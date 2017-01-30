@@ -34,11 +34,43 @@ extern const char *build_version;
 #define MANIFEST_FILENAME "manifest.json"
 #define SHA1SUM_LEN 40
 
+static mgos_upd_event_cb s_event_cb = NULL;
+static void *s_event_cb_arg = NULL;
+
+/*
+ * --- Zip file local header structure ---
+ *                                             size  offset
+ * local file header signature   (0x04034b50)   4      0
+ * version needed to extract                    2      4
+ * general purpose bit flag                     2      6
+ * compression method                           2      8
+ * last mod file time                           2      10
+ * last mod file date                           2      12
+ * crc-32                                       4      14
+ * compressed size                              4      18
+ * uncompressed size                            4      22
+ * file name length                             2      26
+ * extra field length                           2      28
+ * file name (variable size)                    v      30
+ * extra field (variable size)                  v
+ */
+
+#define ZIP_LOCAL_HDR_SIZE 30U
+#define ZIP_GENFLAG_OFFSET 6U
+#define ZIP_COMPRESSION_METHOD_OFFSET 8U
+#define ZIP_CRC32_OFFSET 14U
+#define ZIP_COMPRESSED_SIZE_OFFSET 18U
+#define ZIP_UNCOMPRESSED_SIZE_OFFSET 22U
+#define ZIP_FILENAME_LEN_OFFSET 26U
+#define ZIP_EXTRAS_LEN_OFFSET 28U
+#define ZIP_FILENAME_OFFSET 30U
+#define ZIP_FILE_DESCRIPTOR_SIZE 12U
+
 const uint32_t c_zip_file_header_magic = 0x04034b50;
 const uint32_t c_zip_cdir_magic = 0x02014b50;
 
-enum update_status {
-  US_INITED,
+enum update_state {
+  US_INITED = 0,
   US_WAITING_MANIFEST_HEADER,
   US_WAITING_MANIFEST,
   US_WAITING_FILE_HEADER,
@@ -74,13 +106,21 @@ struct update_context *updater_context_create() {
     return NULL;
   }
 
+  if (s_event_cb != NULL) {
+    bool ok = s_event_cb(MGOS_UPD_EV_INIT, NULL, s_event_cb_arg);
+    if (!ok) {
+      CONSOLE_LOG(LL_ERROR, ("Update declined by user callback"));
+      return NULL;
+    }
+  }
+
   s_ctx = calloc(1, sizeof(*s_ctx));
   if (s_ctx == NULL) {
     CONSOLE_LOG(LL_ERROR, ("Out of memory"));
     return NULL;
   }
 
-  s_ctx->dev_ctx = mgos_upd_ctx_create();
+  s_ctx->dev_ctx = mgos_upd_dev_ctx_create();
 
   CONSOLE_LOG(LL_INFO,
               ("Starting update (timeout %d)", get_cfg()->update.timeout));
@@ -89,9 +129,9 @@ struct update_context *updater_context_create() {
   return s_ctx;
 }
 
-void updater_set_status(struct update_context *ctx, enum update_status st) {
-  LOG(LL_DEBUG, ("Update status %d -> %d", (int) ctx->update_status, (int) st));
-  ctx->update_status = st;
+void updater_set_status(struct update_context *ctx, enum update_state st) {
+  LOG(LL_DEBUG, ("Update state %d -> %d", (int) ctx->update_state, (int) st));
+  ctx->update_state = st;
 }
 
 /*
@@ -145,15 +185,17 @@ void context_remove_data(struct update_context *ctx, size_t len) {
 }
 
 static void context_clear_current_file(struct update_context *ctx) {
-  memset(&ctx->current_file, 0, sizeof(ctx->current_file));
+  memset(&ctx->info.current_file, 0, sizeof(ctx->info.current_file));
+  ctx->current_file_crc = ctx->current_file_crc_calc = 0;
+  ctx->current_file_has_descriptor = false;
 }
 
 int is_write_finished(struct update_context *ctx) {
-  return ctx->update_status == US_WRITE_FINISHED;
+  return ctx->update_state == US_WRITE_FINISHED;
 }
 
 int is_update_finished(struct update_context *ctx) {
-  return ctx->update_status == US_FINISHED;
+  return ctx->update_state == US_FINISHED;
 }
 
 int is_reboot_required(struct update_context *ctx) {
@@ -214,40 +256,40 @@ static int parse_zip_file_header(struct update_context *ctx) {
   LOG(LL_DEBUG,
       ("File name to use: %.*s", (int) nodir_file_name_len, nodir_file_name));
 
-  if (nodir_file_name_len >= sizeof(ctx->current_file.fi.name)) {
+  if (nodir_file_name_len >= sizeof(ctx->info.current_file.name)) {
     /* We are in charge of file names, right? */
     CONSOLE_LOG(LL_ERROR, ("Too long file name"));
     ctx->status_msg = "Too long file name";
     return -1;
   }
-  memcpy(ctx->current_file.fi.name, nodir_file_name, nodir_file_name_len);
+  memcpy(ctx->info.current_file.name, nodir_file_name, nodir_file_name_len);
 
-  memcpy(&ctx->current_file.fi.size, ctx->data + ZIP_COMPRESSED_SIZE_OFFSET,
-         sizeof(ctx->current_file.fi.size));
+  memcpy(&ctx->info.current_file.size, ctx->data + ZIP_COMPRESSED_SIZE_OFFSET,
+         sizeof(ctx->info.current_file.size));
 
   uint32_t uncompressed_size;
   memcpy(&uncompressed_size, ctx->data + ZIP_UNCOMPRESSED_SIZE_OFFSET,
          sizeof(uncompressed_size));
 
-  if (ctx->current_file.fi.size != uncompressed_size) {
+  if (ctx->info.current_file.size != uncompressed_size) {
     /* Probably malformed archive*/
     CONSOLE_LOG(LL_ERROR, ("Malformed archive"));
     ctx->status_msg = "Malformed archive";
     return -1;
   }
 
-  LOG(LL_DEBUG, ("File size: %d", ctx->current_file.fi.size));
+  LOG(LL_DEBUG, ("File size: %d", ctx->info.current_file.size));
 
   uint16_t gen_flag;
   memcpy(&gen_flag, ctx->data + ZIP_GENFLAG_OFFSET, sizeof(gen_flag));
-  ctx->current_file.has_descriptor = gen_flag & (1 << 3);
+  ctx->current_file_has_descriptor = ((gen_flag & (1 << 3)) != 0);
 
   LOG(LL_DEBUG, ("General flag=%d", (int) gen_flag));
 
-  memcpy(&ctx->current_file.crc, ctx->data + ZIP_CRC32_OFFSET,
-         sizeof(ctx->current_file.crc));
+  memcpy(&ctx->current_file_crc, ctx->data + ZIP_CRC32_OFFSET,
+         sizeof(ctx->current_file_crc));
 
-  LOG(LL_DEBUG, ("CRC32: 0x%08x", ctx->current_file.crc));
+  LOG(LL_DEBUG, ("CRC32: 0x%08x", ctx->current_file_crc));
 
   context_remove_data(ctx, ZIP_LOCAL_HDR_SIZE + file_name_len + extras_len);
 
@@ -255,35 +297,37 @@ static int parse_zip_file_header(struct update_context *ctx) {
 }
 
 static int parse_manifest(struct update_context *ctx) {
-  ctx->manifest_data = malloc(ctx->current_file.fi.size);
+  struct mgos_upd_info *info = &ctx->info;
+  ctx->manifest_data = calloc(1, info->current_file.size);
   if (ctx->manifest_data == NULL) {
     ctx->status_msg = "Out of memory";
     return -1;
   }
-  memcpy(ctx->manifest_data, ctx->data, ctx->current_file.fi.size);
+  memcpy(ctx->manifest_data, ctx->data, info->current_file.size);
 
   if (json_scanf(
-          ctx->manifest_data, ctx->current_file.fi.size,
+          ctx->manifest_data, info->current_file.size,
           "{name: %T, platform: %T, version: %T, build_id: %T, parts: %T}",
-          &ctx->name, &ctx->platform, &ctx->version, &ctx->build_id,
-          &ctx->parts) <= 0) {
+          &info->name, &info->platform, &info->version, &info->build_id,
+          &info->parts) <= 0) {
     ctx->status_msg = "Failed to parse manifest";
     return -1;
   }
 
-  if (ctx->platform.len == 0 || ctx->version.len == 0 ||
-      ctx->build_id.len == 0 || ctx->parts.len == 0) {
+  if (info->platform.len == 0 || info->version.len == 0 ||
+      info->build_id.len == 0 || info->parts.len == 0) {
     ctx->status_msg = "Required manifest field missing";
     return -1;
   }
 
-  CONSOLE_LOG(LL_INFO,
-              ("FW: %.*s %.*s %s %s -> %.*s %.*s", (int) ctx->name.len,
-               ctx->name.ptr, (int) ctx->platform.len, ctx->platform.ptr,
-               build_version, build_id, (int) ctx->version.len,
-               ctx->version.ptr, (int) ctx->build_id.len, ctx->build_id.ptr));
+  CONSOLE_LOG(
+      LL_INFO,
+      ("FW: %.*s %.*s %s %s -> %.*s %.*s", (int) info->name.len, info->name.ptr,
+       (int) info->platform.len, info->platform.ptr, build_version, build_id,
+       (int) info->version.len, info->version.ptr, (int) info->build_id.len,
+       info->build_id.ptr));
 
-  context_remove_data(ctx, ctx->current_file.fi.size);
+  context_remove_data(ctx, info->current_file.size);
 
   return 1;
 }
@@ -291,20 +335,19 @@ static int parse_manifest(struct update_context *ctx) {
 static int finalize_write(struct update_context *ctx, struct mg_str tail) {
   /* We have to add the tail to CRC now to be able to verify it. */
   if (tail.len > 0) {
-    ctx->current_file.crc_current = cs_crc32(
-        ctx->current_file.crc_current, (const uint8_t *) tail.p, tail.len);
+    ctx->current_file_crc_calc = cs_crc32(ctx->current_file_crc_calc,
+                                          (const uint8_t *) tail.p, tail.len);
   }
 
-  if (ctx->current_file.crc != 0 &&
-      ctx->current_file.crc != ctx->current_file.crc_current) {
-    CONSOLE_LOG(LL_ERROR,
-                ("Invalid CRC, want 0x%x, got 0x%x", ctx->current_file.crc,
-                 ctx->current_file.crc_current));
+  if (ctx->current_file_crc != 0 &&
+      ctx->current_file_crc != ctx->current_file_crc_calc) {
+    CONSOLE_LOG(LL_ERROR, ("Invalid CRC, want 0x%x, got 0x%x",
+                           ctx->current_file_crc, ctx->current_file_crc_calc));
     ctx->status_msg = "Invalid CRC";
     return -1;
   }
 
-  int ret = mgos_upd_file_end(ctx->dev_ctx, &ctx->current_file.fi, tail);
+  int ret = mgos_upd_file_end(ctx->dev_ctx, &ctx->info.current_file, tail);
   if (ret != (int) tail.len) {
     if (ret < 0) {
       ctx->status_msg = mgos_upd_get_status_msg(ctx->dev_ctx);
@@ -328,7 +371,7 @@ static int updater_process_int(struct update_context *ctx, const char *data,
   }
 
   while (true) {
-    switch (ctx->update_status) {
+    switch (ctx->update_state) {
       case US_INITED: {
         updater_set_status(ctx, US_WAITING_MANIFEST_HEADER);
       } /* fall through */
@@ -339,11 +382,12 @@ static int updater_process_int(struct update_context *ctx, const char *data,
           }
           return ret;
         }
-        if (strncmp(ctx->current_file.fi.name, MANIFEST_FILENAME,
+        if (strncmp(ctx->info.current_file.name, MANIFEST_FILENAME,
                     sizeof(MANIFEST_FILENAME)) != 0) {
           /* We've got file header, but it isn't not metadata */
-          CONSOLE_LOG(LL_ERROR, ("Get %s instead of %s",
-                                 ctx->current_file.fi.name, MANIFEST_FILENAME));
+          CONSOLE_LOG(LL_ERROR,
+                      ("Get %s instead of %s", ctx->info.current_file.name,
+                       MANIFEST_FILENAME));
           return -1;
         }
         updater_set_status(ctx, US_WAITING_MANIFEST);
@@ -353,37 +397,48 @@ static int updater_process_int(struct update_context *ctx, const char *data,
          * Assume metadata isn't too big and might be cached
          * otherwise we need streaming json-parser
          */
-        if (ctx->data_len < ctx->current_file.fi.size) {
+        if (ctx->data_len < ctx->info.current_file.size) {
           context_save_unprocessed(ctx);
           return 0;
         }
 
-        if (ctx->current_file.crc != 0 &&
+        if (ctx->current_file_crc != 0 &&
             cs_crc32(0, (const uint8_t *) ctx->data,
-                     ctx->current_file.fi.size) != ctx->current_file.crc) {
+                     ctx->info.current_file.size) != ctx->current_file_crc) {
           ctx->status_msg = "Invalid CRC";
           return -1;
         }
 
         if ((ret = parse_manifest(ctx)) < 0) return ret;
 
-        if (strncasecmp(ctx->platform.ptr, CS_STRINGIFY_MACRO(FW_ARCHITECTURE),
+        if (strncasecmp(ctx->info.platform.ptr,
+                        CS_STRINGIFY_MACRO(FW_ARCHITECTURE),
                         strlen(CS_STRINGIFY_MACRO(FW_ARCHITECTURE))) != 0) {
-          CONSOLE_LOG(LL_ERROR,
-                      ("Wrong platform: want \"%s\", got \"%s\"",
-                       CS_STRINGIFY_MACRO(FW_ARCHITECTURE), ctx->platform.ptr));
+          CONSOLE_LOG(LL_ERROR, ("Wrong platform: want \"%s\", got \"%s\"",
+                                 CS_STRINGIFY_MACRO(FW_ARCHITECTURE),
+                                 ctx->info.platform.ptr));
           ctx->status_msg = "Wrong platform";
           return -1;
         }
 
         if (ctx->ignore_same_version &&
-            strncmp(ctx->version.ptr, build_version, ctx->version.len) == 0 &&
-            strncmp(ctx->build_id.ptr, build_id, ctx->build_id.len) == 0) {
+            strncmp(ctx->info.version.ptr, build_version,
+                    ctx->info.version.len) == 0 &&
+            strncmp(ctx->info.build_id.ptr, build_id, ctx->info.build_id.len) ==
+                0) {
           ctx->status_msg = "Version is the same as current";
           return 1;
         }
 
-        if ((ret = mgos_upd_begin(ctx->dev_ctx, &ctx->parts)) < 0) {
+        if (s_event_cb != NULL) {
+          bool ok = s_event_cb(MGOS_UPD_EV_BEGIN, &ctx->info, s_event_cb_arg);
+          if (!ok) {
+            ctx->status_msg = "Update declined by user callback";
+            return -101;
+          }
+        }
+
+        if ((ret = mgos_upd_begin(ctx->dev_ctx, &ctx->info.parts)) < 0) {
           ctx->status_msg = mgos_upd_get_status_msg(ctx->dev_ctx);
           CONSOLE_LOG(LL_ERROR, ("Bad manifest: %d %s", ret, ctx->status_msg));
           return ret;
@@ -408,7 +463,7 @@ static int updater_process_int(struct update_context *ctx, const char *data,
         }
 
         enum mgos_upd_file_action r =
-            mgos_upd_file_begin(ctx->dev_ctx, &ctx->current_file.fi);
+            mgos_upd_file_begin(ctx->dev_ctx, &ctx->info.current_file);
 
         if (r == MGOS_UPDATER_ABORT) {
           ctx->status_msg = mgos_upd_get_status_msg(ctx->dev_ctx);
@@ -417,34 +472,40 @@ static int updater_process_int(struct update_context *ctx, const char *data,
           updater_set_status(ctx, US_SKIPPING_DATA);
           break;
         }
+        if (s_event_cb != NULL) {
+          s_event_cb(MGOS_UPD_EV_PROGRESS, &ctx->info, s_event_cb_arg);
+        }
         updater_set_status(ctx, US_WAITING_FILE);
-        ctx->current_file.crc_current = 0;
+        ctx->current_file_crc_calc = 0;
       } /* fall through */
       case US_WAITING_FILE: {
         struct mg_str to_process;
         to_process.p = ctx->data;
         to_process.len =
-            MIN(ctx->current_file.fi.size - ctx->current_file.fi.processed,
+            MIN(ctx->info.current_file.size - ctx->info.current_file.processed,
                 ctx->data_len);
 
-        int num_processed =
-            mgos_upd_file_data(ctx->dev_ctx, &ctx->current_file.fi, to_process);
+        int num_processed = mgos_upd_file_data(
+            ctx->dev_ctx, &ctx->info.current_file, to_process);
         if (num_processed < 0) {
           ctx->status_msg = mgos_upd_get_status_msg(ctx->dev_ctx);
           return num_processed;
         } else if (num_processed > 0) {
-          ctx->current_file.crc_current =
-              cs_crc32(ctx->current_file.crc_current,
+          ctx->current_file_crc_calc =
+              cs_crc32(ctx->current_file_crc_calc,
                        (const uint8_t *) to_process.p, num_processed);
           context_remove_data(ctx, num_processed);
-          ctx->current_file.fi.processed += num_processed;
+          ctx->info.current_file.processed += num_processed;
         }
         LOG(LL_DEBUG,
             ("Processed %d, up to %u, %u left in the buffer", num_processed,
-             ctx->current_file.fi.processed, ctx->data_len));
+             ctx->info.current_file.processed, ctx->data_len));
+        if (s_event_cb != NULL) {
+          s_event_cb(MGOS_UPD_EV_PROGRESS, &ctx->info, s_event_cb_arg);
+        }
 
         uint32_t bytes_left =
-            ctx->current_file.fi.size - ctx->current_file.fi.processed;
+            ctx->info.current_file.size - ctx->info.current_file.processed;
         if (bytes_left > ctx->data_len) {
           context_save_unprocessed(ctx);
           return 0;
@@ -463,13 +524,16 @@ static int updater_process_int(struct update_context *ctx, const char *data,
       case US_SKIPPING_DATA: {
         uint32_t to_skip =
             MIN(ctx->data_len,
-                ctx->current_file.fi.size - ctx->current_file.fi.processed);
-        ctx->current_file.fi.processed += to_skip;
+                ctx->info.current_file.size - ctx->info.current_file.processed);
+        ctx->info.current_file.processed += to_skip;
         LOG(LL_DEBUG, ("Skipping %u bytes, %u total", to_skip,
-                       ctx->current_file.fi.processed));
+                       ctx->info.current_file.processed));
         context_remove_data(ctx, to_skip);
+        if (s_event_cb != NULL) {
+          s_event_cb(MGOS_UPD_EV_PROGRESS, &ctx->info, s_event_cb_arg);
+        }
 
-        if (ctx->current_file.fi.processed < ctx->current_file.fi.size) {
+        if (ctx->info.current_file.processed < ctx->info.current_file.size) {
           context_save_unprocessed(ctx);
           return 0;
         }
@@ -478,13 +542,13 @@ static int updater_process_int(struct update_context *ctx, const char *data,
         updater_set_status(ctx, US_SKIPPING_DESCRIPTOR);
       } /* fall through */
       case US_SKIPPING_DESCRIPTOR: {
-        int has_descriptor = ctx->current_file.has_descriptor;
+        bool has_descriptor = ctx->current_file_has_descriptor;
         LOG(LL_DEBUG, ("Has descriptor : %d", has_descriptor));
         context_clear_current_file(ctx);
-        ctx->current_file.has_descriptor = 0;
+        ctx->current_file_has_descriptor = false;
         if (has_descriptor) {
           /* If file has descriptor we have to skip 12 bytes after its body */
-          ctx->current_file.fi.size = ZIP_FILE_DESCRIPTOR_SIZE;
+          ctx->info.current_file.size = ZIP_FILE_DESCRIPTOR_SIZE;
           updater_set_status(ctx, US_SKIPPING_DATA);
         } else {
           updater_set_status(ctx, US_WAITING_FILE_HEADER);
@@ -514,8 +578,9 @@ static int updater_process_int(struct update_context *ctx, const char *data,
         }
         ctx->result = 1;
         ctx->need_reboot = 1;
-        updater_set_status(ctx, US_FINISHED);
-      } /* fall through */
+        updater_finish(ctx);
+        break;
+      }
       case US_FINISHED: {
         /* After receiving manifest, fw & fs just skipping all data */
         context_remove_data(ctx, ctx->data_len);
@@ -543,11 +608,14 @@ int updater_finalize(struct update_context *ctx) {
 }
 
 void updater_finish(struct update_context *ctx) {
-  if (ctx->update_status == US_FINISHED) return;
+  if (ctx->update_state == US_FINISHED) return;
   updater_set_status(ctx, US_FINISHED);
   const char *msg = (ctx->status_msg ? ctx->status_msg : "???");
   CONSOLE_LOG(LL_INFO, ("Finished: %d %s", ctx->result, msg));
   updater_process_int(ctx, NULL, 0);
+  if (s_event_cb != NULL) {
+    (void) s_event_cb(MGOS_UPD_EV_END, &ctx->result, s_event_cb_arg);
+  }
 }
 
 void updater_context_free(struct update_context *ctx) {
@@ -555,7 +623,7 @@ void updater_context_free(struct update_context *ctx) {
     CONSOLE_LOG(LL_ERROR, ("Update terminated unexpectedly"));
   }
   mgos_clear_timer(ctx->wdt);
-  mgos_upd_ctx_free(ctx->dev_ctx);
+  mgos_upd_dev_ctx_free(ctx->dev_ctx);
   mbuf_free(&ctx->unprocessed);
   free(ctx->manifest_data);
   free(ctx);
@@ -743,3 +811,10 @@ void mgos_upd_boot_finish(bool is_successful, bool is_first) {
     mgos_upd_commit();
   }
 }
+
+void mgos_upd_set_event_cb(mgos_upd_event_cb cb, void *cb_arg) {
+  s_event_cb = cb;
+  s_event_cb_arg = cb_arg;
+}
+typedef bool (*mgos_upd_event_cb)(enum mgos_upd_event ev, const void *ev_data,
+                                  void *user_data);

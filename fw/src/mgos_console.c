@@ -60,6 +60,7 @@ void mgos_console_putc(char c) {
 #endif
     mbuf_remove(&s_cctx.buf, l);
   }
+  if (s_cctx.buf.len == 0) mbuf_trim(&s_cctx.buf);
   /* Construct valid JSON from the get-go. */
   if (!s_cctx.msg_in_progress) {
     /* Skip empty lines */
@@ -138,7 +139,6 @@ static void mgos_console_push_to_cloud(void) {
                    (int) (l - 1), s_cctx.buf.buf)) {
     s_cctx.request_in_flight = 1;
     mbuf_remove(&s_cctx.buf, l);
-    if (s_cctx.buf.len == 0) mbuf_trim(&s_cctx.buf);
   }
 }
 

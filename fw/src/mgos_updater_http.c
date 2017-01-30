@@ -248,6 +248,7 @@ static void handle_update_post(struct mg_connection *c, int ev, void *p) {
           LOG(LL_INFO, ("Rebooting device"));
           mgos_system_restart_after(101);
         }
+        c->flags |= MG_F_SEND_AND_CLOSE;
       }
       updater_context_free(ctx);
       c->user_data = NULL;

@@ -25,7 +25,7 @@
 
 #if MGOS_ENABLE_UPDATER
 
-struct mgos_upd_ctx {
+struct mgos_upd_dev_ctx {
   struct json_token *parts;
   int cur_boot_cfg_idx;
   int new_boot_cfg_idx;
@@ -39,17 +39,18 @@ struct mgos_upd_ctx {
   const char *status_msg;
 };
 
-struct mgos_upd_ctx *mgos_upd_ctx_create(void) {
-  struct mgos_upd_ctx *ctx = (struct mgos_upd_ctx *) calloc(1, sizeof(*ctx));
+struct mgos_upd_dev_ctx *mgos_upd_dev_ctx_create(void) {
+  struct mgos_upd_dev_ctx *ctx =
+      (struct mgos_upd_dev_ctx *) calloc(1, sizeof(*ctx));
   ctx->cur_fh = -1;
   return ctx;
 }
 
-const char *mgos_upd_get_status_msg(struct mgos_upd_ctx *ctx) {
+const char *mgos_upd_get_status_msg(struct mgos_upd_dev_ctx *ctx) {
   return ctx->status_msg;
 }
 
-int mgos_upd_begin(struct mgos_upd_ctx *ctx, struct json_token *parts) {
+int mgos_upd_begin(struct mgos_upd_dev_ctx *ctx, struct json_token *parts) {
   ctx->parts = parts;
   /* We want to make sure device uses boto loader. */
   ctx->cur_boot_cfg_idx = get_active_boot_cfg_idx();
@@ -115,7 +116,7 @@ static void create_fname(struct mg_str pfx, int idx, char *fn, int len) {
   fn[l] = '\0';
 }
 
-static int prepare_to_write(struct mgos_upd_ctx *ctx,
+static int prepare_to_write(struct mgos_upd_dev_ctx *ctx,
                             const struct mgos_upd_file_info *fi,
                             const char *fname, uint32_t falloc,
                             struct json_token *part) {
@@ -191,7 +192,7 @@ static int tcmp(const struct json_token *tok, const char *str) {
 }
 
 enum mgos_upd_file_action mgos_upd_file_begin(
-    struct mgos_upd_ctx *ctx, const struct mgos_upd_file_info *fi) {
+    struct mgos_upd_dev_ctx *ctx, const struct mgos_upd_file_info *fi) {
   struct mg_str part_name = MG_MK_STR("");
   enum mgos_upd_file_action ret = MGOS_UPDATER_SKIP_FILE;
   struct find_part_info find_part_info = {fi->name, &part_name, &ctx->cur_part};
@@ -281,7 +282,7 @@ enum mgos_upd_file_action mgos_upd_file_begin(
   return ret;
 }
 
-int mgos_upd_file_data(struct mgos_upd_ctx *ctx,
+int mgos_upd_file_data(struct mgos_upd_dev_ctx *ctx,
                        const struct mgos_upd_file_info *fi,
                        struct mg_str data) {
   _i32 r = sl_FsWrite(ctx->cur_fh, fi->processed, (_u8 *) data.p, data.len);
@@ -292,7 +293,7 @@ int mgos_upd_file_data(struct mgos_upd_ctx *ctx,
   return r;
 }
 
-int mgos_upd_file_end(struct mgos_upd_ctx *ctx,
+int mgos_upd_file_end(struct mgos_upd_dev_ctx *ctx,
                       const struct mgos_upd_file_info *fi, struct mg_str tail) {
   int r = tail.len;
   assert(tail.len == 0);
@@ -322,7 +323,7 @@ int mgos_upd_file_end(struct mgos_upd_ctx *ctx,
   return r;
 }
 
-int mgos_upd_finalize(struct mgos_upd_ctx *ctx) {
+int mgos_upd_finalize(struct mgos_upd_dev_ctx *ctx) {
   struct boot_cfg cur_cfg, new_cfg;
   int r = read_boot_cfg(ctx->cur_boot_cfg_idx, &cur_cfg);
   if (r < 0) {
@@ -366,7 +367,7 @@ int mgos_upd_finalize(struct mgos_upd_ctx *ctx) {
   return 1;
 }
 
-void mgos_upd_ctx_free(struct mgos_upd_ctx *ctx) {
+void mgos_upd_dev_ctx_free(struct mgos_upd_dev_ctx *ctx) {
   if (ctx == NULL) return;
   if (ctx->cur_fh >= 0) sl_FsClose(ctx->cur_fh, NULL, NULL, 0);
   if (ctx->cur_fn != NULL) sl_FsDel(ctx->cur_fn, 0);
