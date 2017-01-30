@@ -134,7 +134,7 @@ func (rwc *reconnectWrapperCodec) Recv(ctx context.Context) (*frame.FrameV1V2, e
 		}
 		frame, err := conn.Recv(ctx)
 		if err != nil {
-			glog.V(1).Infof("%s recv error: %s, eof? %T", rwc, err, IsEOF(err))
+			glog.V(1).Infof("%s recv error: %s, eof? %v", rwc, err, IsEOF(err))
 		}
 		switch {
 		case err == nil:
