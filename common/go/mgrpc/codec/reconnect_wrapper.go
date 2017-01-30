@@ -77,7 +77,12 @@ func (rwc *reconnectWrapperCodec) maintainConnection() {
 			}
 		}
 		glog.V(2).Infof("Next attempt: %s, Now: %s, Diff: %s", rwc.nextAttempt, time.Now(), rwc.nextAttempt.Sub(time.Now()))
-		time.Sleep(rwc.nextAttempt.Sub(time.Now()))
+		select {
+		case <-rwc.closeNotifier:
+			glog.V(1).Infof("closed, stopping reconnect thread")
+			return
+		case <-time.After(rwc.nextAttempt.Sub(time.Now())):
+		}
 
 		glog.V(1).Infof("%s connecting", rwc)
 		conn, err := rwc.connect(rwc.addr)
