@@ -191,11 +191,20 @@ func (r *mgRPCImpl) connect(ctx context.Context, opts ...ConnectOption) error {
 				return c, errors.Trace(err)
 			})
 	case tSerial:
-		serialCodec, err := r.serialConnect(ctx, r.opts.connectAddress, r.opts)
-		if err != nil {
-			return errors.Trace(err)
+		if r.opts.enableReconnect {
+			r.codec = codec.NewReconnectWrapperCodec(
+				r.opts.connectAddress,
+				func(serialAddress string) (codec.Codec, error) {
+					c, err := r.serialConnect(ctx, serialAddress, r.opts)
+					return c, errors.Trace(err)
+				})
+		} else {
+			serialCodec, err := r.serialConnect(ctx, r.opts.connectAddress, r.opts)
+			if err != nil {
+				return errors.Trace(err)
+			}
+			r.codec = serialCodec
 		}
-		r.codec = serialCodec
 
 	default:
 		return fmt.Errorf("unknown transport %q", r.opts.proto)
