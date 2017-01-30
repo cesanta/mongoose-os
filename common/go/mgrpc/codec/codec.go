@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/x509"
 	"io"
+	"runtime"
+	"strings"
 
 	"github.com/cesanta/errors"
 
@@ -38,5 +40,15 @@ type ConnectionInfo struct {
 
 // IsEOF returns true when err means "end of file".
 func IsEOF(err error) bool {
-	return errors.Cause(err) == io.EOF
+	ret := (errors.Cause(err) == io.EOF)
+
+	// On Windows, when COM port disappears, the error returned is not an EOF,
+	// so here, for lack of anything better, we just compare a substring.
+	// TODO(dfrank): try to fix the root cause of it
+	if runtime.GOOS == "windows" {
+		if err != nil {
+			ret = ret || strings.Contains(err.Error(), "The I/O operation has been aborted")
+		}
+	}
+	return ret
 }

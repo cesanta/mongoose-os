@@ -193,7 +193,7 @@ func (scc *streamConnectionCodec) Recv(ctx context.Context) (*frame.FrameV1V2, e
 			}
 		}
 		readLen, err := scc.conn.Read(buf)
-		eof := err == io.EOF
+		eof := IsEOF(err)
 		scc.eofLock.Lock()
 		scc.eof = eof
 		lastFrameEof := scc.lastFrameEof
