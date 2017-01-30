@@ -84,7 +84,7 @@ static bool mg_rpc_channel_http_send_frame(struct mg_rpc_channel *ch,
       mg_printf(chd->nc, "%.*s\r\n", (int) result_tok.len, result_tok.ptr);
     } else if (error_code != 0) {
       /* Got some error */
-      mg_http_send_error(chd->nc, error_code, error_msg);
+      mg_http_send_error(chd->nc, 500, error_msg);
     } else {
       /* Empty result - that is legal. */
       mg_send_response_line(

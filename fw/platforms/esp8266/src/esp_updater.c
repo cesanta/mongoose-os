@@ -56,9 +56,9 @@ rboot_config *get_rboot_config(void) {
       LOG(LL_DEBUG, ("Out of memory"));
       return NULL;
     }
-    *cfg = rboot_get_config();
   }
 
+  *cfg = rboot_get_config();
   return cfg;
 }
 
@@ -77,15 +77,6 @@ static void get_slot_info(int id, struct slot_info *si) {
   si->fw_slot_size = FW_SIZE;
   si->fs_size = cfg->fs_sizes[id];
   si->fs_slot_size = FS_SIZE;
-}
-
-static void get_active_slot(struct slot_info *si) {
-  get_slot_info(get_rboot_config()->current_rom, si);
-}
-
-static void get_inactive_slot(struct slot_info *si) {
-  int inactive_slot = (get_rboot_config()->current_rom == 0 ? 1 : 0);
-  get_slot_info(inactive_slot, si);
 }
 
 struct mgos_upd_ctx *mgos_upd_ctx_create(void) {
@@ -116,7 +107,10 @@ int mgos_upd_begin(struct mgos_upd_ctx *ctx, struct json_token *parts) {
     return -4;
   }
 
-  get_inactive_slot(&ctx->write_slot);
+  struct mgos_upd_boot_state bs;
+  if (!mgos_upd_boot_get_state(&bs)) return -5;
+  int inactive_slot = (bs.active_slot == 0 ? 1 : 0);
+  get_slot_info(inactive_slot, &ctx->write_slot);
 
   LOG(LL_INFO,
       ("Slot %d, FW: %.*s -> 0x%x, FS %.*s -> 0x%x", ctx->write_slot.id,
@@ -336,8 +330,11 @@ static bool copy_region(uint32_t src_addr, uint32_t dst_addr, size_t len) {
 
 int mgos_upd_create_snapshot() {
   struct slot_info rsi, wsi;
-  get_active_slot(&rsi);
-  get_inactive_slot(&wsi);
+  struct mgos_upd_boot_state bs;
+  if (!mgos_upd_boot_get_state(&bs)) return -1;
+  int inactive_slot = (bs.active_slot == 0 ? 1 : 0);
+  get_slot_info(bs.active_slot, &rsi);
+  get_slot_info(inactive_slot, &wsi);
   LOG(LL_INFO, ("Snapshot: %d -> %d, "
                 "FW: 0x%x (%u) -> 0x%x, FS: 0x%x (%u) -> 0x%x",
                 rsi.id, wsi.id, rsi.fw_addr, rsi.fw_size, wsi.fw_addr,
@@ -355,19 +352,49 @@ int mgos_upd_create_snapshot() {
   return slot;
 }
 
-void mgos_upd_boot_commit() {
+bool mgos_upd_boot_get_state(struct mgos_upd_boot_state *bs) {
   rboot_config *cfg = get_rboot_config();
-  if (!cfg->fw_updated) return;
-  LOG(LL_INFO, ("Committing ROM %d", cfg->current_rom));
-  cfg->fw_updated = cfg->is_first_boot = 0;
-  rboot_set_config(cfg);
+  if (cfg == NULL) return false;
+  LOG(LL_INFO, ("cur %d prev %d fwu %d", cfg->current_rom, cfg->previous_rom,
+                cfg->fw_updated));
+  memset(bs, 0, sizeof(*bs));
+  bs->active_slot = cfg->current_rom;
+  bs->revert_slot = cfg->previous_rom;
+  bs->is_committed = !cfg->fw_updated;
+  return true;
+}
+
+bool mgos_upd_boot_set_state(const struct mgos_upd_boot_state *bs) {
+  rboot_config *cfg = get_rboot_config();
+  if (cfg == NULL) return false;
+  if (bs->active_slot < 0 || bs->active_slot > 1 || bs->revert_slot < 0 ||
+      bs->revert_slot > 1) {
+    return false;
+  }
+  cfg->current_rom = bs->active_slot;
+  cfg->previous_rom = bs->revert_slot;
+  cfg->fw_updated = cfg->is_first_boot = (!bs->is_committed);
+  cfg->boot_attempts = 0;
+  LOG(LL_INFO, ("cur %d prev %d fwu %d", cfg->current_rom, cfg->previous_rom,
+                cfg->fw_updated));
+  return rboot_set_config(cfg);
+}
+
+void mgos_upd_boot_commit() {
+  struct mgos_upd_boot_state s;
+  if (!mgos_upd_boot_get_state(&s)) return;
+  if (s.is_committed) return;
+  LOG(LL_INFO, ("Committing ROM %d", s.active_slot));
+  s.is_committed = true;
+  mgos_upd_boot_set_state(&s);
 }
 
 void mgos_upd_boot_revert() {
-  rboot_config *cfg = get_rboot_config();
-  if (!cfg->fw_updated) return;
-  LOG(LL_INFO, ("Update failed, reverting to ROM %d", cfg->previous_rom));
-  cfg->current_rom = cfg->previous_rom;
-  cfg->fw_updated = cfg->is_first_boot = 0;
-  rboot_set_config(cfg);
+  struct mgos_upd_boot_state s;
+  if (!mgos_upd_boot_get_state(&s)) return;
+  if (s.is_committed) return;
+  s.active_slot = (s.active_slot == 0 ? 1 : 0);
+  LOG(LL_INFO, ("Update failed, reverting to ROM %d", s.active_slot));
+  s.is_committed = true;
+  mgos_upd_boot_set_state(&s);
 }

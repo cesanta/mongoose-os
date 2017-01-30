@@ -99,9 +99,7 @@ struct update_context {
    * and then restored after reboot.
    */
   struct update_file_context {
-    int64_t id;
     int commit_timeout;
-    char mg_rpc_src[100];
   } fctx __attribute__((packed));
 };
 
@@ -116,7 +114,11 @@ int is_reboot_required(struct update_context *ctx);
 
 void mgos_upd_boot_finish(bool is_successful, bool is_first);
 bool mgos_upd_commit();
+bool mgos_upd_is_committed();
 bool mgos_upd_revert(bool reboot);
+
+int mgos_upd_get_commit_timeout();
+bool mgos_upd_set_commit_timeout(int commit_timeout);
 
 #ifdef __cplusplus
 }

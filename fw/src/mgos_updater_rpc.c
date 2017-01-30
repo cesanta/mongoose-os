@@ -21,10 +21,6 @@ static struct mg_rpc_request_info *s_update_req;
 
 static void mg_rpc_updater_result(struct update_context *ctx) {
   if (s_update_req == NULL) return;
-  if (ctx->need_reboot) {
-    /* We're about to reboot, don't reply yet. */
-    return;
-  }
   mg_rpc_send_errorf(s_update_req, (ctx->result > 0 ? 0 : -1), ctx->status_msg);
   s_update_req = NULL;
 }
@@ -83,10 +79,7 @@ static void handle_update_req(struct mg_rpc_request_info *ri, void *cb_arg,
     reply = "Failed to init updater";
     goto clean;
   }
-  ctx->fctx.id = ri->id;
   ctx->fctx.commit_timeout = commit_timeout;
-  strncpy(ctx->fctx.mg_rpc_src, ri->src.p,
-          MIN(ri->src.len, sizeof(ctx->fctx.mg_rpc_src)));
   ctx->result_cb = mg_rpc_updater_result;
   s_update_req = ri;
 
@@ -140,6 +133,54 @@ static void handle_create_snapshot_req(struct mg_rpc_request_info *ri,
   (void) args;
 }
 
+static void handle_get_boot_state_req(struct mg_rpc_request_info *ri,
+                                      void *cb_arg,
+                                      struct mg_rpc_frame_info *fi,
+                                      struct mg_str args) {
+  struct mgos_upd_boot_state bs;
+  if (!mgos_upd_boot_get_state(&bs)) {
+    mg_rpc_send_errorf(ri, -1, NULL);
+  } else {
+    LOG(LL_INFO, ("is_committed", bs.is_committed));
+    mg_rpc_send_responsef(ri,
+                          "{active_slot: %d, is_committed: %B, revert_slot: "
+                          "%d, commit_timeout: %d}",
+                          bs.active_slot, bs.is_committed, bs.revert_slot,
+                          mgos_upd_get_commit_timeout());
+  }
+  (void) cb_arg;
+  (void) fi;
+  (void) args;
+}
+
+static void handle_set_boot_state_req(struct mg_rpc_request_info *ri,
+                                      void *cb_arg,
+                                      struct mg_rpc_frame_info *fi,
+                                      struct mg_str args) {
+  int ret = 0;
+  struct mgos_upd_boot_state bs;
+  if (mgos_upd_boot_get_state(&bs)) {
+    int commit_timeout = -1;
+    if (json_scanf(args.p, args.len,
+                   "{active_slot: %d, is_committed: %B, revert_slot: %d, "
+                   "commit_timeout: %d}",
+                   &bs.active_slot, &bs.is_committed, &bs.revert_slot,
+                   &commit_timeout) > 0) {
+      ret = mgos_upd_boot_set_state(&bs) ? 0 : -3;
+      if (ret == 0 && commit_timeout >= 0) {
+        ret = mgos_upd_set_commit_timeout(commit_timeout) ? 0 : -4;
+      }
+    } else {
+      ret = -2;
+    }
+  } else {
+    ret = -1;
+  }
+  mg_rpc_send_errorf(ri, ret, NULL);
+  (void) cb_arg;
+  (void) fi;
+}
+
 void mgos_updater_rpc_init(void) {
   struct mg_rpc *mg_rpc = mgos_rpc_get_global();
   if (mg_rpc == NULL) return;
@@ -148,51 +189,10 @@ void mgos_updater_rpc_init(void) {
   mg_rpc_add_handler(mg_rpc, mg_mk_str("OTA.Revert"), handle_revert_req, NULL);
   mg_rpc_add_handler(mg_rpc, mg_mk_str("OTA.CreateSnapshot"),
                      handle_create_snapshot_req, NULL);
-}
-
-static void send_update_reply(struct mg_rpc_request_info *ri) {
-  int status = (intptr_t) ri->user_data;
-  LOG(LL_INFO, ("Sending update reply to %.*s: %d", (int) ri->src.len,
-                ri->src.p, status));
-  mg_rpc_send_errorf(ri, status, NULL);
-  ri = NULL;
-}
-
-static void handle_mg_rpc_event(struct mg_rpc *mg_rpc, void *cb_arg,
-                                enum mg_rpc_event ev, void *ev_arg) {
-  if (ev != MG_RPC_EV_CHANNEL_OPEN) return;
-  /*
-   * We're only interested in default route.
-   * TODO(rojer): We should be watching for the route to the destination of our
-   * response.
-   */
-  const struct mg_str *dst = (const struct mg_str *) ev_arg;
-  if (mg_vcmp(dst, MG_RPC_DST_DEFAULT) != 0) return;
-  struct mg_rpc_request_info *ri = (struct mg_rpc_request_info *) cb_arg;
-  send_update_reply(ri);
-  mg_rpc_remove_observer(mg_rpc, handle_mg_rpc_event, ri);
-}
-
-void mgos_updater_rpc_finish(int error_code, int64_t id,
-                             const struct mg_str src) {
-  struct mg_rpc *mg_rpc = mgos_rpc_get_global();
-  if (mg_rpc == NULL || id <= 0 || src.len == 0) return;
-  struct mg_rpc_request_info *ri = NULL;
-  ri = (struct mg_rpc_request_info *) calloc(1, sizeof(*ri));
-  if (ri == NULL) goto clean;
-  ri->rpc = mg_rpc;
-  ri->id = id;
-  ri->src = mg_strdup(src);
-  if (ri->src.p == NULL) goto clean;
-  ri->user_data = (void *) error_code;
-  if (mg_rpc_is_connected(mg_rpc)) {
-    send_update_reply(ri);
-  } else {
-    mg_rpc_add_observer(mg_rpc, handle_mg_rpc_event, ri);
-  }
-  ri = NULL;
-clean:
-  if (ri != NULL) mg_rpc_free_request_info(ri);
+  mg_rpc_add_handler(mg_rpc, mg_mk_str("OTA.GetBootState"),
+                     handle_get_boot_state_req, NULL);
+  mg_rpc_add_handler(mg_rpc, mg_mk_str("OTA.SetBootState"),
+                     handle_set_boot_state_req, NULL);
 }
 
 #endif /* MGOS_ENABLE_UPDATER_RPC && MGOS_ENABLE_RPC */

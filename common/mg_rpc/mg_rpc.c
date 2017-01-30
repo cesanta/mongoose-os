@@ -570,8 +570,8 @@ bool mg_rpc_send_errorf(struct mg_rpc_request_info *ri, int error_code,
                         const char *error_msg_fmt, ...) {
   struct mbuf prefb;
   struct json_out prefbout = JSON_OUT_MBUF(&prefb);
+  mbuf_init(&prefb, 0);
   if (error_code != 0) {
-    mbuf_init(&prefb, 100);
     json_printf(&prefbout, "error:{code:%d", error_code);
     if (error_msg_fmt != NULL) {
       va_list ap;

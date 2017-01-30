@@ -217,7 +217,7 @@ enum mgos_upd_file_action mgos_upd_file_begin(
     /*
      * When safe code update is enabled, we write code to a new file.
      * Otherwise we write to the same slot we're using currently, which is
-     * unsafe, makes reverting coide update not possible, but saves space.
+     * unsafe, makes reverting code update not possible, but saves space.
      */
     create_fname(part_name, ctx->new_boot_cfg_idx, ctx->app_image_file,
                  sizeof(ctx->app_image_file));
@@ -377,6 +377,22 @@ void mgos_upd_ctx_free(struct mgos_upd_ctx *ctx) {
 int mgos_upd_create_snapshot() {
   /* TODO(rojer): Implement. */
   return -1;
+}
+
+bool mgos_upd_boot_get_state(struct mgos_upd_boot_state *bs) {
+  struct boot_cfg *cfg = &g_boot_cfg;
+  memset(bs, 0, sizeof(*bs));
+  const char *p = strrchr(cfg->app_image_file, '.');
+  bs->active_slot = (*(p + 1) == '0' ? 0 : 1);
+  bs->revert_slot = (bs->active_slot == 0 ? 1 : 0);
+  bs->is_committed = !(cfg->flags & BOOT_F_FIRST_BOOT);
+  return true;
+}
+
+bool mgos_upd_boot_set_state(const struct mgos_upd_boot_state *bs) {
+  /* TODO(rojer): Implement. */
+  (void) bs;
+  return false;
 }
 
 void mgos_upd_boot_revert() {

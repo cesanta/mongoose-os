@@ -82,6 +82,18 @@ int mgos_upd_apply_update();
  */
 int mgos_upd_create_snapshot();
 
+struct mgos_upd_boot_state {
+  /* Slot that will be used to load firmware during next boot. */
+  int active_slot;
+  /* Whether the boot configuration is committed or not.
+   * Reboot with uncommitted configration reverts to revert_slot. */
+  bool is_committed;
+  /* Slot that will be used in case of revert, explicit or implicit. */
+  int revert_slot;
+};
+bool mgos_upd_boot_get_state(struct mgos_upd_boot_state *bs);
+bool mgos_upd_boot_set_state(const struct mgos_upd_boot_state *bs);
+/* Shortcuts for get and set */
 void mgos_upd_boot_commit();
 void mgos_upd_boot_revert();
 

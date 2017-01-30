@@ -26,9 +26,6 @@
  */
 struct update_context *s_ctx = NULL;
 
-/* Context for delayed commit after an update. */
-struct update_file_context *s_fctx = NULL;
-
 /* Must be provided externally, usually auto-generated. */
 extern const char *build_id;
 extern const char *build_version;
@@ -69,6 +66,11 @@ static void updater_abort(void *arg) {
 struct update_context *updater_context_create() {
   if (s_ctx != NULL) {
     CONSOLE_LOG(LL_ERROR, ("Update already in progress"));
+    return NULL;
+  }
+
+  if (!mgos_upd_is_committed()) {
+    CONSOLE_LOG(LL_ERROR, ("Previous update has not been committed yet"));
     return NULL;
   }
 
@@ -498,21 +500,13 @@ static int updater_process_int(struct update_context *ctx, const char *data,
       case US_FINALIZE: {
         ret = 1;
         ctx->status_msg = "Update applied, finalizing";
-        if (ctx->fctx.id > 0 || ctx->fctx.commit_timeout > 0) {
-          /* Write file state */
-          if (ctx->fctx.commit_timeout > 0) {
-            CONSOLE_LOG(LL_INFO, ("Update requires commit, timeout: %d",
-                                  ctx->fctx.commit_timeout));
-          }
-          LOG(LL_DEBUG, ("Writing update state to %s", UPDATER_CTX_FILE_NAME));
-          FILE *tmp_file = fopen(UPDATER_CTX_FILE_NAME, "w");
-          if (tmp_file == NULL ||
-              fwrite(&ctx->fctx, sizeof(ctx->fctx), 1, tmp_file) != 1) {
+        if (ctx->fctx.commit_timeout > 0) {
+          CONSOLE_LOG(LL_INFO, ("Update requires commit, timeout: %d",
+                                ctx->fctx.commit_timeout));
+          if (!mgos_upd_set_commit_timeout(ctx->fctx.commit_timeout)) {
             ctx->status_msg = "Cannot save update status";
-            ret = -1;
+            return -1;
           }
-          if (tmp_file) fclose(tmp_file);
-          if (ret < 0) return ret;
         }
         if ((ret = mgos_upd_finalize(ctx->dev_ctx)) < 0) {
           ctx->status_msg = mgos_upd_get_status_msg(ctx->dev_ctx);
@@ -670,34 +664,59 @@ cleanup:
 }
 
 bool mgos_upd_commit() {
-  if (s_fctx == NULL) return false;
+  if (mgos_upd_is_committed()) return false;
   CONSOLE_LOG(LL_INFO, ("Committing update"));
   mgos_upd_boot_commit();
-#if MGOS_ENABLE_UPDATER_RPC && MGOS_ENABLE_RPC
-  mgos_updater_rpc_finish(0, s_fctx->id, mg_mk_str(s_fctx->mg_rpc_src));
-#endif
-  free(s_fctx);
-  s_fctx = NULL;
+  remove(UPDATER_CTX_FILE_NAME);
   return true;
 }
 
+bool mgos_upd_is_committed() {
+  struct mgos_upd_boot_state s;
+  if (!mgos_upd_boot_get_state(&s)) return false;
+  return s.is_committed;
+}
+
 bool mgos_upd_revert(bool reboot) {
-  if (s_fctx == NULL) return false;
+  if (mgos_upd_is_committed()) return false;
   CONSOLE_LOG(LL_INFO, ("Reverting update"));
   mgos_upd_boot_revert();
-  free(s_fctx);
-  s_fctx = NULL;
   if (reboot) mgos_system_restart(0);
   return true;
 }
 
 void mgos_upd_watchdog_cb(void *arg) {
-  if (s_fctx != NULL) {
-    /* Timer fired and updtae has not been committed. Revert! */
+  if (!mgos_upd_is_committed()) {
+    /* Timer fired and update has not been committed. Revert! */
     CONSOLE_LOG(LL_ERROR, ("Update commit timeout expired"));
     mgos_upd_revert(true /* reboot */);
   }
   (void) arg;
+}
+
+int mgos_upd_get_commit_timeout() {
+  size_t len;
+  char *data = cs_read_file(UPDATER_CTX_FILE_NAME, &len);
+  if (data == NULL) return 0;
+  struct update_file_context *fctx = (struct update_file_context *) data;
+  LOG(LL_INFO, ("Update state: %d", fctx->commit_timeout));
+  int res = fctx->commit_timeout;
+  free(data);
+  return res;
+}
+
+bool mgos_upd_set_commit_timeout(int commit_timeout) {
+  bool ret = false;
+  LOG(LL_DEBUG, ("Writing update state to %s", UPDATER_CTX_FILE_NAME));
+  FILE *fp = fopen(UPDATER_CTX_FILE_NAME, "w");
+  if (fp == NULL) return false;
+  struct update_file_context fctx;
+  fctx.commit_timeout = commit_timeout;
+  if (fwrite(&fctx, sizeof(fctx), 1, fp) == 1) {
+    ret = true;
+  }
+  fclose(fp);
+  return ret;
 }
 
 void mgos_upd_boot_finish(bool is_successful, bool is_first) {
@@ -707,38 +726,20 @@ void mgos_upd_boot_finish(bool is_successful, bool is_first) {
    * If this was the first boot after an update, this will revert it.
    */
   LOG(LL_DEBUG, ("%d %d", is_successful, is_first));
+  if (!is_first) return;
   if (!is_successful) {
     mgos_upd_boot_revert(true /* reboot */);
     /* Not reached */
     return;
   }
   /* We booted. Now see if we have any special instructions. */
-  size_t len;
-  char *data = cs_read_file(UPDATER_CTX_FILE_NAME, &len);
-  if (data != NULL) {
-    struct update_file_context *fctx = (struct update_file_context *) data;
-    LOG(LL_INFO, ("Update state: %lld %d %s", fctx->id, fctx->commit_timeout,
-                  fctx->mg_rpc_src));
-    if (is_first) {
-      s_fctx = fctx;
-      data = NULL;
-      if (fctx->commit_timeout > 0) {
-        CONSOLE_LOG(LL_INFO, ("Arming commit watchdog for %d seconds",
-                              fctx->commit_timeout));
-        mgos_set_timer(fctx->commit_timeout * 1000, 0 /* repeat */,
-                       mgos_upd_watchdog_cb, NULL);
-      } else {
-        mgos_upd_commit();
-      }
-    } else {
-/* This is a successful boot after a reverted update. */
-#if MGOS_ENABLE_UPDATER_RPC && MGOS_ENABLE_RPC
-      mgos_updater_rpc_finish(-1, fctx->id, mg_mk_str(fctx->mg_rpc_src));
-#endif
-    }
-    remove(UPDATER_CTX_FILE_NAME);
-    if (data != NULL) free(data);
-  } else if (is_first) {
-    mgos_upd_boot_commit();
+  int commit_timeout = mgos_upd_get_commit_timeout();
+  if (commit_timeout > 0) {
+    CONSOLE_LOG(LL_INFO,
+                ("Arming commit watchdog for %d seconds", commit_timeout));
+    mgos_set_timer(commit_timeout * 1000, 0 /* repeat */, mgos_upd_watchdog_cb,
+                   NULL);
+  } else {
+    mgos_upd_commit();
   }
 }

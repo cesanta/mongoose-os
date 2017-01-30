@@ -252,6 +252,7 @@ static bool set_update_status(int old_slot, int new_slot, bool first_boot) {
     goto cleanup;
   }
   LOG(LL_DEBUG, ("New status: %08x", val));
+  g_boot_status = val;
   ret = true;
 
 cleanup:
@@ -318,8 +319,23 @@ int mgos_upd_create_snapshot() {
   return -1;
 }
 
+bool mgos_upd_boot_get_state(struct mgos_upd_boot_state *bs) {
+  memset(bs, 0, sizeof(*bs));
+  bs->active_slot = MGOS_UPDATE_NEW_SLOT(g_boot_status);
+  bs->revert_slot = MGOS_UPDATE_OLD_SLOT(g_boot_status);
+  bs->is_committed = (g_boot_status & MGOS_UPDATE_FIRST_BOOT) != 0;
+  return true;
+}
+
+bool mgos_upd_boot_set_state(const struct mgos_upd_boot_state *bs) {
+  return (set_update_status(bs->active_slot, bs->revert_slot,
+                            !bs->is_committed /* first_boot */) &&
+          esp32_set_boot_slot(bs->active_slot));
+}
+
 void mgos_upd_boot_revert() {
   int slot = MGOS_UPDATE_OLD_SLOT(g_boot_status);
+  if (slot == MGOS_UPDATE_NEW_SLOT(g_boot_status)) return;
   LOG(LL_ERROR, ("Reverting to slot %d", slot));
   set_update_status(slot, slot, false /* first_boot */);
   esp32_set_boot_slot(slot);
