@@ -16,7 +16,11 @@ USE_LWIP ?= 1
 
 include $(MGOS_PATH)/fw/src/features.mk
 
-TARGET ?= F746ZG
+TARGET ?=
+
+ifeq "${TARGET}" ""
+$(error Please, specify TARGET. Possible values are NUCLEO-F746ZG or DISCO-F746G)
+endif
 
 APP ?= mongoose-os
 APP_PLATFORM = stm32
@@ -40,6 +44,11 @@ PLATFORM_SDK_ROOT ?= /opt/stm32-sdks/
 # PLATFORM_SDK_ROOT ?= $(MGOS_PATH)/docker/stm32/stm32-sdks/
 
 PLATFORM_SDK_PATH = ${PLATFORM_SDK_ROOT}/${TARGET}
+
+ifeq "$(wildcard $(PLATFORM_SDK_PATH))" ""
+$(error Invalid TARGET. Possible values are NUCLEO-F746ZG or DISCO-F746G)
+endif
+
 PLATFORM_CFLAGS = $(shell cat $(PLATFORM_SDK_PATH)/cflags)
 
 CC = arm-none-eabi-gcc
@@ -128,9 +137,10 @@ FW_PARTS = boot:src=$(APP_BIN),addr=0
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
 
 OBJECTS := $(addprefix $(BUILD_DIR)/,$(SRCS:=.o))
-CFLAGS ?= -Os -fno-common -ffunction-sections -fdata-sections \
+CFLAGS ?= -DSTM32 -Os -fno-common -ffunction-sections -fdata-sections \
           $(PLATFORM_CFLAGS) $(MGOS_FEATURES) \
-          -DMGOS_MAX_NUM_UARTS=2 -DFS_SIZE=${FS_SIZE}
+          -DMGOS_MAX_NUM_UARTS=2 -DFS_SIZE=${FS_SIZE} \
+          -Wall -Werror -Wno-error=parentheses
 
 LDFLAGS ?=
 

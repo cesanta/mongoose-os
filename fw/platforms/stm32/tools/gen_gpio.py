@@ -2,7 +2,7 @@
 #
 # STM32<->mos GPIOs mapping generator
 #
-# usage: gen_gpio.py <general HAL file> <gpip HAL file> <output path>
+# usage: gen_gpio.py <general HAL file> <gpio HAL file> <output path>
 #
 # This script generates table for mapping STM32 pins (which are combination
 # of GPIO-port_address and GPIO_address-within-port) to MOS pins (aka just

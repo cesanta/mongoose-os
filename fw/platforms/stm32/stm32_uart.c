@@ -37,7 +37,7 @@ void uart_dprintf(char *fmt, ...) {
   va_start(ap, fmt);
   int result = vsnprintf(buf, sizeof(buf), fmt, ap);
   va_end(ap);
-  UART_Transmit(&UART2, buf, result, UART_TRANSMIT_TIMEOUT);
+  UART_Transmit(&UART2, (uint8_t *) buf, result, UART_TRANSMIT_TIMEOUT);
 }
 
 static void move_rbuf_data(cs_rbuf_t *dst, cs_rbuf_t *src) {

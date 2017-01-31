@@ -114,6 +114,8 @@ bool mgos_gpio_dev_set_int_mode(int pin, enum mgos_gpio_int_mode mode) {
   }
 
   HAL_GPIO_Init(def->port, &def->init_info);
+
+  return true;
 }
 
 bool mgos_gpio_enable_int(int pin) {
@@ -124,6 +126,8 @@ bool mgos_gpio_enable_int(int pin) {
   HAL_NVIC_SetPriority(def->exti, 0, 0);
   HAL_NVIC_EnableIRQ(def->exti);
   def->intr_enabled = 1;
+
+  return true;
 }
 
 bool mgos_gpio_disable_int(int pin) {
@@ -133,6 +137,8 @@ bool mgos_gpio_disable_int(int pin) {
   }
   HAL_NVIC_DisableIRQ(def->exti);
   def->intr_enabled = 0;
+
+  return true;
 }
 
 void mgos_gpio_irq_handler(IRQn_Type irq) {
