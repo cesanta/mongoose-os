@@ -392,6 +392,9 @@ static void mg_rpc_ev_handler(struct mg_rpc_channel *ch,
       }
       if (remove) {
         SLIST_REMOVE(&c->channels, ci, mg_rpc_channel_info, channels);
+        if (ci->dst.p != NULL) free((void *) ci->dst.p);
+        memset(ci, 0, sizeof(*ci));
+        free(ci);
       }
       break;
     }
