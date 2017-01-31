@@ -244,6 +244,7 @@ clean:
 static void mgos_fs_remove_handler(struct mg_rpc_request_info *ri, void *cb_arg,
                                    struct mg_rpc_frame_info *fi,
                                    struct mg_str args) {
+  int ret = 0;
   char *filename = NULL;
 
   if (!fi->channel_is_trusted) {
@@ -261,7 +262,7 @@ static void mgos_fs_remove_handler(struct mg_rpc_request_info *ri, void *cb_arg,
     goto clean;
   }
 
-  int ret = remove(filename);
+  ret = remove(filename);
   LOG(LL_INFO, ("Remove %s -> %d", filename, ret));
   if (ret != 0) {
     mg_rpc_send_errorf(ri, 500, "remove failed");

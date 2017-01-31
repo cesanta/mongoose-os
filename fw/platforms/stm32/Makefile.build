@@ -149,7 +149,7 @@ LDLIBS = -Wl,--start-group
 ifeq "${USE_LWIP}" "1"
 CFLAGS += -DMG_NET_IF=3 -D__CPU_H__ -DMG_LWIP=1 -DLWIP_TIMEVAL_PRIVATE=0 \
           -DLWIP_TCP_KEEPALIVE=1 -DMG_SSL_IF=MG_SSL_IF_MBEDTLS \
-          -DMG_ENABLE_SSL
+          -DMGOS_APP=\"$(APP)\" -DMG_ENABLE_SSL
 LDFLAGS += -L$(PLATFORM_SDK_PATH)/CS/mbedtls/library
 LDLIBS += -lmbedcrypto -lmbedtls -lmbedx509
 endif

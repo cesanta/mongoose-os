@@ -14,7 +14,7 @@ BIN_DIR ?= ./bin
 BUILD_DIR ?= ./.build
 GEN_DIR ?= ./.build/gen
 FROZEN_PATH ?= $(MGOS_PATH)/frozen
-OUTAPP ?= mongoose-os
+APP ?= mongoose-os
 VERBOSE ?= 0
 VPATH = $(SRC_PATH) $(MONGOOSE_PATH) $(FROZEN_PATH) $(COMMON_PATH) $(COMMON_PATH)/mg_rpc
 SSL ?= None
@@ -31,6 +31,7 @@ MGOS_ENABLE_UPDATER_RPC = 0
 MGOS_ENABLE_DNS_SD = 0  # Not supported on POSIX
 MGOS_ENABLE_I2C ?= 1
 MGOS_ENABLE_I2C_GPIO = 0
+MGOS_ENABLE_SYS_SERVICE = 0
 MGOS_ENABLE_WIFI = 0
 
 # For FW_VERSION, MG_FEATURES_TINY
@@ -64,7 +65,7 @@ CFLAGS ?= -std=c99 -fno-inline -W -Wall -Wundef -Werror -g -Wno-unused-function 
           -D_GNU_SOURCE \
           $(MGOS_FEATURES) $(MGOS_POSIX_FEATURES) \
           $(MONGOOSE_FEATURES) \
-          -DFW_ARCHITECTURE=$(BUILD_PLATFORM) \
+          -DMGOS_APP=\"$(APP)\" -DFW_ARCHITECTURE=$(BUILD_PLATFORM) \
           $(CFLAGS_EXTRA)
 
 ifeq "$(DEBUG)" "1"
@@ -167,7 +168,7 @@ $(vecho) "CC    $< -> $@"
 $(Q) $(CC_WRAPPER) $(CC) -MD $(INCDIRS) $(CFLAGS) $1 -c $< -o $@
 endef
 
-all: $(BIN_DIR) $(BUILD_DIR) $(BIN_DIR)/$(OUTAPP) fs
+all: $(BIN_DIR) $(BUILD_DIR) $(BIN_DIR)/$(APP) fs
 
 include $(MGOS_PATH)/fw/src/sys_config.mk
 
@@ -199,7 +200,7 @@ $(BUILD_INFO_C): $(APP_OBJS)
 
 -include $(wildcard $(BUILD_DIR)/*.d)
 
-$(BIN_DIR)/$(OUTAPP): $(BIN_DIR) $(OBJS)
+$(BIN_DIR)/$(APP): $(BIN_DIR) $(OBJS)
 	@echo "LD $@"
 	$(Q) $(CC_WRAPPER) $(CC) $(OBJS) $(LIBS) $(LDFLAGS) -o $@
 

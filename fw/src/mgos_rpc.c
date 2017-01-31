@@ -9,6 +9,7 @@
 #if MGOS_ENABLE_RPC
 
 #include "fw/src/mgos_config.h"
+#include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_mongoose.h"
 #include "fw/src/mgos_rpc.h"
 #include "fw/src/mgos_rpc_channel_mqtt.h"
@@ -101,6 +102,24 @@ static void mgos_sys_reboot_handler(struct mg_rpc_request_info *ri,
   ri = NULL;
   (void) cb_arg;
 }
+
+static void mgos_sys_get_info_handler(struct mg_rpc_request_info *ri,
+                                      void *cb_arg,
+                                      struct mg_rpc_frame_info *fi,
+                                      struct mg_str args) {
+  const struct sys_ro_vars *v = get_ro_vars();
+  mg_rpc_send_responsef(ri,
+                        "{app: %Q, version: %Q, id: %Q, mac: %Q, "
+                        "ram_size: %u, ram_free: %u, ram_min_free: %u, "
+                        "fs_size: %u, fs_free: %u}",
+                        MGOS_APP, v->fw_version, v->fw_id, v->mac_address,
+                        mgos_get_heap_size(), mgos_get_free_heap_size(),
+                        mgos_get_min_free_heap_size(), mgos_get_fs_size(),
+                        mgos_get_free_fs_size());
+  (void) cb_arg;
+  (void) args;
+  (void) fi;
+}
 #endif
 
 enum mgos_init_result mgos_rpc_init(void) {
@@ -168,6 +187,8 @@ enum mgos_init_result mgos_rpc_init(void) {
 
 #if MGOS_ENABLE_SYS_SERVICE
   mg_rpc_add_handler(c, mg_mk_str("Sys.Reboot"), mgos_sys_reboot_handler, NULL);
+  mg_rpc_add_handler(c, mg_mk_str("Sys.GetInfo"), mgos_sys_get_info_handler,
+                     NULL);
 #endif
 
   return MGOS_INIT_OK;

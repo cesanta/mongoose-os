@@ -153,6 +153,18 @@ void fs_umount(void) {
   SPIFFS_unmount(&fs);
 }
 
+size_t mgos_get_fs_size(void) {
+  u32_t total, used;
+  if (SPIFFS_info(&fs, &total, &used) != SPIFFS_OK) return 0;
+  return total;
+}
+
+size_t mgos_get_free_fs_size(void) {
+  u32_t total, used;
+  if (SPIFFS_info(&fs, &total, &used) != SPIFFS_OK) return 0;
+  return total - used;
+}
+
 int _open_r(struct _reent *r, const char *filename, int flags, int mode) {
   int res = spiffs_vfs_open(&fs, filename, flags, mode);
   if (res >= 0) {

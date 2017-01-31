@@ -18,6 +18,18 @@
 
 struct mount_info s_fsm;
 
+size_t mgos_get_fs_size(void) {
+  u32_t total, used;
+  if (SPIFFS_info(&s_fsm.fs, &total, &used) != SPIFFS_OK) return 0;
+  return total;
+}
+
+size_t mgos_get_free_fs_size(void) {
+  u32_t total, used;
+  if (SPIFFS_info(&s_fsm.fs, &total, &used) != SPIFFS_OK) return 0;
+  return total - used;
+}
+
 int fs_spiffs_open(const char *pathname, int flags, mode_t mode) {
   struct mount_info *m = &s_fsm;
   if (!s_fsm.valid) return set_errno(ENXIO);

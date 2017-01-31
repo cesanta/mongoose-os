@@ -119,6 +119,24 @@ enum mgos_init_result esp32_fs_mount(const esp_partition_t *part,
   return MGOS_INIT_OK;
 }
 
+size_t mgos_get_fs_size(void) {
+  u32_t total, used;
+  if (s_mount == NULL ||
+      SPIFFS_info(&s_mount->fs, &total, &used) != SPIFFS_OK) {
+    return 0;
+  }
+  return total;
+}
+
+size_t mgos_get_free_fs_size(void) {
+  u32_t total, used;
+  if (s_mount == NULL ||
+      SPIFFS_info(&s_mount->fs, &total, &used) != SPIFFS_OK) {
+    return 0;
+  }
+  return total - used;
+}
+
 static int spiffs_open_p(void *ctx, const char *path, int flags, int mode) {
   return spiffs_vfs_open(&((struct mount_info *) ctx)->fs, path, flags, mode);
 }

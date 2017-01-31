@@ -17,6 +17,11 @@
 #include "fw/src/mgos_sys_config.h"
 #include "fw/platforms/esp32/src/esp32_fs.h"
 
+size_t mgos_get_heap_size(void) {
+  /* ESP-IDF does not have a function for this. TODO(rojer): Implement. */
+  return 0;
+}
+
 size_t mgos_get_free_heap_size(void) {
   return xPortGetFreeHeapSize();
 }

@@ -114,6 +114,18 @@ int stm32_spiffs_init() {
   return 0;
 }
 
+size_t mgos_get_fs_size(void) {
+  u32_t total, used;
+  if (SPIFFS_info(&fs, &total, &used) != SPIFFS_OK) return 0;
+  return total;
+}
+
+size_t mgos_get_free_fs_size(void) {
+  u32_t total, used;
+  if (SPIFFS_info(&fs, &total, &used) != SPIFFS_OK) return 0;
+  return total - used;
+}
+
 static void set_errno(int res) {
   if (res < 0) {
     errno = SPIFFS_errno(&fs);

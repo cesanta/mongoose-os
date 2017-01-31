@@ -30,6 +30,12 @@ size_t mgos_get_min_free_heap_size(void);
 /* Get filesystem memory usage */
 size_t mgos_get_fs_memory_usage(void);
 
+/* Get filesystem size. */
+size_t mgos_get_fs_size(void);
+
+/* Get filesystem free space. */
+size_t mgos_get_free_fs_size(void);
+
 /* Feed watchdog */
 void mgos_wdt_feed(void);
 

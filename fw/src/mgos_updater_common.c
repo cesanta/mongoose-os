@@ -817,5 +817,3 @@ void mgos_upd_set_event_cb(mgos_upd_event_cb cb, void *cb_arg) {
   s_event_cb = cb;
   s_event_cb_arg = cb_arg;
 }
-typedef bool (*mgos_upd_event_cb)(enum mgos_upd_event ev, const void *ev_data,
-                                  void *user_data);
