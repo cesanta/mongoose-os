@@ -36,17 +36,11 @@ rboot_config ICACHE_FLASH_ATTR rboot_get_config(void) {
 // so the rest of the sector can be used to store user data
 // updates checksum automatically (if enabled)
 bool ICACHE_FLASH_ATTR rboot_set_config(rboot_config *conf) {
-	uint8 *buffer;
+	uint32_t buffer[sizeof(*conf) / sizeof(uint32_t) + 1];
 #ifdef BOOT_CONFIG_CHKSUM
 	uint8 chksum;
 	uint8 *ptr;
 #endif
-
-	buffer = (uint8*)os_malloc(SECTOR_SIZE);
-	if (!buffer) {
-		//os_printf("No ram!\r\n");
-		return false;
-	}
 
 #ifdef BOOT_CONFIG_CHKSUM
 	chksum = CHKSUM_INIT;
@@ -56,12 +50,12 @@ bool ICACHE_FLASH_ATTR rboot_set_config(rboot_config *conf) {
 	conf->chksum = chksum;
 #endif
 
-	spi_flash_read(BOOT_CONFIG_SECTOR * SECTOR_SIZE, (uint32*)buffer, SECTOR_SIZE);
-	memcpy(buffer, conf, sizeof(rboot_config));
-	spi_flash_erase_sector(BOOT_CONFIG_SECTOR);
-	spi_flash_write(BOOT_CONFIG_SECTOR * SECTOR_SIZE, (uint32*)buffer, SECTOR_SIZE);
-
-	os_free(buffer);
+	memset(buffer, 0xff, sizeof(buffer));
+	memcpy(buffer, conf, sizeof(*conf));
+	if (spi_flash_erase_sector(BOOT_CONFIG_SECTOR) != SPI_FLASH_RESULT_OK ||
+		spi_flash_write(BOOT_CONFIG_SECTOR * SECTOR_SIZE, buffer, sizeof(buffer)) != SPI_FLASH_RESULT_OK) {
+		return false;
+	}
 	return true;
 }
 
