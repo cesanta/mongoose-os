@@ -228,3 +228,7 @@ const char *mgos_get_http_message_param(const struct http_message *m,
   ((char *) s->p)[s->len] = '\0';
   return s->p;
 }
+
+int mgos_peek(const void *ptr, int offset) {
+  return ((unsigned char *) ptr)[offset];
+}

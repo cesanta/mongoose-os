@@ -60,6 +60,9 @@ enum http_message_param {
 const char *mgos_get_http_message_param(const struct http_message *,
                                         enum http_message_param);
 
+/* Get byte value at given offset */
+int mgos_peek(const void *ptr, int offset);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
