@@ -20,15 +20,15 @@ type inboundHttpCodec struct {
 	req           *http.Request
 	rw            http.ResponseWriter
 	cloudHost     string
-	in            *frame.FrameV1V2
-	out           []*frame.FrameV1V2
+	in            *frame.Frame
+	out           []*frame.Frame
 	closeNotifier chan struct{}
 	closeOnce     sync.Once
 	isSingleShot  bool
 }
 
 func InboundHTTP(rw http.ResponseWriter, req *http.Request, cloudHost string) Codec {
-	f := &frame.FrameV1V2{}
+	f := &frame.Frame{}
 	c := &inboundHttpCodec{
 		req:           req,
 		rw:            rw,
@@ -115,7 +115,7 @@ func (c *inboundHttpCodec) String() string {
 	return fmt.Sprintf("[inboundHttpCodec from %s]", c.req.RemoteAddr)
 }
 
-func (c *inboundHttpCodec) Recv(ctx context.Context) (*frame.FrameV1V2, error) {
+func (c *inboundHttpCodec) Recv(ctx context.Context) (*frame.Frame, error) {
 	c.Lock()
 	defer c.Unlock()
 	if c.in == nil {
@@ -126,7 +126,7 @@ func (c *inboundHttpCodec) Recv(ctx context.Context) (*frame.FrameV1V2, error) {
 	return f, nil
 }
 
-func (c *inboundHttpCodec) Send(ctx context.Context, f *frame.FrameV1V2) error {
+func (c *inboundHttpCodec) Send(ctx context.Context, f *frame.Frame) error {
 	glog.V(2).Infof("%s: Sending %+v", c, f)
 	select {
 	case <-c.closeNotifier:

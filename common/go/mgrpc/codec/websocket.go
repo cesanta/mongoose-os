@@ -82,15 +82,15 @@ func ParseEncodingExtension(s string) (WSEncoding, error) {
 }
 
 func jsonMarshal(v interface{}) ([]byte, byte, error) {
-	if _, ok := v.(*frame.FrameV1V2); !ok {
+	if _, ok := v.(*frame.Frame); !ok {
 		return nil, websocket.TextFrame, errors.Errorf("only clubby frames are supported, got %T", v)
 	}
-	b, err := frame.MarshalJSON(v.(*frame.FrameV1V2))
+	b, err := frame.MarshalJSON(v.(*frame.Frame))
 	return b, websocket.TextFrame, err
 }
 
 func jsonUnmarshal(data []byte, payloadType byte, v interface{}) error {
-	f12, ok := v.(*frame.FrameV1V2)
+	f12, ok := v.(*frame.Frame)
 	if !ok {
 		return errors.Errorf("only clubby frames are supported, got %T", v)
 	}
@@ -102,7 +102,7 @@ func jsonUnmarshal(data []byte, payloadType byte, v interface{}) error {
 }
 
 func ubjsonMarshal(v interface{}) ([]byte, byte, error) {
-	if _, ok := v.(*frame.FrameV1V2); !ok {
+	if _, ok := v.(*frame.Frame); !ok {
 		return nil, websocket.TextFrame, errors.Errorf("only clubby frames are supported, got %T", v)
 	}
 	b, err := ubjson.Marshal(v)
@@ -110,7 +110,7 @@ func ubjsonMarshal(v interface{}) ([]byte, byte, error) {
 }
 
 func ubjsonUnmarshal(data []byte, payloadType byte, v interface{}) error {
-	f12, ok := v.(*frame.FrameV1V2)
+	f12, ok := v.(*frame.Frame)
 	if !ok {
 		return errors.Errorf("only clubby frames are supported, got %T", v)
 	}
@@ -124,7 +124,7 @@ func ubjsonUnmarshal(data []byte, payloadType byte, v interface{}) error {
 }
 
 func combinedUnmarshal(data []byte, payloadType byte, v interface{}) error {
-	f12, ok := v.(*frame.FrameV1V2)
+	f12, ok := v.(*frame.Frame)
 	if !ok {
 		return errors.Errorf("only clubby frames are supported, got %T", v)
 	}
@@ -158,7 +158,6 @@ func WebSocket(conn *websocket.Conn) Codec {
 		closeNotify: make(chan struct{}),
 		conn:        conn,
 		codec:       websocket.Codec{Marshal: jsonMarshal, Unmarshal: jsonUnmarshal},
-		version:     0, // Auto-detect
 	}
 	exts := conn.Config().OutboundExtensions
 	if conn.IsClientConn() {
@@ -201,7 +200,6 @@ type wsCodec struct {
 	conn        *websocket.Conn
 	closeOnce   sync.Once
 	codec       websocket.Codec
-	version     int
 }
 
 func (c *wsCodec) String() string {
@@ -212,8 +210,8 @@ func (c *wsCodec) String() string {
 	return fmt.Sprintf("[wsCodec from %s]", addr)
 }
 
-func (c *wsCodec) Recv(ctx context.Context) (*frame.FrameV1V2, error) {
-	var f12 frame.FrameV1V2
+func (c *wsCodec) Recv(ctx context.Context) (*frame.Frame, error) {
+	var f12 frame.Frame
 	if err := c.codec.Receive(c.conn, &f12); err != nil {
 		glog.V(2).Infof("%s Recv(): %s", c, err)
 		c.Close()
@@ -222,7 +220,7 @@ func (c *wsCodec) Recv(ctx context.Context) (*frame.FrameV1V2, error) {
 	return &f12, nil
 }
 
-func (c *wsCodec) Send(ctx context.Context, f12 *frame.FrameV1V2) error {
+func (c *wsCodec) Send(ctx context.Context, f12 *frame.Frame) error {
 	return errors.Trace(c.codec.Send(c.conn, f12))
 }
 

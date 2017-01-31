@@ -49,51 +49,6 @@ type Error struct {
 	Message string `json:"message,omitempty"`
 }
 
-// Frame is a basic data structure that encapsulates commands and responses on the wire.
-type FrameV1V2 struct {
-	// Version denotes the protocol version in use. Must be set to 1.
-	Version int `json:"v,omitempty"`
-
-	// Src is the ID of the sender.
-	Src string `json:"src,omitempty"`
-
-	// Dst is the ID of the recipient.
-	Dst string `json:"dst,omitempty"`
-
-	// Key should contains pre-shared key if client certificates are not used.
-	Key string `json:"key,omitempty"`
-
-	// V1
-
-	// Cmds contains commands.
-	Cmds []*Command `json:"cmds,omitempty"`
-
-	// Resp contains responses to previous commands.
-	Resp []*Response `json:"resp,omitempty"`
-
-	// V2
-	ID int64 `json:"id,omitempty"`
-
-	// Request
-	Method string             `json:"method,omitempty"`
-	Args   ourjson.RawMessage `json:"args,omitempty"`
-	// Timestamp (as number of seconds since Epoch) of when the command result is no longer relevant.
-	Deadline int64 `json:"deadline,omitempty"`
-	// Number of seconds after reception of the command after when the command result is no longer relevant.
-	Timeout int64 `json:"timeout,omitempty"`
-
-	// Response
-	Result ourjson.RawMessage `json:"result,omitempty"`
-	Error  *Error             `json:"error,omitempty"`
-
-	Trace *Trace `json:"trace,omitempty"`
-
-	// Size hint, if present, gives approximate size of the frame in memory.
-	SizeHint int `json:"-"`
-}
-
-// TODO(imax): document the rest of structs.
-
 type Command struct {
 	Cmd  string             `json:"cmd"`
 	ID   int64              `json:"id,omitempty"`
@@ -141,19 +96,14 @@ func (f *Frame) IsRequest() bool {
 	return f.Method != ""
 }
 
-func (f12 *FrameV1V2) IsRequest() bool {
-	return f12.Method != ""
-}
-
 const frameSizeStringifyLimit = 2048
 
-func (f *FrameV1V2) String() string {
+func (f *Frame) String() string {
 	buf := bytes.NewBuffer(nil)
 	lim := limitedwriter.New(buf, frameSizeStringifyLimit) // in case the hint is missing or wrong
-
 	fmt.Fprintf(lim, "%q -> %q v=%d id=%d ", f.Src, f.Dst, f.Version, f.ID)
 	if f.SizeHint < frameSizeStringifyLimit {
-		if f.Method != "" {
+		if f.IsRequest() {
 			fmt.Fprintf(lim, "%s args=%v %d", f.Method, f.Args, f.SizeHint)
 		} else {
 			fmt.Fprintf(lim, "result=%v error=%v %d", f.Result, f.Error, f.SizeHint)
@@ -166,24 +116,6 @@ func (f *FrameV1V2) String() string {
 		}
 	}
 	return buf.String()
-}
-
-func (f *Frame) String() string {
-	r := fmt.Sprintf("%q -> %q v=%d id=%d ", f.Src, f.Dst, f.Version, f.ID)
-	if f.SizeHint < frameSizeStringifyLimit {
-		if f.IsRequest() {
-			r += fmt.Sprintf("%s args=%v %d", f.Method, f.Args, f.SizeHint)
-		} else {
-			r += fmt.Sprintf("result=%v error=%v %d", f.Result, f.Error, f.SizeHint)
-		}
-	} else {
-		if f.IsRequest() {
-			r += fmt.Sprintf("%s args=(too big) %d", f.Method, f.SizeHint)
-		} else {
-			r += fmt.Sprintf("result=(too big) error=%v %d", f.Error, f.SizeHint)
-		}
-	}
-	return r
 }
 
 func (c Command) String() string {
@@ -216,7 +148,6 @@ func (r Response) String() string {
 
 func NewRequestFrame(src string, dst string, key string, cmd *Command) *Frame {
 	return &Frame{
-		Version:  2,
 		Src:      src,
 		Dst:      dst,
 		Key:      key,
@@ -264,72 +195,6 @@ func NewResponseFromFrame(f *Frame) *Response {
 	return r
 }
 
-func NewFrameV1V2(f *Frame, v int) *FrameV1V2 {
-	f12 := &FrameV1V2{
-		Version:  v,
-		Src:      f.Src,
-		Dst:      f.Dst,
-		Key:      f.Key,
-		SizeHint: f.SizeHint,
-	}
-	if f.IsRequest() {
-		if f12.Version == 1 {
-			f12.Cmds = []*Command{NewCommandFromFrame(f)}
-		} else {
-			f12.ID = f.ID
-			f12.Method = f.Method
-			f12.Args = f.Args
-			f12.Deadline = f.Deadline
-			f12.Timeout = f.Timeout
-		}
-	} else {
-		if f12.Version == 1 {
-			f12.Resp = []*Response{NewResponseFromFrame(f)}
-		} else {
-			f12.ID = f.ID
-			f12.Result = f.Result
-			f12.Error = f.Error
-		}
-	}
-	return f12
-}
-
-func ParseFrameV1V2(f12 *FrameV1V2) ([]*Frame, error) {
-	ff := []*Frame{}
-	if f12.Version == 1 {
-		if len(f12.Cmds) == 0 && len(f12.Resp) == 0 {
-			return nil, fmt.Errorf("No commands or responses")
-		}
-		for _, cmd := range f12.Cmds {
-			ff = append(ff, NewRequestFrame(f12.Src, f12.Dst, f12.Key, cmd))
-		}
-		for _, resp := range f12.Resp {
-			ff = append(ff, NewResponseFrame(f12.Src, f12.Dst, f12.Key, resp))
-		}
-	} else {
-		if f12.Method == "" && f12.ID == 0 {
-			return nil, fmt.Errorf("Not a valid request or response")
-		}
-		f := &Frame{
-			Version:  2,
-			Src:      f12.Src,
-			Dst:      f12.Dst,
-			Key:      f12.Key,
-			ID:       f12.ID,
-			Method:   f12.Method,
-			Args:     f12.Args,
-			Deadline: f12.Deadline,
-			Timeout:  f12.Timeout,
-			Result:   f12.Result,
-			Error:    f12.Error,
-			Trace:    f12.Trace,
-			SizeHint: f12.SizeHint,
-		}
-		ff = append(ff, f)
-	}
-	return ff, nil
-}
-
-func MarshalJSON(f *FrameV1V2) ([]byte, error) {
+func MarshalJSON(f *Frame) ([]byte, error) {
 	return ourjson.MarshalJSONNoHTMLEscape(f)
 }

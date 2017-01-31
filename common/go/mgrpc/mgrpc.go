@@ -220,7 +220,7 @@ func (r *mgRPCImpl) Disconnect(ctx context.Context) error {
 
 func (r *mgRPCImpl) recvLoop(ctx context.Context, c codec.Codec) {
 	for {
-		f12, err := c.Recv(ctx)
+		f, err := c.Recv(ctx)
 		if err != nil {
 			glog.Infof("error returned from codec Recv: %s, breaking out of the recvLoop", err)
 			r.reqsLock.Lock()
@@ -233,29 +233,22 @@ func (r *mgRPCImpl) recvLoop(ctx context.Context, c codec.Codec) {
 		}
 
 		if glog.V(2) {
-			s := fmt.Sprintf("%+v", f12)
+			s := fmt.Sprintf("%+v", f)
 			if len(s) > 1024 {
 				s = fmt.Sprintf("%s... (%d)", s[:1024], len(s))
 			}
 			glog.V(2).Infof("Rec'd %s", s)
 		}
 
-		frames, err := frame.ParseFrameV1V2(f12)
-		if err != nil {
-			glog.V(2).Infof("failed to parse frame: %s", err)
+		resp := frame.NewResponseFromFrame(f)
+		r.reqsLock.Lock()
+		if req, ok := r.reqs[resp.ID]; ok {
+			req.respChan <- resp
+			delete(r.reqs, resp.ID)
+		} else {
+			glog.Infof("ignoring unsolicited response: %v", resp)
 		}
-
-		for _, f := range frames {
-			resp := frame.NewResponseFromFrame(f)
-			r.reqsLock.Lock()
-			if req, ok := r.reqs[resp.ID]; ok {
-				req.respChan <- resp
-				delete(r.reqs, resp.ID)
-			} else {
-				glog.Infof("ignoring unsolicited response: %v", resp)
-			}
-			r.reqsLock.Unlock()
-		}
+		r.reqsLock.Unlock()
 	}
 }
 
@@ -277,8 +270,7 @@ func (r *mgRPCImpl) Call(
 	r.reqsLock.Unlock()
 
 	f := frame.NewRequestFrame(r.opts.localID, dst, "", cmd)
-	f12 := frame.NewFrameV1V2(f, 2)
-	r.codec.Send(ctx, f12)
+	r.codec.Send(ctx, f)
 
 	select {
 	case resp := <-respChan:

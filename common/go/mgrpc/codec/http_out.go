@@ -21,7 +21,7 @@ type outboundHttpCodec struct {
 	closeNotifier chan struct{}
 	closeOnce     sync.Once
 	url           string
-	queue         []*frame.FrameV1V2
+	queue         []*frame.Frame
 	cond          *sync.Cond
 	client        *http.Client
 }
@@ -51,7 +51,7 @@ func (c *outboundHttpCodec) String() string {
 	return fmt.Sprintf("[outboundHttpCodec to %q]", c.url)
 }
 
-func (c *outboundHttpCodec) Send(ctx context.Context, f *frame.FrameV1V2) error {
+func (c *outboundHttpCodec) Send(ctx context.Context, f *frame.Frame) error {
 	select {
 	case <-c.closeNotifier:
 		return errors.Trace(io.EOF)
@@ -71,7 +71,7 @@ func (c *outboundHttpCodec) Send(ctx context.Context, f *frame.FrameV1V2) error 
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("server returned an error: %v", resp)
 	}
-	var rfs []*frame.FrameV1V2
+	var rfs []*frame.Frame
 	if err := json.NewDecoder(resp.Body).Decode(&rfs); err != nil {
 		// Return it from Recv?
 		return errors.Trace(err)
@@ -83,9 +83,9 @@ func (c *outboundHttpCodec) Send(ctx context.Context, f *frame.FrameV1V2) error 
 	return nil
 }
 
-func (c *outboundHttpCodec) Recv(ctx context.Context) (*frame.FrameV1V2, error) {
+func (c *outboundHttpCodec) Recv(ctx context.Context) (*frame.Frame, error) {
 	// Check if there's anything left in the queue.
-	var r *frame.FrameV1V2
+	var r *frame.Frame
 	c.Lock()
 	if len(c.queue) > 0 {
 		r, c.queue = c.queue[0], c.queue[1:]
@@ -95,7 +95,7 @@ func (c *outboundHttpCodec) Recv(ctx context.Context) (*frame.FrameV1V2, error) 
 		return r, nil
 	}
 	// Wait for stuff to arrive.
-	ch := make(chan *frame.FrameV1V2, 1)
+	ch := make(chan *frame.Frame, 1)
 	go func(ctx context.Context) {
 		c.Lock()
 		defer c.Unlock()
@@ -107,7 +107,7 @@ func (c *outboundHttpCodec) Recv(ctx context.Context) (*frame.FrameV1V2, error) 
 			}
 			c.cond.Wait()
 		}
-		var f *frame.FrameV1V2
+		var f *frame.Frame
 		f, c.queue = c.queue[0], c.queue[1:]
 		ch <- f // chan is buffered so we won't be stuck forever if the reader is gone
 	}(ctx)

@@ -78,7 +78,7 @@ func tailMatch(haystack, needle []byte) int {
 
 // frameFromRxBuf tries to get frame from rx buffer, returns a frame or nil if
 // there are no valid frames received.
-func (scc *streamConnectionCodec) frameFromRxBuf() (*frame.FrameV1V2, error) {
+func (scc *streamConnectionCodec) frameFromRxBuf() (*frame.Frame, error) {
 	var err error
 	var junk, frameData, remainder []byte
 	var junkLen, frameBegin, frameDataBegin, frameDataEnd, frameEnd int
@@ -158,7 +158,7 @@ func (scc *streamConnectionCodec) frameFromRxBuf() (*frame.FrameV1V2, error) {
 		}
 
 		// Try to parse frameData.
-		frame := &frame.FrameV1V2{SizeHint: len(frameData)}
+		frame := &frame.Frame{SizeHint: len(frameData)}
 		err = json.Unmarshal(frameData, frame)
 
 		if err != nil {
@@ -176,11 +176,11 @@ func (scc *streamConnectionCodec) frameFromRxBuf() (*frame.FrameV1V2, error) {
 	}
 }
 
-func (scc *streamConnectionCodec) Recv(ctx context.Context) (*frame.FrameV1V2, error) {
+func (scc *streamConnectionCodec) Recv(ctx context.Context) (*frame.Frame, error) {
 	scc.rxBufLock.Lock()
 	defer scc.rxBufLock.Unlock()
 	buf := make([]byte, 10000)
-	var frame *frame.FrameV1V2
+	var frame *frame.Frame
 	for {
 		var err error
 		for len(scc.rxBuf) > 0 && err != wantRead {
@@ -219,7 +219,7 @@ func (scc *streamConnectionCodec) Recv(ctx context.Context) (*frame.FrameV1V2, e
 	}
 }
 
-func (scc *streamConnectionCodec) Send(ctx context.Context, f *frame.FrameV1V2) error {
+func (scc *streamConnectionCodec) Send(ctx context.Context, f *frame.Frame) error {
 	frameData := []byte(streamFrameDelimiter)
 	framePayload, err := frame.MarshalJSON(f)
 	if err != nil {

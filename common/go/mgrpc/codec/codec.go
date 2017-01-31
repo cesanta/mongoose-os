@@ -15,9 +15,9 @@ import (
 // Codec represents a transport for clubby frames.
 type Codec interface {
 	// Recv returns the next incoming frame.
-	Recv(context.Context) (*frame.FrameV1V2, error)
+	Recv(context.Context) (*frame.Frame, error)
 	// Send sends the frame to the remote peer.
-	Send(context.Context, *frame.FrameV1V2) error
+	Send(context.Context, *frame.Frame) error
 	// Close closes the channel.
 	Close()
 	// CloseNotify() returns a channel that will be closed once the underlying channel has been closed.
