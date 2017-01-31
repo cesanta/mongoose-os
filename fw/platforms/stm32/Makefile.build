@@ -140,7 +140,7 @@ OBJECTS := $(addprefix $(BUILD_DIR)/,$(SRCS:=.o))
 CFLAGS ?= -DSTM32 -Os -fno-common -ffunction-sections -fdata-sections \
           $(PLATFORM_CFLAGS) $(MGOS_FEATURES) \
           -DMGOS_MAX_NUM_UARTS=2 -DFS_SIZE=${FS_SIZE} \
-          -Wall -Werror -Wno-error=parentheses
+          -Wall -Werror
 
 LDFLAGS ?=
 
