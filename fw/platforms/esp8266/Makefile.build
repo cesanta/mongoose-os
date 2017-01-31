@@ -313,6 +313,15 @@ $(APP_BIN): $(APP_ELF)
 
 # Link the main ELF output file.
 $(APP_ELF): $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(ATCA_LIB) $(LWIP_LIB) $(SSL_LIBS) $(BUILD_DIR)/build_info.o $(LD_SCRIPT)
+	# Before linking, rename .rodata section in APP_OBJS.
+	#
+	# We can't build a library APP_LIB and rename section there, because for
+	# some weird reason mgos_app_init() from that lib can't override a weak symbol
+	# from MGOS_LIB.
+	for i in $(APP_OBJS); do \
+	  $(OBJCOPY) --rename-section .rodata=.irom0.text $$i; \
+	  $(OBJCOPY) --rename-section .rodata.str1.1=.irom0.text $$i; \
+	done
 	$(call link,$(APP_OBJS) $(MG_BUILD_INFO_O) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MGOS_LIB) $(ATCA_LIB) $(LWIP_LIB) $(SSL_LIBS) $(LIBS) $(LD_WRAPPERS))
 
 $(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(MGOS_ESP_PATH)/Makefile.build
