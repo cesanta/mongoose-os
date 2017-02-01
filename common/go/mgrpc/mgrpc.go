@@ -268,16 +268,20 @@ func (r *mgRPCImpl) Call(
 		errChan:  errChan,
 	}
 	r.reqsLock.Unlock()
+	glog.V(2).Infof("created a request with id %d", cmd.ID)
 
 	f := frame.NewRequestFrame(r.opts.localID, dst, "", cmd)
 	r.codec.Send(ctx, f)
 
 	select {
 	case resp := <-respChan:
+		glog.V(2).Infof("got response on request %d: [%v]", cmd.ID, resp)
 		return resp, nil
 	case err := <-errChan:
+		glog.V(2).Infof("got err on request %d: [%v]", cmd.ID, err)
 		return nil, errors.Trace(err)
 	case <-ctx.Done():
+		glog.V(2).Infof("context for the request %d is done: %v", cmd.ID, ctx.Err())
 		r.reqsLock.Lock()
 		delete(r.reqs, cmd.ID)
 		r.reqsLock.Unlock()
