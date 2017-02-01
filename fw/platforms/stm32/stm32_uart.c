@@ -10,7 +10,7 @@
 static int s_stdout_uart_no;
 static int s_stderr_uart_no;
 
-static UART_Handle *s_huarts[2] = {&USB_UART, &UART2};
+static UART_Handle *s_huarts[2] = {&UART_USB, &UART_2};
 
 struct UART_State {
   uint8_t received_byte;
@@ -37,7 +37,7 @@ void uart_dprintf(char *fmt, ...) {
   va_start(ap, fmt);
   int result = vsnprintf(buf, sizeof(buf), fmt, ap);
   va_end(ap);
-  UART_Transmit(&UART2, (uint8_t *) buf, result, UART_TRANSMIT_TIMEOUT);
+  UART_Transmit(&UART_2, (uint8_t *) buf, result, UART_TRANSMIT_TIMEOUT);
 }
 
 static void move_rbuf_data(cs_rbuf_t *dst, cs_rbuf_t *src) {

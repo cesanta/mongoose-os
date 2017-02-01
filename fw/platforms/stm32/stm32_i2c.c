@@ -1,14 +1,18 @@
+#include <stm32_sdk_hal.h>
 #include "fw/src/mgos_i2c.h"
 
 struct mgos_i2c {
-  /* TODO(alashkin): implement */
+  I2C_HandleTypeDef *hi2c;
 };
 
 struct mgos_i2c *mgos_i2c_create(const struct sys_config_i2c *cfg) {
-  /* TODO(alashkin): implement */
-  (void) cfg;
-  static struct mgos_i2c dummy;
-  return &dummy;
+  if (cfg->enable) {
+    struct mgos_i2c *i2c = calloc(1, sizeof(*i2c));
+    i2c->hi2c = &I2C_DEFAULT;
+    return i2c;
+  } else {
+    return NULL;
+  }
 }
 
 enum i2c_ack_type mgos_i2c_start(struct mgos_i2c *conn, uint16_t addr,
@@ -37,4 +41,8 @@ uint8_t mgos_i2c_read_byte(struct mgos_i2c *conn, enum i2c_ack_type ack_type) {
   (void) conn;
   (void) ack_type;
   return 0xFF;
+}
+
+void mgos_i2c_close(struct mgos_i2c *conn) {
+  free(conn);
 }
