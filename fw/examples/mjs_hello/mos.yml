@@ -7,6 +7,10 @@ sources:
 filesystem:
   - fs
 ffi_symbols:
+  - fclose
+  - fopen
+  - fread
+  - fwrite
   - get_led_gpio_pin
   - mg_send
   - mgos_add_http_endpoint
