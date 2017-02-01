@@ -68,6 +68,7 @@ static void mgos_gpio_int_done_cb(void *arg) {
 
 bool mgos_gpio_set_int_handler(int pin, enum mgos_gpio_int_mode mode,
                                mgos_gpio_int_handler_f cb, void *arg) {
+  if (pin < 0 || pin > MGOS_NUM_GPIO) return false;
   if (!mgos_gpio_dev_set_int_mode(pin, mode)) return false;
   if (mode == MGOS_GPIO_INT_NONE) return true;
   struct mgos_gpio_state *s = (struct mgos_gpio_state *) &s_state[pin];
