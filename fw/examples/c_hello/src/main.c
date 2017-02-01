@@ -24,11 +24,16 @@
 #define BUTTON_GPIO 15                  /* SW2 on LAUNCHXL */
 #define BUTTON_PULL MGOS_GPIO_PULL_NONE /* External pull-downs */
 #define BUTTON_EDGE MGOS_GPIO_INT_EDGE_NEG
-#elif CS_PLATFORM == CS_P_STM32 && defined(STM32F746xx)
-/* Nucleo-144 F746 - pin B7 (blue LED) */
-#define LED_GPIO STM32_PIN_PB7
-/* Nucleo-144 F746 - pin C13 (blue user button) */
-#define BUTTON_GPIO STM32_PIN_PC13
+#elif(CS_PLATFORM == CS_P_STM32) && defined(BSP_NUCLEO_F746ZG)
+/* Nucleo-144 F746 */
+#define LED_GPIO STM32_PIN_PB7     /* Blue LED */
+#define BUTTON_GPIO STM32_PIN_PC13 /* Blue user button */
+#define BUTTON_PULL MGOS_GPIO_PULL_NONE
+#define BUTTON_EDGE MGOS_GPIO_INT_EDGE_POS
+#elif(CS_PLATFORM == CS_P_STM32) && defined(BSP_DISCO_F746G)
+/* Discovery-0 F746 */
+#define LED_GPIO STM32_PIN_PI1     /* Green LED */
+#define BUTTON_GPIO STM32_PIN_PI11 /* Blue user button */
 #define BUTTON_PULL MGOS_GPIO_PULL_NONE
 #define BUTTON_EDGE MGOS_GPIO_INT_EDGE_POS
 #else

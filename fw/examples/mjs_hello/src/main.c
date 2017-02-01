@@ -16,9 +16,12 @@
 #define LED_GPIO 21 /* No LED on DevKitC, use random GPIO close to GND pin */
 #elif CS_PLATFORM == CS_P_CC3200
 #define LED_GPIO 64 /* The red LED on LAUNCHXL */
-#elif CS_PLATFORM == CS_P_STM32 && defined(STM32F746xx)
-/* Nucleo-144 F746 - pin B7 (blue LED) */
-#define LED_GPIO STM32_PIN_PB7
+#elif(CS_PLATFORM == CS_P_STM32) && defined(BSP_NUCLEO_F746ZG)
+/* Nucleo-144 F746 */
+#define LED_GPIO STM32_PIN_PB7 /* Blue LED */
+#elif(CS_PLATFORM == CS_P_STM32) && defined(BSP_DISCO_F746G)
+/* Discovery-0 F746 */
+#define LED_GPIO STM32_PIN_PI1 /* Green LED */
 #else
 #error Unknown platform
 #endif
