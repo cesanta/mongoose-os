@@ -131,7 +131,7 @@ bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
   return true;
 }
 
-void mgos_gpio_write(int pin, bool level) {
+IRAM void mgos_gpio_write(int pin, bool level) {
   if (pin < 0 || pin > 16) {
     return;
   } else if (pin == 16) {
@@ -139,12 +139,12 @@ void mgos_gpio_write(int pin, bool level) {
     return;
   }
 
-  if (get_gpio_info(pin) == NULL) {
-    /* Just verifying pin number */
-    return;
+  uint32_t mask = 1 << pin;
+  if (level) {
+    WRITE_PERI_REG(PERIPHS_GPIO_BASEADDR + GPIO_OUT_W1TS_ADDRESS, mask);
+  } else {
+    WRITE_PERI_REG(PERIPHS_GPIO_BASEADDR + GPIO_OUT_W1TC_ADDRESS, mask);
   }
-
-  GPIO_OUTPUT_SET(GPIO_ID_PIN(pin), !!level);
 }
 
 bool mgos_gpio_read(int pin) {
