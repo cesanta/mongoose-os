@@ -1,5 +1,4 @@
-// This example demonstrates how to react on a button press
-// by printing a message on a console.
+// This example demonstrates how to react on a button press by toggling LED.
 //
 // To try this example,
 //   1. Download `mos` tool from https://mongoose-iot.com/software.html
