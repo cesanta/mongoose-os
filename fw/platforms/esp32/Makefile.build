@@ -17,6 +17,7 @@ MGOS_PATH ?= ../../..
 COMMON_PATH ?= $(MGOS_PATH)/common
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 MGOS_ESP_PATH ?= $(MGOS_PATH)/fw/platforms/esp32
+MGOS_ESP_SRC_PATH ?= $(MGOS_PATH)/fw/platforms/esp32/src
 COMMON_FS_PATH ?= $(MGOS_PATH)/fw/skeleton/fs
 
 BUILD_DIR ?= $(CURDIR)/.build
@@ -63,6 +64,7 @@ export _FW_DIR := $(FW_DIR)
 export _GEN_DIR := $(GEN_DIR)
 export _MGOS_PATH
 export MGOS_ESP_PATH
+export MGOS_ESP_SRC_PATH
 export SPIFFS_PATH
 
 export BUILD_INFO_JSON = $(GEN_DIR)/build_info.json

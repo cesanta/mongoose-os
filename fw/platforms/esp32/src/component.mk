@@ -48,24 +48,26 @@ include $(MGOS_PATH)/fw/common.mk
 include $(MGOS_PATH)/fw/src/features.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
 
-SYS_CONF_SCHEMA += $(MGOS_ESP_PATH)/src/esp32_config.yaml
+SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_config.yaml
 
 ifeq "$(MGOS_ENABLE_I2C)" "1"
-  SYS_CONF_SCHEMA += $(MGOS_ESP_PATH)/src/esp32_i2c_config.yaml
+  SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_i2c_config.yaml
 endif
 ifeq "$(MGOS_ENABLE_UPDATER)" "1"
   MGOS_SRCS += esp32_updater.c
 endif
 ifeq "$(MGOS_ENABLE_WIFI)" "1"
   MGOS_SRCS += esp32_wifi.c
-  SYS_CONF_SCHEMA += $(MGOS_ESP_PATH)/src/esp32_wifi_config.yaml
+  SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_wifi_config.yaml
 endif
 
 include $(MGOS_PATH)/common/scripts/build_info.mk
 
 include $(MGOS_PATH)/fw/src/sys_config.mk
 
-VPATH += $(MGOS_ESP_PATH)/src $(MGOS_PATH)/common
+SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_sys_config.yaml
+
+VPATH += $(MGOS_ESP_SRC_PATH) $(MGOS_PATH)/common
 MGOS_SRCS += cs_crc32.c cs_dbg.c cs_file.c cs_rbuf.c json_utils.c
 ifeq "$(MGOS_ENABLE_RPC)" "1"
   VPATH += $(MGOS_PATH)/common/mg_rpc

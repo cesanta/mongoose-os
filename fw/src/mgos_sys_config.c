@@ -500,6 +500,7 @@ enum mgos_init_result mgos_sys_config_init(void) {
     return MGOS_INIT_OUT_OF_MEMORY;
   }
   LOG(LL_INFO, ("MAC: %s", s_ro_vars.mac_address));
+  mgos_expand_mac_address_placeholders(s_cfg.device.id);
 
   LOG(LL_INFO, ("WDT: %d seconds", s_cfg.sys.wdt_timeout));
   mgos_wdt_set_timeout(s_cfg.sys.wdt_timeout);

@@ -251,6 +251,8 @@ APP_OBJS =
 include $(MGOS_PATH)/common/scripts/build_info.mk
 include $(MGOS_PATH)/fw/src/sys_config.mk
 
+SYS_CONF_SCHEMA += $(MGOS_PIC32_SRC_PATH)/pic32_sys_config.yaml
+
 MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" \
               -DMGOS_MAX_NUM_UARTS=6 \
               -DMGOS_DEBUG_UART=$(MGOS_DEBUG_UART)

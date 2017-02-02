@@ -66,8 +66,6 @@ override BUILD_DIR := $(abspath $(BUILD_DIR))
 
 include $(MGOS_PATH)/fw/common.mk
 
-SYS_CONF_SCHEMA += $(MGOS_PLATFORM_PATH)/stm32_config.yaml
-
 SDK_SRCS = $(shell find $(PLATFORM_SDK_PATH)/STM -name '*.[cs]')
 SDK_INCLUDES = $(shell find $(PLATFORM_SDK_PATH)/STM -type d)
 LDSCRIPT = $(shell find $(PLATFORM_SDK_PATH)/STM -name '*.ld')
@@ -196,6 +194,8 @@ $(APP_BIN): $(APP_ELF)
 include $(MGOS_PATH)/common/scripts/build_info.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
 include $(MGOS_PATH)/fw/src/sys_config.mk
+
+SYS_CONF_SCHEMA += $(MGOS_PLATFORM_PATH)/stm32_config.yaml
 
 $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(FW_STAGING_DIR)
 	$(call gen_build_info,$@,,$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))

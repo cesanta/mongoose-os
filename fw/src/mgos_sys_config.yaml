@@ -1,6 +1,6 @@
 [
   ["device", "o", {title: "Device settings"}],
-  ["device.id", "s", {title: "Device ID"}],
+  ["device.id", "s", {title: "Device ID"}],  # Note: Each arch defines a default
   ["device.password", "s", {title: "Device password"}],
 
   ["debug", "o", {title: "Debug Settings"}],
