@@ -13,8 +13,21 @@
 
 #include "mcp9808.h"
 
+#if CS_PLATFORM == CS_P_ESP8266
+/* ESP8266 - main target */
 #define LED_GPIO 10
 #define RELAY_GPIO 13
+#elif(CS_PLATFORM == CS_P_STM32) && defined(BSP_NUCLEO_F746ZG)
+/* Nucleo-144 F746 */
+#define LED_GPIO STM32_PIN_PB7
+#define RELAY_GPIO STM32_PIN_PC13
+#elif(CS_PLATFORM == CS_P_STM32) && defined(BSP_DISCO_F746G)
+/* Discovery-0 F746 */
+#define LED_GPIO STM32_PIN_PI1
+#define RELAY_GPIO STM32_PIN_PI11
+#else
+#error Unknown platform
+#endif
 
 static bool s_heater = false;
 
