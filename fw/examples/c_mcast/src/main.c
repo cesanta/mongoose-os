@@ -29,8 +29,8 @@ static void on_wifi_change(enum mgos_wifi_status event, void *ud) {
   switch (event) {
     case MGOS_WIFI_IP_ACQUIRED: {
       const char *group = get_cfg()->mcast.group;
-      struct ip_addr host_addr;
-      struct ip_addr group_addr;
+      ip_addr_t host_addr;
+      ip_addr_t group_addr;
 
       char *ip = mgos_wifi_get_sta_ip();
       host_addr.addr = inet_addr(ip);
