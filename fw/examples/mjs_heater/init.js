@@ -11,15 +11,16 @@ load('api_net.js');
 load('api_http.js');
 load('api_timer.js');
 load('api_sys.js');
+load('api_mqtt.js');
 
 let listener = HTTP.get_system_server();
 let pin = 13;
-let ok = 'HTTP/1.0 200 OK\r\n\r\n{"result":true}\n';
+let redir = 'HTTP/1.0 302 OK\r\nLocation: /\r\n\r\n';
 let freq = 10000; // Milliseconds. How often to send temperature readings
 
 GPIO.set_mode(pin, GPIO.MODE_OUTPUT);
 
-HTTP.add_endpoint(listener, '/status', function(conn, ev, msg) {
+HTTP.add_endpoint(listener, '/heater/status', function(conn, ev, msg) {
   Net.send(conn, 'HTTP/1.0 200 OK\r\n\r\n');
   Net.send(conn, JSON.stringify({
     on: GPIO.read(pin)
@@ -27,39 +28,26 @@ HTTP.add_endpoint(listener, '/status', function(conn, ev, msg) {
   Net.disconnect(conn);
 }, true);
 
-HTTP.add_endpoint(listener, '/on', function(conn, ev, msg) {
+HTTP.add_endpoint(listener, '/heater/on', function(conn, ev, msg) {
   GPIO.write(pin, 1);
-  Net.send(conn, ok);
+  Net.send(conn, redir);
   Net.disconnect(conn);
 }, true);
 
-HTTP.add_endpoint(listener, '/off', function(conn, ev, msg) {
+HTTP.add_endpoint(listener, '/heater/off', function(conn, ev, msg) {
   GPIO.write(pin, 0);
-  Net.send(conn, ok);
+  Net.send(conn, redir);
   Net.disconnect(conn);
 }, true);
 
 // Send temperature readings to the cloud
 Timer.set(freq, 1, function() {
-  let addr = 'mongoose.cloud:80';
-  // let addr = '192.168.0.157:1234';
-  print('Sending stats to', addr);
-  HTTP.connect(addr, function(c, ev, ed) {
-    if (ev === Net.EV_POLL) return;
-    if (ev === Net.EV_CONNECT) {
-      let data = JSON.stringify({ t: Sys.free_ram() });
-      Net.send(c, 'POST /api/heater-cesanta/data/add HTTP/1.1\r\n');
-      // TODO(lsm): add authorization header - read from a file ?
-      Net.send(c, 'Content-Length: ');
-      Net.send(c, JSON.stringify(data.length));
-      Net.send(c, '\r\n\r\n');
-      Net.send(c, data)
-    } else if (ev === HTTP.EV_RESPONSE) {
-      Net.disconnect(c);
-      print('disconnecting...');
-    }
-    print('in connect, ev', c, ev);
-  }, true);
-}, true);
+  let topic = 'mOS/topic1';
+  let message = JSON.stringify({
+    total_ram: Sys.total_ram(),
+    free_ram: Sys.free_ram()
+  });
+  MQTT.pub(topic, message, message.length);
+}, null);
 
 print('HTTP endpoints initialised');

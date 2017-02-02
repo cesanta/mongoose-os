@@ -25,15 +25,15 @@
           }
         }
       };
-      httpRequest.open('POST', url);
+      httpRequest.open('GET', url);
       httpRequest.send();
     }
     var el = function(id) { return document.getElementById(id); };
     var text = function(id, text) { el(id).innerHTML = text; };
 
-    ajax('/status', function(json) {
+    ajax('/heater/status', function(json) {
       text('status', json.on ? 'on' : 'off');
-      el('f1').setAttribute('action', json.on ? 'off' : 'on');
+      el('f1').setAttribute('action', json.on ? '/heater/off' : '/heater/on');
       el('b1').setAttribute('value', 'Turn heater ' + (json.on ? 'off' : 'on'));
     });
 
