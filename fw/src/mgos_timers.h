@@ -14,18 +14,26 @@ extern "C" {
 
 /* HAL */
 
-/*
- * Setup timer with msecs timeout and cb as a callback.
- * cb is not owned, callee must own it to prevent premature GC.
- */
-
 #define MGOS_INVALID_TIMER_ID 0
 
+/* Timer callback */
 typedef void (*timer_callback)(void *param);
+
+/* Timer ID type */
 typedef uint32_t mgos_timer_id;
 
+/*
+ * Setup timer with `msecs` timeout and `cb` as a callback.
+ *
+ * `repeat` set to 1 will repeat a call infinitely, otherwise it's a one-off.
+ * `arg` is a parameter to pass to `cb`. Return numeric timer ID.
+ */
 mgos_timer_id mgos_set_timer(int msecs, int repeat, timer_callback cb,
                              void *arg);
+
+/*
+ * Disable timer with a given timer ID.
+ */
 void mgos_clear_timer(mgos_timer_id id);
 
 #ifdef __cplusplus

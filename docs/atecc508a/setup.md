@@ -1,5 +1,5 @@
 ---
-title: ATECC508A crypto element
+title: Setup procedure
 ---
 
 Mongoose OS has native support for
