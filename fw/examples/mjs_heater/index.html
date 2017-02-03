@@ -2,13 +2,13 @@
 <body>
   <h1>Welcome to Cesanta Office Heater!</h1>
 
-  <p>Temperature is <span id="temp"></span>&deg;C.</p>
-  <p>Heater is <span id="status"></span>.</p>
+  <p>Temperature is <b id="temp"></b>&deg;C.</p>
+  <p>Heater is <b id="status"></b>.</p>
   <form id="f1">
     <input type=submit value="Turn heater on" id="b1">
   </form>
   <hr>
-  Heater firmware version: <span id="fw"></span>
+  Device information: <pre id="fw"></pre>
 
   <script>
     function ajax(url, callback) {
@@ -33,12 +33,13 @@
 
     ajax('/heater/status', function(json) {
       text('status', json.on ? 'on' : 'off');
+      text('temp', json.temp);
       el('f1').setAttribute('action', json.on ? '/heater/off' : '/heater/on');
       el('b1').setAttribute('value', 'Turn heater ' + (json.on ? 'off' : 'on'));
     });
 
-    ajax('/rpc/Vars.Get', function(json) {
-      text('fw', json.fw_id);
+    ajax('/rpc/Sys.GetInfo', function(json) {
+      text('fw', JSON.stringify(json, null, '  '));
     });
   </script>
 
