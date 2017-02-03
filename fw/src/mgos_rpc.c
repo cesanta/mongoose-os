@@ -110,9 +110,11 @@ static void mgos_sys_get_info_handler(struct mg_rpc_request_info *ri,
   const struct sys_ro_vars *v = get_ro_vars();
   mg_rpc_send_responsef(ri,
                         "{app: %Q, version: %Q, id: %Q, mac: %Q, "
+                        "arch: %Q, uptime: %lu, "
                         "ram_size: %u, ram_free: %u, ram_min_free: %u, "
                         "fs_size: %u, fs_free: %u}",
                         MGOS_APP, v->fw_version, v->fw_id, v->mac_address,
+                        v->arch, (unsigned long) mg_time(),
                         mgos_get_heap_size(), mgos_get_free_heap_size(),
                         mgos_get_min_free_heap_size(), mgos_get_fs_size(),
                         mgos_get_free_fs_size());
