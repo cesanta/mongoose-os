@@ -8,6 +8,7 @@ items:
   - { name: configuration }
   - { name: boot.md }
   - { name: rpc }
+  - { name: ota }
   - { name: atecc508a }
   - { name: timer }
   - { name: gpio }
