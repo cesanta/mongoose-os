@@ -32,5 +32,7 @@ typedef struct stat cs_stat_t;
 #define MG_ENABLE_FILESYSTEM 1
 #endif
 
+#define CS_DEFINE_DIRENT
+
 #endif /* CS_PLATFORM == CS_P_STM32 */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_STM32_H_ */

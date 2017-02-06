@@ -17,7 +17,11 @@
 
 #if MG_ENABLE_DIRECTORY_LISTING
 
+#if !defined(CS_DEFINE_DIRENT)
 #include <dirent.h>
+#else
+#include "common/cs_dirent.h"
+#endif
 
 /* Handler for FS.List */
 static void mgos_fs_list_handler(struct mg_rpc_request_info *ri, void *cb_arg,

@@ -9,6 +9,7 @@
 #include "stm32_uart.h"
 #include "common/spiffs/spiffs.h"
 #include "common/cs_dbg.h"
+#include "common/cs_dirent.h"
 #include "fw/src/mgos_uart.h"
 
 #define STDOUT_FILENO 1
@@ -289,4 +290,53 @@ int _stat_r(struct _reent *r, const char *path, struct stat *s) {
   ret = _fstat_r(NULL, fd, s);
   _close_r(NULL, fd);
   return ret;
+}
+
+struct spiffs_dir {
+  DIR dir;
+  spiffs_DIR sdh;
+  struct spiffs_dirent sde;
+  struct dirent de;
+};
+
+DIR *opendir(const char *dir_name) {
+  struct spiffs_dir *sd = NULL;
+
+  if (dir_name == NULL) {
+    errno = EINVAL;
+    return NULL;
+  }
+
+  if ((sd = (struct spiffs_dir *) calloc(1, sizeof(*sd))) == NULL) {
+    errno = ENOMEM;
+    return NULL;
+  }
+
+  if (SPIFFS_opendir(&fs, dir_name, &sd->sdh) == NULL) {
+    free(sd);
+    sd = NULL;
+    errno = EINVAL;
+  }
+
+  return (DIR *) sd;
+}
+
+struct dirent *readdir(DIR *dir) {
+  struct spiffs_dir *sd = (struct spiffs_dir *) dir;
+  if (SPIFFS_readdir(&sd->sdh, &sd->sde) == SPIFFS_OK) {
+    errno = EBADF;
+    return NULL;
+  }
+  sd->de.d_ino = sd->sde.obj_id;
+  memcpy(sd->de.d_name, sd->sde.name, SPIFFS_OBJ_NAME_LEN);
+  return &sd->de;
+}
+
+int closedir(DIR *dir) {
+  struct spiffs_dir *sd = (struct spiffs_dir *) dir;
+  if (dir != NULL) {
+    SPIFFS_closedir(&sd->sdh);
+    free(dir);
+  }
+  return 0;
 }

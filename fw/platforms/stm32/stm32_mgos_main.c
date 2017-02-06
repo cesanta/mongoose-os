@@ -6,6 +6,12 @@
 #include "stm32_hal.h"
 #include "common/cs_dbg.h"
 #include "stm32_lwip.h"
+#include "fw/src/mgos_app.h"
+#include "fw/src/mgos_sys_config.h"
+#include "fw/src/mgos_uart.h"
+
+extern const char *build_version, *build_id;
+extern const char *mg_build_version, *mg_build_id;
 
 static int s_fw_initialized = 0;
 static int s_net_initialized = 0;
@@ -18,7 +24,20 @@ void mgos_main() {
   if (stm32_spiffs_init() != 0) {
     return;
   }
+
   mongoose_init();
+
+  if (mgos_init_debug_uart(MGOS_DEBUG_UART) != MGOS_INIT_OK) {
+    return;
+  }
+
+  if (strcmp(MGOS_APP, "mongoose-os") != 0) {
+    LOG(LL_INFO, ("%s %s (%s)", MGOS_APP, build_version, build_id));
+  }
+  LOG(LL_INFO, ("Mongoose OS Firmware %s (%s)", mg_build_version, mg_build_id));
+
+  mgos_app_preinit();
+
   if (mgos_init() != MGOS_INIT_OK) {
     return;
   }
