@@ -16,4 +16,5 @@ const (
 	tPlainTCP
 	// tSerial creates a permanent connection to the destination over serial port.
 	tSerial
+	tMQTT
 )

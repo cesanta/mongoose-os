@@ -19,6 +19,7 @@ type connectOptions struct {
 	useTLS          bool
 	cert            *tls.Certificate
 	caPool          *x509.CertPool
+	tlsConfig       *tls.Config
 	psk             string
 	enableUBJSON    bool
 	enableTracing   bool
@@ -29,6 +30,13 @@ type connectOptions struct {
 // ConnectOption is an optional argument to Instance.Connect which affects the
 // behaviour of the connection.
 type ConnectOption func(*connectOptions) error
+
+func TlsConfig(tlsConfig *tls.Config) ConnectOption {
+	return func(c *connectOptions) error {
+		c.tlsConfig = tlsConfig
+		return nil
+	}
+}
 
 // UseWebSocket instructs RPC to create a WebSocket connection.
 func UseWebSocket() ConnectOption {
@@ -74,6 +82,11 @@ func connectTo(connectURL string) ConnectOption {
 		url.Fragment = ""
 		t, a = tHTTP_POST, url.String()
 		tls = url.Scheme == "https"
+	case url.Scheme == "mqtt" || url.Scheme == "mqtts":
+		url.RawQuery = ""
+		url.Fragment = ""
+		t, a = tMQTT, url.String()
+		tls = url.Scheme == "mqtts"
 	case url.Scheme == "ws" || url.Scheme == "wss":
 		url.RawQuery = ""
 		url.Fragment = ""

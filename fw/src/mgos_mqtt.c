@@ -129,7 +129,7 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
         struct mg_mqtt_topic_expression te = {.topic = th->topic.p, .qos = 0};
         th->sub_id = sub_id++;
         mg_mqtt_subscribe(nc, &te, 1, th->sub_id);
-        LOG(LL_DEBUG, ("Subscribing to '%s'", te.topic));
+        LOG(LL_INFO, ("Subscribing to '%s'", te.topic));
       }
       call_global_handler(nc, ev, ev_data);
       break;

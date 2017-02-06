@@ -112,6 +112,10 @@ func wsDialConfig(config *websocket.Config) (*websocket.Conn, error) {
 	return conn, errors.Trace(err)
 }
 
+func (r *mgRPCImpl) mqttConnect(dst string, opts *connectOptions) (codec.Codec, error) {
+	return codec.MQTT(dst, opts.tlsConfig)
+}
+
 func (r *mgRPCImpl) wsConnect(url string, opts *connectOptions) (codec.Codec, error) {
 	// TODO(imax): figure out what we should use as origin and what to check on the server side.
 	const origin = "https://api.cesanta.com/"
@@ -181,6 +185,13 @@ func (r *mgRPCImpl) connect(ctx context.Context, opts ...ConnectOption) error {
 			r.opts.connectAddress,
 			func(wsURL string) (codec.Codec, error) {
 				c, err := r.wsConnect(wsURL, r.opts)
+				return c, errors.Trace(err)
+			})
+	case tMQTT:
+		r.codec = codec.NewReconnectWrapperCodec(
+			r.opts.connectAddress,
+			func(mqttURL string) (codec.Codec, error) {
+				c, err := r.mqttConnect(mqttURL, r.opts)
 				return c, errors.Trace(err)
 			})
 	case tPlainTCP:

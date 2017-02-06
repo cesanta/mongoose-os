@@ -109,7 +109,7 @@ static void mgos_sys_get_info_handler(struct mg_rpc_request_info *ri,
                                       struct mg_str args) {
   const struct sys_ro_vars *v = get_ro_vars();
   mg_rpc_send_responsef(ri,
-                        "{app: %Q, version: %Q, id: %Q, mac: %Q, "
+                        "{app: %Q, fw_version: %Q, fw_id: %Q, mac: %Q, "
                         "arch: %Q, uptime: %lu, "
                         "ram_size: %u, ram_free: %u, ram_min_free: %u, "
                         "fs_size: %u, fs_free: %u}",
