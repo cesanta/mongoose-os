@@ -230,6 +230,7 @@ func (r *mgRPCImpl) Disconnect(ctx context.Context) error {
 }
 
 func (r *mgRPCImpl) recvLoop(ctx context.Context, c codec.Codec) {
+	glog.V(2).Infof("Started recv loop, codec: %v", c)
 	for {
 		f, err := c.Recv(ctx)
 		if err != nil {
