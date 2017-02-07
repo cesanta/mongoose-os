@@ -81,6 +81,10 @@ void mgos_uart_dev_set_rx_enabled(struct mgos_uart_state *us, bool enabled) {
   (void) enabled;
 }
 
+void mgos_uart_dev_flush_fifo(struct mgos_uart_state *us) {
+  (void) us;
+}
+
 enum mgos_init_result mgos_set_stdout_uart(int uart_no) {
   if (uart_no <= 0) return MGOS_INIT_OK;
   /* TODO */

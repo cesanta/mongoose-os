@@ -171,6 +171,7 @@ enum mgos_init_result mgos_rpc_init(void) {
     struct mgos_uart_config *ucfg = mgos_uart_default_config();
     ucfg->baud_rate = scucfg->baud_rate;
     ucfg->rx_fc_ena = ucfg->tx_fc_ena = scucfg->fc_enable;
+    mgos_uart_flush(scucfg->uart_no);
     if (mgos_uart_init(scucfg->uart_no, ucfg, NULL, NULL) != NULL) {
       struct mg_rpc_channel *uch =
           mg_rpc_channel_uart(scucfg->uart_no, scucfg->wait_for_start_frame);

@@ -71,6 +71,7 @@ void mgos_uart_flush(int uart_no) {
   while (txb->used > 0) {
     mgos_uart_dev_dispatch_tx_top(us);
   }
+  mgos_uart_dev_flush_fifo(us);
 }
 
 struct mgos_uart_state *mgos_uart_init(int uart_no,

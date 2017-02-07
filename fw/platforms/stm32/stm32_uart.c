@@ -101,6 +101,10 @@ void mgos_uart_dev_dispatch_tx_top(struct mgos_uart_state *us) {
   }
 }
 
+void mgos_uart_dev_flush_fifo(struct mgos_uart_state *us) {
+  /* TODO(alashkin): Implement. */
+}
+
 bool mgos_uart_dev_init(struct mgos_uart_state *us) {
   if (us->uart_no == 0 || us->uart_no == 1) {
     /* TODO(alashkin): reinit UART if cfg was changed */

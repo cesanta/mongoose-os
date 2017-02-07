@@ -117,6 +117,8 @@ void mgos_uart_dev_dispatch_tx_top(struct mgos_uart_state *us);
  */
 void mgos_uart_dev_dispatch_bottom(struct mgos_uart_state *us);
 
+void mgos_uart_dev_flush_fifo(struct mgos_uart_state *us);
+
 void mgos_uart_dev_set_rx_enabled(struct mgos_uart_state *us, bool enabled);
 
 /* Note: this is executed in ISR context, almost nothing can be done here. */

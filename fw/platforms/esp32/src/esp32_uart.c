@@ -157,6 +157,11 @@ IRAM void mgos_uart_dev_dispatch_bottom(struct mgos_uart_state *us) {
   WRITE_PERI_REG(UART_INT_ENA_REG(us->uart_no), int_ena);
 }
 
+void mgos_uart_dev_flush_fifo(struct mgos_uart_state *us) {
+  while (esp32_uart_tx_fifo_len(us->uart_no) > 0) {
+  }
+}
+
 bool esp32_uart_validate_config(struct mgos_uart_config *c) {
   if (c->baud_rate < 0 || c->baud_rate > 4000000 || c->rx_buf_size < 0 ||
       c->rx_fifo_full_thresh < 1 || c->rx_fifo_full_thresh > 127 ||

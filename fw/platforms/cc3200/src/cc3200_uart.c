@@ -116,6 +116,12 @@ void mgos_uart_dev_set_rx_enabled(struct mgos_uart_state *us, bool enabled) {
   HWREG(base + UART_O_CTL) = ctl;
 }
 
+void mgos_uart_dev_flush_fifo(struct mgos_uart_state *us) {
+  uint32_t base = (uint32_t) us->dev_data;
+  while (MAP_UARTBusy(base)) {
+  }
+}
+
 static void u0_int(void) {
   uart_int(s_us[0]);
 }
