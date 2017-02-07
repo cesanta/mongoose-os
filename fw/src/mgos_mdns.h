@@ -25,7 +25,7 @@ void mgos_mdns_remove_handler(mg_event_handler_t handler, void *ud);
 
 /* HAL */
 
-void mgos_mdns_hal_join_group(const char *iface_ip, const char *mcast_ip);
+void mgos_mdns_hal_join_group(const char *mcast_ip);
 
 #endif /* MGOS_ENABLE_MDNS */
 

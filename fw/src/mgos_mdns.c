@@ -59,9 +59,7 @@ static void on_wifi_change(enum mgos_wifi_status event, void *ud) {
        *
        * TODO(mkm): give mongoose a generic multicast management API.
        */
-      char *ip = mgos_wifi_get_sta_ip();
-      mgos_mdns_hal_join_group(ip, MDNS_MCAST_GROUP);
-      free(ip);
+      mgos_mdns_hal_join_group(MDNS_MCAST_GROUP);
       break;
     }
     default:
