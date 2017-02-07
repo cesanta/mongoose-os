@@ -125,6 +125,8 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
     case MG_EV_MQTT_CONNACK: {
       struct topic_handler *th;
       uint16_t sub_id = 1;
+      int code = ((struct mg_mqtt_message *) ev_data)->connack_ret_code;
+      LOG(LL_DEBUG, ("CONNACK %d", code));
       SLIST_FOREACH(th, &s_topic_handlers, entries) {
         struct mg_mqtt_topic_expression te = {.topic = th->topic.p, .qos = 0};
         th->sub_id = sub_id++;
@@ -219,8 +221,8 @@ static bool mqtt_global_connect(void) {
       struct mg_send_mqtt_handshake_opts opts;
       memset(&opts, 0, sizeof(opts));
 
-      opts.user_name = scfg->device.id;
-      opts.password = scfg->device.password;
+      opts.user_name = scfg->mqtt.user;
+      opts.password = scfg->mqtt.pass;
       if (scfg->mqtt.clean_session) {
         opts.flags |= MG_MQTT_CLEAN_SESSION;
       }
