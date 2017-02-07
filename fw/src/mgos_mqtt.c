@@ -202,7 +202,7 @@ static bool mqtt_global_connect(void) {
 
   memset(&opts, 0, sizeof(opts));
 
-  if (scfg->mqtt.server != NULL && scfg->device.id != NULL) {
+  if (scfg->mqtt.server != NULL) {
     LOG(LL_INFO, ("MQTT connecting to %s", scfg->mqtt.server));
 
 #if MG_ENABLE_SSL
