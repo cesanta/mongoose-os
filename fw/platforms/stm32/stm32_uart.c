@@ -166,7 +166,7 @@ void HAL_UART_RxCpltCallback(UART_Handle *huart) {
   struct UART_State *state = get_state_by_huart(huart);
   state->rx_in_progress = 0;
 
-  if (state->rx_buf.avail > 0) {
+  if (state->rx_buf.avail > 0 && state->rx_enabled) {
     cs_rbuf_append_one(&state->rx_buf, state->received_byte);
   } else {
     LOG(LL_ERROR, ("UART RX buf overflow"));
@@ -174,12 +174,14 @@ void HAL_UART_RxCpltCallback(UART_Handle *huart) {
     return;
   }
 
-  HAL_StatusTypeDef status = HAL_OK;
-  status = HAL_UART_Receive_IT(huart, &state->received_byte, 1);
-  if (status != HAL_OK) {
-    LOG(LL_ERROR, ("Failed to restart receive from UART"));
-  } else {
-    state->rx_in_progress = 1;
+  if (state->rx_enabled) {
+    HAL_StatusTypeDef status = HAL_OK;
+    status = HAL_UART_Receive_IT(huart, &state->received_byte, 1);
+    if (status != HAL_OK) {
+      LOG(LL_ERROR, ("Failed to restart receive from UART"));
+    } else {
+      state->rx_in_progress = 1;
+    }
   }
 }
 
