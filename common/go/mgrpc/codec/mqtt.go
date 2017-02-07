@@ -5,23 +5,24 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/url"
 	"time"
 
 	"cesanta.com/common/go/mgrpc/frame"
 
 	"github.com/cesanta/errors"
+	mqtt "github.com/eclipse/paho.mqtt.golang"
 	"github.com/golang/glog"
-	"github.com/yosssi/gmq/mqtt"
-	"github.com/yosssi/gmq/mqtt/client"
 )
 
 type mqttCodec struct {
 	dst         string
 	closeNotify chan struct{}
+	ready       chan struct{}
 	rchan       chan frame.Frame
-	topic       string
-	cli         *client.Client
+	clientID    string
+	cli         mqtt.Client
 }
 
 func MQTT(dst string, tlsConfig *tls.Config) (Codec, error) {
@@ -29,64 +30,69 @@ func MQTT(dst string, tlsConfig *tls.Config) (Codec, error) {
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
-	topic := u.Path[1:]
-	rchan := make(chan frame.Frame)
-
-	cli := client.New(&client.Options{
-		ErrorHandler: func(err error) {
-			glog.Errorf("MQTT error: %v", err)
-		},
-	})
 
 	clientID := fmt.Sprintf("mos-%v", time.Now().Unix())
-	co := client.ConnectOptions{
-		Network:      "tcp",
-		Address:      u.Host,
-		ClientID:     []byte(clientID),
-		TLSConfig:    tlsConfig,
-		UserName:     []byte(clientID),
-		CleanSession: true,
-	}
 
-	glog.Infof("Connecting %s to %s", clientID, u.Host)
-	err = cli.Connect(&co)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	glog.Infof("Subscribing to [%s]", topic)
-	err = cli.Subscribe(&client.SubscribeOptions{
-		SubReqs: []*client.SubReq{
-			&client.SubReq{
-				TopicFilter: []byte(topic + "/rpc"),
-				QoS:         mqtt.QoS0,
-				Handler: func(topicName, message []byte) {
-					glog.Infof("Got MQTT message, topic [%s], message [%s]", string(topicName), string(message))
-					f := &frame.Frame{}
-					if err := json.Unmarshal(message, &f); err != nil {
-						glog.Errorf("Invalid json (%s): %+v", err, string(message))
-						return
-					}
-					rchan <- *f
-				},
-			},
-		},
-	})
-
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	return &mqttCodec{
-		dst:         dst,
+	c := &mqttCodec{
+		dst:         u.Path[1:],
 		closeNotify: make(chan struct{}),
-		rchan:       rchan,
-		topic:       topic,
-		cli:         cli,
-	}, nil
+		ready:       make(chan struct{}),
+		rchan:       make(chan frame.Frame),
+		clientID:    clientID,
+	}
+
+	u.Path = ""
+	if u.Scheme == "mqtts" {
+		u.Scheme = "tcps"
+	} else {
+		u.Scheme = "tcp"
+	}
+	broker := u.String()
+	glog.V(1).Infof("Connecting %s to %s", clientID, broker)
+
+	opts := mqtt.NewClientOptions()
+	opts.AddBroker(broker)
+	opts.SetClientID(clientID)
+	opts.SetUsername(clientID)
+	opts.SetTLSConfig(tlsConfig)
+	opts.SetConnectionLostHandler(c.onConnectionLost)
+
+	c.cli = mqtt.NewClient(opts)
+	token := c.cli.Connect()
+	token.Wait()
+	if err := token.Error(); err != nil {
+		return nil, errors.Annotatef(err, "MQTT connect error")
+	}
+
+	topic := fmt.Sprintf("%s/rpc", clientID)
+	glog.V(1).Infof("Subscribing to [%s]", topic)
+	token = c.cli.Subscribe(topic, 1 /* qos */, c.onMessage)
+	token.Wait()
+	if err := token.Error(); err != nil {
+		return nil, errors.Annotatef(err, "MQTT subscribe error")
+	}
+
+	return c, nil
+}
+
+func (c *mqttCodec) onMessage(cli mqtt.Client, msg mqtt.Message) {
+	glog.V(4).Infof("Got MQTT message, topic [%s], message [%s]", msg.Topic(), msg.Payload())
+	f := &frame.Frame{}
+	if err := json.Unmarshal(msg.Payload(), &f); err != nil {
+		glog.Errorf("Invalid json (%s): %+v", err, msg.Payload())
+		return
+	}
+	c.rchan <- *f
+}
+
+func (c *mqttCodec) onConnectionLost(cli mqtt.Client, err error) {
+	glog.Errorf("Lost conection to MQTT broker: %s", err)
+	close(c.closeNotify)
 }
 
 func (c *mqttCodec) Close() {
+	c.cli.Disconnect(0)
+	close(c.closeNotify)
 }
 
 func (c *mqttCodec) CloseNotify() <-chan struct{} {
@@ -106,25 +112,29 @@ func (c *mqttCodec) MaxNumFrames() int {
 }
 
 func (c *mqttCodec) Recv(ctx context.Context) (*frame.Frame, error) {
-	f := <-c.rchan
-	return &f, nil
+	select {
+	case f := <-c.rchan:
+		return &f, nil
+	case <-c.closeNotify:
+		return nil, errors.Trace(io.EOF)
+	}
 }
 
-func (c *mqttCodec) Send(ctx context.Context, f12 *frame.Frame) error {
-	f12.Src = c.topic
-	msg, err := json.Marshal(f12)
+func (c *mqttCodec) Send(ctx context.Context, f *frame.Frame) error {
+	f.Src = c.clientID
+	msg, err := json.Marshal(f)
 	if err != nil {
 		return errors.Trace(err)
 	}
-	glog.Infof("Sending [%s] to [%s]", string(msg), c.topic)
-	err = c.cli.Publish(&client.PublishOptions{
-		QoS:       mqtt.QoS1,
-		Retain:    false,
-		TopicName: []byte(c.topic),
-		Message:   []byte(msg),
-	})
-	if err != nil {
-		return errors.Trace(err)
+	if f.Dst == "" {
+		f.Dst = c.dst
+	}
+	topic := fmt.Sprintf("%s/rpc", f.Dst)
+	glog.V(4).Infof("Sending [%s] to [%s]", msg, topic)
+	token := c.cli.Publish(topic, 1 /* qos */, false /* retained */, msg)
+	token.Wait()
+	if err := token.Error(); err != nil {
+		return errors.Annotatef(err, "MQTT publish error")
 	}
 	return nil
 }
