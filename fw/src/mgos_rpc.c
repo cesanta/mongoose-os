@@ -174,8 +174,8 @@ enum mgos_init_result mgos_rpc_init(void) {
     if (mgos_uart_init(scucfg->uart_no, ucfg, NULL, NULL) != NULL) {
       struct mg_rpc_channel *uch =
           mg_rpc_channel_uart(scucfg->uart_no, scucfg->wait_for_start_frame);
-      mg_rpc_add_channel(c, mg_mk_str(""), uch, true /* is_trusted */,
-                         false /* send_hello */);
+      mg_rpc_add_channel(c, mg_mk_str(MG_RPC_DST_DEFAULT), uch,
+                         true /* is_trusted */, false /* send_hello */);
       uch->ch_connect(uch);
     } else {
       LOG(LL_ERROR, ("UART%d init failed", scucfg->uart_no));
