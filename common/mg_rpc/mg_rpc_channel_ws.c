@@ -58,6 +58,8 @@ static void mg_rpc_ws_handler(struct mg_connection *nc, int ev, void *ev_data) {
         free(chd);
         ch->channel_data = NULL;
       }
+      free(ch);
+      nc->user_data = NULL;
       break;
     }
   }
