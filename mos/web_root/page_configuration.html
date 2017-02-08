@@ -1,0 +1,113 @@
+<div data-title="Device configuration" style="height: 100%;">
+  <div style="margin: 1px 10px;">
+    <button class="btn btn-sm btn-primary" id="config-save-button"><i class="fa fa-save"></i> Save configuration</button>
+  </div>
+  <form class="form-inline upcontrol" id="config"></form>
+</div>
+
+<script>
+  var confGet = function(c, p) {
+    if (!p) return undefined;
+    var result, i;
+    var parts = p.split('.');
+    for (i = 0; i < parts.length && typeof(c) === 'object'; i++) {
+      c = c[parts[i]];
+    }
+    if (i < parts.length) c = undefined;
+    return c;
+  };
+
+  var renderConfig = function(schema, cfg, el) {
+    var html = [];
+    var currentObject = null;
+    for (var i in schema) {
+      var entry = schema[i];
+      var ep = entry[0], et = entry[1], ed = entry[2];
+      var val = confGet(cfg, ep);
+      var k = ep.split('.').pop();
+      // if (typeof(val) !== 'object') console.debug(ep, et, typeof(val), val);
+      if (et === 'o' && typeof(val) === 'object') {
+        if (currentObject) html.push('</fieldset>')
+        currentObject = ep;
+        if (!ed.hide) {
+          html.push('<fieldset><legend>', ed.title || ep, '</legend>\n');
+        }
+      } else if (!ed.hide) {
+        html.push('<div class="param">',
+        '<label for="', ep, '">', ed.title || k, '</label>');
+
+        // Look if the element should be disabled.
+        var extra_attrs = '';
+        if (ed.read_only) {
+          extra_attrs = ' disabled ';
+        }
+
+        if (et == 'b') {
+          html.push('<input type="checkbox" id="', ep,
+          '" ', extra_attrs, val ? ' checked' : '', '/>');
+        } else if (ed.type == 'select') {
+          html.push('<select ', extra_attrs, 'id="', ep, '">');
+          for (var i = 0; ed.values && i < ed.values.length; i++) {
+            var o = ed.values[i];
+            html.push('<option value="', o.value, '" ', extra_attrs,
+            o.value == val ? 'selected' : '', '>',
+            o.title, '</option>');
+          }
+          html.push('</select>');
+        } else {
+          html.push('<input ', extra_attrs, 'type="text" id="', ep,
+          '" value="', val, '" class="form-control input-sm"/>');
+        }
+        html.push('</div>\n');
+      }
+    }
+    el.html(html.join(''));
+  };
+
+  var schema, config;
+  var loadConfig = function() {
+    return $.ajax({url: '/call',
+      data: {method: 'Config.Get'}}).then(function(json) {
+      config = json.result;
+      return $.ajax({url: '/get', data: {name: 'sys_config_schema.json'}});
+    }).then(function(json) {
+      var schema = JSON.parse(json.result);
+      renderConfig(schema, config, $('#config'));
+    }).then(function() {
+      new PNotify({title: 'Configuration loaded', type: 'success' });
+    });
+  };
+  loadConfig();
+
+  function ev(id) {
+    var el = document.getElementById(id);
+    if (!el) return undefined;
+    if (el.type == 'checkbox') return el.checked ? true : false;
+    return el.value;
+  };
+
+  $(document).on('click', '#config-save-button', function() {
+    var walk = function(obj, prefix) {
+      for (var k in obj) {
+        var key = (prefix + '.' + k).replace(/^\./, '');
+        console.log(key);
+        if (typeof(obj[k]) === 'object') {
+          walk(obj[k], key);
+        } else {
+          obj[k] = ev(key);
+        }
+      }
+    };
+    walk(config, '');
+
+    $.ajax({url: '/call', data: {
+      method: 'Config.Set',
+      args: JSON.stringify({config: config})
+    }}).then(function() {
+      new PNotify({title: 'Configuration saved', type: 'success' });
+      return loadConfig();
+    });
+  });
+
+  //# sourceURL=page_configuration.js
+</script>

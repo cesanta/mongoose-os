@@ -1,0 +1,85 @@
+<div data-title="Device File Manager" style="height: 100%;">
+    <div class="col-xs-3" style="height: 100%;">
+      <h2>Files on device - click to edit</h2>
+      <div class="list-group upcontrol" id="file-list"></div>
+    </div>
+    <div class="col-xs-9" style="height: 100%;">
+      <div style="margin-top: 2px; ">
+        <button class="btn btn-sm btn-primary disabled file-control" id="file-save-button"><i class="fa fa-save"></i> Save selected file</button>
+        <button class="btn btn-sm btn-warning disabled file-control" id="file-savereboot-button"><i class="fa fa-refresh"></i> Save and reboot device</button>
+      </div>
+      <div class="form-group upcontrol">
+        <div id="file-textarea"></div>
+      </div>
+    </div>
+</div>
+
+<script>
+  var guesslang = function(filename) {
+    if ((filename || '').match(/\.js$/)) return 'javascript';
+    if ((filename || '').match(/\.json$/)) return 'json';
+    if ((filename || '').match(/\.ya?ml$/)) return 'yaml';
+    return 'text';
+  };
+
+  $(document).off('click', '.file');
+  $(document).on('click', '.file', function() {
+    var name = $(this).text();
+    var $t = $(this);
+    $.ajax({url: '/get', data: {name: name}}).done(function(json) {
+      $('.file').removeClass('selected');
+      $t.addClass('selected');
+      $('#file-textarea').text(json.result || '');
+      var flask = new CodeFlask;
+      flask.run('#file-textarea', {language: guesslang(name)});
+      $('.file-control').toggleClass('disabled', false);
+      new PNotify({title: 'Loaded ' + name, type: 'success' });
+    });
+  });
+
+  // https://developer.mozilla.org/en/docs/Web/API/WindowBase64/Base64_encoding_and_decoding
+  function b64enc(str) {
+    return btoa(
+        encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1) {
+          return String.fromCharCode('0x' + p1);
+        }));
+  };
+
+  var onSave = function() {
+    var fileName = $('.file.selected').text();
+    var text = $('#file-textarea textarea').val();
+    return $.ajax({
+      url: '/call',
+      data: {
+        method: 'FS.Put',
+        args: JSON.stringify({filename: fileName, data: b64enc(text)})
+      }
+    }).then(function() {
+      new PNotify({title: 'Saved ' + fileName, type: 'success' });
+    });
+  };
+
+  $(document).off('click', '#file-save-button');
+  $(document).on('click', '#file-save-button', onSave);
+
+  $(document).off('click', '#file-savereboot-button');
+  $(document).on('click', '#file-savereboot-button', function () {
+    onSave().then(function() {
+      return $.ajax({url: '/call', data: {method: 'Sys.Reboot'}});
+    }).then(function() {
+      new PNotify({title: 'Device reboot successful', type: 'success' });
+    });
+  });
+
+  $.ajax({url: '/call', data: {method: 'FS.List'}}).done(function(json) {
+    var $tbody = $('#file-list').empty();
+    json.result.sort();
+    $.each(json.result, function(i, v) {
+      var link = $('<a href="#" class="list-group-item file"/>')
+          .text(v)
+          .addClass(v == 'init.js' ? 'is_init' : '')
+          .appendTo($tbody);
+    });
+  });
+
+</script>

@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta http-equiv="Cache-control" content="no-cache">
+    <title>Mongoose OS</title>
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/font-awesome.min.css" rel="stylesheet">
+    <link href="css/pnotify.min.css" rel="stylesheet">
+    <link href="css/main.css" rel="stylesheet">
+  </head>
+  <body>
+    <div class="container master-container top-content">
+
+      <nav class="navbar navbar-fixed-top">
+        <div class="container small">
+          <div class="pull-right">
+          <a class="active" href="/">wizard mode</a> |
+          <a href="/dash.html">advanced mode</a>
+          </div>
+        </div>
+      </nav>
+
+      <center>
+        <div id="main-title"><img src="/images/logo_blue.png" height="50px"> installer</div>
+      </center>
+
+ <div class="row wizard">
+   <div xclass="col-sm-10 col-sm-offset-1 col-md-8 col-md-offset-2">
+    <div class="panel panel-default">
+      <div class="panel-body">
+
+        <form id="wizard-1">
+            <ul class="bootstrapWizard form-wizard">
+              <li class="active">
+                <a href="#tab1" data-toggle="tab">
+                  <span class="step">1</span>
+                  <span class="title">Connect your device</span>
+                </a>
+              </li>
+              <li>
+                <a href="#tab2" data-toggle="tab"> <span class="step">2</span>
+                  <span class="title">Flash firmware</span> </a>
+              </li>
+              <li>
+                <a href="#tab3" data-toggle="tab"> <span class="step">3</span>
+                  <span class="title">Setup WiFi</span> </a>
+              </li>
+              <li>
+                <a href="#tab4" data-toggle="tab"> <span class="step">4</span>
+                  <span class="title">Connect to Cloud</span> </a>
+              </li>
+              <li>
+                <a href="#tab5" data-toggle="tab"> <span class="step">5</span>
+                  <span class="title">Done</span> </a>
+              </li>
+            </ul>
+            <div class="clearfix"></div>
+            <div class="tab-content">
+
+              <div class="tab-pane active" id="tab1" data-next="#tab2">
+
+              <!-- <h3></h3> -->
+                <h3><strong>Step 1</strong> - Connect your device and select serial port</h3>
+
+                <div class="row">
+                  <div class="col-sm-6 step-image-div">
+                    <center><img src="/images/step1.png" class="wizard-image"></center>
+                  </div>
+                  <div class="col-sm-6">
+
+                    <div class="form-group text-xs-center">
+                      <label>Select Serial Port:</label>
+                      <div class="input-group">
+                        <span class="input-group-btn">
+                          <div class="btn-group dropdown">
+                            <button type="button" class="btn btn-default dropdown-toggle"
+                              data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                              <span class="caret"></span>
+                              <span class="sr-only">Toggle Dropdown</span>
+                            </button>
+                            <ul class="dropdown-menu" id="dropdown-ports"></ul>
+                          </div>
+                        </span>
+                        <input type="text" class="form-control" required autofocus
+                          id="input-serial" placeholder="e.g. COM1, or /dev/ttyUSB0">
+                      </div>
+                    </div>
+
+                    <div class="text-muted small">
+                      Connect your device to your computer, choose
+                      serial port and click Next.
+                    </div>
+
+                    <div class="alert alert-warning" id="noports-warning"
+                      style="display: none;">
+                      Cannot detect any suitable serial port on your system!
+                      To fix it:
+                      <ol>
+                        <li>Plug the device into the USB slot now.
+                          The ports dropdown should update automatically.
+                        </li>
+                        <li>If the ports dropdown still does not populate,
+                          install USB-to-Serial driver:
+                          <ul>
+                            <li><a href="http://www.ftdichip.com/Drivers/VCP.htm">FTDI drivers</a> for CC3200</li>
+                            <li><a href="https://www.silabs.com/products/mcu/Pages/USBtoUARTBridgeVCPDrivers.aspx">SiLabs drivers</a> for Espressif boards</li>
+                          </ul>
+                        </li>
+                      </ol>
+                    </div>
+
+                  </div>
+                </div>
+
+              </div>
+
+              <div class="tab-pane" id="tab2" data-next="#tab3" data-prev="#tab1">
+
+                <h3><strong>Step 2</strong> - Flash firmware</h3>
+
+                <div class="row">
+                  <div class="col-sm-6 step-image-div">
+                    <center><img src="/images/step2.png" class="wizard-image"></center>
+                  </div>
+                  <div class="col-sm-6">
+
+                    <div class="form-group">
+                      <label class="control-label">Select Firmware:</label>
+                      <div class="input-group">
+                        <span class="input-group-btn">
+                          <div class="btn-group dropdown">
+                            <button type="button" class="btn btn-default dropdown-toggle"
+                              data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                              <span class="caret"></span>
+                              <span class="sr-only">Toggle Dropdown</span>
+                            </button>
+                            <ul class="dropdown-menu" id="dropdown-firmware">
+                              <li><a href="#">https://mongoose-os.com/downloads/fw-esp32.zip</a></li>
+                              <li><a href="#">https://mongoose-os.com/downloads/fw-esp8266.zip</a></li>
+                              <li><a href="#">https://mongoose-os.com/downloads/fw-cc3200.zip</a></li>
+                            </ul>
+                          </div>
+                        </span>
+                        <input type="text" class="form-control" id="input-firmware" placeholder=".zip path or URL">
+                      </div>
+                    </div>
+
+                    <div class="text-muted small">
+                      Select firmware suitable for your device and
+                      press Next to flash it.
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+
+              <div class="tab-pane" id="tab3" data-next="#tab4" data-prev="#tab2">
+
+                <h3><strong>Step 3</strong> - Configure WiFi</h3>
+
+                <div class="row">
+                  <div class="col-sm-6 step-image-div">
+                    <center><img src="/images/step3.png" class="wizard-image"></center>
+                  </div>
+                  <div class="col-sm-6">
+
+                    <div class="form-group">
+                      <label>WiFi network name:</label>
+                      <input type="text" class="form-control" id="input-ssid"
+                        placeholder="type WiFi name ...">
+                    </div>
+
+                    <div class="form-group">
+                      <label>WiFi password:</label>
+                      <input type="password" class="form-control" id="input-pass"
+                        placeholder="type WiFi password ...">
+                    </div>
+
+                  </div>
+                </div>
+
+              </div>
+
+              <div class="tab-pane" id="tab4" data-next="#tab5" data-prev="#tab3">
+
+                <h3><strong>Step 4</strong> - Connect to cloud</h3>
+
+                <div class="row">
+                  <div class="col-sm-6 step-image-div">
+                    <center><img src="/images/step3.png" class="wizard-image"></center>
+                  </div>
+                  <div class="col-sm-6">
+
+                    <div class="form-group">
+                      <label class="control-label">Choose Cloud:</label>
+                      <div class="input-group">
+                        <span class="input-group-btn">
+                          <div class="btn-group dropdown">
+                            <button type="button" class="btn btn-default dropdown-toggle"
+                              data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                              <span class="caret"></span>
+                              <span class="sr-only">Toggle Dropdown</span>
+                            </button>
+                            <ul class="dropdown-menu" id="dropdown-firmware">
+                              <li><a href="#">Generic MQTT server</a></li>
+                               <li><a href="#">AWS IoT</a></li> 
+                            </ul>
+                          </div>
+                        </span>
+                        <input type="text" class="form-control" value="MQTT server"
+                          id="input-cloud" placeholder="Select cloud option ...">
+                      </div>
+                    </div>
+
+                    <div class="text-muted small alert alert-warning" id="help-aws">
+                      AWS credentials are missing. Visit <a href="http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-set-up.html">AWS setup page</a>
+                      and enter values below:
+                    </div>
+
+                    <div class="form-group">
+                      <label>Access Key ID:</label>
+                      <input type="text" class="form-control" id="input-awskey"
+                        placeholder="type AWS Access Key ID">
+                    </div>
+
+                    <div class="form-group">
+                      <label>Secret Access Key:</label>
+                      <input type="text" class="form-control" id="input-awssecret"
+                        placeholder="type AWS Secret Access Key">
+                    </div>
+
+                    <div class="form-group">
+                      <label class="control-label">AWS region:</label>
+                      <div class="input-group">
+                        <span class="input-group-btn">
+                          <div class="btn-group dropdown">
+                            <button type="button" class="btn btn-default dropdown-toggle"
+                              data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                              <span class="caret"></span>
+                              <span class="sr-only">Toggle Dropdown</span>
+                            </button>
+                            <ul class="dropdown-menu" id="dropdown-regions"></ul>
+                          </div>
+                        </span>
+                        <input type="text" class="form-control" id="input-region" placeholder="Choose region ...">
+                      </div>
+                    </div>
+
+                    <div class="form-group">
+                      <label class="control-label">AWS policy:</label>
+                      <div class="input-group">
+                        <span class="input-group-btn">
+                          <div class="btn-group dropdown">
+                            <button type="button" class="btn btn-default dropdown-toggle"
+                              data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                              <span class="caret"></span>
+                              <span class="sr-only">Toggle Dropdown</span>
+                            </button>
+                            <ul class="dropdown-menu" id="dropdown-policies">
+                            </ul>
+                          </div>
+                        </span>
+                        <input type="text" class="form-control" id="input-policy" placeholder="Choose policy ...">
+                      </div>
+                    </div>
+
+                    <div class="text-muted small" id="help-policy">
+                      You must have a policy created in AWS IoT prior to
+                      registering this device. Follow a
+                      <a href="http://docs.aws.amazon.com/iot/latest/developerguide/create-iot-policy.html">guide</a> to create one, then refresh this page.
+                    </div>
+
+                    <div class="form-group">
+                      <label>MQTT server host:port:</label>
+                      <input type="text" class="form-control" id="input-mqtt"
+                        placeholder="type MQTT host:port">
+                    </div>
+
+                  </div>
+                </div>
+              </div>
+
+              <div class="tab-pane" id="tab5" data-prev="#tab4">
+
+                <br><br>
+                <h1 class="text-center"><strong><i class="fa fa-check fa-lg"></i>
+                  Mongoose OS is installed</strong></h1>
+                <br />
+
+                <p>MOS utility provides advanced functionality like building
+                  firmware in C, working with device filesystem and
+                  configuration. You can quit this wizard now and switch to the
+                  command line mode to continue with this option. See
+                  <a href="https://mongoose-os.com/docs/#/quickstart/">documentation</a>
+                  for the references and examples.
+                </p>
+                <p>
+                  Alternatively, continue using this simple Web UI to
+                  prototype firmware functionality in JavaScript. Click
+                  "Start Prototyping" button to proceed with it.
+                </p>
+                <br>
+                <center>
+                  <a href="dash.html" class="btn btn-lg btn-primary">START PROTOTYPING</a>
+                </center>
+                <br><br>
+              </div>
+
+            </div>
+        </form>
+
+      </div>
+
+      <div class="panel-footer">
+        <small class="text-muted">&copy; <a href="https://mongoose-os.com">Cesanta 2017</a>
+          | Version: <span id="version"></span>
+          <span id="version-update" class="hidden">Out of date! <a href="https://mongoose-os.com/software.html">Update here</a></span>
+          | <a href="/infolog" target="_blank">show device logs</a>
+      </small>
+
+        <div class="pull-right">
+          <button class="btn btn-primary btn-sm hidden" id="wizard-button-prev">
+            <i class="fa fa-angle-double-left"></i>&nbsp;&nbsp;Back</button>
+          <button class="btn btn-sm btn-primary" data-style="zoom-out"
+            id="wizard-button-next">Next&nbsp;&nbsp;<i class="fa fa-angle-double-right"></i></button>
+        </div>
+        <div class="clearfix"></div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+    <script src="js/jquery.min.js"></script>
+    <script src="js/bootstrap.min.js"></script>
+    <script src="js/moment.min.js"></script>
+    <script src="js/pnotify.min.js"></script>
+    <script src="js/ws.js"></script>
+    <script src="js/wizard.js"></script>
+
+  </body>
+</html>

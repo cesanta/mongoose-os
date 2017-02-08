@@ -1,0 +1,209 @@
+html, body { height: 100%; }
+body { color: #666;  background-color: #eee; }
+
+/* DASHBOARD STYLES */
+#top_nav { line-height: 36px; margin: 0 10px; border-bottom: 1px solid #ccc; position: relative; }
+#breadcrumb { font-size: 24px; text-transform: capitalize !important; }
+#page { margin-left: 80px; margin-right: 1em; }
+#d1 { display: flex; flex-direction: column; }
+#app_view { flex: 0 0 auto; min-height: 200px; position: relative; }
+#device-logs-panel { flex: 1 1 auto; }
+.splitter-horizontal { height: 18px; background: #ccc; cursor: row-resize; margin: 0 10px; }
+.panel-title { margin: 5px 10px; }
+#app_view .panel { padding: 0 1em; }
+
+/* FILE MANAGER PAGE */
+#file-list { overflow-y: auto; }
+#file-textarea { font-family: Consolas, Menlo, Monaco, monospace; }
+.upcontrol { position: absolute; top: 36px; bottom: 0; left: 10px; right: 10px; }
+#device-logs { font-size: 90%; overflow-y: auto; line-height: 1.2em; background: #fff; }
+
+#example-code, #file-textarea { height: 100%; background: #fff; border-radius: 3px; }
+
+/* INFO PAGE */
+#app_view label { min-width: 10em; margin-left: 2em; }
+#app_view #net  { white-space: pre; margin: 0 2em; font-family: Menlo, monospace; }
+
+/* CONFIG PAGE */
+#config label { margin-left: 3em; min-width: 20em; max-width: 20em; }
+#config legend { padding-top: 2em; }
+#config .param { padding-top: 0.4em; }
+#config { background-color: #fff; border-radius: 3px; overflow-y: auto; padding: 0 2em; }
+
+/* WIZARD STYLES */
+.wizard .panel-body, .wizard .panel-footer { padding-left: 3em; padding-right: 3em; }
+.tab-pane h3 { margin: 3em 0 1em; }
+.step-image-div { background: #0e7cac; border-radius: 0.4em; min-height: 200px;}
+.panel-footer { background-color: #fff; }
+.navbar a.active { color: #000; font-weight: bold; }
+.navbar a.active:hover { text-decoration: none; }
+.wizard-image { height: 240px; max-width: 100%; }
+.red { color: #f66 !important; }
+#wizard-button-next, #wizard-button-prev { position: relative; }
+#wizard-button-next.spinner, #wizard-button-prev.spinner { color: transparent; }
+#main-title { margin: 0.5em 0; font-size: 30px; font-weight: 300; }
+.link { cursor: pointer; }
+#version-update { font-weight: bold; color: red; }
+
+/* COMMON STUFF */
+@keyframes spinner {
+  to {transform: rotate(360deg);}
+}
+
+.spinner:before {
+  content: '';
+  box-sizing: border-box;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  margin-top: -10px;
+  margin-left: -10px;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  border-top-color: #333;
+  animation: spinner .6s linear infinite;
+}
+
+input, textarea, button,
+textarea:focus,
+input[type="text"]:focus,
+input[type="password"]:focus,
+input[type="datetime"]:focus,
+input[type="datetime-local"]:focus,
+input[type="date"]:focus,
+input[type="month"]:focus,
+input[type="time"]:focus,
+input[type="week"]:focus,
+input[type="number"]:focus,
+input[type="email"]:focus,
+input[type="url"]:focus,
+input[type="search"]:focus,
+input[type="tel"]:focus,
+input[type="color"]:focus,
+.uneditable-input:focus {
+  border-color: #ccc ;
+  box-shadow: none;
+  outline: 0 none !important;
+}
+
+
+.bootstrapWizard {
+    display: block;
+    list-style: none;
+    padding: 0;
+    position: relative;
+    width: 100%;
+}
+
+.bootstrapWizard a:hover,.bootstrapWizard a:active,.bootstrapWizard a:focus {
+    text-decoration: none
+}
+
+.bootstrapWizard li {
+    display: block;
+    float: left;
+    width: 20%;
+    text-align: center;
+    padding-left: 0
+}
+
+.bootstrapWizard li:before {
+    border-top: 3px solid #55606E;
+    content: "";
+    display: block;
+    font-size: 0;
+    overflow: hidden;
+    position: relative;
+    top: 11px;
+    right: 1px;
+    width: 100%;
+    z-index: 1
+}
+
+.bootstrapWizard li:first-child:before {
+    left: 50%;
+    max-width: 50%
+}
+
+.bootstrapWizard li:last-child:before {
+    max-width: 50%;
+    width: 50%
+}
+
+.bootstrapWizard li.complete .step {
+    background: #0aa66e;
+    padding: 1px 6px;
+    border: 3px solid #55606E
+}
+
+.bootstrapWizard li .step i {
+    font-size: 10px;
+    font-weight: 400;
+    position: relative;
+    top: -1.5px
+}
+
+.bootstrapWizard li .step {
+    background: #B2B5B9;
+    color: #fff;
+    display: inline;
+    font-size: 15px;
+    font-weight: 700;
+    line-height: 12px;
+    padding: 7px 13px;
+    border: 3px solid transparent;
+    border-radius: 50%;
+    line-height: normal;
+    position: relative;
+    text-align: center;
+    z-index: 2;
+    transition: all .1s linear 0s
+}
+
+.bootstrapWizard li.active .step,.bootstrapWizard li.active.complete .step {
+    background: orange;
+    color: #fff;
+    font-weight: 700;
+    padding: 7px 13px;
+    font-size: 15px;
+    border-radius: 50%;
+    border: 3px solid #55606E;
+}
+
+.bootstrapWizard li.complete .title,.bootstrapWizard li.active .title {
+    color: #2B3D53
+}
+
+.bootstrapWizard li .title {
+    color: #bfbfbf;
+    display: block;
+    font-size: 13px;
+    line-height: 15px;
+    max-width: 100%;
+    position: relative;
+    table-layout: fixed;
+    text-align: center;
+    top: 20px;
+    word-wrap: break-word;
+    z-index: 104
+}
+
+.wizard-actions {
+    display: block;
+    list-style: none;
+    padding: 0;
+    position: relative;
+    width: 100%
+}
+
+.wizard-actions li {
+    display: inline
+}
+
+.tab-content.transparent {
+    background-color: transparent
+}
+
+/*End Wizard*/

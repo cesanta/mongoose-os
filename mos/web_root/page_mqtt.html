@@ -1,0 +1,96 @@
+<div class="row" id="mqtt-diagram">
+  <div class="col-sm-1 text-right">
+    <i class="fa fa-rotate-90 fa-microchip"></i>
+    <br /><span  style="margin-right: -18px;">YOUR&nbsp;DEVICE</span>
+  </div>
+  <div class="col-sm-3 text-center arrows">
+    <div><i class="fa fa-long-arrow-left arrow"></i><span class="mqtt-topic-pub">esp8266_A5FF35/request</span></div>
+    <div><span class="mqtt-topic-sub">esp8266_A5FF35/response</span><i class="fa fa-long-arrow-right arrow"></i></div>
+  </div>
+  <div class="col-sm-1 text-center">
+    <i class="fa fa-cloud"></i>
+    <br /><span>MQTT&nbsp;SERVER</span>
+  </div>
+  <div class="col-sm-3 text-center arrows">
+    <div><i class="fa fa-long-arrow-left arrow"></i><span class="mqtt-topic-pub">esp8266_A5FF35/request</span></div>
+    <div><span class="mqtt-topic-sub">esp8266_A5FF35/response</span><i class="fa fa-long-arrow-right arrow"></i></div>
+  </div>
+  <div class="col-sm-1">
+    <i class="fa fa-laptop"></i>
+    <br /><span>THIS&nbsp;PAGE</span>
+  </div>
+  <div class="col-sm-3 text-right">
+
+      <div class="form-group">
+        <label class="form-label">MQTT SERVER</label>
+        <div class="input-group">
+          <input type="text" class="form-control input-sm" placeholder="mqtt.server:1883" id="mqtt-server-input">
+          <span class="input-group-btn">
+            <button type="button" class="btn btn-primary btn-sm" id="mqtt-connect-button"><i class="fa fa-circle"></i> Connect</button>
+          </span>
+        </div>
+      </div>
+
+  </div>
+</div>
+
+
+<div class="x_panel" data-title="MQTT client">
+  <div class="x_content">
+
+  <div class="col-sm-4">
+    <div class="form-group">
+      <label class="form-label">Choose action:</label>
+      <div class="input-group">
+        <span class="input-group-btn">
+          <div class="btn-group dropdown">
+            <button type="button" class="btn btn-default dropdown-toggle"
+              data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+              Action
+              <span class="caret"></span>
+              <span class="sr-only">Toggle Dropdown</span>
+            </button>
+            <ul class="dropdown-menu" id="dropdown-firmware">
+              <li class="dropdown-menu-header">Handled by the device:</li>
+              <li><a>GPIO write</a></li>
+              <li><a>GPIO read</a></li>
+              <li><a>I2C write</a></li>
+              <li><a>I2C read</a></li>
+              <li><a>Initialize button</a></li>
+              <li class="dropdown-menu-header">Handled by this page:</li>
+              <li><a></a></li>
+              <li><a>Blink LED 3 times</a></li>
+              <li><a>Send weather report on button click</a></li>
+            </ul>
+          </div>
+        </span>
+        <input type="text" class="form-control" id="mqtt-action-input" placeholder="">
+      </div>
+    </div>
+  </div>
+
+  <div class="col-sm-4">
+    <div class="form-group">
+      <label class="form-label">Publish topic:</label>
+      <input type="text" class="form-control" id="mqtt-pub-input">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Message:</label>
+      <textarea class="form-control" rows="7"></textarea>
+    </div>
+    <button class="btn btn-primary btn-sm"><i class="fa fa-upload"></i> Send message</button>
+  </div>
+
+  <div class="col-sm-4">
+    <div class="form-group">
+      <label class="form-label">Subscribe topic:</label>
+      <input type="text" class="form-control" id="mqtt-sub-input">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Log:</label>
+      <div id="mqtt-subscribe-log"></div>
+    </div>
+  </div>
+
+  </div>
+</div>
