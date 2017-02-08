@@ -35,18 +35,19 @@ enum mgos_init_result mgos_init(void) {
   if (r != MGOS_INIT_OK) return r;
 #endif
 
+  /* Before mgos_sys_config_init_http */
+  r = mgos_sys_config_init_platform(get_cfg());
+  if (r != MGOS_INIT_OK) return r;
+
 #if MGOS_ENABLE_MDNS
-  r = mgos_mdns_init(); /* Before dns_sd init */
+  r = mgos_mdns_init(); /* Before dns_sd init, after
+                           mgos_sys_config_init_platform */
   if (r != MGOS_INIT_OK) return r;
 #endif
 #if MGOS_ENABLE_DNS_SD
   r = mgos_dns_sd_init(); /* Before mgos_rpc_init */
   if (r != MGOS_INIT_OK) return r;
 #endif
-
-  /* Before mgos_sys_config_init_http */
-  r = mgos_sys_config_init_platform(get_cfg());
-  if (r != MGOS_INIT_OK) return r;
 
 #if MGOS_ENABLE_I2C
   r = mgos_i2c_init();

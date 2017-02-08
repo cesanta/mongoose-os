@@ -47,26 +47,6 @@ void mgos_mdns_remove_handler(mg_event_handler_t handler, void *ud) {
   }
 }
 
-static void on_wifi_change(enum mgos_wifi_status event, void *ud) {
-  (void) ud;
-
-  switch (event) {
-    case MGOS_WIFI_IP_ACQUIRED: {
-      /*
-       * multicast is not abstracted properly neither by most SDKs
-       * nor my mongoose itself. Each platform will have a hal function
-       * that deals with joining a multicast group.
-       *
-       * TODO(mkm): give mongoose a generic multicast management API.
-       */
-      mgos_mdns_hal_join_group(MDNS_MCAST_GROUP);
-      break;
-    }
-    default:
-      ;
-  }
-}
-
 static void handler(struct mg_connection *nc, int ev, void *ev_data) {
   struct mdns_handler *e;
   (void) ev_data;
@@ -104,11 +84,7 @@ enum mgos_init_result mgos_mdns_init(void) {
   lc->sa.sin.sin_port = htons(5353);
   inet_aton(MDNS_MCAST_GROUP, &lc->sa.sin.sin_addr);
 
-  /*
-   * wait until the STA interface is brought up in order to add it to the
-   * multicast group
-   */
-  mgos_wifi_add_on_change_cb(on_wifi_change, NULL);
+  mgos_mdns_hal_join_group(MDNS_MCAST_GROUP);
 
   return MGOS_INIT_OK;
 }

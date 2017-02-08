@@ -243,13 +243,26 @@ static void advertise_service(const char *service, int rtype,
 
 static void reply_address_record(struct mg_dns_reply *reply,
                                  struct mg_dns_resource_record *question) {
-  uint32_t addr;
-  char *ip = mgos_wifi_get_sta_ip();
-  addr = inet_addr(ip);
-  free(ip);
+  char *ip = NULL;
+  char *ap_ip = mgos_wifi_get_ap_ip();
+  char *sta_ip = mgos_wifi_get_sta_ip();
+  /* Determine which interface this was received on. */
+  if (sta_ip == NULL && ap_ip != NULL) {
+    ip = ap_ip;
+  } else if (sta_ip != NULL && ap_ip == NULL) {
+    ip = sta_ip;
+  } else {
+    /* In AP+STA mode we shouldn't be here anyway. Just bail. */
+  }
 
-  mg_dns_reply_record(reply, question, NULL, question->rtype,
-                      RESOURCE_RECORD_TTL, &addr, 4);
+  if (ip != NULL) {
+    uint32_t addr = inet_addr(ip);
+    mg_dns_reply_record(reply, question, NULL, question->rtype,
+                        RESOURCE_RECORD_TTL, &addr, 4);
+  }
+
+  free(ap_ip);
+  free(sta_ip);
 }
 
 static void advertise_host(const char *hostname, struct mg_dns_reply *reply,
@@ -284,7 +297,7 @@ static void handler(struct mg_connection *nc, int ev, void *ev_data) {
 
       char *peer = inet_ntoa(nc->sa.sin.sin_addr);
       if (msg->num_questions > 0) {
-        LOG(LL_DEBUG, ("---- DNS packet from from %s (%d questions)", peer,
+        LOG(LL_DEBUG, ("---- DNS packet from %s (%d questions)", peer,
                        msg->num_questions));
       }
 
@@ -292,10 +305,6 @@ static void handler(struct mg_connection *nc, int ev, void *ev_data) {
         char rname[256];
         struct mg_dns_resource_record *rr = &msg->questions[i];
         mg_dns_uncompress_name(msg, &rr->name, rname, sizeof(rname) - 1);
-
-        if (strstr(rname, "google") != NULL) {
-          continue;
-        }
 
         LOG(LL_DEBUG,
             ("  -- Q type %d name %s (%s) from %s", rr->rtype, rname,
@@ -368,6 +377,12 @@ enum mgos_init_result mgos_dns_sd_init(void) {
   const struct sys_config *c = get_cfg();
 
   if (!c->dns_sd.enable) return MGOS_INIT_OK;
+  if (c->wifi.ap.enable && c->wifi.sta.enable) {
+    /* Reason: multiple interfaces. More work is required to make sure
+     * requests and responses are correctly plumbed to the right interface. */
+    LOG(LL_ERROR, ("MDNS does not work in AP+STA mode"));
+    return MGOS_INIT_MDNS_FAILED;
+  }
 
   s_resolver = (struct mdns_resolver *) calloc(1, sizeof(*s_resolver));
   mgos_mdns_add_handler(handler, NULL);
