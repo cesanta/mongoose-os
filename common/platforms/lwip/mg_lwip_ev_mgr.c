@@ -55,7 +55,12 @@ void mg_ev_mgr_lwip_process_signals(struct mg_mgr *mgr) {
         break;
       }
       case MG_SIG_RECV: {
-        mg_lwip_handle_recv(nc);
+        cs->recv_pending = 0;
+        if (nc->flags & MG_F_UDP) {
+          mg_lwip_handle_recv_udp(nc);
+        } else {
+          mg_lwip_handle_recv_tcp(nc);
+        }
         break;
       }
       case MG_SIG_SENT_CB: {
@@ -118,7 +123,9 @@ time_t mg_lwip_if_poll(struct mg_iface *iface, int timeout_ms) {
     struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
     tmp = nc->next;
     n++;
-    if (nc->flags & MG_F_CLOSE_IMMEDIATELY) {
+    if ((nc->flags & MG_F_CLOSE_IMMEDIATELY) ||
+        ((nc->flags & MG_F_SEND_AND_CLOSE) && (nc->flags & MG_F_UDP) &&
+         (nc->send_mbuf.len == 0))) {
       mg_close_conn(nc);
       continue;
     }

@@ -28,6 +28,8 @@ struct mg_lwip_conn_state {
   size_t rx_offset; /* Offset within the first pbuf (if partially consumed) */
   /* Last SSL write size, for retries. */
   int last_ssl_write_size;
+  int recv_pending; /* Whether MG_SIG_RECV is already pending for this
+                       connection */
 };
 
 enum mg_sig_type {
