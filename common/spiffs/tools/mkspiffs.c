@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include <dirent.h>
+#include "/usr/include/dirent.h"
 #include <errno.h>
 #include <fcntl.h>
 #include <stdbool.h>

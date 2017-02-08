@@ -3,7 +3,7 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/stat.h>
-#include <dirent.h>
+#include "/usr/include/dirent.h"
 
 #include <spiffs.h>
 
