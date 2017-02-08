@@ -7,7 +7,8 @@ MG_FEATURES_TINY = \
                    -DMG_DISABLE_HTTP_KEEP_ALIVE \
                    -DMG_ENABLE_HTTP_SSI=0 \
                    -DMG_ENABLE_TUN=0 \
-                   -DMG_ENABLE_HTTP_STREAMING_MULTIPART
+                   -DMG_ENABLE_HTTP_STREAMING_MULTIPART \
+                   -DMG_SSL_IF_MBEDTLS_MAX_FRAGMENT_LEN=1024
 
 V ?=
 ifeq ("$(V)","1")
