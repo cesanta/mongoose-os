@@ -291,15 +291,18 @@ static void handler(struct mg_connection *nc, int ev, void *ev_data) {
       /* the reply goes either to the sender or to a multicast dest */
       struct mg_connection *reply_conn = nc;
 
+      char *peer = inet_ntoa(nc->sa.sin.sin_addr);
+      if (msg->num_questions > 0) {
+        LOG(LL_DEBUG, ("---- DNS packet from %s (%d questions, %d answers)",
+                       peer, msg->num_questions, msg->num_answers));
+      }
+
+      /* This is someone else's answer to someone else's question, ignore. */
+      if (msg->num_answers > 0) break;
+
       mbuf_init(&rdata, 0);
       mbuf_init(&reply_buf, 512);
       reply = mg_dns_create_reply(&reply_buf, msg);
-
-      char *peer = inet_ntoa(nc->sa.sin.sin_addr);
-      if (msg->num_questions > 0) {
-        LOG(LL_DEBUG, ("---- DNS packet from %s (%d questions)", peer,
-                       msg->num_questions));
-      }
 
       for (i = 0; i < msg->num_questions; i++) {
         char rname[256];
