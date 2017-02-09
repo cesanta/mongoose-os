@@ -164,6 +164,10 @@ enum mgos_init_result mgos_set_stderr_uart(int uart_no) {
 
 void HAL_UART_RxCpltCallback(UART_Handle *huart) {
   struct UART_State *state = get_state_by_huart(huart);
+  if (!state->rx_in_progress) {
+    return;
+  }
+
   state->rx_in_progress = 0;
 
   if (state->rx_buf.avail > 0 && state->rx_enabled) {
@@ -187,6 +191,9 @@ void HAL_UART_RxCpltCallback(UART_Handle *huart) {
 
 void HAL_UART_TxCpltCallback(UART_Handle *huart) {
   struct UART_State *state = get_state_by_huart(huart);
+  if (!state->tx_in_progress) {
+    return;
+  }
   cs_rbuf_clear(&state->tx_buf);
   state->tx_in_progress = 0;
 }
