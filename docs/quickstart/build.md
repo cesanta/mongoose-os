@@ -83,4 +83,4 @@ modules:
 The example above includes an external library from Github, an embedded
 scripting engine. This is how a default Mongoose OS firmware is build, which
 included mJS scripting engine, see
-https://github.com/cesanta/mongoose-os/tree/master/fw/examples/mjs\_base 
+https://github.com/cesanta/mongoose-os/tree/master/fw/examples/mjs_base 
