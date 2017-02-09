@@ -11,6 +11,8 @@ APP_EXTRA_SRCS ?=
 APP_VERSION ?=
 APP_BUILD_ID ?=
 FFI_SYMBOLS ?=
+
+MGOS_ENABLE_ATCA ?= 1
 MGOS_ESP32_ENABLE_FLASH_ENCRYPTION ?= 0
 
 MGOS_PATH ?= ../../..
@@ -62,9 +64,10 @@ export _BUILD_DIR = $(BUILD_DIR)
 export FFI_SYMBOLS
 export _FW_DIR := $(FW_DIR)
 export _GEN_DIR := $(GEN_DIR)
-export _MGOS_PATH
+export MGOS_ENABLE_ATCA
 export MGOS_ESP_PATH
 export MGOS_ESP_SRC_PATH
+export _MGOS_PATH
 export SPIFFS_PATH
 
 export BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
