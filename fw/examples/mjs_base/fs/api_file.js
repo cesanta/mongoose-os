@@ -6,6 +6,7 @@ let File = {
   fclose: ffi('void fclose(void *)'),
   fread: ffi('int fread(char *, int, int, void *)'),
   fwrite: ffi('int fwrite(char *, int, int, void *)'),
+  remove: ffi('int remove(char *)'),
 
   // Read the whole file into a string
   read: function(path) {
