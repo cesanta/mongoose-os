@@ -12,7 +12,6 @@ override GEN_DIR := $(_GEN_DIR)
 override MGOS_PATH = $(_MGOS_PATH)
 
 MGOS_ENABLE_CONSOLE ?= 0
-MGOS_ENABLE_DNS_SD ?= 0
 # Use bitbang I2C for now.
 MGOS_ENABLE_I2C_GPIO ?= 1
 
@@ -41,7 +40,7 @@ MGOS_SRCS = mgos_config.c mgos_gpio.c mgos_init.c mgos_mongoose.c \
             mgos_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
             mgos_timers_mongoose.c mgos_uart.c mgos_utils.c mgos_dlsym.c \
             esp32_console.c esp32_crypto.c esp32_fs.c esp32_fs_crypt.c \
-            esp32_gpio.c esp32_hal.c \
+            esp32_gpio.c esp32_hal.c esp32_mdns.c \
             esp32_main.c esp32_uart.c
 
 include $(MGOS_PATH)/fw/common.mk
