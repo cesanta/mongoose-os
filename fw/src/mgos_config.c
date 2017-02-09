@@ -112,9 +112,13 @@ void mgos_conf_parse_cb(void *data, const char *name, size_t name_len,
           ctx->result = false;
           return;
         }
-        /* TODO(rojer): Unescape the string. */
-        memcpy(s, tok->ptr, tok->len);
-        s[tok->len] = '\0';
+        int n = json_unescape(tok->ptr, tok->len, s, tok->len);
+        if (n < 0) {
+          free(s);
+          ctx->result = false;
+          return;
+        }
+        s[n] = '\0';
       } else {
         /* Empty string - keep value as NULL. */
       }

@@ -430,7 +430,8 @@ static int doit(struct frozen *f) {
   return parse_value(f);
 }
 
-static int json_encode_string(struct json_out *out, const char *p, size_t len) {
+int json_escape(struct json_out *out, const char *p, size_t len) WEAK;
+int json_escape(struct json_out *out, const char *p, size_t len) {
   size_t i, cl, n = 0;
   const char *hex_digits = "0123456789abcdef";
   const char *specials = "btnvfr";
@@ -613,7 +614,7 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
             l = strlen(p);
           }
           len += out->printer(out, quote, 1);
-          len += json_encode_string(out, p, l);
+          len += json_escape(out, p, l);
           len += out->printer(out, quote, 1);
         }
       } else {

@@ -207,6 +207,12 @@ int json_scanf_array_elem(const char *s, int len, const char *path, int index,
  */
 int json_unescape(const char *src, int slen, char *dst, int dlen);
 
+/*
+ * Escape a string `str`, `str_len` into the printer `out`.
+ * Return the number of bytes printed.
+ */
+int json_escape(struct json_out *out, const char *str, size_t str_len);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -9,9 +9,9 @@
 
 void mg_json_emit_str(struct mbuf *b, const struct mg_str s, int quote) WEAK;
 void mg_json_emit_str(struct mbuf *b, const struct mg_str s, int quote) {
+  struct json_out out = JSON_OUT_MBUF(b);
   if (quote) mbuf_append(b, "\"", 1);
-  /* TODO(rojer): JSON escaping. */
-  if (s.len != 0) mbuf_append(b, s.p, s.len);
+  json_escape(&out, s.p, s.len);
   if (quote) mbuf_append(b, "\"", 1);
 }
 
