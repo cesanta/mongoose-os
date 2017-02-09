@@ -273,12 +273,6 @@ void fs_flush_stderr(void) {
   if (s_stderr_uart >= 0) mgos_uart_flush(s_stderr_uart);
 }
 
-int64_t mgos_get_storage_free_space(void) {
-  uint32_t total, used;
-  SPIFFS_info(&fs, &total, &used);
-  return total - used;
-}
-
 enum mgos_init_result mgos_set_stdout_uart(int uart_no) {
   enum mgos_init_result r = mgos_init_debug_uart(uart_no);
   if (r == MGOS_INIT_OK) {

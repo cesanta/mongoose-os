@@ -121,15 +121,6 @@ int fs_spiffs_mkdir(const char *path, mode_t mode) {
   return (strlen(path) == 1 && *path == '.') ? 0 : ENOTDIR;
 }
 
-int64_t mgos_get_storage_free_space(void) {
-  struct mount_info *m = &s_fsm;
-  uint32_t total, used;
-  if (!m->valid) return set_errno(EBADF);
-
-  SPIFFS_info(&m->fs, &total, &used);
-  return total - used;
-}
-
 void cc3200_fs_flush(void) {
   struct mount_info *m = &s_fsm;
   /*

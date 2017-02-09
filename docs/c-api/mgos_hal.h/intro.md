@@ -9,7 +9,6 @@ items:
   - { name: mgos_get_fs_size.md }
   - { name: mgos_get_heap_size.md }
   - { name: mgos_get_min_free_heap_size.md }
-  - { name: mgos_get_storage_free_space.md }
   - { name: mgos_system_restart.md }
   - { name: mgos_usleep.md }
   - { name: mgos_wdt_disable.md }

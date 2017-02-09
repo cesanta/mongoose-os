@@ -54,9 +54,6 @@ void mgos_system_restart(int exit_code);
 /* Delay usecs */
 void mgos_usleep(int usecs);
 
-/* Get storage free space, bytes */
-int64_t mgos_get_storage_free_space(void);
-
 /*
  * Invoke a callback in the main MGOS event loop.
  * Returns true if the callback has been scheduled for execution.

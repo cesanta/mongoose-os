@@ -94,11 +94,6 @@ void mgos_system_restart(int exit_code) {
   exit(exit_code);
 }
 
-size_t mgos_get_fs_memory_usage(void) {
-  /* TODO(alashkin): What kind of fs memory we want to see? */
-  return 0;
-}
-
 void mgos_usleep(int usecs) {
 #ifndef _WIN32
   usleep(usecs);
@@ -121,9 +116,4 @@ bool mgos_invoke_cb(mgos_cb_t cb, void *arg) {
   /* FIXME: This is NOT correct. */
   cb(arg);
   return true;
-}
-
-int64_t mgos_get_storage_free_space(void) {
-  /* TODO(alashkin): think about implementation */
-  return -1;
 }
