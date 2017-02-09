@@ -24,6 +24,19 @@ struct mg_rpc_cfg *mgos_rpc_cfg_from_sys(const struct sys_config *scfg);
 struct mg_rpc_channel_ws_out_cfg *mgos_rpc_channel_ws_out_cfg_from_sys(
     const struct sys_config *scfg);
 
+/* FFI-able callback, see `mgos_rpc_add_handler()` */
+typedef void (*mgos_rpc_eh_t)(struct mg_rpc_request_info *ri, const char *args,
+                              const char *src, void *user_data);
+
+/*
+ * FFI-able function to add RPC handler
+ */
+void mgos_rpc_add_handler(const char *method, mgos_rpc_eh_t cb, void *cb_arg);
+
+/* FFI-able function to send response from RPC handler */
+bool mgos_rpc_send_response(struct mg_rpc_request_info *ri,
+                            const char *response_json);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

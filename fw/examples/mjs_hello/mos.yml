@@ -31,6 +31,8 @@ ffi_symbols:
   - mgos_set_timer
   - mgos_system_restart
   - mgos_usleep
+  - mgos_rpc_add_handler
+  - mgos_rpc_send_response
 modules:
   - src: https://github.com/cesanta/mjs
 build_vars:
