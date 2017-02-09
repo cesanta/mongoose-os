@@ -1,0 +1,4 @@
+[
+  ["mqtt.server", "test.mosquitto.org:1883"],
+  ["i2c.enable", true],
+]

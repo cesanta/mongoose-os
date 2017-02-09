@@ -1,0 +1,41 @@
+name: mjs_base
+# arch: PLATFORM
+version: 1.0
+skeleton_version: 2017-02-09
+sources:
+  - src
+filesystem:
+  - fs
+ffi_symbols:
+  - fclose
+  - fopen
+  - fread
+  - fwrite
+  - get_led_gpio_pin
+  - mg_send
+  - mg_time
+  - mgos_add_http_endpoint
+  - mgos_bind
+  - mgos_bind_http
+  - mgos_connect
+  - mgos_connect_http
+  - mgos_disconnect
+  - mgos_get_free_heap_size
+  - mgos_get_heap_size
+  - mgos_get_http_message_param
+  - mgos_get_sys_http_server
+  - mgos_gpio_*
+  - mgos_i2c_*
+  - mgos_mqtt_pub
+  - mgos_mqtt_sub
+  - mgos_peek
+  - mgos_set_timer
+  - mgos_system_restart
+  - mgos_usleep
+  - remove
+modules:
+  - src: https://github.com/cesanta/mjs
+build_vars:
+  MGOS_ENABLE_MQTT: 1
+  SSL: mbedTLS
+  APP_CONF_SCHEMA: src/conf_schema.yaml

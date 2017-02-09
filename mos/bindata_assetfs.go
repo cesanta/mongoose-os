@@ -5329,7 +5329,7 @@ var _web_rootPage_examplesHtml = []byte(`<div data-title="Code Examples" style="
 </div>
 
 <script>
-  var prefix = 'https://raw.githubusercontent.com/cesanta/mongoose-os/master/fw/examples/mjs_hello/examples/';
+  var prefix = 'https://raw.githubusercontent.com/cesanta/mongoose-os/master/fw/examples/mjs_base/examples/';
 
   $(document).off('click', '.example');
   $(document).on('click', '.example', function() {
@@ -5382,7 +5382,7 @@ func web_rootPage_examplesHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_examples.html", size: 2155, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_examples.html", size: 2154, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

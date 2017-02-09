@@ -2,7 +2,7 @@
 
 This is an example of the smart heater we use in our office,
 implemented totally in JavaScript on top of vanilla mOS firmware,
-https://github.com/cesanta/mongoose-os/tree/master/fw/examples/mjs_hello
+[mjs\_base](https://github.com/cesanta/mongoose-os/tree/master/fw/examples/mjs_base)
 
 It provides
 a number of HTTP endpoints to get heater status and perform a remote control:
