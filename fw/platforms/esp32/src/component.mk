@@ -114,6 +114,10 @@ $(SYMBOLS_DUMP): $(MGOS_OBJS) $(APP_OBJS)
 	$(vecho) "GEN   $@"
 	$(NM) --defined-only --print-file-name -g $^ > $@
 
+# In ffi exports file we use fake signatures: void func(void), and it conflicts
+# with the builtin functions like fopen, etc.
+$(FFI_EXPORTS_O): CFLAGS += -fno-builtin
+
 $(FFI_EXPORTS_O): $(FFI_EXPORTS_C)
 	$(summary) CC $@ '$(FFI_EXPORTS_C)'
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@

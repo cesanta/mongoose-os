@@ -137,6 +137,12 @@ size_t mgos_get_free_fs_size(void) {
   return total - used;
 }
 
+int64_t mgos_get_storage_free_space(void) {
+  uint32_t total, used;
+  SPIFFS_info(&s_mount->fs, &total, &used);
+  return total - used;
+}
+
 static int spiffs_open_p(void *ctx, const char *path, int flags, int mode) {
   return spiffs_vfs_open(&((struct mount_info *) ctx)->fs, path, flags, mode);
 }

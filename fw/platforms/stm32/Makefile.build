@@ -222,5 +222,9 @@ $(SYMBOLS_DUMP): $(OBJECTS)
 $(FFI_EXPORTS_C): $(SYMBOLS_DUMP)
 	$(call gen_ffi_exports,$<,$@,$(FFI_SYMBOLS))
 
+# In ffi exports file we use fake signatures: void func(void), and it conflicts
+# with the builtin functions like fopen, etc.
+$(FFI_EXPORTS_O): CFLAGS += -fno-builtin
+
 clean:
 	@rm -rf $(BUILD_DIR)

@@ -187,7 +187,7 @@ def cmd_gen_ffi_exports(args):
                 symbol_name = m.group('symbol_name')
 
                 for p in patterns:
-                    if fnmatch.fnmatch(symbol_name, p):
+                    if "*" in p and fnmatch.fnmatch(symbol_name, p):
                         # A hack: since ffi exports generator doesn't know
                         # signatures, it just declares all functions as
                         # `void foo(void)`, but `mgos_dlsym()` is
@@ -197,6 +197,11 @@ def cmd_gen_ffi_exports(args):
                         if symbol_name != "mgos_dlsym":
                             symbols.append(symbol_name)
                             break
+
+    # Blindly append non-glob patterns
+    for p in patterns:
+      if "*" not in p:
+        symbols.append(p)
 
     symbols.sort()
 

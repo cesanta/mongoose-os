@@ -335,6 +335,10 @@ $(SYMBOLS_DUMP): $(APP_OBJS) $(MGOS_OBJS)
 $(FFI_EXPORTS_C): $(SYMBOLS_DUMP)
 	$(call gen_ffi_exports,$<,$@,$(FFI_SYMBOLS))
 
+# In ffi exports file we use fake signatures: void func(void), and it conflicts
+# with the builtin functions like fopen, etc.
+$(FFI_EXPORTS_O): CFLAGS += -fno-builtin
+
 # Regenerate build info if there are changes in objects.
 $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MGOS_OBJS)
 	$(call gen_build_info,$@,,$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
