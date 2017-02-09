@@ -62,6 +62,11 @@ size_t mgos_get_heap_size(void) {
   return 0;
 }
 
+void mgos_usleep(int usecs) {
+  (void) usecs;
+  /* TODO(alashkin): implement */
+}
+
 enum mgos_init_result mgos_sys_config_init_platform(struct sys_config *cfg) {
   return MGOS_INIT_OK;
 }
