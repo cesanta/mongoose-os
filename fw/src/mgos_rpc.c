@@ -219,18 +219,22 @@ struct mg_rpc *mgos_rpc_get_global(void) {
   return s_global_mg_rpc;
 };
 
+/* Adding handlers {{{ */
+
 /*
  * Data for the FFI-able wrapper
  */
-struct mgos_rpc_eh_data {
+struct mgos_rpc_req_eh_data {
   /* FFI-able callback and its userdata */
   mgos_rpc_eh_t cb;
   void *cb_arg;
 };
 
-static void mgos_rpc_oplya(struct mg_rpc_request_info *ri, void *cb_arg,
-                           struct mg_rpc_frame_info *fi, struct mg_str args) {
-  struct mgos_rpc_eh_data *oplya_arg = (struct mgos_rpc_eh_data *) cb_arg;
+static void mgos_rpc_req_oplya(struct mg_rpc_request_info *ri, void *cb_arg,
+                               struct mg_rpc_frame_info *fi,
+                               struct mg_str args) {
+  struct mgos_rpc_req_eh_data *oplya_arg =
+      (struct mgos_rpc_req_eh_data *) cb_arg;
 
   /*
    * FFI expects strings to be null-terminated, so we have to reallocate
@@ -255,11 +259,11 @@ static void mgos_rpc_oplya(struct mg_rpc_request_info *ri, void *cb_arg,
 
 void mgos_rpc_add_handler(const char *method, mgos_rpc_eh_t cb, void *cb_arg) {
   /* NOTE: it won't be freed */
-  struct mgos_rpc_eh_data *oplya_arg = calloc(1, sizeof(*oplya_arg));
+  struct mgos_rpc_req_eh_data *oplya_arg = calloc(1, sizeof(*oplya_arg));
   oplya_arg->cb = cb;
   oplya_arg->cb_arg = cb_arg;
 
-  mg_rpc_add_handler(s_global_mg_rpc, mg_mk_str(method), mgos_rpc_oplya,
+  mg_rpc_add_handler(s_global_mg_rpc, mg_mk_str(method), mgos_rpc_req_oplya,
                      oplya_arg);
 }
 
@@ -267,5 +271,65 @@ bool mgos_rpc_send_response(struct mg_rpc_request_info *ri,
                             const char *response_json) {
   return !!mg_rpc_send_responsef(ri, "%s", response_json);
 }
+
+/* }}} */
+
+/* Calling {{{ */
+
+/*
+ * Data for the FFI-able wrapper
+ */
+struct mgos_rpc_call_eh_data {
+  /* FFI-able callback and its userdata */
+  mgos_rpc_result_cb_t cb;
+  void *cb_arg;
+};
+
+static void mgos_rpc_call_oplya(struct mg_rpc *c, void *cb_arg,
+                                struct mg_rpc_frame_info *fi,
+                                struct mg_str result, int error_code,
+                                struct mg_str error_msg) {
+  struct mgos_rpc_call_eh_data *oplya_arg =
+      (struct mgos_rpc_call_eh_data *) cb_arg;
+
+  /*
+   * FFI expects strings to be null-terminated, so we have to reallocate
+   * `mg_str`s.
+   *
+   * TODO(dfrank): implement a way to ffi strings via pointer + length
+   */
+
+  char *result2 = calloc(1, result.len + 1 /* null-terminate */);
+  char *error_msg2 = calloc(1, error_msg.len + 1 /* null-terminate */);
+
+  memcpy(result2, result.p, result.len);
+  memcpy(error_msg2, error_msg.p, error_msg.len);
+
+  oplya_arg->cb(result2, error_code, error_msg2, oplya_arg->cb_arg);
+
+  free(error_msg2);
+  free(result2);
+
+  free(oplya_arg);
+
+  (void) c;
+  (void) fi;
+}
+
+bool mg_rpc_call(const char *dst, const char *method, const char *args_json,
+                 mgos_rpc_result_cb_t cb, void *cb_arg) {
+  /* It will be freed in mgos_rpc_call_oplya() */
+  struct mgos_rpc_call_eh_data *oplya_arg = calloc(1, sizeof(*oplya_arg));
+  oplya_arg->cb = cb;
+  oplya_arg->cb_arg = cb_arg;
+
+  struct mg_rpc_call_opts opts;
+  opts.dst = mg_mk_str(dst);
+
+  return mg_rpc_callf(s_global_mg_rpc, mg_mk_str(method), mgos_rpc_call_oplya,
+                      oplya_arg, &opts, "%s", args_json);
+}
+
+/* }}} */
 
 #endif /* MGOS_ENABLE_RPC */
