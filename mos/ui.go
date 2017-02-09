@@ -183,7 +183,7 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 					if c.Wifi.Status == "got ip" {
 						result = fmt.Sprintf("\"%s\"", c.Wifi.Sta_ip)
 						break
-					} else if c.Wifi.Status == "connecting" || c.Wifi.Status == "" || c.Wifi.Status == "associated" {
+					} else if c.Wifi.Status == "connecting" || c.Wifi.Status == "connected" || c.Wifi.Status == "" || c.Wifi.Status == "associated" {
 						// Still connecting, wait
 					} else {
 						err = errors.Errorf("%s", c.Wifi.Status)
