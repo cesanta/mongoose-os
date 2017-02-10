@@ -53,8 +53,12 @@ func MQTT(dst string, tlsConfig *tls.Config) (Codec, error) {
 	opts := mqtt.NewClientOptions()
 	opts.AddBroker(broker)
 	opts.SetClientID(clientID)
-	opts.SetUsername(clientID)
-	opts.SetTLSConfig(tlsConfig)
+	if u.User != nil {
+		opts.SetUsername(u.User.Username())
+	}
+	if tlsConfig != nil {
+		opts.SetTLSConfig(tlsConfig)
+	}
 	opts.SetConnectionLostHandler(c.onConnectionLost)
 
 	c.cli = mqtt.NewClient(opts)
