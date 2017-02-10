@@ -31,6 +31,10 @@ var _ = trace.New
 
 const ServiceID = "http://mongoose-iot.com/fwConfig"
 
+type GetArgs struct {
+	Key *string `json:"key,omitempty"`
+}
+
 type SaveArgs struct {
 	Reboot *bool `json:"reboot,omitempty"`
 }
@@ -40,7 +44,7 @@ type SetArgs struct {
 }
 
 type Service interface {
-	Get(ctx context.Context) (ourjson.RawMessage, error)
+	Get(ctx context.Context, args *GetArgs) (ourjson.RawMessage, error)
 	Save(ctx context.Context, args *SaveArgs) error
 	Set(ctx context.Context, args *SetArgs) error
 }
@@ -50,6 +54,8 @@ type Instance interface {
 }
 
 type _validators struct {
+	// This comment prevents gofmt from aligning types in the struct.
+	GetArgs *schema.Validator
 	// This comment prevents gofmt from aligning types in the struct.
 	GetResult *schema.Validator
 	// This comment prevents gofmt from aligning types in the struct.
@@ -101,6 +107,19 @@ func initValidators() {
 	}
 	var s *ucl.Object
 	_ = s // avoid unused var error
+	s = &ucl.Object{
+		Value: map[ucl.Key]ucl.Value{
+			ucl.Key{Value: "properties"}: service.(*ucl.Object).Find("methods").(*ucl.Object).Find("Get").(*ucl.Object).Find("args"),
+			ucl.Key{Value: "type"}:       &ucl.String{Value: "object"},
+		},
+	}
+	if req, found := service.(*ucl.Object).Find("methods").(*ucl.Object).Find("Get").(*ucl.Object).Lookup("required_args"); found {
+		s.Value[ucl.Key{Value: "required"}] = req
+	}
+	validators.GetArgs, err = schema.NewValidator(s, loader)
+	if err != nil {
+		panic(err)
+	}
 	validators.GetResult, err = schema.NewValidator(service.(*ucl.Object).Find("methods").(*ucl.Object).Find("Get").(*ucl.Object).Find("result"), loader)
 	if err != nil {
 		panic(err)
@@ -143,9 +162,25 @@ type _Client struct {
 	addr string
 }
 
-func (c *_Client) Get(ctx context.Context) (res ourjson.RawMessage, err error) {
+func (c *_Client) Get(ctx context.Context, args *GetArgs) (res ourjson.RawMessage, err error) {
 	cmd := &frame.Command{
 		Cmd: "Config.Get",
+	}
+
+	cmd.Args = ourjson.DelayMarshaling(args)
+	b, err := cmd.Args.MarshalJSON()
+	if err != nil {
+		glog.Errorf("Failed to marshal args as JSON: %+v", err)
+	} else {
+		v, err := ucl.Parse(bytes.NewReader(b))
+		if err != nil {
+			glog.Errorf("Failed to parse just serialized JSON value %q: %+v", string(b), err)
+		} else {
+			if err := validators.GetArgs.Validate(v); err != nil {
+				glog.Warningf("Sending invalid args for Get: %+v", err)
+				return ourjson.RawMessage{}, errors.Annotatef(err, "invalid args for Get")
+			}
+		}
 	}
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
@@ -250,7 +285,26 @@ type _Server struct {
 }
 
 func (s *_Server) Get(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
-	r, err := s.impl.Get(ctx)
+	b, err := cmd.Args.MarshalJSON()
+	if err != nil {
+		glog.Errorf("Failed to marshal args as JSON: %+v", err)
+	} else {
+		if v, err := ucl.Parse(bytes.NewReader(b)); err != nil {
+			glog.Errorf("Failed to parse valid JSON value %q: %+v", string(b), err)
+		} else {
+			if err := validators.GetArgs.Validate(v); err != nil {
+				glog.Warningf("Got invalid args for Get: %+v", err)
+				return nil, errors.Annotatef(err, "invalid args for Get")
+			}
+		}
+	}
+	var args GetArgs
+	if len(cmd.Args) > 0 {
+		if err := cmd.Args.UnmarshalInto(&args); err != nil {
+			return nil, errors.Annotatef(err, "unmarshaling args")
+		}
+	}
+	r, err := s.impl.Get(ctx, &args)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -318,6 +372,12 @@ func (s *_Server) Set(ctx context.Context, src string, cmd *frame.Command) (inte
 var _ServiceDefinition = json.RawMessage([]byte(`{
   "methods": {
     "Get": {
+      "args": {
+        "key": {
+          "doc": "If specified, return this key from the config.",
+          "type": "string"
+        }
+      },
       "doc": "Get device config",
       "result": {
         "keep_as_json": true

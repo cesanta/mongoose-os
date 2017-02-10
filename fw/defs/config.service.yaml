@@ -3,6 +3,10 @@ name: Config
 methods:
   Get:
     doc: Get device config
+    args:
+      key:
+        type: string
+        doc: If specified, return this key from the config.
     result:
       keep_as_json: true
 

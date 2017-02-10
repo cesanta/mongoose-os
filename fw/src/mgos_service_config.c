@@ -35,10 +35,22 @@ static void mgos_config_get_handler(struct mg_rpc_request_info *ri,
   }
 
   struct sys_config *cfg = get_cfg();
+  const struct mgos_conf_entry *schema = sys_config_schema();
   struct mbuf send_mbuf;
   mbuf_init(&send_mbuf, 0);
-  mgos_conf_emit_cb(cfg, NULL, sys_config_schema(), false, &send_mbuf, NULL,
-                    NULL);
+
+  char *key = NULL;
+  json_scanf(args.p, args.len, "{key: %Q}", &key);
+  if (key != NULL) {
+    schema = mgos_conf_find_schema_entry(key, sys_config_schema());
+    free(key);
+    if (schema == NULL) {
+      mg_rpc_send_errorf(ri, 404, "invalid config key");
+      return;
+    }
+  }
+
+  mgos_conf_emit_cb(cfg, NULL, schema, false, &send_mbuf, NULL, NULL);
 
   /*
    * TODO(dfrank): figure out why frozen handles %.*s incorrectly here,

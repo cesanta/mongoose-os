@@ -188,6 +188,46 @@ static bool mgos_conf_value_eq(const void *cfg, const void *base,
 
 static void mgos_conf_emit_obj(struct emit_ctx *ctx,
                                const struct mgos_conf_entry *schema,
+                               int num_entries, int indent);
+
+static void mgos_conf_emit_entry(struct emit_ctx *ctx,
+                                 const struct mgos_conf_entry *e, int indent) {
+  switch (e->type) {
+    case CONF_TYPE_INT: {
+      char buf[20];
+      int len = snprintf(buf, sizeof(buf), "%d",
+                         *((int *) (((char *) ctx->cfg) + e->offset)));
+      mbuf_append(ctx->out, buf, len);
+      break;
+    }
+    case CONF_TYPE_BOOL: {
+      int v = *((int *) (((char *) ctx->cfg) + e->offset));
+      const char *s;
+      int len;
+      if (v != 0) {
+        s = "true";
+        len = 4;
+      } else {
+        s = "false";
+        len = 5;
+      }
+      mbuf_append(ctx->out, s, len);
+      break;
+    }
+    case CONF_TYPE_STRING: {
+      const char *v = *((char **) (((char *) ctx->cfg) + e->offset));
+      mg_json_emit_str(ctx->out, mg_mk_str(v), 1);
+      break;
+    }
+    case CONF_TYPE_OBJECT: {
+      mgos_conf_emit_obj(ctx, e + 1, e->num_desc, indent + 2);
+      break;
+    }
+  }
+}
+
+static void mgos_conf_emit_obj(struct emit_ctx *ctx,
+                               const struct mgos_conf_entry *schema,
                                int num_entries, int indent) {
   mbuf_append(ctx->out, "{", 1);
   bool first = true;
@@ -206,38 +246,7 @@ static void mgos_conf_emit_obj(struct emit_ctx *ctx,
     if (ctx->pretty) mgos_emit_indent(ctx->out, indent);
     mg_json_emit_str(ctx->out, mg_mk_str(e->key), 1);
     mbuf_append(ctx->out, ": ", (ctx->pretty ? 2 : 1));
-    switch (e->type) {
-      case CONF_TYPE_INT: {
-        char buf[20];
-        int len = snprintf(buf, sizeof(buf), "%d",
-                           *((int *) (((char *) ctx->cfg) + e->offset)));
-        mbuf_append(ctx->out, buf, len);
-        break;
-      }
-      case CONF_TYPE_BOOL: {
-        int v = *((int *) (((char *) ctx->cfg) + e->offset));
-        const char *s;
-        int len;
-        if (v != 0) {
-          s = "true";
-          len = 4;
-        } else {
-          s = "false";
-          len = 5;
-        }
-        mbuf_append(ctx->out, s, len);
-        break;
-      }
-      case CONF_TYPE_STRING: {
-        const char *v = *((char **) (((char *) ctx->cfg) + e->offset));
-        mg_json_emit_str(ctx->out, mg_mk_str(v), 1);
-        break;
-      }
-      case CONF_TYPE_OBJECT: {
-        mgos_conf_emit_obj(ctx, schema + i + 1, e->num_desc, indent + 2);
-        break;
-      }
-    }
+    mgos_conf_emit_entry(ctx, e, indent);
     i++;
     if (e->type == CONF_TYPE_OBJECT) i += e->num_desc;
     if (ctx->cb != NULL) ctx->cb(ctx->out, ctx->cb_param);
@@ -259,7 +268,7 @@ void mgos_conf_emit_cb(const void *cfg, const void *base,
                          .out = out,
                          .cb = cb,
                          .cb_param = cb_param};
-  mgos_conf_emit_obj(&ctx, schema + 1, schema->num_desc, 2);
+  mgos_conf_emit_entry(&ctx, schema, 0);
   if (cb != NULL) cb(out, cb_param);
   if (out == &m) mbuf_free(out);
 }

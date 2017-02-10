@@ -26,6 +26,10 @@ var _ = trace.New
 
 const ServiceID = "http://mongoose-iot.com/fwConfig"
 
+type GetArgs struct {
+	Key *string `json:"key,omitempty"`
+}
+
 type SaveArgs struct {
 	Reboot *bool `json:"reboot,omitempty"`
 }
@@ -35,7 +39,7 @@ type SetArgs struct {
 }
 
 type Service interface {
-	Get(ctx context.Context) (ourjson.RawMessage, error)
+	Get(ctx context.Context, args *GetArgs) (ourjson.RawMessage, error)
 	Save(ctx context.Context, args *SaveArgs) error
 	Set(ctx context.Context, args *SetArgs) error
 }
@@ -53,10 +57,12 @@ type _Client struct {
 	addr string
 }
 
-func (c *_Client) Get(ctx context.Context) (res ourjson.RawMessage, err error) {
+func (c *_Client) Get(ctx context.Context, args *GetArgs) (res ourjson.RawMessage, err error) {
 	cmd := &frame.Command{
 		Cmd: "Config.Get",
 	}
+
+	cmd.Args = ourjson.DelayMarshaling(args)
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
 		return ourjson.RawMessage{}, errors.Trace(err)
@@ -119,7 +125,13 @@ type _Server struct {
 }
 
 func (s *_Server) Get(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
-	return s.impl.Get(ctx)
+	var args GetArgs
+	if len(cmd.Args) > 0 {
+		if err := cmd.Args.UnmarshalInto(&args); err != nil {
+			return nil, errors.Annotatef(err, "unmarshaling args")
+		}
+	}
+	return s.impl.Get(ctx, &args)
 }
 
 func (s *_Server) Save(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
@@ -145,6 +157,12 @@ func (s *_Server) Set(ctx context.Context, src string, cmd *frame.Command) (inte
 var _ServiceDefinition = json.RawMessage([]byte(`{
   "methods": {
     "Get": {
+      "args": {
+        "key": {
+          "doc": "If specified, return this key from the config.",
+          "type": "string"
+        }
+      },
       "doc": "Get device config",
       "result": {
         "keep_as_json": true

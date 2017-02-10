@@ -63,7 +63,7 @@ func (c *Client) CreateDevConnWithJunkHandler(ctx context.Context, connectAddr s
 }
 
 func (dc *DevConn) GetConfig(ctx context.Context) (*DevConf, error) {
-	devConfRaw, err := dc.CConf.Get(ctx)
+	devConfRaw, err := dc.CConf.Get(ctx, &fwconfig.GetArgs{})
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
