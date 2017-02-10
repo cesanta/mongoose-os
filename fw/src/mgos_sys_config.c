@@ -438,7 +438,6 @@ enum mgos_init_result mgos_sys_config_init(void) {
     return MGOS_INIT_CONFIG_LOAD_DEFAULTS_FAILED;
   }
 
-#if MGOS_ENABLE_GPIO_API
   /*
    * Check factory reset GPIO. We intentionally do it before loading CONF_FILE
    * so that it cannot be overridden by the end user.
@@ -455,7 +454,6 @@ enum mgos_init_result mgos_sys_config_init(void) {
       /* Continue as if nothing happened, no reboot necessary. */
     }
   }
-#endif
 
   /* Successfully loaded system config. Try overrides - they are optional. */
   load_config_file(CONF_FILE, s_cfg.conf_acl, &s_cfg);

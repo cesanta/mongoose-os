@@ -6,10 +6,6 @@
 #ifndef CS_FW_SRC_MGOS_FEATURES_H_
 #define CS_FW_SRC_MGOS_FEATURES_H_
 
-#ifndef MGOS_ENABLE_ADC_API
-#define MGOS_ENABLE_ADC_API 0
-#endif
-
 #ifndef MGOS_ENABLE_GPIO_SERVICE
 #define MGOS_ENABLE_GPIO_SERVICE 0
 #endif
@@ -38,10 +34,6 @@
 #define MGOS_ENABLE_CONSOLE_FILE_BUFFER 0
 #endif
 
-#ifndef MGOS_ENABLE_DEBUG_API
-#define MGOS_ENABLE_DEBUG_API 0
-#endif
-
 #ifndef MGOS_ENABLE_DNS_SD
 #define MGOS_ENABLE_DNS_SD 0
 #endif
@@ -50,44 +42,12 @@
 #define MGOS_ENABLE_FILE_UPLOAD 0
 #endif
 
-#ifndef MGOS_ENABLE_HTTP_CLIENT_API
-#define MGOS_ENABLE_HTTP_CLIENT_API 0
-#endif
-
-#ifndef MGOS_ENABLE_HTTP_SERVER_API
-#define MGOS_ENABLE_HTTP_SERVER_API 0
-#endif
-
 #ifndef MGOS_ENABLE_MDNS
 #define MGOS_ENABLE_MDNS 0
 #endif
 
 #ifndef MGOS_ENABLE_MQTT
 #define MGOS_ENABLE_MQTT 0
-#endif
-
-#ifndef MGOS_ENABLE_MQTT_API
-#define MGOS_ENABLE_MQTT_API 0
-#endif
-
-#ifndef MGOS_ENABLE_PWM_API
-#define MGOS_ENABLE_PWM_API 0
-#endif
-
-#ifndef MGOS_ENABLE_SPI_API
-#define MGOS_ENABLE_SPI_API 0
-#endif
-
-#ifndef MGOS_ENABLE_TCP_API
-#define MGOS_ENABLE_TCP_API 0
-#endif
-
-#ifndef MGOS_ENABLE_UART_API
-#define MGOS_ENABLE_UART_API 0
-#endif
-
-#ifndef MGOS_ENABLE_UDP_API
-#define MGOS_ENABLE_UDP_API 0
 #endif
 
 #ifndef MGOS_ENABLE_UPDATER
@@ -108,14 +68,6 @@
 
 #ifndef MGOS_ENABLE_WIFI
 #define MGOS_ENABLE_WIFI 0
-#endif
-
-#ifndef MGOS_ENABLE_WIFI_API
-#define MGOS_ENABLE_WIFI_API 0
-#endif
-
-#ifndef MGOS_ENABLE_WS_CLIENT_API
-#define MGOS_ENABLE_WS_CLIENT_API 0
 #endif
 
 #ifndef MGOS_PROMPT_DISABLE_ECHO

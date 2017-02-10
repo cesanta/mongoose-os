@@ -71,7 +71,7 @@ endif
 
 ifeq "$(MGOS_ENABLE_RPC)" "1"
   MGOS_SRCS += mg_rpc.c mgos_rpc.c
-  MGOS_FEATURES += -DMGOS_ENABLE_RPC -DMGOS_ENABLE_RPC_API
+  MGOS_FEATURES += -DMGOS_ENABLE_RPC
   SYS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_rpc_config.yaml
 
 ifeq "$(MGOS_ENABLE_CONFIG_SERVICE)" "1"

@@ -3,8 +3,6 @@
  * All rights reserved
  */
 
-#if MGOS_ENABLE_GPIO_API
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdint.h>
@@ -317,5 +315,3 @@ bool mgos_gpio_toggle(int pin) {
 enum mgos_init_result mgos_gpio_dev_init(void) {
   return MGOS_INIT_OK;
 }
-
-#endif /* MGOS_ENABLE_GPIO_API */

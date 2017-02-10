@@ -103,20 +103,7 @@ MGOS_SRCS = cs_file.c cs_rbuf.c \
 MGOS_SRCS += $(notdir $(foreach m,$(MGOS_ESP_SRC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_PATH),$(wildcard $(m)/*.c)))
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
 
-MGOS_FEATURES ?= -DMGOS_ENABLE_ADC_API \
-                -DMGOS_ENABLE_DEBUG_API \
-                -DMGOS_ENABLE_GPIO_API \
-                -DMGOS_ENABLE_HTTP_CLIENT_API \
-                -DMGOS_ENABLE_HTTP_SERVER_API \
-                -DMGOS_ENABLE_I2C_API \
-                -DMGOS_ENABLE_MQTT_API \
-                -DMGOS_ENABLE_PWM_API \
-                -DMGOS_ENABLE_SPI_API \
-                -DMGOS_ENABLE_TCP_API \
-                -DMGOS_ENABLE_UART_API \
-                -DMGOS_ENABLE_UDP_API \
-                -DMGOS_ENABLE_WIFI_API \
-                -DMGOS_ENABLE_WS_CLIENT_API
+MGOS_FEATURES ?=
 
 MGOS_ENABLE_I2C_GPIO = 1
 

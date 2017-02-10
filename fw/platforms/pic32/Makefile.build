@@ -74,15 +74,8 @@ MG_FEATURES ?= $(MG_FEATURES_TINY) \
 
 # TODO(dfrank): add these macros
 # -DMG_ENABLE_SSL
-# -DMG_FS_SLFS
 
 MGOS_FEATURES ?=
-
-# TODO(dfrank): use these features
-#MGOS_FEATURES ?= -DMGOS_ENABLE_GPIO_API \
-                  -DMGOS_ENABLE_I2C_API \
-                  -DMGOS_ENABLE_WIFI_API \
-                  -DMGOS_ENABLE_HTTP_CLIENT_API
 
 APP_HEX = $(BUILD_DIR)/$(APP).hex
 ###BOOT_BIN = $(BOOT_FW_DIR)/mg-boot.bin

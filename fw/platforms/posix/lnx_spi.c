@@ -5,8 +5,6 @@
 
 #include "fw/src/mgos_features.h"
 
-#if MGOS_ENABLE_SPI_API
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <fcntl.h>
@@ -126,5 +124,3 @@ void mgos_spi_close(spi_connection c) {
   close(conn->fd);
   free(c);
 }
-
-#endif /* MGOS_ENABLE_SPI_API */

@@ -106,8 +106,6 @@ endif
 # Linux
 ifeq ($(BUILD_PLATFORM), "LINUX")
   ADD_LIBS += rt
-  MGOS_FEATURES += -DMGOS_ENABLE_GPIO_API \
-                   -DMGOS_ENABLE_I2C_API
 endif
 
 # Windows
