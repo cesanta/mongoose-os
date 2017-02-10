@@ -15,4 +15,5 @@ items:
   - { name: i2c }
   - { name: spi }
   - { name: wifi }
+  - { name: http }
 ---

@@ -9,5 +9,6 @@ items:
   - { name: mgos_mqtt.h }
   - { name: mgos_hal.h }
   - { name: mgos_wifi.h }
+  - { name: mgos_mongoose.h }
   - { name: mg_rpc.h }
 ---

@@ -14,7 +14,10 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/* Return global event manager */
 struct mg_mgr *mgos_get_mgr(void);
+
+/* Register HTTP endpoint handler `handler` on URI `uri_path` */
 void mgos_register_http_endpoint(const char *uri_path,
                                  mg_event_handler_t handler);
 
@@ -35,13 +38,11 @@ void mgos_set_enable_min_heap_free_reporting(bool enable);
 /* Schedule MG poll ASAP. Note: may be called from ISR context. */
 void mongoose_schedule_poll(void);
 
-/* API that passes user data to the callback. Could be FFI-ed. */
 typedef void (*mg_eh_t)(struct mg_connection *, int, void *, void *);
 struct mg_connection *mgos_bind(const char *addr, mg_eh_t func, void *ud);
 struct mg_connection *mgos_connect(const char *addr, mg_eh_t func, void *ud);
 void mgos_disconnect(struct mg_connection *c);
 
-/* Create HTTP server */
 struct mg_connection *mgos_bind_http(const char *addr);
 bool mgos_add_http_endpoint(struct mg_connection *c, const char *uri,
                             mg_eh_t handler, void *user_data);
@@ -56,11 +57,9 @@ enum http_message_param {
   HTTP_MESSAGE_PARAM_QUERY_STRING = 5,
 };
 
-/* Retrieve HTTP message param */
 const char *mgos_get_http_message_param(const struct http_message *,
                                         enum http_message_param);
 
-/* Get byte value at given offset */
 int mgos_peek(const void *ptr, int offset);
 
 #ifdef __cplusplus
