@@ -375,10 +375,9 @@ body { color: #666;  background-color: #eee; }
 #app_view #net  { white-space: pre; margin: 0 2em; font-family: Menlo, monospace; }
 
 /* CONFIG PAGE */
-#config label { margin-left: 3em; min-width: 20em; max-width: 20em; }
-#config legend { padding-top: 2em; }
+#config label { margin-left: 0; margin-right: 1em; width: 20em; }
 #config .param { padding-top: 0.4em; }
-#config { background-color: #fff; border-radius: 3px; overflow-y: auto; padding: 0 2em; }
+#config { overflow-y: auto; }
 
 /* WIZARD STYLES */
 .wizard .panel-body, .wizard .panel-footer { padding-left: 3em; padding-right: 3em; }
@@ -569,7 +568,7 @@ func web_rootCssMainCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/css/main.css", size: 5268, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/css/main.css", size: 5167, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -5184,7 +5183,8 @@ var _web_rootPage_configurationHtml = []byte(`<div data-title="Device configurat
   <div style="margin: 1px 10px;">
     <button class="btn btn-sm btn-primary" id="config-save-button"><i class="fa fa-save"></i> Save configuration</button>
   </div>
-  <form class="form-inline upcontrol" id="config"></form>
+  <div class="upcontrol row" id="config">
+  </div>
 </div>
 
 <script>
@@ -5209,13 +5209,14 @@ var _web_rootPage_configurationHtml = []byte(`<div data-title="Device configurat
       var k = ep.split('.').pop();
       // if (typeof(val) !== 'object') console.debug(ep, et, typeof(val), val);
       if (et === 'o' && typeof(val) === 'object') {
-        if (currentObject) html.push('</fieldset>')
+        if (currentObject) html.push('</div></div></div>')
         currentObject = ep;
         if (!ed.hide) {
-          html.push('<fieldset><legend>', ed.title || ep, '</legend>\n');
+          html.push('<div class="col-sm-12 form-inline"><div class="x_panel"><div class="x_title">',
+                    ed.title || ep, '</div><div class="x_content form-inline">\n');
         }
       } else if (!ed.hide) {
-        html.push('<div class="param">',
+        html.push('<div rel="' + et + '" class="param">',
         '<label for="', ep, '">', ed.title || k, '</label>');
 
         // Look if the element should be disabled.
@@ -5265,6 +5266,8 @@ var _web_rootPage_configurationHtml = []byte(`<div data-title="Device configurat
     var el = document.getElementById(id);
     if (!el) return undefined;
     if (el.type == 'checkbox') return el.checked ? true : false;
+    var type = $(el).closest('.param').attr('rel');
+    if (type == 'i') return parseInt(el.value);
     return el.value;
   };
 
@@ -5305,7 +5308,7 @@ func web_rootPage_configurationHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_configuration.html", size: 3600, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_configuration.html", size: 3828, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

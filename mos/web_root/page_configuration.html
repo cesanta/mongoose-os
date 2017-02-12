@@ -2,7 +2,8 @@
   <div style="margin: 1px 10px;">
     <button class="btn btn-sm btn-primary" id="config-save-button"><i class="fa fa-save"></i> Save configuration</button>
   </div>
-  <form class="form-inline upcontrol" id="config"></form>
+  <div class="upcontrol row" id="config">
+  </div>
 </div>
 
 <script>
@@ -27,13 +28,14 @@
       var k = ep.split('.').pop();
       // if (typeof(val) !== 'object') console.debug(ep, et, typeof(val), val);
       if (et === 'o' && typeof(val) === 'object') {
-        if (currentObject) html.push('</fieldset>')
+        if (currentObject) html.push('</div></div></div>')
         currentObject = ep;
         if (!ed.hide) {
-          html.push('<fieldset><legend>', ed.title || ep, '</legend>\n');
+          html.push('<div class="col-sm-12 form-inline"><div class="x_panel"><div class="x_title">',
+                    ed.title || ep, '</div><div class="x_content form-inline">\n');
         }
       } else if (!ed.hide) {
-        html.push('<div class="param">',
+        html.push('<div rel="' + et + '" class="param">',
         '<label for="', ep, '">', ed.title || k, '</label>');
 
         // Look if the element should be disabled.
@@ -83,6 +85,8 @@
     var el = document.getElementById(id);
     if (!el) return undefined;
     if (el.type == 'checkbox') return el.checked ? true : false;
+    var type = $(el).closest('.param').attr('rel');
+    if (type == 'i') return parseInt(el.value);
     return el.value;
   };
 
