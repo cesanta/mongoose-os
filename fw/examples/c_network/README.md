@@ -2,7 +2,7 @@ Mongoose Firmware networking skeleton
 =====================================
 
 
-See [quick start guide](https://mongoose-iot.com/docs/#/quickstart/)
+See [quick start guide](https://mongoose-os.com/docs/#/quickstart/)
 on how to build and flash the firmware.
 
 # How to test Over-the-air (OTA) update

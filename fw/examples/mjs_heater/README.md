@@ -25,7 +25,7 @@ see published messages:
 ## Build instructions
 
 ```bash
-mos flash --firmware https://mongoose-iot.com/downloads/fw-esp8266.zip
+mos flash --firmware https://mongoose-os.com/downloads/mos-esp8266.zip
 mos put index.html
 mos put init.js
 mos config-set i2c.enable=true mqtt.server=test.mosca.io:1883

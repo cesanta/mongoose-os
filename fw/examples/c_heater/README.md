@@ -19,7 +19,7 @@ A cloud endpoint and report interval can be specified via custom
 configuration options, which is a nice example on how to use configuration
 rather than hardcoding constants in the code.
 
-See [quick start guide](https://mongoose-iot.com/docs/#/quickstart/)
+See [quick start guide](https://mongoose-os.com/docs/#/quickstart/)
 on how to build and flash the firmware. Below is an example session that
 builds and sets up a heater:
 

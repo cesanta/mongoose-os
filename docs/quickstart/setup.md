@@ -6,7 +6,7 @@ Mongoose OS uses a command line utility `mos` for various tasks:
 installation (flashing firmware), building firmware, managing files on
 a device, calling device's services, and so on.
 Download and install `mos` tool following instructions
-at https://mongoose-iot.com/software.html.
+at https://mongoose-os.com/software.html.
 
 `mos` should be invoked this way: `mos COMMAND OPTIONAL_FLAGS`.
 To see what commands are available, run `mos --help`. To see help for a

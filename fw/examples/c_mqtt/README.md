@@ -2,7 +2,7 @@
 
 This example demonstrates how to perform remote device control over MQTT
 protocol. Build & flash a firmware and configure WiFi
-(see [quick start guide](https://mongoose-iot.com/docs/#/quickstart/)),
+(see [quick start guide](https://mongoose-os.com/docs/#/quickstart/)),
 and configure MQTT server:
 
 ```
@@ -50,7 +50,7 @@ mgos console
 ```
 
 Login to AWS IoT console, use web-based MQTT client to send messages.
-See https://mongoose-iot.com/blog/esp8266-remote-control-via-aws-iot/
+See https://mongoose-os.com/blog/esp8266-remote-control-via-aws-iot/
 for the step-by-step instructions.
 
 [![](https://img.youtube.com/vi/1iwwBXFBAcU/0.jpg)](https://www.youtube.com/watch?v=1iwwBXFBAcU)

@@ -1,7 +1,7 @@
 // This example demonstrates how to react on a button press by toggling LED.
 //
 // To try this example,
-//   1. Download `mos` tool from https://mongoose-iot.com/software.html
+//   1. Download `mos` tool from https://mongoose-os.com/software.html
 //   2. Run `mos` tool and install Mongoose OS
 //   3. In the UI, navigate to the `Examples` tab and load this example
 

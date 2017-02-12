@@ -38,7 +38,7 @@ func InboundHTTP(rw http.ResponseWriter, req *http.Request, cloudHost string) Co
 	}
 	if req.URL.Path != "/" {
 		// Path is a method, destination is derived from Host or left empty/implicit.
-		// http://src:key@my.dst.api.mongoose-iot.com/Method?id=123&timeout=456
+		// http://src:key@my.dst.api.mongoose-os.com/Method?id=123&timeout=456
 		// Args, if any, are passed as a JSON object in the body.
 		f.Version = 2
 		f.Src, f.Key, _ = req.BasicAuth()

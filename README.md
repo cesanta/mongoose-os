@@ -1,15 +1,15 @@
 # Mongoose OS
 
-- [Mongoose OS](https://mongoose-iot.com) - open source embedded operating system for low-power connected microcontrollers. 
+- [Mongoose OS](https://mongoose-os.com) - open source embedded operating system for low-power connected microcontrollers. 
 
-Designed for Internet of Things: 
-- secure connectivity; 
-- best runtime performance; 
-- complete environment for prototyping, development and managing;
-- available for ESP8266, ESP 32, TI CC3200, STM32, NRF52 and other hardware platforms.
+Targeting commercial connected products:
+- security features like crypto chip support, filesystem encryption, etc; 
+- built-in AWS IoT integration;
+- embedded JavaScript engine for quick proof of concepts / prototypes;
+- available for ESP8266, ESP32, TI CC3200, STM32.
 
 # Support
-- [Mongoose OS Documentation](https://mongoose-iot.com/docs/#/overview/)
+- [Mongoose OS Documentation](https://mongoose-os.com/docs/#/overview/)
 - [Support Forum - ask your technical questions here] (http://forum.cesanta.com/index.php?p=/categories/mongoose-os)
 - [Commercial licensing and support available](https://cesanta.com/contact)
 

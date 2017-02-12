@@ -1,7 +1,7 @@
 "use strict";
 
 print('\nMongoose OS Firmware - see documentation at',
-      'https://mongoose-iot.com/docs/\n');
+      'https://mongoose-os.com/docs/\n');
 
 if (Sys.conf.device.id) {
     print('Device credentials: ', {

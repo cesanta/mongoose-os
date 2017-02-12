@@ -4,7 +4,7 @@
 This example shows how to control a device remotely using HTTP protocol.
 
 Assuming you have downloaded the
-[mos utility](https://mongoose-iot.com/software.html).
+[mos utility](https://mongoose-os.com/software.html).
 Please follow these steps:
 
 ```Bash
