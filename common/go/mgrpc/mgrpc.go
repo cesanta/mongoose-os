@@ -32,6 +32,8 @@ type mgRPCImpl struct {
 	reqsLock sync.Mutex
 
 	opts *connectOptions
+
+	closing bool
 }
 
 type req struct {
@@ -225,6 +227,7 @@ func (r *mgRPCImpl) connect(ctx context.Context, opts ...ConnectOption) error {
 }
 
 func (r *mgRPCImpl) Disconnect(ctx context.Context) error {
+	r.closing = true
 	r.codec.Close()
 	return nil
 }
@@ -233,8 +236,8 @@ func (r *mgRPCImpl) recvLoop(ctx context.Context, c codec.Codec) {
 	glog.V(2).Infof("Started recv loop, codec: %v", c)
 	for {
 		f, err := c.Recv(ctx)
-		if err != nil {
-			glog.Infof("error returned from codec Recv: %s, breaking out of the recvLoop", err)
+		if r.closing {
+			glog.Infof("devConn is disconnected, breaking out of the recvLoop", err)
 			r.reqsLock.Lock()
 			for k, v := range r.reqs {
 				v.errChan <- err
@@ -242,6 +245,10 @@ func (r *mgRPCImpl) recvLoop(ctx context.Context, c codec.Codec) {
 			}
 			r.reqsLock.Unlock()
 			return
+		}
+		if err != nil {
+			glog.Infof("error returned from codec Recv: %s, keep trying", err)
+			continue
 		}
 
 		if glog.V(2) {
