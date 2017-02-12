@@ -16,4 +16,5 @@ items:
   - { name: spi }
   - { name: wifi }
   - { name: http }
+  - { name: mjs }
 ---
