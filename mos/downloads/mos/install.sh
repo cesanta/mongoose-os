@@ -1,7 +1,8 @@
 #!/bin/sh
 
 OS=`uname`
-DESTDIR=/usr/local/bin
+DESTDIR=$1
+test -z "$DESTDIR" && DESTDIR=~/.mos/bin
 PROGNAME=mos
 FULLPATH=$DESTDIR/$PROGNAME
 MOS_URL=
@@ -13,6 +14,8 @@ checklib() {
     curl -fsSL https://mongoose-os.com/downloads/mos/`basename $1` -o "$1"
   fi
 }
+
+test -d $DESTDIR || mkdir -p $DESTDIR
 
 if test "$OS" = Linux ; then
   MOS_URL=https://mongoose-os.com/downloads/mos/linux/mos
@@ -32,12 +35,17 @@ if ! test -d $DESTDIR ; then
 fi
 
 echo "Downloading $MOS_URL ..."
-curl -fsSL $MOS_URL -o $FULLPATH
+curl -L --progress-bar $MOS_URL -o $FULLPATH
 
 echo "Installing into $FULLPATH ..."
 chmod 755 $FULLPATH
 
-echo "SUCCESS."
-echo "$FULLPATH is successfully installed."
-echo "Run '$PROGNAME --help' to see all available commands."
-echo "Run '$PROGNAME' without arguments to start a simplified Web UI installer."
+mos --help 2>/dev/null
+if test "$?" == "127" ; then
+  echo "Adding $DESTDIR to your PATH in ~/.profile"
+  echo "PATH=\$PATH:$DESTDIR" >> ~/.profile
+fi
+
+echo "SUCCESS: $FULLPATH is installed."
+echo "Run '$FULLPATH --help' to see all available commands."
+echo "Run '$FULLPATH' without arguments to start a simplified Web UI installer."
