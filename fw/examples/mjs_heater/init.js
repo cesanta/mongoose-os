@@ -7,17 +7,18 @@
 
 // Load Mongoose OS API
 load('api_gpio.js');
-load('api_net.js');
-load('api_http.js');
-load('api_timer.js');
-load('api_sys.js');
-load('api_mqtt.js');
 load('api_i2c.js');
+load('api_mqtt.js');
+load('api_rpc.js');
+load('api_sys.js');
+load('api_timer.js');
 
-let listener = HTTP.get_system_server();
-let pin = 13;  // GPIO pin which has a on/off relay connected
-let freq = 10000; // Milliseconds. How often to send temperature readings
-let redir = 'HTTP/1.0 302 OK\r\nLocation: /\r\n\r\n';  // HTTP redirect message
+// GPIO pin which has a on/off relay connected
+let pin = 13;
+GPIO.set_mode(pin, GPIO.MODE_OUTPUT);
+
+// Milliseconds. How often to send temperature readings to the cloud
+let freq = 10000;
 
 // MQTT topic to publish to. MQTT server is configured separately,
 // mos config-set mqtt.server=YOUR_SERVER:PORT
@@ -44,37 +45,25 @@ let getTemp = function() {
   return temp;
 };
 
-GPIO.set_mode(pin, GPIO.MODE_OUTPUT);
-
-HTTP.add_endpoint(listener, '/heater/status', function(conn, ev, msg) {
-  Net.send(conn, 'HTTP/1.0 200 OK\r\n\r\n');
-  Net.send(conn, JSON.stringify({
+let getStatus = function() {
+  return {
     temp: getTemp(),
     on: GPIO.read(pin)
-  }));
-  Net.disconnect(conn);
-}, null);
+  };
+};
 
-HTTP.add_endpoint(listener, '/heater/on', function(conn, ev, msg) {
-  GPIO.write(pin, 1);
-  Net.send(conn, redir);
-  Net.disconnect(conn);
-}, null);
+RPC.addHandler('Heater.SetState', function(args) {
+  GPIO.write(pin, args.state || 0);
+  return true;
+});
 
-HTTP.add_endpoint(listener, '/heater/off', function(conn, ev, msg) {
-  GPIO.write(pin, 0);
-  Net.send(conn, redir);
-  Net.disconnect(conn);
-}, null);
+RPC.addHandler('Heater.GetState', function(args) {
+  return getStatus();
+});
 
 // Send temperature readings to the cloud
 Timer.set(freq, 1, function() {
-  let message = JSON.stringify({
-    temp: getTemp(),
-    total_ram: Sys.total_ram(),
-    free_ram: Sys.free_ram()
-  });
-  MQTT.pub(topic, message, message.length);
+  let message = JSON.stringify(getStatus());
+  let ok = MQTT.pub(topic, message, message.length);
+  print('MQTT pubish: topic ', topic, 'msg: ', message, 'status: ', ok);
 }, null);
-
-print('HTTP endpoints initialised');
