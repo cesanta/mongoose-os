@@ -81,7 +81,7 @@ ATCAIface _gIface = NULL;
  *  \return ATCA_STATUS
  *  \see atcab_init_device()
  */
-ATCA_STATUS atcab_init( ATCAIfaceCfg *cfg )
+ATCA_STATUS atcab_init( const ATCAIfaceCfg *cfg )
 {
 	if ( _gDevice )     // if there's already a device created, release it
 		atcab_release();

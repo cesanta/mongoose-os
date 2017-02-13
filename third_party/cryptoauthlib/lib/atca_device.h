@@ -53,7 +53,7 @@ extern "C" {
 #endif
 
 typedef struct atca_device * ATCADevice;
-ATCADevice newATCADevice(ATCAIfaceCfg *cfg );  // constructor
+ATCADevice newATCADevice(const ATCAIfaceCfg *cfg );  // constructor
 
 /* member functions here */
 ATCACommand atGetCommands( ATCADevice dev );

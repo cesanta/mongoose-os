@@ -50,28 +50,28 @@ extern "C" {
 #endif
 
 /** \brief default configuration for an ECCx08A device on the first logical I2C bus */
-extern ATCAIfaceCfg cfg_ateccx08a_i2c_default;
+extern const ATCAIfaceCfg cfg_ateccx08a_i2c_default;
 
 /** \brief default configuration for an ECCx08A device on the logical SWI bus over UART*/
-extern ATCAIfaceCfg cfg_ateccx08a_swi_default;
+extern const ATCAIfaceCfg cfg_ateccx08a_swi_default;
 
 /** \brief default configuration for a SHA204A device on the first logical I2C bus */
-extern ATCAIfaceCfg cfg_sha204a_i2c_default;
+extern const ATCAIfaceCfg cfg_sha204a_i2c_default;
 
 /** \brief default configuration for an SHA204A device on the logical SWI bus over UART*/
-extern ATCAIfaceCfg cfg_sha204a_swi_default;
+extern const ATCAIfaceCfg cfg_sha204a_swi_default;
 
 /** \brief default configuration for Kit protocol over a CDC interface */
-extern ATCAIfaceCfg cfg_ecc508_kitcdc_default;
+extern const ATCAIfaceCfg cfg_ecc508_kitcdc_default;
 
 /** \brief default configuration for Kit protocol over a HID interface */
-extern ATCAIfaceCfg cfg_ecc508_kithid_default;
+extern const ATCAIfaceCfg cfg_ecc508_kithid_default;
 
 /** \brief default configuration for Kit protocol over a HID interface for SHA204 */
-extern ATCAIfaceCfg cfg_sha204_kithid_default;
+extern const ATCAIfaceCfg cfg_sha204_kithid_default;
 
 /** \brief example of a default configuration for AES132 SPI */
-extern ATCAIfaceCfg cfg_ataes132_spi_default;
+extern const ATCAIfaceCfg cfg_ataes132_spi_default;
 
 #ifdef __cplusplus
 }

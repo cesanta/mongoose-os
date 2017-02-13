@@ -51,7 +51,7 @@
 /* if the number of these configurations grows large, we can #ifdef them based on required device support */
 
 /** \brief default configuration for an ECCx08A device */
-ATCAIfaceCfg cfg_ateccx08a_i2c_default = {
+const ATCAIfaceCfg cfg_ateccx08a_i2c_default = {
 	.iface_type				= ATCA_I2C_IFACE,
 	.devtype				= ATECC508A,
 	.atcai2c.baud			= 400000,
@@ -63,7 +63,7 @@ ATCAIfaceCfg cfg_ateccx08a_i2c_default = {
 };
 
 /** \brief default configuration for an ECCx08A device on the logical SWI bus over UART*/
-ATCAIfaceCfg cfg_ateccx08a_swi_default = {
+const ATCAIfaceCfg cfg_ateccx08a_swi_default = {
 	.iface_type		= ATCA_SWI_IFACE,
 	.devtype		= ATECC508A,
 	.atcaswi.bus	= 4,
@@ -72,7 +72,7 @@ ATCAIfaceCfg cfg_ateccx08a_swi_default = {
 };
 
 /** \brief default configuration for a SHA204A device on the first logical I2C bus */
-ATCAIfaceCfg cfg_sha204a_i2c_default = {
+const ATCAIfaceCfg cfg_sha204a_i2c_default = {
 	.iface_type				= ATCA_I2C_IFACE,
 	.devtype				= ATSHA204A,
 	.atcai2c.baud			= 400000,
@@ -83,7 +83,7 @@ ATCAIfaceCfg cfg_sha204a_i2c_default = {
 };
 
 /** \brief default configuration for an SHA204A device on the logical SWI bus over UART*/
-ATCAIfaceCfg cfg_sha204a_swi_default = {
+const ATCAIfaceCfg cfg_sha204a_swi_default = {
 	.iface_type		= ATCA_SWI_IFACE,
 	.devtype		= ATSHA204A,
 	.atcaswi.bus	= 4,
@@ -92,7 +92,7 @@ ATCAIfaceCfg cfg_sha204a_swi_default = {
 };
 
 /** \brief default configuration for Kit protocol over the device's async interface */
-ATCAIfaceCfg cfg_ecc508_kitcdc_default = {
+const ATCAIfaceCfg cfg_ecc508_kitcdc_default = {
 	.iface_type			= ATCA_UART_IFACE,
 	.devtype			= ATECC508A,
 	.atcauart.stopbits	= 1,
@@ -104,7 +104,7 @@ ATCAIfaceCfg cfg_ecc508_kitcdc_default = {
 };
 
 /** \brief default configuration for Kit protocol over the device's async interface */
-ATCAIfaceCfg cfg_ecc508_kithid_default = {
+const ATCAIfaceCfg cfg_ecc508_kithid_default = {
 	.iface_type			= ATCA_HID_IFACE,
 	.devtype			= ATECC508A,
 	.atcahid.guid		= { 0x4d,		 0x1e, 0x55, 0xb2, 0xf1, 0x6f, 0x11, 0xcf, 0x88, 0xcb, 0x00, 0x11, 0x11, 0x00, 0x00, 0x30 },
@@ -115,7 +115,7 @@ ATCAIfaceCfg cfg_ecc508_kithid_default = {
 };
 
 /** \brief default configuration for Kit protocol over the device's async interface */
-ATCAIfaceCfg cfg_sha204_kithid_default = {
+const ATCAIfaceCfg cfg_sha204_kithid_default = {
 	.iface_type			= ATCA_HID_IFACE,
 	.devtype			= ATSHA204A,
 	.atcahid.guid		= { 0x4d,		 0x1e, 0x55, 0xb2, 0xf1, 0x6f, 0x11, 0xcf, 0x88, 0xcb, 0x00, 0x11, 0x11, 0x00, 0x00, 0x30 },

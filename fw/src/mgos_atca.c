@@ -27,7 +27,7 @@
  * Currently only I2C is implemented.
  */
 
-static ATCA_STATUS mgos_atca_hal_i2c_init(void *hal, ATCAIfaceCfg *cfg) {
+static ATCA_STATUS mgos_atca_hal_i2c_init(void *hal, const ATCAIfaceCfg *cfg) {
   (void) hal;
   (void) cfg;
   return ATCA_SUCCESS;
@@ -40,7 +40,7 @@ static ATCA_STATUS mgos_atca_hal_i2c_post_init(ATCAIface iface) {
 
 static ATCA_STATUS mgos_atca_hal_i2c_send(ATCAIface iface, uint8_t *txdata,
                                           int txlength) {
-  ATCAIfaceCfg *cfg = atgetifacecfg(iface);
+  const ATCAIfaceCfg *cfg = atgetifacecfg(iface);
   struct mgos_i2c *i2c = (struct mgos_i2c *) atgetifacehaldat(iface);
 
   ATCA_STATUS status = ATCA_TX_TIMEOUT;
@@ -67,7 +67,7 @@ static ATCA_STATUS mgos_atca_hal_i2c_send(ATCAIface iface, uint8_t *txdata,
 
 static ATCA_STATUS mgos_atca_hal_i2c_receive(ATCAIface iface, uint8_t *rxdata,
                                              uint16_t *rxlength) {
-  ATCAIfaceCfg *cfg = atgetifacecfg(iface);
+  const ATCAIfaceCfg *cfg = atgetifacecfg(iface);
   struct mgos_i2c *i2c = (struct mgos_i2c *) atgetifacehaldat(iface);
 
   ATCA_STATUS status = ATCA_RX_TIMEOUT;
@@ -99,7 +99,7 @@ static ATCA_STATUS mgos_atca_hal_i2c_receive(ATCAIface iface, uint8_t *rxdata,
 }
 
 static ATCA_STATUS mgos_atca_hal_i2c_wake(ATCAIface iface) {
-  ATCAIfaceCfg *cfg = atgetifacecfg(iface);
+  const ATCAIfaceCfg *cfg = atgetifacecfg(iface);
   struct mgos_i2c *i2c = (struct mgos_i2c *) atgetifacehaldat(iface);
 
   ATCA_STATUS status = ATCA_WAKE_FAILED;
@@ -146,7 +146,7 @@ ATCA_STATUS mgos_atca_hal_i2c_release(void *hal_data) {
   return ATCA_SUCCESS;
 }
 
-ATCA_STATUS hal_iface_init(ATCAIfaceCfg *cfg, ATCAHAL_t *hal) {
+ATCA_STATUS hal_iface_init(const ATCAIfaceCfg *cfg, ATCAHAL_t *hal) {
   if (cfg->iface_type != ATCA_I2C_IFACE) return ATCA_BAD_PARAM;
   struct mgos_i2c *i2c = mgos_i2c_get_global();
   if (i2c == NULL) return ATCA_GEN_FAIL;
@@ -187,7 +187,7 @@ enum mgos_init_result mgos_atca_init(void) {
   bool config_is_locked, data_is_locked;
   ATCA_STATUS status;
   struct sys_config_sys_atca *acfg = &get_cfg()->sys.atca;
-  ATCAIfaceCfg *atca_cfg;
+  const ATCAIfaceCfg *atca_cfg;
 
   if (!acfg->enable) {
     return MGOS_INIT_OK;
@@ -207,9 +207,10 @@ enum mgos_init_result mgos_atca_init(void) {
   if (addr < 0x7f) addr <<= 1;
   atca_cfg = &cfg_ateccx08a_i2c_default;
   if (atca_cfg->atcai2c.slave_address != addr) {
-    atca_cfg = (ATCAIfaceCfg *) calloc(1, sizeof(*atca_cfg));
-    memcpy(atca_cfg, &cfg_ateccx08a_i2c_default, sizeof(*atca_cfg));
-    atca_cfg->atcai2c.slave_address = addr;
+    ATCAIfaceCfg *cfg = (ATCAIfaceCfg *) calloc(1, sizeof(*cfg));
+    memcpy(cfg, &cfg_ateccx08a_i2c_default, sizeof(*cfg));
+    cfg->atcai2c.slave_address = addr;
+    atca_cfg = cfg;
   }
 
   status = atcab_init(atca_cfg);

@@ -56,9 +56,9 @@
 
 struct atca_iface {
 	ATCAIfaceType mType;
-	ATCAIfaceCfg  *mIfaceCFG;   // points to previous defined/given Cfg object, caller manages this
+	const ATCAIfaceCfg  *mIfaceCFG;   // points to previous defined/given Cfg object, caller manages this
 
-	ATCA_STATUS (*atinit)(void *hal, ATCAIfaceCfg *);
+	ATCA_STATUS (*atinit)(void *hal, const ATCAIfaceCfg *);
 	ATCA_STATUS (*atpostinit)(ATCAIface hal);
 	ATCA_STATUS (*atsend)(ATCAIface hal, uint8_t *txdata, int txlength);
 	ATCA_STATUS (*atreceive)( ATCAIface hal, uint8_t *rxdata, uint16_t *rxlength);
@@ -78,7 +78,7 @@ ATCA_STATUS _atinit(ATCAIface caiface, ATCAHAL_t *hal);
  * \return ATCAIface
  */
 
-ATCAIface newATCAIface(ATCAIfaceCfg *cfg)  // constructor
+ATCAIface newATCAIface(const ATCAIfaceCfg *cfg)  // constructor
 {
 	ATCAIface caiface = (ATCAIface)malloc(sizeof(struct atca_iface));
 
@@ -140,7 +140,7 @@ ATCA_STATUS atsleep(ATCAIface caiface)
 	return caiface->atsleep(caiface);
 }
 
-ATCAIfaceCfg * atgetifacecfg(ATCAIface caiface)
+const ATCAIfaceCfg * atgetifacecfg(ATCAIface caiface)
 {
 	return caiface->mIfaceCFG;
 }

@@ -62,7 +62,7 @@ extern "C" {
 
 // basic global device object methods
 ATCA_STATUS atcab_version( char *verstr );
-ATCA_STATUS atcab_init(ATCAIfaceCfg *cfg);
+ATCA_STATUS atcab_init(const ATCAIfaceCfg *cfg);
 ATCA_STATUS atcab_init_device(ATCADevice cadevice);
 ATCA_STATUS atcab_release(void);
 ATCADevice atcab_getDevice(void);

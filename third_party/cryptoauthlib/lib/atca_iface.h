@@ -117,7 +117,7 @@ typedef struct {
 } ATCAIfaceCfg;
 
 typedef struct atca_iface * ATCAIface;
-ATCAIface newATCAIface(ATCAIfaceCfg *cfg);  // constructor
+ATCAIface newATCAIface(const ATCAIfaceCfg *cfg);  // constructor
 // IFace methods
 ATCA_STATUS atinit(ATCAIface caiface);
 ATCA_STATUS atpostinit(ATCAIface caiface);
@@ -128,7 +128,7 @@ ATCA_STATUS atidle(ATCAIface caiface);
 ATCA_STATUS atsleep(ATCAIface caiface);
 
 // accessors
-ATCAIfaceCfg * atgetifacecfg(ATCAIface caiface);
+const ATCAIfaceCfg * atgetifacecfg(ATCAIface caiface);
 void* atgetifacehaldat(ATCAIface caiface);
 
 void deleteATCAIface( ATCAIface *dev );      // destructor

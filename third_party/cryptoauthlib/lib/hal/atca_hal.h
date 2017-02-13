@@ -64,7 +64,7 @@ typedef struct {
 	// interface is a group of function pointers to a specific HAL implementation for this interface type
 	// so these function pointers are initialized in the HAL layer in order to help keep the ATCAIface object
 	// from needing to know the low-level details, including global naming of HAL methods and physical implementation.
-	ATCA_STATUS (*halinit)(void *hal, ATCAIfaceCfg *cfg);
+	ATCA_STATUS (*halinit)(void *hal, const ATCAIfaceCfg *cfg);
 	ATCA_STATUS (*halpostinit)(ATCAIface iface);
 	ATCA_STATUS (*halsend)(ATCAIface iface, uint8_t *txdata, int txlength);
 	ATCA_STATUS (*halreceive)(ATCAIface iface, uint8_t* rxdata, uint16_t* rxlength);
@@ -80,7 +80,7 @@ typedef struct {
 extern "C" {
 #endif
 
-extern ATCA_STATUS hal_iface_init(ATCAIfaceCfg *, ATCAHAL_t* hal);
+extern ATCA_STATUS hal_iface_init(const ATCAIfaceCfg *, ATCAHAL_t* hal);
 extern ATCA_STATUS hal_iface_release(ATCAIfaceType, void* hal_data);
 
 // Added one or more of the following defines to your compiler's defines to include add support for

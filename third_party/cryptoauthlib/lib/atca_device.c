@@ -60,7 +60,7 @@ struct atca_device {
  * \return reference to a new ATCADevice
  */
 
-ATCADevice newATCADevice(ATCAIfaceCfg *cfg )
+ATCADevice newATCADevice(const ATCAIfaceCfg *cfg )
 {
 	ATCADevice cadev = NULL;
 
