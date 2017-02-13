@@ -670,6 +670,8 @@ static int integrity_check(void) {
     umm_init();
   }
 
+  UMM_CRITICAL_ENTRY();
+
   /* Iterate through all free blocks */
   prev = 0;
   while(1) {
@@ -758,6 +760,7 @@ static int integrity_check(void) {
   }
 
 clean:
+  UMM_CRITICAL_EXIT();
   if (!ok){
     UMM_HEAP_CORRUPTION_CB();
   }
