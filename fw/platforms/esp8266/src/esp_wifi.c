@@ -25,6 +25,10 @@
 static mgos_wifi_scan_cb_t s_wifi_scan_cb;
 static void *s_wifi_scan_cb_arg;
 
+static void invoke_wifi_on_change_cb(void *arg) {
+  mgos_wifi_on_change_cb((enum mgos_wifi_status)(int) arg);
+}
+
 void wifi_changed_cb(System_Event_t *evt) {
   int mg_ev = -1;
   switch (evt->event) {
@@ -37,9 +41,18 @@ void wifi_changed_cb(System_Event_t *evt) {
     case EVENT_STAMODE_GOT_IP:
       mg_ev = MGOS_WIFI_IP_ACQUIRED;
       break;
+    case EVENT_SOFTAPMODE_STACONNECTED:
+    case EVENT_SOFTAPMODE_STADISCONNECTED:
+    case EVENT_SOFTAPMODE_PROBEREQRECVED:
+    case EVENT_STAMODE_AUTHMODE_CHANGE:
+    case EVENT_STAMODE_DHCP_TIMEOUT:
+    case EVENT_MAX:
+      break;
   }
 
-  if (mg_ev >= 0) mgos_wifi_on_change_cb(mg_ev);
+  if (mg_ev >= 0) {
+    mgos_invoke_cb(invoke_wifi_on_change_cb, (void *) mg_ev);
+  }
 }
 
 static bool mgos_wifi_set_mode(uint8_t mode) {
