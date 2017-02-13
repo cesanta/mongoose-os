@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"crypto/tls"
-	"crypto/x509"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -28,20 +27,12 @@ type outboundHttpCodec struct {
 
 // OutboundHTTP sends outbound frames in HTTP POST requests and
 // returns replies with Recv.
-func OutboundHTTP(url string, serverHost string, cert *tls.Certificate, caPool *x509.CertPool) Codec {
+func OutboundHTTP(url string, tlsConfig *tls.Config) Codec {
 	r := &outboundHttpCodec{
 		closeNotifier: make(chan struct{}),
 		url:           url,
 	}
-	transport := &http.Transport{
-		TLSClientConfig: &tls.Config{
-			RootCAs:    caPool,
-			ServerName: serverHost,
-		},
-	}
-	if cert != nil {
-		transport.TLSClientConfig.Certificates = []tls.Certificate{*cert}
-	}
+	transport := &http.Transport{TLSClientConfig: tlsConfig}
 	r.client = &http.Client{Transport: transport}
 	r.cond = sync.NewCond(r)
 	return r

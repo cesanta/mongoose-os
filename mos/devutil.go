@@ -42,29 +42,32 @@ func createDevConnWithJunkHandler(
 
 	// Init and pass TLS config if --cert-file and --key-file are specified
 	var tlsConfig *tls.Config = nil
-	if certFile != "" {
-		if keyFile == "" {
+	if certFile != "" || strings.HasPrefix(port, "wss") || strings.HasPrefix(port, "https") || strings.HasPrefix(port, "mqtts") {
+
+		tlsConfig = &tls.Config{
+			InsecureSkipVerify: caFile == "",
+		}
+
+		// Load client cert / key if specified
+		if certFile != "" && keyFile == "" {
 			return nil, errors.Errorf("Please specify --key-file")
 		}
-		cert, err := tls.LoadX509KeyPair(certFile, keyFile)
-		if err != nil {
-			return nil, errors.Trace(err)
+		if certFile != "" {
+			cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+			if err != nil {
+				return nil, errors.Trace(err)
+			}
+			tlsConfig.Certificates = []tls.Certificate{cert}
 		}
-		var caCerts *x509.CertPool = nil
+
+		// Load CA cert if specified
 		if caFile != "" {
 			caCert, err := ioutil.ReadFile(caFile)
 			if err != nil {
 				return nil, errors.Trace(err)
 			}
-			caCerts = x509.NewCertPool()
-			caCerts.AppendCertsFromPEM(caCert)
-		}
-
-		tlsConfig = &tls.Config{
-			RootCAs:            caCerts,
-			InsecureSkipVerify: caFile == "",
-			Certificates:       []tls.Certificate{cert},
-			Renegotiation:      tls.RenegotiateNever,
+			tlsConfig.RootCAs = x509.NewCertPool()
+			tlsConfig.RootCAs.AppendCertsFromPEM(caCert)
 		}
 	}
 

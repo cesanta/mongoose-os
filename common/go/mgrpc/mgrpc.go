@@ -132,14 +132,7 @@ func (r *mgRPCImpl) wsConnect(url string, opts *connectOptions) (codec.Codec, er
 	s := strings.Join(encodings, "|")
 	config.Protocol = []string{codec.WSProtocol}
 	config.OutboundExtensions = []string{fmt.Sprintf("%s; in=%s; out=%s", codec.WSEncodingExtension, s, s)}
-	config.TlsConfig = &tls.Config{
-		RootCAs:    opts.caPool,
-		ServerName: opts.serverHost,
-	}
-	if opts.cert != nil {
-		config.TlsConfig.Certificates = []tls.Certificate{*opts.cert}
-	}
-
+	config.TlsConfig = opts.tlsConfig
 	conn, err := wsDialConfig(config)
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -181,7 +174,7 @@ func (r *mgRPCImpl) connect(ctx context.Context, opts ...ConnectOption) error {
 	switch r.opts.proto {
 
 	case tHTTP_POST:
-		r.codec = codec.OutboundHTTP(r.opts.connectAddress, r.opts.serverHost, r.opts.cert, r.opts.caPool)
+		r.codec = codec.OutboundHTTP(r.opts.connectAddress, r.opts.tlsConfig)
 	case tWebSocket:
 		r.codec = codec.NewReconnectWrapperCodec(
 			r.opts.connectAddress,
