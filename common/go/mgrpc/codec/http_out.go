@@ -62,13 +62,13 @@ func (c *outboundHttpCodec) Send(ctx context.Context, f *frame.Frame) error {
 	if resp.StatusCode != http.StatusOK {
 		return fmt.Errorf("server returned an error: %v", resp)
 	}
-	var rfs []*frame.Frame
+	var rfs *frame.Frame
 	if err := json.NewDecoder(resp.Body).Decode(&rfs); err != nil {
 		// Return it from Recv?
 		return errors.Trace(err)
 	}
 	c.Lock()
-	c.queue = append(c.queue, rfs...)
+	c.queue = append(c.queue, rfs)
 	c.Unlock()
 	c.cond.Signal()
 	return nil

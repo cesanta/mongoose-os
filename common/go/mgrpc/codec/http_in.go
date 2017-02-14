@@ -21,7 +21,7 @@ type inboundHttpCodec struct {
 	rw            http.ResponseWriter
 	cloudHost     string
 	in            *frame.Frame
-	out           []*frame.Frame
+	out           *frame.Frame
 	closeNotifier chan struct{}
 	closeOnce     sync.Once
 	isSingleShot  bool
@@ -135,7 +135,10 @@ func (c *inboundHttpCodec) Send(ctx context.Context, f *frame.Frame) error {
 	}
 	c.Lock()
 	defer c.Unlock()
-	c.out = append(c.out, f)
+	if c.out != nil {
+		return errors.Errorf("Trying to send more than one frame. Existing: %v, new: %v", c.out, f)
+	}
+	c.out = f
 	return nil
 }
 
@@ -143,13 +146,13 @@ func (c *inboundHttpCodec) Close() {
 	c.Lock()
 	defer c.Unlock()
 	if c.rw != nil {
-		glog.V(2).Infof("Response finished, %d frames", len(c.out))
-		if len(c.out) != 0 {
+		glog.V(2).Infof("Response finished, frame: %v", c.out)
+		if c.out != nil {
 			c.rw.Header().Set("Content-Type", "application/json")
 			var err error
 			if c.isSingleShot {
 				// Elide fields that are implicit.
-				f := c.out[0]
+				f := c.out
 				f.Src = ""
 				f.Dst = ""
 				err = json.NewEncoder(c.rw).Encode(f)
@@ -157,7 +160,7 @@ func (c *inboundHttpCodec) Close() {
 				err = json.NewEncoder(c.rw).Encode(c.out)
 			}
 			if err != nil {
-				glog.Errorf("Failed to serialize the response (%s): %+v", err, len(c.out))
+				glog.Errorf("Failed to serialize the response (%s): %+v", err, c.out)
 				// Too late to return an error to the client.
 			}
 		} else {
@@ -165,8 +168,8 @@ func (c *inboundHttpCodec) Close() {
 			// TODO(rojer): Find a way to propagate error details.
 			http.Error(c.rw, "Bad request.", http.StatusBadRequest)
 		}
-	} else if len(c.out) > 0 {
-		glog.Warningf("HTTP connection to %s closed before response was sent, lost %d frames.", c.req.RemoteAddr, len(c.out))
+	} else if c.out != nil {
+		glog.Warningf("HTTP connection to %s closed before response was sent, lost frame: %v.", c.req.RemoteAddr, c.out)
 	}
 	c.closeOnce.Do(c.sendAndClose)
 }
