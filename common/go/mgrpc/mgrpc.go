@@ -283,7 +283,9 @@ func (r *mgRPCImpl) Call(
 	glog.V(2).Infof("created a request with id %d", cmd.ID)
 
 	f := frame.NewRequestFrame(r.opts.localID, dst, "", cmd)
-	r.codec.Send(ctx, f)
+	if err := r.codec.Send(ctx, f); err != nil {
+		return nil, errors.Trace(err)
+	}
 
 	select {
 	case resp := <-respChan:
