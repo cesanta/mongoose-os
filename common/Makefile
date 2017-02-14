@@ -22,5 +22,5 @@ clean:
 	rm -f *.o unit_test
 
 format:
-	@$(CLANG_FORMAT) -i *.[ch] platforms/*/*.[ch] mg_rpc/*.[ch] segstack/*.[ch]
+	@$(CLANG_FORMAT) -i *.[ch] platforms/*/*.[ch] platforms/stm32/tools/stlink/*.[ch] mg_rpc/*.[ch] segstack/*.[ch]
 
