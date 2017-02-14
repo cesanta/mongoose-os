@@ -49,21 +49,21 @@
  * will use heap implementation from SDK.
  */
 
-void *pvPortMalloc(size_t size, const char *file, int line) {
+void *pvPortMalloc(size_t size, const char *file, unsigned line) {
   (void) file;
   (void) line;
 
   return umm_malloc(size);
 }
 
-void *pvPortCalloc(size_t num, size_t size, const char *file, int line) {
+void *pvPortCalloc(size_t num, size_t size, const char *file, unsigned line) {
   (void) file;
   (void) line;
 
   return umm_calloc(num, size);
 }
 
-void *pvPortZalloc(size_t size, const char *file, int line) {
+void *pvPortZalloc(size_t size, const char *file, unsigned line) {
   void *ret;
 
   (void) file;
@@ -74,14 +74,14 @@ void *pvPortZalloc(size_t size, const char *file, int line) {
   return ret;
 }
 
-void *pvPortRealloc(void *ptr, size_t size, const char *file, int line) {
+void *pvPortRealloc(void *ptr, size_t size, const char *file, unsigned line) {
   (void) file;
   (void) line;
 
   return umm_realloc(ptr, size);
 }
 
-void vPortFree(void *ptr, const char *file, int line) {
+void vPortFree(void *ptr, const char *file, unsigned line) {
   (void) file;
   (void) line;
 

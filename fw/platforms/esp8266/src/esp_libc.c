@@ -3,29 +3,19 @@
 * All rights reserved
 */
 
-#include <ctype.h>
-#include <sys/time.h>
 #include <stdint.h>
-#include "common/platforms/esp8266/esp_missing_includes.h"
-#include "common/cs_strtod.h"
-
-#include <math.h>
-#include <stdarg.h>
+#include <stdio.h>
 #include <stdlib.h>
-#include <stdio.h>
 #include <string.h>
+#include <sys/time.h>
+#include "common/platforms/esp8266/esp_missing_includes.h"
+#include "common/umm_malloc/umm_malloc.h"
 
-#include <stddef.h>
-#include <stdio.h>
-#include <limits.h>
-#include <string.h>
-#include <sys/stat.h>
-#include <ets_sys.h>
-#include <os_type.h>
-#include <osapi.h>
-#include <mem.h>
-#include <user_interface.h>
-#include <errno.h>
+#ifdef RTOS_SDK
+#include "esp_system.h"
+#else
+#include "user_interface.h"
+#endif
 
 #include "fw/platforms/esp8266/src/esp_features.h"
 
@@ -44,7 +34,7 @@ int cs_heap_shim = 0;
 void *malloc(size_t size) {
   void *res;
   CS_HEAP_SHIM_FLAG_SET();
-  res = (void *) os_malloc(size);
+  res = (void *) umm_malloc(size);
 #ifdef ESP_ABORT_ON_MALLOC_FAILURE
   if (res == NULL) abort();
 #endif
@@ -53,18 +43,13 @@ void *malloc(size_t size) {
 
 void free(void *ptr) {
   CS_HEAP_SHIM_FLAG_SET();
-  os_free(ptr);
+  umm_free(ptr);
 }
 
 void *realloc(void *ptr, size_t size) {
   void *res;
   CS_HEAP_SHIM_FLAG_SET();
-  /* ESP realloc is annoying - it prints an error message if reallocing to 0. */
-  if (size == 0) {
-    free(ptr);
-    return NULL;
-  }
-  res = (void *) os_realloc(ptr, size);
+  res = (void *) umm_realloc(ptr, size);
 #ifdef ESP_ABORT_ON_MALLOC_FAILURE
   if (res == NULL) {
     printf("failed to alloc %u bytes, %d avail\n", size,
@@ -78,7 +63,7 @@ void *realloc(void *ptr, size_t size) {
 void *calloc(size_t num, size_t size) {
   void *res;
   CS_HEAP_SHIM_FLAG_SET();
-  res = (void *) os_zalloc(num * size);
+  res = (void *) umm_calloc(num, size);
 #ifdef ESP_ABORT_ON_MALLOC_FAILURE
   if (res == NULL) abort();
 #endif

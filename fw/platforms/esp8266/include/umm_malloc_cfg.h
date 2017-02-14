@@ -59,6 +59,10 @@
 #include <stdlib.h>         /* for abort() */
 #include "esp_mem_layout.h" /* for ESP_DRAM0_END */
 #include "esp_umm_malloc.h" /* for esp_umm_oom_cb() */
+#ifdef RTOS_SDK
+#include "freertos/FreeRTOS.h"
+#include "freertos/portmacro.h"
+#endif
 
 /* Defined in linker script. */
 extern unsigned int _heap_start;
@@ -92,8 +96,13 @@ extern unsigned int _heap_start;
  * called from within umm_malloc()
  */
 
+#ifdef RTOS_SDK
+#define UMM_CRITICAL_ENTRY() vPortEnterCritical()
+#define UMM_CRITICAL_EXIT() vPortExitCritical()
+#else
 #define UMM_CRITICAL_ENTRY()
 #define UMM_CRITICAL_EXIT()
+#endif
 
 /*
  * -D UMM_INTEGRITY_CHECK :
