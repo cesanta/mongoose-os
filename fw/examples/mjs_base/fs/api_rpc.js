@@ -33,7 +33,11 @@ let RPC = {
 
   // **`RPC.addHandler(name, handler)`** -
   // add RPC handler. `name` is a string like `'MyMethod'`, `handler`
-  // is a callback function which takes `args` arguments object. Example:
+  // is a callback function which takes `args` arguments object.
+  //
+  // Return value: none.
+  //
+  // Example:
   // ```javascript
   // RPC.addHandler('Sum', function(args) {
   //   return args.a + args.b;
@@ -58,6 +62,9 @@ let RPC = {
   },
 
   // **`RPC.Call(dst, method, args, callback)`** - call remote RPC service.
+  //
+  // Return value: 1 in case of success, 0 otherwise.
+  //
   // If `dst` is empty, connected server is implied. `method` is a string
   // like "MyMethod", `callback` is a callback function which takes the following
   // arguments: res (results object), err_code (0 means success, or error code

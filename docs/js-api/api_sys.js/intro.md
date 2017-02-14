@@ -8,7 +8,8 @@ items:
 
 
 
- **`Sys.peek(ptr, offset)`** - return byte value for given pointer at offset.
+ **`Sys.peek(ptr, offset)`** - return byte value (a number) for given
+ pointer at offset.
 
 
 
@@ -21,8 +22,10 @@ items:
 
 
  **`Sys.reboot()`** - reboot the system.
+ Return value: none.
 
 
 
  **`Sys.usleep(microseconds)`** - sleep given number of microseconds.
+ Return value: none.
 

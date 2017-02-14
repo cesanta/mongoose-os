@@ -12,7 +12,11 @@ items:
 
 
  **`MQTT.sub(topic, handler)`** - subscribe to a topic, and call given
- handler function when message arrives. Example:
+ handler function when message arrives.
+
+ Return value: none.
+
+ Example:
  ```javascript
  MQTT.sub('my/topic', function(conn, message) {
    print('Got message:', message);

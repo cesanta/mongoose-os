@@ -5,6 +5,9 @@ let Timer = {
   // **`Timer.set(milliseconds, repeat, handler)`**  -
   // setup timer with `milliseconds` timeout and `handler` as a callback.
   // `repeat` set to 1 will repeat a call infinitely, otherwise it's a one-off.
+  //
+  // Return value: numeric timer ID.
+  //
   // Example:
   // ```javascript
   // // Call every second

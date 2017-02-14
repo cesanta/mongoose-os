@@ -24,6 +24,7 @@ items:
 
 
  **`GPIO.write(pin, level)`** - set GPIO pin level to either 0 or 1.
+ Return value: none.
 
 
 
@@ -33,10 +34,12 @@ items:
 
  **`GPIO.enable_int(pin)`** - enable interrupts on GPIO pin.
  This function must be called AFTER the interrupt handler is installed.
+ Return value: 1 in case of success, 0 otherwise.
 
 
 
  **`GPIO.disable_int(pin)`** - disable interrupts on GPIO pin.
+ Return value: 1 in case of success, 0 otherwise.
 
 
 
@@ -44,6 +47,7 @@ items:
  GPIO interrupt handler. `mode` could be one of: `GPIO.INT_NONE`,
  `GPIO.INT_EDGE_POS`, `GPIO.INT_EDGE_NEG`, `GPIO.INT_EDGE_ANY`,
  `GPIO.INT_LEVEL_HI`, `GPIO.INT_LEVEL_LO`.
+ Return value: 1 in case of success, 0 otherwise.
  Example:
  ```javascript
  GPIO.set_mode(pin, GPIO.MODE_INPUT);
@@ -59,6 +63,7 @@ items:
  GPIO button handler. `pull` is pull type, `intmode` is interrupt mode,
  `period` is debounce interval in milliseconds, handler is a function that
  receives pin number.
+ Return value: 1 in case of success, 0 otherwise.
  Example:
  ```javascript
  GPIO.set_button_handler(pin, GPIO.PULL_UP, GPIO.INT_EDGE_NEG, 50, function(x) {
