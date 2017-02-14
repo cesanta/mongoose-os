@@ -101,7 +101,7 @@ MGOS_SRCS = cs_file.c cs_rbuf.c \
             umm_malloc.c \
             mongoose.c frozen.c
 MGOS_SRCS += $(notdir $(foreach m,$(MGOS_ESP_SRC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_PATH),$(wildcard $(m)/*.c)))
-APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
+APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c) $(wildcard $(m)/*.cpp))) $(APP_EXTRA_SRCS)
 
 MGOS_FEATURES ?=
 
@@ -174,13 +174,13 @@ SYS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/sys_config_schema.json
 SYS_RO_VARS_C = $(GEN_DIR)/sys_ro_vars.c
 SYS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/sys_ro_vars_schema.json
 BUILD_INFO_C = $(GEN_DIR)/build_info.c
-BUILD_INFO_O = $(BUILD_DIR)/build_info.o
+BUILD_INFO_O = $(BUILD_DIR)/build_info.c.o
 BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
 MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
-MG_BUILD_INFO_O = $(BUILD_DIR)/mg_build_info.o
+MG_BUILD_INFO_O = $(BUILD_DIR)/mg_build_info.c.o
 SYMBOLS_DUMP = $(GEN_DIR)/symbols_dump.txt
 FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
-FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.o
+FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.c.o
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
 GENFILES_LIST = $(LD_SCRIPT) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 FW_FILE_1_OUT = $(FW_STAGING_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_1_ADDR))
@@ -212,8 +212,8 @@ endif
 
 include $(MGOS_PATH)/fw/src/spiffs.mk
 
-MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(MGOS_SRCS)))
-APP_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(APP_SRCS)))
+MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o))
+APP_OBJS = $(addprefix $(BUILD_DIR)/,$(APP_SRCS:=.o))
 
 APP_BIN = $(BUILD_DIR)/$(APP).bin
 APP_ELF = $(BUILD_DIR)/$(APP).elf
@@ -301,7 +301,7 @@ $(APP_BIN): $(APP_ELF)
 # -- Linking.
 
 # Link the main ELF output file.
-$(APP_ELF): $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(ATCA_LIB) $(LWIP_LIB) $(SSL_LIBS) $(BUILD_DIR)/build_info.o $(LD_SCRIPT)
+$(APP_ELF): $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(ATCA_LIB) $(LWIP_LIB) $(SSL_LIBS) $(LD_SCRIPT)
 	# Before linking, rename .rodata section in APP_OBJS.
 	#
 	# We can't build a library APP_LIB and rename section there, because for
@@ -335,11 +335,15 @@ $(LWIP_LIB): $(LWIP_PATH)
 	  CFLAGS_EXTRA="$(HEAP_LOG_FLAGS)"
 
 # This rule is for normal (pre-existing) sources from VPATH.
-$(BUILD_DIR)/%.o: %.c $(GENFILES_FLAG)
+$(BUILD_DIR)/%.c.o: %.c $(GENFILES_FLAG)
 	$(compile)
 
+# This rule is for normal (pre-existing) sources from VPATH.
+$(BUILD_DIR)/%.cpp.o: %.cpp $(GENFILES_FLAG)
+	$(compile_cxx)
+
 # This one is for generated sources in build/gen directory.
-$(BUILD_DIR)/%.o: $(GEN_DIR)/%.c $(GENFILES_FLAG)
+$(BUILD_DIR)/%.c.o: $(GEN_DIR)/%.c $(GENFILES_FLAG)
 	$(compile)
 
 # Common gathering point for all generated files.

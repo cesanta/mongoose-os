@@ -11,6 +11,7 @@ ESPFLASHARGS = --flash_mode dio --flash_size 32m
 VERBOSE ?= 0
 
 CC := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
+CXX := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-g++
 AR := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-ar
 LD := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-gcc
 OBJCOPY := $(XTENSA_TOOLS_ROOT)/xtensa-lx106-elf-objcopy
@@ -24,12 +25,16 @@ $(Q) $(CC_WRAPPER) $(LD) $(LIBDIRS) -T$(LD_SCRIPT) $(LDFLAGS) -o $@ \
 endef
 
 define compile_params
-$(vecho) "CC    $1 -> $2"
-$(Q) $(CC_WRAPPER) $(CC) -MD $(INCDIRS) $(CFLAGS) -c $1 -o $2
+$(vecho) "$5    $1 -> $2"
+$(Q) $(CC_WRAPPER) $3 -MD $(INCDIRS) $4 -c $1 -o $2
 endef
 
 define compile
-$(call compile_params,$<,$@)
+$(call compile_params,$<,$@, $(CC), $(CFLAGS),"CC")
+endef
+
+define compile_cxx
+$(call compile_params,$<,$@, $(CXX), $(CXXFLAGS),"CXX")
 endef
 
 # some of these flags works around for gdb 7.5.x stacktrace issue
@@ -51,15 +56,17 @@ NO_Os_FLAGS= -fno-expensive-optimizations -fno-thread-jumps \
              -fno-tree-builtin-call-dce -fno-tree-switch-conversion -fno-tree-tail-merge \
              -fno-tree-pre -fno-tree-vrp
 
-CFLAGS := -std=c99 -W -Wall -Werror -Wundef -Wno-comment -Wno-variadic-macros -Wpointer-arith \
-          -Os $(NO_Os_FLAGS) -g3 \
-          -Wl,-EL -fno-inline-functions \
-          -D_XOPEN_SOURCE=500 \
-          -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DSTATIC=static \
-          -Wno-parentheses -DIRAM='__attribute__((section(".fast.text")))' \
-          -DNOINSTR='__attribute__((no_instrument_function))' \
-          -DCS_PLATFORM=3 \
-          -ffunction-sections
+C_CXX_FLAGS := -W -Wall -Werror -Wundef -Wno-comment -Wno-variadic-macros -Wpointer-arith \
+               -Os $(NO_Os_FLAGS) -g3 \
+               -Wl,-EL -fno-inline-functions \
+               -D_XOPEN_SOURCE=500 \
+               -nostdlib -mlongcalls -mtext-section-literals  -D__ets__ -DSTATIC=static \
+               -Wno-parentheses -DIRAM='__attribute__((section(".fast.text")))' \
+               -DNOINSTR='__attribute__((no_instrument_function))' \
+               -DCS_PLATFORM=3 \
+               -ffunction-sections
+CFLAGS := -std=c99 $(C_CXX_FLAGS)
+CXXFLAGS := $(C_CXX_FLAGS)
 
 # linker flags used to generate the main object file
 LDFLAGS = -nostdlib -Wl,--no-check-sections -u call_user_start \
