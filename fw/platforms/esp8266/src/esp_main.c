@@ -23,7 +23,6 @@
 
 #include "common/cs_dbg.h"
 #include "fw/src/mgos_app.h"
-#include "fw/src/mgos_gpio.h"
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_init.h"
 #include "fw/src/mgos_mongoose.h"
@@ -79,7 +78,6 @@ static IRAM void mongoose_poll_cb(void *arg) {
     os_timer_arm(&s_mg_poll_tmr, timeout_ms, 0 /* no repeat */);
   }
   mgos_unlock();
-  mgos_gpio_toggle(15);
   (void) arg;
 }
 
@@ -232,8 +230,6 @@ void user_init(void) {
   os_timer_disarm(&s_mg_poll_tmr);
   os_timer_setfn(&s_mg_poll_tmr, (void (*) (void *)) mongoose_schedule_poll,
                  NULL);
-
-  mgos_gpio_set_mode(15, MGOS_GPIO_MODE_OUTPUT);
 
 #ifdef RTOS_SDK
   xTaskCreate(mgos_task, (const signed char *) "mgos", MGOS_TASK_STACK_SIZE,
