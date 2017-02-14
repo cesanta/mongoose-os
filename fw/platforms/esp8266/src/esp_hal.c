@@ -4,6 +4,18 @@
  */
 
 #include "common/platforms/esp8266/esp_missing_includes.h"
+
+#ifdef RTOS_SDK
+#include "esp_misc.h"
+#include "esp_system.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#else
+#include <osapi.h>
+#include <os_type.h>
+#include <user_interface.h>
+#endif
+
 #include "fw/src/mgos_timers.h"
 #include "fw/src/mgos_hal.h"
 
@@ -12,10 +24,6 @@
 
 #include "fw/platforms/esp8266/src/esp_fs.h"
 #include "fw/platforms/esp8266/src/esp_task.h"
-
-#include <osapi.h>
-#include <os_type.h>
-#include <user_interface.h>
 
 size_t mgos_get_heap_size(void) {
   return UMM_MALLOC_CFG__HEAP_SIZE;
@@ -58,18 +66,28 @@ void mgos_wdt_set_timeout(int secs) {
   system_soft_wdt_restart();
 }
 
+#ifdef RTOS_SDK
+IRAM void mgos_lock(void) {
+  portENTER_CRITICAL();
+}
+
+IRAM void mgos_unlock(void) {
+  portEXIT_CRITICAL();
+}
+#else
+IRAM void mgos_lock(void) {
+}
+
+IRAM void mgos_unlock(void) {
+}
+#endif
+
 void mgos_system_restart(int exit_code) {
   (void) exit_code;
   fs_umount();
   system_restart();
 }
 
-int spiffs_get_memory_usage();
-
 void mgos_usleep(int usecs) {
   os_delay_us(usecs);
-}
-
-IRAM void mongoose_schedule_poll(void) {
-  mg_lwip_mgr_schedule_poll(mgos_get_mgr());
 }

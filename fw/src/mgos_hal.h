@@ -61,6 +61,9 @@ void mgos_usleep(int usecs);
 typedef void (*mgos_cb_t)(void *arg);
 bool mgos_invoke_cb(mgos_cb_t cb, void *arg);
 
+void mgos_lock(void);
+void mgos_unlock(void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

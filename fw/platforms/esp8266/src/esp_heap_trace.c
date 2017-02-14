@@ -22,7 +22,7 @@
  * global flag that is needed for heap trace: we shouldn't send anything to
  * uart until it is initialized
  */
-int uart_initialized = 0;
+extern bool uart_initialized;
 
 extern int cs_heap_shim;
 

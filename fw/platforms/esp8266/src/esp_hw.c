@@ -6,8 +6,6 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "user_interface.h"
-
 #include "esp_hw.h"
 #include "esp_fs.h"
 
