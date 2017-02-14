@@ -1,5 +1,5 @@
 ---
-title: How config is generated
+title: Compile time generation
 ---
 
 Configuration is defined by several YAML files in the Mongoose OS source
