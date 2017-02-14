@@ -13,6 +13,8 @@ static const uint8_t loader_code_stm32f7[] = {
     0x00, 0x3c, 0x02, 0x40,
 };
 
+#define WAIT_ROUNDS 10000
+
 int stlink_flash_loader_init(stlink_t *sl, flash_loader_t *fl) {
   size_t size;
 
@@ -70,7 +72,6 @@ int stlink_flash_loader_run(stlink_t *sl, flash_loader_t *fl,
   /* run loader */
   stlink_run(sl);
 
-#define WAIT_ROUNDS 10000
   /* wait until done (reaches breakpoint) */
   for (i = 0; i < WAIT_ROUNDS; i++) {
     usleep(10);

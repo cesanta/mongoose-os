@@ -101,13 +101,6 @@ typedef struct flash_loader {
   stm32_addr_t buf_addr;    /* buffer sram address */
 } flash_loader_t;
 
-typedef struct _cortex_m3_cpuid_ {
-  uint16_t implementer_id;
-  uint16_t variant;
-  uint16_t part;
-  uint8_t revision;
-} cortex_m3_cpuid_t;
-
 typedef struct stlink_version_ {
   uint32_t stlink_v;
   uint32_t jtag_v;
@@ -115,13 +108,6 @@ typedef struct stlink_version_ {
   uint32_t st_vid;
   uint32_t stlink_pid;
 } stlink_version_t;
-
-enum transport_type {
-  TRANSPORT_TYPE_ZERO = 0,
-  TRANSPORT_TYPE_LIBSG,
-  TRANSPORT_TYPE_LIBUSB,
-  TRANSPORT_TYPE_INVALID
-};
 
 typedef struct _stlink stlink_t;
 
@@ -135,7 +121,6 @@ struct _stlink {
   int q_len;
 
   // transport layer verboseness: 0 for no debug info, 10 for lots
-  int verbose;
   uint32_t core_id;
   uint32_t chip_id;
   int core_stat;
@@ -182,15 +167,11 @@ int stlink_current_mode(stlink_t *sl);
 int stlink_force_debug(stlink_t *sl);
 int stlink_target_voltage(stlink_t *sl);
 int stlink_set_swdclk(stlink_t *sl, uint16_t divisor);
-
-int stlink_erase_flash_mass(stlink_t *sl);
 int stlink_write_flash(stlink_t *sl, stm32_addr_t address, uint8_t *data,
                        uint32_t length, uint8_t eraseonly);
-uint8_t stlink_get_erased_pattern(stlink_t *sl);
 int stlink_fwrite_flash(stlink_t *sl, const char *path, stm32_addr_t addr);
 int stlink_verify_write_flash(stlink_t *sl, stm32_addr_t address, uint8_t *data,
                               uint32_t length);
-
 int stlink_chip_id(stlink_t *sl, uint32_t *chip_id);
 int stlink_erase_flash_page(stlink_t *sl, stm32_addr_t flashaddr);
 uint32_t stlink_calculate_pagesize(stlink_t *sl, uint32_t flashaddr);
@@ -207,8 +188,6 @@ int write_loader_to_sram(stlink_t *sl, stm32_addr_t *addr, size_t *size);
 int stlink_load_device_params(stlink_t *sl);
 
 #include "usb.h"
-#include "reg.h"
-#include "commands.h"
 #include "flash_loader.h"
 
 #ifdef __cplusplus

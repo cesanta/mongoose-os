@@ -10,7 +10,6 @@
 #include <sys/stat.h>
 
 #include "stlink.h"
-#include "mmap.h"
 #include "usb.h"
 
 #ifndef _WIN32
@@ -118,6 +117,36 @@
 
 #define L1_WRITE_BLOCK_SIZE 0x80
 #define L0_WRITE_BLOCK_SIZE 0x40
+
+#define STLINK_REG_CM3_CPUID 0xE000ED00
+#define STLINK_REG_CM3_FP_CTRL 0xE0002000
+#define STLINK_REG_CM3_FP_COMP0 0xE0002008
+
+/* Cortex™-M3 Technical Reference Manual */
+/* Debug Halting Control and Status Register */
+#define STLINK_REG_DHCSR 0xe000edf0
+#define STLINK_REG_DHCSR_DBGKEY 0xa05f0000
+#define STLINK_REG_DCRSR 0xe000edf4
+#define STLINK_REG_DCRDR 0xe000edf8
+
+#ifdef STLINK_HAVE_SYS_MMAN_H
+#include <sys/mman.h>
+#else
+
+#define PROT_READ (1 << 0)
+#define PROT_WRITE (1 << 1)
+
+#define MAP_SHARED (1 << 0)
+#define MAP_PRIVATE (1 << 1)
+
+#define MAP_ANONYMOUS (1 << 5)
+
+#define MAP_FAILED ((void *) -1)
+
+void *mmap(void *addr, size_t len, int prot, int flags, int fd,
+           long long offset);
+int munmap(void *addr, size_t len);
+#endif
 
 struct stlink_chipid_params {
   uint32_t chip_id;
@@ -958,10 +987,6 @@ int stlink_write_flash(stlink_t *sl, stm32_addr_t addr, uint8_t *base,
   return stlink_verify_write_flash(sl, addr, base, len);
 }
 
-uint8_t stlink_get_erased_pattern(stlink_t *sl) {
-  return 0xff;
-}
-
 /**
  * Write the given binary file into flash at address "addr"
  * @param sl
@@ -973,7 +998,7 @@ int stlink_fwrite_flash(stlink_t *sl, const char *path, stm32_addr_t addr) {
   /* write the file in flash at addr */
   int err;
   unsigned int num_empty, idx;
-  uint8_t erased_pattern = stlink_get_erased_pattern(sl);
+  uint8_t erased_pattern = 0xFF;
   mapped_file_t mf = MAPPED_FILE_INITIALIZER;
 
   if (map_file(&mf, path) == -1) {
