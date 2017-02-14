@@ -30,7 +30,8 @@ CFLAGS    = -Os -O3 -Wpointer-arith -Wundef -Werror -Wl,-EL \
             -DICACHE_FLASH $(CFLAGS_EXTRA)
 
 LDFLAGS   = -nostdlib -Wl,--no-check-sections -u call_user_start -Wl,-static -L $(SDK_BASE)/ld/
-LD_SCRIPT = $(SDK_BASE)/ld/eagle.app.v6.ld
+
+LD_SCRIPT = rboot.ld
 
 E2_OPTS = -quiet -bin -boot0
 

@@ -159,6 +159,8 @@ static uint8 calc_chksum(uint8 *start, uint8 *end) {
 }
 #endif
 
+#define UART_CLKDIV_26MHZ(B) (52000000 + B / 2) / B
+
 // prevent this function being placed inline with main
 // to keep main's stack size as small as possible
 // don't mark as static or it'll be optimised out when
@@ -178,6 +180,9 @@ uint32 NOINLINE find_image(void) {
 
 	// delay to slow boot (help see messages when debugging)
 	//ets_delay_us(2000000);
+
+	uart_div_modify(0, UART_CLKDIV_26MHZ(115200));
+	ets_delay_us(1000);
 
 	ets_printf("\r\nrBoot v1.2.1 - richardaburton@gmail.com\r\n");
 

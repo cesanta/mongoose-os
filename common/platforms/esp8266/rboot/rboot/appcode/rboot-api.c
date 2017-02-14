@@ -11,10 +11,14 @@
 #endif
 
 #include <c_types.h>
+#include <stdlib.h>
+#include <string.h>
+
+#ifdef RTOS_SDK
+#include "spi_flash.h"
+#else
 #include <user_interface.h>
-#include <espconn.h>
-#include <mem.h>
-#include <osapi.h>
+#endif
 
 #include "rboot-api.h"
 #include "../rboot-private.h"
@@ -98,23 +102,23 @@ bool ICACHE_FLASH_ATTR rboot_write_flash(rboot_write_status *status, uint8 *data
 	}
 
 	// get a buffer
-	buffer = (uint8 *)os_zalloc(len + status->extra_count);
+	buffer = (uint8 *) calloc(1, len + status->extra_count);
 	if (!buffer) {
 		//os_printf("No ram!\r\n");
 		return false;
 	}
 
 	// copy in any remaining bytes from last chunk
-	os_memcpy(buffer, status->extra_bytes, status->extra_count);
+	memcpy(buffer, status->extra_bytes, status->extra_count);
 	// copy in new data
-	os_memcpy(buffer + status->extra_count, data, len);
+	memcpy(buffer + status->extra_count, data, len);
 
 	// calculate length, must be multiple of 4
 	// save any remaining bytes for next go
 	len += status->extra_count;
 	status->extra_count = len % 4;
 	len -= status->extra_count;
-	os_memcpy(status->extra_bytes, buffer + len, status->extra_count);
+	memcpy(status->extra_bytes, buffer + len, status->extra_count);
 
 	// check data will fit
 	//if (status->start_addr + len < (status->start_sector + status->max_sector_count) * SECTOR_SIZE) {
@@ -139,7 +143,7 @@ bool ICACHE_FLASH_ATTR rboot_write_flash(rboot_write_status *status, uint8 *data
 		}
 	//}
 
-	os_free(buffer);
+	free(buffer);
 	return ret;
 }
 

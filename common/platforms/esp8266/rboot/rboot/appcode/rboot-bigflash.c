@@ -29,7 +29,6 @@ extern "C" {
 
 extern void Cache_Read_Disable();
 extern uint32 SPIRead(uint32, void*, uint32);
-extern void ets_printf(const char*, ...);
 extern void Cache_Read_Enable(uint32, uint32, uint32);
 
 uint8 rBoot_mmap_1 = 0xff;
