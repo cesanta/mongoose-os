@@ -7,6 +7,7 @@ signature: |
     MG_RPC_EV_CHANNEL_OPEN,   /* struct mg_str *dst */
     MG_RPC_EV_CHANNEL_CLOSED, /* struct mg_str *dst */
   };
+  
 ---
 
 mg_rpc event observer. 
