@@ -1,10 +1,15 @@
 /*  Default entry point:  */
 ENTRY(call_user_start)
 EXTERN(_DebugExceptionVector)
-EXTERN(_DoubleExceptionVector)
-EXTERN(_KernelExceptionVector)
+EXTERN(_OurDebugExceptionVector)
 EXTERN(_NMIExceptionVector)
+EXTERN(_OurNMIExceptionVector)
+EXTERN(_KernelExceptionVector)
+EXTERN(_OurKernelExceptionVector)
 EXTERN(_UserExceptionVector)
+EXTERN(_OurUserExceptionVector)
+EXTERN(_DoubleExceptionVector)
+EXTERN(_OurDoubleExceptionVector)
 PROVIDE(_memmap_vecbase_reset = 0x40000000);
 /* Various memory-map dependent cache attribute settings: */
 _memmap_cacheattr_wb_base = 0x00000110;
@@ -135,29 +140,14 @@ SECTIONS
   {
     _stext = .;
     _text_start = ABSOLUTE(.);
-    *(.UserEnter.text)
-    . = ALIGN(16);
+    *(.OurVectors.text)
+    . = 0x200;
     *(.DebugExceptionVector.text)
-    . = ALIGN(16);
     *(.NMIExceptionVector.text)
-    . = ALIGN(16);
     *(.KernelExceptionVector.text)
-    LONG(0)
-    LONG(0)
-    LONG(0)
-    LONG(0)
-    . = ALIGN(16);
     *(.UserExceptionVector.text)
-    LONG(0)
-    LONG(0)
-    LONG(0)
-    LONG(0)
-    . = ALIGN(16);
     *(.DoubleExceptionVector.text)
-    LONG(0)
-    LONG(0)
-    LONG(0)
-    LONG(0)
+    *(.UserEnter.text)
     . = ALIGN (16);
     *(.entry.text)
     *(.init.literal)

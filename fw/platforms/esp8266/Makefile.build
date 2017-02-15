@@ -212,7 +212,7 @@ endif
 
 include $(MGOS_PATH)/fw/src/spiffs.mk
 
-MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o))
+MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o)) $(BUILD_DIR)/lse_handler.S.o
 APP_OBJS = $(addprefix $(BUILD_DIR)/,$(APP_SRCS:=.o))
 
 APP_BIN = $(BUILD_DIR)/$(APP).bin
@@ -334,13 +334,18 @@ $(LWIP_LIB): $(LWIP_PATH)
 	  APP=liblwip_cs BUILD_DIR=$(abspath $(LWIP_BUILD_DIR)) \
 	  CFLAGS_EXTRA="$(HEAP_LOG_FLAGS)"
 
-# This rule is for normal (pre-existing) sources from VPATH.
+# This rule is for normal (pre-existing) C sources from VPATH.
 $(BUILD_DIR)/%.c.o: %.c $(GENFILES_FLAG)
 	$(compile)
 
-# This rule is for normal (pre-existing) sources from VPATH.
+# This rule is for normal (pre-existing) C++ sources from VPATH.
 $(BUILD_DIR)/%.cpp.o: %.cpp $(GENFILES_FLAG)
 	$(compile_cxx)
+
+# Assembly sources.
+$(BUILD_DIR)/%.S.o: %.S $(GENFILES_FLAG)
+	$(vecho) "AS    $< -> $@"
+	$(Q) $(CC) -c -mtext-section-literals -o $@ $<
 
 # This one is for generated sources in build/gen directory.
 $(BUILD_DIR)/%.c.o: $(GEN_DIR)/%.c $(GENFILES_FLAG)

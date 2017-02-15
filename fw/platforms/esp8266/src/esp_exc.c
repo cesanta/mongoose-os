@@ -18,7 +18,6 @@
 #include "fw/src/mgos_hal.h"
 
 #include "esp_coredump.h"
-#include "esp_flash_bytes.h"
 #include "esp_fs.h"
 #include "esp_gdb.h"
 #include "esp_hw.h"
@@ -142,15 +141,6 @@ NOINSTR void esp_exception_handler_init(void) {
   for (i = 0; i < (int) sizeof(causes); i++) {
     _xtos_set_exception_handler(causes[i], esp_exception_handler);
   }
-
-#ifdef ESP_FLASH_BYTES_EMUL
-  /*
-   * registers exception handlers that allow reading arbitrary data from
-   * flash
-   */
-  flash_emul_init();
-#endif
-
 #endif
 }
 
