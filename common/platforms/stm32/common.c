@@ -781,8 +781,8 @@ int stlink_write_flash(stlink_t *sl, stm32_addr_t addr, uint8_t *base,
                        uint32_t len, uint8_t eraseonly) {
   size_t off;
   flash_loader_t fl;
-  printf("Writing %d (%#x) bytes to stm32 address: %u (%#x)\n", len,
-         len, addr, addr);
+  printf("Writing %d (%#x) bytes to stm32 address: %u (%#x)\n", len, len, addr,
+         addr);
   /* check addr range is inside the flash */
   stlink_calculate_pagesize(sl, addr);
   if (addr < sl->flash_base) {
@@ -852,7 +852,8 @@ int stlink_write_flash(stlink_t *sl, stm32_addr_t addr, uint8_t *base,
 
   for (off = 0; off < len;) {
     size_t size = len - off > 0x8000 ? 0x8000 : len - off;
-    printf("Writing %d bytes at 0x%08X\n", (int)size, (int)(addr + (uint32_t) off));
+    printf("Writing %d bytes at 0x%08X\n", (int) size,
+           (int) (addr + (uint32_t) off));
     if (stlink_flash_loader_run(sl, &fl, addr + (uint32_t) off, base + off,
                                 size) == -1) {
       printf("stlink_flash_loader_run(%#zx) failed! == -1\n", addr + off);

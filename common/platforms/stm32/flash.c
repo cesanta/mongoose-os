@@ -72,7 +72,7 @@ int stm32_flash(const char *device_name, void *data, int len) {
     goto on_error;
   }
 
-  err = stlink_write_flash(sl, FLASH_ADDRESS, (uint8_t*)data, len, 0);
+  err = stlink_write_flash(sl, FLASH_ADDRESS, (uint8_t *) data, len, 0);
   stlink_fwrite_finalize(sl, FLASH_ADDRESS);
 
   if (err == -1) {
