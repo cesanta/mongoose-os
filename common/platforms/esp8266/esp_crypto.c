@@ -3,13 +3,21 @@
  * All rights reserved
  */
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 
+#ifdef RTOS_SDK
+#include "esp_libc.h"
+#else
 #include "osapi.h"
+#endif
 
-#include "common/platforms/esp8266/esp_missing_includes.h"
-#include "mongoose/mongoose.h"
+extern int sha1_vector(size_t num_msgs, const uint8_t *msgs[],
+                       const size_t *msg_lens, uint8_t *digest);
+
+extern int md5_vector(size_t num_msgs, const uint8_t *msgs[],
+                      const size_t *msg_lens, uint8_t *digest);
 
 /* For WebSocket handshake. */
 void mg_hash_sha1_v(size_t num_msgs, const uint8_t *msgs[],
@@ -19,91 +27,39 @@ void mg_hash_sha1_v(size_t num_msgs, const uint8_t *msgs[],
 
 #if MG_ENABLE_SSL
 
-/* For Krypton */
-#if MG_SSL_IF != MG_SSL_IF_MBEDTLS
-
-#include "krypton/krypton.h"
-
-#ifdef KR_EXT_MD5
-void kr_hash_md5_v(size_t num_msgs, const uint8_t *msgs[],
-                   const size_t *msg_lens, uint8_t *digest) {
-  (void) md5_vector(num_msgs, msgs, msg_lens, digest);
-}
-#endif
-
-#ifdef KR_EXT_SHA1
-void kr_hash_sha1_v(size_t num_msgs, const uint8_t *msgs[],
-                    const size_t *msg_lens, uint8_t *digest) {
-  (void) sha1_vector(num_msgs, msgs, msg_lens, digest);
-}
-#endif
-
-#ifdef KR_EXT_AES
-
-#define AES_BLOCK_SIZE 16
-#define AES128_KEY_SIZE 16
-#define AES128_IV_SIZE 16
-
-static void *esp_aes128_new_ctx(void) {
-  return malloc(4 * 4 * 15 + 4);
-}
-
-void esp_aes128_setup_enc(void *ctxv, const uint8_t *key) {
-  (void) rijndaelKeySetupEnc(ctxv, key, 128);
-}
-
-void esp_aes128_setup_dec(void *ctxv, const uint8_t *key) {
-  rijndaelKeySetupDec(ctxv, key);
-}
-
-static void esp_aes128_encrypt(void *ctxv, const uint8_t *in, int len,
-                               uint8_t *out) {
-  while (len > 0) {
-    rijndaelEncrypt(ctxv, 10, in, out);
-    in += AES_BLOCK_SIZE;
-    out += AES_BLOCK_SIZE;
-    len -= AES_BLOCK_SIZE;
-  }
-}
-
-static void esp_aes128_decrypt(void *ctxv, const uint8_t *in, int len,
-                               uint8_t *out) {
-  while (len > 0) {
-    rijndaelDecrypt(ctxv, in, out);
-    in += AES_BLOCK_SIZE;
-    out += AES_BLOCK_SIZE;
-    len -= AES_BLOCK_SIZE;
-  }
-}
-
-static void esp_aes128_free_ctx(void *ctxv) {
-  free(ctxv);
-}
-
-const kr_cipher_info *kr_aes128_cs_info(void) {
-  static const kr_cipher_info aes128_cs_info = {
-      AES_BLOCK_SIZE,     AES128_KEY_SIZE,      AES128_IV_SIZE,
-      esp_aes128_new_ctx, esp_aes128_setup_enc, esp_aes128_setup_dec,
-      esp_aes128_encrypt, esp_aes128_decrypt,   esp_aes128_free_ctx};
-  return &aes128_cs_info;
-}
-#endif /* KR_EXT_AES */
-
-#ifdef KR_EXT_RANDOM
-int kr_get_random(uint8_t *out, size_t len) {
-  return os_get_random(out, len) == 0;
-}
-#endif
-
-/* For mbedTLS */
-#else
-
 #include "mbedtls/aes.h"
 #include "mbedtls/sha256.h"
 
+#define AES_PRIV_NR_POS (4 * 15)
+
+/*
+ * Crypto functions in ROM/SDK.
+ * They come from wpa_supplicant, you can find them here https://w1.fi/cgit/
+ *
+ * Note that ROM version of the key setup function is older, does not take the
+ * number of bits argument and only supports AES-128. This prototype doesn't
+ * suit it, but since the difference is in the last aegument, it doesn't matter.
+ */
+
+extern void rijndaelKeySetupDec(void *ctx, const uint8_t *key, int bits);
+extern int rijndaelKeySetupEnc(void *ctx, const uint8_t *key, int bits);
+void aes_encrypt(void *ctx, const uint8_t *plain, uint8_t *crypt);
+void aes_decrypt(void *ctx, const uint8_t *crypt, uint8_t *plain);
+
+/*
+ * AES that comes with wpa_supplicant allocates its own AES context in
+ * aes_{encrypt,decrypt}_init. Ideally, we'd take that pointer and store it in
+ * our mbedtls_aes_context, but then a lot of space would be wasted.
+ * We do not call _init and go directly to key setup functions and poke number
+ * of rounds into the right place too. This is a bit hacky, but works fine.
+ * There is also a difference between older function in ROM and the one coming
+ * with SDK which is newer: the older one actually takes two arguments, not 3.
+ * But it doesn't matter, extra argument doesn't hurt and this works with both.
+ */
 int mbedtls_aes_setkey_enc(mbedtls_aes_context *ctx, const unsigned char *key,
                            unsigned int keybits) {
   if (keybits != 128) return MBEDTLS_ERR_AES_INVALID_KEY_LENGTH;
+  ((uint32_t *) ctx)[AES_PRIV_NR_POS] = 10;
   rijndaelKeySetupEnc(ctx, key, 128);
   return 0;
 }
@@ -111,20 +67,21 @@ int mbedtls_aes_setkey_enc(mbedtls_aes_context *ctx, const unsigned char *key,
 int mbedtls_aes_setkey_dec(mbedtls_aes_context *ctx, const unsigned char *key,
                            unsigned int keybits) {
   if (keybits != 128) return MBEDTLS_ERR_AES_INVALID_KEY_LENGTH;
-  rijndaelKeySetupDec(ctx, key);
+  ((uint32_t *) ctx)[AES_PRIV_NR_POS] = 10;
+  rijndaelKeySetupDec(ctx, key, 128);
   return 0;
 }
 
 void mbedtls_aes_encrypt(mbedtls_aes_context *ctx,
                          const unsigned char input[16],
                          unsigned char output[16]) {
-  rijndaelEncrypt(ctx, 10, input, output);
+  aes_encrypt(ctx, input, output);
 }
 
 void mbedtls_aes_decrypt(mbedtls_aes_context *ctx,
                          const unsigned char input[16],
                          unsigned char output[16]) {
-  rijndaelDecrypt(ctx, input, output);
+  aes_decrypt(ctx, input, output);
 }
 
 /* os_get_random uses hardware RNG, so it's cool. */
@@ -140,7 +97,5 @@ int atcac_sw_sha2_256(const uint8_t *data, size_t data_size,
   mbedtls_sha256(data, data_size, digest, false /* is_224 */);
   return 0;
 }
-
-#endif /* MG_SSL_IF == MG_SSL_IF_MBEDTLS */
 
 #endif /* MG_ENABLE_SSL */

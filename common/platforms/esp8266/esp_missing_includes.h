@@ -53,24 +53,4 @@ int printf_broken(const char *format, ...);
 
 void _ResetVector(void);
 
-/*
- * Crypto functions in ROM/SDK.
- * They come from wpa_supplicant, you can find them here https://w1.fi/cgit/
- */
-
-/* These are old, in ROM - no "rounds" and "bits" params (128 bits only). */
-extern void rijndaelKeySetupDec(void *ctx, const uint8_t *key);
-extern void rijndaelDecrypt(void *ctx, const uint8_t *in, uint8_t *out);
-
-extern int sha1_vector(size_t num_msgs, const uint8_t *msgs[],
-                       const size_t *msg_lens, uint8_t *digest);
-
-extern int md5_vector(size_t num_msgs, const uint8_t *msgs[],
-                      const size_t *msg_lens, uint8_t *digest);
-
-/* These are newer, in flash. */
-extern int rijndaelKeySetupEnc(void *ctx, const uint8_t *key, int bits);
-extern void rijndaelEncrypt(void *ctx, int rounds, const uint8_t *in,
-                            uint8_t *out);
-
 #endif /* CS_COMMON_PLATFORMS_ESP8266_ESP_MISSING_INCLUDES_H_ */
