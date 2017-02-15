@@ -1,5 +1,3 @@
-// +build !linux
-
 package stm32
 
 import (
