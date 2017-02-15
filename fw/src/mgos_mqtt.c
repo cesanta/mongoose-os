@@ -211,6 +211,9 @@ static bool mqtt_global_connect(void) {
     opts.ssl_cert = scfg->mqtt.ssl_cert;
     opts.ssl_key = scfg->mqtt.ssl_key;
     opts.ssl_ca_cert = scfg->mqtt.ssl_ca_cert;
+    opts.ssl_cipher_suites = scfg->mqtt.ssl_cipher_suites;
+    opts.ssl_psk_identity = scfg->mqtt.ssl_psk_identity;
+    opts.ssl_psk_key = scfg->mqtt.ssl_psk_key;
 #endif
 
     struct mg_connection *nc =
