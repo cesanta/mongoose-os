@@ -129,25 +129,6 @@
 #define STLINK_REG_DCRSR 0xe000edf4
 #define STLINK_REG_DCRDR 0xe000edf8
 
-#ifdef STLINK_HAVE_SYS_MMAN_H
-#include <sys/mman.h>
-#else
-
-#define PROT_READ (1 << 0)
-#define PROT_WRITE (1 << 1)
-
-#define MAP_SHARED (1 << 0)
-#define MAP_PRIVATE (1 << 1)
-
-#define MAP_ANONYMOUS (1 << 5)
-
-#define MAP_FAILED ((void *) -1)
-
-void *mmap(void *addr, size_t len, int prot, int flags, int fd,
-           long long offset);
-int munmap(void *addr, size_t len);
-#endif
-
 struct stlink_chipid_params {
   uint32_t chip_id;
   char *description;
@@ -462,7 +443,6 @@ static const struct stlink_chipid_params F7_params = {
 };
 
 int stlink_load_device_params(stlink_t *sl) {
-  printf("Loading device parameters....\n");
   const struct stlink_chipid_params *params = &F7_params;
   stlink_core_id(sl);
   uint32_t chip_id;
@@ -495,8 +475,6 @@ int stlink_load_device_params(stlink_t *sl) {
   sl->sram_size = params->sram_size;
   sl->sys_base = params->bootrom_base;
   sl->sys_size = params->bootrom_size;
-
-  printf("Device connected is: %s, id %#x\n", params->description, chip_id);
 
   return 0;
 }
@@ -649,81 +627,7 @@ void stlink_core_stat(stlink_t *sl) {
   }
 }
 
-/* memory mapped file */
-
-typedef struct mapped_file {
-  uint8_t *base;
-  size_t len;
-} mapped_file_t;
-
-#define MAPPED_FILE_INITIALIZER \
-  { NULL, 0 }
-
-static int map_file(mapped_file_t *mf, const char *path) {
-  int error = -1;
-  struct stat st;
-
-  const int fd = open(path, O_RDONLY | O_BINARY);
-  if (fd == -1) {
-    fprintf(stderr, "open(%s) == -1\n", path);
-    return -1;
-  }
-
-  if (fstat(fd, &st) == -1) {
-    fprintf(stderr, "fstat() == -1\n");
-    goto on_error;
-  }
-
-  mf->base = (uint8_t *) mmap(NULL, st.st_size, PROT_READ, MAP_SHARED, fd, 0);
-  if (mf->base == MAP_FAILED) {
-    fprintf(stderr, "mmap() == MAP_FAILED\n");
-    goto on_error;
-  }
-
-  mf->len = st.st_size;
-
-  /* success */
-  error = 0;
-
-on_error:
-  close(fd);
-
-  return error;
-}
-
-static void unmap_file(mapped_file_t *mf) {
-  munmap((void *) mf->base, mf->len);
-  mf->base = (unsigned char *) MAP_FAILED;
-  mf->len = 0;
-}
-
-/* Limit the block size to compare to 0x1800
-   Anything larger will stall the STLINK2
-   Maybe STLINK V1 needs smaller value!*/
-static int check_file(stlink_t *sl, mapped_file_t *mf, stm32_addr_t addr) {
-  size_t off;
-  size_t n_cmp = sl->flash_pgsz;
-  if (n_cmp > 0x1800) n_cmp = 0x1800;
-
-  for (off = 0; off < mf->len; off += n_cmp) {
-    size_t aligned_size;
-
-    /* adjust last page size */
-    size_t cmp_size = n_cmp;
-    if ((off + n_cmp) > mf->len) cmp_size = mf->len - off;
-
-    aligned_size = cmp_size;
-    if (aligned_size & (4 - 1)) aligned_size = (cmp_size + 4) & ~(4 - 1);
-
-    stlink_read_mem32(sl, addr + (uint32_t) off, aligned_size);
-
-    if (memcmp(sl->q_buf, mf->base + off, cmp_size)) return -1;
-  }
-
-  return 0;
-}
-
-static void stlink_fwrite_finalize(stlink_t *sl, stm32_addr_t addr) {
+void stlink_fwrite_finalize(stlink_t *sl, stm32_addr_t addr) {
   unsigned int val;
   /* set stack*/
   stlink_read_debug32(sl, addr, &val);
@@ -825,9 +729,6 @@ int stlink_erase_flash_page(stlink_t *sl, stm32_addr_t flashaddr) {
   // calculate the actual page from the address
   uint32_t sector = calculate_F7_sectornum(flashaddr);
 
-  fprintf(stderr, "EraseFlash - Sector:0x%x Size:0x%x ", sector,
-          stlink_calculate_pagesize(sl, flashaddr));
-
   write_flash_cr_snb(sl, sector);
 
   /* start erase operation */
@@ -843,21 +744,6 @@ int stlink_erase_flash_page(stlink_t *sl, stm32_addr_t flashaddr) {
   return 0;
 }
 
-int stlink_fcheck_flash(stlink_t *sl, const char *path, stm32_addr_t addr) {
-  /* check the contents of path are at addr */
-
-  int res;
-  mapped_file_t mf = MAPPED_FILE_INITIALIZER;
-
-  if (map_file(&mf, path) == -1) return -1;
-
-  res = check_file(sl, &mf, addr);
-
-  unmap_file(&mf);
-
-  return res;
-}
-
 /**
  * Verify addr..addr+len is binary identical to base...base+len
  * @param sl stlink context
@@ -870,7 +756,7 @@ int stlink_verify_write_flash(stlink_t *sl, stm32_addr_t address, uint8_t *data,
                               unsigned length) {
   size_t off;
   size_t cmp_size = (sl->flash_pgsz > 0x1800) ? 0x1800 : sl->flash_pgsz;
-  printf("Verification...\n");
+  printf("Verifying flash...\n");
   for (off = 0; off < length; off += cmp_size) {
     size_t aligned_size;
 
@@ -888,7 +774,6 @@ int stlink_verify_write_flash(stlink_t *sl, stm32_addr_t address, uint8_t *data,
       return -1;
     }
   }
-  printf("Flash written and verified\n");
   return 0;
 }
 
@@ -896,7 +781,7 @@ int stlink_write_flash(stlink_t *sl, stm32_addr_t addr, uint8_t *base,
                        uint32_t len, uint8_t eraseonly) {
   size_t off;
   flash_loader_t fl;
-  printf("Attempting to write %d (%#x) bytes to stm32 address: %u (%#x)\n", len,
+  printf("Writing %d (%#x) bytes to stm32 address: %u (%#x)\n", len,
          len, addr, addr);
   /* check addr range is inside the flash */
   stlink_calculate_pagesize(sl, addr);
@@ -926,21 +811,17 @@ int stlink_write_flash(stlink_t *sl, stm32_addr_t addr, uint8_t *base,
   int page_count = 0;
   for (off = 0; off < len;
        off += stlink_calculate_pagesize(sl, addr + (uint32_t) off)) {
+    fprintf(stdout, "Erasing flash page at addr 0x%08X\n", (int) (addr + off));
     /* addr must be an addr inside the page */
     if (stlink_erase_flash_page(sl, addr + (uint32_t) off) == -1) {
       printf("Failed to erase_flash_page(%#zx) == -1\n", addr + off);
       return -1;
     }
-    fprintf(stdout, "\rFlash page at addr: 0x%08lx erased",
-            (unsigned long) addr + off);
-    fflush(stdout);
     page_count++;
   }
-  fprintf(stdout, "\n");
 
   if (eraseonly) return 0;
 
-  printf("Starting Flash write for F2/F4/L4\n");
   /* flash loader initialization */
   if (stlink_flash_loader_init(sl, &fl) == -1) {
     printf("stlink_flash_loader_init() == -1\n");
@@ -957,7 +838,6 @@ int stlink_write_flash(stlink_t *sl, stm32_addr_t addr, uint8_t *base,
     printf("Failed to read Target voltage\n");
     return voltage;
   } else if (voltage > 2700) {
-    printf("Writing (32-bit mode)...\n");
     write_flash_cr_psiz(sl, 2);
   } else {
     printf(
@@ -972,12 +852,12 @@ int stlink_write_flash(stlink_t *sl, stm32_addr_t addr, uint8_t *base,
 
   for (off = 0; off < len;) {
     size_t size = len - off > 0x8000 ? 0x8000 : len - off;
+    printf("Writing %d bytes at 0x%08X\n", (int)size, (int)(addr + (uint32_t) off));
     if (stlink_flash_loader_run(sl, &fl, addr + (uint32_t) off, base + off,
                                 size) == -1) {
       printf("stlink_flash_loader_run(%#zx) failed! == -1\n", addr + off);
       return -1;
     }
-
     off += size;
   }
 
@@ -985,44 +865,4 @@ int stlink_write_flash(stlink_t *sl, stm32_addr_t addr, uint8_t *base,
   lock_flash(sl);
 
   return stlink_verify_write_flash(sl, addr, base, len);
-}
-
-/**
- * Write the given binary file into flash at address "addr"
- * @param sl
- * @param path readable file path, should be binary image
- * @param addr where to start writing
- * @return 0 on success, -ve on failure.
- */
-int stlink_fwrite_flash(stlink_t *sl, const char *path, stm32_addr_t addr) {
-  /* write the file in flash at addr */
-  int err;
-  unsigned int num_empty, idx;
-  uint8_t erased_pattern = 0xFF;
-  mapped_file_t mf = MAPPED_FILE_INITIALIZER;
-
-  if (map_file(&mf, path) == -1) {
-    printf("map_file() == -1\n");
-    return -1;
-  }
-
-  idx = (unsigned int) mf.len;
-  for (num_empty = 0; num_empty != mf.len; ++num_empty) {
-    if (mf.base[--idx] != erased_pattern) {
-      break;
-    }
-  }
-  /* Round down to words */
-  num_empty -= (num_empty & 3);
-  if (num_empty != 0) {
-    printf("Ignoring %d bytes of 0x%02x at end of file\n", num_empty,
-           erased_pattern);
-  }
-  err = stlink_write_flash(
-      sl, addr, mf.base,
-      (num_empty == mf.len) ? (uint32_t) mf.len : (uint32_t) mf.len - num_empty,
-      num_empty == mf.len);
-  stlink_fwrite_finalize(sl, addr);
-  unmap_file(&mf);
-  return err;
 }

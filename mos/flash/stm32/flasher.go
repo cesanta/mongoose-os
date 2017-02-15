@@ -1,10 +1,15 @@
+// +build linux
+
 package stm32
 
+// #cgo CFLAGS: -I/usr/include/libusb-1.0/
+// #cgo LDFLAGS: -lusb-1.0
+// #include "stm32_flash.h"
+import "C"
+
 import (
-	"io/ioutil"
-	"os"
-	"path/filepath"
 	"time"
+	"unsafe"
 
 	"cesanta.com/mos/flash/common"
 	"github.com/cesanta/errors"
@@ -21,34 +26,12 @@ func Flash(fw *common.FirmwareBundle, opts *FlashOpts) error {
 		return errors.Annotatef(err, "invalid manifest")
 	}
 
-	name := filepath.Join(opts.ShareName, fw.Parts["boot"].Src)
+	flash_res := C.stm32_flash(C.CString(opts.ShareName),
+		unsafe.Pointer(&data[0]),
+		C.int(len(data)))
 
-	common.Reportf("Copying %s to %s...", fw.Parts["boot"].Src, opts.ShareName)
-	err = ioutil.WriteFile(name, data, 0)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	common.Reportf("Waiting for operation to complete...")
-
-	start := time.Now()
-
-	for {
-		_, err = os.Stat(name)
-		if err != nil {
-			if os.IsNotExist(err) {
-				// File is disappeared: operation ok
-				return nil
-			} else {
-				return errors.Annotatef(err, "flash failed")
-			}
-		}
-
-		if time.Since(start) > opts.Timeout {
-			return errors.Errorf("timeout")
-		}
-
-		time.Sleep(1000 * time.Millisecond)
+	if flash_res != 0 {
+		return errors.Errorf("flash failed")
 	}
 
 	return nil

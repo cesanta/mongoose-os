@@ -186,6 +186,7 @@ int write_buffer_to_sram(stlink_t *sl, flash_loader_t *fl, const uint8_t *buf,
                          size_t size);
 int write_loader_to_sram(stlink_t *sl, stm32_addr_t *addr, size_t *size);
 int stlink_load_device_params(stlink_t *sl);
+void stlink_fwrite_finalize(stlink_t *sl, stm32_addr_t addr);
 
 #include "usb.h"
 #include "flash_loader.h"

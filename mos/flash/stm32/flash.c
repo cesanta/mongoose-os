@@ -11,7 +11,7 @@
 
 #define FLASH_ADDRESS 0x8000000
 
-int stm32_flash(const char *device_name, const char *file_name) {
+int stm32_flash(const char *device_name, void *data, int len) {
   stlink_t *sl = NULL;
   int err = -1;
   uint8_t serial[16];
@@ -72,7 +72,9 @@ int stm32_flash(const char *device_name, const char *file_name) {
     goto on_error;
   }
 
-  err = stlink_fwrite_flash(sl, file_name, FLASH_ADDRESS);
+  err = stlink_write_flash(sl, FLASH_ADDRESS, (uint8_t*)data, len, 0);
+  stlink_fwrite_finalize(sl, FLASH_ADDRESS);
+
   if (err == -1) {
     printf("stlink_fwrite_flash() == -1\n");
     goto on_error;
