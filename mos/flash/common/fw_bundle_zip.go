@@ -26,7 +26,7 @@ func NewZipFirmwareBundle(fname string) (*FirmwareBundle, error) {
 	// a shortcut for `mos flash esp32`. Transform that into the canonical URL
 	_, err2 := os.Stat(fname)
 	if fname != "" && !strings.HasSuffix(fname, ".zip") && os.IsNotExist(err2) {
-		fname = fmt.Sprintf("https://mongoose-os.com/downloads/mos-%s.zip", fname)
+		fname = fmt.Sprintf("https://mongoose-os.com/downloads/%s.zip", fname)
 	}
 
 	if strings.HasPrefix(fname, "http://") || strings.HasPrefix(fname, "https://") {
