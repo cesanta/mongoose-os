@@ -7,7 +7,9 @@
 
 #include <inttypes.h>
 #include <strings.h>
-#include <user_interface.h>
+
+#include <c_types.h>
+#include <spi_flash.h>
 
 #include "common/platforms/esp8266/esp_missing_includes.h"
 #include "common/platforms/esp8266/rboot/rboot/appcode/rboot-api.h"

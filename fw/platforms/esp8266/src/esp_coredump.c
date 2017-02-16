@@ -9,7 +9,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#include <ets_sys.h>
 #include <user_interface.h>
 #include <xtensa/corebits.h>
 

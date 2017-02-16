@@ -3,11 +3,7 @@
  * All rights reserved
  */
 
-#include <stdint.h>
-#include <stdio.h>
-
-#include "esp_hw.h"
-#include "esp_fs.h"
+#include "fw/platforms/esp8266/src/esp_hw.h"
 
 IRAM NOINSTR uint8_t read_unaligned_byte(uint8_t *addr) {
   uint32_t *base = (uint32_t *) ((uintptr_t) addr & ~0x3);

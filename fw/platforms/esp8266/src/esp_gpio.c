@@ -5,19 +5,19 @@
 
 #include "fw/platforms/esp8266/src/esp_gpio.h"
 
-#include <ets_sys.h>
+#ifdef RTOS_SDK
+#include <esp_common.h>
+#include <driver_lib/include/gpio.h>
+#else
+#include <user_interface.h>
+#endif
+
 #include "fw/src/mgos_gpio.h"
 #include "fw/src/mgos_gpio_hal.h"
 
 #include "common/platforms/esp8266/esp_missing_includes.h"
 #include "common/cs_dbg.h"
 #include "esp_periph.h"
-
-#include <osapi.h>
-#include <gpio.h>
-#include <os_type.h>
-#include <user_interface.h>
-#include <stdlib.h>
 
 #if MGOS_NUM_GPIO != GPIO_PIN_COUNT
 #error MGOS_NUM_GPIO must match GPIO_PIN_COUNT
@@ -36,7 +36,7 @@ static uint8_t s_int_config[GPIO_PIN_COUNT];
 #define INT_TYPE_MASK 0x7
 #define INT_ENA 0x8
 
-static void gpio16_set_output_mode(void) {
+void gpio16_output_conf(void) {
   WRITE_PERI_REG(
       PAD_XPD_DCDC_CONF,
       (READ_PERI_REG(PAD_XPD_DCDC_CONF) & 0xffffffbc) | (uint32_t) 0x1);
@@ -50,13 +50,13 @@ static void gpio16_set_output_mode(void) {
                      (uint32_t) 0x1);
 }
 
-static void gpio16_output_set(uint8_t value) {
+void gpio16_output_set(uint8_t value) {
   WRITE_PERI_REG(RTC_GPIO_OUT,
                  (READ_PERI_REG(RTC_GPIO_OUT) & (uint32_t) 0xfffffffe) |
                      (uint32_t)(value & 1));
 }
 
-static void gpio16_set_input_mode(void) {
+void gpio16_input_conf(void) {
   WRITE_PERI_REG(
       PAD_XPD_DCDC_CONF,
       (READ_PERI_REG(PAD_XPD_DCDC_CONF) & 0xffffffbc) | (uint32_t) 0x1);
@@ -69,16 +69,16 @@ static void gpio16_set_input_mode(void) {
                  READ_PERI_REG(RTC_GPIO_ENABLE) & (uint32_t) 0xfffffffe);
 }
 
-static uint8_t gpio16_input_get(void) {
+uint8_t gpio16_input_get(void) {
   return (uint8_t)(READ_PERI_REG(RTC_GPIO_IN_DATA) & 1);
 }
 
 bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
   if (pin == 16) {
     if (mode == MGOS_GPIO_MODE_INPUT) {
-      gpio16_set_input_mode();
+      gpio16_input_conf();
     } else {
-      gpio16_set_output_mode();
+      gpio16_output_conf();
     }
     return true;
   }
@@ -105,6 +105,13 @@ bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
   }
 
   return true;
+}
+
+void gpio_pin_intr_state_set(uint32 i, GPIO_INT_TYPE intr_state) {
+  uint32 pin_reg = GPIO_REG_READ(GPIO_PIN_ADDR(i));
+  pin_reg &= (~GPIO_PIN_INT_TYPE_MASK);
+  pin_reg |= (intr_state << GPIO_PIN_INT_TYPE_LSB);
+  GPIO_REG_WRITE(GPIO_PIN_ADDR(i), pin_reg);
 }
 
 bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
@@ -197,8 +204,13 @@ IRAM void mgos_gpio_dev_int_done(int pin) {
 }
 
 enum mgos_init_result mgos_gpio_dev_init(void) {
+#ifdef RTOS_SDK
+  _xt_isr_attach(ETS_GPIO_INUM, (void *) esp8266_gpio_isr, NULL);
+  _xt_isr_unmask(1 << ETS_GPIO_INUM);
+#else
   ETS_GPIO_INTR_ATTACH(esp8266_gpio_isr, NULL);
   ETS_INTR_ENABLE(ETS_GPIO_INUM);
+#endif
   return MGOS_INIT_OK;
 }
 

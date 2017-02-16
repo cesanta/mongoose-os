@@ -6,19 +6,15 @@
 #include "mongoose/mongoose.h"
 
 #include "common/platforms/esp8266/esp_missing_includes.h"
-#include "common/platforms/esp8266/esp_mem_layout.h"
 
 #ifdef RTOS_SDK
-#include "esp_misc.h"
-#include "esp_system.h"
-#include "esp_timer.h"
-#include "esp8266/eagle_soc.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/queue.h"
+#include <esp_common.h>
+#include <freertos/FreeRTOS.h>
+#include <freertos/task.h>
+#include <freertos/queue.h>
+#include <freertos/semphr.h>
 #else
-#include "ets_sys.h"
-#include "user_interface.h"
+#include <user_interface.h>
 #endif
 
 #include "common/cs_dbg.h"
@@ -38,7 +34,7 @@
 #ifdef RTOS_SDK
 
 #ifndef MGOS_TASK_STACK_SIZE
-#define MGOS_TASK_STACK_SIZE 2048 /* in 32-bit words */
+#define MGOS_TASK_STACK_SIZE 8192 /* in bytes */
 #endif
 
 #ifndef MGOS_TASK_PRIORITY
@@ -166,6 +162,8 @@ struct mgos_event {
   void *arg;
 };
 
+xSemaphoreHandle s_mtx;
+
 IRAM bool mgos_invoke_cb(mgos_cb_t cb, void *arg) {
   struct mgos_event e = {.cb = cb, .arg = arg};
   long int should_yield = false;
@@ -232,7 +230,9 @@ void user_init(void) {
                  NULL);
 
 #ifdef RTOS_SDK
-  xTaskCreate(mgos_task, (const signed char *) "mgos", MGOS_TASK_STACK_SIZE,
+  s_mtx = xSemaphoreCreateRecursiveMutex();
+  xTaskCreate(mgos_task, (const signed char *) "mgos",
+              MGOS_TASK_STACK_SIZE / 4, /* specified in 32-bit words */
               NULL, MGOS_TASK_PRIORITY, NULL);
 #else
   esp_exception_handler_init();

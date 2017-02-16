@@ -35,17 +35,20 @@ void mgos_uart_dispatcher(void *arg) {
   int uart_no = (intptr_t) arg;
   struct mgos_uart_state *us = s_uart_state[uart_no];
   if (us == NULL) return;
+  mgos_lock();
   if (us->rx_enabled) mgos_uart_dev_dispatch_rx_top(us);
   mgos_uart_dev_dispatch_tx_top(us);
   if (us->dispatcher_cb != NULL) {
     us->dispatcher_cb(us);
   }
   mgos_uart_dev_dispatch_bottom(us);
+  mgos_unlock();
 }
 
 size_t mgos_uart_write(int uart_no, const void *buf, size_t len) {
   struct mgos_uart_state *us = s_uart_state[uart_no];
   if (us == NULL || !us->write_enabled) return 0;
+  mgos_lock();
   size_t n = 0;
   cs_rbuf_t *txb = &us->tx_buf;
   while (n < len) {
@@ -55,6 +58,7 @@ size_t mgos_uart_write(int uart_no, const void *buf, size_t len) {
     mgos_uart_flush(uart_no);
   }
   mgos_uart_schedule_dispatcher(uart_no);
+  mgos_unlock();
   return len;
 }
 

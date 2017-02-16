@@ -9,16 +9,20 @@
 
 #include "fw/src/mgos_uart.h"
 
-#include "osapi.h"
-#include "os_type.h"
-#include "user_interface.h"
+#ifdef RTOS_SDK
+#include <esp_common.h>
+#else
+#include <user_interface.h>
+#endif
 
 #include "common/cs_dbg.h"
 #include "common/cs_rbuf.h"
 #include "common/platforms/esp8266/esp_missing_includes.h"
 #include "common/platforms/esp8266/uart_register.h"
 
+#ifndef HOST_INF_SEL
 #define HOST_INF_SEL (0x28)
+#endif
 #define PERI_IO_UART1_PIN_SWAP \
   (BIT(3)) /* swap uart1 pins (u1rxd <-> u1cts), (u1txd <-> u1rts) */
 #define PERI_IO_UART0_PIN_SWAP \
@@ -188,7 +192,11 @@ bool mgos_uart_dev_init(struct mgos_uart_state *us) {
   struct mgos_uart_config *cfg = us->cfg;
   if (!esp_uart_validate_config(cfg)) return false;
 
+#ifdef RTOS_SDK
+  _xt_isr_mask(1 << ETS_UART_INUM);
+#else
   ETS_INTR_DISABLE(ETS_UART_INUM);
+#endif
   uart_div_modify(us->uart_no, UART_CLK_FREQ / cfg->baud_rate);
 
   if (us->uart_no == 0) {
@@ -237,8 +245,13 @@ bool mgos_uart_dev_init(struct mgos_uart_state *us) {
   /* Start with TX and RX ints disabled. */
   WRITE_PERI_REG(UART_INT_ENA(us->uart_no), UART_INFO_INTS);
 
+#ifdef RTOS_SDK
+  _xt_isr_attach(ETS_UART_INUM, (void *) esp_uart_isr, NULL);
+  _xt_isr_unmask(1 << ETS_UART_INUM);
+#else
   ETS_UART_INTR_ATTACH(esp_uart_isr, NULL);
   ETS_INTR_ENABLE(ETS_UART_INUM);
+#endif
   return true;
 }
 

@@ -57,7 +57,6 @@
  */
 
 #include <stdlib.h>         /* for abort() */
-#include "esp_mem_layout.h" /* for ESP_DRAM0_END */
 #include "esp_umm_malloc.h" /* for esp_umm_oom_cb() */
 #ifdef RTOS_SDK
 #include "freertos/FreeRTOS.h"
@@ -69,8 +68,21 @@ extern unsigned int _heap_start;
 
 /* Start and end addresses of the heap */
 #define UMM_MALLOC_CFG__HEAP_ADDR ((char *) (&_heap_start))
+
+#ifdef RTOS_SDK
+/*
+ * On RTOS SDK there is no system area. In theory, we should be able to go all
+ * the way to 0x40000000, but for some reason it hangs.
+ * TODO(rojer): Figure out why.
+ */
+#define UMM_MALLOC_CFG__HEAP_END ((char *) 0x3ffff000)
+#else
+/* On non-OS SDK upper 16K are used by ETS. */
+#define UMM_MALLOC_CFG__HEAP_END ((char *) 0x3fffc000)
+#endif
+
 #define UMM_MALLOC_CFG__HEAP_SIZE \
-  (((char *) ESP_DRAM0_END) - UMM_MALLOC_CFG__HEAP_ADDR)
+  (UMM_MALLOC_CFG__HEAP_END - UMM_MALLOC_CFG__HEAP_ADDR)
 
 /* A couple of macros to make packing structures less compiler dependent */
 

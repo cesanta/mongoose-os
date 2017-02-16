@@ -3,13 +3,16 @@
  * All rights reserved
  */
 
-#include <ets_sys.h>
+#include "fw/platforms/esp8266/src/esp_periph.h"
+
 #include <stdlib.h>
 #include <stdint.h>
-#include "esp_periph.h"
 
-#include <osapi.h>
-#include <gpio.h>
+#ifdef RTOS_SDK
+#include <esp8266/pin_mux_register.h>
+#else
+#include <ets_sys.h>
+#endif
 
 /*
 * Map gpio -> { mux reg, func }

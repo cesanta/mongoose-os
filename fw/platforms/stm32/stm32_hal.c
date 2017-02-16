@@ -116,3 +116,9 @@ void mgos_wdt_feed(void) {
 void mgos_wdt_set_timeout(int secs) {
   (void) secs;
 }
+
+void mgos_lock(void) {
+}
+
+void mgos_unlock(void) {
+}

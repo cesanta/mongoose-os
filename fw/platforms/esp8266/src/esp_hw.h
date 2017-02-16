@@ -6,6 +6,8 @@
 #ifndef CS_FW_PLATFORMS_ESP8266_USER_ESP_HW_H_
 #define CS_FW_PLATFORMS_ESP8266_USER_ESP_HW_H_
 
+#include <stdint.h>
+
 #define __stringify_1(x...) #x
 #define __stringify(x...) __stringify_1(x)
 #define RSR(sr)                                         \

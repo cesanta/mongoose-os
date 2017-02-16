@@ -30,8 +30,17 @@
 #include "fw/platforms/esp32/src/esp32_fs.h"
 #include "fw/platforms/esp32/src/esp32_updater.h"
 
-#define MGOS_TASK_STACK_SIZE 8192
+#ifndef MGOS_TASK_STACK_SIZE
+#define MGOS_TASK_STACK_SIZE 8192 /* in bytes */
+#endif
+
+#ifndef MGOS_TASK_PRIORITY
+#define MGOS_TASK_PRIORITY 5
+#endif
+
+#ifndef MGOS_TASK_QUEUE_LENGTH
 #define MGOS_TASK_QUEUE_LENGTH 32
+#endif
 
 extern const char *build_version, *build_id;
 extern const char *mg_build_version, *mg_build_id;
@@ -115,6 +124,7 @@ static enum mgos_init_result esp32_mgos_init() {
   return MGOS_INIT_OK;
 }
 
+extern SemaphoreHandle_t s_mgos_mux;
 static QueueHandle_t s_main_queue;
 
 void mgos_task(void *arg) {
@@ -166,6 +176,7 @@ void app_main(void) {
   nvs_flash_init();
   tcpip_adapter_init();
   ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
-  TaskHandle_t th;
-  xTaskCreate(mgos_task, "mgos", MGOS_TASK_STACK_SIZE, NULL, 5, &th);
+  s_mgos_mux = xSemaphoreCreateRecursiveMutex();
+  xTaskCreate(mgos_task, "mgos", MGOS_TASK_STACK_SIZE, NULL, MGOS_TASK_PRIORITY,
+              NULL);
 }

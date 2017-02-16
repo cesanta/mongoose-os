@@ -19,7 +19,6 @@ APP_CFLAGS ?=
 APP_FS_PATH ?=
 APP_EXTRA_SRCS ?=
 FFI_SYMBOLS ?=
-SDK_PATH ?= /opt/Espressif/ESP8266_NONOS_SDK
 
 MGOS_DEBUG_UART = 0
 
@@ -35,7 +34,6 @@ MBEDTLS_PATH ?= /opt/mbedtls
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 UMM_MALLOC_PATH ?= $(COMMON_PATH)/umm_malloc
 COMMON_FS_PATH ?= $(MGOS_PATH)/fw/skeleton/fs
-LWIP_PATH ?= $(COMMON_ESP_PATH)/lwip
 BOOTLOADER_PATH ?= $(COMMON_ESP_PATH)/rboot
 ESPTOOL2 = $(BUILD_DIR)/esptool2
 # Enable heap allocation logging - every malloc/free is logged.
@@ -43,6 +41,7 @@ MGOS_ENABLE_HEAP_LOG ?= 0
 # In addition to logging allocations, print call traces for them.
 # This instruments every function and increases code size significantly.
 MGOS_ENABLE_CALL_TRACE ?= 0
+MGOS_ESP8266_RTOS ?= 0
 
 FLASH_SIZE ?= 4M
 FS_SIZE ?= 128K
@@ -122,14 +121,14 @@ VPATH = $(APP_MODULES) $(MGOS_SRC_PATH) $(MONGOOSE_PATH) \
         $(BOOTLOADER_PATH)/rboot/appcode $(COMMON_PATH) $(COMMON_PATH)/mg_rpc \
         $(MGOS_ESP_SRC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_PATH)
 IPATH = $(APP_MODULES) $(MGOS_PATH) $(MGOS_ESP_PATH)/include $(SPIFFS_PATH) \
-        $(BOOTLOADER_PATH)/rboot $(LWIP_PATH)/src/include \
-        $(LWIP_PATH)/src/include/ipv4 $(LWIP_PATH)/espressif/include \
-        $(SDK_PATH)/include $(SDK_PATH)/include/json $(COMMON_ESP_PATH) \
+        $(BOOTLOADER_PATH)/rboot $(SDK_PATH)/include/lwip \
+        $(SDK_PATH) $(SDK_PATH)/include \
+        $(COMMON_ESP_PATH) \
         $(MGOS_ESP_SRC_PATH) $(COMMON_PATH)/mg_rpc .
 LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip $(MGOS_ESP_SRC_PATH)
 
 # libraries used in this project, mainly provided by the SDK
-SDK_LIBS = c crypto gcc hal m pp phy net80211 wpa main_ota
+SDK_LIBS = c crypto gcc hal pp phy net80211 wpa
 LIBS = $(addprefix -l,$(SDK_LIBS))
 
 SHIMS = -DNDEBUG
@@ -141,33 +140,31 @@ MINIZ_FLAGS = -DMINIZ_NO_STDIO -DMINIZ_NO_TIME -DMINIZ_NO_ARCHIVE_APIS \
               -DMINIZ_NO_ZLIB_COMPATIBLE_NAMES
 
 MG_FEATURES ?= $(MG_FEATURES_TINY) -DMG_ESP8266 -DMG_EXT_SHA1 \
-               -DMG_ENABLE_FILESYSTEM -DMG_ENABLE_DIRECTORY_LISTING
+               -DMG_ENABLE_FILESYSTEM -DMG_ENABLE_DIRECTORY_LISTING \
+               -DMG_NET_IF=MG_NET_IF_LWIP_LOW_LEVEL -DMG_MODULE_LINES
 
 FEATURES_EXTRA ?=
 FEATURES = $(MG_FEATURES) $(MGOS_FEATURES) $(MGOS_ESP_FEATURES) \
            $(FEATURES_EXTRA) \
-           -DESP_COREDUMP -DESP_FLASH_BYTES_EMUL -DCS_ENABLE_SPIFFS \
+           -DCS_ENABLE_SPIFFS \
            -DBOOT_BIG_FLASH -DCS_SPIFFS_ENABLE_VFS -DESP_UMM_ENABLE
 
 MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5
 
 .PHONY: all clean
 
-MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" -DLWIP_OPEN_SRC -DMG_LOCALS -DMG_DISABLE_SOCKET_IF \
-              -DESP_ENABLE_MG_LWIP_IF \
+MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" \
               -DMGOS_MAX_NUM_UARTS=2 \
               -DMGOS_NUM_GPIO=16 \
               -DC_DISABLE_BUILTIN_SNPRINTF
 
 FS_IMG = $(FW_STAGING_DIR)/$(FS_ADDR).bin
-LD_SCRIPT_TEMPL = $(MGOS_ESP_PATH)/ld/non_os.ld
 
 _FLASH_SIZE = $(shell echo $$((`echo $(FLASH_SIZE) | \
    sed -e 's/K/*1024/;s/k/128/;s/M/*1048576/;s/m/*131072/'`)))
 _FS_SIZE = $(shell echo $$((`echo $(FS_SIZE) | \
    sed -e 's/K/*1024/;s/k/128/;s/M/*1048576/;s/m/*131072/'`)))
 
-LWIP_LIB = $(LWIP_BUILD_DIR)/liblwip_cs.a
 MGOS_LIB = $(BUILD_DIR)/mongoose-os.a
 SYS_CONFIG_C = $(GEN_DIR)/sys_config.c
 SYS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/sys_config_defaults.json
@@ -187,6 +184,34 @@ GENFILES_LIST = $(LD_SCRIPT) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 FW_FILE_1_OUT = $(FW_STAGING_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_1_ADDR))
 FW_FILE_2_OUT = $(FW_STAGING_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_2_ADDR))
 IMAGE_HEADER_SIZE = 0
+
+ifeq "$(MGOS_ESP8266_RTOS)" "1"
+	SDK_PATH = /opt/Espressif/ESP8266_RTOS_SDK
+  MGOS_CFLAGS += -DRTOS_SDK
+	LWIP_LIB =
+  LWIP_PATH = $(SDK_PATH)/lwip
+	SDK_LIBS += freertos lwip main mirom
+  IPATH += $(SDK_PATH)/include/espressif \
+           $(SDK_PATH)/extra_include \
+           $(SDK_PATH)/include/lwip/ipv4 \
+           $(SDK_PATH)/include/lwip/ipv6
+	LD_SCRIPT_TEMPL = $(MGOS_ESP_PATH)/ld/rtos.ld
+else
+	SDK_PATH = /opt/Espressif/ESP8266_NONOS_SDK
+	MGOS_CFLAGS += -DLWIP_OPEN_SRC -DESP_COREDUMP
+	LWIP_LIB = $(LWIP_BUILD_DIR)/liblwip_cs.a
+	LWIP_PATH = $(COMMON_ESP_PATH)/lwip
+	SDK_LIBS += m main_ota
+	IPATH += $(LWIP_PATH)/src/include \
+           $(LWIP_PATH)/src/include/ipv4 \
+           $(LWIP_PATH)/espressif/include
+  LD_SCRIPT_TEMPL = $(MGOS_ESP_PATH)/ld/non_os.ld
+
+$(LWIP_LIB): $(LWIP_PATH)
+	$(Q) $(MAKE) -C $(LWIP_PATH) -j3 all \
+	  APP=liblwip_cs BUILD_DIR=$(abspath $(LWIP_BUILD_DIR)) \
+	  CFLAGS_EXTRA="$(HEAP_LOG_FLAGS)"
+endif
 
 ifeq "$(SSL)" "mbedTLS"
   IPATH += $(MBEDTLS_PATH)/include
@@ -262,8 +287,6 @@ CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) \
           $(MGOS_CFLAGS) $(APP_CFLAGS) $(CFLAGS_EXTRA) \
           $(HEAP_LOG_FLAGS) $(MINIZ_FLAGS) $(BOOTLOADER_FLAGS)
 
-LDFLAGS += -u Cache_Read_Enable_New
-
 $(BUILD_DIR) $(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
 	$(vecho) "MKDIR $@"
 	$(Q) mkdir -p $@
@@ -328,12 +351,6 @@ $(MGOS_LIB): $(MGOS_OBJS)
 	$(Q) $(AR) cru $@ $^
 	$(Q) $(OBJCOPY) --rename-section .rodata=.irom0.text $@
 	$(Q) $(OBJCOPY) --rename-section .rodata.str1.1=.irom0.text $@
-
-# LWIP.
-$(LWIP_LIB): $(LWIP_PATH)
-	$(Q) $(MAKE) -C $(LWIP_PATH) -j3 all \
-	  APP=liblwip_cs BUILD_DIR=$(abspath $(LWIP_BUILD_DIR)) \
-	  CFLAGS_EXTRA="$(HEAP_LOG_FLAGS)"
 
 # This rule is for normal (pre-existing) C sources from VPATH.
 $(BUILD_DIR)/%.c.o: %.c $(GENFILES_FLAG)
@@ -410,7 +427,7 @@ $(BUILD_DIR)/rboot.bin: $(ESPTOOL2)
 	$(Q) $(MAKE) --no-print-directory -C $(BOOTLOADER_PATH)/rboot -f rboot.mk \
 	  RBOOT_BUILD_BASE=$(abspath $(BUILD_DIR)) \
 	  RBOOT_GEN_BASE=$(abspath $(GEN_DIR)) \
-	  ESPTOOL2=$(abspath $(ESPTOOL2)) \
+	  ESPTOOL2=$(abspath $(ESPTOOL2)) SDK_BASE=$(SDK_PATH) \
 	  RBOOT_BIG_FLASH=1 CFLAGS_EXTRA="$(BOOTLOADER_FLAGS)"
 
 clean:

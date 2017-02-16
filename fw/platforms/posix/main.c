@@ -97,3 +97,8 @@ enum mgos_init_result mgos_set_stderr_uart(int uart_no) {
   return MGOS_INIT_UART_FAILED;
 }
 
+void mgos_lock(void) {
+}
+
+void mgos_unlock(void) {
+}

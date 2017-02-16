@@ -5,7 +5,8 @@
 
 #include "fw/platforms/esp8266/src/esp_flash_writer.h"
 
-#include <user_interface.h>
+#include <c_types.h>
+#include <spi_flash.h>
 
 #include "common/cs_dbg.h"
 #include "common/platforms/esp8266/esp_missing_includes.h"
@@ -46,7 +47,8 @@ int esp_flash_write(struct esp_flash_write_ctx *wctx,
   mgos_wdt_feed();
   while (wctx->num_erased < wctx->num_written + data.len) {
     uint32_t erase_addr = wctx->addr + wctx->num_erased;
-    /* If possible, erase entire block. If not, erase a page. */
+/* If possible, erase entire block. If not, erase a page. */
+#ifndef RTOS_SDK
     if (erase_addr % FLASH_BLOCK_SIZE == 0 &&
         (wctx->num_erased + FLASH_BLOCK_SIZE <= wctx->max_size)) {
       uint32_t block_no = erase_addr / FLASH_BLOCK_SIZE;
@@ -55,7 +57,9 @@ int esp_flash_write(struct esp_flash_write_ctx *wctx,
           ("Erase block %u (0x%x) -> %d", block_no, erase_addr, ret));
       if (ret != 0) return -11;
       wctx->num_erased += FLASH_BLOCK_SIZE;
-    } else {
+    } else
+#endif
+    {
       uint32_t sec_no = erase_addr / FLASH_SECTOR_SIZE;
       int ret = spi_flash_erase_sector(sec_no);
       LOG((ret == 0 ? LL_DEBUG : LL_ERROR),

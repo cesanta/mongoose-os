@@ -3,10 +3,13 @@
  * All rights reserved
  */
 
-#include <ets_sys.h>
-#include <osapi.h>
-#include <user_interface.h>
 #include <stdio.h>
+
+#ifdef RTOS_SDK
+#include <esp_common.h>
+#else
+#include <user_interface.h>
+#endif
 
 #include "mongoose/mongoose.h"
 #include "fw/src/mgos_mongoose.h"

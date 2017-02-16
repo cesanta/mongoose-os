@@ -21,7 +21,7 @@ CC_WRAPPER ?=
 define link
 $(vecho) "LD    $@"
 $(Q) $(CC_WRAPPER) $(LD) $(LIBDIRS) -T$(LD_SCRIPT) $(LDFLAGS) -o $@ \
--Wl,--start-group $1 -Wl,--end-group
+-Wl,-Map=$@.map -Wl,--start-group $1 -Wl,--end-group
 endef
 
 define compile_params

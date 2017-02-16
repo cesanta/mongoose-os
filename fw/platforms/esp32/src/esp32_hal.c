@@ -80,14 +80,16 @@ void mgos_wdt_set_timeout(int secs) {
 }
 
 static bool s_mg_poll_scheduled;
-portMUX_TYPE s_mgos_mux = portMUX_INITIALIZER_UNLOCKED;
+SemaphoreHandle_t s_mgos_mux = NULL;
 
 inline void mgos_lock() {
-  portENTER_CRITICAL(&s_mgos_mux);
+  while (!xSemaphoreTakeRecursive(s_mgos_mux, 10)) {
+  }
 }
 
 inline void mgos_unlock() {
-  portEXIT_CRITICAL(&s_mgos_mux);
+  while (!xSemaphoreGiveRecursive(s_mgos_mux)) {
+  }
 }
 
 static void IRAM_ATTR mongoose_poll_cb(void *arg) {

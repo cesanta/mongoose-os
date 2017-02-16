@@ -7,13 +7,11 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include <ets_sys.h>
-#include <osapi.h>
-#include <os_type.h>
+#ifdef RTOS_SDK
+#include <esp_common.h>
+#else
 #include <user_interface.h>
-#include "common/sha1.h"
-#include <mem.h>
-#include <espconn.h>
+#endif
 
 #include "common/cs_dbg.h"
 
@@ -31,7 +29,11 @@ static void invoke_wifi_on_change_cb(void *arg) {
 
 void wifi_changed_cb(System_Event_t *evt) {
   int mg_ev = -1;
+#ifdef RTOS_SDK
+  switch (evt->event_id) {
+#else
   switch (evt->event) {
+#endif
     case EVENT_STAMODE_DISCONNECTED:
       mg_ev = MGOS_WIFI_DISCONNECTED;
       break;
@@ -46,6 +48,9 @@ void wifi_changed_cb(System_Event_t *evt) {
     case EVENT_SOFTAPMODE_PROBEREQRECVED:
     case EVENT_STAMODE_AUTHMODE_CHANGE:
     case EVENT_STAMODE_DHCP_TIMEOUT:
+#ifdef RTOS_SDK
+    case EVENT_STAMODE_SCAN_DONE:
+#endif
     case EVENT_MAX:
       break;
   }

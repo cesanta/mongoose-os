@@ -130,3 +130,9 @@ void mongoose_poll_cb(void *arg) {
   s_mg_poll_scheduled = false;
   (void) arg;
 }
+
+void mgos_lock(void) {
+}
+
+void mgos_unlock(void) {
+}

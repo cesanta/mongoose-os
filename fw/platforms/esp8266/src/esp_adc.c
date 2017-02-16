@@ -3,15 +3,13 @@
  * All rights reserved
  */
 
-#include <ets_sys.h>
+#include "fw/platforms/esp8266/src/esp_adc.h"
 
-#include "esp_adc.h"
-#include "common/platforms/esp8266/esp_missing_includes.h"
-#include "esp_periph.h"
-
-#include <osapi.h>
-#include <os_type.h>
+#ifdef RTOS_SDK
+#include <esp_system.h>
+#else
 #include <user_interface.h>
+#endif
 
 uint32_t mgos_adc_read(int pin) {
   (void) pin;

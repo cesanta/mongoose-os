@@ -17,10 +17,17 @@
 
 #include "fw/src/mgos_hal.h"
 
-#include "esp_coredump.h"
-#include "esp_fs.h"
-#include "esp_gdb.h"
-#include "esp_hw.h"
+#include "fw/platforms/esp8266/src/esp_coredump.h"
+#include "fw/platforms/esp8266/src/esp_fs.h"
+#include "fw/platforms/esp8266/src/esp_gdb.h"
+#include "fw/platforms/esp8266/src/esp_hw.h"
+
+/* TODO(rojer): Exceptions and core dump on RTOS. */
+#ifdef RTOS_SDK
+
+#include <esp_system.h>
+
+#else
 
 #include <osapi.h>
 #include <gpio.h>
@@ -144,48 +151,6 @@ NOINSTR void esp_exception_handler_init(void) {
 #endif
 }
 
-void esp_print_reset_info(void) {
-  struct rst_info *ri = system_get_rst_info();
-  const char *reason_str;
-  int print_exc_info = 0;
-  switch (ri->reason) {
-    case REASON_DEFAULT_RST:
-      reason_str = "power on";
-      break;
-    case REASON_WDT_RST:
-      reason_str = "HW WDT";
-      print_exc_info = 1;
-      break;
-    case REASON_EXCEPTION_RST:
-      reason_str = "exception";
-      print_exc_info = 1;
-      break;
-    case REASON_SOFT_WDT_RST:
-      reason_str = "SW WDT";
-      print_exc_info = 1;
-      break;
-    case REASON_SOFT_RESTART:
-      reason_str = "soft reset";
-      break;
-    case REASON_DEEP_SLEEP_AWAKE:
-      reason_str = "deep sleep wake";
-      break;
-    case REASON_EXT_SYS_RST:
-      reason_str = "sys reset";
-      break;
-    default:
-      reason_str = "???";
-      break;
-  }
-  LOG(LL_INFO, ("Reset cause: %u (%s)", ri->reason, reason_str));
-  if (print_exc_info) {
-    LOG(LL_INFO,
-        ("Exc info: cause=%u epc1=0x%08x epc2=0x%08x epc3=0x%08x vaddr=0x%08x "
-         "depc=0x%08x",
-         ri->exccause, ri->epc1, ri->epc2, ri->epc3, ri->excvaddr, ri->depc));
-  }
-}
-
 NOINSTR void system_restart_local(void) {
   struct rst_info ri;
   system_rtc_mem_read(0, &ri, sizeof(ri));
@@ -238,4 +203,47 @@ NOINSTR void system_restart_local(void) {
   fs_flush_stderr();
   system_restart_local_sdk();
 #endif
+}
+#endif /* !RTOS_SDK */
+
+void esp_print_reset_info(void) {
+  struct rst_info *ri = system_get_rst_info();
+  const char *reason_str;
+  int print_exc_info = 0;
+  switch (ri->reason) {
+    case REASON_DEFAULT_RST:
+      reason_str = "power on";
+      break;
+    case REASON_WDT_RST:
+      reason_str = "HW WDT";
+      print_exc_info = 1;
+      break;
+    case REASON_EXCEPTION_RST:
+      reason_str = "exception";
+      print_exc_info = 1;
+      break;
+    case REASON_SOFT_WDT_RST:
+      reason_str = "SW WDT";
+      print_exc_info = 1;
+      break;
+    case REASON_SOFT_RESTART:
+      reason_str = "soft reset";
+      break;
+    case REASON_DEEP_SLEEP_AWAKE:
+      reason_str = "deep sleep wake";
+      break;
+    case REASON_EXT_SYS_RST:
+      reason_str = "sys reset";
+      break;
+    default:
+      reason_str = "???";
+      break;
+  }
+  LOG(LL_INFO, ("Reset cause: %u (%s)", ri->reason, reason_str));
+  if (print_exc_info) {
+    LOG(LL_INFO,
+        ("Exc info: cause=%u epc1=0x%08x epc2=0x%08x epc3=0x%08x vaddr=0x%08x "
+         "depc=0x%08x",
+         ri->exccause, ri->epc1, ri->epc2, ri->epc3, ri->excvaddr, ri->depc));
+  }
 }

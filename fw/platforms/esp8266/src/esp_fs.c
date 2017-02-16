@@ -8,12 +8,8 @@
 
 #include "fw/src/mgos_features.h"
 
-#include "ets_sys.h"
-#include "osapi.h"
-#include "gpio.h"
-#include "os_type.h"
-#include "user_interface.h"
-#include "mem.h"
+#include "c_types.h"
+#include "spi_flash.h"
 
 #include "common/cs_dbg.h"
 
