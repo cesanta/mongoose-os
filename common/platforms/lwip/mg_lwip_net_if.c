@@ -316,9 +316,23 @@ void mg_lwip_accept_conn(struct mg_connection *nc, struct tcp_pcb *tpcb) {
   mg_if_accept_tcp_cb(nc, &sa, sizeof(sa.sin));
 }
 
+void mg_lwip_handle_accept(struct mg_connection *nc) {
+  struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
+#if MG_ENABLE_SSL
+  if (cs->lc->flags & MG_F_SSL) {
+    if (mg_ssl_if_conn_accept(nc, cs->lc) != MG_SSL_OK) {
+      LOG(LL_ERROR, ("SSL error"));
+      tcp_close(cs->pcb.tcp);
+    }
+  } else
+#endif
+  {
+    mg_lwip_accept_conn(nc, cs->pcb.tcp);
+  }
+}
+
 static err_t mg_lwip_accept_cb(void *arg, struct tcp_pcb *newtpcb, err_t err) {
   struct mg_connection *lc = (struct mg_connection *) arg;
-  (void) err;
   DBG(("%p conn %p from %s:%u", lc, newtpcb,
        IPADDR_NTOA(ipX_2_ip(&newtpcb->remote_ip)), newtpcb->remote_port));
   struct mg_connection *nc = mg_if_accept_new_conn(lc);
@@ -327,7 +341,10 @@ static err_t mg_lwip_accept_cb(void *arg, struct tcp_pcb *newtpcb, err_t err) {
     return ERR_ABRT;
   }
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
+  cs->lc = lc;
   cs->pcb.tcp = newtpcb;
+  /* We need to set up callbacks before returning because data may start
+   * arriving immediately. */
   tcp_arg(newtpcb, nc);
   tcp_err(newtpcb, mg_lwip_tcp_error_cb);
   tcp_sent(newtpcb, mg_lwip_tcp_sent_cb);
@@ -335,17 +352,8 @@ static err_t mg_lwip_accept_cb(void *arg, struct tcp_pcb *newtpcb, err_t err) {
 #if LWIP_TCP_KEEPALIVE
   mg_lwip_set_keepalive_params(nc, 60, 10, 6);
 #endif
-#if MG_ENABLE_SSL
-  if (lc->flags & MG_F_SSL) {
-    if (mg_ssl_if_conn_accept(nc, lc) != MG_SSL_OK) {
-      LOG(LL_ERROR, ("SSL error"));
-      tcp_close(newtpcb);
-    }
-  } else
-#endif
-  {
-    mg_lwip_accept_conn(nc, newtpcb);
-  }
+  mg_lwip_post_signal(MG_SIG_ACCEPT, nc);
+  (void) err;
   return ERR_OK;
 }
 

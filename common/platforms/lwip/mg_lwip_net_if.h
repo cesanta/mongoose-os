@@ -18,6 +18,7 @@ extern struct mg_iface_vtable mg_lwip_iface_vtable;
 
 struct mg_lwip_conn_state {
   struct mg_connection *nc;
+  struct mg_connection *lc;
   union {
     struct tcp_pcb *tcp;
     struct udp_pcb *udp;
@@ -38,6 +39,7 @@ enum mg_sig_type {
   MG_SIG_SENT_CB = 3,
   MG_SIG_CLOSE_CONN = 4,
   MG_SIG_TOMBSTONE = 5,
+  MG_SIG_ACCEPT = 6,
 };
 
 void mg_lwip_post_signal(enum mg_sig_type sig, struct mg_connection *nc);

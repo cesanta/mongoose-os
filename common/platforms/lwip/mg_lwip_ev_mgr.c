@@ -28,6 +28,7 @@ void mg_lwip_post_signal(enum mg_sig_type sig, struct mg_connection *nc) {
   md->sig_queue[end_index].sig = sig;
   md->sig_queue[end_index].nc = nc;
   md->sig_queue_len++;
+  mg_lwip_mgr_schedule_poll(nc->mgr);
 }
 
 void mg_ev_mgr_lwip_process_signals(struct mg_mgr *mgr) {
@@ -75,6 +76,10 @@ void mg_ev_mgr_lwip_process_signals(struct mg_mgr *mgr) {
         break;
       }
       case MG_SIG_TOMBSTONE: {
+        break;
+      }
+      case MG_SIG_ACCEPT: {
+        mg_lwip_handle_accept(nc);
         break;
       }
     }
@@ -187,11 +192,24 @@ uint32_t mg_lwip_get_poll_delay_ms(struct mg_mgr *mgr) {
   int num_timers = 0;
   mg_ev_mgr_lwip_process_signals(mgr);
   for (nc = mg_next(mgr, NULL); nc != NULL; nc = mg_next(mgr, nc)) {
+    struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
     if (nc->ev_timer_time > 0) {
       if (num_timers == 0 || nc->ev_timer_time < min_timer) {
         min_timer = nc->ev_timer_time;
       }
       num_timers++;
+    }
+    if (nc->send_mbuf.len > 0) {
+      int can_send = 0;
+      /* We have stuff to send, but can we? */
+      if (nc->flags & MG_F_UDP) {
+        /* UDP is always ready for sending. */
+        can_send = (cs->pcb.udp != NULL);
+      } else {
+        can_send = (cs->pcb.tcp != NULL && cs->pcb.tcp->snd_buf > 0);
+      }
+      /* We want and can send, request a poll immediately. */
+      if (can_send) return 0;
     }
   }
   uint32_t timeout_ms = ~0;

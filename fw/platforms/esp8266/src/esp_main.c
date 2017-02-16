@@ -69,9 +69,14 @@ static IRAM void mongoose_poll_cb(void *arg) {
   mgos_lock();
   if (!s_mg_poll_scheduled) {
     uint32_t timeout_ms = mg_lwip_get_poll_delay_ms(mgos_get_mgr());
-    if (timeout_ms > 1000) timeout_ms = 1000;
-    os_timer_disarm(&s_mg_poll_tmr);
-    os_timer_arm(&s_mg_poll_tmr, timeout_ms, 0 /* no repeat */);
+    if (timeout_ms > 0) {
+      if (timeout_ms > 1000) timeout_ms = 1000;
+      os_timer_disarm(&s_mg_poll_tmr);
+      os_timer_arm(&s_mg_poll_tmr, timeout_ms, 0 /* no repeat */);
+    } else {
+      /* Poll immediately */
+      mongoose_schedule_poll();
+    }
   }
   mgos_unlock();
   (void) arg;
@@ -115,7 +120,6 @@ enum mgos_init_result esp_mgos_init2(rboot_config *bcfg) {
   LOG(LL_INFO, ("SDK %s, RAM: %d total, %d free", system_get_sdk_version(),
                 mgos_get_heap_size(), mgos_get_free_heap_size()));
   esp_print_reset_info();
-  // umm_info(NULL, 1);
 
   int r = fs_init(bcfg->fs_addresses[bcfg->current_rom],
                   bcfg->fs_sizes[bcfg->current_rom]);
