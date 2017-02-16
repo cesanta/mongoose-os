@@ -1,6 +1,6 @@
 [
   ["mqtt", "o", {title: "MQTT settings"}],
-  ["mqtt.server", "s", "mongoose.cloud:1883", {title: "MQTT server"}],
+  ["mqtt.server", "s", "test.mosquitto.org:1883", {title: "MQTT server"}],
   ["mqtt.user", "s", "", {title: "User name"}],
   ["mqtt.pass", "s", "", {title: "Password"}],
   ["mqtt.reconnect_timeout_min", "i", 10, {title: "Starting reconnect timeout"}],
