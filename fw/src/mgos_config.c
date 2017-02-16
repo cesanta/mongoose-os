@@ -322,3 +322,24 @@ void mgos_conf_set_str(char **vp, const char *v) {
     *vp = NULL;
   }
 }
+
+enum mgos_conf_type mgos_conf_value_type(struct mgos_conf_entry *e) {
+  return e->type;
+}
+
+const char *mgos_conf_value_string(const void *cfg,
+                                   const struct mgos_conf_entry *e) {
+  char *vp = (((char *) cfg) + e->offset);
+  if (e->type == CONF_TYPE_STRING) {
+    return *((const char **) vp);
+  }
+  return NULL;
+}
+
+int mgos_conf_value_int(const void *cfg, const struct mgos_conf_entry *e) {
+  char *vp = (((char *) cfg) + e->offset);
+  if (e->type == CONF_TYPE_INT || e->type == CONF_TYPE_BOOL) {
+    return *((int *) vp);
+  }
+  return 0;
+}

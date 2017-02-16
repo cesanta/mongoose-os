@@ -12,6 +12,7 @@ ffi_symbols:
   - fread
   - fwrite
   - get_led_gpio_pin
+  - get_cfg
   - mg_send
   - mg_time
   - mgos_add_http_endpoint
@@ -19,6 +20,10 @@ ffi_symbols:
   - mgos_bind_http
   - mgos_connect
   - mgos_connect_http
+  - mgos_conf_find_schema_entry
+  - mgos_conf_value_type
+  - mgos_conf_value_string
+  - mgos_conf_value_int
   - mgos_disconnect
   - mgos_get_free_heap_size
   - mgos_get_heap_size
@@ -36,6 +41,7 @@ ffi_symbols:
   - mgos_rpc_add_handler
   - mgos_rpc_send_response
   - mg_rpc_call
+  - sys_config_schema
 modules:
   - src: https://github.com/cesanta/mjs
 build_vars:

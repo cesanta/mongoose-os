@@ -75,6 +75,22 @@ const struct mgos_conf_entry *mgos_conf_find_schema_entry(
 
 void mgos_conf_set_str(char **vp, const char *v);
 
+/*
+ * Returns a type of the value (this function is primarily for FFI)
+ */
+enum mgos_conf_type mgos_conf_value_type(struct mgos_conf_entry *e);
+
+/*
+ * Returns a string value from the config entry
+ */
+const char *mgos_conf_value_string(const void *cfg,
+                                   const struct mgos_conf_entry *e);
+
+/*
+ * Returns an int or bool value from the config entry
+ */
+int mgos_conf_value_int(const void *cfg, const struct mgos_conf_entry *e);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
