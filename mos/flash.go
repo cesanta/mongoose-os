@@ -5,7 +5,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 	"runtime"
 	"strings"
 	"time"
@@ -77,9 +76,10 @@ func init() {
 }
 
 func flash(ctx context.Context, devConn *dev.DevConn) error {
-	fwname := os.Args[2]
-	if fwname == "" {
-		fwname = *firmware
+	fwname := *firmware
+	args := flag.Args()
+	if len(args) == 2 {
+		fwname = args[1]
 	}
 	fw, err := common.NewZipFirmwareBundle(fwname)
 	if err != nil {

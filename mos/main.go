@@ -66,6 +66,7 @@ var (
 		{"config-set", configSet, `Set config value at the locally attached device`, nil, []string{"port"}, true},
 		{"call", call, `Perform a device API call. "mos call RPC.List" shows available methods`, nil, []string{"port"}, true},
 		{"aws-iot-setup", awsIoTSetup, `Provision the device for AWS IoT cloud`, nil, []string{"atca-slot", "aws-region", "port", "use-atca"}, true},
+		{"wifi", wifi, `Setup WiFi - shortcut to config-set wifi...`, nil, nil, true},
 	}
 	// These commands are only available when invoked with -X
 	extendedCommands = []command{
