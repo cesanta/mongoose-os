@@ -1,3 +1,22 @@
+/* This linker script generated from xt-genldscripts.tpp for LSP . */
+/* Linker Script for ld -N */
+MEMORY
+{
+  dport0_0_seg :                        org = 0x3FF00000, len = 0x10
+  dram0_0_seg :                         org = 0x3FFE8000, len = 0x14000
+  iram1_0_seg :                         org = 0x40100000, len = 0x8000
+  irom0_0_seg :                         org = _IROM0ADDR, len = _IROM0SIZE
+}
+
+PHDRS
+{
+  dport0_0_phdr PT_LOAD;
+  dram0_0_phdr PT_LOAD;
+  dram0_0_bss_phdr PT_LOAD;
+  iram1_0_phdr PT_LOAD;
+  irom0_0_phdr PT_LOAD;
+}
+
 /*  Default entry point:  */
 ENTRY(call_user_start)
 EXTERN(_DebugExceptionVector)
@@ -87,11 +106,14 @@ SECTIONS
     *(.gnu.linkonce.e.*)
     *(.gnu.version_r)
     *(.eh_frame)
+    . = (. + 3) & ~ 3;
     /*  C++ constructor and destructor tables, properly ordered:  */
+    __init_array_start = ABSOLUTE(.);
     KEEP (*crtbegin.o(.ctors))
     KEEP (*(EXCLUDE_FILE (*crtend.o) .ctors))
     KEEP (*(SORT(.ctors.*)))
     KEEP (*(.ctors))
+    __init_array_end = ABSOLUTE(.);
     KEEP (*crtbegin.o(.dtors))
     KEEP (*(EXCLUDE_FILE (*crtend.o) .dtors))
     KEEP (*(SORT(.dtors.*)))
@@ -153,6 +175,7 @@ SECTIONS
     *(.init.literal)
     *(.init)
     *(.literal .fast.text .literal.* .stub .gnu.warning .gnu.linkonce.literal.* .gnu.linkonce.t.*.literal .gnu.linkonce.t.*)
+    *(.fast.text)
     *(.fini.literal)
     *(.fini)
     *(.gnu.version)
@@ -172,11 +195,11 @@ SECTIONS
   .irom0.text : ALIGN(4)
   {
     _irom0_text_start = ABSOLUTE(.);
-    *(.irom0.literal .irom.literal .irom.text.literal .irom0.text .irom.text .text .text.*)
+    *(.irom0.literal .irom.literal .irom.text.literal .irom0.text .irom.text)
+    *(.literal.* .text .text.*)
     _irom0_text_end = ABSOLUTE(.);
   } >irom0_0_seg :irom0_0_phdr
 }
 
 /* get ROM code address */
 INCLUDE "../ld/eagle.rom.addr.v6.ld"
-PROVIDE ( rijndaelDecrypt = 0x40008ecc );

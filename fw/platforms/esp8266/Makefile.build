@@ -159,7 +159,7 @@ MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" -DLWIP_OPEN_SRC -DMG_LOCALS -DMG_DISABLE_SOC
               -DC_DISABLE_BUILTIN_SNPRINTF
 
 FS_IMG = $(FW_STAGING_DIR)/$(FS_ADDR).bin
-LD_SCRIPT_TEMPL = $(MGOS_ESP_PATH)/ld/fw.ld
+LD_SCRIPT_TEMPL = $(MGOS_ESP_PATH)/ld/non_os.ld
 
 _FLASH_SIZE = $(shell echo $$((`echo $(FLASH_SIZE) | \
    sed -e 's/K/*1024/;s/k/128/;s/M/*1048576/;s/m/*131072/'`)))
