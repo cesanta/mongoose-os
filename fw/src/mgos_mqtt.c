@@ -110,7 +110,7 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
       struct mg_mqtt_proto_data *pd =
           (struct mg_mqtt_proto_data *) nc->proto_data;
       double now = mg_time();
-      if ((now - nc->last_io_time) > pd->keep_alive / 2) {
+      if (pd->keep_alive > 0 && (now - nc->last_io_time) > pd->keep_alive) {
         LOG(LL_DEBUG, ("Send PINGREQ"));
         mg_mqtt_ping(nc);
         nc->last_io_time = (time_t) mg_time();

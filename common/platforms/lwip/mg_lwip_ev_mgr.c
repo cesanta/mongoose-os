@@ -6,7 +6,7 @@
 #if MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL
 
 #ifndef MG_SIG_QUEUE_LEN
-#define MG_SIG_QUEUE_LEN 16
+#define MG_SIG_QUEUE_LEN 32
 #endif
 
 struct mg_ev_mgr_lwip_signal {
@@ -23,21 +23,32 @@ struct mg_ev_mgr_lwip_data {
 void mg_lwip_post_signal(enum mg_sig_type sig, struct mg_connection *nc) {
   struct mg_ev_mgr_lwip_data *md =
       (struct mg_ev_mgr_lwip_data *) nc->iface->data;
-  if (md->sig_queue_len >= MG_SIG_QUEUE_LEN) return;
+  mgos_lock();
+  if (md->sig_queue_len >= MG_SIG_QUEUE_LEN) {
+    mgos_unlock();
+    return;
+  }
   int end_index = (md->start_index + md->sig_queue_len) % MG_SIG_QUEUE_LEN;
   md->sig_queue[end_index].sig = sig;
   md->sig_queue[end_index].nc = nc;
   md->sig_queue_len++;
   mg_lwip_mgr_schedule_poll(nc->mgr);
+  mgos_unlock();
 }
 
 void mg_ev_mgr_lwip_process_signals(struct mg_mgr *mgr) {
   struct mg_ev_mgr_lwip_data *md =
       (struct mg_ev_mgr_lwip_data *) mgr->ifaces[MG_MAIN_IFACE]->data;
   while (md->sig_queue_len > 0) {
+    mgos_lock();
+    int sig = md->sig_queue[md->start_index].sig;
     struct mg_connection *nc = md->sig_queue[md->start_index].nc;
     struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
-    switch (md->sig_queue[md->start_index].sig) {
+    md->start_index = (md->start_index + 1) % MG_SIG_QUEUE_LEN;
+    md->sig_queue_len--;
+    mgos_unlock();
+    if (nc->iface == NULL || nc->mgr == NULL) continue;
+    switch (sig) {
       case MG_SIG_CONNECT_RESULT: {
 #if MG_ENABLE_SSL
         if (cs->err == 0 && (nc->flags & MG_F_SSL) &&
@@ -83,8 +94,6 @@ void mg_ev_mgr_lwip_process_signals(struct mg_mgr *mgr) {
         break;
       }
     }
-    md->start_index = (md->start_index + 1) % MG_SIG_QUEUE_LEN;
-    md->sig_queue_len--;
   }
 }
 

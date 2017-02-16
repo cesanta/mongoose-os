@@ -48,17 +48,17 @@ void mgos_uart_dispatcher(void *arg) {
 size_t mgos_uart_write(int uart_no, const void *buf, size_t len) {
   struct mgos_uart_state *us = s_uart_state[uart_no];
   if (us == NULL || !us->write_enabled) return 0;
-  mgos_lock();
   size_t n = 0;
   cs_rbuf_t *txb = &us->tx_buf;
   while (n < len) {
+    mgos_lock();
     size_t nw = MIN(len - n, txb->avail);
     cs_rbuf_append(txb, ((uint8_t *) buf) + n, nw);
+    mgos_unlock();
     n += nw;
     mgos_uart_flush(uart_no);
   }
   mgos_uart_schedule_dispatcher(uart_no);
-  mgos_unlock();
   return len;
 }
 

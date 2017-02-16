@@ -38,7 +38,7 @@
 #endif
 
 #ifndef MGOS_TASK_PRIORITY
-#define MGOS_TASK_PRIORITY 5
+#define MGOS_TASK_PRIORITY 10
 #endif
 
 #else
@@ -195,6 +195,7 @@ static void mgos_task(void *arg) {
     while (xQueueReceive(s_main_queue, &e, 100 /* tick */)) {
       e.cb(e.arg);
     }
+    taskYIELD();
   }
   (void) arg;
 }

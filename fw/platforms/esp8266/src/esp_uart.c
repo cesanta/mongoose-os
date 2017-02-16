@@ -88,7 +88,7 @@ IRAM NOINSTR static void esp_uart_isr(void *arg) {
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-IRAM void mgos_uart_dev_dispatch_rx_top(struct mgos_uart_state *us) {
+void mgos_uart_dev_dispatch_rx_top(struct mgos_uart_state *us) {
   int uart_no = us->uart_no;
   cs_rbuf_t *rxb = &us->rx_buf;
   uint32_t rxn = 0;
@@ -132,7 +132,7 @@ IRAM void mgos_uart_dev_dispatch_rx_top(struct mgos_uart_state *us) {
   }
 }
 
-IRAM void mgos_uart_dev_dispatch_tx_top(struct mgos_uart_state *us) {
+void mgos_uart_dev_dispatch_tx_top(struct mgos_uart_state *us) {
   int uart_no = us->uart_no;
   cs_rbuf_t *txb = &us->tx_buf;
   uint32_t txn = 0;
@@ -155,7 +155,7 @@ IRAM void mgos_uart_dev_dispatch_tx_top(struct mgos_uart_state *us) {
   }
 }
 
-IRAM void mgos_uart_dev_dispatch_bottom(struct mgos_uart_state *us) {
+void mgos_uart_dev_dispatch_bottom(struct mgos_uart_state *us) {
   cs_rbuf_t *rxb = &us->rx_buf;
   cs_rbuf_t *txb = &us->tx_buf;
   uint32_t int_ena = UART_INFO_INTS;
