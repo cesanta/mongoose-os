@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#include "common/mg_rpc/mg_rpc_channel_ws.h"
 #include "common/mg_rpc/mg_rpc_channel_http.h"
+#include "common/mg_rpc/mg_rpc_channel_ws.h"
 
 #if MGOS_ENABLE_RPC
 
@@ -91,7 +91,7 @@ static void mgos_sys_reboot_handler(struct mg_rpc_request_info *ri,
     return;
   }
   int delay_ms = 100;
-  json_scanf(args.p, args.len, "{delay_ms: %d}", &delay_ms);
+  json_scanf(args.p, args.len, ri->args_fmt, &delay_ms);
   if (delay_ms < 0) {
     mg_rpc_send_errorf(ri, 400, "invalid delay value");
     ri = NULL;
@@ -189,9 +189,9 @@ enum mgos_init_result mgos_rpc_init(void) {
   s_global_mg_rpc = c;
 
 #if MGOS_ENABLE_SYS_SERVICE
-  mg_rpc_add_handler(c, mg_mk_str("Sys.Reboot"), mgos_sys_reboot_handler, NULL);
-  mg_rpc_add_handler(c, mg_mk_str("Sys.GetInfo"), mgos_sys_get_info_handler,
+  mg_rpc_add_handler(c, "Sys.Reboot", "{delay_ms: %d}", mgos_sys_reboot_handler,
                      NULL);
+  mg_rpc_add_handler(c, "Sys.GetInfo", "", mgos_sys_get_info_handler, NULL);
 #endif
 
   return MGOS_INIT_OK;
@@ -263,7 +263,7 @@ void mgos_rpc_add_handler(const char *method, mgos_rpc_eh_t cb, void *cb_arg) {
   oplya_arg->cb = cb;
   oplya_arg->cb_arg = cb_arg;
 
-  mg_rpc_add_handler(s_global_mg_rpc, mg_mk_str(method), mgos_rpc_req_oplya,
+  mg_rpc_add_handler(s_global_mg_rpc, method, "", mgos_rpc_req_oplya,
                      oplya_arg);
 }
 

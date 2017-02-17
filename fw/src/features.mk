@@ -75,7 +75,7 @@ ifeq "$(MGOS_ENABLE_RPC)" "1"
   SYS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_rpc_config.yaml
 
 ifeq "$(MGOS_ENABLE_CONFIG_SERVICE)" "1"
-  MGOS_SRCS += mgos_service_config.c mgos_service_vars.c
+  MGOS_SRCS += mgos_service_config.c
   MGOS_FEATURES += -DMGOS_ENABLE_CONFIG_SERVICE
 endif
 ifeq "$(MGOS_ENABLE_FILESYSTEM_SERVICE)" "1"

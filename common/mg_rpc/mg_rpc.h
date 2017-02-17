@@ -87,10 +87,11 @@ bool mg_rpc_callf(struct mg_rpc *c, const struct mg_str method,
  */
 struct mg_rpc_request_info {
   struct mg_rpc *rpc;
-  int64_t id;        /* Request id. */
-  struct mg_str src; /* Source of the request. */
-  struct mg_str tag; /* Request tag. Opaque, should be passed back as is. */
-  void *user_data;   /* Place to store user pointer. Not used by mg_rpc. */
+  int64_t id;           /* Request id. */
+  struct mg_str src;    /* Source of the request. */
+  struct mg_str tag;    /* Request tag. Opaque, should be passed back as is. */
+  const char *args_fmt; /* Arguments format string */
+  void *user_data;      /* Place to store user pointer. Not used by mg_rpc. */
 };
 
 /*
@@ -103,8 +104,8 @@ typedef void (*mg_handler_cb_t)(struct mg_rpc_request_info *ri, void *cb_arg,
                                 struct mg_str args);
 
 /* Add a method handler. */
-void mg_rpc_add_handler(struct mg_rpc *c, const struct mg_str method,
-                        mg_handler_cb_t cb, void *cb_arg);
+void mg_rpc_add_handler(struct mg_rpc *c, const char *method,
+                        const char *args_fmt, mg_handler_cb_t cb, void *cb_arg);
 
 /*
  * Respond to an incoming request.

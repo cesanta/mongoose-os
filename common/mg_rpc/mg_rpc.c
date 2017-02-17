@@ -8,11 +8,11 @@
 
 #if MGOS_ENABLE_RPC
 
-#include "common/mg_rpc/mg_rpc.h"
-#include "common/mg_rpc/mg_rpc_channel.h"
 #include "common/cs_dbg.h"
 #include "common/json_utils.h"
 #include "common/mbuf.h"
+#include "common/mg_rpc/mg_rpc.h"
+#include "common/mg_rpc/mg_rpc_channel.h"
 #include "mongoose/mongoose.h"
 
 #define MG_RPC_HELLO_CMD "RPC.Hello"
@@ -29,7 +29,8 @@ struct mg_rpc {
 };
 
 struct mg_rpc_handler_info {
-  struct mg_str method;
+  const char *method;
+  const char *args_fmt;
   mg_handler_cb_t cb;
   void *cb_arg;
   SLIST_ENTRY(mg_rpc_handler_info) handlers;
@@ -102,10 +103,8 @@ static bool mg_rpc_handle_request(struct mg_rpc *c,
 
   struct mg_rpc_handler_info *hi;
   SLIST_FOREACH(hi, &c->handlers, handlers) {
-    if (mg_strcmp(hi->method,
-                  mg_mk_str_n(frame->method.p, frame->method.len)) == 0) {
-      break;
-    }
+    struct mg_str method = mg_mk_str_n(frame->method.p, frame->method.len);
+    if (mg_vcmp(&method, hi->method) == 0) break;
   }
   if (hi == NULL) {
     LOG(LL_ERROR,
@@ -119,6 +118,7 @@ static bool mg_rpc_handle_request(struct mg_rpc *c,
   memset(&fi, 0, sizeof(fi));
   fi.channel_type = ci->ch->get_type(ci->ch);
   fi.channel_is_trusted = ci->is_trusted;
+  ri->args_fmt = hi->args_fmt;
   hi->cb(ri, hi->cb_arg, &fi, mg_mk_str_n(frame->args.p, frame->args.len));
   return true;
 }
@@ -441,8 +441,7 @@ struct mg_rpc *mg_rpc_create(struct mg_rpc_cfg *cfg) {
   SLIST_INIT(&c->observers);
   STAILQ_INIT(&c->queue);
 
-  mg_rpc_add_handler(c, mg_mk_str(MG_RPC_HELLO_CMD), mg_rpc_hello_handler,
-                     NULL);
+  mg_rpc_add_handler(c, MG_RPC_HELLO_CMD, "", mg_rpc_hello_handler, NULL);
 
   return c;
 }
@@ -597,14 +596,16 @@ bool mg_rpc_send_errorf(struct mg_rpc_request_info *ri, int error_code,
   return result;
 }
 
-void mg_rpc_add_handler(struct mg_rpc *c, const struct mg_str method,
-                        mg_handler_cb_t cb, void *cb_arg) {
+void mg_rpc_add_handler(struct mg_rpc *c, const char *method,
+                        const char *args_fmt, mg_handler_cb_t cb,
+                        void *cb_arg) {
   if (c == NULL) return;
   struct mg_rpc_handler_info *hi =
       (struct mg_rpc_handler_info *) calloc(1, sizeof(*hi));
-  hi->method = mg_strdup(method);
+  hi->method = method;
   hi->cb = cb;
   hi->cb_arg = cb_arg;
+  hi->args_fmt = args_fmt;
   SLIST_INSERT_HEAD(&c->handlers, hi, handlers);
 }
 
@@ -671,7 +672,7 @@ static void mg_rpc_list_handler(struct mg_rpc_request_info *ri, void *cb_arg,
   json_printf(&out, "[");
   SLIST_FOREACH(hi, &ri->rpc->handlers, handlers) {
     if (mbuf.len > 1) json_printf(&out, ",");
-    json_printf(&out, "%.*Q", hi->method.len, hi->method.p);
+    json_printf(&out, "%Q", hi->method);
   }
   json_printf(&out, "]");
 
@@ -682,8 +683,39 @@ static void mg_rpc_list_handler(struct mg_rpc_request_info *ri, void *cb_arg,
   (void) args;
 }
 
+/* Describe a registered RPC endpoint */
+static void mg_rpc_describe_handler(struct mg_rpc_request_info *ri,
+                                    void *cb_arg, struct mg_rpc_frame_info *fi,
+                                    struct mg_str args) {
+  struct mg_rpc_handler_info *hi;
+  struct json_token t = JSON_INVALID_TOKEN;
+  if (!fi->channel_is_trusted) {
+    mg_rpc_send_errorf(ri, 403, "unauthorized");
+    return;
+  }
+  if (json_scanf(args.p, args.len, ri->args_fmt, &t) != 1) {
+    mg_rpc_send_errorf(ri, 400, "name is required");
+    return;
+  }
+  struct mg_str name = mg_mk_str_n(t.ptr, t.len);
+  SLIST_FOREACH(hi, &ri->rpc->handlers, handlers) {
+    if (mg_vcmp(&name, hi->method) == 0) {
+      char buf[100];
+      struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+      json_printf(&out, "{name: %.*Q, args_fmt: %Q}", t.len, t.ptr,
+                  hi->args_fmt);
+      mg_rpc_send_responsef(ri, "%s", buf);
+      return;
+    }
+  }
+  mg_rpc_send_errorf(ri, 404, "name not found");
+  (void) cb_arg;
+}
+
 void mg_rpc_add_list_handler(struct mg_rpc *c) {
-  mg_rpc_add_handler(c, mg_mk_str("RPC.List"), mg_rpc_list_handler, NULL);
+  mg_rpc_add_handler(c, "RPC.List", "", mg_rpc_list_handler, NULL);
+  mg_rpc_add_handler(c, "RPC.Describe", "{name: %T}", mg_rpc_describe_handler,
+                     NULL);
 }
 
 #endif /* MGOS_ENABLE_RPC */

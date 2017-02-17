@@ -15,7 +15,6 @@
 #include "fw/src/mgos_rpc.h"
 #include "fw/src/mgos_service_config.h"
 #include "fw/src/mgos_service_filesystem.h"
-#include "fw/src/mgos_service_vars.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_updater_rpc.h"
 #include "fw/src/mgos_updater_http.h"
@@ -73,7 +72,6 @@ enum mgos_init_result mgos_init(void) {
 #endif
 #if MGOS_ENABLE_CONFIG_SERVICE
   mgos_service_config_init();
-  mgos_service_vars_init();
 #endif
 #if MGOS_ENABLE_FILESYSTEM_SERVICE
   mgos_service_filesystem_init();

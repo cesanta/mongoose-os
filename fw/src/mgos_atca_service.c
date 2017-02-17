@@ -58,8 +58,7 @@ static void mgos_atca_set_config(struct mg_rpc_request_info *ri, void *cb_arg,
   uint8_t *config = NULL;
   uint32_t config_len = 0;
   uint32_t crc32 = 0;
-  json_scanf(args.p, args.len, "{config: %V, crc32: %u}", &config, &config_len,
-             &crc32);
+  json_scanf(args.p, args.len, ri->args_fmt, &config, &config_len, &crc32);
 
   if (config_len != ATCA_CONFIG_SIZE) {
     mg_rpc_send_errorf(ri, 400, "Expected %d bytes, got %d",
@@ -101,7 +100,7 @@ static void mgos_atca_lock_zone(struct mg_rpc_request_info *ri, void *cb_arg,
   }
 
   int zone = -1;
-  json_scanf(args.p, args.len, "{zone: %d}", &zone);
+  json_scanf(args.p, args.len, ri->args_fmt, &zone);
 
   ATCA_STATUS status;
   uint8_t lock_response = 0;
@@ -145,10 +144,8 @@ static void mgos_atca_set_key(struct mg_rpc_request_info *ri, void *cb_arg,
   uint32_t key_len = 0, write_key_len = 0;
   uint32_t crc32 = 0, wk_slot = 0;
   bool is_ecc = false;
-  json_scanf(args.p, args.len,
-             "{slot:%d, ecc:%B, key:%V, crc32:%u, wkey:%V, wkslot:%u}", &slot,
-             &is_ecc, &key, &key_len, &crc32, &write_key, &write_key_len,
-             &wk_slot);
+  json_scanf(args.p, args.len, ri->args_fmt, &slot, &is_ecc, &key, &key_len,
+             &crc32, &write_key, &write_key_len, &wk_slot);
 
   if (slot < 0 || slot > 15 || (is_ecc && slot > 7)) {
     mg_rpc_send_errorf(ri, 400, "Invalid slot");
@@ -208,7 +205,7 @@ static void mgos_atca_get_or_gen_key(struct mg_rpc_request_info *ri,
 
   uint8_t pubkey[ATCA_PUB_KEY_SIZE];
   int slot = -1;
-  json_scanf(args.p, args.len, "{slot: %d}", &slot);
+  json_scanf(args.p, args.len, ri->args_fmt, &slot);
 
   if (slot < 0 || slot > 15) {
     mg_rpc_send_errorf(ri, 400, "Invalid slot");
@@ -255,8 +252,8 @@ static void mgos_atca_sign(struct mg_rpc_request_info *ri, void *cb_arg,
   uint8_t *digest = NULL;
   uint32_t digest_len = 0;
   uint32_t crc32 = 0;
-  json_scanf(args.p, args.len, "{slot: %d, digest: %V, crc32: %u}", &slot,
-             &digest, &digest_len, &crc32);
+  json_scanf(args.p, args.len, ri->args_fmt, &slot, &digest, &digest_len,
+             &crc32);
 
   if (slot < 0 || slot > 7) {
     mg_rpc_send_errorf(ri, 400, "Invalid slot");
@@ -306,17 +303,20 @@ enum mgos_init_result mgos_atca_service_init(void) {
     LOG(LL_ERROR, ("ATCA is not available"));
     return MGOS_INIT_ATCA_FAILED;
   }
-  mg_rpc_add_handler(c, mg_mk_str("ATCA.GetConfig"), mgos_atca_get_config,
+  mg_rpc_add_handler(c, "ATCA.GetConfig", "", mgos_atca_get_config, NULL);
+  mg_rpc_add_handler(c, "ATCA.SetConfig", "{config: %V, crc32: %u}",
+                     mgos_atca_set_config, NULL);
+  mg_rpc_add_handler(c, "ATCA.LockZone", "{zone: %d}", mgos_atca_lock_zone,
                      NULL);
-  mg_rpc_add_handler(c, mg_mk_str("ATCA.SetConfig"), mgos_atca_set_config,
-                     NULL);
-  mg_rpc_add_handler(c, mg_mk_str("ATCA.LockZone"), mgos_atca_lock_zone, NULL);
-  mg_rpc_add_handler(c, mg_mk_str("ATCA.SetKey"), mgos_atca_set_key, NULL);
-  mg_rpc_add_handler(c, mg_mk_str("ATCA.GenKey"), mgos_atca_get_or_gen_key,
+  mg_rpc_add_handler(c, "ATCA.SetKey",
+                     "{slot:%d, ecc:%B, key:%V, crc32:%u, wkey:%V, wkslot:%u}",
+                     mgos_atca_set_key, NULL);
+  mg_rpc_add_handler(c, "ATCA.GenKey", "{slot: %d}", mgos_atca_get_or_gen_key,
                      "ATCA.GenKey");
-  mg_rpc_add_handler(c, mg_mk_str("ATCA.GetPubKey"), mgos_atca_get_or_gen_key,
-                     "ATCA.GetPubKey");
-  mg_rpc_add_handler(c, mg_mk_str("ATCA.Sign"), mgos_atca_sign, NULL);
+  mg_rpc_add_handler(c, "ATCA.GetPubKey", "{slot: %d}",
+                     mgos_atca_get_or_gen_key, "ATCA.GetPubKey");
+  mg_rpc_add_handler(c, "ATCA.Sign", "{slot: %d, digest: %V, crc32: %u}",
+                     mgos_atca_sign, NULL);
   return MGOS_INIT_OK;
 }
 

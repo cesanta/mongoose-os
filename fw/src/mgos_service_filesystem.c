@@ -10,8 +10,8 @@
 #include "common/cs_file.h"
 #include "common/json_utils.h"
 #include "common/mg_str.h"
-#include "fw/src/mgos_rpc.h"
 #include "fw/src/mgos_config.h"
+#include "fw/src/mgos_rpc.h"
 #include "fw/src/mgos_service_filesystem.h"
 #include "fw/src/mgos_sys_config.h"
 
@@ -87,8 +87,7 @@ static void mgos_fs_get_handler(struct mg_rpc_request_info *ri, void *cb_arg,
     goto clean;
   }
 
-  json_scanf(args.p, args.len, "{filename: %Q, offset: %ld, len: %ld}",
-             &filename, &offset, &len);
+  json_scanf(args.p, args.len, ri->args_fmt, &filename, &offset, &len);
 
   /* check arguments */
   if (filename == NULL) {
@@ -197,8 +196,8 @@ static void mgos_fs_put_handler(struct mg_rpc_request_info *ri, void *cb_arg,
     goto clean;
   }
 
-  json_scanf(args.p, args.len, "{filename: %Q, data: %V, append: %B}",
-             &filename, &data.p, &data.len, &append);
+  json_scanf(args.p, args.len, ri->args_fmt, &filename, &data.p, &data.len,
+             &append);
 
   /* check arguments */
   if (filename == NULL) {
@@ -257,7 +256,7 @@ static void mgos_fs_remove_handler(struct mg_rpc_request_info *ri, void *cb_arg,
     goto clean;
   }
 
-  json_scanf(args.p, args.len, "{filename: %Q}", &filename);
+  json_scanf(args.p, args.len, ri->args_fmt, &filename);
 
   /* check arguments */
   if (filename == NULL) {
@@ -288,11 +287,14 @@ clean:
 enum mgos_init_result mgos_service_filesystem_init(void) {
   struct mg_rpc *c = mgos_rpc_get_global();
 #if MG_ENABLE_DIRECTORY_LISTING
-  mg_rpc_add_handler(c, mg_mk_str("FS.List"), mgos_fs_list_handler, NULL);
+  mg_rpc_add_handler(c, "FS.List", "", mgos_fs_list_handler, NULL);
 #endif
-  mg_rpc_add_handler(c, mg_mk_str("FS.Get"), mgos_fs_get_handler, NULL);
-  mg_rpc_add_handler(c, mg_mk_str("FS.Put"), mgos_fs_put_handler, NULL);
-  mg_rpc_add_handler(c, mg_mk_str("FS.Remove"), mgos_fs_remove_handler, NULL);
+  mg_rpc_add_handler(c, "FS.Get", "{filename: %Q, offset: %ld, len: %ld}",
+                     mgos_fs_get_handler, NULL);
+  mg_rpc_add_handler(c, "FS.Put", "{filename: %Q, data: %V, append: %B}",
+                     mgos_fs_put_handler, NULL);
+  mg_rpc_add_handler(c, "FS.Remove", "{filename: %Q}", mgos_fs_remove_handler,
+                     NULL);
   return MGOS_INIT_OK;
 }
 

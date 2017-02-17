@@ -5,12 +5,12 @@
 
 #include "fw/src/mgos_updater_rpc.h"
 
-#include "common/mg_rpc/mg_rpc.h"
 #include "common/cs_dbg.h"
+#include "common/mg_rpc/mg_rpc.h"
 #include "common/mg_str.h"
-#include "fw/src/mgos_rpc.h"
 #include "fw/src/mgos_console.h"
 #include "fw/src/mgos_mongoose.h"
+#include "fw/src/mgos_rpc.h"
 #include "fw/src/mgos_updater_common.h"
 #include "fw/src/mgos_updater_http.h"
 #include "fw/src/mgos_utils.h"
@@ -43,9 +43,8 @@ static void handle_update_req(struct mg_rpc_request_info *ri, void *cb_arg,
     goto clean;
   }
 
-  json_scanf(args.p, args.len,
-             "{section: %T, blob_url: %T, blob_type: %T, commit_timeout: %d}",
-             &section_tok, &blob_url_tok, &blob_type_tok, &commit_timeout);
+  json_scanf(args.p, args.len, ri->args_fmt, &section_tok, &blob_url_tok,
+             &blob_type_tok, &commit_timeout);
 
   /*
    * TODO(alashkin): enable update for another files, not
@@ -129,8 +128,8 @@ static void handle_create_snapshot_req(struct mg_rpc_request_info *ri,
     if (ret >= 0) {
       bool set_as_revert = false;
       int commit_timeout = -1;
-      json_scanf(args.p, args.len, "{set_as_revert: %B, commit_timeout: %d}",
-                 &set_as_revert, &commit_timeout);
+      json_scanf(args.p, args.len, ri->args_fmt, &set_as_revert,
+                 &commit_timeout);
       if (set_as_revert) {
         struct mgos_upd_boot_state bs;
         if (mgos_upd_boot_get_state(&bs)) {
@@ -194,11 +193,8 @@ static void handle_set_boot_state_req(struct mg_rpc_request_info *ri,
   struct mgos_upd_boot_state bs;
   if (mgos_upd_boot_get_state(&bs)) {
     int commit_timeout = -1;
-    if (json_scanf(args.p, args.len,
-                   "{active_slot: %d, is_committed: %B, revert_slot: %d, "
-                   "commit_timeout: %d}",
-                   &bs.active_slot, &bs.is_committed, &bs.revert_slot,
-                   &commit_timeout) > 0) {
+    if (json_scanf(args.p, args.len, ri->args_fmt, &bs.active_slot,
+                   &bs.is_committed, &bs.revert_slot, &commit_timeout) > 0) {
       ret = mgos_upd_boot_set_state(&bs) ? 0 : -3;
       if (ret == 0 && commit_timeout >= 0) {
         ret = mgos_upd_set_commit_timeout(commit_timeout) ? 0 : -4;
@@ -217,14 +213,20 @@ static void handle_set_boot_state_req(struct mg_rpc_request_info *ri,
 void mgos_updater_rpc_init(void) {
   struct mg_rpc *mg_rpc = mgos_rpc_get_global();
   if (mg_rpc == NULL) return;
-  mg_rpc_add_handler(mg_rpc, mg_mk_str("OTA.Update"), handle_update_req, NULL);
-  mg_rpc_add_handler(mg_rpc, mg_mk_str("OTA.Commit"), handle_commit_req, NULL);
-  mg_rpc_add_handler(mg_rpc, mg_mk_str("OTA.Revert"), handle_revert_req, NULL);
-  mg_rpc_add_handler(mg_rpc, mg_mk_str("OTA.CreateSnapshot"),
+  mg_rpc_add_handler(
+      mg_rpc, "OTA.Update",
+      "{section: %T, blob_url: %T, blob_type: %T, commit_timeout: %d}",
+      handle_update_req, NULL);
+  mg_rpc_add_handler(mg_rpc, "OTA.Commit", "", handle_commit_req, NULL);
+  mg_rpc_add_handler(mg_rpc, "OTA.Revert", "", handle_revert_req, NULL);
+  mg_rpc_add_handler(mg_rpc, "OTA.CreateSnapshot",
+                     "{set_as_revert: %B, commit_timeout: %d}",
                      handle_create_snapshot_req, NULL);
-  mg_rpc_add_handler(mg_rpc, mg_mk_str("OTA.GetBootState"),
-                     handle_get_boot_state_req, NULL);
-  mg_rpc_add_handler(mg_rpc, mg_mk_str("OTA.SetBootState"),
+  mg_rpc_add_handler(mg_rpc, "OTA.GetBootState", "", handle_get_boot_state_req,
+                     NULL);
+  mg_rpc_add_handler(mg_rpc, "OTA.SetBootState",
+                     "{active_slot: %d, is_committed: %B, revert_slot: %d, "
+                     "commit_timeout: %d}",
                      handle_set_boot_state_req, NULL);
 }
 

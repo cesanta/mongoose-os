@@ -8,9 +8,9 @@
 #if MGOS_ENABLE_RPC && MGOS_ENABLE_CONFIG_SERVICE
 
 #include "common/mg_str.h"
-#include "fw/src/mgos_rpc.h"
 #include "fw/src/mgos_config.h"
 #include "fw/src/mgos_hal.h"
+#include "fw/src/mgos_rpc.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_utils.h"
 #include "fw/src/mgos_wifi.h"
@@ -18,11 +18,6 @@
 #if CS_PLATFORM == CS_P_ESP8266
 #include "fw/platforms/esp8266/src/esp_gpio.h"
 #endif
-
-#define MGOS_CONFIG_GET_CMD "Config.Get"
-#define MGOS_CONFIG_SET_CMD "Config.Set"
-#define MGOS_CONFIG_GET_NETWORK_STATUS_CMD "Config.GetNetworkStatus"
-#define MGOS_CONFIG_SAVE_CMD "Config.Save"
 
 /* Handler for Config.Get */
 static void mgos_config_get_handler(struct mg_rpc_request_info *ri,
@@ -40,7 +35,7 @@ static void mgos_config_get_handler(struct mg_rpc_request_info *ri,
   mbuf_init(&send_mbuf, 0);
 
   char *key = NULL;
-  json_scanf(args.p, args.len, "{key: %Q}", &key);
+  json_scanf(args.p, args.len, ri->args_fmt, &key);
   if (key != NULL) {
     schema = mgos_conf_find_schema_entry(key, sys_config_schema());
     free(key);
@@ -125,7 +120,7 @@ static void mgos_config_set_handler(struct mg_rpc_request_info *ri,
     return;
   }
 
-  json_scanf(args.p, args.len, "{config: %M}", set_handler, NULL);
+  json_scanf(args.p, args.len, ri->args_fmt, set_handler, NULL);
 
   mg_rpc_send_responsef(ri, NULL);
   ri = NULL;
@@ -158,7 +153,7 @@ static void mgos_config_save_handler(struct mg_rpc_request_info *ri,
     return;
   }
 
-  json_scanf(args.p, args.len, "{reboot: %B}", &reboot);
+  json_scanf(args.p, args.len, ri->args_fmt, &reboot);
 #if CS_PLATFORM == CS_P_ESP8266
   if (reboot && esp_strapping_to_bootloader()) {
     /*
@@ -185,14 +180,14 @@ static void mgos_config_save_handler(struct mg_rpc_request_info *ri,
 
 enum mgos_init_result mgos_service_config_init(void) {
   struct mg_rpc *c = mgos_rpc_get_global();
-  mg_rpc_add_handler(c, mg_mk_str(MGOS_CONFIG_GET_CMD), mgos_config_get_handler,
+  mg_rpc_add_handler(c, "Config.Get", "{key: %Q}", mgos_config_get_handler,
                      NULL);
-  mg_rpc_add_handler(c, mg_mk_str(MGOS_CONFIG_SET_CMD), mgos_config_set_handler,
+  mg_rpc_add_handler(c, "Config.Set", "{config: %M}", mgos_config_set_handler,
                      NULL);
-  mg_rpc_add_handler(c, mg_mk_str(MGOS_CONFIG_GET_NETWORK_STATUS_CMD),
-                     mgos_config_gns_handler, NULL);
-  mg_rpc_add_handler(c, mg_mk_str(MGOS_CONFIG_SAVE_CMD),
-                     mgos_config_save_handler, NULL);
+  mg_rpc_add_handler(c, "Config.GetNetworkStatus", "", mgos_config_gns_handler,
+                     NULL);
+  mg_rpc_add_handler(c, "Config.Save", "{reboot: %B}", mgos_config_save_handler,
+                     NULL);
   return MGOS_INIT_OK;
 }
 

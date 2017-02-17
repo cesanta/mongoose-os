@@ -15,7 +15,7 @@ static void inc_handler(struct mg_rpc_request_info *ri, void *cb_arg,
   mbuf_init(&fb, 20);
 
   int num = 0;
-  if (json_scanf(args.p, args.len, "{num: %d}", &num) == 1) {
+  if (json_scanf(args.p, args.len, ri->args_fmt, &num) == 1) {
     json_printf(&out, "{num: %d}", num + 1);
   } else {
     json_printf(&out, "{error: %Q}", "num is required");
@@ -32,6 +32,6 @@ static void inc_handler(struct mg_rpc_request_info *ri, void *cb_arg,
 
 enum mgos_app_init_result mgos_app_init(void) {
   struct mg_rpc *c = mgos_rpc_get_global();
-  mg_rpc_add_handler(c, mg_mk_str("Example.Increment"), inc_handler, NULL);
+  mg_rpc_add_handler(c, "Example.Increment", "{num: %d}", inc_handler, NULL);
   return MGOS_APP_INIT_SUCCESS;
 }

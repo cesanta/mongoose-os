@@ -13,7 +13,7 @@ static void gpio_read_handler(struct mg_rpc_request_info *ri, void *cb_arg,
                               struct mg_rpc_frame_info *fi,
                               struct mg_str args) {
   int pin, value;
-  if (json_scanf(args.p, args.len, "{pin: %d}", &pin) != 1) {
+  if (json_scanf(args.p, args.len, ri->args_fmt, &pin) != 1) {
     mg_rpc_send_errorf(ri, 400, "pin is required");
     ri = NULL;
     return;
@@ -34,7 +34,7 @@ static void gpio_write_handler(struct mg_rpc_request_info *ri, void *cb_arg,
                                struct mg_rpc_frame_info *fi,
                                struct mg_str args) {
   int pin, value;
-  if (json_scanf(args.p, args.len, "{pin: %d, value: %d}", &pin, &value) != 2) {
+  if (json_scanf(args.p, args.len, ri->args_fmt, &pin, &value) != 2) {
     mg_rpc_send_errorf(ri, 400, "pin and value are required");
     ri = NULL;
     return;
@@ -60,7 +60,7 @@ static void gpio_toggle_handler(struct mg_rpc_request_info *ri, void *cb_arg,
                                 struct mg_rpc_frame_info *fi,
                                 struct mg_str args) {
   int pin, value;
-  if (json_scanf(args.p, args.len, "{pin: %d}", &pin) != 1) {
+  if (json_scanf(args.p, args.len, ri->args_fmt, &pin) != 1) {
     mg_rpc_send_errorf(ri, 400, "pin is required");
     ri = NULL;
     return;
@@ -125,10 +125,8 @@ static void gpio_set_int_handler(struct mg_rpc_request_info *ri, void *cb_arg,
   int pin = -1, debounce_ms = 0;
   struct json_token edge = JSON_INVALID_TOKEN, pull = JSON_INVALID_TOKEN,
                     dst = JSON_INVALID_TOKEN, method = JSON_INVALID_TOKEN;
-  json_scanf(
-      args.p, args.len,
-      "{pin: %d, edge: %T, pull: %T, debounce_ms: %d, dst: %T, method: %T}",
-      &pin, &edge, &pull, &debounce_ms, &dst, &method);
+  json_scanf(args.p, args.len, ri->args_fmt, &pin, &edge, &pull, &debounce_ms,
+             &dst, &method);
   if (pin < 0 || edge.len == 0) {
     err = "pin and edge are required";
     goto out_err;
@@ -207,7 +205,7 @@ static void gpio_rm_int_handler(struct mg_rpc_request_info *ri, void *cb_arg,
                                 struct mg_rpc_frame_info *fi,
                                 struct mg_str args) {
   int pin;
-  if (json_scanf(args.p, args.len, "{pin: %d}", &pin) != 1) {
+  if (json_scanf(args.p, args.len, ri->args_fmt, &pin) != 1) {
     mg_rpc_send_errorf(ri, 400, "pin is required");
     ri = NULL;
     return;
@@ -227,12 +225,15 @@ static void gpio_rm_int_handler(struct mg_rpc_request_info *ri, void *cb_arg,
 
 enum mgos_init_result mgos_gpio_service_init(void) {
   struct mg_rpc *c = mgos_rpc_get_global();
-  mg_rpc_add_handler(c, mg_mk_str("GPIO.Read"), gpio_read_handler, NULL);
-  mg_rpc_add_handler(c, mg_mk_str("GPIO.Write"), gpio_write_handler, NULL);
-  mg_rpc_add_handler(c, mg_mk_str("GPIO.Toggle"), gpio_toggle_handler, NULL);
-  mg_rpc_add_handler(c, mg_mk_str("GPIO.SetIntHandler"), gpio_set_int_handler,
-                     NULL);
-  mg_rpc_add_handler(c, mg_mk_str("GPIO.RemoveIntHandler"), gpio_rm_int_handler,
-                     NULL);
+  mg_rpc_add_handler(c, "GPIO.Read", "{pin: %d}", gpio_read_handler, NULL);
+  mg_rpc_add_handler(c, "GPIO.Write", "{pin: %d, value: %d}",
+                     gpio_write_handler, NULL);
+  mg_rpc_add_handler(c, "GPIO.Toggle", "{pin: %d}", gpio_toggle_handler, NULL);
+  mg_rpc_add_handler(
+      c, "GPIO.SetIntHandler",
+      "{pin: %d, edge: %T, pull: %T, debounce_ms: %d, dst: %T, method: %T}",
+      gpio_set_int_handler, NULL);
+  mg_rpc_add_handler(c, "GPIO.RemoveIntHandler", "{pin: %d}",
+                     gpio_rm_int_handler, NULL);
   return MGOS_INIT_OK;
 }
