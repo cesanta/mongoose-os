@@ -8,6 +8,16 @@ Targeting commercial connected products:
 - embedded JavaScript engine for quick proof of concepts / prototypes;
 - available for ESP8266, ESP32, TI CC3200, STM32.
 
+Mongoose OS benefits:
+- Shorter time to market at optimal cost;
+- Secure, trusted and verified by leading companies;
+- Reliable infrastructure for commercial products.
+
+Trusted and Recommended By:
+- Amazon AWS - [Amazon AWS Technology Partner](https://aws.amazon.com/partners/find/partnerdetails/?id=0010L00001jQCb5QAG)
+- Texas Instruments - [an official partner of Texas Instruments](http://www.ti.com/ww/en/internet_of_things/iot-cloudsolution.html)
+- Espressif Systems - [an official partner of Espressif Systems](http://espressif.com/en/ecosystem/cloud-platform)
+
 # Support
 - [Mongoose OS Documentation](https://mongoose-os.com/docs/#/overview/)
 - [Support Forum - ask your technical questions here] (http://forum.cesanta.com/index.php?p=/categories/mongoose-os)
