@@ -10,50 +10,60 @@
       "MaxLength": "2048",
       "ConstraintDescription": "must contain only alphanumberic characters and underscores"
     },
-    "ReadCapacityUnits": {
-      "Description": "Provisioned read throughput",
-      "Type": "Number",
-      "Default": "5",
-      "MinValue": "5",
-      "MaxValue": "10000",
-      "ConstraintDescription": "must be between 5 and 10000"
-    },
-    "WriteCapacityUnits": {
-      "Description": "Provisioned write throughput",
-      "Type": "Number",
-      "Default": "10",
-      "MinValue": "5",
-      "MaxValue": "10000",
-      "ConstraintDescription": "must be between 5 and 10000"
+    "SubscriptionEmail": {
+      "Description": "Subscription Email",
+      "Type": "String",
+      "AllowedPattern": ".+",
+      "MinLength": "1",
+      "MaxLength": "2048"
     }
   },
   "Resources": {
-    "myDynamoDBTable": {
-      "Type": "AWS::DynamoDB::Table",
+    "mySNSTopic": {
+      "Type": "AWS::SNS::Topic",
       "Properties": {
-        "AttributeDefinitions": [
+        "Subscription": [
           {
-            "AttributeName": "myid",
-            "AttributeType": "S"
+            "Protocol": "email",
+            "Endpoint": {"Ref": "SubscriptionEmail"}
           }
-        ],
-        "KeySchema": [
-          {
-            "AttributeName": "myid",
-            "KeyType": "HASH"
-          }
-        ],
-        "ProvisionedThroughput": {
-          "ReadCapacityUnits": {
-            "Ref": "ReadCapacityUnits"
-          },
-          "WriteCapacityUnits": {
-            "Ref": "WriteCapacityUnits"
-          }
-        }
+        ]
       }
     },
-    "myDynamoRole": {
+    "myLambda": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "ZipFile": {
+            "Fn::Join": ["\n", [
+              "var AWS = require('aws-sdk');",
+              "",
+              "exports.handler = (event, context, callback) => {",
+              {"Fn::Join": ["", ["    var message = 'Button pressed: ", { "Ref": "TopicName" }, "';"]]},
+              "    var sns = new AWS.SNS();",
+              "    sns.publish({",
+              {"Fn::Join": ["", ["        TopicArn: '", { "Ref": "mySNSTopic" }, "',"]]},
+              "        Message: JSON.stringify(message)",
+              "    }, function(err, data) {",
+              "        if(err) {",
+              "            console.error('error publishing to SNS');",
+              "            context.fail(err);",
+              "        } else {",
+              "            console.info('message published to SNS');",
+              "            context.succeed();",
+              "        }",
+              "    });",
+              "};",
+              ""
+            ]]
+          }
+        },
+        "Handler": "index.handler",
+        "Runtime": "nodejs4.3",
+        "Role": {"Fn::GetAtt": ["myLambdaRoleWhichAllowsCallingSNS", "Arn"]}
+      }
+    },
+    "myLambdaRoleWhichAllowsCallingSNS": {
       "Type": "AWS::IAM::Role",
       "Properties": {
         "AssumeRolePolicyDocument": {
@@ -61,7 +71,7 @@
           "Statement": [ {
             "Effect": "Allow",
             "Principal": {
-              "Service": [ "iot.amazonaws.com" ]
+              "Service": [ "lambda.amazonaws.com" ]
             },
             "Action": [ "sts:AssumeRole" ]
           } ]
@@ -69,24 +79,13 @@
         "Path": "/",
         "Policies": [
           {
-            "PolicyName": "allow-put-item",
+            "PolicyName": "allow-call-sns",
             "PolicyDocument": {
               "Version" : "2012-10-17",
               "Statement": [ {
                 "Effect": "Allow",
-                "Action": "dynamodb:PutItem",
-                "Resource": {
-                  "Fn::Join": [
-                    "", [
-                      "arn:aws:dynamodb:",
-                      { "Ref": "AWS::Region" },
-                      ":",
-                      { "Ref": "AWS::AccountId" },
-                      ":table/",
-                      { "Ref": "myDynamoDBTable" }
-                    ]
-                  ]
-                }
+                "Action": "sns:Publish",
+                "Resource": { "Ref": "mySNSTopic" }
               } ]
             }
           }
@@ -103,32 +102,36 @@
           },
           "Actions": [
             {
-              "DynamoDB": {
-                "TableName": {"Ref": "myDynamoDBTable"},
-                "HashKeyField": "myid",
-                "HashKeyValue": "${timestamp()}",
-                "RangeKeyField": "timestamp",
-                "RangeKeyValue": "${timestamp()}",
-                "RoleArn": {"Fn::GetAtt": ["myDynamoRole", "Arn"]}
+              "Lambda": {
+                "FunctionArn": {"Fn::GetAtt": ["myLambda", "Arn"]}
               }
             }
+          ]
+        }
+      }
+    },
+    "myPermissionForTopicRuleToInvokeLambda": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": {"Fn::GetAtt": ["myLambda", "Arn"]},
+        "Principal": "iot.amazonaws.com",
+        "SourceAccount": {"Ref": "AWS::AccountId"},
+        "SourceArn": {
+          "Fn::Join": [
+            "", [
+              "arn:aws:iot:",
+              { "Ref": "AWS::Region" },
+              ":",
+              { "Ref": "AWS::AccountId" },
+              ":rule/",
+              { "Ref": "myTopicRule" }
+            ]
           ]
         }
       }
     }
   },
   "Outputs": {
-    "TableName": {
-      "Value": {
-        "Ref": "myDynamoDBTable"
-      },
-      "Description": "Table name of the newly created DynamoDB table"
-    },
-    "RuleName": {
-      "Value": {
-        "Ref": "myTopicRule"
-      },
-      "Description": "Name of the newly created topic rule"
-    }
   }
 }
