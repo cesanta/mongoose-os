@@ -28,7 +28,6 @@ cc_library(
         "platforms/simplelink/cs_simplelink.h",
     ],
     defines = ["c_strnlen=strnlen"],
-    deps = ["//common/segstack"],
 )
 
 cc_library(
