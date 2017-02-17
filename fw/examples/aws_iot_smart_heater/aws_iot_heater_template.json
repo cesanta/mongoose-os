@@ -1,0 +1,134 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Description": "AWS IoT Smart Heater Template",
+  "Parameters": {
+    "TopicName": {
+      "Description": "IoT Topic Name",
+      "Type": "String",
+      "AllowedPattern": "[a-zA-Z0-9_/#+]*",
+      "MinLength": "1",
+      "MaxLength": "2048",
+      "ConstraintDescription": "must contain only alphanumberic characters and underscores"
+    },
+    "ReadCapacityUnits": {
+      "Description": "Provisioned read throughput",
+      "Type": "Number",
+      "Default": "5",
+      "MinValue": "5",
+      "MaxValue": "10000",
+      "ConstraintDescription": "must be between 5 and 10000"
+    },
+    "WriteCapacityUnits": {
+      "Description": "Provisioned write throughput",
+      "Type": "Number",
+      "Default": "10",
+      "MinValue": "5",
+      "MaxValue": "10000",
+      "ConstraintDescription": "must be between 5 and 10000"
+    }
+  },
+  "Resources": {
+    "myDynamoDBTable": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "myid",
+            "AttributeType": "S"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "myid",
+            "KeyType": "HASH"
+          }
+        ],
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": {
+            "Ref": "ReadCapacityUnits"
+          },
+          "WriteCapacityUnits": {
+            "Ref": "WriteCapacityUnits"
+          }
+        }
+      }
+    },
+    "myDynamoRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version" : "2012-10-17",
+          "Statement": [ {
+            "Effect": "Allow",
+            "Principal": {
+              "Service": [ "iot.amazonaws.com" ]
+            },
+            "Action": [ "sts:AssumeRole" ]
+          } ]
+        },
+        "Path": "/",
+        "Policies": [
+          {
+            "PolicyName": "allow-put-item",
+            "PolicyDocument": {
+              "Version" : "2012-10-17",
+              "Statement": [ {
+                "Effect": "Allow",
+                "Action": "dynamodb:PutItem",
+                "Resource": {
+                  "Fn::Join": [
+                    "", [
+                      "arn:aws:dynamodb:",
+                      { "Ref": "AWS::Region" },
+                      ":",
+                      { "Ref": "AWS::AccountId" },
+                      ":table/",
+                      { "Ref": "myDynamoDBTable" }
+                    ]
+                  ]
+                }
+              } ]
+            }
+          }
+        ]
+      }
+    },
+    "myTopicRule": {
+      "Type": "AWS::IoT::TopicRule",
+      "Properties": {
+        "TopicRulePayload": {
+          "RuleDisabled": "false",
+          "Sql": {
+            "Fn::Join" : [ "", ["SELECT * FROM '", { "Ref": "TopicName" }, "'"] ]
+          },
+          "Actions": [
+            {
+              "DynamoDB": {
+                "TableName": {"Ref": "myDynamoDBTable"},
+                "HashKeyField": "myid",
+                "HashKeyValue": "${timestamp()}",
+                "RangeKeyField": "timestamp",
+                "RangeKeyValue": "${timestamp()}",
+                "RoleArn": {"Fn::GetAtt": ["myDynamoRole", "Arn"]}
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "Outputs": {
+    "TableName": {
+      "Value": {
+        "Ref": "myDynamoDBTable"
+      },
+      "Description": "Table name of the newly created DynamoDB table"
+    },
+    "RuleName": {
+      "Value": {
+        "Ref": "myTopicRule"
+      },
+      "Description": "Name of the newly created topic rule"
+    }
+  }
+}
