@@ -4661,7 +4661,9 @@ Disassembly of section .text:
 40002e56:	f00d      	ret.n
 40002e58:	002e24        	excw
 40002e5b:	fe0040        	excw
-40002e5e:	ef          	.byte 0xef
+
+40002e5c <_c_0x3feffe00>:
+40002e5c:	effe00        	excw
 40002e5f:	3f          	.byte 0x3f
 40002e60:	2e3c      	movi.n	a14, 50
 40002e62:	c04000        	sub	a4, a0, a0
@@ -4678,7 +4680,7 @@ Disassembly of section .text:
 40002e7a:	0049      	s32i.n	a4, a0, 0
 40002e7c:	fe1085        	call0	40000f88 <ets_isr_attach>
 40002e7f:	440c      	movi.n	a4, 4
-40002e81:	fff631        	l32r	a3, 40002e5c <ets_timer_handler_isr+0xb4>
+40002e81:	fff631        	l32r	a3, 40002e5c <_c_0x3feffe00>
 40002e84:	0020c0        	memw
 40002e87:	812322        	l32i	a2, a3, 0x204
 40002e8a:	f03d      	nop.n
@@ -4687,9 +4689,9 @@ Disassembly of section .text:
 40002e92:	816322        	s32i	a2, a3, 0x204
 40002e95:	00a422        	movi	a2, 0x400
 40002e98:	fe10c5        	call0	40000fa8 <ets_isr_unmask>
-40002e9b:	fff121        	l32r	a2, 40002e60 <ets_timer_handler_isr+0xb8>
+40002e9b:	fff121        	l32r	a2, 40002e60 <_c_0x3feffe00+0x4>
 40002e9e:	f31c      	movi.n	a3, 31
-40002ea0:	fff141        	l32r	a4, 40002e64 <ets_timer_handler_isr+0xbc>
+40002ea0:	fff141        	l32r	a4, 40002e64 <_c_0x3feffe00+0x8>
 40002ea3:	450c      	movi.n	a5, 4
 40002ea5:	fdf285        	call0	40000dd0 <ets_task>
 40002ea8:	f8ad61        	l32r	a6, 4000115c <_c_0x60000600>
@@ -4741,9 +4743,11 @@ Disassembly of section .text:
 40002f0c:	ffef21        	l32r	a2, 40002ec8 <ets_timer_init+0x60>
 40002f0f:	0228      	l32i.n	a2, a2, 0
 40002f11:	f00d      	ret.n
-40002f13:	322600        	excw
-40002f16:	0e          	.byte 0xe
-40002f17:	0f6226        	beqi	a2, 6, 40002f2a <ets_get_cpu_frequency+0x1e>
+	...
+
+40002f14 <_x_wdt_interval>:
+40002f14:	0e3226        	beqi	a2, 3, 40002f26 <_x_wdt_interval+0x12>
+40002f17:	0f6226        	beqi	a2, 6, 40002f2a <_x_wdt_interval+0x16>
 40002f1a:	f4c242        	addi	a4, a2, -12
 40002f1d:	d30c      	movi.n	a3, 13
 40002f1f:	020c      	movi.n	a2, 0
@@ -4753,26 +4757,37 @@ Disassembly of section .text:
 40002f28:	f00d      	ret.n
 40002f2a:	c20c      	movi.n	a2, 12
 40002f2c:	f00d      	ret.n
-40002f2e:	080000        	excw
-40002f31:	3fffc7        	bbsi	a15, 28, 40002f74 <ets_wdt_get_mode+0x40>
+	...
+
+40002f30 <_p_wdt_cfg>:
+40002f30:	c708      	l32i.n	a0, a7, 48
+40002f32:	ff          	.byte 0xff
+40002f33:	3f          	.byte 0x3f
 
 40002f34 <ets_wdt_get_mode>:
-40002f34:	ffff21        	l32r	a2, 40002f30 <ets_get_cpu_frequency+0x24>
+40002f34:	ffff21        	l32r	a2, 40002f30 <_p_wdt_cfg>
 40002f37:	0228      	l32i.n	a2, a2, 0
 40002f39:	f00d      	ret.n
-40002f3b:	c11200        	mul16u	a1, a2, a0
-40002f3e:	0109f0        	slli	a0, a9, 17
+	...
+
+40002f3c <_wdt_soft_timer_fn2>:
+40002f3c:	f0c112        	addi	a1, a1, -16
+40002f3f:	0109      	s32i.n	a0, a1, 0
 40002f41:	ffff05        	call0	40002f34 <ets_wdt_get_mode>
 40002f44:	73a042        	movi	a4, 115
 40002f47:	f88501        	l32r	a0, 4000115c <_c_0x60000600>
-40002f4a:	121226        	beqi	a2, 1, 40002f60 <ets_wdt_get_mode+0x2c>
-40002f4d:	082266        	bnei	a2, 2, 40002f59 <ets_wdt_get_mode+0x25>
+40002f4a:	121226        	beqi	a2, 1, 40002f60 <_l_wdt_soft_timer_fn2_feed>
+40002f4d:	082266        	bnei	a2, 2, 40002f59 <_l_wdt_soft_timer_fn2_exit>
 40002f50:	0020c0        	memw
 40002f53:	c42022        	l32i	a2, a0, 0x310
-40002f56:	1a1226        	beqi	a2, 1, 40002f74 <ets_wdt_get_mode+0x40>
+40002f56:	1a1226        	beqi	a2, 1, 40002f74 <_l_wdt_soft_timer_fn2_mode2_stage1_feed>
+
+40002f59 <_l_wdt_soft_timer_fn2_exit>:
 40002f59:	0108      	l32i.n	a0, a1, 0
 40002f5b:	10c112        	addi	a1, a1, 16
 40002f5e:	f00d      	ret.n
+
+40002f60 <_l_wdt_soft_timer_fn2_feed>:
 40002f60:	0020c0        	memw
 40002f63:	c56042        	s32i	a4, a0, 0x314
 40002f66:	0020c0        	memw
@@ -4780,22 +4795,33 @@ Disassembly of section .text:
 40002f6c:	0108      	l32i.n	a0, a1, 0
 40002f6e:	10c112        	addi	a1, a1, 16
 40002f71:	f00d      	ret.n
-40002f73:	20c000        	or	a12, a0, a0
-40002f76:	604200        	excw
-40002f79:	20c0c6        	j	4000b280 <SHA1Transform+0xf1c>
-40002f7c:	604200        	excw
-40002f7f:	0108c5        	call0	4000400c <SelectSpiFunction+0xb4>
+	...
+
+40002f74 <_l_wdt_soft_timer_fn2_mode2_stage1_feed>:
+40002f74:	0020c0        	memw
+40002f77:	c66042        	s32i	a4, a0, 0x318
+40002f7a:	0020c0        	memw
+40002f7d:	c56042        	s32i	a4, a0, 0x314
+40002f80:	0108      	l32i.n	a0, a1, 0
 40002f82:	10c112        	addi	a1, a1, 16
 40002f85:	f00d      	ret.n
-40002f87:	c11200        	mul16u	a1, a2, a0
-40002f8a:	0109f0        	slli	a0, a9, 17
-40002f8d:	fffac5        	call0	40002f3c <ets_wdt_get_mode+0x8>
+	...
+
+40002f88 <_wdt_soft_timer_fn>:
+40002f88:	f0c112        	addi	a1, a1, -16
+40002f8b:	0109      	s32i.n	a0, a1, 0
+40002f8d:	fffac5        	call0	40002f3c <_wdt_soft_timer_fn2>
 40002f90:	0108      	l32i.n	a0, a1, 0
 40002f92:	10c112        	addi	a1, a1, 16
 40002f95:	f00d      	ret.n
-40002f97:	2f8800        	excw
+	...
+
+40002f98 <_p_wdt_soft_timer_fn>:
+40002f98:	2f88      	l32i.n	a8, a15, 8
 40002f9a:	e04000        	subx4	a4, a0, a0
-40002f9d:	ffdd      	excw
+
+40002f9c <_p_wdt_soft_timer>:
+40002f9c:	ffdde0        	excw
 40002f9f:	3f          	.byte 0x3f
 
 40002fa0 <ets_wdt_enable>:
@@ -4805,14 +4831,16 @@ Disassembly of section .text:
 40002fa7:	31e9      	s32i.n	a14, a1, 12
 40002fa9:	11c9      	s32i.n	a12, a1, 4
 40002fab:	03ed      	mov.n	a14, a3
-40002fad:	ffe031        	l32r	a3, 40002f30 <ets_get_cpu_frequency+0x24>
+40002fad:	ffe031        	l32r	a3, 40002f30 <_p_wdt_cfg>
 40002fb0:	02cd      	mov.n	a12, a2
 40002fb2:	002302        	l32i	a0, a3, 0
 40002fb5:	20d440        	or	a13, a4, a4
-40002fb8:	082066        	bnei	a0, 2, 40002fc4 <ets_wdt_enable+0x24>
+40002fb8:	082066        	bnei	a0, 2, 40002fc4 <_l_skip_wdt_imask>
 40002fbb:	00a122        	movi	a2, 0x100
 40002fbe:	fdfd85        	call0	40000f98 <ets_isr_mask>
-40002fc1:	ffdb31        	l32r	a3, 40002f30 <ets_get_cpu_frequency+0x24>
+40002fc1:	ffdb31        	l32r	a3, 40002f30 <_p_wdt_cfg>
+
+40002fc4 <_l_skip_wdt_imask>:
 40002fc4:	23d9      	s32i.n	a13, a3, 8
 40002fc6:	13e9      	s32i.n	a14, a3, 4
 40002fc8:	e67c      	movi.n	a6, -2
@@ -4823,10 +4851,12 @@ Disassembly of section .text:
 40002fd6:	0020c0        	memw
 40002fd9:	c06052        	s32i	a5, a0, 0x300
 40002fdc:	4c0b      	addi.n	a4, a12, -1
-40002fde:	0ba416        	beqz	a4, 4000309c <ets_wdt_enable+0xfc>
-40002fe1:	252c26        	beqi	a12, 2, 4000300a <ets_wdt_enable+0x6a>
-40002fe4:	224c26        	beqi	a12, 4, 4000300a <ets_wdt_enable+0x6a>
-40002fe7:	753c26        	beqi	a12, 3, 40003060 <ets_wdt_enable+0xc0>
+40002fde:	0ba416        	beqz	a4, 4000309c <_l_wdt_mode_1>
+40002fe1:	252c26        	beqi	a12, 2, 4000300a <_l_wdt_mode_2_4>
+40002fe4:	224c26        	beqi	a12, 4, 4000300a <_l_wdt_mode_2_4>
+40002fe7:	753c26        	beqi	a12, 3, 40003060 <_l_wdt_mode_3>
+
+40002fea <_l_wdt_enable_and_exit>:
 40002fea:	180c      	movi.n	a8, 1
 40002fec:	0020c0        	memw
 40002fef:	c02072        	l32i	a7, a0, 0x300
@@ -4840,19 +4870,21 @@ Disassembly of section .text:
 40003003:	0108      	l32i.n	a0, a1, 0
 40003005:	10c112        	addi	a1, a1, 16
 40003008:	f00d      	ret.n
+
+4000300a <_l_wdt_mode_2_4>:
 4000300a:	38a092        	movi	a9, 56
 4000300d:	0020c0        	memw
 40003010:	f853a1        	l32r	a10, 4000115c <_c_0x60000600>
 40003013:	202ee0        	or	a2, a14, a14
 40003016:	c06a92        	s32i	a9, a10, 0x300
-40003019:	ffef85        	call0	40002f14 <ets_get_cpu_frequency+0x8>
-4000301c:	ffc531        	l32r	a3, 40002f30 <ets_get_cpu_frequency+0x24>
+40003019:	ffef85        	call0	40002f14 <_x_wdt_interval>
+4000301c:	ffc531        	l32r	a3, 40002f30 <_p_wdt_cfg>
 4000301f:	0020c0        	memw
 40003022:	f84e01        	l32r	a0, 4000115c <_c_0x60000600>
 40003025:	c16022        	s32i	a2, a0, 0x304
 40003028:	0020c0        	memw
 4000302b:	c26022        	s32i	a2, a0, 0x308
-4000302e:	b82c66        	bnei	a12, 2, 40002fea <ets_wdt_enable+0x4a>
+4000302e:	b82c66        	bnei	a12, 2, 40002fea <_l_wdt_enable_and_exit>
 40003031:	00a122        	movi	a2, 0x100
 40003034:	fdf705        	call0	40000fa8 <ets_isr_unmask>
 40003037:	01a002        	movi	a0, 1
@@ -4863,21 +4895,23 @@ Disassembly of section .text:
 40003046:	0020c0        	memw
 40003049:	0108      	l32i.n	a0, a1, 0
 4000304b:	c06ed2        	s32i	a13, a14, 0x300
-4000304e:	ffb8b1        	l32r	a11, 40002f30 <ets_get_cpu_frequency+0x24>
+4000304e:	ffb8b1        	l32r	a11, 40002f30 <_p_wdt_cfg>
 40003051:	21d8      	l32i.n	a13, a1, 8
 40003053:	0bc9      	s32i.n	a12, a11, 0
 40003055:	31e8      	l32i.n	a14, a1, 12
 40003057:	11c8      	l32i.n	a12, a1, 4
 40003059:	10c112        	addi	a1, a1, 16
 4000305c:	f00d      	ret.n
-4000305e:	c00000        	sub	a0, a0, a0
-40003061:	310020        	srai	a0, a2, 16
-40003064:	3e          	.byte 0x3e
-40003065:	3cf8      	l32i.n	a15, a12, 12
-40003067:	6322c2        	l32i	a12, a2, 0x18c
-4000306a:	0d2dc0        	excw
-4000306d:	ffea45        	call0	40002f14 <ets_get_cpu_frequency+0x8>
-40003070:	ffb031        	l32r	a3, 40002f30 <ets_get_cpu_frequency+0x24>
+	...
+
+40003060 <_l_wdt_mode_3>:
+40003060:	0020c0        	memw
+40003063:	f83e31        	l32r	a3, 4000115c <_c_0x60000600>
+40003066:	c23c      	movi.n	a2, 60
+40003068:	c06322        	s32i	a2, a3, 0x300
+4000306b:	0d2d      	mov.n	a2, a13
+4000306d:	ffea45        	call0	40002f14 <_x_wdt_interval>
+40003070:	ffb031        	l32r	a3, 40002f30 <_p_wdt_cfg>
 40003073:	0020c0        	memw
 40003076:	f83901        	l32r	a0, 4000115c <_c_0x60000600>
 40003079:	c16022        	s32i	a2, a0, 0x304
@@ -4894,11 +4928,13 @@ Disassembly of section .text:
 40003095:	0108      	l32i.n	a0, a1, 0
 40003097:	10c112        	addi	a1, a1, 16
 4000309a:	f00d      	ret.n
-4000309c:	ffbf31        	l32r	a3, 40002f98 <ets_wdt_get_mode+0x64>
-4000309f:	ffbf21        	l32r	a2, 40002f9c <ets_wdt_get_mode+0x68>
+
+4000309c <_l_wdt_mode_1>:
+4000309c:	ffbf31        	l32r	a3, 40002f98 <_p_wdt_soft_timer_fn>
+4000309f:	ffbf21        	l32r	a2, 40002f9c <_p_wdt_soft_timer>
 400030a2:	00a042        	movi	a4, 0
 400030a5:	ffba05        	call0	40002c48 <ets_timer_setfn>
-400030a8:	ffbd21        	l32r	a2, 40002f9c <ets_wdt_get_mode+0x68>
+400030a8:	ffbd21        	l32r	a2, 40002f9c <_p_wdt_soft_timer>
 400030ab:	413ae0        	srli	a3, a14, 10
 400030ae:	01a042        	movi	a4, 1
 400030b1:	ffc105        	call0	40002cc4 <ets_timer_arm>
@@ -4907,7 +4943,7 @@ Disassembly of section .text:
 400030b9:	f828e1        	l32r	a14, 4000115c <_c_0x60000600>
 400030bc:	c43c      	movi.n	a4, 60
 400030be:	c06e42        	s32i	a4, a14, 0x300
-400030c1:	ffe505        	call0	40002f14 <ets_get_cpu_frequency+0x8>
+400030c1:	ffe505        	call0	40002f14 <_x_wdt_interval>
 400030c4:	0020c0        	memw
 400030c7:	c16e22        	s32i	a2, a14, 0x304
 400030ca:	170c      	movi.n	a7, 1
@@ -4917,7 +4953,7 @@ Disassembly of section .text:
 400030d5:	0020c0        	memw
 400030d8:	0108      	l32i.n	a0, a1, 0
 400030da:	21d8      	l32i.n	a13, a1, 8
-400030dc:	ff9551        	l32r	a5, 40002f30 <ets_get_cpu_frequency+0x24>
+400030dc:	ff9551        	l32r	a5, 40002f30 <_p_wdt_cfg>
 400030df:	c06e62        	s32i	a6, a14, 0x300
 400030e2:	05c9      	s32i.n	a12, a5, 0
 400030e4:	31e8      	l32i.n	a14, a1, 12
@@ -4931,7 +4967,7 @@ Disassembly of section .text:
 400030f2:	f0c112        	addi	a1, a1, -16
 400030f5:	0109      	s32i.n	a0, a1, 0
 400030f7:	11c9      	s32i.n	a12, a1, 4
-400030f9:	ff8d21        	l32r	a2, 40002f30 <ets_get_cpu_frequency+0x24>
+400030f9:	ff8d21        	l32r	a2, 40002f30 <_p_wdt_cfg>
 400030fc:	f81841        	l32r	a4, 4000115c <_c_0x60000600>
 400030ff:	02c8      	l32i.n	a12, a2, 0
 40003101:	0020c0        	memw
@@ -4971,7 +5007,7 @@ Disassembly of section .text:
 40003158:	f0c112        	addi	a1, a1, -16
 4000315b:	0109      	s32i.n	a0, a1, 0
 4000315d:	828c      	beqz.n	a2, 40003169 <ets_wdt_restore+0x11>
-4000315f:	ff7441        	l32r	a4, 40002f30 <ets_get_cpu_frequency+0x24>
+4000315f:	ff7441        	l32r	a4, 40002f30 <_p_wdt_cfg>
 40003162:	1438      	l32i.n	a3, a4, 4
 40003164:	2448      	l32i.n	a4, a4, 8
 40003166:	ffe385        	call0	40002fa0 <ets_wdt_enable>
@@ -4988,13 +5024,13 @@ Disassembly of section .text:
 4000317f:	c02202        	l32i	a0, a2, 0x300
 40003182:	100030        	and	a0, a0, a3
 40003185:	0020c0        	memw
-40003188:	ff8431        	l32r	a3, 40002f98 <ets_wdt_get_mode+0x64>
+40003188:	ff8431        	l32r	a3, 40002f98 <_p_wdt_soft_timer_fn>
 4000318b:	c06202        	s32i	a0, a2, 0x300
 4000318e:	00a042        	movi	a4, 0
 40003191:	820c      	movi.n	a2, 8
 40003193:	fddf45        	call0	40000f88 <ets_isr_attach>
 40003196:	160c      	movi.n	a6, 1
-40003198:	ff3151        	l32r	a5, 40002e5c <ets_timer_handler_isr+0xb4>
+40003198:	ff3151        	l32r	a5, 40002e5c <_c_0x3feffe00>
 4000319b:	0020c0        	memw
 4000319e:	812542        	l32i	a4, a5, 0x204
 400031a1:	204460        	or	a4, a4, a6
@@ -6977,7 +7013,7 @@ Disassembly of section .text:
 4000448c <Wait_SPI_Idle>:
 4000448c:	f0c112        	addi	a1, a1, -16
 4000448f:	1109      	s32i.n	a0, a1, 4
-40004491:	fa7201        	l32r	a0, 40002e5c <ets_timer_handler_isr+0xb4>
+40004491:	fa7201        	l32r	a0, 40002e5c <_c_0x3feffe00>
 40004494:	0020c0        	memw
 40004497:	832032        	l32i	a3, a0, 0x20c
 4000449a:	086397        	bbci	a3, 9, 400044a6 <Wait_SPI_Idle+0x1a>
@@ -7179,7 +7215,7 @@ Disassembly of section .text:
 
 40004678 <Cache_Read_Enable>:
 40004678:	00a182        	movi	a8, 0x100
-4000467b:	f9f871        	l32r	a7, 40002e5c <ets_timer_handler_isr+0xb4>
+4000467b:	f9f871        	l32r	a7, 40002e5c <_c_0x3feffe00>
 4000467e:	0020c0        	memw
 40004681:	832752        	l32i	a5, a7, 0x20c
 40004684:	ffae62        	movi	a6, 0xfffffeff
@@ -7309,7 +7345,7 @@ Disassembly of section .text:
 400047ed:	000000        	ill
 
 400047f0 <Cache_Read_Disable>:
-400047f0:	f99b31        	l32r	a3, 40002e5c <ets_timer_handler_isr+0xb4>
+400047f0:	f99b31        	l32r	a3, 40002e5c <_c_0x3feffe00>
 400047f3:	0020c0        	memw
 400047f6:	832322        	l32i	a2, a3, 0x20c
 400047f9:	ffae42        	movi	a4, 0xfffffeff

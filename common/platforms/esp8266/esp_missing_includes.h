@@ -20,9 +20,6 @@ void Cache_Read_Disable_2();
 void Cache_Read_Enable_2();
 int SPIEraseBlock(uint32_t block);
 
-void ets_wdt_disable(void);
-void ets_wdt_enable(void);
-
 #ifndef RTOS_SDK
 
 #include <ets_sys.h>
@@ -38,6 +35,12 @@ void ets_timer_setfn(ETSTimer *t, ETSTimerFunc *fn, void *parg);
 void ets_delay_us(unsigned us);
 void system_restart_local(void);
 int os_printf_plus(const char *format, ...);
+
+void ets_wdt_init(void);
+void ets_wdt_enable(uint32_t mode, uint32_t arg1, uint32_t arg2);
+void ets_wdt_disable(void);
+void ets_wdt_restore(uint32_t mode);
+uint32_t ets_wdt_get_mode(void);
 
 void _xtos_set_exception_handler();
 void xthal_set_intenable(unsigned);
