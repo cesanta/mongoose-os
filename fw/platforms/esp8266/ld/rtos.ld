@@ -163,7 +163,7 @@ SECTIONS
     _stext = .;
     _text_start = ABSOLUTE(.);
     *(.OurVectors.text)
-    . = 0x200;
+    . = ALIGN (4);
     *(.DebugExceptionVector.text)
     *(.NMIExceptionVector.text)
     *(.KernelExceptionVector.text)

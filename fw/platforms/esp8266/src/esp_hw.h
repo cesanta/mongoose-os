@@ -17,6 +17,4 @@
     r;                                                  \
   })
 
-uint8_t read_unaligned_byte(uint8_t *addr);
-
 #endif /* CS_FW_PLATFORMS_ESP8266_USER_ESP_HW_H_ */

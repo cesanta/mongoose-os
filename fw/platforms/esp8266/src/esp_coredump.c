@@ -30,12 +30,13 @@ static NOINSTR void core_dump_emit_char(char c, void *user_data) {
   do {
     now = system_get_time();
   } while (now > last_char_ts /* handle overflow */ &&
-           now - last_char_ts < 70 /* Char time @ 115200 is 70 us */);
+           now - last_char_ts < 20 /* Char time @ 115200 is 70 us */);
   (*col_counter)++;
   fputc(c, stderr);
   if (*col_counter >= 160) {
     fputc('\n', stderr);
     (*col_counter) = 0;
+    system_soft_wdt_feed();
   }
   last_char_ts = now;
 }
@@ -59,12 +60,12 @@ static NOINSTR void emit_core_dump_section(const char *name, uint32_t addr,
   fprintf(stderr, "\"}\n");
 }
 
-NOINSTR void esp_dump_core(int cause, struct regfile *regs) {
+NOINSTR void esp_dump_core(uint32_t cause, struct regfile *regs) {
+  (void) cause;
   fprintf(stderr,
           "Dumping core\n"
           "--- BEGIN CORE DUMP ---\n"
-          "{\"arch\": \"ESP8266\", \"cause\": %d",
-          cause);
+          "{\"arch\": \"ESP8266\"");
   emit_core_dump_section("REGS", (uintptr_t) regs, sizeof(*regs));
   emit_core_dump_section("DRAM", 0x3FFE8000, 0x18000);
   emit_core_dump_section("IRAM", 0x40100000, 0x8000);

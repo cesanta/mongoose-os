@@ -181,7 +181,7 @@ class GDBHandler(SocketServer.BaseRequestHandler):
 
         while self.expect_packet_start():
             pkt = self.read_packet()
-            #print >>sys.stderr, pkt
+            #print >>sys.stderr, ">>", pkt
             if pkt == "?": # status -> trap
                 self.send_str("S09")
             elif pkt == "g": # dump registers
@@ -216,6 +216,9 @@ class GDBHandler(SocketServer.BaseRequestHandler):
                     print >>sys.stderr, 'fixup %08x' % addr
                     addr |= 0x40000000
                 bs = core.read(addr, size)
+                #if bs == "\0\0\0\0":
+                #    bs = "\x01\0\0\0"
+                #print >>sys.stderr, "<<", " ".join("{:02x}".format(ord(c)) for c in bs)
                 self.send_str(self.encode_bytes(bs))
             elif pkt.startswith("Hg"):
                 tid = int(pkt[2:], 16)

@@ -12,12 +12,13 @@
  * BSD Licensed as described in the file LICENSE
  */
 
-#define CAUSE_LOADSTORE 3
+#define EXCCAUSE_LOAD_STORE_ERROR 3
+#define EXCCAUSE_LEVEL1_INTERRUPT 4
 
         .section .bss
 
         .balign 16
-LoadStoreErrorHandlerStack:
+.LoadStoreErrorHandlerStack:
         .word   0       # a0
         .word   0       # (unused)
         .word   0       # a2
@@ -52,13 +53,13 @@ _OurDebugExceptionVector:
 _OurNMIExceptionVector:
         .global _OurNMIExceptionVector
         .type   _OurNMIExceptionVector, @function
-        j       _NMIExceptionVector
+        j       _OurNMIExceptionHandler
 
         .org    VecBase + 0x30
 _OurKernelExceptionVector:
         .global _OurKernelExceptionVector
         .type   _OurKernelExceptionVector, @function
-        j       _OurKernelExceptionVector
+        j       _KernelExceptionVector
 
         .org    VecBase + 0x50
 _OurUserExceptionVector:
@@ -66,7 +67,7 @@ _OurUserExceptionVector:
         .type   _OurUserExceptionVector, @function
         wsr     a1, excsave1
         rsr     a1, exccause
-        beqi    a1, CAUSE_LOADSTORE, LoadStoreErrorHandler
+        beqi    a1, EXCCAUSE_LOAD_STORE_ERROR, LoadStoreErrorHandler
         rsr     a1, excsave1
         wsr     a0, excsave1
         j       _UserExceptionVector
@@ -101,7 +102,7 @@ LoadStoreErrorHandler:
         /* Registers are saved in the address corresponding to their register
          * number times 4.  This allows a quick and easy mapping later on when
          * needing to store the value to a particular register number. */
-        movi    sp, LoadStoreErrorHandlerStack
+        movi    sp, .LoadStoreErrorHandlerStack
         s32i    a0, sp, 0
         s32i    a2, sp, 0x08
         s32i    a3, sp, 0x0c
@@ -234,9 +235,12 @@ LoadStoreErrorHandler:
         rsr     a1, excsave1
         mov     a2, a1
         movi    a3, 0
-spin:
-        j       spin
-//        call0   fatal_exception_handler
+#ifdef RTOS_SDK
+        movi    a0, system_restart_in_nmi
+#else
+        movi    a0, system_restart_local_sdk
+#endif
+        callx0  a0
 
         .balign 4
 .LSE_assign_a1:
@@ -334,3 +338,48 @@ spin:
         l32i    a4, sp, 0x10
         rsr     a1, excsave1
         rfe
+
+/*
+ * We store NMI registers here before handing off to SDK handler.
+ * These are then used by our soft WDT exception interceptor (ShowCritical).
+ */
+_OurNMIExceptionHandler:
+        .global _OurNMIExceptionHandler
+        .type   _OurNMIExceptionHandler, @function
+        wsr.excsave3 a0
+        movi    a0, g_exc_regs
+        // 0 ... 60 - a0 ... a15
+        s32i    a1, a0, 4
+        s32i    a2, a0, 8
+        s32i    a3, a0, 12
+        s32i    a4, a0, 16
+        s32i    a5, a0, 20
+        s32i    a6, a0, 24
+        s32i    a7, a0, 28
+        s32i    a8, a0, 32
+        s32i    a9, a0, 36
+        s32i    a10, a0, 40
+        s32i    a11, a0, 44
+        s32i    a12, a0, 48
+        s32i    a13, a0, 52
+        s32i    a14, a0, 56
+        s32i    a15, a0, 60
+        // 64 - pc
+        rsr.sar a1
+        s32i    a1, a0, 68
+        rsr.litbase a1
+        s32i    a1, a0, 72
+        // 76 - sr176, not used
+        // 80 - sr208, not used
+        rsr.ps  a1
+        s32i    a1, a0, 84
+        // Put a0 where it belongs
+        rsync
+        rsr.excsave3 a1
+        s32i    a1, a0, 0   // a0
+        s32i    a1, a0, 64  // pc
+        // Restore a1
+        l32i    a1, a0, 4
+        // Restore a0 (_NMIExceptionVector will stash it to excsave3 again)
+        rsr.excsave3 a0
+        j       _NMIExceptionVector

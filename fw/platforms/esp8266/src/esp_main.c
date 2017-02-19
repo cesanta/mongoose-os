@@ -19,6 +19,7 @@
 
 #include "common/cs_dbg.h"
 #include "fw/src/mgos_app.h"
+#include "fw/src/mgos_gpio.h"
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_init.h"
 #include "fw/src/mgos_mongoose.h"
@@ -247,6 +248,7 @@ void user_init(void) {
 
 void user_rf_pre_init() {
   /* Early init app hook. */
+  uart_div_modify(0, UART_CLK_FREQ / 115200);
   mgos_app_preinit();
 }
 

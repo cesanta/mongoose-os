@@ -34,5 +34,6 @@ struct regfile {
 void esp_exception_handler(UserFrame *frame);
 void esp_exception_handler_init(void);
 void esp_print_reset_info(void);
+void esp_print_exc_info(uint32_t cause, struct regfile *regs);
 
 #endif /* CS_FW_PLATFORMS_ESP8266_USER_ESP_EXC_H_ */

@@ -128,7 +128,7 @@ IPATH = $(APP_MODULES) $(MGOS_PATH) $(MGOS_ESP_PATH)/include $(SPIFFS_PATH) \
 LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip $(MGOS_ESP_SRC_PATH)
 
 # libraries used in this project, mainly provided by the SDK
-SDK_LIBS = c crypto gcc hal pp phy net80211 wpa
+SDK_LIBS = c crypto gcc hal net80211 pp phy wpa
 LIBS = $(addprefix -l,$(SDK_LIBS))
 
 SHIMS = -DNDEBUG
@@ -156,7 +156,8 @@ MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5
 MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" \
               -DMGOS_MAX_NUM_UARTS=2 \
               -DMGOS_NUM_GPIO=16 \
-              -DC_DISABLE_BUILTIN_SNPRINTF
+              -DC_DISABLE_BUILTIN_SNPRINTF \
+              -DESP_COREDUMP
 
 FS_IMG = $(FW_STAGING_DIR)/$(FS_ADDR).bin
 
@@ -180,7 +181,7 @@ SYMBOLS_DUMP = $(GEN_DIR)/symbols_dump.txt
 FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
 FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.c.o
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
-GENFILES_LIST = $(LD_SCRIPT) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
+GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 FW_FILE_1_OUT = $(FW_STAGING_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_1_ADDR))
 FW_FILE_2_OUT = $(FW_STAGING_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_2_ADDR))
 IMAGE_HEADER_SIZE = 0
@@ -196,9 +197,11 @@ ifeq "$(MGOS_ESP8266_RTOS)" "1"
            $(SDK_PATH)/include/lwip/ipv4 \
            $(SDK_PATH)/include/lwip/ipv6
 	LD_SCRIPT_TEMPL = $(MGOS_ESP_PATH)/ld/rtos.ld
+  LDFLAGS += -Wl,--wrap=user_fatal_exception_handler \
+             -Wl,--wrap=ShowCritical
 else
 	SDK_PATH = /opt/Espressif/ESP8266_NONOS_SDK
-	MGOS_CFLAGS += -DLWIP_OPEN_SRC -DESP_COREDUMP
+	MGOS_CFLAGS += -DLWIP_OPEN_SRC
 	LWIP_LIB = $(LWIP_BUILD_DIR)/liblwip_cs.a
 	LWIP_PATH = $(COMMON_ESP_PATH)/lwip
 	SDK_LIBS += m main_ota
@@ -238,7 +241,7 @@ endif
 
 include $(MGOS_PATH)/fw/src/spiffs.mk
 
-MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o)) $(BUILD_DIR)/lse_handler.S.o
+MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o)) $(BUILD_DIR)/esp_exc_vectors.S.o
 APP_OBJS = $(addprefix $(BUILD_DIR)/,$(APP_SRCS:=.o))
 
 APP_BIN = $(BUILD_DIR)/$(APP).bin
@@ -366,7 +369,7 @@ $(BUILD_DIR)/%.cpp.o: %.cpp $(GENFILES_FLAG)
 # Assembly sources.
 $(BUILD_DIR)/%.S.o: %.S $(GENFILES_FLAG)
 	$(vecho) "AS    $< -> $@"
-	$(Q) $(CC) -c -mtext-section-literals -o $@ $<
+	$(Q) $(CC) -c -mtext-section-literals $(MGOS_CFLAGS) -o $@ $<
 
 # This one is for generated sources in build/gen directory.
 $(BUILD_DIR)/%.c.o: $(GEN_DIR)/%.c $(GENFILES_FLAG)
