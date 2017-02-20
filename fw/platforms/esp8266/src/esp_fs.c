@@ -285,6 +285,10 @@ enum mgos_init_result mgos_set_stderr_uart(int uart_no) {
   return r;
 }
 
-enum mgos_init_result esp_console_init() {
+int esp_get_stderr_uart(void) {
+  return s_stderr_uart;
+}
+
+enum mgos_init_result esp_console_init(void) {
   return mgos_init_debug_uart(MGOS_DEBUG_UART);
 }

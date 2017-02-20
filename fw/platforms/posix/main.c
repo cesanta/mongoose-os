@@ -36,7 +36,8 @@ static void dummy_handler(struct mg_connection *nc, int ev, void *ev_data) {
   (void) ev_data;
 }
 
-void mongoose_schedule_poll(void) {
+void mongoose_schedule_poll(bool from_isr) {
+  (void) from_isr;
   mg_broadcast(mgos_get_mgr(), dummy_handler, NULL, 0);
 }
 

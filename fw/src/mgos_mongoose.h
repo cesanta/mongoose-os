@@ -36,7 +36,7 @@ void mgos_set_enable_min_heap_free_reporting(bool enable);
 /* HAL */
 
 /* Schedule MG poll ASAP. Note: may be called from ISR context. */
-void mongoose_schedule_poll(void);
+void mongoose_schedule_poll(bool from_isr);
 
 typedef void (*mg_eh_t)(struct mg_connection *, int, void *, void *);
 struct mg_connection *mgos_bind(const char *addr, mg_eh_t func, void *ud);

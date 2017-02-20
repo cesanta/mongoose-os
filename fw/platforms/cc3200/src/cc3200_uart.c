@@ -40,7 +40,7 @@ static void uart_int(struct mgos_uart_state *us) {
   if (int_st & (UART_RX_INTS | UART_TX_INTS)) {
     if (int_st & UART_RX_INTS) us->stats.rx_ints++;
     if (int_st & UART_TX_INTS) us->stats.tx_ints++;
-    mgos_uart_schedule_dispatcher(us->uart_no);
+    mgos_uart_schedule_dispatcher(us->uart_no, true /* from_isr */);
   }
   MAP_UARTIntDisable(base, (UART_RX_INTS | UART_TX_INTS));
   MAP_UARTIntClear(base, int_st);

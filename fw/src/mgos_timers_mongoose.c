@@ -68,7 +68,7 @@ static mgos_timer_id mgos_set_timer_common(struct timer_info *ti, int msecs,
     return 0;
   }
   c->ev_timer_time = mg_time() + (msecs / 1000.0);
-  mongoose_schedule_poll();
+  mongoose_schedule_poll(false /* from_isr */);
   return 1;
 }
 

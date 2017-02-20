@@ -63,7 +63,7 @@ static bool mg_rpc_channel_mqtt_send_frame(struct mg_rpc_channel *ch,
     mg_mqtt_publish(nc, topic, 0, MG_MQTT_QOS(1), f.p, f.len);
     LOG(LL_DEBUG, ("Published [%.*s] to topic [%s]", (int) f.len, f.p, topic));
     free(topic);
-    mgos_invoke_cb(frame_sent, ch);
+    mgos_invoke_cb(frame_sent, ch, false /* from_isr */);
     return true;
   }
   return false;

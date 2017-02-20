@@ -13,6 +13,7 @@ void pp_soft_wdt_init(void);
 void pp_soft_wdt_stop(void);
 void pp_soft_wdt_feed(void);
 void pp_soft_wdt_restart(void);
+void system_soft_wdt_stop(void); /* Alias for pp_soft_wdt_stop */
 
 void uart_div_modify(int no, unsigned int freq);
 
@@ -42,6 +43,7 @@ void ets_wdt_disable(void);
 void ets_wdt_restore(uint32_t mode);
 uint32_t ets_wdt_get_mode(void);
 
+void _xtos_l1int_handler(void);
 void _xtos_set_exception_handler();
 void xthal_set_intenable(unsigned);
 

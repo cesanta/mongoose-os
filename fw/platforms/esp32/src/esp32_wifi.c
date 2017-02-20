@@ -75,7 +75,8 @@ esp_err_t wifi_event_handler(system_event_t *event) {
   }
 
   if (mg_ev >= 0) {
-    mgos_invoke_cb(invoke_wifi_on_change_cb, (void *) mg_ev);
+    mgos_invoke_cb(invoke_wifi_on_change_cb, (void *) mg_ev,
+                   false /* from_isr */);
   }
 
   return (pass_to_system ? esp_event_send(event) : ESP_OK);

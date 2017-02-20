@@ -79,7 +79,6 @@ void mgos_wdt_set_timeout(int secs) {
   TIMERG0.wdt_wprotect = 0;
 }
 
-static bool s_mg_poll_scheduled;
 SemaphoreHandle_t s_mgos_mux = NULL;
 
 inline void mgos_lock() {
@@ -92,20 +91,28 @@ inline void mgos_unlock() {
   }
 }
 
+/* Note: we cannot use mutex here because there is no recursive mutex
+ * that can be used from ISR as well as from task. mgos_invoke_cb pust an item
+ * on the queue and may cause a context switch and re-enter schedule_poll.
+ * Hence this elaborate dance we perform with poll counter. */
+static volatile uint32_t s_mg_last_poll = 0;
+static volatile bool s_mg_poll_scheduled = false;
+
 static void IRAM_ATTR mongoose_poll_cb(void *arg) {
-  mgos_lock();
   s_mg_poll_scheduled = false;
-  mgos_unlock();
+  s_mg_last_poll++;
   (void) arg;
 }
 
-void IRAM_ATTR mongoose_schedule_poll(void) {
-  mgos_lock();
+void IRAM_ATTR mongoose_schedule_poll(bool from_isr) {
   /* Prevent piling up of poll callbacks. */
   if (!s_mg_poll_scheduled) {
-    s_mg_poll_scheduled = mgos_invoke_cb(mongoose_poll_cb, NULL);
+    uint32_t last_poll = s_mg_last_poll;
+    if (mgos_invoke_cb(mongoose_poll_cb, NULL, from_isr) &&
+        s_mg_last_poll == last_poll) {
+      s_mg_poll_scheduled = true;
+    }
   }
-  mgos_unlock();
 }
 
 int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {

@@ -10,12 +10,6 @@
 #include <xtensa/xtruntime-frames.h>
 
 /*
- * xtruntime-frames defines this only for assembler.
- * It ends up being 256 bytes in ESP8266.
- */
-#define ESF_TOTALSIZE 0x100
-
-/*
  * Register file in the format lx106 gdb port expects it.
  *
  * Inspired by gdb/regformats/reg-xtensa.dat from
@@ -31,9 +25,23 @@ struct regfile {
   uint32_t ps;
 };
 
+/* Special "cause" values. */
+#define EXCCAUSE_ABORT 100
+#define EXCCAUSE_SW_WDT 101
+#define EXCCAUSE_HW_WDT 102
+
 void esp_exception_handler(UserFrame *frame);
 void esp_exception_handler_init(void);
 void esp_print_reset_info(void);
 void esp_print_exc_info(uint32_t cause, struct regfile *regs);
+void esp_exc_putc(char c);
+void esp_exc_puts(const char *s);
+void esp_exc_printf(const char *fmt, ...); /* Note: uses 100-byte buffer */
+
+void esp_exc_common(uint32_t cause, struct regfile *regs);
+/*
+ * NMI exception handler will store registers in this struct.
+ */
+extern struct regfile g_exc_regs;
 
 #endif /* CS_FW_PLATFORMS_ESP8266_USER_ESP_EXC_H_ */

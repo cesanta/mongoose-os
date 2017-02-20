@@ -34,7 +34,8 @@ static void mgos_gpio_int_done_cb(void *arg);
 IRAM void mgos_gpio_dev_int_cb(int pin) {
   struct mgos_gpio_state *s = &s_state[pin];
   if (s->cb_pending || s->cb == NULL) return;
-  if (mgos_invoke_cb(mgos_gpio_int_cb, (void *) (intptr_t) pin)) {
+  if (mgos_invoke_cb(mgos_gpio_int_cb, (void *) (intptr_t) pin,
+                     true /* from_isr */)) {
     s->cb_pending = true;
   } else {
     /*

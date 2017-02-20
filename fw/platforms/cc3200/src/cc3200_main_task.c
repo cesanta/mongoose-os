@@ -181,7 +181,8 @@ void main_task(void *arg) {
   }
 }
 
-bool mgos_invoke_cb(mgos_cb_t cb, void *arg) {
+bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
   struct mgos_event e = {.cb = cb, .arg = arg};
+  (void) from_isr;
   return (osi_MsgQWrite(&s_main_queue, &e, OSI_NO_WAIT) == OSI_OK);
 }

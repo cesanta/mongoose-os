@@ -133,7 +133,7 @@ static bool mg_rpc_channel_uart_send_frame(struct mg_rpc_channel *ch,
   chd->sending = chd->sending_user_frame = true;
   /* Disable UART console while sending. */
   mgos_uart_set_write_enabled(chd->uart_no, false);
-  mgos_uart_schedule_dispatcher(chd->uart_no);
+  mgos_uart_schedule_dispatcher(chd->uart_no, false /* from_isr */);
   return true;
 }
 

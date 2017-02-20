@@ -5,9 +5,9 @@
 
 #include "fw/platforms/esp8266/src/esp_exc.h"
 
+#include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-#include <xtensa/corebits.h>
 #include <stdint.h>
 
 #ifdef RTOS_SDK
@@ -25,51 +25,128 @@
 #include "fw/platforms/esp8266/src/esp_coredump.h"
 #include "fw/platforms/esp8266/src/esp_fs.h"
 #include "fw/platforms/esp8266/src/esp_hw.h"
+#include "fw/platforms/esp8266/src/esp_hw_wdt.h"
+#include "fw/platforms/esp8266/src/esp_uart.h"
 
-/*
- * default exception handler will convert OS specific register frame format
- * into a standard GDB frame layout used by both the GDB server and coredumper.
- * We need to minimize stack usage and cannot do heap allocation, thus we
- * use some storage in the .data segment.
- */
+extern void esp_system_restart_low_level(void);
+
 struct regfile g_exc_regs;
 
-/* Low-level restart functions. */
-void system_restart_in_nmi();    /* RTOS SDK */
-void system_restart_local_sdk(); /* Non-OS SDK */
-
-void esp_print_exc_info(uint32_t cause, struct regfile *regs) {
-  printf(
-      "\r\nException 0x%x @ 0x%08x, vaddr 0x%08x\r\n"
-      " A0: 0x%08x  A1: 0x%08x  A2: 0x%08x  A3: 0x%08x\r\n"
-      " A4: 0x%08x  A5: 0x%08x  A6: 0x%08x  A7: 0x%08x\r\n"
-      " A8: 0x%08x  A9: 0x%08x A10: 0x%08x A11: 0x%08x\r\n"
-      "A12: 0x%08x A13: 0x%08x A14: 0x%08x A15: 0x%08x\r\n"
-      "\r\n",
-      cause, regs->pc, RSR(EXCVADDR), regs->a[0], regs->a[1], regs->a[2],
-      regs->a[3], regs->a[4], regs->a[5], regs->a[6], regs->a[7], regs->a[8],
-      regs->a[9], regs->a[10], regs->a[11], regs->a[12], regs->a[13],
-      regs->a[14], regs->a[15]);
+void esp_exc_putc(char c) {
+  int uart_no = esp_get_stderr_uart();
+  if (uart_no < 0) return;
+  while (esp_uart_tx_fifo_len(uart_no) > 125) {
+  }
+  esp_uart_tx_byte(uart_no, c);
 }
 
-NOINSTR void esp_exc_common(uint32_t cause, struct regfile *regs) {
+void esp_exc_puts(const char *s) {
+  while (*s != '\0') {
+    esp_exc_putc(*s++);
+  }
+}
+
+void esp_exc_printf(const char *fmt, ...) {
+  char buf[100];
+  va_list ap;
+  va_start(ap, fmt);
+  vsnprintf(buf, sizeof(buf), fmt, ap);
+  va_end(ap);
+  esp_exc_puts(buf);
+}
+
+void esp_print_exc_info(uint32_t cause, struct regfile *regs) {
+  switch (cause) {
+    case EXCCAUSE_ABORT:
+      esp_exc_printf("\r\nabort() @ 0x%08x\r\n", regs->a[0]);
+      break;
+    case EXCCAUSE_SW_WDT:
+    case EXCCAUSE_HW_WDT:
+      esp_exc_printf("\r\n%cW WDT @ 0x%08x\r\n",
+                     (cause == EXCCAUSE_SW_WDT ? 'S' : 'H'), regs->pc);
+      break;
+    default:
+      esp_exc_printf("\r\nException %u @ 0x%08x, vaddr 0x%08x\r\n", cause,
+                     regs->pc, RSR(EXCVADDR));
+      break;
+  }
+  esp_exc_printf(" A0: 0x%08x  A1: 0x%08x  A2: 0x%08x  A3: 0x%08x\r\n",
+                 regs->a[0], regs->a[1], regs->a[2], regs->a[3]);
+  esp_exc_printf(" A4: 0x%08x  A5: 0x%08x  A6: 0x%08x  A7: 0x%08x\r\n",
+                 regs->a[4], regs->a[5], regs->a[6], regs->a[7]);
+  esp_exc_printf(" A8: 0x%08x  A9: 0x%08x A10: 0x%08x A11: 0x%08x\r\n",
+                 regs->a[8], regs->a[9], regs->a[10], regs->a[11]);
+  esp_exc_printf("A12: 0x%08x A13: 0x%08x A14: 0x%08x A15: 0x%08x\r\n",
+                 regs->a[12], regs->a[13], regs->a[14], regs->a[15]);
+  esp_exc_printf("\r\n(exc SP: %p)\r\n", &cause);
+}
+
+IRAM NOINSTR void dummy_putc(char c) {
+  (void) c;
+}
+
+NOINSTR __attribute__((noreturn)) void esp_exc_common(uint32_t cause,
+                                                      struct regfile *regs) {
+  /* Disable interrupts. This takes care of SW WDT and other activity. */
+  __asm volatile("rsil a0, 0" : : : "a0");
+  os_install_putc1(dummy_putc);
+  /* Set up 1-stage HW WDT to give us a kick if we are not done in ~27 secs. */
+  esp_hw_wdt_setup(ESP_HW_WDT_26_8_SEC, ESP_HW_WDT_DISABLE);
+  esp_hw_wdt_enable();
   esp_print_exc_info(cause, regs);
   esp_dump_core(cause, regs);
 #ifdef MGOS_STOP_ON_EXCEPTION
-  fprintf(stderr, "NOT rebooting.\n");
-  fs_flush_stderr();
-  while (1) {
-    mgos_wdt_feed();
-  }
+  esp_exc_puts("NOT rebooting\r\n");
+  esp_hw_wdt_disable();
 #else
-  fprintf(stderr, "rebooting\n");
-  fs_flush_stderr();
-#ifdef RTOS_SDK
-  system_restart_in_nmi();
-#else
-  system_restart_local_sdk();
-#endif
+  esp_exc_puts("rebooting\r\n");
+  esp_system_restart_low_level();
 #endif /* MGOS_STOP_ON_EXCEPTION */
+  while (1) {
+  }
+}
+
+IRAM NOINSTR void abort(void) {
+  /*
+   * We construct the register frame ourselves instead of causing an exception
+   * because we want abort() to work even when interrupts are disabled (e.g. in
+   * critical sections).
+   */
+  struct regfile regs;
+  struct regfile *rp = &regs;
+  __asm volatile(
+      "\
+      s32i   a0,  a1, 0     \n\
+      s32i   a1,  a1, 4     \n\
+      s32i   a2,  a1, 8     \n\
+      s32i   a3,  a1, 12    \n\
+      s32i   a4,  a1, 16    \n\
+      s32i   a5,  a1, 20    \n\
+      s32i   a6,  a1, 24    \n\
+      s32i   a7,  a1, 28    \n\
+      s32i   a8,  a1, 32    \n\
+      s32i   a9,  a1, 36    \n\
+      s32i   a10, a1, 40    \n\
+      s32i   a11, a1, 44    \n\
+      s32i   a12, a1, 48    \n\
+      s32i   a13, a1, 52    \n\
+      s32i   a14, a1, 56    \n\
+      s32i   a15, a1, 60    \n\
+      movi   a2,  abort     \n\
+      addi   a2,  a2, 38    \n\
+      s32i   a2,  a1, 64    \n\
+      rsr    a2,  sar       \n\
+      s32i   a2,  a1, 68    \n\
+      rsr    a2,  litbase   \n\
+      s32i   a2,  a1, 72    \n\
+      rsr    a2,  ps        \n\
+      s32i   a2,  a1, 84    \n\
+  "
+      : "=a"(rp)
+      :
+      : "a2");
+  esp_exc_common(EXCCAUSE_ABORT, &regs);
+  /* esp_exc_common does not return. */
 }
 
 void esp_print_reset_info(void) {
@@ -113,167 +190,3 @@ void esp_print_reset_info(void) {
          ri->exccause, ri->epc1, ri->epc2, ri->epc3, ri->excvaddr, ri->depc));
   }
 }
-
-#ifdef RTOS_SDK
-
-struct exc_frame {
-  uint32_t exit; /* exit pointer for dispatch, points to _xt_user_exit */
-  uint32_t pc;
-  uint32_t ps;
-  uint32_t a[16];
-  uint32_t sar;
-};
-
-void _xt_user_exit(void);
-
-IRAM NOINSTR void __wrap_user_fatal_exception_handler(uint32_t cause) {
-  /*
-   * Note that we don't get here with SYSTEM_CALL or LOAD_STORE_ERROR.
-   * SDK has partially filled an exc_frame struct for us that has been placed
-   * on the stack of the calling function. a14 and a15 have not bee saved, save
-   * them now.
-   */
-  uint32_t a14, a15;
-  __asm volatile(
-      "mov.n %0, a14\n"
-      "mov.n %1, a15"
-      : "=a"(a14), "=a"(a15));
-  /* We identify the frame by searching for the exit pointer (_xt_user_exit). */
-  uint32_t *sp = &cause;
-  while (*sp != (uint32_t) _xt_user_exit) sp++;
-  struct exc_frame *f = (struct exc_frame *) sp;
-  /* Now convert it to GDB frame. */
-  static struct regfile regs;
-  memcpy(g_exc_regs.a, f->a, sizeof(g_exc_regs.a));
-  g_exc_regs.pc = f->pc;
-  g_exc_regs.sar = f->sar;
-  g_exc_regs.ps = f->ps;
-  g_exc_regs.a[1] = ((uint32_t) sp) + sizeof(*f);
-  g_exc_regs.a[14] = a14;
-  g_exc_regs.a[15] = a15;
-  g_exc_regs.litbase = RSR(LITBASE);
-  g_exc_regs.sr176 = 0;
-  g_exc_regs.sr208 = 0;
-  esp_exc_common(cause, &regs);
-}
-
-/* _OurNMIExceptionHandler has stored registers for us, and in what looks like
- * struct regfile too - how convenient! */
-IRAM NOINSTR void __wrap_ShowCritical(void) {
-  printf("\r\nSoft WDT!\r\n");
-  esp_exc_common(0x123, &g_exc_regs);
-}
-
-#else /* !RTOS_SDK */
-
-/*
- * xtos low level exception handler (in rom)
- * populates an xtos_regs structure with (most) registers
- * present at the time of the exception and passes it to the
- * high-level handler.
- *
- * Note that the a1 (sp) register is clobbered (bug? necessity?),
- * however the original stack pointer can be inferred from the address
- * of the saved registers area, since the exception handler uses the same
- * user stack. This might be different in other execution modes on the
- * quite variegated xtensa platform family, but that's how it works on ESP8266.
- */
-
-NOINSTR void regs_from_xtos_frame(UserFrame *frame, struct regfile *regs) {
-  regs->a[0] = frame->a0;
-  regs->a[1] = (uint32_t) frame + ESF_TOTALSIZE;
-  regs->a[2] = frame->a2;
-  regs->a[3] = frame->a3;
-  regs->a[4] = frame->a4;
-  regs->a[5] = frame->a5;
-  regs->a[6] = frame->a6;
-  regs->a[7] = frame->a7;
-  regs->a[8] = frame->a8;
-  regs->a[9] = frame->a9;
-  regs->a[10] = frame->a10;
-  regs->a[11] = frame->a11;
-  regs->a[12] = frame->a12;
-  regs->a[13] = frame->a13;
-  regs->a[14] = frame->a14;
-  regs->a[15] = frame->a15;
-  regs->pc = frame->pc;
-  regs->sar = frame->sar;
-  regs->litbase = RSR(LITBASE);
-  regs->sr176 = 0;
-  regs->sr208 = 0;
-  regs->ps = frame->ps;
-}
-
-NOINSTR void esp_exception_handler(UserFrame *frame) {
-  /* Not stored in the frame's fields for some reason. */
-  uint32_t cause = RSR(EXCCAUSE);
-  regs_from_xtos_frame(frame, &g_exc_regs);
-  esp_exc_common(cause, &g_exc_regs);
-}
-
-NOINSTR void esp_exception_handler_init(void) {
-  char causes[] = {EXCCAUSE_ILLEGAL,          EXCCAUSE_INSTR_ERROR,
-                   EXCCAUSE_LOAD_STORE_ERROR, EXCCAUSE_DIVIDE_BY_ZERO,
-                   EXCCAUSE_UNALIGNED,        EXCCAUSE_INSTR_PROHIBITED,
-                   EXCCAUSE_LOAD_PROHIBITED,  EXCCAUSE_STORE_PROHIBITED};
-  int i;
-  for (i = 0; i < (int) sizeof(causes); i++) {
-    _xtos_set_exception_handler(causes[i], esp_exception_handler);
-  }
-}
-
-NOINSTR void system_restart_local(void) {
-  struct rst_info ri;
-  system_rtc_mem_read(0, &ri, sizeof(ri));
-  if (ri.reason == REASON_SOFT_WDT_RST) {
-    LOG(LL_INFO,
-        ("WDT reset, info: exccause=%u epc1=0x%08x epc2=0x%08x epc3=0x%08x "
-         "vaddr=0x%08x depc=0x%08x",
-         ri.exccause, ri.epc1, ri.epc2, ri.epc3, ri.excvaddr, ri.depc));
-#ifdef ESP_COREDUMP
-    /* So, here's how we got here:
-     *  0) system_restart_local (that's us!) - 64 byte frame.
-     *  1) pp_soft_wdt_feed_local - 32 bytes.
-     *  2) static local function in the SDK, probably wDev_something - 16 bytes.
-     *  3) wDev_ProcessFiq - 48 bytes.
-     *  4) _xtos_l1int_handler - in ROM, ret 0x4000050c, no stack of its own
-     *  5) XTOS user vector mode exception stack frame,
-     *     aka struct UserFrame - 256 bytes (ESF_TOTALSIZE)
-     *  6) ... pre-interrupt stack.
-     *
-     * Needless to say, stack frame sizes are less than reliable. So we try to
-     * make our code more robust in the face of SDK changes by:
-     *  1) Searching the stack for 0x4000050c first. This is the return address
-     *     of the int handler in ROM, it will not change. This we will find in
-     *     wDev_ProcessFiq's stack frame (note: it is compiled with something
-     *     other than GCC and return address is not at the end of the frame but
-     *     in the middle).
-     *  2) Searching for the epc1 value from reset info, which is the PC value
-     *     which is the first field of the UserFrame struct. wDev_ProcessFiq
-     *     seems to be something generic enough that it doesn't care about PC,
-     *     so it's unlikely that it will appear on its stack.
-     * We assume that stack frames are 32-bit aligned, which seems reasonabe.
-     */
-    uint32_t *sp = (uint32_t *) &ri;
-    while (sp < (uint32_t *) 0x40000000 && *sp != 0x4000050c) sp++;
-    while (sp < (uint32_t *) 0x40000000 && *sp != ri.epc1) sp++;
-    if (sp < (uint32_t *) 0x40000000) {
-      regs_from_xtos_frame((UserFrame *) sp, &g_exc_regs);
-      esp_dump_core(100 /* not really an exception */, &g_exc_regs);
-    }
-#endif
-  }
-#ifdef MGOS_STOP_ON_EXCEPTION
-  fprintf(stderr, "NOT rebooting.\n");
-  fs_flush_stderr();
-  while (1) {
-    mgos_wdt_feed();
-  }
-#else
-  fprintf(stderr, "rebooting\n");
-  fs_flush_stderr();
-  system_restart_local_sdk();
-#endif
-}
-
-#endif /* !RTOS_SDK */

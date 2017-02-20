@@ -71,7 +71,7 @@ IRAM NOINSTR static void esp_handle_uart_int(struct mgos_uart_state *us) {
     if (int_st & UART_TX_INTS) us->stats.tx_ints++;
     /* Wake up the processor and disable TX and RX ints until it runs. */
     WRITE_PERI_REG(UART_INT_ENA_REG(uart_no), UART_INFO_INTS);
-    mgos_uart_schedule_dispatcher(uart_no);
+    mgos_uart_schedule_dispatcher(uart_no, true /* from_isr */);
   }
   WRITE_PERI_REG(UART_INT_CLR_REG(uart_no), int_st);
 }

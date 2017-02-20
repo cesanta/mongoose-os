@@ -19,7 +19,6 @@
 
 #include "common/cs_dbg.h"
 #include "fw/src/mgos_app.h"
-#include "fw/src/mgos_gpio.h"
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_init.h"
 #include "fw/src/mgos_mongoose.h"
@@ -29,6 +28,8 @@
 
 #include "fw/platforms/esp8266/src/esp_exc.h"
 #include "fw/platforms/esp8266/src/esp_fs.h"
+#include "fw/platforms/esp8266/src/esp_hw.h"
+#include "fw/platforms/esp8266/src/esp_hw_wdt.h"
 #include "fw/platforms/esp8266/src/esp_features.h"
 #include "fw/platforms/esp8266/src/esp_updater.h"
 
@@ -57,44 +58,44 @@
 extern const char *build_version, *build_id;
 extern const char *mg_build_version, *mg_build_id;
 
-bool uart_initialized;
+bool uart_initialized = false;
 
 static os_timer_t s_mg_poll_tmr;
-static bool s_mg_poll_scheduled = false;
 
-static IRAM void mongoose_poll_cb(void *arg) {
-  mgos_lock();
+/* Note: we cannot use mutex here because there is no recursive mutex
+ * that can be used from ISR as well as from task. mgos_invoke_cb pust an item
+ * on the queue and may cause a context switch and re-enter schedule_poll.
+ * Hence this elaborate dance we perform with poll counter. */
+static volatile uint32_t s_mg_last_poll = 0;
+static volatile bool s_mg_poll_scheduled = false;
+
+static void mongoose_poll_cb(void *arg) {
   s_mg_poll_scheduled = false;
-  mgos_unlock();
+  s_mg_last_poll++;
   mongoose_poll(0);
-  mgos_lock();
   if (!s_mg_poll_scheduled) {
     uint32_t timeout_ms = mg_lwip_get_poll_delay_ms(mgos_get_mgr());
-    if (timeout_ms > 0) {
-      if (timeout_ms > 1000) timeout_ms = 1000;
-      os_timer_disarm(&s_mg_poll_tmr);
-      os_timer_arm(&s_mg_poll_tmr, timeout_ms, 0 /* no repeat */);
-    } else {
-      /* Poll immediately */
-      mongoose_schedule_poll();
-    }
+    if (timeout_ms > 1000) timeout_ms = 1000;
+    os_timer_disarm(&s_mg_poll_tmr);
+    /* We set repeat = true in case things get stuck for any reason. */
+    os_timer_arm(&s_mg_poll_tmr, timeout_ms, 1 /* repeat */);
   }
-  mgos_unlock();
   (void) arg;
 }
 
-IRAM void mongoose_schedule_poll(void) {
-  mgos_lock();
+IRAM void mongoose_schedule_poll(bool from_isr) {
   /* Prevent piling up of poll callbacks. */
-  if (!s_mg_poll_scheduled) {
-    s_mg_poll_scheduled = mgos_invoke_cb(mongoose_poll_cb, NULL);
+  if (s_mg_poll_scheduled) return;
+  uint32_t last_poll = s_mg_last_poll;
+  if (mgos_invoke_cb(mongoose_poll_cb, NULL, from_isr) &&
+      s_mg_last_poll == last_poll) {
+    s_mg_poll_scheduled = true;
   }
-  mgos_unlock();
 }
 
 void mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr) {
   (void) mgr;
-  mongoose_schedule_poll();
+  mongoose_schedule_poll(false /* from_isr */);
 }
 
 static void dbg_putc(char c) {
@@ -169,17 +170,18 @@ struct mgos_event {
 
 xSemaphoreHandle s_mtx;
 
-IRAM bool mgos_invoke_cb(mgos_cb_t cb, void *arg) {
+IRAM bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
   struct mgos_event e = {.cb = cb, .arg = arg};
-  long int should_yield = false;
-  if (!xQueueSendToBackFromISR(s_main_queue, &e, &should_yield)) {
-    return false;
-  }
-  if (should_yield) {
-    /*
-     * TODO(rojer): Find a way to determine if we're in an interrupt and
-     * invoke portYIELD or portYIELD_FROM_ISR.
-     */
+  if (from_isr) {
+    long int should_yield = false;
+    if (!xQueueSendToBackFromISR(s_main_queue, &e, &should_yield)) {
+      return false;
+    }
+    if (should_yield) {
+      /* Hm? */
+    }
+  } else {
+    return xQueueSendToBack(s_main_queue, &e, 10);
   }
   return true;
 }
@@ -190,10 +192,14 @@ static void mgos_task(void *arg) {
 
   esp_mgos_init();
 
-  mongoose_schedule_poll();
+  mongoose_schedule_poll(false /* from_isr */);
+
+  esp_hw_wdt_setup(ESP_HW_WDT_3_36_SEC, ESP_HW_WDT_3_36_SEC);
 
   while (true) {
-    while (xQueueReceive(s_main_queue, &e, 100 /* tick */)) {
+    /* Keep soft WDT disabled. */
+    system_soft_wdt_stop();
+    if (xQueueReceive(s_main_queue, &e, 10 /* tick */)) {
       e.cb(e.arg);
     }
     taskYIELD();
@@ -201,28 +207,30 @@ static void mgos_task(void *arg) {
   (void) arg;
 }
 
-#else
+#else /* !RTOS_SDK */
 
 static os_event_t s_main_queue[MGOS_TASK_QUEUE_LENGTH];
 
-IRAM bool mgos_invoke_cb(mgos_cb_t cb, void *arg) {
+IRAM bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
   if (!system_os_post(MGOS_TASK_PRIORITY, (uint32_t) cb, (uint32_t) arg)) {
     return false;
   }
+  (void) from_isr;
   return true;
 }
 
 static void mgos_lwip_task(os_event_t *e) {
   mgos_cb_t cb = (mgos_cb_t)(e->sig);
   cb((void *) e->par);
+  /* Keep soft WDT disabled. */
+  system_soft_wdt_stop();
 }
 
 void sdk_init_done_cb(void) {
   system_os_task(mgos_lwip_task, MGOS_TASK_PRIORITY, s_main_queue,
                  MGOS_TASK_QUEUE_LENGTH);
-  ets_wdt_disable(); /* Disable HW watchdog, it's too aggressive. */
   esp_mgos_init();
-  mongoose_schedule_poll();
+  mongoose_schedule_poll(false);
 }
 
 #endif
@@ -233,8 +241,12 @@ void user_init(void) {
   srand(system_get_rtc_time());
   os_timer_disarm(&s_mg_poll_tmr);
   os_timer_setfn(&s_mg_poll_tmr, (void (*) (void *)) mongoose_schedule_poll,
-                 NULL);
-
+                 /* RTOS callbacks are executed in ISR context; for non-OS it
+                    doesn't matter. */
+                 (void *) true);
+  esp_hw_wdt_setup(ESP_HW_WDT_26_8_SEC, ESP_HW_WDT_26_8_SEC);
+  /* Soft WDT feeds HW WDT, we don't want this. */
+  system_soft_wdt_stop();
 #ifdef RTOS_SDK
   s_mtx = xSemaphoreCreateRecursiveMutex();
   xTaskCreate(mgos_task, (const signed char *) "mgos",

@@ -59,7 +59,7 @@ void mgos_usleep(int usecs);
  * Returns true if the callback has been scheduled for execution.
  */
 typedef void (*mgos_cb_t)(void *arg);
-bool mgos_invoke_cb(mgos_cb_t cb, void *arg);
+bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr);
 
 void mgos_lock(void);
 void mgos_unlock(void);

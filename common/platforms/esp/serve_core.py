@@ -18,6 +18,7 @@ import SocketServer
 import argparse
 import base64
 import binascii
+import ctypes
 import json
 import os
 import struct
@@ -123,11 +124,11 @@ class Core(object):
             end_pos = self._search_backwards(f, f.tell(), END_DELIM)
             if end_pos == -1:
                 print >>sys.stderr, "Cannot find end delimiter:", END_DELIM
-                os.exit(1)
+                sys.exit(1)
             start_pos = self._search_backwards(f, end_pos, START_DELIM)
             if start_pos == -1:
                 print >>sys.stderr, "Cannot find start delimiter:", START_DELIM
-                os.exit(1)
+                sys.exit(1)
             start_pos += len(START_DELIM)
 
             print >>sys.stderr, "Found core at %d - %d" % (start_pos, end_pos)
@@ -142,6 +143,12 @@ class Core(object):
                 continue
             data = base64.decodestring(v["data"])
             print >>sys.stderr, "Mapping {0}: {1} @ {2:#02x}".format(k, len(data), v["addr"])
+            if "crc32" in v:
+                crc32 = ctypes.c_uint32(binascii.crc32(data))
+                expected_crc32 = ctypes.c_uint32(v["crc32"])
+                if crc32.value != expected_crc32.value:
+                    print >>sys.stderr, "CRC mismatch, section corrupted %s %s" % (crc32, expected_crc32)
+                    sys.exit(1)
             mem.append((v["addr"], v["addr"] + len(data), data))
         return mem
 

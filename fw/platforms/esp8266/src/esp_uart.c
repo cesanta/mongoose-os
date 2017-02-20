@@ -53,7 +53,7 @@ IRAM int esp_uart_tx_fifo_len(int uart_no) {
   return (READ_PERI_REG(UART_STATUS(uart_no)) >> 16) & 0xff;
 }
 
-IRAM static void tx_byte(int uart_no, uint8_t byte) {
+IRAM void esp_uart_tx_byte(int uart_no, uint8_t byte) {
   WRITE_PERI_REG(UART_FIFO(uart_no), byte);
 }
 
@@ -75,7 +75,7 @@ IRAM NOINSTR static void esp_handle_uart_int(struct mgos_uart_state *us) {
     if (int_st & UART_TX_INTS) us->stats.tx_ints++;
     /* Wake up the processor and disable TX and RX ints until it runs. */
     WRITE_PERI_REG(UART_INT_ENA(uart_no), UART_INFO_INTS);
-    mgos_uart_schedule_dispatcher(uart_no);
+    mgos_uart_schedule_dispatcher(uart_no, true);
   }
   WRITE_PERI_REG(UART_INT_CLR(uart_no), int_st);
 }
@@ -146,7 +146,7 @@ void mgos_uart_dev_dispatch_tx_top(struct mgos_uart_state *us) {
       if (tx_av <= 0) break;
       len = cs_rbuf_get(txb, tx_av, &data);
       for (i = 0; i < len; i++, data++) {
-        tx_byte(uart_no, *data);
+        esp_uart_tx_byte(uart_no, *data);
       }
       txn += len;
       cs_rbuf_consume(txb, len);

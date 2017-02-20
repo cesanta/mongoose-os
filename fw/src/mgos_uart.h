@@ -6,8 +6,8 @@
 #ifndef CS_FW_SRC_MGOS_UART_H_
 #define CS_FW_SRC_MGOS_UART_H_
 
-#include <inttypes.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <string.h>
 
 #include "common/cs_rbuf.h"
@@ -122,7 +122,7 @@ void mgos_uart_dev_flush_fifo(struct mgos_uart_state *us);
 void mgos_uart_dev_set_rx_enabled(struct mgos_uart_state *us, bool enabled);
 
 /* Note: this is executed in ISR context, almost nothing can be done here. */
-void mgos_uart_schedule_dispatcher(int uart_no);
+void mgos_uart_schedule_dispatcher(int uart_no, bool from_isr);
 
 void mgos_uart_flush(int uart_no);
 

@@ -7,6 +7,6 @@
 
 #include <inttypes.h>
 
-uint32_t cs_crc32(uint32_t crc, const uint8_t *ptr, uint32_t buf_len);
+uint32_t cs_crc32(uint32_t crc, const void *data, uint32_t len);
 
 #endif /* CS_COMMON_CS_CRC32_H_ */

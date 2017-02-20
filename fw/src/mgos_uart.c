@@ -25,10 +25,10 @@
 
 static struct mgos_uart_state *s_uart_state[MGOS_MAX_NUM_UARTS];
 
-IRAM void mgos_uart_schedule_dispatcher(int uart_no) {
+IRAM void mgos_uart_schedule_dispatcher(int uart_no, bool from_isr) {
   struct mgos_uart_state *us = s_uart_state[uart_no];
   if (us == NULL) return;
-  mongoose_schedule_poll();
+  mongoose_schedule_poll(from_isr);
 }
 
 void mgos_uart_dispatcher(void *arg) {
@@ -58,7 +58,7 @@ size_t mgos_uart_write(int uart_no, const void *buf, size_t len) {
     n += nw;
     mgos_uart_flush(uart_no);
   }
-  mgos_uart_schedule_dispatcher(uart_no);
+  mgos_uart_schedule_dispatcher(uart_no, false /* from_isr */);
   return len;
 }
 

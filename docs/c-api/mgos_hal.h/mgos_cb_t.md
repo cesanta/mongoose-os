@@ -4,7 +4,7 @@ decl_name: "mgos_cb_t"
 symbol_kind: "typedef"
 signature: |
   typedef void (*mgos_cb_t)(void *arg);
-  bool mgos_invoke_cb(mgos_cb_t cb, void *arg);
+  bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr);
 ---
 
 Invoke a callback in the main MGOS event loop.

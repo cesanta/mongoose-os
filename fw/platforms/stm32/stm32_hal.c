@@ -24,12 +24,13 @@ static void stm32_invoke_cb(void *param) {
   free(params);
 }
 
-bool mgos_invoke_cb(mgos_cb_t cb, void *arg) {
+bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
   /* Going to call cb from Mongoose context */
   struct cb_invoke_params *params = malloc(sizeof(*params));
   params->cb = cb;
   params->arg = arg;
   mgos_set_timer(0, 0, stm32_invoke_cb, params);
+  (void) from_isr;
   return true;
 }
 
@@ -43,7 +44,8 @@ void device_get_mac_address(uint8_t mac[6]) {
   memset(mac, 0, 6);
 }
 
-void mongoose_schedule_poll(void) {
+void mongoose_schedule_poll(bool from_isr) {
+  (void) from_isr;
   s_mongoose_poll_scheduled = 0;
 }
 

@@ -10,6 +10,7 @@
 
 #include "common/platforms/esp8266/uart_register.h"
 
+void esp_uart_tx_byte(int uart_no, uint8_t byte);
 int esp_uart_rx_fifo_len(int uart_no);
 int esp_uart_tx_fifo_len(int uart_no);
 bool esp_uart_cts(int uart_no);

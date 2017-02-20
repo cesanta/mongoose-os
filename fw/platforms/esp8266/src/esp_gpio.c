@@ -167,7 +167,7 @@ bool mgos_gpio_read(int pin) {
   return 0x1 & GPIO_INPUT_GET(GPIO_ID_PIN(pin));
 }
 
-bool mgos_gpio_toggle(int pin) {
+IRAM bool mgos_gpio_toggle(int pin) {
   if (pin < 0 || pin > 16) {
     return false;
   } else if (pin == 16) {

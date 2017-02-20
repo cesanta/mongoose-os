@@ -112,7 +112,8 @@ static void *stdin_thread(void *param) {
   return NULL;
 }
 
-bool mgos_invoke_cb(mgos_cb_t cb, void *arg) {
+bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
+  (void) from_isr;
   /* FIXME: This is NOT correct. */
   cb(arg);
   return true;

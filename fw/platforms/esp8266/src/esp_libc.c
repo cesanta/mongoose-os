@@ -111,13 +111,6 @@ void *_realloc_r(struct _reent *r, void *ptr, size_t size) {
   return realloc(ptr, size);
 }
 
-NOINSTR void abort(void) {
-  /* cause an unaligned access exception, that will drop you into gdb */
-  *(int *) 1 = 1;
-  while (1)
-    ; /* avoid gcc warning because stdlib abort() has noreturn attribute */
-}
-
 void _exit(int status) {
   printf("_exit(%d)\n", status);
   abort();

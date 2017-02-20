@@ -88,7 +88,8 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *e) {
       return;
   }
   mgos_invoke_cb(invoke_wifi_on_change_cb,
-                 (void *) (intptr_t) s_wifi_sta_config.status);
+                 (void *) (intptr_t) s_wifi_sta_config.status,
+                 false /* from_isr */);
 }
 
 void sl_net_app_eh(SlNetAppEvent_t *e) {
@@ -100,7 +101,8 @@ void sl_net_app_eh(SlNetAppEvent_t *e) {
              SL_IPV4_BYTE(ed->ip, 0));
     s_wifi_sta_config.status = MGOS_WIFI_IP_ACQUIRED;
     mgos_invoke_cb(invoke_wifi_on_change_cb,
-                   (void *) (int) s_wifi_sta_config.status);
+                   (void *) (int) s_wifi_sta_config.status,
+                   false /* from_isr */);
   } else if (e->Event == SL_NETAPP_IP_LEASED_EVENT) {
     SlIpLeasedAsync_t *ed = &e->EventData.ipLeased;
     LOG(LL_INFO,

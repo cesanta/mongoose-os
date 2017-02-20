@@ -48,8 +48,7 @@ int fs_mount(spiffs *spf, uint32_t addr, uint32_t size, uint8_t *workbuf,
 spiffs *get_fs(void);
 void fs_umount(void);
 
-enum mgos_init_result esp_console_init();
-enum mgos_init_result esp_set_stdout_uart(int uart_no);
-enum mgos_init_result esp_set_stderr_uart(int uart_no);
+enum mgos_init_result esp_console_init(void);
+int esp_get_stderr_uart(void);
 
 #endif /* CS_FW_PLATFORMS_ESP8266_USER_ESP_FS_H_ */

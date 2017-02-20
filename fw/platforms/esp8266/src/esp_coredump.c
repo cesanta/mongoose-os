@@ -6,66 +6,56 @@
 #ifdef ESP_COREDUMP
 
 #include <stdint.h>
-#include <stdio.h>
 #include <string.h>
 
 #include <user_interface.h>
 #include <xtensa/corebits.h>
 
+#include "common/cs_crc32.h"
 #include "common/platforms/esp8266/esp_missing_includes.h"
 
-#include "esp_exc.h"
-#include "esp_gdb.h"
-#include "esp_hw.h"
+#include "fw/platforms/esp8266/src/esp_exc.h"
 
 #include "common/base64.h"
 
-static uint32_t last_char_ts = 0;
+struct section_ctx {
+  struct cs_base64_ctx b64_ctx;
+  int col_counter;
+  uint32_t crc32;
+};
 
 static NOINSTR void core_dump_emit_char(char c, void *user_data) {
-  int *col_counter = (int *) user_data;
-  /* Since we have may have no flow control on dbg uart, limit the speed
-   * the we emit the chars at. It's important to deliver core dumps intact. */
-  uint32_t now;
-  do {
-    now = system_get_time();
-  } while (now > last_char_ts /* handle overflow */ &&
-           now - last_char_ts < 20 /* Char time @ 115200 is 70 us */);
-  (*col_counter)++;
-  fputc(c, stderr);
-  if (*col_counter >= 160) {
-    fputc('\n', stderr);
-    (*col_counter) = 0;
-    system_soft_wdt_feed();
+  struct section_ctx *ctx = (struct section_ctx *) user_data;
+  esp_exc_putc(c);
+  ctx->col_counter++;
+  if (ctx->col_counter >= 160) {
+    esp_exc_puts("\r\n");
+    ctx->col_counter = 0;
   }
-  last_char_ts = now;
 }
 
 /* address must be aligned to 4 and size must be multiple of 4 */
 static NOINSTR void emit_core_dump_section(const char *name, uint32_t addr,
                                            uint32_t size) {
-  struct cs_base64_ctx ctx;
-  int col_counter = 0;
-  fprintf(stderr, ", \"%s\": {\"addr\": %u, \"data\": \"", name, addr);
-  cs_base64_init(&ctx, core_dump_emit_char, &col_counter);
+  struct section_ctx ctx = {.col_counter = 0, .crc32 = 0};
+  cs_base64_init(&ctx.b64_ctx, core_dump_emit_char, &ctx);
+  esp_exc_printf(",\r\n\"%s\": {\"addr\": %u, \"data\": \"\r\n", name, addr);
 
   uint32_t end = addr + size;
   while (addr < end) {
-    uint32_t buf;
-    buf = *((uint32_t *) addr);
-    addr += sizeof(uint32_t);
-    cs_base64_update(&ctx, (char *) &buf, sizeof(uint32_t));
+    uint32_t tmp;
+    tmp = *((uint32_t *) addr);
+    addr += sizeof(tmp);
+    ctx.crc32 = cs_crc32(ctx.crc32, &tmp, sizeof(tmp));
+    cs_base64_update(&ctx.b64_ctx, (char *) &tmp, sizeof(tmp));
   }
-  cs_base64_finish(&ctx);
-  fprintf(stderr, "\"}\n");
+  cs_base64_finish(&ctx.b64_ctx);
+  esp_exc_printf("\", \"crc32\": %u}", ctx.crc32);
 }
 
 NOINSTR void esp_dump_core(uint32_t cause, struct regfile *regs) {
   (void) cause;
-  fprintf(stderr,
-          "Dumping core\n"
-          "--- BEGIN CORE DUMP ---\n"
-          "{\"arch\": \"ESP8266\"");
+  esp_exc_puts("\r\n--- BEGIN CORE DUMP ---\r\n{\"arch\": \"ESP8266\"");
   emit_core_dump_section("REGS", (uintptr_t) regs, sizeof(*regs));
   emit_core_dump_section("DRAM", 0x3FFE8000, 0x18000);
   emit_core_dump_section("IRAM", 0x40100000, 0x8000);
@@ -75,7 +65,7 @@ NOINSTR void esp_dump_core(uint32_t cause, struct regfile *regs) {
    * so we can avoid sending here huge amount of data that's available
    * on the host where we run GDB.
    */
-  fprintf(stderr, "}\n---- END CORE DUMP ----\n");
+  esp_exc_puts("}\r\n---- END CORE DUMP ----\r\n");
 }
 
 #endif /* ESP_COREDUMP */

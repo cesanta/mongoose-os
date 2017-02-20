@@ -157,19 +157,20 @@ void mgos_task(void *arg) {
   (void) arg;
 }
 
-bool IRAM_ATTR mgos_invoke_cb(mgos_cb_t cb, void *arg) {
+bool IRAM_ATTR mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
   struct mgos_event e = {.cb = cb, .arg = arg};
-  int should_yield = false;
-  if (!xQueueSendToBackFromISR(s_main_queue, &e, &should_yield)) {
-    return false;
+  if (from_isr) {
+    int should_yield = false;
+    if (!xQueueSendToBackFromISR(s_main_queue, &e, &should_yield)) {
+      return false;
+    }
+    if (should_yield) {
+      portYIELD_FROM_ISR();
+    }
+    return true;
+  } else {
+    return xQueueSendToBack(s_main_queue, &e, 10);
   }
-  if (should_yield) {
-    /*
-     * TODO(rojer): Find a way to determine if we're in an interrupt and
-     * invoke portYIELD or portYIELD_FROM_ISR.
-     */
-  }
-  return true;
 }
 
 void app_main(void) {

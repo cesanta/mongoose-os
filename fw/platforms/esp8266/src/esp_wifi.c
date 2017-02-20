@@ -56,7 +56,8 @@ void wifi_changed_cb(System_Event_t *evt) {
   }
 
   if (mg_ev >= 0) {
-    mgos_invoke_cb(invoke_wifi_on_change_cb, (void *) mg_ev);
+    mgos_invoke_cb(invoke_wifi_on_change_cb, (void *) mg_ev,
+                   false /* from_isr */);
   }
 }
 
