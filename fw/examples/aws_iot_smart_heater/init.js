@@ -4,21 +4,22 @@
 // See README.md for details.
 //
 // Load Mongoose OS API
-load('api_gpio.js');
+load('api_timer.js');
 load('api_mqtt.js');
-load('api_sys.js');
 load('api_config.js');
 
-let pin = 0;   // GPIO 0 is typically a 'Flash' button
-GPIO.set_button_handler(pin, GPIO.PULL_UP, GPIO.INT_EDGE_NEG, 50, function(x) {
-  let topic = Cfg.get('device.id') + '/button_pressed';
+let devID = Cfg.get('device.id')
+let topic = devID + '/temp';
+let tempDummy = 10;
+Timer.set(5000 /* milliseconds */, 1 /* repeat */, function() {
   let message = JSON.stringify({
-    total_ram: Sys.total_ram(),
-    free_ram: Sys.free_ram()
+    temp: tempDummy,
   });
   let ok = MQTT.pub(topic, message, message.length);
   print('Published:', ok ? 'yes' : 'no', 'topic:', topic, 'message:', message);
-}, true);
 
-print('Flash button is configured on GPIO pin ', pin);
-print('Press the flash button now!');
+  tempDummy++;
+  if (tempDummy > 30) {
+    tempDummy = 10;
+  }
+}, null);

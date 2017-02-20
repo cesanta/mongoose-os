@@ -2,8 +2,8 @@
   "AWSTemplateFormatVersion": "2010-09-09",
   "Description": "AWS IoT Smart Heater Template",
   "Parameters": {
-    "TopicName": {
-      "Description": "IoT Topic Name",
+    "DeviceID": {
+      "Description": "ID of the device which represents a heater",
       "Type": "String",
       "AllowedPattern": "[a-zA-Z0-9_/#+]*",
       "MinLength": "1",
@@ -33,14 +33,22 @@
       "Properties": {
         "AttributeDefinitions": [
           {
-            "AttributeName": "myid",
+            "AttributeName": "deviceid",
+            "AttributeType": "S"
+          },
+          {
+            "AttributeName": "timestamp",
             "AttributeType": "S"
           }
         ],
         "KeySchema": [
           {
-            "AttributeName": "myid",
+            "AttributeName": "deviceid",
             "KeyType": "HASH"
+          },
+          {
+            "AttributeName": "timestamp",
+            "KeyType": "RANGE"
           }
         ],
         "ProvisionedThroughput": {
@@ -99,16 +107,17 @@
         "TopicRulePayload": {
           "RuleDisabled": "false",
           "Sql": {
-            "Fn::Join" : [ "", ["SELECT * FROM '", { "Ref": "TopicName" }, "'"] ]
+            "Fn::Join" : [ "", ["SELECT temp FROM '", { "Ref": "DeviceID" }, "/temp'"] ]
           },
           "Actions": [
             {
               "DynamoDB": {
                 "TableName": {"Ref": "myDynamoDBTable"},
-                "HashKeyField": "myid",
-                "HashKeyValue": "${timestamp()}",
+                "HashKeyField": "deviceid",
+                "HashKeyValue": { "Ref": "DeviceID" },
                 "RangeKeyField": "timestamp",
                 "RangeKeyValue": "${timestamp()}",
+                "PayloadField": "payload",
                 "RoleArn": {"Fn::GetAtt": ["myDynamoRole", "Arn"]}
               }
             }
