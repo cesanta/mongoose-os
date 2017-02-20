@@ -36,15 +36,10 @@ aws cloudformation create-stack \
     --template-body file://aws_button_template.json
 
 # Wait until the stack creation is completed (it may take a few minutes).
-# You can check the status of stack creation with the following command:
-aws cloudformation describe-stack-events --stack-name my-internet-button
+aws cloudformation wait stack-create-complete --stack-name my-internet-button
 
-# It will return a list of events, the top one is the latest one. When stack
-# creation is done, the top event will have the following properties:
-#   "ResourceStatus": "CREATE_COMPLETE",
-#   "ResourceType": "AWS::CloudFormation::Stack",
-# Alternatively, you can use the web UI; e.g. for the eu-west-1 region the URL is:
-# https://eu-west-1.console.aws.amazon.com/cloudformation/home?region=eu-west-1#/stacks?filter=active
+# Alternatively, you can use the web UI to check the status and read event
+# details: https://console.aws.amazon.com/cloudformation/home
 
 # NOTE: During stack creation, AWS will send a Subscription Confirmation email,
 # so check your email and confirm the subscription by following a link.
