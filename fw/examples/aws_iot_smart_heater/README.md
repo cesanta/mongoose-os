@@ -1,10 +1,6 @@
 # AWS IoT button example
 
-This is a draft of "AWS IoT Smart Heater" example.
-
-This particular example creates a stack on AWS IoT which consists of the
-dynamoDB table and a rule which listens for the messages from the device, and
-for each message creates an item in the dynamoDB table.
+This is a draft of the "AWS IoT Smart Heater" example.
 
 ## Build instructions
 
@@ -14,27 +10,6 @@ mos flash mos-esp8266
 
 # Get device id (e.g. esp8266_DA84C1), we'll need it later
 mos config-get device.id
-
-# Instantiate AWS stack (replace <device_id> with the ID you obtained above)
-#
-# In the example command I use stack name "my-internet-button", but you can
-# use any other name.
-aws cloudformation create-stack \
-    --stack-name my-internet-button \
-    --parameters ParameterKey=TopicName,ParameterValue=<device_id>/button_pressed \
-    --capabilities CAPABILITY_IAM \
-    --template-body file://aws_iot_heater_template.json
-
-# Wait until the stack creation is completed (it may take a few minutes).
-# You can check the status of stack creation with the following command:
-aws cloudformation describe-stack-events --stack-name my-internet-button
-
-# It will return a list of events, the top one is the latest one. When stack
-# creation is done, the top event will have the following properties:
-#   "ResourceStatus": "CREATE_COMPLETE",
-#   "ResourceType": "AWS::CloudFormation::Stack",
-# Alternatively, you can use the web UI; e.g. for the eu-west-1 region the URL is:
-# https://eu-west-1.console.aws.amazon.com/cloudformation/home?region=eu-west-1#/stacks?filter=active
 
 # Put init.js on the device
 mos put init.js
@@ -49,9 +24,41 @@ mos aws-iot-setup --aws-iot-policy=mos-default
 # Attach console
 mos console
 
-# When the device is connected to the AWS IoT, navigate to the AWS dynamoDB
-# web UI (e.g. for the region eu-west-1 the URL is: https://eu-west-1.console.aws.amazon.com/dynamodb/home),
-# open the created table (named like "my-internet-button-myDynamoDBTable-XXXXXXXX"),
-# and try to press a button on your device. Each button press will result in
-# a new item added to the table.
+# Now, in another terminal, instantiate AWS stack
+# (replace <device_id> with the ID you obtained above)
+#
+# In the example command I use stack name "my-heater", but you can
+# use any other name.
+aws cloudformation create-stack \
+    --stack-name my-heater \
+    --parameters \
+        ParameterKey=DeviceID,ParameterValue=<device_id> \
+    --capabilities CAPABILITY_IAM \
+    --template-body file://aws_iot_heater_template.yaml
+
+# Wait until the stack creation is completed (it may take a few minutes).
+aws cloudformation wait stack-create-complete --stack-name my-heater
+
+# Alternatively, you can use the web UI to check the status and read event
+# details: https://console.aws.amazon.com/cloudformation/home
+
+# When the stack is created, get the name of the created S3 bucket:
+aws cloudformation describe-stacks --stack-name my-heater
+
+# look for the following:
+#  ...
+#  {
+#      "Description": "Name of the newly created S3 bucket", 
+#      "OutputKey": "S3BucketName", 
+#      "OutputValue": "<my-s3bucket-name>"
+#  }
+#  ...
+#
+# Copy the actual value of "<my-s3bucket-name>", and use it to put two files
+# on the S3 bucket:
+aws s3 cp bucket/index.html s3://<my-s3bucket-name> --acl public-read
+aws s3 cp bucket/index.js s3://<my-s3bucket-name> --acl public-read
+
+# Now, navigate to the index page of your S3 bucket:
+# https://<my-s3bucket-name>.s3.amazonaws.com/index.html
 ```
