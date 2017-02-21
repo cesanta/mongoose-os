@@ -12,6 +12,7 @@ load('api_mqtt.js');
 load('api_rpc.js');
 load('api_sys.js');
 load('api_timer.js');
+load('api_config.js');
 
 // GPIO pin which has a on/off relay connected
 let pin = 13;
@@ -22,7 +23,8 @@ let freq = 10000;
 
 // MQTT topic to publish to. MQTT server is configured separately,
 // mos config-set mqtt.server=YOUR_SERVER:PORT
-let topic = 'topic1';
+let devID = Cfg.get('device.id');
+let topic = devID + '/temp';
 
 // This function reads temperature from the MCP9808 temperature sensor.
 // Data sheet: http://www.microchip.com/wwwproducts/en/en556182
