@@ -8,7 +8,7 @@
 </div>
 
 <script>
-  $.ajax({url: '/call', data: {method: 'Vars.Get'}}).then(function(json) {
+  $.ajax({url: '/call', data: {method: 'Sys.GetInfo'}}).then(function(json) {
     $.each(json.result, function(k, v) {
       $('<div><label>' + k + '</label><span>' + v + '</span></div>').appendTo('#rovars');
     });

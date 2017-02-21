@@ -813,7 +813,7 @@ var _web_rootDashHtml = []byte(`<!DOCTYPE html>
           </div>
         </div>
 
-        <div id="d1" style="border: 1px solid transparent; height: 600px;">
+        <div id="d1" class="col-xs-12" style="border: 1px solid transparent; height: 600px;">
           <div id="app_view"></div>
           <div class="splitter-horizontal">
             <div class="text-center"><i class="fa fa-bars"></i></div>
@@ -861,7 +861,7 @@ func web_rootDashHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/dash.html", size: 3729, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/dash.html", size: 3747, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4955,13 +4955,12 @@ var _web_rootJsWizardJs = []byte(`(function($) {
     return $.ajax({url: '/flash', data: {firmware: firmware}}).done(function(json) {
       new PNotify({title: 'Successfully flashed ' + firmware, type: 'success' });
       document.cookie = 'firmware=' + firmware;
-      return $.ajax({url: '/call', data: {method: 'Vars.Get'}})
+      return $.ajax({url: '/call', data: {method: 'Sys.GetInfo'}})
           .done(function(json) {
             var v = json.result;
             new PNotify({
               title: 'Firmware Details',
-              text: 'Arch: ' + v.arch + ', ID: ' + v.fw_id + ', MAC: ' +
-                        v.mac_address,
+              text: 'Arch: ' + v.arch + ', ID: ' + v.fw_id + ', MAC: ' + v.mac,
               type: 'success'
             });
           });
@@ -5121,7 +5120,7 @@ func web_rootJsWizardJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 9604, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 9575, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -5502,7 +5501,7 @@ var _web_rootPage_infoHtml = []byte(`<div data-title="Device information" style=
 </div>
 
 <script>
-  $.ajax({url: '/call', data: {method: 'Vars.Get'}}).then(function(json) {
+  $.ajax({url: '/call', data: {method: 'Sys.GetInfo'}}).then(function(json) {
     $.each(json.result, function(k, v) {
       $('<div><label>' + k + '</label><span>' + v + '</span></div>').appendTo('#rovars');
     });
@@ -5524,7 +5523,7 @@ func web_rootPage_infoHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_info.html", size: 679, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_info.html", size: 682, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

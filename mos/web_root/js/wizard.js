@@ -102,13 +102,12 @@
     return $.ajax({url: '/flash', data: {firmware: firmware}}).done(function(json) {
       new PNotify({title: 'Successfully flashed ' + firmware, type: 'success' });
       document.cookie = 'firmware=' + firmware;
-      return $.ajax({url: '/call', data: {method: 'Vars.Get'}})
+      return $.ajax({url: '/call', data: {method: 'Sys.GetInfo'}})
           .done(function(json) {
             var v = json.result;
             new PNotify({
               title: 'Firmware Details',
-              text: 'Arch: ' + v.arch + ', ID: ' + v.fw_id + ', MAC: ' +
-                        v.mac_address,
+              text: 'Arch: ' + v.arch + ', ID: ' + v.fw_id + ', MAC: ' + v.mac,
               type: 'success'
             });
           });
