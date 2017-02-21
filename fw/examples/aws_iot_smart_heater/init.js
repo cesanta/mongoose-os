@@ -8,7 +8,7 @@ load('api_timer.js');
 load('api_mqtt.js');
 load('api_config.js');
 
-let devID = Cfg.get('device.id')
+let devID = Cfg.get('device.id');
 let topic = devID + '/temp';
 let tempDummy = 10;
 Timer.set(5000 /* milliseconds */, 1 /* repeat */, function() {
