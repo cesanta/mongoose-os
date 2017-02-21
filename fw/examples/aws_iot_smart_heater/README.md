@@ -24,8 +24,21 @@ mos aws-iot-setup --aws-iot-policy=mos-default
 # Attach console
 mos console
 
-# Now, in another terminal, instantiate AWS stack
-# (replace <device_id> with the ID you obtained above)
+# Now, in another terminal, instantiate AWS stack.
+# First of all, we need to create an S3 bucket for helper functions:
+aws s3 mb s3://my-cf-helpers
+
+# Now, "package" the template. Packaging includes copying source code of the
+# helper functions from local machine to the s3 bucket we created above,
+# and adjusting the template appropriately. It's all done in one step:
+aws cloudformation package \
+    --template-file aws_iot_heater_template.yaml \
+    --s3-bucket my-cf-helpers \
+    --output-template-file packaged_template.yaml
+
+# The command above has created a new template file: packaged-template.yaml.
+# Now, instantiate AWS stack (replace <device_id> with the ID you obtained by
+# config-get in the beginning)
 #
 # In the example command I use stack name "my-heater", but you can
 # use any other name.
@@ -34,7 +47,7 @@ aws cloudformation create-stack \
     --parameters \
         ParameterKey=DeviceID,ParameterValue=<device_id> \
     --capabilities CAPABILITY_IAM \
-    --template-body file://aws_iot_heater_template.yaml
+    --template-body file://packaged_template.yaml
 
 # Wait until the stack creation is completed (it may take a few minutes).
 aws cloudformation wait stack-create-complete --stack-name my-heater
