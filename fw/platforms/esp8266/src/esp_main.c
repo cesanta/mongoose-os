@@ -40,7 +40,7 @@
 #endif
 
 #ifndef MGOS_TASK_PRIORITY
-#define MGOS_TASK_PRIORITY 10
+#define MGOS_TASK_PRIORITY 5
 #endif
 
 #else
