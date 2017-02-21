@@ -339,7 +339,7 @@ $(APP_ELF): $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MG
 	  $(OBJCOPY) --rename-section .rodata.str1.1=.irom0.text $$i; \
 	done
 ifeq "$(MGOS_ESP8266_RTOS)" "1"
-	$(OBJCOPY) --weaken-symbol printf /opt/Espressif/esp-open-sdk/xtensa-lx106-elf/xtensa-lx106-elf/lib/libc.a
+	$(OBJCOPY) --weaken-symbol printf --weaken-symbol puts /opt/Espressif/esp-open-sdk/xtensa-lx106-elf/xtensa-lx106-elf/lib/libc.a
 endif
 	$(call link,$(APP_OBJS) $(MG_BUILD_INFO_O) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MGOS_LIB) $(ATCA_LIB) $(LWIP_LIB) $(SSL_LIBS) $(LIBS) $(LD_WRAPPERS))
 
