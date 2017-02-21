@@ -1,13 +1,17 @@
 <html>
   <body>
-    hi!
-
-    <pre id="content"></pre>
 
     <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.bundle.min.js"></script>
     <script src="https://sdk.amazonaws.com/js/aws-sdk-2.7.20.min.js"></script>
     <script src="vars.js"></script>
     <script src="index.js"></script>
+
+    <p>Temperature during the last 2 minutes</p>
+
+    <div style="width: 1280px; height: 200px">
+      <canvas id="myChart" style="height: 100%; width: 100%"></canvas>
+    </div>
   </body>
 </html>
 
