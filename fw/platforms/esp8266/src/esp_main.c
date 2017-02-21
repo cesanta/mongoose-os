@@ -194,8 +194,6 @@ static void mgos_task(void *arg) {
 
   mongoose_schedule_poll(false /* from_isr */);
 
-  esp_hw_wdt_setup(ESP_HW_WDT_3_36_SEC, ESP_HW_WDT_3_36_SEC);
-
   while (true) {
     /* Keep soft WDT disabled. */
     system_soft_wdt_stop();
