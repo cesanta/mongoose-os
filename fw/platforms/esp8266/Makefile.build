@@ -216,6 +216,9 @@ $(LWIP_LIB): $(LWIP_PATH)
 	  CFLAGS_EXTRA="$(HEAP_LOG_FLAGS)"
 endif
 
+# Intercept Cache_Read_Enable_New for rBoot's big flash support.
+LDFLAGS += -Wl,--wrap=Cache_Read_Enable_New
+
 ifeq "$(SSL)" "mbedTLS"
   IPATH += $(MBEDTLS_PATH)/include
   MGOS_SRCS += esp_crypto.c
