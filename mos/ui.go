@@ -119,7 +119,6 @@ func reconnectToDevice(ctx context.Context) (*dev.DevConn, error) {
 func startUI(ctx context.Context, devConn *dev.DevConn) error {
 	var devConnMtx sync.Mutex
 
-	flag.Set("v", "4")
 	glog.CopyStandardLogTo("INFO")
 	go reportConsoleLogs()
 	http.Handle("/ws", websocket.Handler(wsHandler))
