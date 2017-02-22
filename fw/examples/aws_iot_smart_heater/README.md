@@ -25,7 +25,10 @@ mos aws-iot-setup --aws-iot-policy=mos-default
 mos console
 
 # Now, in another terminal, instantiate AWS stack.
-# First of all, we need to create an S3 bucket for helper functions:
+# First of all, install node_modules for the helpers
+npm --prefix ../helpers/cloudformation-helpers install ../helpers/cloudformation-helpers
+
+# We'll also need to create a separate S3 bucket for helper functions:
 aws s3 mb s3://my-cf-helpers
 
 # Now, "package" the template. Packaging includes copying source code of the

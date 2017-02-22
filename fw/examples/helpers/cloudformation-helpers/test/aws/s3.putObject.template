@@ -1,0 +1,54 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+    "CFHelperStackName": {
+      "Type": "String",
+      "Description": "The name of the stack where you installed the CloudFormation helper functions. See https://github.com/gilt/cloudformation-helpers."
+    },
+    "S3Bucket": {
+      "Type": "String",
+      "Description": "The name of the S3 bucket where to put the object. Must already exist."
+    }
+  },
+  "Resources": {
+    "CFHelperStack": {
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": "https://s3.amazonaws.com/com.gilt.public.backoffice/cloudformation_templates/lookup_stack_outputs.template"
+      }
+    },
+    "CFHelper": {
+      "Type": "Custom::CFHelper",
+      "Properties": {
+        "ServiceToken": { "Fn::GetAtt" : ["CFHelperStack", "Outputs.LookupStackOutputsArn"] },
+        "StackName": { "Ref": "CFHelperStackName" }
+      },
+      "DependsOn": [
+        "CFHelperStack"
+      ]
+    },
+    "S3PutObject1": {
+      "Type": "Custom::S3PutObject",
+      "Properties": {
+        "ServiceToken": { "Fn::GetAtt" : ["CFHelper", "S3PutObjectFunctionArn"] },
+        "Bucket": { "Ref": "S3Bucket" },
+        "Key": "empty-dir/"
+      },
+      "DependsOn": [
+        "CFHelper"
+      ]
+    },
+    "S3PutObject2": {
+      "Type": "Custom::S3PutObject",
+      "Properties": {
+        "ServiceToken": { "Fn::GetAtt" : ["CFHelper", "S3PutObjectFunctionArn"] },
+        "Bucket": { "Ref": "S3Bucket" },
+        "Key": "new-dir/test.txt",
+        "Body": "Test data"
+      },
+      "DependsOn": [
+        "CFHelper"
+      ]
+    }
+  }
+}

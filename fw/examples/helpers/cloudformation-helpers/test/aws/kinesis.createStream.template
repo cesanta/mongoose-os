@@ -1,0 +1,38 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+    "CFHelperStackName": {
+      "Type": "String",
+      "Description": "The name of the stack where you installed the CloudFormation helper functions. See https://github.com/gilt/cloudformation-helpers."
+    }
+  },
+  "Resources": {
+    "CFHelperStack": {
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": "https://s3.amazonaws.com/com.gilt.public.backoffice/cloudformation_templates/lookup_stack_outputs.template"
+      }
+    },
+    "CFHelper": {
+      "Type": "Custom::CFHelper",
+      "Properties": {
+        "ServiceToken": { "Fn::GetAtt" : ["CFHelperStack", "Outputs.LookupStackOutputsArn"] },
+        "StackName": { "Ref": "CFHelperStackName" }
+      },
+      "DependsOn": [
+        "CFHelperStack"
+      ]
+    },
+    "CreateStream": {
+      "Type": "Custom::CreateStream",
+      "Properties": {
+        "ServiceToken": { "Fn::GetAtt" : ["CFHelper", "KinesisCreateStreamFunctionArn"] },
+        "ShardCount": 1,
+        "StreamName": { "Fn::Join": [ "-", [ { "Ref": "AWS::StackName" }, "stream" ] ] }
+      },
+      "DependsOn": [
+        "CFHelper"
+      ]
+    }
+  }
+}

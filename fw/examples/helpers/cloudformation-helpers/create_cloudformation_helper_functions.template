@@ -1,0 +1,533 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Resources": {
+    "ReferenceDB": {
+      "Type": "AWS::DynamoDB::Table",
+      "Properties": {
+        "AttributeDefinitions": [
+          {
+            "AttributeName": "key",
+            "AttributeType": "S"
+          }
+        ],
+        "KeySchema": [
+          {
+            "AttributeName": "key",
+            "KeyType": "HASH"
+          }
+        ],
+        "ProvisionedThroughput": {
+          "ReadCapacityUnits": 1,
+          "WriteCapacityUnits": 1
+        },
+        "TableName": { "Fn::Join": [ "-", [ { "Ref" : "AWS::StackName" }, "reference" ] ] }
+      }
+    },
+    "RoleBasePolicy": {
+      "Type": "AWS::IAM::ManagedPolicy",
+      "Properties": {
+        "Description" : { "Fn::Join": [ " ", [ "Base policy for all Lambda function roles in", { "Ref" : "AWS::StackName" }, "." ] ] },
+        "PolicyDocument" : {
+          "Version" : "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+              ],
+              "Resource": "arn:aws:logs:*:*:*"
+            },
+            {
+              "Effect": "Allow",
+              "Action": [
+                "dynamodb:GetItem",
+                "dynamodb:PutItem",
+                "dynamodb:Scan"
+              ],
+              "Resource": { "Fn::Join":  [ "", [ "arn:aws:dynamodb:", { "Ref": "AWS::Region" }, ":", { "Ref": "AWS::AccountId" } , ":table/", { "Ref": "ReferenceDB" } ] ] }
+            }
+          ]
+        }
+      }
+    },
+    "ApiGatewayCreateApiFunctionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version" : "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [ "lambda.amazonaws.com" ]
+              },
+              "Action": [ "sts:AssumeRole" ]
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          { "Ref": "RoleBasePolicy" }
+        ],
+        "Policies": [
+          {
+            "PolicyName": "ApiGatewayWriter",
+            "PolicyDocument": {
+              "Version" : "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "apigateway:*"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "ApiGatewayCreateApiFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": { "Fn::Join": [ ".", [ "com.gilt.public.backoffice", { "Ref" : "AWS::Region" } ] ] },
+          "S3Key": "lambda_functions/cloudformation-helpers.zip"
+        },
+        "Description": "Used to create a full API in Api Gateway.",
+        "Handler": "aws/apiGateway.createApi",
+        "Role": {"Fn::GetAtt" : [ "ApiGatewayCreateApiFunctionRole", "Arn" ] },
+        "Runtime": "nodejs4.3",
+        "Timeout": 30
+      },
+      "DependsOn": [
+        "ApiGatewayCreateApiFunctionRole"
+      ]
+    },
+    "CloudWatchLogsPutMetricFilterFunctionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version" : "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [ "lambda.amazonaws.com" ]
+              },
+              "Action": [ "sts:AssumeRole" ]
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          { "Ref": "RoleBasePolicy" }
+        ],
+        "Policies": [
+          {
+            "PolicyName": "LogFilterCreator",
+            "PolicyDocument": {
+              "Version" : "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:DeleteMetricFilter",
+                    "logs:PutMetricFilter"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "CloudWatchLogsPutMetricFilterFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": { "Fn::Join": [ ".", [ "com.gilt.public.backoffice", { "Ref" : "AWS::Region" } ] ] },
+          "S3Key": "lambda_functions/cloudformation-helpers.zip"
+        },
+        "Description": "Used to populate a DynamoDB database from CloudFormation",
+        "Handler": "aws/cloudWatchLogs.putMetricFilter",
+        "Role": {"Fn::GetAtt" : [ "CloudWatchLogsPutMetricFilterFunctionRole", "Arn" ] },
+        "Runtime": "nodejs4.3",
+        "Timeout": 30
+      },
+      "DependsOn": [
+        "CloudWatchLogsPutMetricFilterFunctionRole"
+      ]
+    },
+    "DynamoDBPutItemsFunctionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version" : "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [ "lambda.amazonaws.com" ]
+              },
+              "Action": [ "sts:AssumeRole" ]
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          { "Ref": "RoleBasePolicy" }
+        ],
+        "Policies": [
+          {
+            "PolicyName": "DBWriter",
+            "PolicyDocument": {
+              "Version" : "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "dynamodb:DeleteItem",
+                    "dynamodb:DescribeTable",
+                    "dynamodb:PutItem"
+                  ],
+                  "Resource": { "Fn::Join":  [ "", [ "arn:aws:dynamodb:", { "Ref": "AWS::Region" }, ":", { "Ref": "AWS::AccountId" } , ":table/*" ] ] }
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "DynamoDBPutItemsFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": { "Fn::Join": [ ".", [ "com.gilt.public.backoffice", { "Ref" : "AWS::Region" } ] ] },
+          "S3Key": "lambda_functions/cloudformation-helpers.zip"
+        },
+        "Description": "Used to populate a DynamoDB database from CloudFormation",
+        "Handler": "aws/dynamo.putItems",
+        "Role": {"Fn::GetAtt" : [ "DynamoDBPutItemsFunctionRole", "Arn" ] },
+        "Runtime": "nodejs4.3",
+        "Timeout": 30
+      },
+      "DependsOn": [
+        "DynamoDBPutItemsFunctionRole"
+      ]
+    },
+    "KinesisCreateStreamFunctionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version" : "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [ "lambda.amazonaws.com" ]
+              },
+              "Action": [ "sts:AssumeRole" ]
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          { "Ref": "RoleBasePolicy" }
+        ],
+        "Policies": [
+          {
+            "PolicyName": "KinesisCreator",
+            "PolicyDocument": {
+              "Version" : "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "kinesis:CreateStream",
+                    "kinesis:DeleteStream",
+                    "kinesis:DescribeStream"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "KinesisCreateStreamFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": { "Fn::Join": [ ".", [ "com.gilt.public.backoffice", { "Ref" : "AWS::Region" } ] ] },
+          "S3Key": "lambda_functions/cloudformation-helpers.zip"
+        },
+        "Description": "Used to create a Kinesis stream",
+        "Handler": "aws/kinesis.createStream",
+        "Role": {"Fn::GetAtt" : [ "KinesisCreateStreamFunctionRole", "Arn" ] },
+        "Runtime": "nodejs4.3",
+        "Timeout": 180
+      },
+      "DependsOn": [
+        "KinesisCreateStreamFunctionRole"
+      ]
+    },
+    "S3PutObjectFunctionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version" : "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [ "lambda.amazonaws.com" ]
+              },
+              "Action": [ "sts:AssumeRole" ]
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          { "Ref": "RoleBasePolicy" }
+        ],
+        "Policies": [
+          {
+            "PolicyName": "S3Writer",
+            "PolicyDocument": {
+              "Version" : "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:DeleteObject",
+                    "s3:ListBucket",
+                    "s3:PutObject"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "S3PutObjectFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": { "Fn::Join": [ ".", [ "com.gilt.public.backoffice", { "Ref" : "AWS::Region" } ] ] },
+          "S3Key": "lambda_functions/cloudformation-helpers.zip"
+        },
+        "Description": "Used to put objects into S3.",
+        "Handler": "aws/s3.putObject",
+        "Role": {"Fn::GetAtt" : [ "S3PutObjectFunctionRole", "Arn" ] },
+        "Runtime": "nodejs4.3",
+        "Timeout": 30
+      },
+      "DependsOn": [
+        "S3PutObjectFunctionRole"
+      ]
+    },
+    "S3PutBucketPolicyFunctionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version" : "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [ "lambda.amazonaws.com" ]
+              },
+              "Action": [ "sts:AssumeRole" ]
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          { "Ref": "RoleBasePolicy" }
+        ],
+        "Policies": [
+          {
+            "PolicyName": "S3PolicyWriter",
+            "PolicyDocument": {
+              "Version" : "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "s3:ListBucket",
+                    "s3:PutBucketPolicy",
+                    "s3:DeleteBucketPolicy"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "S3PutBucketPolicyFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": "com.gilt.public.backoffice",
+          "S3Key": "lambda_functions/cloudformation-helpers.zip"
+        },
+        "Description": "Used to put S3 bucket policy.",
+        "Handler": "aws/s3.putBucketPolicy",
+        "Role": {"Fn::GetAtt" : [ "S3PutBucketPolicyFunctionRole", "Arn" ] },
+        "Runtime": "nodejs4.3",
+        "Timeout": 30
+      },
+      "DependsOn": [
+        "S3PutBucketPolicyFunctionRole"
+      ]
+    },
+    "SnsSubscribeFunctionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version" : "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [ "lambda.amazonaws.com" ]
+              },
+              "Action": [ "sts:AssumeRole" ]
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          { "Ref": "RoleBasePolicy" }
+        ],
+        "Policies": [
+          {
+            "PolicyName": "SNSSubscriber",
+            "PolicyDocument": {
+              "Version" : "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "sns:subscribe",
+                    "sns:unsubscribe"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "SnsSubscribeFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": { "Fn::Join": [ ".", [ "com.gilt.public.backoffice", { "Ref" : "AWS::Region" } ] ] },
+          "S3Key": "lambda_functions/cloudformation-helpers.zip"
+        },
+        "Description": "Used to subscribe to existing SNS topics.",
+        "Handler": "aws/sns.subscribe",
+        "Role": {"Fn::GetAtt" : [ "SnsSubscribeFunctionRole", "Arn" ] },
+        "Runtime": "nodejs4.3",
+        "Timeout": 30
+      },
+      "DependsOn": [
+        "SnsSubscribeFunctionRole"
+      ]
+    },
+    "SesCreateReceiptRuleFunctionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version" : "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [ "lambda.amazonaws.com" ]
+              },
+              "Action": [ "sts:AssumeRole" ]
+            }
+          ]
+        },
+        "ManagedPolicyArns": [
+          { "Ref": "RoleBasePolicy" }
+        ],
+        "Policies": [
+          {
+            "PolicyName": "SESReceiptRuleModifier",
+            "PolicyDocument": {
+              "Version" : "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "ses:CreateReceiptRule",
+                    "ses:DeleteReceiptRule"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "SesCreateReceiptRuleFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Code": {
+          "S3Bucket": "com.gilt.public.backoffice",
+          "S3Key": "lambda_functions/cloudformation-helpers.zip"
+        },
+        "Description": "Used to create SES receipt rules.",
+        "Handler": "aws/ses.createReceiptRule",
+        "Role": {"Fn::GetAtt" : [ "SesCreateReceiptRuleFunctionRole", "Arn" ] },
+        "Runtime": "nodejs4.3",
+        "Timeout": 30
+      },
+      "DependsOn": [
+        "SesCreateReceiptRuleFunctionRole"
+      ]
+    }
+  },
+  "Outputs": {
+    "ApiGatewayCreateApiFunctionArn": {
+      "Description": "The ARN of the ApiGatewayCreateApiFunction, for use in other CloudFormation templates.",
+      "Value": { "Fn::GetAtt" : ["ApiGatewayCreateApiFunction", "Arn"] }
+    },
+    "CloudWatchLogsPutMetricFilterFunctionArn": {
+      "Description": "The ARN of the CloudWatchLogsPutMetricFilterFunction, for use in other CloudFormation templates.",
+      "Value": { "Fn::GetAtt" : ["CloudWatchLogsPutMetricFilterFunction", "Arn"] }
+    },
+    "DynamoDBPutItemsFunctionArn": {
+      "Description": "The ARN of the DynamoDBPutItemsFunction, for use in other CloudFormation templates.",
+      "Value": { "Fn::GetAtt" : ["DynamoDBPutItemsFunction", "Arn"] }
+    },
+    "KinesisCreateStreamFunctionArn": {
+      "Description": "The ARN of the KinesisCreateStreamFunction, for use in other CloudFormation templates.",
+      "Value": { "Fn::GetAtt" : ["KinesisCreateStreamFunction", "Arn"] }
+    },
+    "SnsSubscribeFunctionArn": {
+      "Description": "The ARN of the SnsSubscribeFunction, for use in other CloudFormation templates.",
+      "Value": { "Fn::GetAtt" : ["SnsSubscribeFunction", "Arn"] }
+    },
+    "S3PutObjectFunctionArn": {
+      "Description": "The ARN of the S3PutObjectFunction, for use in other CloudFormation templates.",
+      "Value": { "Fn::GetAtt" : ["S3PutObjectFunction", "Arn"] }
+    },
+    "S3PutBucketPolicyFunctionArn": {
+      "Description": "The ARN of the S3PutBucketPolicyFunction, for use in other CloudFormation templates.",
+      "Value": { "Fn::GetAtt" : ["S3PutBucketPolicyFunction", "Arn"] }
+    },
+    "SesCreateReceiptRuleFunctionArn": {
+      "Description": "The ARN of the SesCreateReceiptRuleFunction, for use in other CloudFormation templates.",
+      "Value": { "Fn::GetAtt" : ["SesCreateReceiptRuleFunction", "Arn"] }
+    }
+  }
+}

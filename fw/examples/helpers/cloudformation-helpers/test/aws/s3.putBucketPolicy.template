@@ -1,0 +1,38 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+    "CFHelperStackName": {
+      "Type": "String",
+      "Description": "The name of the stack where you installed the CloudFormation helper functions. See https://github.com/gilt/cloudformation-helpers."
+    }
+  },
+  "Resources": {
+    "CFHelperStack": {
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": "https://s3.amazonaws.com/com.gilt.public.backoffice/cloudformation_templates/lookup_stack_outputs.template"
+      }
+    },
+    "CFHelper": {
+      "Type": "Custom::CFHelper",
+      "Properties": {
+        "ServiceToken": { "Fn::GetAtt" : ["CFHelperStack", "Outputs.LookupStackOutputsArn"] },
+        "StackName": { "Ref": "CFHelperStackName" }
+      },
+      "DependsOn": [
+        "CFHelperStack"
+      ]
+    },
+    "S3PutBucketPolicy": {
+      "Type": "Custom::S3PutBucketPolicy",
+      "Properties": {
+        "ServiceToken": { "Fn::GetAtt" : ["CFHelper", "S3PutBucketPolicyFunctionArn"] },
+        "Bucket": "my-test-bucket321",
+        "Policy": "{ \"Version\": \"2008-10-17\", \"Statement\": [ { \"Effect\": \"Allow\", \"Principal\": { \"Service\": \"ses.amazonaws.com\" }, \"Action\": \"s3:PutObject\", \"Resource\": \"arn:aws:s3:::my-test-bucket321/*\" } ] }"
+      },
+      "DependsOn": [
+        "CFHelper"
+      ]
+    }
+  }
+}

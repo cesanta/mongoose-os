@@ -1,0 +1,20 @@
+{
+  "name": "cloudformation-helpers",
+  "version": "0.0.0",
+  "description": "A set of helper methods to fill in the gaps in existing CloudFormation support.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gilt/cloudformation-helpers"
+  },
+  "keywords": [
+    "cloudformation"
+  ],
+  "author": "Ryan Martin",
+  "license": "Apache 2.0",
+  "bugs": {
+    "url": "https://github.com/gilt/cloudformation-helpers/issues"
+  },
+  "dependencies": {
+    "bluebird": "3.x"
+  }
+}

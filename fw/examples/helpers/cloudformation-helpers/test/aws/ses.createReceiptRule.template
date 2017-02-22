@@ -1,0 +1,61 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+    "CFHelperStackName": {
+      "Type": "String",
+      "Description": "The name of the stack where you installed the CloudFormation helper functions. See https://github.com/gilt/cloudformation-helpers."
+    },
+    "RuleSetName": {
+      "Type": "String",
+      "Description": "The name of the rule set where to create the rule. Must already exist."
+    },
+    "S3Bucket": {
+      "Type": "String",
+      "Description": "The name of the S3 bucket where to put the object. Must already exist."
+    },
+    "MailRecipient" :{
+      "Type": "String",
+      "Description": "Email used to receive mails in the configured rule"
+    }
+  },
+  "Resources": {
+    "CFHelperStack": {
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": "https://s3.amazonaws.com/com.gilt.public.backoffice/cloudformation_templates/lookup_stack_outputs.template"
+      }
+    },
+    "CFHelper": {
+      "Type": "Custom::CFHelper",
+      "Properties": {
+        "ServiceToken": { "Fn::GetAtt" : ["CFHelperStack", "Outputs.LookupStackOutputsArn"] },
+        "StackName": { "Ref": "CFHelperStackName" }
+      },
+      "DependsOn": [
+        "CFHelperStack"
+      ]
+    },
+    "SesCreateReceiptRule": {
+      "Type": "Custom::SesCreateReceiptRule",
+      "Properties": {
+        "ServiceToken": { "Fn::GetAtt" : ["CFHelper", "SesCreateReceiptRuleFunctionArn"] },
+        "Rule" : {
+          "Name": "Test-SESRule",
+          "Recipients" : [{ "Ref": "MailRecipient" }],
+          "Enabled" : true,
+          "ScanEnabled" : true,
+          "Actions" : [{
+            "S3Action": {
+               "BucketName": { "Ref": "S3Bucket" },
+               "ObjectKeyPrefix": "incoming_mails/"
+             }
+          }]
+        },
+        "RuleSetName" :{ "Ref": "RuleSetName" } 
+      },
+      "DependsOn": [
+        "CFHelper"
+      ]
+    }
+  }
+}

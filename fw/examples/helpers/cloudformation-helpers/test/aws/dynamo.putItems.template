@@ -1,0 +1,64 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+    "CFHelperStackName": {
+      "Type": "String",
+      "Description": "The name of the stack where you installed the CloudFormation helper functions. See https://github.com/gilt/cloudformation-helpers."
+    },
+    "DynamoTable": {
+      "Type": "String",
+      "Description": "The name of the DynamoDB table where to put the items. Must already exist."
+    }
+  },
+  "Resources": {
+    "CFHelperStack": {
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": "https://s3.amazonaws.com/com.gilt.public.backoffice/cloudformation_templates/lookup_stack_outputs.template"
+      }
+    },
+    "CFHelper": {
+      "Type": "Custom::CFHelper",
+      "Properties": {
+        "ServiceToken": { "Fn::GetAtt" : ["CFHelperStack", "Outputs.LookupStackOutputsArn"] },
+        "StackName": { "Ref": "CFHelperStackName" }
+      },
+      "DependsOn": [
+        "CFHelperStack"
+      ]
+    },
+    "DynamoPutItems": {
+      "Type": "Custom::DynamoPutItems",
+      "Properties": {
+        "ServiceToken": { "Fn::GetAtt" : ["CFHelper", "DynamoDBPutItemsFunctionArn"] },
+        "TableName": { "Ref": "DynamoTable" },
+        "Items": [
+          {
+            "key": "temp-nested",
+            "value": {
+              "foo": "bar",
+              "bal": {
+                "baz": [
+                  1,
+                  "test1",
+                  false
+                ]
+              }
+            }
+          },
+          {
+            "key": "temp-bool",
+            "value": false
+          },
+          {
+            "key": "temp-num",
+            "value": 10.5
+          }
+        ]
+      },
+      "DependsOn": [
+        "CFHelper"
+      ]
+    }
+  }
+}

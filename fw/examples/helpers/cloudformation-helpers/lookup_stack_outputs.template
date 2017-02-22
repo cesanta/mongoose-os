@@ -1,0 +1,113 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Resources": {
+    "LookupStackOutputsRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version" : "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [ "lambda.amazonaws.com" ]
+              },
+              "Action": [ "sts:AssumeRole" ]
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "LogWriter",
+            "PolicyDocument": {
+              "Version" : "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                  ],
+                  "Resource": "arn:aws:logs:*:*:*"
+                }
+              ]
+            }
+          },
+          {
+            "PolicyName": "CFReader",
+            "PolicyDocument": {
+              "Version" : "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "cloudformation:DescribeStacks"
+                  ],
+                  "Resource": "*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "LookupStackOutputs": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Handler": "index.handler",
+        "Role": { "Fn::GetAtt": [ "LookupStackOutputsRole", "Arn" ] },
+        "Code": {
+          "ZipFile": {
+            "Fn::Join": [
+              "",
+              [
+                "var response = require('cfn-response');",
+                "exports.handler = function(event, context) {",
+                  "console.log('REQUEST RECEIVED:\\n', JSON.stringify(event));",
+                  "if (event.RequestType == 'Delete') {",
+                    "response.send(event, context, response.SUCCESS);",
+                    "return;",
+                  "}",
+                  "var stackName = event.ResourceProperties.StackName;",
+                  "var responseData = {};",
+                  "if (stackName) {",
+                    "var aws = require('aws-sdk');",
+                    "var cfn = new aws.CloudFormation();",
+                    "cfn.describeStacks({StackName: stackName}, function(err, data) {",
+                      "if (err) {",
+                        "responseData = {Error: 'DescribeStacks call failed'};",
+                        "console.log(responseData.Error + ':\\n', err);",
+                        "response.send(event, context, response.FAILED, responseData);",
+                      "} else {",
+                        "data.Stacks[0].Outputs.forEach(function(output) {",
+                          "responseData[output.OutputKey] = output.OutputValue;",
+                        "});",
+                        "response.send(event, context, response.SUCCESS, responseData);",
+                      "}",
+                    "});",
+                  "} else {",
+                    "responseData = {Error: 'Stack name not specified'};",
+                    "console.log(responseData.Error);",
+                    "response.send(event, context, response.FAILED, responseData);",
+                  "}",
+                "};"
+              ]
+            ]
+          }
+        },
+        "Runtime": "nodejs4.3",
+        "Timeout": "30"
+      },
+      "DependsOn": [
+        "LookupStackOutputsRole"
+      ]
+    }
+  },
+  "Outputs": {
+    "LookupStackOutputsArn": {
+      "Description": "The ARN of the LookupStackOutputs function, for use in other CloudFormation templates.",
+      "Value": { "Fn::GetAtt" : ["LookupStackOutputs", "Arn"] }
+    }
+  }
+}

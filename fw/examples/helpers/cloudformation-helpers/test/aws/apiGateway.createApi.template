@@ -1,0 +1,182 @@
+{
+  "AWSTemplateFormatVersion": "2010-09-09",
+  "Parameters": {
+    "CFHelperStackName": {
+      "Type": "String",
+      "Description": "The name of the stack where you installed the CloudFormation helper functions. See https://github.com/gilt/cloudformation-helpers."
+    }
+  },
+  "Resources": {
+    "CFHelperStack": {
+      "Type": "AWS::CloudFormation::Stack",
+      "Properties": {
+        "TemplateURL": "https://s3.amazonaws.com/com.gilt.public.backoffice/cloudformation_templates/lookup_stack_outputs.template"
+      }
+    },
+    "CFHelper": {
+      "Type": "Custom::CFHelper",
+      "Properties": {
+        "ServiceToken": { "Fn::GetAtt" : ["CFHelperStack", "Outputs.LookupStackOutputsArn"] },
+        "StackName": { "Ref": "CFHelperStackName" }
+      },
+      "DependsOn": [
+        "CFHelperStack"
+      ]
+    },
+    "TestFunctionRole": {
+      "Type": "AWS::IAM::Role",
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Version" : "2012-10-17",
+          "Statement": [
+            {
+              "Effect": "Allow",
+              "Principal": {
+                "Service": [ "lambda.amazonaws.com" ]
+              },
+              "Action": [ "sts:AssumeRole" ]
+            }
+          ]
+        },
+        "Policies": [
+          {
+            "PolicyName": "LogWriter",
+            "PolicyDocument": {
+              "Version" : "2012-10-17",
+              "Statement": [
+                {
+                  "Effect": "Allow",
+                  "Action": [
+                    "logs:CreateLogGroup",
+                    "logs:CreateLogStream",
+                    "logs:PutLogEvents"
+                  ],
+                  "Resource": "arn:aws:logs:*:*:*"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    "TestFunction": {
+      "Type": "AWS::Lambda::Function",
+      "Properties": {
+        "Handler": "index.handler",
+        "Role": { "Fn::GetAtt": [ "TestFunctionRole", "Arn" ] },
+        "Code": {
+          "ZipFile": {
+            "Fn::Join": [
+              "\n",
+              [
+                "exports.handler = function(event, context) {",
+                  "console.log(JSON.stringify(event));",
+                  "context.succeed('REQUEST RECEIVED:\\n' + JSON.stringify(event));",
+                "}"
+              ]
+            ]
+          }
+        },
+        "Runtime": "nodejs",
+        "Timeout": "30"
+      },
+      "DependsOn": [
+        "TestFunctionRole"
+      ]
+    },
+    "ApiGatewayCreateApi": {
+      "Type": "Custom::ApiGatewayCreateApi",
+      "Properties": {
+        "ServiceToken": { "Fn::GetAtt" : ["CFHelper", "ApiGatewayCreateApiFunctionArn"] },
+        "name": { "Fn::Join": [ "-", ["test-api", { "Ref": "AWS::StackName" } ] ] },
+        "description": "Test API",
+        "endpoints": {
+          "foo": {
+            "{baz}": {
+              "PUT": {
+                "authorizationType": "NONE",
+                "apiKeyRequired": true,
+                "integration": {
+                  "type": "MOCK",
+                  "contentType": "text/plain"
+                }
+              }
+            },
+            "GET": {
+              "authorizationType": "NONE",
+              "integration": {
+                "type": "HTTP",
+                "integrationHttpMethod": "GET",
+                "uri": "http://www.example.com",
+                "contentType": "text/html"
+              }
+            }
+          },
+          "bar": {
+            "POST": {
+              "authorizationType": "NONE",
+              "integration": {
+                "type": "AWS",
+                "integrationHttpMethod": "POST",
+                "uri": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:aws:apigateway:",
+                      { "Ref": "AWS::Region" },
+                      ":lambda:path/2015-03-31/functions/arn:aws:lambda:",
+                      { "Ref": "AWS::Region" },
+                      ":",
+                      { "Ref": "AWS::AccountId" },
+                      ":function:",
+                      { "Ref": "TestFunction" },
+                      "/invocations"
+                    ]
+                  ]
+                },
+                "contentType": "application/json"
+              }
+            }
+          }
+        },
+        "version": "prod"
+      },
+      "DependsOn": [
+        "CFHelper",
+        "TestFunction"
+      ]
+    },
+    "TestFunctionApiPermission": {
+      "Type": "AWS::Lambda::Permission",
+      "Properties": {
+        "Action": "lambda:InvokeFunction",
+        "FunctionName": { "Fn::GetAtt": [ "TestFunction", "Arn" ] },
+        "Principal": "apigateway.amazonaws.com",
+        "SourceArn": {
+          "Fn::Join": [
+            "",
+            [
+              "arn:aws:execute-api:",
+              { "Ref": "AWS::Region" },
+              ":",
+              { "Ref": "AWS::AccountId" },
+              ":",
+              { "Fn::GetAtt" : ["ApiGatewayCreateApi", "restApiId"] },
+              "/*/POST/bar"
+            ]
+          ]
+        }
+      },
+      "DependsOn": [
+        "TestFunction",
+        "ApiGatewayCreateApi"
+      ]
+    }
+  },
+  "Outputs": {
+    "ApiEndpointRootUrl": {
+      "Description": "The root URL for the API's endpoints.",
+      "Value": { "Fn::GetAtt" : ["ApiGatewayCreateApi", "baseUrl"] }
+    }
+  }
+}
