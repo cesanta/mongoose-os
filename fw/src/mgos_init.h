@@ -33,6 +33,7 @@ enum mgos_init_result {
   MGOS_INIT_APPLY_UPDATE_FAILED = -21,
   MGOS_INIT_CONSOLE_INIT_FAILED = -22,
   MGOS_INIT_GPIO_INIT_FAILED = -23,
+  MGOS_INIT_DEBUG_INIT_FAILED = -24,
 };
 
 enum mgos_init_result mgos_init(void);

@@ -20,13 +20,14 @@
 
 #include "common/cs_dbg.h"
 #include "fw/src/mgos_app.h"
+#include "fw/src/mgos_debug.h"
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_init.h"
 #include "fw/src/mgos_mongoose.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_updater_common.h"
 
-#include "fw/platforms/esp32/src/esp32_console.h"
+#include "fw/platforms/esp32/src/esp32_debug.h"
 #include "fw/platforms/esp32/src/esp32_fs.h"
 #include "fw/platforms/esp32/src/esp32_updater.h"
 
@@ -88,7 +89,9 @@ static enum mgos_init_result esp32_mgos_init() {
   cs_log_set_level(MGOS_EARLY_DEBUG_LEVEL);
   mongoose_init();
 
-  r = esp32_console_init();
+  r = esp32_debug_init();
+  if (r != MGOS_INIT_OK) return r;
+  r = mgos_debug_uart_init();
   if (r != MGOS_INIT_OK) return r;
 
   if (strcmp(MGOS_APP, "mongoose-os") != 0) {

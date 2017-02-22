@@ -7,6 +7,7 @@
 #include "common/cs_dbg.h"
 #include "stm32_lwip.h"
 #include "fw/src/mgos_app.h"
+#include "fw/src/mgos_debug.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_uart.h"
 
@@ -27,7 +28,7 @@ void mgos_main() {
 
   mongoose_init();
 
-  if (mgos_init_debug_uart(MGOS_DEBUG_UART) != MGOS_INIT_OK) {
+  if (mgos_debug_uart_init() != MGOS_INIT_OK) {
     return;
   }
 

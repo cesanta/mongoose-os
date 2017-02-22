@@ -41,7 +41,6 @@ struct mmap_desc {
 
 extern struct mmap_desc mmap_descs[MGOS_MMAP_SLOTS];
 
-void fs_flush_stderr(void);
 int fs_init(uint32_t addr, uint32_t size);
 int fs_mount(spiffs *spf, uint32_t addr, uint32_t size, uint8_t *workbuf,
              uint8_t *fds, size_t fds_size);
@@ -49,6 +48,5 @@ spiffs *get_fs(void);
 void fs_umount(void);
 
 enum mgos_init_result esp_console_init(void);
-int esp_get_stderr_uart(void);
 
 #endif /* CS_FW_PLATFORMS_ESP8266_USER_ESP_FS_H_ */

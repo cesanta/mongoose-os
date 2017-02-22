@@ -86,18 +86,6 @@ void mgos_uart_dev_flush_fifo(struct mgos_uart_state *us) {
   (void) us;
 }
 
-enum mgos_init_result mgos_set_stdout_uart(int uart_no) {
-  if (uart_no <= 0) return MGOS_INIT_OK;
-  /* TODO */
-  return MGOS_INIT_UART_FAILED;
-}
-
-enum mgos_init_result mgos_set_stderr_uart(int uart_no) {
-  if (uart_no <= 0) return MGOS_INIT_OK;
-  /* TODO */
-  return MGOS_INIT_UART_FAILED;
-}
-
 void mgos_lock(void) {
 }
 

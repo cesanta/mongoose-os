@@ -14,12 +14,13 @@
 #include "common/str_util.h"
 #include "fw/src/mgos_atca.h"
 #include "fw/src/mgos_config.h"
+#include "fw/src/mgos_debug.h"
+#include "fw/src/mgos_debug_hal.h"
 #include "fw/src/mgos_gpio.h"
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_init.h"
 #include "fw/src/mgos_mongoose.h"
 #include "fw/src/mgos_updater_common.h"
-#include "fw/src/mgos_uart.h"
 #include "fw/src/mgos_utils.h"
 #include "fw/src/mgos_wifi.h"
 
@@ -476,7 +477,14 @@ enum mgos_init_result mgos_sys_config_init(void) {
   if (mgos_set_stderr_uart(s_cfg.debug.stderr_uart) != MGOS_INIT_OK) {
     return MGOS_INIT_CONFIG_INVALID_STDERR_UART;
   }
-
+#if MGOS_ENABLE_DEBUG_UDP
+  if (s_cfg.debug.udp_log_addr != NULL) {
+    LOG(LL_INFO, ("Sending logs to UDP %s", s_cfg.debug.udp_log_addr));
+    if (mgos_debug_udp_init(s_cfg.debug.udp_log_addr) != MGOS_INIT_OK) {
+      return MGOS_INIT_DEBUG_INIT_FAILED;
+    }
+  }
+#endif /* MGOS_ENABLE_DEBUG_UDP */
   if (s_cfg.debug.level > _LL_MIN && s_cfg.debug.level < _LL_MAX) {
     cs_log_set_level((enum cs_log_level) s_cfg.debug.level);
   }

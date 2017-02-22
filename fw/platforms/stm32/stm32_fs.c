@@ -6,11 +6,10 @@
 #include <fcntl.h>
 #include "fs_data.h"
 #include "stm32_spiffs.h"
-#include "stm32_uart.h"
 #include "common/spiffs/spiffs.h"
 #include "common/cs_dbg.h"
 #include "common/cs_dirent.h"
-#include "fw/src/mgos_uart.h"
+#include "fw/src/mgos_debug.h"
 
 #define STDOUT_FILENO 1
 #define STDERR_FILENO 2
@@ -184,16 +183,11 @@ _ssize_t _read_r(struct _reent *r, int fd, void *buf, size_t len) {
 }
 
 _ssize_t _write_r(struct _reent *r, int fd, void *buf, size_t len) {
-  int uart_no = -1;
-
   if (fd == STDOUT_FILENO) {
-    uart_no = stm32_get_stdout_uart_no();
+    mgos_debug_write(1, buf, len);
+    return len;
   } else if (fd == STDERR_FILENO) {
-    uart_no = stm32_get_stderr_uart_no();
-  }
-
-  if (uart_no >= 0) {
-    mgos_uart_write(uart_no, buf, len);
+    mgos_debug_write(2, buf, len);
     return len;
   }
 

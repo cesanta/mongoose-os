@@ -13,6 +13,7 @@
 #include "oslib/osi.h"
 
 #include "fw/src/mgos_app.h"
+#include "fw/src/mgos_debug.h"
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_init.h"
 #include "fw/src/mgos_mongoose.h"
@@ -79,7 +80,7 @@ enum cc3200_init_result {
 
 static enum cc3200_init_result cc3200_init(void *arg) {
   mongoose_init();
-  if (cc3200_console_init() != MGOS_INIT_OK) {
+  if (mgos_debug_uart_init() != MGOS_INIT_OK) {
     return CC3200_INIT_UART_INIT_FAILED;
   }
 

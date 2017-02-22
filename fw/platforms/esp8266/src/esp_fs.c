@@ -3,7 +3,10 @@
  * All rights reserved
  */
 
+#include "fw/platforms/esp8266/src/esp_fs.h"
+
 #include <dirent.h>
+#include <errno.h>
 #include <fcntl.h>
 
 #include "fw/src/mgos_features.h"
@@ -18,11 +21,8 @@
 #include "common/spiffs/spiffs_vfs.h"
 #include "spiffs_config.h"
 
-#include "esp_fs.h"
-#include "fw/src/mgos_uart.h"
-#include "mongoose/mongoose.h"
-
-#include <sys/mman.h>
+#include "fw/src/mgos_debug.h"
+#include "fw/platforms/esp8266/src/esp_exc.h"
 
 /*
  * number of file descriptors reserved for system.
@@ -43,9 +43,6 @@ static spiffs fs;
 
 static u8_t spiffs_work_buf[LOG_PAGE_SIZE * 2];
 static u8_t spiffs_fds[32 * FS_MAX_OPEN_FILES];
-
-static int8_t s_stdout_uart = MGOS_DEBUG_UART;
-static int8_t s_stderr_uart = MGOS_DEBUG_UART;
 
 /* For cs_dirent.c functions */
 spiffs *cs_spiffs_get_fs(void) {
@@ -186,16 +183,12 @@ _ssize_t _read_r(struct _reent *r, int fd, void *buf, size_t len) {
 _ssize_t _write_r(struct _reent *r, int fd, void *buf, size_t len) {
   (void) r;
   if (fd < NUM_SYS_FD) {
-    int uart_no = -1;
-    if (fd == 1) {
-      uart_no = s_stdout_uart;
-    } else if (fd == 2) {
-      uart_no = s_stderr_uart;
-    } else if (fd == 0) {
+    if (fd == 1 || fd == 2) {
+      mgos_debug_write(fd, buf, len);
+    } else {
       errno = EBADF;
       len = -1;
     }
-    if (uart_no >= 0) len = mgos_uart_write(uart_no, buf, len);
     return len;
   }
 
@@ -263,32 +256,4 @@ struct dirent *readdir(DIR *dir) {
 
 int closedir(DIR *dir) {
   return spiffs_vfs_closedir(&fs, dir);
-}
-
-void fs_flush_stderr(void) {
-  if (s_stderr_uart >= 0) mgos_uart_flush(s_stderr_uart);
-}
-
-enum mgos_init_result mgos_set_stdout_uart(int uart_no) {
-  enum mgos_init_result r = mgos_init_debug_uart(uart_no);
-  if (r == MGOS_INIT_OK) {
-    s_stdout_uart = uart_no;
-  }
-  return r;
-}
-
-enum mgos_init_result mgos_set_stderr_uart(int uart_no) {
-  enum mgos_init_result r = mgos_init_debug_uart(uart_no);
-  if (r == MGOS_INIT_OK) {
-    s_stderr_uart = uart_no;
-  }
-  return r;
-}
-
-int esp_get_stderr_uart(void) {
-  return s_stderr_uart;
-}
-
-enum mgos_init_result esp_console_init(void) {
-  return mgos_init_debug_uart(MGOS_DEBUG_UART);
 }

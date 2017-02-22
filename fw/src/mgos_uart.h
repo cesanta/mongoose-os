@@ -91,12 +91,6 @@ mgos_uart_dispatcher_t mgos_uart_get_dispatcher(int uart_no);
 
 void mgos_uart_set_rx_enabled(int uart_no, bool enabled);
 
-/*
- * Will init uart_no with default config + MGOS_DEBUG_UART_BAUD_RATE
- * unless it's already inited.
- */
-enum mgos_init_result mgos_init_debug_uart(int uart_no);
-
 /* HAL */
 
 /* Set device-specific defaults. */
@@ -125,13 +119,6 @@ void mgos_uart_dev_set_rx_enabled(struct mgos_uart_state *us, bool enabled);
 void mgos_uart_schedule_dispatcher(int uart_no, bool from_isr);
 
 void mgos_uart_flush(int uart_no);
-
-/*
- * Set UART for stdout, stderr streams.
- * NB: Must accept negative values as "stdout/err disabled".
- */
-enum mgos_init_result mgos_set_stdout_uart(int uart_no);
-enum mgos_init_result mgos_set_stderr_uart(int uart_no);
 
 #ifdef __cplusplus
 }

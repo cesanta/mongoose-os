@@ -18,7 +18,6 @@
   }],
   ["debug.stdout_uart", "i", {title: "STDOUT UART (-1 to disable)"}],
   ["debug.stderr_uart", "i", {title: "STDERR UART (-1 to disable)"}],
-  ["debug.enable_prompt", "b", true, {title: "Enable interactive JavaScript prompt on UART0"}],
   ["debug.factory_reset_gpio", "i", -1, {title: "Factory reset GPIO (low on boot)"}],
 
   ["sys", "o", {title: "System settings"}],

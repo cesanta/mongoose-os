@@ -20,6 +20,7 @@
 #include "fw/src/mgos_timers.h"
 #include "fw/src/mgos_hal.h"
 
+#include "fw/src/mgos_debug.h"
 #include "fw/src/mgos_mongoose.h"
 #include "common/umm_malloc/umm_malloc.h"
 
@@ -57,6 +58,7 @@ void mgos_wdt_set_timeout(int secs) {
 void mgos_system_restart(int exit_code) {
   (void) exit_code;
   fs_umount();
+  mgos_debug_flush();
   system_restart();
 }
 

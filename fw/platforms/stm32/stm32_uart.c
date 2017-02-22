@@ -7,9 +7,6 @@
 #define UART_TRANSMIT_TIMEOUT 100
 #define UART_BUF_SIZE 1024
 
-static int s_stdout_uart_no;
-static int s_stderr_uart_no;
-
 static UART_Handle *s_huarts[2] = {&UART_USB, &UART_2};
 
 struct UART_State {
@@ -49,14 +46,6 @@ static void move_rbuf_data(cs_rbuf_t *dst, cs_rbuf_t *src) {
   cs_rbuf_get(src, len, &cp);
   cs_rbuf_append(dst, cp, len);
   cs_rbuf_consume(src, len);
-}
-
-int stm32_get_stdout_uart_no() {
-  return s_stdout_uart_no;
-}
-
-int stm32_get_stderr_uart_no() {
-  return s_stderr_uart_no;
 }
 
 void mgos_uart_dev_dispatch_rx_top(struct mgos_uart_state *us) {
@@ -144,22 +133,6 @@ void mgos_uart_dev_set_defaults(struct mgos_uart_config *cfg) {
     cs_rbuf_init(&s_uarts_state[i].rx_buf, UART_BUF_SIZE);
     cs_rbuf_init(&s_uarts_state[i].tx_buf, UART_BUF_SIZE);
   }
-}
-
-enum mgos_init_result mgos_set_stdout_uart(int uart_no) {
-  enum mgos_init_result r = mgos_init_debug_uart(uart_no);
-  if (r == MGOS_INIT_OK) {
-    s_stdout_uart_no = uart_no;
-  }
-  return r;
-}
-
-enum mgos_init_result mgos_set_stderr_uart(int uart_no) {
-  enum mgos_init_result r = mgos_init_debug_uart(uart_no);
-  if (r == MGOS_INIT_OK) {
-    s_stderr_uart_no = uart_no;
-  }
-  return r;
 }
 
 void HAL_UART_RxCpltCallback(UART_Handle *huart) {

@@ -19,6 +19,7 @@
 
 #include "common/cs_dbg.h"
 #include "fw/src/mgos_app.h"
+#include "fw/src/mgos_debug.h"
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_init.h"
 #include "fw/src/mgos_mongoose.h"
@@ -106,7 +107,7 @@ static void dbg_putc(char c) {
 
 enum mgos_init_result esp_mgos_init2(rboot_config *bcfg) {
   mongoose_init();
-  enum mgos_init_result ir = esp_console_init();
+  enum mgos_init_result ir = mgos_debug_uart_init();
   if (ir != MGOS_INIT_OK) return ir;
   uart_initialized = true;
   setvbuf(stdout, NULL, _IOLBF, 256);

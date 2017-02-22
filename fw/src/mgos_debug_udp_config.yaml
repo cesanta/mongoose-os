@@ -1,0 +1,3 @@
+[
+  ["debug.udp_log_addr", "s", {title: "Send logs to this ip:port (UDP)"}],
+]
