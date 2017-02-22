@@ -16,6 +16,9 @@ let Sys = {
   // Return value: none.
   reboot: ffi('void mgos_system_restart(int)'),
 
+  // **`Sys.uptime()`** - return number of seconds since last reboot.
+  uptime: ffi('double mg_time()'),
+
   // **`Sys.usleep(microseconds)`** - sleep given number of microseconds.
   // Return value: none.
   usleep: ffi('void mgos_usleep(int)')

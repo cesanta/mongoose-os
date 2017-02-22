@@ -26,6 +26,10 @@ items:
 
 
 
+ **`Sys.uptime()`** - return number of seconds since last reboot.
+
+
+
  **`Sys.usleep(microseconds)`** - sleep given number of microseconds.
  Return value: none.
 
