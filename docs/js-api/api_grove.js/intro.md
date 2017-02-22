@@ -7,4 +7,5 @@ items:
  components API
  Load Mongoose OS GPIO API
 load('api_gpio.js');
+load('api_adc.js');
 

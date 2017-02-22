@@ -11,7 +11,7 @@
 #include <user_interface.h>
 #endif
 
-uint32_t mgos_adc_read(int pin) {
+int mgos_adc_read(int pin) {
   (void) pin;
   return 0xFFFF & system_adc_read();
 }

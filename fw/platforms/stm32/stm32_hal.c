@@ -124,3 +124,9 @@ void mgos_lock(void) {
 
 void mgos_unlock(void) {
 }
+
+int mgos_adc_read(int pin) {
+  (void) pin;
+  /* TODO(alashkin): implement */
+  return 0;
+}

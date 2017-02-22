@@ -136,3 +136,9 @@ void mgos_lock(void) {
 
 void mgos_unlock(void) {
 }
+
+int mgos_adc_read(int pin) {
+  /* TODO(rojer): implement */
+  (void) pin;
+  return 0;
+}

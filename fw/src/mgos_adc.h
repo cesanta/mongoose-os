@@ -14,7 +14,7 @@ extern "C" {
 
 /* HAL */
 
-uint32_t mgos_adc_read(int pin);
+int mgos_adc_read(int pin);
 
 /* return the voltage read by the ADC */
 double mgos_adc_read_voltage(int pin);

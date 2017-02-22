@@ -1,6 +1,7 @@
 ---
 title: "API"
 items:
+  - { name: api_adc.js }
   - { name: api_file.js }
   - { name: api_i2c.js }
   - { name: api_mqtt.js }

@@ -15,6 +15,7 @@ ffi_symbols:
   - get_cfg
   - mg_send
   - mg_time
+  - mgos_adc_read
   - mgos_add_http_endpoint
   - mgos_bind
   - mgos_bind_http

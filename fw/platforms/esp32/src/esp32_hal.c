@@ -12,6 +12,8 @@
 #include "soc/timer_group_struct.h"
 #include "soc/timer_group_reg.h"
 
+#include "driver/adc.h"
+
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_wifi.h"
 #include "fw/src/mgos_sys_config.h"
@@ -125,4 +127,21 @@ int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {
   }
   (void) ctx;
   return 0;
+}
+
+int mgos_adc_read(int pin) {
+  static int pins[] = {36, 37, 38, 39, 32, 33, 34, 35};
+  static adc1_channel_t channels[] = {
+      ADC1_CHANNEL_0, ADC1_CHANNEL_1, ADC1_CHANNEL_2, ADC1_CHANNEL_3,
+      ADC1_CHANNEL_4, ADC1_CHANNEL_5, ADC1_CHANNEL_6, ADC1_CHANNEL_7};
+  int i;
+  for (i = 0; i < ARRAY_SIZE(pins); i++) {
+    if (pins[i] == pin) {
+      adc1_config_width(ADC_WIDTH_12Bit);
+      adc1_config_channel_atten(channels[i], ADC_ATTEN_11db);
+      return 0x0FFF & adc1_get_voltage(channels[i]);
+    }
+  }
+
+  return -1;
 }

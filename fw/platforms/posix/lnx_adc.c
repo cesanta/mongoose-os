@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 
-uint32_t mgos_adc_read(int pin) {
+int mgos_adc_read(int pin) {
   (void) pin;
   return 0;
 }
