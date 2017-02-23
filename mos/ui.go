@@ -134,6 +134,12 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 			devConn = nil
 		}
 		defer func() {
+			// On Windows, closing a port and immediately opening it back is not
+			// going to work, so here we just use a random 700ms timeout which seems
+			// to solve the problem (just like we do in devConn.Disconnect()).
+			//
+			// Just in case though, we sleep not only on Windows, but on all
+			// platforms.
 			time.Sleep(700 * time.Millisecond)
 			devConn, _ = reconnectToDevice(ctx)
 		}()
