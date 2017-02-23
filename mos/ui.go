@@ -134,6 +134,7 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 			devConn = nil
 		}
 		defer func() {
+			time.Sleep(700 * time.Millisecond)
 			devConn, _ = reconnectToDevice(ctx)
 		}()
 		err := flash(ctx, devConn)
