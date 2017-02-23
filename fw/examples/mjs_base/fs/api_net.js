@@ -28,7 +28,7 @@ let Net = {
   // Handler is a callback function which takes the following arguments:
   // `(conn, event, event_data, userdata)`.
   // conn is an opaque pointer which should be used as a first argument to
-  // `Net.send()`, `Net.rsend()`, `Net.disconnect()`.
+  // `Net.send()`, `Net._send()`, `Net.close()`.
   // event is one of the following:
   // - `Net.EV_POLL`
   // - `Net.EV_ACCEPT`
@@ -42,19 +42,17 @@ let Net = {
   // userdata is the value given as a third argument to `Net.connect()`.
   connect: ffi('void *mgos_connect(char *, void (*)(void *, int, void *, userdata), userdata)'),
 
-  // **`Net.disconnect(conn)`** - send all pending data to the remote peer,
+  // **`Net.close(conn)`** - send all pending data to the remote peer,
   // and disconnect when all data is sent.
   // Return value: none.
-  disconnect: ffi('void mgos_disconnect(void *)'),
-  // **`Net.rsend(conn, data, length)`** - send byte array to the given
-  // connection. Avoid using it, use `Net.send()` instead.
-  // Return value: none.
-  rsend: ffi('void mg_send(void *, char *, int)'),
+  close: ffi('void mgos_disconnect(void *)'),
+
+  _send: ffi('void mg_send(void *, char *, int)'),
 
   // **`Net.send(conn, data)`** - send data to the remote peer.
   // `data` is an mJS string.
   // Return value: none.
-  send: function(c, msg) { return Net.rsend(c, msg, msg.length); },
+  send: function(c, msg) { return Net._send(c, msg, msg.length); },
   EV_POLL: 0,
   EV_ACCEPT: 1,
   EV_CONNECT: 2,

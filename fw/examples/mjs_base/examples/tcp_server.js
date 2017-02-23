@@ -12,7 +12,7 @@ let port = '1234';
 Net.bind(port, function(conn, ev, ev_data) {
   if (ev !== Net.EV_ACCEPT) return;
   Net.send(conn, JSON.stringify({a: 1, b: 'hey!'}));
-  Net.disconnect(conn);
+  Net.close(conn);
 }, true);
 
 print('TCP server is listening on port ', port);

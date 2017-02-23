@@ -35,7 +35,7 @@ items:
  Handler is a callback function which takes the following arguments:
  `(conn, event, event_data, userdata)`.
  conn is an opaque pointer which should be used as a first argument to
- `Net.send()`, `Net.rsend()`, `Net.disconnect()`.
+ `Net.send()`, `Net._send()`, `Net.close()`.
  event is one of the following:
  - `Net.EV_POLL`
  - `Net.EV_ACCEPT`
@@ -50,14 +50,8 @@ items:
 
 
 
- **`Net.disconnect(conn)`** - send all pending data to the remote peer,
+ **`Net.close(conn)`** - send all pending data to the remote peer,
  and disconnect when all data is sent.
- Return value: none.
-
-
-
- **`Net.rsend(conn, data, length)`** - send byte array to the given
- connection. Avoid using it, use `Net.send()` instead.
  Return value: none.
 
 

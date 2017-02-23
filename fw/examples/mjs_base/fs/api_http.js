@@ -24,7 +24,7 @@ let HTTP = {
   // HTTP.add_endpoint(server, '/my/api', function(conn, ev, ev_data) {
   //   if (ev === HTTP.EV_REQUEST) {
   //     Net.send(conn, 'HTTP/1.0 200 OK\n\n  hello! \n');
-  //     Net.disconnect(conn);
+  //     Net.close(conn);
   //   }
   // }, null);
   // ```
