@@ -1,5 +1,11 @@
+/*
+ * Copyright (c) 2014-2016 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #include "fw/src/mgos_init.h"
 
+#include "fw/src/Arduino/mgos_arduino.h"
 #include "fw/src/mgos_app.h"
 #include "fw/src/mgos_atca.h"
 #include "fw/src/mgos_console.h"
@@ -108,6 +114,12 @@ enum mgos_init_result mgos_init(void) {
   if (mgos_app_init() != MGOS_APP_INIT_SUCCESS) {
     return MGOS_INIT_APP_INIT_FAILED;
   }
+
+#if MGOS_ENABLE_ARDUINO_API
+  if (mgos_arduino_init() != MGOS_INIT_OK) {
+    return MGOS_INIT_APP_INIT_FAILED;
+  }
+#endif
 
   LOG(LL_INFO,
       ("Init done, RAM: %d free, %d min free", (int) mgos_get_free_heap_size(),

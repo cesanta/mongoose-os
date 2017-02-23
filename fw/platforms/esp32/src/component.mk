@@ -43,6 +43,8 @@ MGOS_SRCS = mgos_config.c mgos_gpio.c mgos_init.c mgos_mongoose.c \
             esp32_gpio.c esp32_hal.c esp32_mdns.c \
             esp32_main.c esp32_uart.c
 
+IPATH =
+
 include $(MGOS_PATH)/fw/common.mk
 include $(MGOS_PATH)/fw/src/features.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
@@ -84,20 +86,24 @@ VPATH += $(GEN_DIR)
 
 VPATH += $(APP_MODULES)
 
-APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
+APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c*))) $(APP_EXTRA_SRCS)
 
 MGOS_OBJS = $(addsuffix .o,$(basename $(MGOS_SRCS)))
 APP_OBJS = $(addsuffix .o,$(basename $(APP_SRCS)))
 BUILD_INFO_OBJS = $(addsuffix .o,$(basename $(notdir $(BUILD_INFO_C)) $(notdir $(MG_BUILD_INFO_C))))
 COMPONENT_OBJS = $(MGOS_OBJS) $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_OBJS)
 
-CFLAGS += $(MGOS_FEATURES) -DMGOS_MAX_NUM_UARTS=3 \
-          -DMGOS_DEBUG_UART=$(MGOS_DEBUG_UART) \
-          -DMGOS_NUM_GPIO=40 \
-          -DMG_ENABLE_FILESYSTEM \
-          -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS \
-          -DMG_ENABLE_HTTP_STREAMING_MULTIPART \
-          -DMG_ENABLE_DIRECTORY_LISTING
+C_CXX_CFLAGS += $(MGOS_FEATURES) -DMGOS_MAX_NUM_UARTS=3 \
+               -DMGOS_DEBUG_UART=$(MGOS_DEBUG_UART) \
+               -DMGOS_NUM_GPIO=40 \
+               -DMG_ENABLE_FILESYSTEM \
+               -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS \
+               -DMG_ENABLE_HTTP_STREAMING_MULTIPART \
+               -DMG_ENABLE_DIRECTORY_LISTING
+
+CFLAGS += $(C_CXX_CFLAGS)
+CXXFLAGS += -std=c++11 -fno-exceptions $(C_CXX_CFLAGS)
+COMPONENT_EXTRA_INCLUDES += $(IPATH)
 
 COMPONENT_ADD_LDFLAGS := -Wl,--whole-archive -lsrc -Wl,--no-whole-archive
 
@@ -118,15 +124,22 @@ $(SYMBOLS_DUMP): $(MGOS_OBJS) $(APP_OBJS)
 $(FFI_EXPORTS_O): CFLAGS += -fno-builtin
 
 $(FFI_EXPORTS_O): $(FFI_EXPORTS_C)
-	$(summary) CC $@ '$(FFI_EXPORTS_C)'
+	$(summary) "  CC $@"
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
 $(FFI_EXPORTS_C): $(SYMBOLS_DUMP)
 	$(call gen_ffi_exports,$<,$@,$(FFI_SYMBOLS))
 
 ./%.o: %.c $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
-	$(summary) CC $@
+	$(summary) "  CC $@"
 	$(CC) $(CFLAGS) $(CPPFLAGS) \
+	  $(addprefix -I ,$(COMPONENT_INCLUDES)) \
+	  $(addprefix -I ,$(COMPONENT_EXTRA_INCLUDES)) \
+	  -c $< -o $@
+
+./%.o: %.cpp $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
+	$(summary) "  CXX $@"
+	$(CC) $(CXXFLAGS) $(CPPFLAGS) \
 	  $(addprefix -I ,$(COMPONENT_INCLUDES)) \
 	  $(addprefix -I ,$(COMPONENT_EXTRA_INCLUDES)) \
 	  -c $< -o $@

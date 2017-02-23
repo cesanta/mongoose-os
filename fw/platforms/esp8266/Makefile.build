@@ -107,15 +107,6 @@ MGOS_FEATURES ?=
 
 MGOS_ENABLE_I2C_GPIO = 1
 
-include $(MGOS_PATH)/fw/src/features.mk
-
-ifeq "$(MGOS_ENABLE_I2C)" "1"
-  SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp_i2c_config.yaml
-endif
-ifeq "$(MGOS_ENABLE_WIFI)" "1"
-  SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp_wifi_config.yaml
-endif
-
 VPATH = $(APP_MODULES) $(MGOS_SRC_PATH) $(MONGOOSE_PATH) \
         $(FROZEN_PATH) $(UMM_MALLOC_PATH) \
         $(BOOTLOADER_PATH)/rboot/appcode $(COMMON_PATH) $(COMMON_PATH)/mg_rpc \
@@ -126,6 +117,15 @@ IPATH = $(APP_MODULES) $(MGOS_PATH) $(MGOS_ESP_PATH)/include $(SPIFFS_PATH) \
         $(COMMON_ESP_PATH) \
         $(MGOS_ESP_SRC_PATH) $(COMMON_PATH)/mg_rpc .
 LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip $(MGOS_ESP_SRC_PATH)
+
+include $(MGOS_PATH)/fw/src/features.mk
+
+ifeq "$(MGOS_ENABLE_I2C)" "1"
+  SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp_i2c_config.yaml
+endif
+ifeq "$(MGOS_ENABLE_WIFI)" "1"
+  SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp_wifi_config.yaml
+endif
 
 # libraries used in this project, mainly provided by the SDK
 SDK_LIBS = c crypto gcc hal net80211 pp phy wpa
@@ -242,6 +242,10 @@ else
   SSL_LIBS =
 endif
 
+ifeq "$(MGOS_ENABLE_ARDUINO_API)" "1"
+  MGOS_FEATURES += -DESP8266 -DF_CPU=160000000
+endif
+
 include $(MGOS_PATH)/fw/src/spiffs.mk
 
 MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o)) $(BUILD_DIR)/esp_exc_vectors.S.o
@@ -287,11 +291,11 @@ FW_MANIFEST = $(FW_STAGING_DIR)/manifest.json
 INCDIRS = $(addprefix -I,$(IPATH)) -I$(GEN_DIR)
 LIBDIRS = $(addprefix -L,$(LPATH))
 
-CFLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) \
-          -DFW_RF_CAL_DATA_ADDR=$(FW_RF_CAL_DATA_ADDR) \
-          -DFW_ARCHITECTURE=$(APP_PLATFORM) \
-          $(MGOS_CFLAGS) $(APP_CFLAGS) $(CFLAGS_EXTRA) \
-          $(HEAP_LOG_FLAGS) $(MINIZ_FLAGS) $(BOOTLOADER_FLAGS)
+C_CXX_FLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) \
+              -DFW_RF_CAL_DATA_ADDR=$(FW_RF_CAL_DATA_ADDR) \
+              -DFW_ARCHITECTURE=$(APP_PLATFORM) \
+              $(MGOS_CFLAGS) $(APP_CFLAGS) $(CFLAGS_EXTRA) \
+              $(HEAP_LOG_FLAGS) $(MINIZ_FLAGS) $(BOOTLOADER_FLAGS)
 
 $(BUILD_DIR) $(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
 	$(vecho) "MKDIR $@"
