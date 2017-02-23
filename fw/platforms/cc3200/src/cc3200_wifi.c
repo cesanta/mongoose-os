@@ -28,6 +28,7 @@ struct cc3200_wifi_config {
   char *ssid;
   char *pass;
   char *ip;
+  char *gw;
   SlNetCfgIpV4Args_t static_ip;
   unsigned int status : 4;
   unsigned int reconnect : 1;
@@ -40,6 +41,7 @@ static void free_wifi_config(void) {
   free(s_wifi_sta_config.ssid);
   free(s_wifi_sta_config.pass);
   free(s_wifi_sta_config.ip);
+  free(s_wifi_sta_config.gw);
   memset(&s_wifi_sta_config, 0, sizeof(s_wifi_sta_config));
 }
 
@@ -99,6 +101,10 @@ void sl_net_app_eh(SlNetAppEvent_t *e) {
     asprintf(&s_wifi_sta_config.ip, "%lu.%lu.%lu.%lu", SL_IPV4_BYTE(ed->ip, 3),
              SL_IPV4_BYTE(ed->ip, 2), SL_IPV4_BYTE(ed->ip, 1),
              SL_IPV4_BYTE(ed->ip, 0));
+    free(s_wifi_sta_config.gw);
+    asprintf(&s_wifi_sta_config.gw, "%lu.%lu.%lu.%lu",
+             SL_IPV4_BYTE(ed->gateway, 3), SL_IPV4_BYTE(ed->gateway, 2),
+             SL_IPV4_BYTE(ed->gateway, 1), SL_IPV4_BYTE(ed->gateway, 0));
     s_wifi_sta_config.status = MGOS_WIFI_IP_ACQUIRED;
     mgos_invoke_cb(invoke_wifi_on_change_cb,
                    (void *) (int) s_wifi_sta_config.status,
@@ -343,4 +349,9 @@ out:
 }
 
 void mgos_wifi_hal_init(void) {
+}
+
+char *mgos_wifi_get_sta_default_gw() {
+  if (s_wifi_sta_config.gw == NULL) return NULL;
+  return strdup(s_wifi_sta_config.gw);
 }

@@ -389,3 +389,16 @@ bool mgos_wifi_set_config(const struct sys_config_wifi *cfg) {
 
 void mgos_wifi_hal_init(void) {
 }
+
+char *mgos_wifi_get_sta_default_gw() {
+  tcpip_adapter_ip_info_t info;
+  char *ip;
+  if ((tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &info) != ESP_OK) ||
+      info.gw.addr == 0) {
+    return NULL;
+  }
+  if (asprintf(&ip, IPSTR, IP2STR(&info.gw)) < 0) {
+    return NULL;
+  }
+  return ip;
+}

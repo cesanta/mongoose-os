@@ -47,6 +47,7 @@ int mgos_wifi_disconnect(void);
 char *mgos_wifi_get_status_str(void);
 char *mgos_wifi_get_connected_ssid(void);
 char *mgos_wifi_get_sta_ip(void);
+char *mgos_wifi_get_sta_default_gw(void);
 char *mgos_wifi_get_ap_ip(void);
 
 /*

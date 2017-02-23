@@ -47,3 +47,8 @@ void mgos_mdns_hal_join_group(const char *iface_ip, const char *group) {
 clean:
   return;
 }
+
+char *mgos_wifi_get_sta_default_gw() {
+  /* TODO(alashkin): implement */
+  return NULL;
+}

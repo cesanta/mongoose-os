@@ -408,3 +408,13 @@ void mgos_wifi_hal_init(void) {
   wifi_set_opmode_current(NULL_MODE);
   wifi_set_event_handler_cb(wifi_changed_cb);
 }
+
+char *mgos_wifi_get_sta_default_gw() {
+  struct ip_info info;
+  char *ip;
+  if (!wifi_get_ip_info(0, &info) || info.gw.addr == 0) return NULL;
+  if (asprintf(&ip, IPSTR, IP2STR(&info.gw)) < 0) {
+    return NULL;
+  }
+  return ip;
+}
