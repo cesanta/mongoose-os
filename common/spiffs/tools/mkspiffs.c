@@ -49,12 +49,12 @@ bool copy(char *src, char *dst) {
   }
 
   if ((sfd = SPIFFS_open(&fs, dst, SPIFFS_CREAT | SPIFFS_TRUNC | SPIFFS_RDWR,
-                         0)) == -1) {
+                         0)) < 0) {
     fprintf(stderr, "SPIFFS_open failed: %d\n", SPIFFS_errno(&fs));
     goto cleanup;
   }
 
-  if (SPIFFS_write(&fs, sfd, (uint8_t *) buf, size) == -1) {
+  if (SPIFFS_write(&fs, sfd, (uint8_t *) buf, size) != size) {
     fprintf(stderr, "SPIFFS_write failed: %d\n", SPIFFS_errno(&fs));
     goto spiffs_cleanup;
   }
