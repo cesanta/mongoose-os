@@ -99,7 +99,7 @@ MGOS_FEATURES ?=
 
 APP_BIN = $(BUILD_DIR)/$(APP).bin
 BOOT_BIN = $(BOOT_FW_DIR)/mg-boot.bin
-APP_ELF = $(BUILD_DIR)/$(APP).axf
+APP_ELF = $(BUILD_DIR)/$(APP).elf
 MGOS_LIB = $(BUILD_DIR)/mongoose-os.a
 MK_BOOT_CFG_BIN = $(BOOT_BUILD_DIR)/mkcfg
 FS_IMG = $(BUILD_DIR)/fs.img
