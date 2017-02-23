@@ -90,6 +90,7 @@ func buildLocal() (err error) {
 	genDir := filepath.Join(buildDir, "gen")
 	fsDir := filepath.Join(buildDir, "fs")
 	fwFilename := filepath.Join(buildDir, ide.FirmwareFileName)
+	elfFilename := filepath.Join(objsDir, "fw.elf")
 
 	if *cleanBuild {
 		err = os.RemoveAll(buildDir)
@@ -240,6 +241,15 @@ func buildLocal() (err error) {
 	err = os.Rename(
 		filepath.Join(fwDir, fmt.Sprintf("%s-%s-last.zip", appName, archEffective)),
 		fwFilename,
+	)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	// Move elf as fw.elf
+	err = os.Rename(
+		filepath.Join(objsDir, fmt.Sprintf("%s.elf", appName)),
+		elfFilename,
 	)
 	if err != nil {
 		return errors.Trace(err)
