@@ -85,14 +85,14 @@ struct frozen {
 
   /* For callback API */
   char path[JSON_MAX_PATH_LEN];
-  int path_len;
+  size_t path_len;
   void *callback_data;
   json_walk_callback_t callback;
 };
 
 struct fstate {
   const char *ptr;
-  int path_len;
+  size_t path_len;
 };
 
 #define SET_STATE(fr, ptr, str, len)              \
@@ -118,13 +118,15 @@ struct fstate {
 static int append_to_path(struct frozen *f, const char *str, int size) {
   int n = f->path_len;
   f->path_len +=
-      snprintf(f->path + f->path_len, sizeof(f->path) - (f->path_len + 1),
-               "%.*s", size, str);
+      snprintf(f->path + f->path_len, sizeof(f->path) - (f->path_len), "%.*s", size, str);
+  if (f->path_len > sizeof(f->path) - 1) {
+    f->path_len = sizeof(f->path) - 1;
+  }
 
   return n;
 }
 
-static void truncate_path(struct frozen *f, int len) {
+static void truncate_path(struct frozen *f, size_t len) {
   f->path_len = len;
   f->path[len] = '\0';
 }
