@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"flag"
@@ -9,7 +11,9 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
@@ -143,7 +147,21 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 			time.Sleep(700 * time.Millisecond)
 			devConn, _ = reconnectToDevice(ctx)
 		}()
-		err := flash(ctx, devConn)
+
+		flashArgs := []string{
+			"flash", "--port", *portFlag, "--firmware", *firmware,
+			"--v", "4", "--logtostderr",
+		}
+		fmt.Println("Flashing: calling ", os.Args[0], strings.Join(flashArgs, " "))
+		cmd := exec.Command(os.Args[0], flashArgs...)
+		var buf bytes.Buffer
+		cmd.Stderr = &buf
+		cmd.Stdout = &buf
+		err := cmd.Run()
+		fscanner := bufio.NewScanner(&buf)
+		for fscanner.Scan() {
+			glog.Infof("%s", fscanner.Text())
+		}
 		httpReply(w, true, err)
 	})
 
