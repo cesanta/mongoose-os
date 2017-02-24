@@ -1,8 +1,8 @@
 # This provides a debug_coredump target for ESP8266 and ESP32.
 
-OBJ_DIR ?= .build
+OBJ_DIR ?= build/objs
 BIN_FILE ?= $(OBJ_DIR)/$(APP).bin
-ELF_FILE ?= $(OBJ_DIR)/$(APP).elf
+ELF_FILE ?= $(OBJ_DIR)/fw.elf
 
 debug_coredump:
 ifndef CONSOLE_LOG
