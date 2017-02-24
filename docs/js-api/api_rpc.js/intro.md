@@ -16,6 +16,11 @@ items:
 
 
 
+ NOTE: we need strdup to return `void *` instead of `char *`, in order to
+ make mJS not to process it in any way, and just pass pointer as is.
+
+
+
  **`RPC.addHandler(name, handler)`** -
  add RPC handler. `name` is a string like `'MyMethod'`, `handler`
  is a callback function which takes `args` arguments object.

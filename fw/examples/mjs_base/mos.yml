@@ -11,6 +11,7 @@ ffi_symbols:
   - fopen
   - fread
   - fwrite
+  - strdup
   - get_led_gpio_pin
   - get_cfg
   - mg_send

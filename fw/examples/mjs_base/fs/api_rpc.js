@@ -10,7 +10,10 @@
 // Mongoose OS by default supports Serial (UART), HTTP, WebSocket, MQTT channels.
 
 let RPC = {
-  _addHandler: ffi('void *mgos_rpc_add_handler(char *, void (*)(void *, char *, char *, userdata), userdata)'),
+  // NOTE: we need strdup to return `void *` instead of `char *`, in order to
+  // make mJS not to process it in any way, and just pass pointer as is.
+  _strdup: ffi('void *strdup(char *)'),
+  _addHandler: ffi('void *mgos_rpc_add_handler(void *, void (*)(void *, char *, char *, userdata), userdata)'),
   _sendResponse: ffi('int mgos_rpc_send_response(void *, char *)'),
   _call: ffi('int mg_rpc_call(char *, char *, char *, void (*)(char *, int, char *, userdata), userdata)'),
 
@@ -55,7 +58,7 @@ let RPC = {
   // 3
   // ```
   addHandler: function(method, cb, userdata) {
-    RPC._addHandler(method, RPC._addCB, {
+    RPC._addHandler(RPC._strdup(method), RPC._addCB, {
       cb: cb,
       ud: userdata,
     });
