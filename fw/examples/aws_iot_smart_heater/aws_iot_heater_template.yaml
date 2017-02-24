@@ -450,7 +450,7 @@ Resources:
                 - Ref: AWS::AccountId
                 - ":topic/"
                 - Ref: DeviceID
-                - "/rpc"
+                - "/rpc/Heater.GetState"
           - Effect: Allow
             Action:
             - "iot:Subscribe"

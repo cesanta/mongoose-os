@@ -109,11 +109,10 @@ function initClient(requestUrl) {
           id: msgId,
           src: rpcId,
           dst: heaterVars.deviceId,
-          method: 'Heater.GetState',
           args: {},
         };
         message = new Paho.MQTT.Message(JSON.stringify(msgObj));
-        message.destinationName = heaterVars.deviceId + '/rpc';
+        message.destinationName = heaterVars.deviceId + '/rpc/Heater.GetState';
         var sendRes = client.send(message);
         console.log(message, 'result:', sendRes);
       }, 2000);
