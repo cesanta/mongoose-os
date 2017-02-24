@@ -9,6 +9,12 @@ Parameters:
     MinLength: '1'
     MaxLength: '2048'
     ConstraintDescription: must contain only alphanumberic characters and underscores
+  CognitoIdentityPoolName:
+    Type: String
+    Description: |
+      The name for the Cognito Identity Pool. If not provided, it's generated
+      after given DeviceID.
+    Default: ''
   ReadCapacityUnits:
     Description: Provisioned read throughput
     Type: Number
@@ -23,6 +29,12 @@ Parameters:
     MinValue: '5'
     MaxValue: '10000'
     ConstraintDescription: must be between 5 and 10000
+
+Conditions:
+  EMPTY_CognitoIdentityPoolName:
+    Fn::Equals:
+    - Ref: CognitoIdentityPoolName
+    - ''
 
 Resources:
   # Helpers for manipulating objects in S3 bucket {{{
@@ -117,6 +129,57 @@ Resources:
     - S3PutObjectFunctionRole
   # }}}
 
+  # Helpers for Cognito {{{
+  CognitoFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          Effect: Allow
+          Principal:
+            Service: lambda.amazonaws.com
+          Action: sts:AssumeRole
+      Path: "/"
+      Policies:
+      - PolicyName: cognito-writer
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - logs:CreateLogGroup
+            - logs:CreateLogStream
+            - logs:PutLogEvents
+            Resource: arn:aws:logs:*:*:*
+          - Effect: Allow
+            Action:
+            - cognito-identity:CreateIdentityPool
+            - cognito-identity:DeleteIdentityPool
+            - cognito-identity:UpdateIdentityPool
+            - cognito-identity:SetIdentityPoolRoles
+            Resource: "*"
+          - Effect: Allow
+            Action:
+            - iam:PassRole
+            Resource: "*"
+  CognitoLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code: ../helpers/cloudformation-helpers
+      Description: Used to create Custom::CognitoIdentityPool and Custom::CognitoIdentityPoolRoles
+      Handler: aws/cognito.handler
+      MemorySize: 128
+      Role:
+        Fn::GetAtt:
+        - CognitoFunctionRole
+        - Arn
+      Runtime: nodejs4.3
+      Timeout: 30
+    DependsOn:
+    - S3PutObjectFunctionRole
+  # }}}
+
   # S3 bucket and files in it {{{
   myS3Bucket:
     Type: AWS::S3::Bucket
@@ -140,6 +203,9 @@ Resources:
           {"Fn::Join": ["", ["  tableName: '", { "Ref": "myDynamoDBTable" }, "',"]]},
           {"Fn::Join": ["", ["  accessKeyId: '", { "Ref": "myDynamoDBTableUserReadOnlyAccessKey" }, "',"]]},
           {"Fn::Join": ["", ["  secretAccessKey: '", { "Fn::GetAtt": ["myDynamoDBTableUserReadOnlyAccessKey", "SecretAccessKey"] }, "',"]]},
+          {"Fn::Join": ["", ["  deviceId: '", { "Ref": "DeviceID" }, "',"]]},
+          {"Fn::Join": ["", ["  identityPoolId: '", { "Ref": "CognitoIdentityPool" }, "',"]]},
+          {"Fn::Join": ["", ["  accountId: '", { "Ref": "AWS::AccountId" }, "',"]]},
           "};",
           ""
         ]]
@@ -219,6 +285,9 @@ Resources:
                 - Ref: AWS::AccountId
                 - ":table/"
                 - Ref: myDynamoDBTable
+          - Effect: Allow
+            Action: "iot:*"
+            Resource: "*"
   # }}}
 
   # User which can read dynamoDB table, and its access key {{{
@@ -250,6 +319,149 @@ Resources:
     Type: AWS::IAM::AccessKey
     Properties:
       UserName: { Ref: "myDynamoDBTableUserReadOnly" }
+  # }}}
+
+  # Cognito {{{
+  CognitoIdentityPool:
+    Type: Custom::CognitoIdentityPool
+    Properties:
+      ServiceToken:
+        Fn::GetAtt:
+        - CognitoLambdaFunction
+        - Arn
+      Options:
+        AllowUnauthenticatedIdentities: "true"
+        IdentityPoolName:
+          Fn::If:
+          - EMPTY_CognitoIdentityPoolName
+          - { "Fn::Join": ["", ["identity_pool_for_", {"Ref": "DeviceID"}]] }
+          - Ref: CognitoIdentityPoolName
+
+        #CognitoIdentityProviders:
+          #Fn::If:
+          #- EMPTY_CognitoIdentityProviders
+          #- Ref: AWS::NoValue
+          #- Ref: CognitoIdentityProviders
+        #DeveloperProviderName:
+          #Fn::If:
+          #- EMPTY_DeveloperProviderName
+          #- Ref: AWS::NoValue
+          #- Ref: DeveloperProviderName
+        #OpenIdConnectProviderARNs:
+          #Fn::If:
+          #- EMPTY_OpenIdConnectProviderARNs
+          #- Ref: AWS::NoValue
+          #- Ref: OpenIdConnectProviderARNs
+        #SupportedLoginProviders:
+          #Fn::If:
+          #- EMPTY_SupportedLoginProviders
+          #- Ref: AWS::NoValue
+          #- Ref: SupportedLoginProviders
+
+  CognitoIdentityPoolRoles:
+    Type: Custom::CognitoIdentityPoolRoles
+    Properties:
+      ServiceToken:
+        Fn::GetAtt:
+        - CognitoLambdaFunction
+        - Arn
+      Options:
+        IdentityPoolId:
+          Fn::GetAtt:
+          - CognitoIdentityPool
+          - IdentityPoolId
+        Roles:
+          authenticated:
+            Fn::GetAtt:
+            - CognitoAuthenticatedRole
+            - Arn
+          unauthenticated:
+            Fn::GetAtt:
+            - CognitoUnauthenticatedRole
+            - Arn
+
+  CognitoAuthenticatedRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Federated: cognito-identity.amazonaws.com
+          Action: sts:AssumeRoleWithWebIdentity
+          Condition:
+            StringEquals:
+              cognito-identity.amazonaws.com:aud:
+                Fn::GetAtt:
+                - CognitoIdentityPool
+                - IdentityPoolId
+            ForAnyValue:StringLike:
+              cognito-identity.amazonaws.com:amr: authenticated
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            # TODO: restrict more
+            Action: "*"
+            Resource: "*"
+
+  CognitoUnauthenticatedRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Federated: cognito-identity.amazonaws.com
+          Action: sts:AssumeRoleWithWebIdentity
+          Condition:
+            StringEquals:
+              cognito-identity.amazonaws.com:aud:
+                Fn::GetAtt:
+                - CognitoIdentityPool
+                - IdentityPoolId
+            ForAnyValue:StringLike:
+              cognito-identity.amazonaws.com:amr: unauthenticated
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - "iot:Connect"
+            - "iot:Receive" # It would be better to limit it in the same way
+                            # as iot:Subscribe, but apparently topicfilter
+                            # doesn't work for Receive
+            Resource: "*"
+          - Effect: Allow
+            Action:
+            - "iot:Publish"
+            Resource:
+              Fn::Join:
+              - ''
+              - - 'arn:aws:iot:'
+                - Ref: AWS::Region
+                - ":"
+                - Ref: AWS::AccountId
+                - ":topic/"
+                - Ref: DeviceID
+                - "/rpc"
+          - Effect: Allow
+            Action:
+            - "iot:Subscribe"
+            Resource:
+              Fn::Join:
+              - ''
+              - - 'arn:aws:iot:'
+                - Ref: AWS::Region
+                - ":"
+                - Ref: AWS::AccountId
+                - ":topicfilter/smart_heater_*/rpc"
   # }}}
 
 Outputs:

@@ -4,6 +4,12 @@
     <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.bundle.min.js"></script>
     <script src="https://sdk.amazonaws.com/js/aws-sdk-2.7.20.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.11.2/moment.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/core-min.js" type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/hmac-min.js" type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/sha256-min.js" type="text/javascript"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/paho-mqtt/1.0.1/mqttws31.min.js" type="text/javascript"></script>
+    <script src="https://cdn.rawgit.com/ma2shita/2c5a4c29242dd5382b05ce941731fd41/raw/eb4bc16c02e7a72bbd0086e937050c258da09a20/sigv4utils.js" type="text/javascript"></script>
     <script src="vars.js"></script>
     <script src="index.js"></script>
 
@@ -12,6 +18,10 @@
     <div style="width: 1280px; height: 200px">
       <canvas id="myChart" style="height: 100%; width: 100%"></canvas>
     </div>
+
+    <div id="heater_status">Heater status: unknown</div>
+
+    <pre id="msg"></pre>
   </body>
 </html>
 

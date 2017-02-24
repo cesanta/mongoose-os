@@ -7,11 +7,12 @@
 load('api_timer.js');
 load('api_mqtt.js');
 load('api_config.js');
+load('api_rpc.js');
 
 let devID = Cfg.get('device.id');
 let topic = devID + '/temp';
 let tempDummy = 10;
-Timer.set(5000 /* milliseconds */, 1 /* repeat */, function() {
+Timer.set(1000 /* milliseconds */, 1 /* repeat */, function() {
   let message = JSON.stringify({
     temp: tempDummy,
   });
@@ -23,3 +24,25 @@ Timer.set(5000 /* milliseconds */, 1 /* repeat */, function() {
     tempDummy = 10;
   }
 }, null);
+
+let getTemp = function() {
+  return tempDummy;
+};
+
+let getStatus = function() {
+  return {
+    temp: getTemp(),
+    on: getTemp() > 20 //GPIO.read(pin)
+  };
+};
+
+RPC.addHandler('Heater.SetState', function(args) {
+  //GPIO.write(pin, args.state || 0);
+  return true;
+});
+
+RPC.addHandler('Heater.GetState', function(args) {
+  return getStatus();
+});
+
+print('hey!');
