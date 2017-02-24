@@ -11,6 +11,7 @@ items:
   - { name: mg_rpc_create.md }
   - { name: mg_rpc_disconnect.md }
   - { name: mg_rpc_is_connected.md }
+  - { name: mg_rpc_parse_frame.md }
   - { name: mg_rpc_send_errorf.md }
   - { name: mg_rpc_send_responsef.md }
   - { name: mg_handler_cb_t.md }

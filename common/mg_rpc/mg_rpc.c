@@ -154,12 +154,7 @@ static bool mg_rpc_handle_response(struct mg_rpc *c,
   return true;
 }
 
-/*
- * Parses frame `f` and stores result into `frame`. Returns true in case of
- * success, false otherwise.
- */
-static bool mg_rpc_parse_frame(const struct mg_str f,
-                               struct mg_rpc_frame *frame) {
+bool mg_rpc_parse_frame(const struct mg_str f, struct mg_rpc_frame *frame) {
   memset(frame, 0, sizeof(*frame));
 
   struct json_token src, dst, tag;

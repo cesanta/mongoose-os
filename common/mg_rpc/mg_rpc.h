@@ -147,5 +147,11 @@ void mg_rpc_free(struct mg_rpc *c);
 /* Enable RPC.List handler that returns a list of all registered endpoints */
 void mg_rpc_add_list_handler(struct mg_rpc *c);
 
+/*
+ * Parses frame `f` and stores result into `frame`. Returns true in case of
+ * success, false otherwise.
+ */
+bool mg_rpc_parse_frame(const struct mg_str f, struct mg_rpc_frame *frame);
+
 #endif /* MGOS_ENABLE_RPC */
 #endif /* CS_COMMON_MG_RPC_MG_RPC_H_ */
