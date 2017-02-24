@@ -44,7 +44,7 @@ static bool call_topic_handler(struct mg_connection *nc, int ev,
   SLIST_FOREACH(th, &s_topic_handlers, entries) {
     if ((ev == MG_EV_CLOSE) ||
         (ev == MG_EV_MQTT_SUBACK && th->sub_id == msg->message_id) ||
-        mg_strcmp(th->topic, msg->topic) == 0) {
+        mg_mqtt_match_topic_expression(th->topic, msg->topic)) {
       nc->user_data = th->user_data;
       th->handler(nc, ev, ev_data);
       return true;
