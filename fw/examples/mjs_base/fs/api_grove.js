@@ -31,4 +31,9 @@ let Grove = {
       return ADC.read(pin);
     },
   },
+  UVSensor: {
+    get: function(pin) {
+      return ADC.read(pin);
+    },
+  }
 };
