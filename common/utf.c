@@ -19,6 +19,7 @@
 #include <stdarg.h>
 #include <string.h>
 #include "common/platform.h"
+#include "common/str_util.h"
 #include "common/utf.h"
 
 #ifndef CS_ENABLE_UTF8
