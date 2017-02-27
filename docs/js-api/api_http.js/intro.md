@@ -54,6 +54,15 @@ items:
 
 
 
+ **`HTTP.connect_ssl(addr, handler, userdata)`** - The same as `HTTP.connect`,
+ but establishes SSL enabled connection
+ Additional parameters are:
+ - `cert` is a client certificate file name or "" if not required
+ - `ca_cert` is a CA certificate or NULL if peer verification is not required.
+ The certificate files must be in PEM format.
+
+
+
  **`HTTP.param(event_data, param)`** - Get various params values of the
  HTTP-specific events. When the callback given to `HTTP.connect()` is
  called with the event `HTTP.EV_REQUEST` or `HTTP.EV_RESPONSE`,

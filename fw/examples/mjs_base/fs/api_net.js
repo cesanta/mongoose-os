@@ -42,6 +42,14 @@ let Net = {
   // userdata is the value given as a third argument to `Net.connect()`.
   connect: ffi('void *mgos_connect(char *, void (*)(void *, int, void *, userdata), userdata)'),
 
+  // **`Net.connect_ssl(addr, handler, userdata, cert, ca_cert)`** -
+  // The same as `Net.connect`, but establishes SSL connection
+  // Additional parameters are:
+  // - `cert` is a client certificate file name or "" if not required
+  // - `ca_cert` is a CA certificate or "" if peer verification is not required.
+  // The certificate files must be in PEM format.
+  connect_ssl: ffi('void *mgos_connect_ssl(void *, char *, void (*)(void *, int, void *, userdata), char *, char *)'),
+
   // **`Net.close(conn)`** - send all pending data to the remote peer,
   // and disconnect when all data is sent.
   // Return value: none.
@@ -53,6 +61,7 @@ let Net = {
   // `data` is an mJS string.
   // Return value: none.
   send: function(c, msg) { return Net._send(c, msg, msg.length); },
+
   EV_POLL: 0,
   EV_ACCEPT: 1,
   EV_CONNECT: 2,

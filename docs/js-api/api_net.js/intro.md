@@ -50,6 +50,15 @@ items:
 
 
 
+ **`Net.connect_ssl(addr, handler, userdata, cert, ca_cert)`** -
+ The same as `Net.connect`, but establishes SSL connection
+ Additional parameters are:
+ - `cert` is a client certificate file name or "" if not required
+ - `ca_cert` is a CA certificate or "" if peer verification is not required.
+ The certificate files must be in PEM format.
+
+
+
  **`Net.close(conn)`** - send all pending data to the remote peer,
  and disconnect when all data is sent.
  Return value: none.

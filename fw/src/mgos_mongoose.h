@@ -41,12 +41,17 @@ void mongoose_schedule_poll(bool from_isr);
 typedef void (*mg_eh_t)(struct mg_connection *, int, void *, void *);
 struct mg_connection *mgos_bind(const char *addr, mg_eh_t func, void *ud);
 struct mg_connection *mgos_connect(const char *addr, mg_eh_t func, void *ud);
+struct mg_connection *mgos_connect_ssl(const char *addr, mg_eh_t f, void *ud,
+                                       const char *cert, const char *ca_cert);
 void mgos_disconnect(struct mg_connection *c);
 
 struct mg_connection *mgos_bind_http(const char *addr);
 bool mgos_add_http_endpoint(struct mg_connection *c, const char *uri,
                             mg_eh_t handler, void *user_data);
 struct mg_connection *mgos_connect_http(const char *addr, mg_eh_t, void *ud);
+struct mg_connection *mgos_connect_http_ssl(const char *addr, mg_eh_t f,
+                                            void *ud, const char *cert,
+                                            const char *ca_cert);
 
 enum http_message_param {
   HTTP_MESSAGE_PARAM_METHOD = 0,

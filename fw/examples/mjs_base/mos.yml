@@ -22,6 +22,7 @@ ffi_symbols:
   - mgos_bind_http
   - mgos_connect
   - mgos_connect_http
+  - mgos_connect_http_ssl
   - mgos_conf_find_schema_entry
   - mgos_conf_value_type
   - mgos_conf_value_string

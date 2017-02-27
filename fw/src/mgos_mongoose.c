@@ -116,6 +116,22 @@ struct mg_connection *mgos_connect(const char *addr, mg_eh_t f, void *ud) {
   return c;
 }
 
+#if MG_ENABLE_SSL
+struct mg_connection *mgos_connect_ssl(const char *addr, mg_eh_t f, void *ud,
+                                       const char *cert, const char *ca_cert) {
+  struct mg_connect_opts opts;
+  memset(&opts, 0, sizeof(opts));
+  opts.ssl_cert = cert;
+  opts.ssl_ca_cert = ca_cert;
+  struct mg_connection *c = mg_connect_opt(mgos_get_mgr(), addr, oplya, opts);
+  if (c != NULL) {
+    c->priv_1.f = (mg_event_handler_t) f;
+    c->user_data = ud;
+  }
+  return c;
+}
+#endif
+
 void mgos_disconnect(struct mg_connection *c) {
   c->flags |= MG_F_SEND_AND_CLOSE;
 }
@@ -198,6 +214,16 @@ struct mg_connection *mgos_connect_http(const char *addr, mg_eh_t f, void *ud) {
   if (c != NULL) mg_set_protocol_http_websocket(c);
   return c;
 }
+
+#if MG_ENABLE_SSL
+struct mg_connection *mgos_connect_http_ssl(const char *addr, mg_eh_t f,
+                                            void *ud, const char *cert,
+                                            const char *ca_cert) {
+  struct mg_connection *c = mgos_connect_ssl(addr, f, ud, cert, ca_cert);
+  if (c != NULL) mg_set_protocol_http_websocket(c);
+  return c;
+}
+#endif
 
 const char *mgos_get_http_message_param(const struct http_message *m,
                                         enum http_message_param p) {

@@ -14,7 +14,7 @@ load('api_http.js');
 load('api_net.js');
 load('api_sys.js');
 
-let addr = 'mongoose-os.com:80';  // web server host:port
+let addr = 'mongoose-os.com:443';  // web server host:port
 
 let cb = function(conn, ev, ev_data, data) {
   if (ev === Net.EV_POLL) return;  // Timer event - ignore
@@ -34,7 +34,7 @@ let cb = function(conn, ev, ev_data, data) {
 let pin = 0;
 GPIO.set_button_handler(pin, GPIO.PULL_UP, GPIO.INT_EDGE_NEG, 200, function(x) {
   print('Sending request to', addr, 'RAM: ', Sys.free_ram());
-  let conn = HTTP.connect(addr, cb, null);
+  let conn = HTTP.connect_ssl(addr, cb, null, "", "DST_Root_CA_X3.pem");
   Net.send(conn, 'GET /downloads/mos/version.json HTTP/1.0\r\n');
   Net.send(conn, 'Content-Length: 0\r\n');  // Must be non-0 for POST requests
   Net.send(conn, '\r\n');

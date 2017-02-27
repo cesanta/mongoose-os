@@ -44,6 +44,14 @@ let HTTP = {
   // first argument to some `Net` functions.
   connect: ffi('void *mgos_connect_http(char *, void (*)(void *, int, void *, userdata), userdata)'),
 
+  // **`HTTP.connect_ssl(addr, handler, userdata)`** - The same as `HTTP.connect`,
+  // but establishes SSL enabled connection
+  // Additional parameters are:
+  // - `cert` is a client certificate file name or "" if not required
+  // - `ca_cert` is a CA certificate or NULL if peer verification is not required.
+  // The certificate files must be in PEM format.
+  connect_ssl: ffi('void *mgos_connect_http_ssl(char *, void (*)(void *, int, void *, userdata), userdata, char *, char *)'),
+
   EV_REQUEST: 100,
   EV_RESPONSE: 101,
   EV_CHUNK: 102,
