@@ -36,7 +36,6 @@
 
 struct mgos_i2c {
   unsigned long base;
-  uint8_t first : 1;
 };
 
 struct mgos_i2c *mgos_i2c_create(const struct sys_config_i2c *cfg) {
@@ -90,75 +89,94 @@ void mgos_i2c_close(struct mgos_i2c *c) {
 }
 
 /* Sends command to the I2C module and waits for it to be processed. */
-static enum i2c_ack_type cc3200_i2c_command(struct mgos_i2c *c, uint32_t cmd) {
-  I2CMasterIntClear(c->base);
-  I2CMasterTimeoutSet(c->base, 0x20); /* 5 ms @ 100 KHz */
+static bool cc3200_i2c_command(struct mgos_i2c *c, uint32_t cmd) {
+  dprintf(("-- cmd %02x\n", cmd));
+  // I2CMasterTimeoutSet(c->base, 0x20); /* 5 ms @ 100 KHz */
+  MAP_I2CMasterIntClearEx(I2CA0_BASE, I2C_INT_MASTER);
   I2CMasterControl(c->base, cmd);
-  unsigned long mcs;
-  while ((MAP_I2CMasterIntStatusEx(c->base, 0) &
-          (I2C_MRIS_RIS | I2C_MRIS_CLKRIS)) == 0) {
-    mcs = HWREG(c->base + I2C_O_MCS);
-    dprintf(("busy mcs %lx cnt %lx\n", mcs, HWREG(c->base + I2C_O_MCLKOCNT)));
+  while (!(MAP_I2CMasterIntStatusEx(I2CA0_BASE, false) & I2C_INT_MASTER)) {
   }
-  I2CMasterIntClearEx(c->base, I2C_MRIS_RIS | I2C_MRIS_CLKRIS);
-  mcs = HWREG(c->base + I2C_O_MCS);
-  dprintf(("mcs %lx\n", mcs));
+  volatile uint32_t mcs = HWREG(c->base + I2C_O_MCS);
+  dprintf(("mcs %02x\n", mcs));
   if ((mcs & (I2C_MCS_ARBLST | I2C_MCS_ACK | I2C_MCS_ADRACK | I2C_MCS_CLKTO)) ==
       0) {
-    return I2C_ACK;
+    return true;
   } else {
-    /* This does not actually put STOP condition on the bus (bit 0 = 0),
-     * but resets the error condition in the module. */
-    I2CMasterControl(c->base, I2C_MASTER_CMD_BURST_SEND_ERROR_STOP);
-    return I2C_NAK;
+    /*
+     * We should release the bus is an error occurs, except if the error is lost
+     * arbitration, in which case we reset the error condition in the module but
+     * not touch the bus.
+     * SEND and RECEIVE varieties of commands are the same, so it doesn't matter
+     * (I2C_MASTER_CMD_BURST_SEND_ERROR_STOP ==
+     *  I2C_MASTER_CMD_BURST_RECEIVE_ERROR_STOP == 4).
+     */
+    if (mcs & I2C_MCS_ARBLST) {
+      MAP_I2CMasterControl(c->base, I2C_MASTER_CMD_BURST_SEND_ERROR_STOP);
+    } else {
+      MAP_I2CMasterControl(c->base, I2C_MASTER_CMD_BURST_SEND_FINISH);
+    }
+    return false;
   }
 }
 
-enum i2c_ack_type mgos_i2c_start(struct mgos_i2c *c, uint16_t addr,
-                                 enum i2c_rw mode) {
-  /* CC3200 does not support 10 bit addresses. */
-  if (addr > 0x7F) return I2C_ERR;
-  MAP_I2CMasterSlaveAddrSet(c->base, addr, (mode == I2C_READ));
-  c->first = 1;
-  if (mode == I2C_WRITE) {
-    /* Start condition is set only with data to send. */
-    return I2C_ACK;
+bool mgos_i2c_write(struct mgos_i2c *c, uint16_t addr, const void *data,
+                    size_t len, bool stop) {
+  dprintf(("- send 0x%02x %u %d\n", addr, len, stop));
+  uint8_t *p = (uint8_t *) data;
+  uint32_t cmd;
+  /* Cannot transmit address only, CC3200 always transmits at least one byte. */
+  if (len == 0) return false;
+  if (addr == MGOS_I2C_ADDR_CONTINUE) {
+    if (!MAP_I2CMasterBusBusy(c->base)) return false;
+    cmd = I2C_MASTER_CMD_BURST_SEND_CONT;
+  } else if (addr <= 0x7F) {
+    MAP_I2CMasterSlaveAddrSet(c->base, addr, false /* read */);
+    cmd = (len == 1 && stop ? I2C_MASTER_CMD_SINGLE_SEND
+                            : I2C_MASTER_CMD_BURST_SEND_START);
   } else {
-    c->first = 1;
-    return cc3200_i2c_command(c, I2C_MASTER_CMD_BURST_RECEIVE_START);
+    /* CC3200 does not support 10 bit addresses. */
+    return false;
   }
+  while (len-- > 0) {
+    MAP_I2CMasterDataPut(c->base, *p++);
+    if (!cc3200_i2c_command(c, cmd)) return false;
+    cmd = (len == 1 && stop ? I2C_MASTER_CMD_BURST_SEND_FINISH
+                            : I2C_MASTER_CMD_BURST_SEND_CONT);
+  }
+  return true;
 }
 
-enum i2c_ack_type mgos_i2c_send_byte(struct mgos_i2c *c, uint8_t data) {
-  I2CMasterDataPut(c->base, data);
-  if (c->first) {
-    c->first = 0;
-    return cc3200_i2c_command(c, I2C_MASTER_CMD_BURST_SEND_START);
+bool mgos_i2c_read(struct mgos_i2c *c, uint16_t addr, void *data, size_t len,
+                   bool stop) {
+  uint8_t *p = (uint8_t *) data;
+  uint32_t cmd;
+  dprintf(("- recv 0x%02x %u %d\n", addr, len, stop));
+  if (len == 0) return false;
+  if (addr == MGOS_I2C_ADDR_CONTINUE) {
+    if (!MAP_I2CMasterBusBusy(c->base)) return false;
+    cmd = I2C_MASTER_CMD_BURST_RECEIVE_CONT;
+  } else if (addr <= 0x7F) {
+    MAP_I2CMasterSlaveAddrSet(c->base, addr, true /* read */);
+    cmd = (len == 1 && stop ? I2C_MASTER_CMD_SINGLE_RECEIVE
+                            : I2C_MASTER_CMD_BURST_RECEIVE_START);
   } else {
-    return cc3200_i2c_command(c, I2C_MASTER_CMD_BURST_SEND_CONT);
+    /* CC3200 does not support 10 bit addresses. */
+    return false;
   }
-}
-
-uint8_t mgos_i2c_read_byte(struct mgos_i2c *c, enum i2c_ack_type ack_type) {
-  if (c->first) {
-    /* First byte is buffered since the time of start. */
-    c->first = 0;
-  } else {
-    cc3200_i2c_command(c, ack_type == I2C_ACK
-                              ? I2C_MASTER_CMD_BURST_RECEIVE_CONT
-                              : I2C_MASTER_CMD_BURST_RECEIVE_FINISH);
+  while (len-- > 0) {
+    if (!cc3200_i2c_command(c, cmd)) return false;
+    *p++ = MAP_I2CMasterDataGet(c->base);
+    cmd = (len == 1 && stop ? I2C_MASTER_CMD_BURST_RECEIVE_FINISH
+                            : I2C_MASTER_CMD_BURST_RECEIVE_CONT);
   }
-  return (uint8_t) I2CMasterDataGet(c->base);
+  return true;
 }
 
 void mgos_i2c_stop(struct mgos_i2c *c) {
   dprintf(("stop mcs %lx\n", HWREG(c->base + I2C_O_MCS)));
-  if (I2CMasterBusBusy(c->base)) {
+  if (MAP_I2CMasterBusBusy(c->base)) {
     cc3200_i2c_command(c, I2C_MASTER_CMD_BURST_SEND_FINISH);
   }
-}
-
-void mgos_i2c_send_ack(struct mgos_i2c *c, enum i2c_ack_type ack_type) {
 }
 
 #endif /* MGOS_ENABLE_I2C */

@@ -17,18 +17,17 @@ static void i2c_handler(struct mg_connection *c, int ev, void *p) {
   if (ev == MG_EV_HTTP_REQUEST) {
     struct http_message *hm = (struct http_message *) p;
     struct mg_str *s = hm->body.len > 0 ? &hm->body : &hm->query_string;
-    enum i2c_ack_type ret = I2C_ACK;
+    bool ret = false;
 
     LOG(LL_INFO, ("Got: [%.*s]", (int) s->len, s->p));
 
     if (s->len >= 2) {
+      int j = 0;
       struct mgos_i2c *i2c = mgos_i2c_get_global();
-      ret = mgos_i2c_start(i2c, from_hex(s->p), I2C_WRITE);
-      for (size_t i = 2; i < s->len && ret == I2C_ACK; i += 2) {
-        ret = mgos_i2c_send_byte(i2c, from_hex(s->p + i));
-        LOG(LL_DEBUG, ("i2c -> %02x", from_hex(s->p + i)));
+      for (size_t i = 0; i < s->len; i += 2, j++) {
+        ((uint8_t *) s->p)[j] = from_hex(s->p + i);
       }
-      mgos_i2c_stop(i2c);
+      ret = mgos_i2c_write(i2c, s->p[0], s->p + 1, j, true /* stop */);
     }
 
     mg_send_head(c, 200, -1, NULL);  // Use chunked encoding

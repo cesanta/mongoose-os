@@ -43,7 +43,7 @@ static void handle_heater(struct mg_connection *nc, int ev, void *ev_data) {
   mg_send_response_line(nc, 200,
                         "Content-Type: text/html\r\n"
                         "Connection: close\r\n");
-  double temp = mc6808_read_temp();
+  double temp = mcp9808_read_temp();
   mg_printf(nc,
             "<h1>Welcome to Cesanta Office IoT!</h1>\r\n"
             "<p>Temperature is %.2lf&deg;C.</p>\r\n"
@@ -103,7 +103,7 @@ static void handle_sensor_conn(struct mg_connection *nc, int ev,
 
 static void sensor_timer_cb(void *arg) {
   if (s_sensor_conn != NULL) return; /* In progress. */
-  double temp = mc6808_read_temp();
+  double temp = mcp9808_read_temp();
   if (temp <= -1000) return; /* Error */
   char *eh = NULL, *post_data = NULL;
   mg_asprintf(&post_data, 0, "{\"office_temperature\": %.2lf}", temp);

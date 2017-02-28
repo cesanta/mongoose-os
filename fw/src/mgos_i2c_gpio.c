@@ -30,6 +30,18 @@ enum i2c_gpio_val {
   I2C_INPUT = 2,
 };
 
+enum i2c_ack_type {
+  I2C_ACK = 0,
+  I2C_NAK = 1,
+  I2C_ERR = 2,
+  I2C_NONE = 3,
+};
+
+enum i2c_rw {
+  I2C_READ = 1,
+  I2C_WRITE = 0,
+};
+
 /* This function delays for half of a SCL pulse, i.e. quarter of a period. */
 static void mgos_i2c_half_delay(struct mgos_i2c *c) {
   (void) c;
@@ -56,8 +68,10 @@ static void mgos_i2c_set_sda_scl(struct mgos_i2c *c, uint8_t sda_val,
   set_gpio_val(c->scl_gpio, scl_val);
 }
 
-enum i2c_ack_type mgos_i2c_start(struct mgos_i2c *c, uint16_t addr,
-                                 enum i2c_rw mode) {
+static enum i2c_ack_type mgos_i2c_send_byte(struct mgos_i2c *c, uint8_t data);
+
+static enum i2c_ack_type mgos_i2c_start(struct mgos_i2c *c, uint16_t addr,
+                                        enum i2c_rw mode) {
   enum i2c_ack_type result;
   uint8_t address_byte = (uint8_t)(addr << 1) | mode;
   if (get_cfg()->i2c.debug) {
@@ -95,11 +109,7 @@ void mgos_i2c_stop(struct mgos_i2c *c) {
   }
 }
 
-static uint8_t mgos_i2c_read_sda(struct mgos_i2c *c) {
-  return mgos_gpio_read(c->sda_gpio);
-}
-
-enum i2c_ack_type mgos_i2c_send_byte(struct mgos_i2c *c, uint8_t data) {
+static enum i2c_ack_type mgos_i2c_send_byte(struct mgos_i2c *c, uint8_t data) {
   enum i2c_ack_type ret_val;
   int8_t i;
 
@@ -119,7 +129,7 @@ enum i2c_ack_type mgos_i2c_send_byte(struct mgos_i2c *c, uint8_t data) {
   mgos_i2c_half_delay(c);
   mgos_i2c_set_sda_scl(c, I2C_INPUT, I2C_HIGH);
   mgos_i2c_half_delay(c);
-  ret_val = mgos_i2c_read_sda(c);
+  ret_val = mgos_gpio_read(c->sda_gpio);
   if (get_cfg()->i2c.debug) {
     LOG(LL_DEBUG,
         ("sent 0x%02x, got %s", data, (ret_val == I2C_ACK ? "ACK" : "NAK")));
@@ -131,7 +141,7 @@ enum i2c_ack_type mgos_i2c_send_byte(struct mgos_i2c *c, uint8_t data) {
   return ret_val;
 }
 
-void mgos_i2c_send_ack(struct mgos_i2c *c, enum i2c_ack_type ack_type) {
+static void mgos_i2c_send_ack(struct mgos_i2c *c, enum i2c_ack_type ack_type) {
   mgos_i2c_set_sda_scl(c, ack_type, I2C_LOW);
   mgos_i2c_half_delay(c);
   mgos_i2c_set_sda_scl(c, ack_type, I2C_HIGH);
@@ -144,7 +154,8 @@ void mgos_i2c_send_ack(struct mgos_i2c *c, enum i2c_ack_type ack_type) {
   }
 }
 
-uint8_t mgos_i2c_read_byte(struct mgos_i2c *c, enum i2c_ack_type ack_type) {
+static uint8_t mgos_i2c_read_byte(struct mgos_i2c *c,
+                                  enum i2c_ack_type ack_type) {
   uint8_t i, ret_val = 0;
 
   mgos_i2c_set_sda_scl(c, I2C_INPUT, I2C_LOW);
@@ -154,7 +165,7 @@ uint8_t mgos_i2c_read_byte(struct mgos_i2c *c, enum i2c_ack_type ack_type) {
     uint8_t bit;
     mgos_i2c_set_sda_scl(c, I2C_INPUT, I2C_HIGH);
     mgos_i2c_half_delay(c);
-    bit = mgos_i2c_read_sda(c);
+    bit = mgos_gpio_read(c->sda_gpio);
     ret_val |= (bit << (7 - i));
     mgos_i2c_half_delay(c);
     mgos_i2c_set_sda_scl(c, I2C_INPUT, I2C_LOW);
@@ -171,6 +182,50 @@ uint8_t mgos_i2c_read_byte(struct mgos_i2c *c, enum i2c_ack_type ack_type) {
   }
 
   return ret_val;
+}
+
+bool mgos_i2c_read(struct mgos_i2c *c, uint16_t addr, void *data, size_t len,
+                   bool stop) {
+  bool res = false;
+  uint8_t *p = (uint8_t *) data;
+
+  if (addr != MGOS_I2C_ADDR_CONTINUE &&
+      mgos_i2c_start(c, addr, I2C_READ) != I2C_ACK) {
+    goto out;
+  }
+
+  while (len-- > 0) {
+    *p++ = mgos_i2c_read_byte(c, I2C_ACK);
+  }
+
+  res = true;
+
+out:
+  if (stop || !res) mgos_i2c_stop(c);
+
+  return res;
+}
+
+bool mgos_i2c_write(struct mgos_i2c *c, uint16_t addr, const void *data,
+                    size_t len, bool stop) {
+  bool res = false;
+  const uint8_t *p = (const uint8_t *) data;
+
+  if (addr != MGOS_I2C_ADDR_CONTINUE &&
+      mgos_i2c_start(c, addr, I2C_WRITE) != I2C_ACK) {
+    goto out;
+  }
+
+  while (len-- > 0) {
+    if (mgos_i2c_send_byte(c, *p++) != I2C_ACK) return false;
+  }
+
+  res = true;
+
+out:
+  if (stop || !res) mgos_i2c_stop(c);
+
+  return res;
 }
 
 struct mgos_i2c *mgos_i2c_create(const struct sys_config_i2c *cfg) {
@@ -197,7 +252,7 @@ struct mgos_i2c *mgos_i2c_create(const struct sys_config_i2c *cfg) {
   mgos_i2c_half_delay(c);
 
   LOG(LL_INFO,
-      ("I2C initialized (SDA: %d, SCL: %d)", c->sda_gpio, c->scl_gpio));
+      ("I2C GPIO init ok (SDA: %d, SCL: %d)", c->sda_gpio, c->scl_gpio));
 
   return c;
 

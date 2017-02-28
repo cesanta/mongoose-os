@@ -30,32 +30,24 @@ let topic = devID + '/temp';
 // Data sheet: http://www.microchip.com/wwwproducts/en/en556182
 let getTemp = function() {
   let i2c = I2C.get_default();
-  I2C.start(i2c, 0x1f, I2C.WRITE);
-  I2C.write(i2c, '\x05');
-  I2C.start(i2c, 0x1f, I2C.READ);
-  let hi = I2C.read(i2c, 1);
-  let lo = I2C.read(i2c, 1);
-  I2C.stop(i2c);
-  let temp = -1;
-  hi &= 0x1f;
-  if (hi & 0x10) {
-    hi &= 0xf;
-    temp = -(256 - (hi * 16.0 + lo / 16.0));
-  } else {
-    temp = (hi * 16.0 + lo / 16.0);
+  let t = -1000;
+  let v = I2C.readRegW(i2c, 0x1f, 5);
+  if (v > 0) {
+    t = ((v >> 4) & 0xff) + ((v & 0xf) / 16.0);
+    if (v & 0x1000) t = -t;
   }
-  return temp;
+  return t;
 };
 
 let getStatus = function() {
   return {
     temp: getTemp(),
-    on: GPIO.read(pin)
+    on: GPIO.read(pin) === 1
   };
 };
 
 RPC.addHandler('Heater.SetState', function(args) {
-  GPIO.write(pin, args.state || 0);
+  GPIO.write(pin, args.on || 0);
   return true;
 });
 

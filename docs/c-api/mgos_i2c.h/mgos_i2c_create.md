@@ -6,5 +6,5 @@ signature: |
   struct mgos_i2c *mgos_i2c_create(const struct sys_config_i2c *cfg);
 ---
 
-Initialize i2c master 
+Initialize I2C master 
 

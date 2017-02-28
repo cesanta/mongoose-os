@@ -69,18 +69,6 @@ struct mgos_i2c *mgos_i2c_create(const struct sys_config_i2c *cfg) {
   }
 }
 
-enum i2c_ack_type mgos_i2c_start(struct mgos_i2c *conn, uint16_t addr,
-                                 enum i2c_rw mode) {
-  /*
-   * STM32's Sequential API sends R/W START/STOP inside its functions
-   * All we have to do here is to store device address
-   * NOTE: STM HAL expects address shifted one bit to left
-   */
-  (void) mode;
-  conn->addr = (addr << 1);
-  return I2C_ACK;
-}
-
 void mgos_i2c_stop(struct mgos_i2c *conn) {
   reset_io_state(conn);
   HAL_StatusTypeDef status = HAL_I2C_Master_Sequential_Transmit_IT(
@@ -90,29 +78,34 @@ void mgos_i2c_stop(struct mgos_i2c *conn) {
   }
 }
 
-enum i2c_ack_type mgos_i2c_send_byte(struct mgos_i2c *conn, uint8_t data) {
+bool mgos_i2c_write(struct mgos_i2c *conn, uint16_t addr, const void *data,
+                    size_t len, bool stop) {
+  conn->addr = (addr << 1);
   reset_io_state(conn);
   HAL_StatusTypeDef status = HAL_I2C_Master_Sequential_Transmit_IT(
-      conn->hi2c, conn->addr, &data, 1, I2C_FIRST_AND_LAST_FRAME);
+      conn->hi2c, conn->addr, (void *) data, len,
+      stop ? I2C_FIRST_AND_LAST_FRAME : I2C_FIRST_AND_NEXT_FRAME);
   if (status != HAL_OK) {
-    return I2C_ERR;
+    return false;
   }
   if (wait_for_io_completion(conn) != 1) {
-    return I2C_NAK;
+    return false;
   }
-  return I2C_ACK;
+  (void) stop;
+  return true;
 }
 
-uint8_t mgos_i2c_read_byte(struct mgos_i2c *conn, enum i2c_ack_type ack_type) {
-  uint8_t ret;
+bool mgos_i2c_read(struct mgos_i2c *conn, uint16_t addr, void *data, size_t len,
+                   bool stop) {
+  conn->addr = (addr << 1);
   reset_io_state(conn);
   HAL_StatusTypeDef status = HAL_I2C_Master_Sequential_Receive_IT(
-      conn->hi2c, conn->addr, &ret, 1,
-      ack_type == I2C_ACK ? I2C_FIRST_AND_NEXT_FRAME : I2C_LAST_FRAME);
+      conn->hi2c, conn->addr, data, len,
+      stop ? I2C_FIRST_AND_LAST_FRAME : I2C_FIRST_AND_NEXT_FRAME);
   if (status != HAL_OK || wait_for_io_completion(conn) != 1) {
-    return 0xFF;
+    return false;
   }
-  return ret;
+  return true;
 }
 
 void mgos_i2c_close(struct mgos_i2c *conn) {

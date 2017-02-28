@@ -98,11 +98,10 @@ static void ev_handler(struct mg_connection *c, int ev, void *p) {
         pub(c, "{error: {code: %d, message: %Q}}", ERROR_I2C_NOT_CONFIGURED,
             "I2C is not enabled");
       } else {
-        enum i2c_ack_type ret;
+        bool ret;
         asciibuf[0] = '\0';
-        if ((ret = mgos_i2c_start(i2c, addr, I2C_READ)) == I2C_ACK) {
-          memset(buf, 0, sizeof(buf));
-          mgos_i2c_read_bytes(i2c, len, (uint8_t *) buf, I2C_ACK);
+        ret = mgos_i2c_read(i2c, addr, (uint8_t *) buf, len, true /* stop */);
+        if (ret) {
           for (i = 0; i < len; i++) {
             const char *hex = "0123456789abcdef";
             asciibuf[i * 2] = hex[(((uint8_t *) buf)[i] >> 4) & 0xf];
@@ -110,22 +109,21 @@ static void ev_handler(struct mg_connection *c, int ev, void *p) {
           }
           asciibuf[i * 2] = '\0';
         }
-        mgos_i2c_stop(i2c);
         pub(c, "{type: %Q, status: %d, data: %Q}", "i2c_read", ret, asciibuf);
       }
     } else if (json_scanf(s->p, s->len, "{i2c_write: {data: %T}}", &t) == 1) {
-      /* Write byte sequence to I2C. First byte is an address */
+      /* Write byte sequence to I2C. First byte is the address */
       struct mgos_i2c *i2c = mgos_i2c_get_global();
       if (i2c == NULL) {
         pub(c, "{error: {code: %d, message: %Q}}", ERROR_I2C_NOT_CONFIGURED,
             "I2C is not enabled");
       } else {
-        enum i2c_ack_type ret = mgos_i2c_start(i2c, from_hex(t.ptr), I2C_WRITE);
-        for (int i = 2; i < t.len && ret == I2C_ACK; i += 2) {
-          ret = mgos_i2c_send_byte(i2c, from_hex(t.ptr + i));
-          LOG(LL_DEBUG, ("i2c -> %02x", from_hex(t.ptr + i)));
+        bool ret;
+        int j = 0;
+        for (int i = 0; i < t.len; i += 2, j++) {
+          ((uint8_t *) t.ptr)[j] = from_hex(t.ptr + i);
         }
-        mgos_i2c_stop(i2c);
+        ret = mgos_i2c_write(i2c, t.ptr[0], t.ptr + 1, j, true /* stop */);
         pub(c, "{type: %Q, status: %d}", "i2c_write", ret);
       }
     } else {

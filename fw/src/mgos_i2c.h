@@ -23,73 +23,36 @@ extern "C" {
 /* Each platform defines its own I2C connection parameters. */
 struct mgos_i2c;
 
-/*
- * I2C_ACK - positive answer
- * I2C_NAK - negative anwser
- * I2C_ERR - a value that can be returned in case of an error.
- * I2C_NONE - a special value that can be provided to read functions
- *   to indicate that ack should not be sent at all.
- */
-enum i2c_ack_type { I2C_ACK = 0, I2C_NAK = 1, I2C_ERR = 2, I2C_NONE = 3 };
-
-/* Initialize i2c master */
+/* Initialize I2C master */
 struct mgos_i2c *mgos_i2c_create(const struct sys_config_i2c *cfg);
 
-/*
- * Set i2c Start condition and send the address on the bus.
- * addr is the 7-bit address of the target.
- * rw selects read or write mode (1 = read, 0 = write).
- *
- * Returns the ack type received in response to the address.
- * Returns I2C_NONE in case of invalid arguments.
- *
- * TODO(rojer): 10-bit address support.
- */
-enum i2c_rw { I2C_READ = 1, I2C_WRITE = 0 };
-enum i2c_ack_type mgos_i2c_start(struct mgos_i2c *conn, uint16_t addr,
-                                 enum i2c_rw mode);
-
-/* Set i2c Stop condition. Releases the bus. */
-void mgos_i2c_stop(struct mgos_i2c *conn);
+/* If this special address is passed to read or write, START is not generated
+ * and address is not put on the bus. It is assumed that this is a continuation
+ * of a previous operation which (after read or write with stop = false). */
+#define MGOS_I2C_ADDR_CONTINUE ((uint16_t) -1)
 
 /*
- * Send one byte to i2c. Returns the type of ack that receiver sent.
+ * Read specified number of bytes from the specified address.
+ * Address should not include the R/W bit. If addr is -1, START is not
+ * performed.
+ * If |stop| is true, then at the end of the operation bus will be released.
  */
-enum i2c_ack_type mgos_i2c_send_byte(struct mgos_i2c *conn, uint8_t data);
+bool mgos_i2c_read(struct mgos_i2c *i2c, uint16_t addr, void *data, size_t len,
+                   bool stop);
 
 /*
- * Send array to I2C.
- * The ack type sent in response to the last transmitted byte is returned,
- * as well as number of bytes sent.
- * Receiver must positively acknowledge all bytes except, maybe, the last one.
- * If all the bytes have been sent, the return value is the acknowledgement
- * status of the last one (ACK or NAK). If a NAK was received before all the
- * bytes could be sent, ERR is returned instead.
+ * Write specified number of bytes from the specified address.
+ * Address should not include the R/W bit. If addr is -1, START is not
+ * performed.
+ * If |stop| is true, then at the end of the operation bus will be released.
  */
-enum i2c_ack_type mgos_i2c_send_bytes(struct mgos_i2c *conn, const uint8_t *buf,
-                                      size_t buf_size);
+bool mgos_i2c_write(struct mgos_i2c *i2c, uint16_t addr, const void *data,
+                    size_t len, bool stop);
 
 /*
- * Read one byte from the bus, finish with an ack of the specified type.
- * ack_type can be "none" to prevent sending ack at all, in which case
- * this call must be followed up by i2c_send_ack.
+ * Release the bus (when left unreleased after read or write).
  */
-uint8_t mgos_i2c_read_byte(struct mgos_i2c *conn, enum i2c_ack_type ack_type);
-
-/*
- * Read n bytes from the connection.
- * Each byte except the last one is acked, for the last one the user has
- * the choice whether to ack it, nack it or not send ack at all, in which case
- * this call must be followed up by i2c_send_ack.
- */
-void mgos_i2c_read_bytes(struct mgos_i2c *conn, size_t n, uint8_t *buf,
-                         enum i2c_ack_type last_ack_type);
-
-/*
- * Send an ack of the specified type. Meant to be used after i2c_read_byte{,s}
- * with ack_type of "none".
- */
-void mgos_i2c_send_ack(struct mgos_i2c *conn, enum i2c_ack_type ack_type);
+void mgos_i2c_stop(struct mgos_i2c *i2c);
 
 /*
  * Register read/write routines.
@@ -99,11 +62,11 @@ void mgos_i2c_send_ack(struct mgos_i2c *conn, enum i2c_ack_type ack_type);
  * For word operations, value is big-endian: for a read, first byte read from
  * the bus is in bits 15-8, second is in bits 7-0; for a write, bits 15-8 are
  * put on the us first, followed by bits 7-0.
+ * Read operations return negative number on error and positive value in the
+ * respective range (0-255, 0-65535) on success.
  */
-bool mgos_i2c_read_reg_b(struct mgos_i2c *conn, uint16_t addr, uint8_t reg,
-                         uint8_t *value);
-bool mgos_i2c_read_reg_w(struct mgos_i2c *conn, uint16_t addr, uint8_t reg,
-                         uint16_t *value);
+int mgos_i2c_read_reg_b(struct mgos_i2c *conn, uint16_t addr, uint8_t reg);
+int mgos_i2c_read_reg_w(struct mgos_i2c *conn, uint16_t addr, uint8_t reg);
 bool mgos_i2c_write_reg_b(struct mgos_i2c *conn, uint16_t addr, uint8_t reg,
                           uint8_t value);
 bool mgos_i2c_write_reg_w(struct mgos_i2c *conn, uint16_t addr, uint8_t reg,

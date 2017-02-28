@@ -52,15 +52,11 @@ static ATCA_STATUS mgos_atca_hal_i2c_send(ATCAIface iface, uint8_t *txdata,
   }
   txlength++; /* Include Word Address value in txlength */
 
-  if (mgos_i2c_start(i2c, (cfg->atcai2c.slave_address >> 1), I2C_WRITE) ==
-      I2C_ACK) {
-    /* Successful transmission ends with an ACK. */
-    if (mgos_i2c_send_bytes(i2c, txdata, txlength) == I2C_ACK) {
-      status = ATCA_SUCCESS;
-    } else {
-      status = ATCA_TX_FAIL;
-    }
-    mgos_i2c_stop(i2c);
+  if (mgos_i2c_write(i2c, (cfg->atcai2c.slave_address >> 1), txdata, txlength,
+                     true /* stop */)) {
+    status = ATCA_SUCCESS;
+  } else {
+    status = ATCA_TX_FAIL;
   }
   return status;
 }
@@ -74,24 +70,27 @@ static ATCA_STATUS mgos_atca_hal_i2c_receive(ATCAIface iface, uint8_t *rxdata,
 
   int retries = cfg->rx_retries;
 
-  while (retries-- > 0 && status != ATCA_SUCCESS) {
+  while (retries-- > 0) {
     uint8_t count;
-    if (mgos_i2c_start(i2c, (cfg->atcai2c.slave_address >> 1), I2C_READ) !=
-        I2C_ACK) {
+    if (!mgos_i2c_read(i2c, (cfg->atcai2c.slave_address >> 1), rxdata, 1,
+                       false /* stop */)) {
       continue;
     }
-    count = rxdata[0] = mgos_i2c_read_byte(i2c, I2C_ACK);
+    count = rxdata[0];
     if ((count < ATCA_RSP_SIZE_MIN) || (count > *rxlength)) {
       mgos_i2c_stop(i2c);
       status = ATCA_INVALID_SIZE;
       break;
     }
-    mgos_i2c_read_bytes(i2c, count - 1, rxdata + 1, I2C_NAK);
-    mgos_i2c_stop(i2c);
+    if (!mgos_i2c_read(i2c, MGOS_I2C_ADDR_CONTINUE, rxdata + 1, count - 1,
+                       true /* stop */)) {
+      continue;
+    }
     status = ATCA_SUCCESS;
+    break;
   }
   /*
-   * rxlength is a pointer, which suggests taht the actual number of bytes
+   * rxlength is a pointer, which suggests that the actual number of bytes
    * received should be returned in the value pointed to, but none of the
    * existing HAL implementations do it.
    */
@@ -109,12 +108,10 @@ static ATCA_STATUS mgos_atca_hal_i2c_wake(ATCAIface iface) {
 
   /*
    * ATCA devices define "wake up" token as START, 80 us of SDA low, STOP.
-   * Simulate this by trying to write to address 0.
-   * We're not expecting an ACK, so don't check for return value.
+   * Simulate this by trying to send 0 bytes to address 0. This will fail,
+   * but we're not expecting an ACK, so don't check for return value.
    */
-
-  mgos_i2c_start(i2c, 0, I2C_WRITE);
-  mgos_i2c_stop(i2c);
+  mgos_i2c_write(i2c, 0, response, 1, true /* stop */);
 
   /* After wake signal we need to wait some time for device to init. */
   atca_delay_us(cfg->wake_delay);

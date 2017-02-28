@@ -23,8 +23,7 @@ static void i2c_scan_handler(struct mg_rpc_request_info *ri, void *cb_arg,
   mbuf_init(&rb, 0);
   json_printf(&out, "[");
   for (int addr = 8; addr < 0x78; addr++) {
-    if (mgos_i2c_start(i2c, addr, I2C_WRITE) == I2C_ACK) {
-      mgos_i2c_stop(i2c);
+    if (mgos_i2c_write(i2c, addr, NULL, 0, true /* stop */)) {
       json_printf(&out, "%s%d", (rb.len > 1 ? ", " : ""), addr);
     }
   }
@@ -39,7 +38,6 @@ static void i2c_scan_handler(struct mg_rpc_request_info *ri, void *cb_arg,
 static void i2c_read_handler(struct mg_rpc_request_info *ri, void *cb_arg,
                              struct mg_rpc_frame_info *fi, struct mg_str args) {
   int addr, len;
-  bool started = false;
   uint8_t *buf = NULL;
   int err_code = 0;
   const char *err_msg = NULL;
@@ -54,20 +52,16 @@ static void i2c_read_handler(struct mg_rpc_request_info *ri, void *cb_arg,
     err_msg = "I2C is disabled";
     goto out;
   }
-  if (mgos_i2c_start(i2c, addr, I2C_READ) != I2C_ACK) {
-    err_code = 503;
-    err_msg = "device did not respond to address";
-    goto out;
-  }
-  started = true;
   if (len > 4096 || ((buf = calloc(len, 1)) == NULL)) {
     err_code = 500;
     err_msg = "malloc failed";
     goto out;
   }
-  mgos_i2c_read_bytes(i2c, len, buf, I2C_ACK);
+  if (!mgos_i2c_read(i2c, addr, buf, len, true /* stop */)) {
+    err_code = 503;
+    err_msg = "I2C read failed";
+  }
 out:
-  if (started) mgos_i2c_stop(i2c);
   if (err_code != 0) {
     mg_rpc_send_errorf(ri, err_code, "%s", err_msg);
   } else {
@@ -82,7 +76,6 @@ static void i2c_write_handler(struct mg_rpc_request_info *ri, void *cb_arg,
                               struct mg_rpc_frame_info *fi,
                               struct mg_str args) {
   int addr, len;
-  bool started = false;
   uint8_t *data = NULL;
   int err_code = 0;
   const char *err_msg = NULL;
@@ -97,18 +90,11 @@ static void i2c_write_handler(struct mg_rpc_request_info *ri, void *cb_arg,
     err_msg = "I2C is disabled";
     goto out;
   }
-  if (mgos_i2c_start(i2c, addr, I2C_WRITE) != I2C_ACK) {
+  if (!mgos_i2c_write(i2c, addr, data, len, true /* stop */)) {
     err_code = 503;
-    err_msg = "device did not respond to address";
-    goto out;
-  }
-  started = true;
-  if (mgos_i2c_send_bytes(i2c, data, len) != I2C_ACK) {
-    err_code = 503;
-    err_msg = "error sending";
+    err_msg = "I2C write failed";
   }
 out:
-  if (started) mgos_i2c_stop(i2c);
   if (data != NULL) free(data);
   if (err_code != 0) {
     mg_rpc_send_errorf(ri, err_code, "%s", err_msg);
@@ -137,19 +123,12 @@ static void i2c_read_reg_handler(struct mg_rpc_request_info *ri, void *cb_arg,
     err_msg = "I2C is disabled";
     goto out;
   }
-  bool res;
-  uint8_t b;
-  uint16_t w;
   if (cb_arg == 0) {
-    if ((res = mgos_i2c_read_reg_b(i2c, addr, reg, &b)) == true) {
-      value = b;
-    }
+    value = mgos_i2c_read_reg_b(i2c, addr, reg);
   } else {
-    if ((res = mgos_i2c_read_reg_w(i2c, addr, reg, &w)) == true) {
-      value = w;
-    }
+    value = mgos_i2c_read_reg_w(i2c, addr, reg);
   }
-  if (!res) {
+  if (value < 0) {
     err_code = 503;
     err_msg = "error reading value";
     goto out;
