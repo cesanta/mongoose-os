@@ -141,7 +141,7 @@ def cmd_gen_build_info(args):
                 repo = get_git_repo(repo_path)
                 version = get_tag_for_commit(repo, repo.head.commit)
             except Exception, e:
-                print >>sys.stderr, 'App version not specified and could not be guessed (%s)' % e
+                pass
         if version is None:
             version = ts.strftime('%Y%m%d%H')
     if version is not None:
@@ -170,7 +170,6 @@ def cmd_gen_build_info(args):
                 str(repo.head.commit)[:8],
                 '+' if dirty else '')
         except Exception, e:
-            print >>sys.stderr, 'Build ID not specified and could not be guessed (%s)' % e
             id = '%s/???' % ts.strftime('%Y%m%d-%H%M%S')
     if id is not None:
         bi['build_id'] = id
