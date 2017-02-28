@@ -3,12 +3,14 @@
 - [Mongoose OS](https://mongoose-os.com) - open source embedded operating system for low-power connected microcontrollers. 
 
 Targeting commercial connected products:
+- Code in C or JavaScript;
 - security features like crypto chip support, filesystem encryption, etc; 
 - built-in AWS IoT integration;
-- embedded JavaScript engine for quick proof of concepts / prototypes;
+- [Embedded JavaScript engine - mJS](https://github.com/cesanta/mjs);
 - available for ESP8266, ESP32, TI CC3200, STM32.
 
 Mongoose OS benefits:
+- Quick proof of concepts / prototypes;
 - Shorter time to market at optimal cost;
 - Secure, trusted and verified by leading companies;
 - Reliable infrastructure for commercial products.
