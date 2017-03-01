@@ -75,6 +75,12 @@ aws cloudformation describe-stacks --stack-name my-heater
 aws s3 cp bucket/index.html s3://<my-s3bucket-name> --acl public-read
 aws s3 cp bucket/index.js s3://<my-s3bucket-name> --acl public-read
 
+# Download two files of Cognito SDK, and also put them on the S3 bucket:
+wget https://raw.githubusercontent.com/aws/amazon-cognito-identity-js/master/dist/aws-cognito-sdk.min.js
+wget https://raw.githubusercontent.com/aws/amazon-cognito-identity-js/master/dist/amazon-cognito-identity.min.js
+aws s3 cp aws-cognito-sdk.min.js s3://<my-s3bucket-name> --acl public-read
+aws s3 cp amazon-cognito-identity.min.js s3://<my-s3bucket-name> --acl public-read
+
 # Now, navigate to the index page of your S3 bucket:
 # https://<my-s3bucket-name>.s3.amazonaws.com/index.html
 ```

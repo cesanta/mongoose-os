@@ -1,9 +1,18 @@
 <html>
+  <head>
+    <style>
+      .hidden {
+        display: none;
+      }
+    </style>
+  </head>
   <body>
 
     <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.bundle.min.js"></script>
-    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.7.20.min.js"></script>
+    <script src="aws-cognito-sdk.min.js"></script>
+    <script src="amazon-cognito-identity.min.js"></script>
+    <script src="https://sdk.amazonaws.com/js/aws-sdk-2.20.0.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.11.2/moment.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/core-min.js" type="text/javascript"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/3.1.2/components/hmac-min.js" type="text/javascript"></script>
@@ -12,6 +21,34 @@
     <script src="https://cdn.rawgit.com/ma2shita/2c5a4c29242dd5382b05ce941731fd41/raw/eb4bc16c02e7a72bbd0086e937050c258da09a20/sigv4utils.js" type="text/javascript"></script>
     <script src="vars.js"></script>
     <script src="index.js"></script>
+
+    <div id="signin_div">
+      <p><b>Sign in</b> :: <a href="#" id="signup_link">Sign up</a></p>
+      <p>
+        Username: <input type="text" id="signin_username" />
+        Password: <input type="password" id="signin_password" />
+        <input type="button" value="Sign in" id="signin_button" />
+      </p>
+    </div>
+
+    <div id="signup_div" class="hidden">
+      <p><a href="#" id="signin_link">Sign in</a> :: <b>Sign up</b></p>
+      <p>
+        Email: <input type="text" id="signup_email" />
+        Username: <input type="text" id="signup_username" />
+        Password: <input type="password" id="signup_password" />
+        <input type="button" value="Sign up" id="signup_button" />
+      </p>
+    </div>
+
+    <div id="signedin_div" class="hidden">
+      <p>
+        Signed in as <span id="signedin_username_span">...</span>
+        <input type="button" value="Sign out" id="signout_button" />
+      </p>
+    </div>
+
+    <p id="status"></p>
 
     <p>Temperature during the last 2 minutes</p>
 

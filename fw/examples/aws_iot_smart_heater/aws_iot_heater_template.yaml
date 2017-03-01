@@ -15,6 +15,18 @@ Parameters:
       The name for the Cognito Identity Pool. If not provided, it's generated
       after given DeviceID.
     Default: ''
+  CognitoUserPoolName:
+    Type: String
+    Description: |
+      The name for the Cognito User Pool. If not provided, it's generated
+      after given DeviceID.
+    Default: ''
+  CognitoUserPoolClientName:
+    Type: String
+    Description: |
+      The name for the Cognito User Pool. If not provided, it's generated
+      after given DeviceID.
+    Default: ''
   ReadCapacityUnits:
     Description: Provisioned read throughput
     Type: Number
@@ -34,6 +46,14 @@ Conditions:
   EMPTY_CognitoIdentityPoolName:
     Fn::Equals:
     - Ref: CognitoIdentityPoolName
+    - ''
+  EMPTY_CognitoUserPoolName:
+    Fn::Equals:
+    - Ref: CognitoUserPoolName
+    - ''
+  EMPTY_CognitoUserPoolClientName:
+    Fn::Equals:
+    - Ref: CognitoUserPoolClientName
     - ''
 
 Resources:
@@ -158,6 +178,7 @@ Resources:
             - cognito-identity:DeleteIdentityPool
             - cognito-identity:UpdateIdentityPool
             - cognito-identity:SetIdentityPoolRoles
+            - cognito-idp:*
             Resource: "*"
           - Effect: Allow
             Action:
@@ -201,11 +222,14 @@ Resources:
           "var heaterVars = {",
           {"Fn::Join": ["", ["  region: '", { "Ref": "AWS::Region" }, "',"]]},
           {"Fn::Join": ["", ["  tableName: '", { "Ref": "myDynamoDBTable" }, "',"]]},
-          {"Fn::Join": ["", ["  accessKeyId: '", { "Ref": "myDynamoDBTableUserReadOnlyAccessKey" }, "',"]]},
-          {"Fn::Join": ["", ["  secretAccessKey: '", { "Fn::GetAtt": ["myDynamoDBTableUserReadOnlyAccessKey", "SecretAccessKey"] }, "',"]]},
+          {"Fn::Join": ["", ["  anonUserAccessKeyId: '", { "Ref": "myAnonymousAccessUserAccessKey" }, "',"]]},
+          {"Fn::Join": ["", ["  anonUserSecretAccessKey: '", { "Fn::GetAtt": ["myAnonymousAccessUserAccessKey", "SecretAccessKey"] }, "',"]]},
           {"Fn::Join": ["", ["  deviceId: '", { "Ref": "DeviceID" }, "',"]]},
           {"Fn::Join": ["", ["  identityPoolId: '", { "Ref": "CognitoIdentityPool" }, "',"]]},
           {"Fn::Join": ["", ["  accountId: '", { "Ref": "AWS::AccountId" }, "',"]]},
+          {"Fn::Join": ["", ["  addIotPolicyLambdaName: '", { "Ref": "myAddIotPolicyLambdaFunction" }, "',"]]},
+          {"Fn::Join": ["", ["  userPoolId: '", { "Ref": "CognitoUserPool" }, "',"]]},
+          {"Fn::Join": ["", ["  userPoolClientId: '", { "Ref": "CognitoUserPoolClient" }, "',"]]},
           "};",
           ""
         ]]
@@ -290,8 +314,8 @@ Resources:
             Resource: "*"
   # }}}
 
-  # User which can read dynamoDB table, and its access key {{{
-  myDynamoDBTableUserReadOnly:
+  # User for anonymous access, and its access key {{{
+  myAnonymousAccessUser:
     Type: AWS::IAM::User
     Properties:
       Policies:
@@ -299,6 +323,7 @@ Resources:
         PolicyDocument:
           Version: '2012-10-17'
           Statement:
+          # The user can read dynamoDB table
           - Effect: Allow
             Action:
             - dynamodb:GetItem
@@ -314,11 +339,20 @@ Resources:
                 - Ref: AWS::AccountId
                 - ":table/"
                 - Ref: myDynamoDBTable
+          # The user can also call the Lambda which will attach IoT policy
+          # to a user
+          - Effect: Allow
+            Action:
+            - lambda:InvokeFunction
+            Resource:
+              Fn::GetAtt:
+              - myAddIotPolicyLambdaFunction
+              - Arn
 
-  myDynamoDBTableUserReadOnlyAccessKey:
+  myAnonymousAccessUserAccessKey:
     Type: AWS::IAM::AccessKey
     Properties:
-      UserName: { Ref: "myDynamoDBTableUserReadOnly" }
+      UserName: { Ref: "myAnonymousAccessUser" }
   # }}}
 
   # Cognito {{{
@@ -337,11 +371,15 @@ Resources:
           - { "Fn::Join": ["", ["identity_pool_for_", {"Ref": "DeviceID"}]] }
           - Ref: CognitoIdentityPoolName
 
-        #CognitoIdentityProviders:
-          #Fn::If:
-          #- EMPTY_CognitoIdentityProviders
-          #- Ref: AWS::NoValue
-          #- Ref: CognitoIdentityProviders
+        CognitoIdentityProviders:
+          - ProviderName:
+              Fn::Join:
+              - ''
+              - - 'cognito-idp.'
+                - Ref: AWS::Region
+                - ".amazonaws.com/"
+                - Ref: CognitoUserPool
+            ClientId: { "Ref": "CognitoUserPoolClient" }
         #DeveloperProviderName:
           #Fn::If:
           #- EMPTY_DeveloperProviderName
@@ -462,7 +500,119 @@ Resources:
                 - ":"
                 - Ref: AWS::AccountId
                 - ":topicfilter/smart_heater_*/rpc"
+
+  CognitoUserPool:
+    Type: Custom::CognitoUserPool
+    Properties:
+      ServiceToken:
+        Fn::GetAtt:
+        - CognitoLambdaFunction
+        - Arn
+      Options:
+        PoolName:
+          Fn::If:
+          - EMPTY_CognitoUserPoolName
+          - { "Fn::Join": ["", ["user_pool_for_", {"Ref": "DeviceID"}]] }
+          - Ref: CognitoUserPoolName
+        AutoVerifiedAttributes:
+          - email
+        Policies:
+          PasswordPolicy:
+            MinimumLength: 6
+            RequireLowercase: false
+            RequireNumbers: false
+            RequireSymbols: false
+            RequireUppercase: false
+        Schema:
+          - Name: email
+            StringAttributeConstraints:
+              MinLength: "0"
+              MaxLength: "2048"
+            DeveloperOnlyAttribute: false
+            Required: true
+            AttributeDataType: "String"
+            Mutable: true
+
+  CognitoUserPoolClient:
+    Type: Custom::CognitoUserPoolClient
+    Properties:
+      ServiceToken:
+        Fn::GetAtt:
+        - CognitoLambdaFunction
+        - Arn
+      Options:
+        ClientName:
+          Fn::If:
+          - EMPTY_CognitoUserPoolClientName
+          - { "Fn::Join": ["", ["user_pool_client_for_", {"Ref": "DeviceID"}]] }
+          - Ref: CognitoUserPoolClientName
+        UserPoolId: { "Ref": "CognitoUserPool" }
+        # NOTE: App with a secret won't work in SDK for browser, so we have to
+        # switch off secret generation
+        GenerateSecret: false
   # }}}
+
+  myIotPolicy:
+    Type: AWS::IoT::Policy
+    Properties:
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action: "iot:*"
+            Resource: "*"
+
+  myAddIotPolicyLambdaFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Code:
+        ZipFile:
+          Fn::Join:
+          - "\n"
+          - - "var AWS = require('aws-sdk');"
+            - "exports.handler = (event, context, callback) => {"
+            - "  var iot = new AWS.Iot();"
+            - "  iot.attachPrincipalPolicy({"
+            - {"Fn::Join": ["", ["policyName: '", { "Ref": "myIotPolicy" }, "',"]]}
+            - "    principal: event.identityId,"
+            - "  }, function(err, data) {"
+            - "    if(err) {"
+            - "      console.error('error', err);"
+            - "      context.done(err);"
+            - "    } else {"
+            - "      console.info('ok', data);"
+            - "      context.done(null, {status: 'ok'});"
+            - "    }"
+            - "  });"
+            - "};"
+      Handler: index.handler
+      Runtime: nodejs4.3
+      Role:
+        Fn::GetAtt:
+        - myAddIotPolicyLambdaFunctionRole
+        - Arn
+
+  myAddIotPolicyLambdaFunctionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - iot:AttachPrincipalPolicy
+            Resource: "*"
 
 Outputs:
   S3BucketName:

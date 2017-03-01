@@ -4,6 +4,7 @@ const https = require("https");
 const url = require("url");
 const AWS = require('aws-sdk');
 const cognitoidentity = new AWS.CognitoIdentity();
+const cognitoidentityserviceprovider = new AWS.CognitoIdentityServiceProvider();
 const SUCCESS = 'SUCCESS';
 const FAILED = 'FAILED';
 const UNKNOWN = {
@@ -14,6 +15,37 @@ const requestTypes = [
   'Update',
   'Delete'
 ];
+
+// Some field are encoded as strings in CloudFormation, e.g. "true" and
+// "false", so we need to convert them back to the proper type
+function tr(val) {
+  switch (typeof val) {
+    case "string":
+      if (val === "true") {
+        return true;
+      } else if (val === "false") {
+        return false;
+      } else {
+        return val;
+      }
+      break;
+    case "object":
+      if (Array.isArray(val)) {
+        for (var i = 0; i < val.length; i++) {
+          val[i] = tr(val[i]);
+        }
+      } else {
+        for (var name in val) {
+          if (val.hasOwnProperty(name)) {
+            val[name] = tr(val[name]);
+          }
+        }
+      }
+      return val;
+    default:
+      return val;
+  }
+}
 
 /**
  * The Lambda function handler
@@ -31,7 +63,8 @@ const requestTypes = [
  * @param {!Requester~requestCallback} callback
  */
 exports.handler = (event, context, callback) => {
-  console.log(event, context);
+  console.log('event:', event);
+  console.log('context:', context);
 
   function respond(responseStatus, responseData, physicalResourceId) {
     const responseBody = JSON.stringify({
@@ -74,44 +107,94 @@ exports.handler = (event, context, callback) => {
     return respond(FAILED, UNKNOWN);
 
   const requestType = event.RequestType;
-  const params = requestType === 'Delete' ? {} : event.ResourceProperties.Options;
+  let params = requestType === 'Delete' ? {} : event.ResourceProperties.Options;
 
   switch (event.LogicalResourceId) {
     case 'CognitoIdentityPool':
-      if (requestType !== 'Create')
+      if (requestType !== 'Create') {
         params.IdentityPoolId = event.PhysicalResourceId;
-
-      // CloudFormation passes the value as a string, so it must be converted to a valid javascript object
-      if (requestType !== 'Delete') {
-        [
-          'AllowUnauthenticatedIdentities',
-          'CognitoIdentityProviders',
-          'OpenIdConnectProviderARNs',
-          'SupportedLoginProviders'
-        ].forEach(param => {
-          if (params[param])
-            params[param] = JSON.parse(params[param]);
-        });
       }
+
+      params = tr(params);
 
       return cognitoidentity
       [`${requestType.toLowerCase()}IdentityPool`](params)
         .promise()
         .then(data => respond(SUCCESS, data, data.IdentityPoolId))
         .catch(err => respond(FAILED, err));
-      case 'CognitoIdentityPoolRoles':
-        switch (requestType) {
-          case 'Create':
-          case 'Update':
-            return cognitoidentity
-              .setIdentityPoolRoles(params)
-              .promise()
-              .then(data => respond(SUCCESS, data))
-              .catch(err => respond(FAILED, err));
-            case 'Delete':
-              return respond(SUCCESS);
-        }
-      default:
-        return respond(FAILED, UNKNOWN);
+
+    case 'CognitoUserPool':
+      if (requestType !== 'Create') {
+        params.UserPoolId = event.PhysicalResourceId;
+      }
+
+      params = tr(params);
+
+      console.log("Params for `${requestType.toLowerCase()}UserPool`:", params);
+      console.log("Calling...");
+
+      return cognitoidentityserviceprovider
+      [`${requestType.toLowerCase()}UserPool`](params)
+        .promise()
+        .then(data => {
+          console.log("success! data:", data);
+
+          var physId = undefined;
+
+          if (requestType === 'Create') {
+            // data.UserPool is apparently too large and beats the 4K limit,
+            // so in order to prevent an error "Response is too long", we have
+            // to delete something SchemaAttributes.
+            delete data.UserPool.SchemaAttributes;
+            physId = data.UserPool.Id;
+          }
+
+          respond(SUCCESS, data, physId);
+        })
+        .catch(err => {
+          console.log("error:", err);
+          respond(FAILED, err);
+        });
+
+    case 'CognitoUserPoolClient':
+      if (requestType !== 'Create') {
+        params.ClientId = event.PhysicalResourceId;
+        params.UserPoolId = event.ResourceProperties.Options.UserPoolId;
+      }
+      params = tr(params);
+
+      console.log(`Params for ${requestType.toLowerCase()}UserPoolClient:`, params);
+      console.log("Calling...");
+
+      return cognitoidentityserviceprovider
+      [`${requestType.toLowerCase()}UserPoolClient`](params)
+        .promise()
+        .then(data => {
+          console.log("success! data:", data);
+          var physId = undefined;
+          if (requestType === 'Create') {
+            physId = data.UserPoolClient.ClientId;
+          }
+          respond(SUCCESS, data, physId);
+        })
+        .catch(err => {
+          console.log("error:", err);
+          respond(FAILED, err);
+        });
+
+    case 'CognitoIdentityPoolRoles':
+      switch (requestType) {
+        case 'Create':
+        case 'Update':
+          return cognitoidentity
+            .setIdentityPoolRoles(params)
+            .promise()
+            .then(data => respond(SUCCESS, data))
+            .catch(err => respond(FAILED, err));
+          case 'Delete':
+            return respond(SUCCESS);
+      }
+    default:
+      return respond(FAILED, UNKNOWN);
   }
 };
