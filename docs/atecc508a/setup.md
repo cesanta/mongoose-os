@@ -24,9 +24,9 @@ refer to Microchip documentation.
   To set it, use extended `mos` commands:
 
   ```
-  mos -X atca-set-config --port=/dev/ttyUSB0 atca-aws-test.yaml --dry-run=false
-  mos -X atca-lock-zone --port=/dev/ttyUSB0 config --dry-run=false
-  mos -X atca-lock-zone --port=/dev/ttyUSB0 data --dry-run=false
+  mos -X atca-set-config atca-aws-test.yaml --dry-run=false
+  mos -X atca-lock-zone config --dry-run=false
+  mos -X atca-lock-zone data --dry-run=false
   ```
 
   Note: these changes are irreversible: once locked, zones cannot be
@@ -44,7 +44,7 @@ refer to Microchip documentation.
 
     ```
     $ openssl rand -hex 32 > slot4.key
-    $ mos -X atca-set-key --port=/dev/ttyUSB0 4 slot4.key --dry-run=false
+    $ mos -X atca-set-key 4 slot4.key --dry-run=false
     AECC508A rev 0x5000 S/N 0x012352aad1bbf378ee, config is locked, data is locked
     Slot 4 is a non-ECC private key slot
     SetKey successful.
@@ -53,7 +53,7 @@ refer to Microchip documentation.
   3.2. Set the actual ECC key in slot 0
 
     ```
-    $ mos -X atca-set-key --port=/dev/ttyUSB0 0 ecc.key.pem --write-key=slot4.key --dry-run=false
+    $ mos -X atca-set-key 0 ecc.key.pem --write-key=slot4.key --dry-run=false
     AECC508A rev 0x5000 S/N 0x012352aad1bbf378ee, config is locked, data is locked
 
     Slot 0 is a ECC private key slot
@@ -65,14 +65,14 @@ refer to Microchip documentation.
 4. Upload the certificate to the device
 
   ```
-  $ mos put --port=/dev/ttyUSB0 ecc.crt.pem
+  $ mos put ecc.crt.pem
   ```
 
 5. Set HTTP server configuration to use the uploaded certificate and private
    key from device's slot 0:
 
   ```
-  $ mos config-set --port=/dev/ttyUSB0 http.listen_addr=:443 http.ssl_cert=ecc.crt.pem http.ssl_key=ATCA:0
+  $ mos config-set http.listen_addr=:443 http.ssl_cert=ecc.crt.pem http.ssl_key=ATCA:0
   Getting configuration...
   Setting new configuration...
   Saving and rebooting...
