@@ -385,7 +385,7 @@ time_t mg_sl_if_poll(struct mg_iface *iface, int timeout_ms) {
             (SL_FD_ISSET(nc->sock, &write_set) ? _MG_F_FD_CAN_WRITE : 0) |
             (SL_FD_ISSET(nc->sock, &err_set) ? _MG_F_FD_ERROR : 0);
       }
-      /* SimpleLink does not report UDP sockets as writeable. */
+      /* SimpleLink does not report UDP sockets as writable. */
       if (nc->flags & MG_F_UDP && nc->send_mbuf.len > 0) {
         fd_flags |= _MG_F_FD_CAN_WRITE;
       }
@@ -408,7 +408,7 @@ time_t mg_sl_if_poll(struct mg_iface *iface, int timeout_ms) {
 void mg_sl_if_get_conn_addr(struct mg_connection *nc, int remote,
                             union socket_address *sa) {
   /* SimpleLink does not provide a way to get socket's peer address after
-   * accept or connect. Address hould have been preserved in the connection,
+   * accept or connect. Address should have been preserved in the connection,
    * so we do our best here by using it. */
   if (remote) memcpy(sa, &nc->sa, sizeof(*sa));
 }
