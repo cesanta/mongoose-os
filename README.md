@@ -20,10 +20,11 @@ Trusted and Recommended By:
 - Texas Instruments - [an official partner of Texas Instruments](http://www.ti.com/ww/en/internet_of_things/iot-cloudsolution.html)
 - Espressif Systems - [an official partner of Espressif Systems](http://espressif.com/en/ecosystem/cloud-platform)
 
-# Support
+# Docs, Support
+- [Video tutorials](https://mongoose-os.com/#videos)
 - [Mongoose OS Documentation](https://mongoose-os.com/docs/#/overview/)
-- [Support Forum - ask your technical questions here] (http://forum.cesanta.com/index.php?p=/categories/mongoose-os)
-- [Commercial licensing and support available](https://cesanta.com/contact)
+- [Support Forum - ask your technical questions here] (http://forum.cesanta.com/index.php?p=/categories/mongoose-iot)
+- [Commercial licensing and support available](https://mongoose-os.com/contact.html)
 
 # Licensing
 
