@@ -254,7 +254,7 @@ static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p) {
   }
 }
 
-#if MGOS_ENABLE_WIFI
+#if MGOS_ENABLE_WIFI && MGOS_ENABLE_TUNNEL
 static void on_wifi_ready(enum mgos_wifi_status event, void *arg) {
   if (listen_conn_tun != NULL) {
     /* Depending on the WiFi status, allow or disallow tunnel reconnection */
@@ -277,6 +277,8 @@ static void on_wifi_ready(enum mgos_wifi_status event, void *arg) {
 enum mgos_init_result mgos_sys_config_init_http(
     const struct sys_config_http *cfg,
     const struct sys_config_device *device_cfg) {
+  (void) device_cfg;
+
   if (!cfg->enable) {
     return MGOS_INIT_OK;
   }
@@ -352,6 +354,7 @@ enum mgos_init_result mgos_sys_config_init_http(
 #endif
                     ));
 
+#if MGOS_ENABLE_TUNNEL
   if (cfg->tunnel.enable && device_cfg->id != NULL &&
       device_cfg->password != NULL) {
     char *tun_addr = NULL;
@@ -391,6 +394,7 @@ enum mgos_init_result mgos_sys_config_init_http(
 #endif
                       ));
   }
+#endif
 
 #if MGOS_ENABLE_WEB_CONFIG
   mgos_register_http_endpoint("/conf/", conf_handler);

@@ -86,4 +86,8 @@
 #define MGOS_ENABLE_HTTP_SERVER 1
 #endif
 
+#ifndef MGOS_ENABLE_TUNNEL
+#define MGOS_ENABLE_TUNNEL 0
+#endif
+
 #endif /* CS_FW_SRC_MGOS_FEATURES_H_ */
