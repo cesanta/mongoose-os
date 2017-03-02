@@ -1,12 +1,14 @@
 // Load Mongoose OS API
 load('api_timer.js');
 load('api_gpio.js');
+load('api_sys.js');
+
+// Helper C function get_led_gpio_pin() in src/main.c returns built-in LED GPIO
+let led = ffi('int get_led_gpio_pin()')();  
 
 // Blink built-in LED every second
-let PIN = ffi('int get_led_gpio_pin()')();  // Helper C function that returns a
-                                            // built-in LED GPIO
-GPIO.set_mode(PIN, GPIO.MODE_OUTPUT);
-Timer.set(1000 /* milliseconds */, 1 /* repeat */, function(pin) {
-  let value = GPIO.toggle(pin);
-  print(value ? 'Tick' : 'Tock');
-}, PIN);
+GPIO.set_mode(led, GPIO.MODE_OUTPUT);
+Timer.set(1000 /* milliseconds */, 1 /* repeat */, function() {
+  let value = GPIO.toggle(led);
+  print(value ? 'Tick' : 'Tock', 'uptime:', Sys.uptime(), 'RAM:', Sys.free_ram());
+}, null);
