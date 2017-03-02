@@ -1,5 +1,9 @@
 var requests = {};
 var cognitoUser;
+var mqttClientAuth;
+var mqttClientUnauth;
+var getStateIntervalId;
+var heaterOn = false;
 
 // Configure Cognito identity pool
 AWS.config.region = heaterVars.region;
@@ -94,36 +98,18 @@ dynamodb.scan(params, function (err, awsData) {
   }
 });
 
-function initClient(requestUrl) {
+function initClient(requestUrl, opts, clientExisting) {
   var clientId = String(Math.random()).replace('.', '');
-  var rpcId = "smart_heater_" + String(Math.random()).replace('.', '');
-  var client = new Paho.MQTT.Client(requestUrl, clientId);
+  var client = clientExisting;
+  if (!client) {
+    client = new Paho.MQTT.Client(requestUrl, clientId);
+  }
   var connectOptions = {
     onSuccess: function () {
       console.log('connected');
-
-      client.subscribe(rpcId + "/rpc");
-
-      setInterval(function() {
-        var msgId = Number(String(Math.random()).replace('.', ''));
-        console.log('msgId:', msgId);
-        requests[msgId] = {
-          handler: function(resp) {
-            console.log('hey', resp);
-            $("#heater_status").text("Heater status: " + (resp.on ? "on" : "off"));
-          },
-        };
-        msgObj = {
-          id: msgId,
-          src: rpcId,
-          dst: heaterVars.deviceId,
-          args: {},
-        };
-        message = new Paho.MQTT.Message(JSON.stringify(msgObj));
-        message.destinationName = heaterVars.deviceId + '/rpc/Heater.GetState';
-        var sendRes = client.send(message);
-        console.log(message, 'result:', sendRes);
-      }, 2000);
+      if (opts.onConnected) {
+        opts.onConnected(client);
+      }
     },
     useSSL: true,
     timeout: 3,
@@ -144,6 +130,13 @@ function initClient(requestUrl) {
           delete requests[payload.id];
         }
       }
+    }
+  };
+
+  client.onConnectionLost = function (resp) {
+    console.log('onConnectionLost, resp:', resp);
+    if (opts.onDisconnected) {
+      opts.onDisconnected();
     }
   };
 }
@@ -176,7 +169,47 @@ AWS.config.credentials.get(function(err) {
     AWS.config.credentials.sessionToken
   );
 
-  initClient(requestUrl);
+  var initClientOpts = {
+    onConnected: function(client) {
+      mqttClientUnauth = client;
+      var rpcId = "smart_heater_" + String(Math.random()).replace('.', '');
+      console.log('subscribing to:', rpcId + "/rpc");
+      client.subscribe(rpcId + "/rpc");
+
+      getStateIntervalId = setInterval(function() {
+        var msgId = Number(String(Math.random()).replace('.', ''));
+        console.log('msgId:', msgId);
+        requests[msgId] = {
+          handler: function(resp) {
+            console.log('hey', resp);
+            heaterOn = !!resp.on;
+            $("#heater_status").text("Heater status: " + (resp.on ? "on" : "off"));
+          },
+        };
+        msgObj = {
+          id: msgId,
+          src: rpcId,
+          dst: heaterVars.deviceId,
+          args: {},
+        };
+        message = new Paho.MQTT.Message(JSON.stringify(msgObj));
+        message.destinationName = heaterVars.deviceId + '/rpc/Heater.GetState';
+        var sendRes = client.send(message);
+        console.log(message, 'result:', sendRes);
+      }, 2000);
+    },
+
+    onDisconnected: function() {
+      console.log("stopping requesting state");
+      mqttClientUnauth = undefined;
+      clearInterval(getStateIntervalId);
+
+      console.log('reconnecting...');
+      initClient(requestUrl, initClientOpts);
+    }
+  };
+
+  initClient(requestUrl, initClientOpts);
 });
 
 function signIn(username, password, confirmationCode, eventHandler) {
@@ -255,7 +288,14 @@ function signIn(username, password, confirmationCode, eventHandler) {
                   AWS.config.credentials.sessionToken
                 );
 
-                initClient(requestUrl);
+                initClient(requestUrl, {
+                  onConnected: function(client) {
+                    mqttClientAuth = client;
+                  },
+                  onDisconnected: function(client) {
+                    mqttClientAuth = undefined;
+                  },
+                });
               }
             });
           }
@@ -318,7 +358,7 @@ function signUp(username, password, email, eventHandler) {
       eventHandler(EV_STATUS, "Error: " + JSON.stringify(err));
       return;
     }
-    cognitoUser = result.user;
+    var cognitoUser = result.user;
     console.log('user', result.user);
     console.log('username is ' + cognitoUser.getUsername());
 
@@ -332,6 +372,7 @@ function signUp(username, password, email, eventHandler) {
 
 function signOut(eventHandler) {
   eventHandler(EV_STATUS, "Signing out...");
+  mqttClientAuth.disconnect();
   AWS.config.credentials.params.Logins = {};
   AWS.config.credentials.Logins = {};
   AWS.config.credentials.expired = true;
@@ -347,6 +388,50 @@ function signOut(eventHandler) {
     }
     eventHandler(EV_SIGNED_OUT);
   });
+}
+
+function switchHeater(on) {
+  var client = mqttClientAuth;
+
+  if (!client) {
+    alert('please login first');
+    return
+  }
+
+  try {
+    var rpcId = "smart_heater_" + String(Math.random()).replace('.', '');
+    console.log('subscribing to:', rpcId + "/rpc");
+    client.subscribe(rpcId + "/rpc");
+
+    var msgId = Number(String(Math.random()).replace('.', ''));
+    console.log('msgId:', msgId);
+    requests[msgId] = {
+      handler: function(resp) {
+        console.log('heater switch resp:', resp);
+        console.log('unsubscribing from:', rpcId + "/rpc");
+        try {
+          client.unsubscribe(rpcId + "/rpc");
+        } catch (e) {
+          console.log(e);
+        }
+      },
+    };
+    msgObj = {
+      id: msgId,
+      src: rpcId,
+      dst: heaterVars.deviceId,
+      args: {
+        state: !heaterOn,
+      },
+    };
+    message = new Paho.MQTT.Message(JSON.stringify(msgObj));
+    message.destinationName = heaterVars.deviceId + '/rpc/Heater.SetState';
+    $("#heater_status").text("Heater status: ...");
+    var sendRes = client.send(message);
+    console.log(message, 'result:', sendRes);
+  } catch (e) {
+    console.log(e);
+  }
 }
 
 function enableLoginInputs(enabled) {
@@ -415,4 +500,9 @@ $(document).ready(function() {
   $("#signout_button").click(function() {
     signOut(uiEventHandler);
   });
+
+  $("#heater_switch_button").click(function() {
+    switchHeater(true);
+  });
+
 });

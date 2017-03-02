@@ -12,6 +12,7 @@ load('api_rpc.js');
 let devID = Cfg.get('device.id');
 let topic = devID + '/temp';
 let tempDummy = 10;
+let heaterOn = false;
 Timer.set(1000 /* milliseconds */, 1 /* repeat */, function() {
   let message = JSON.stringify({
     temp: tempDummy,
@@ -32,12 +33,14 @@ let getTemp = function() {
 let getStatus = function() {
   return {
     temp: getTemp(),
-    on: getTemp() > 20 //GPIO.read(pin)
+    on: heaterOn
   };
 };
 
 RPC.addHandler('Heater.SetState', function(args) {
   //GPIO.write(pin, args.state || 0);
+  print('setstate', JSON.stringify(args));
+  heaterOn = args.state;
   return true;
 });
 
