@@ -443,7 +443,7 @@ function switchHeater(on) {
       src: rpcId,
       dst: heaterVars.deviceId,
       args: {
-        state: !heaterOn,
+        on: !heaterOn,
       },
     };
     message = new Paho.MQTT.Message(JSON.stringify(msgObj));
