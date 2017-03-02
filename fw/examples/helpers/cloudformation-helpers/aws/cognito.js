@@ -63,8 +63,8 @@ function tr(val) {
  * @param {!Requester~requestCallback} callback
  */
 exports.handler = (event, context, callback) => {
-  console.log('event:', event);
-  console.log('context:', context);
+  console.log('event:', JSON.stringify(event, undefined, "  "));
+  console.log('context:', JSON.stringify(context, undefined, "  "));
 
   function respond(responseStatus, responseData, physicalResourceId) {
     const responseBody = JSON.stringify({
@@ -186,6 +186,18 @@ exports.handler = (event, context, callback) => {
       switch (requestType) {
         case 'Create':
         case 'Update':
+
+          params = tr(params);
+
+          if ("MyRoleMappings" in params) {
+            params.RoleMappings = {};
+            for (var i = 0; i < params.MyRoleMappings.length; i++) {
+              var cur = params.MyRoleMappings[i];
+              params.RoleMappings[cur.Key] = cur.Val;
+            }
+            delete params.MyRoleMappings;
+          }
+
           return cognitoidentity
             .setIdentityPoolRoles(params)
             .promise()
@@ -194,6 +206,33 @@ exports.handler = (event, context, callback) => {
           case 'Delete':
             return respond(SUCCESS);
       }
+
+    case 'CognitoUserGroup':
+      if (requestType !== 'Create') {
+        params.GroupName = event.PhysicalResourceId;
+        params.UserPoolId = event.ResourceProperties.Options.UserPoolId;
+      }
+      params = tr(params);
+
+      console.log(`Params for ${requestType.toLowerCase()}Group:`, params);
+      console.log("Calling...");
+
+      return cognitoidentityserviceprovider
+      [`${requestType.toLowerCase()}Group`](params)
+        .promise()
+        .then(data => {
+          console.log("success! data:", JSON.stringify(data));
+          var physId = undefined;
+          if (requestType === 'Create') {
+            physId = data.Group.GroupName;
+          }
+          respond(SUCCESS, data, physId);
+        })
+        .catch(err => {
+          console.log("error:", err);
+          respond(FAILED, err);
+        });
+
     default:
       return respond(FAILED, UNKNOWN);
   }

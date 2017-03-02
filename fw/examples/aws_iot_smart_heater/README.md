@@ -84,3 +84,22 @@ aws s3 cp amazon-cognito-identity.min.js s3://<my-s3bucket-name> --acl public-re
 # Now, navigate to the index page of your S3 bucket:
 # https://<my-s3bucket-name>.s3.amazonaws.com/index.html
 ```
+
+You'll see latest graph of the temperature reported from the device, current
+heater status (on/off), and the switch. Switching the heater is possible only
+for authenticated and authorized users; first of all, you need to sign up:
+click the "Sign Up" link at the top of the page, enter credentials, and push
+the "Sign Up" button. You'll be prompted for the verification code sent to your
+email, and after the code is entered, you'll be signed in.
+
+If you try to switch the heater status, you'll get the message saying that
+you are not authorized to do that. Now, you need to authorize your user to
+manage heater.
+
+For that, navigate to the [AWS Cognito console](https://console.aws.amazon.com/cognito/home), click "Manage your User
+Pools", select "user_pool_for_<device_id>", click "Users and groups", and
+you'll see the list of your registered users. At this point, you should see
+your user there; click on it, then click "Add to group", select the group
+"heater_admins", and finally click "Add to group". After that, you can sign out
+from your heater app, sign in back, and switching the heater should result
+in the state being changed.

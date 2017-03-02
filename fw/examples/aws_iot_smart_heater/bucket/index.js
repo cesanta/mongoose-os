@@ -1,4 +1,3 @@
-var requests = {};
 var cognitoUser;
 var mqttClientAuth;
 var mqttClientUnauth;
@@ -98,12 +97,10 @@ dynamodb.scan(params, function (err, awsData) {
   }
 });
 
-function initClient(requestUrl, opts, clientExisting) {
+function initClient(requestUrl, opts) {
   var clientId = String(Math.random()).replace('.', '');
-  var client = clientExisting;
-  if (!client) {
-    client = new Paho.MQTT.Client(requestUrl, clientId);
-  }
+  var client = new Paho.MQTT.Client(requestUrl, clientId);
+  client.myrequests = {};
   var connectOptions = {
     onSuccess: function () {
       console.log('connected');
@@ -125,9 +122,9 @@ function initClient(requestUrl, opts, clientExisting) {
       console.log("msg arrived: " +  message.payloadString);
       var payload = JSON.parse(message.payloadString);
       if (typeof payload === "object" && typeof payload.id === "number") {
-        if (payload.id in requests) {
-          requests[payload.id].handler(payload.result);
-          delete requests[payload.id];
+        if (payload.id in client.myrequests) {
+          client.myrequests[payload.id].handler(payload.result);
+          delete client.myrequests[payload.id];
         }
       }
     }
@@ -137,6 +134,18 @@ function initClient(requestUrl, opts, clientExisting) {
     console.log('onConnectionLost, resp:', resp);
     if (opts.onDisconnected) {
       opts.onDisconnected();
+    }
+    if (resp.errorCode === 8 && resp.errorMessage === "AMQJS0008I Socket closed.") {
+      // Error reporting in case of permission violation in MQTT is awful: when
+      // the client tries to do something which is not allowed, the connection
+      // gets lost with this error message, so we have to handle errors in this
+      // ugly way.
+      for (key in client.myrequests) {
+        if (client.myrequests.hasOwnProperty(key)) {
+          alert("Not authorized to publish to " + client.myrequests[key].topic);
+          delete client.myrequests[key];
+        }
+      }
     }
   };
 }
@@ -178,13 +187,15 @@ AWS.config.credentials.get(function(err) {
 
       getStateIntervalId = setInterval(function() {
         var msgId = Number(String(Math.random()).replace('.', ''));
+        var topic = heaterVars.deviceId + '/rpc/Heater.GetState'
         console.log('msgId:', msgId);
-        requests[msgId] = {
+        client.myrequests[msgId] = {
           handler: function(resp) {
             console.log('hey', resp);
             heaterOn = !!resp.on;
             $("#heater_status").text("Heater status: " + (resp.on ? "on" : "off"));
           },
+          topic: topic,
         };
         msgObj = {
           id: msgId,
@@ -193,7 +204,7 @@ AWS.config.credentials.get(function(err) {
           args: {},
         };
         message = new Paho.MQTT.Message(JSON.stringify(msgObj));
-        message.destinationName = heaterVars.deviceId + '/rpc/Heater.GetState';
+        message.destinationName = topic;
         var sendRes = client.send(message);
         console.log(message, 'result:', sendRes);
       }, 2000);
@@ -205,7 +216,9 @@ AWS.config.credentials.get(function(err) {
       clearInterval(getStateIntervalId);
 
       console.log('reconnecting...');
-      initClient(requestUrl, initClientOpts);
+      setTimeout(function() {
+        initClient(requestUrl, initClientOpts);
+      }, 100);
     }
   };
 
@@ -288,14 +301,21 @@ function signIn(username, password, confirmationCode, eventHandler) {
                   AWS.config.credentials.sessionToken
                 );
 
-                initClient(requestUrl, {
+                var initClientAuthOpts = {
                   onConnected: function(client) {
                     mqttClientAuth = client;
                   },
                   onDisconnected: function(client) {
                     mqttClientAuth = undefined;
+                    console.log('reconnecting authenticated...');
+                    setTimeout(function() {
+                      initClient(requestUrl, initClientAuthOpts);
+                    }, 100);
+
                   },
-                });
+                };
+
+                initClient(requestUrl, initClientAuthOpts);
               }
             });
           }
@@ -405,7 +425,8 @@ function switchHeater(on) {
 
     var msgId = Number(String(Math.random()).replace('.', ''));
     console.log('msgId:', msgId);
-    requests[msgId] = {
+    var topic = heaterVars.deviceId + '/rpc/Heater.SetState';
+    client.myrequests[msgId] = {
       handler: function(resp) {
         console.log('heater switch resp:', resp);
         console.log('unsubscribing from:', rpcId + "/rpc");
@@ -415,6 +436,7 @@ function switchHeater(on) {
           console.log(e);
         }
       },
+      topic: topic,
     };
     msgObj = {
       id: msgId,
@@ -425,7 +447,7 @@ function switchHeater(on) {
       },
     };
     message = new Paho.MQTT.Message(JSON.stringify(msgObj));
-    message.destinationName = heaterVars.deviceId + '/rpc/Heater.SetState';
+    message.destinationName = topic;
     $("#heater_status").text("Heater status: ...");
     var sendRes = client.send(message);
     console.log(message, 'result:', sendRes);

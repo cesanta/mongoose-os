@@ -417,34 +417,24 @@ Resources:
             Fn::GetAtt:
             - CognitoUnauthenticatedRole
             - Arn
-
-  CognitoAuthenticatedRole:
-    Type: AWS::IAM::Role
-    Properties:
-      AssumeRolePolicyDocument:
-        Version: '2012-10-17'
-        Statement:
-        - Effect: Allow
-          Principal:
-            Federated: cognito-identity.amazonaws.com
-          Action: sts:AssumeRoleWithWebIdentity
-          Condition:
-            StringEquals:
-              cognito-identity.amazonaws.com:aud:
-                Fn::GetAtt:
-                - CognitoIdentityPool
-                - IdentityPoolId
-            ForAnyValue:StringLike:
-              cognito-identity.amazonaws.com:amr: authenticated
-      Policies:
-      - PolicyName: root
-        PolicyDocument:
-          Version: '2012-10-17'
-          Statement:
-          - Effect: Allow
-            # TODO: restrict more
-            Action: "*"
-            Resource: "*"
+        # Actual parameter name for setIdentityPoolRoles is "RoleMappings", but
+        # it's a mapping from the non-constant id to an object, and it cannot
+        # be expressed directly. So here we have to use our own parameter
+        # "MyRoleMappings" with Key and Val properties, and our custom resource
+        # handler converts it to a proper RoleMappings.
+        MyRoleMappings:
+          - Key:
+              Fn::Join:
+              - ''
+              - - 'cognito-idp.'
+                - Ref: AWS::Region
+                - ".amazonaws.com/"
+                - Ref: CognitoUserPool
+                - ":"
+                - Ref: CognitoUserPoolClient
+            Val:
+              AmbiguousRoleResolution: AuthenticatedRole
+              Type: Token
 
   CognitoUnauthenticatedRole:
     Type: AWS::IAM::Role
@@ -489,6 +479,112 @@ Resources:
                 - ":topic/"
                 - Ref: DeviceID
                 - "/rpc/Heater.GetState"
+          - Effect: Allow
+            Action:
+            - "iot:Subscribe"
+            Resource:
+              Fn::Join:
+              - ''
+              - - 'arn:aws:iot:'
+                - Ref: AWS::Region
+                - ":"
+                - Ref: AWS::AccountId
+                - ":topicfilter/smart_heater_*/rpc"
+
+  CognitoAuthenticatedRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Federated: cognito-identity.amazonaws.com
+          Action: sts:AssumeRoleWithWebIdentity
+          Condition:
+            StringEquals:
+              cognito-identity.amazonaws.com:aud:
+                Fn::GetAtt:
+                - CognitoIdentityPool
+                - IdentityPoolId
+            ForAnyValue:StringLike:
+              cognito-identity.amazonaws.com:amr: authenticated
+      Policies:
+      # This policy is equal to the one for unauthenticated users;
+      # unfortunately we can't reuse the same policy for both authenticated
+      # and unauthenticated users: it complains that the pool is misconfigured
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - "iot:Connect"
+            - "iot:Receive" # It would be better to limit it in the same way
+                            # as iot:Subscribe, but apparently topicfilter
+                            # doesn't work for Receive
+            Resource: "*"
+          - Effect: Allow
+            Action:
+            - "iot:Publish"
+            Resource:
+              Fn::Join:
+              - ''
+              - - 'arn:aws:iot:'
+                - Ref: AWS::Region
+                - ":"
+                - Ref: AWS::AccountId
+                - ":topic/"
+                - Ref: DeviceID
+                - "/rpc/Heater.GetState"
+          - Effect: Allow
+            Action:
+            - "iot:Subscribe"
+            Resource:
+              Fn::Join:
+              - ''
+              - - 'arn:aws:iot:'
+                - Ref: AWS::Region
+                - ":"
+                - Ref: AWS::AccountId
+                - ":topicfilter/smart_heater_*/rpc"
+
+  # Heater Admin role
+  myHeaterAdminRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Federated: cognito-identity.amazonaws.com
+          Action: sts:AssumeRoleWithWebIdentity
+      Policies:
+      - PolicyName: root
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - "iot:Connect"
+            - "iot:Receive" # It would be better to limit it in the same way
+                            # as iot:Subscribe, but apparently topicfilter
+                            # doesn't work for Receive
+            Resource: "*"
+          - Effect: Allow
+            Action:
+            - "iot:Publish"
+            Resource:
+              Fn::Join:
+              - ''
+              - - 'arn:aws:iot:'
+                - Ref: AWS::Region
+                - ":"
+                - Ref: AWS::AccountId
+                - ":topic/"
+                - Ref: DeviceID
+                - "/rpc/*"
           - Effect: Allow
             Action:
             - "iot:Subscribe"
@@ -550,8 +646,25 @@ Resources:
         # NOTE: App with a secret won't work in SDK for browser, so we have to
         # switch off secret generation
         GenerateSecret: false
+
+  CognitoUserGroup:
+    Type: Custom::CognitoUserGroup
+    Properties:
+      ServiceToken:
+        Fn::GetAtt:
+        - CognitoLambdaFunction
+        - Arn
+      Options:
+        UserPoolId: { "Ref": "CognitoUserPool" }
+        GroupName: heater_admins
+        RoleArn:
+          Fn::GetAtt:
+          - myHeaterAdminRole
+          - Arn
   # }}}
 
+  # Permissive IoT policy {{{
+  # Permissive IoT policy, applied to all registered users
   myIotPolicy:
     Type: AWS::IoT::Policy
     Properties:
@@ -562,6 +675,9 @@ Resources:
             Action: "iot:*"
             Resource: "*"
 
+  # Lambda function which attaches myIotPolicy to the given user. Every time
+  # the user logs in, JS code in the browser calls this lambda, so that the
+  # user can perform MQTT operations.
   myAddIotPolicyLambdaFunction:
     Type: AWS::Lambda::Function
     Properties:
@@ -613,6 +729,7 @@ Resources:
             Action:
             - iot:AttachPrincipalPolicy
             Resource: "*"
+  # }}}
 
 Outputs:
   S3BucketName:
