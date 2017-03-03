@@ -46,7 +46,7 @@ type serialCodec struct {
 
 func Serial(ctx context.Context, portName string, junkHandler func(junk []byte)) (Codec, error) {
 	glog.Infof("Opening %s...", portName)
-	conn, err := serial.Open(serial.OpenOptions{
+	s, err := serial.Open(serial.OpenOptions{
 		PortName:              portName,
 		BaudRate:              115200,
 		DataBits:              8,
@@ -55,17 +55,21 @@ func Serial(ctx context.Context, portName string, junkHandler func(junk []byte))
 		InterCharacterTimeout: uint(interCharacterTimeout / time.Millisecond),
 		MinimumReadSize:       0,
 	})
-	glog.Infof("%s opened: %v, err: %v", portName, conn, err)
+	glog.Infof("%s opened: %v, err: %v", portName, s, err)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
+	// Explicitly deactivate DTR and RTS.
+	// Some converters/drivers activate them which, in case of ESP, may put device in reset mode.
+	s.SetDTR(false)
+	s.SetRTS(false)
 
 	// Flush any data that might be not yet read
-	conn.Flush()
+	s.Flush()
 
 	return StreamConn(&serialCodec{
 		portName:    portName,
-		conn:        conn,
+		conn:        s,
 		handsShaken: false,
 	}, junkHandler), nil
 }

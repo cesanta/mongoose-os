@@ -72,7 +72,7 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 		return errors.Annotatef(err, "failed to open %s", port)
 	}
 	// Explicitly deactivate DTR and RTS.
-	// Some converters/drivers activate them which, in case of ESP, amy put device in reset mode.
+	// Some converters/drivers activate them which, in case of ESP, may put device in reset mode.
 	s.SetDTR(false)
 	s.SetRTS(false)
 	cctx, cancel := context.WithCancel(ctx)
