@@ -382,11 +382,13 @@ function signUp(username, password, email, eventHandler) {
     console.log('user', result.user);
     console.log('username is ' + cognitoUser.getUsername());
 
-    signIn(
-      cognitoUser.getUsername(), password,
-      prompt('Please check your email and enter verification code from it: ' ,''),
-      eventHandler
-    );
+    openEmailCodeDialog(function(code) {
+      signIn(
+        cognitoUser.getUsername(), password,
+        code,
+        eventHandler
+      );
+    });
   });
 }
 
@@ -528,3 +530,29 @@ $(document).ready(function() {
   });
 
 });
+
+function openEmailCodeDialog(callback) {
+  var codeDialog = $("#code_dialog");
+  codeDialog.dialog({
+    buttons: [
+      {
+        id: "code-button-ok",
+        text: "Ok",
+        click: function() {
+          callback(codeDialog.find("#email_code").val());
+          $(this).dialog("close");
+        },
+      }
+    ],
+    autoOpen: false,
+    modal: true,
+    minWidth: 400,
+    maxHeight: 300,
+    title: "Enter verification code",
+  });
+  codeDialog.on("dialogopen", function(event, ui) {
+    codeDialog.find("#email_code").val("");
+  });
+
+  codeDialog.dialog("open");
+}

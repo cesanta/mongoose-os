@@ -5,10 +5,12 @@
         display: none;
       }
     </style>
+    <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/themes/black-tie/jquery-ui.min.css" />
   </head>
   <body>
 
     <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js" integrity="sha256-VazP97ZCwtekAsvgPBSUwPFKdrwD3unUfSGVYrahUqU=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/2.5.0/Chart.bundle.min.js"></script>
     <script src="aws-cognito-sdk.min.js"></script>
     <script src="amazon-cognito-identity.min.js"></script>
@@ -61,6 +63,13 @@
     <input type="button" value="Switch" id="heater_switch_button" />
 
     <pre id="msg"></pre>
+
+    <div id="code_dialog" class="hidden">
+      <p>
+        Please check your email and enter verification code from it:
+        <input id="email_code" class="text-input" />
+      </p>
+    </div>
   </body>
 </html>
 
