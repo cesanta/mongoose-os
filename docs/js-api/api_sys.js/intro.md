@@ -8,6 +8,11 @@ items:
 
 
 
+ **`Sys.calloc(nmemb, size)`** - allocate a memory region.
+ Note: currently memory allocated this way must be explicitly released with `free()`.
+
+
+
  **`Sys.peek(ptr, offset)`** - return byte value (a number) for given
  pointer at offset.
 

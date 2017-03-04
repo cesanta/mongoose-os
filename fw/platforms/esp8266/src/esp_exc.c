@@ -89,7 +89,7 @@ IRAM NOINSTR void dummy_putc(char c) {
 NOINSTR __attribute__((noreturn)) void esp_exc_common(uint32_t cause,
                                                       struct regfile *regs) {
   /* Disable interrupts. This takes care of SW WDT and other activity. */
-  __asm volatile("rsil a0, 0" : : : "a0");
+  mgos_ints_disable();
   os_install_putc1(dummy_putc);
   /* Set up 1-stage HW WDT to give us a kick if we are not done in ~27 secs. */
   esp_hw_wdt_setup(ESP_HW_WDT_26_8_SEC, ESP_HW_WDT_DISABLE);

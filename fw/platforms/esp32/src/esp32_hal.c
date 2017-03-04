@@ -49,7 +49,11 @@ void device_get_mac_address(uint8_t mac[6]) {
 /* In components/newlib/time.c. Returns a monotonic microsecond counter. */
 uint64_t get_time_since_boot();
 
-void mgos_usleep(int usecs) {
+void mgos_msleep(uint32_t msecs) {
+  mgos_usleep(msecs * 1000);
+}
+
+void mgos_usleep(uint32_t usecs) {
   int ticks = usecs / (1000000 / configTICK_RATE_HZ);
   int remainder = usecs % (1000000 / configTICK_RATE_HZ);
   if (ticks > 0) vTaskDelay(ticks);
@@ -91,6 +95,14 @@ inline void mgos_lock() {
 inline void mgos_unlock() {
   while (!xSemaphoreGiveRecursive(s_mgos_mux)) {
   }
+}
+
+IRAM_ATTR void mgos_ints_disable(void) {
+  __asm volatile("rsil a2, 3" : : : "a2");
+}
+
+IRAM_ATTR void mgos_ints_enable(void) {
+  __asm volatile("rsil a2, 0" : : : "a2");
 }
 
 /* Note: we cannot use mutex here because there is no recursive mutex

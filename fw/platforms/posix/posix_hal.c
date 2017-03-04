@@ -94,7 +94,7 @@ void mgos_system_restart(int exit_code) {
   exit(exit_code);
 }
 
-void mgos_usleep(int usecs) {
+void mgos_usleep(uint32_t usecs) {
 #ifndef _WIN32
   usleep(usecs);
 #else

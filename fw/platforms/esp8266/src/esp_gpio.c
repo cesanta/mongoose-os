@@ -12,6 +12,7 @@
 #include <user_interface.h>
 #endif
 
+#include "fw/src/mgos_bitbang.h"
 #include "fw/src/mgos_gpio.h"
 #include "fw/src/mgos_gpio_hal.h"
 
@@ -203,6 +204,11 @@ IRAM void mgos_gpio_dev_int_done(int pin) {
   }
 }
 
+void esp_nsleep100_80(uint32_t n);
+void esp_nsleep100_160(uint32_t n);
+void (*mgos_nsleep100)(uint32_t n);
+uint32_t mgos_bitbang_n100_cal;
+
 enum mgos_init_result mgos_gpio_dev_init(void) {
 #ifdef RTOS_SDK
   _xt_isr_attach(ETS_GPIO_INUM, (void *) esp8266_gpio_isr, NULL);
@@ -211,6 +217,8 @@ enum mgos_init_result mgos_gpio_dev_init(void) {
   ETS_GPIO_INTR_ATTACH(esp8266_gpio_isr, NULL);
   ETS_INTR_ENABLE(ETS_GPIO_INUM);
 #endif
+  mgos_nsleep100 = &esp_nsleep100_160;
+  mgos_bitbang_n100_cal = 2;
   return MGOS_INIT_OK;
 }
 
@@ -267,7 +275,7 @@ bool mgos_gpio_disable_int(int pin) {
 /* You'd think pins would map the same way as input, but no. GPIO0 is bit 1. */
 #define GPIO_STRAPPING_PIN_0 0x2
 
-bool esp_strapping_to_bootloader() {
+bool esp_strapping_to_bootloader(void) {
   uint32_t strapping_v =
       (READ_PERI_REG(PERIPHS_GPIO_BASEADDR + GPIO_IN_ADDRESS) >>
        GPIO_STRAPPING_S) &

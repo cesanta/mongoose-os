@@ -8,7 +8,9 @@
 #include <string.h>
 
 #include "esp_intr.h"
+#include "sdkconfig.h"
 
+#include "fw/src/mgos_bitbang.h"
 #include "fw/src/mgos_gpio.h"
 #include "fw/src/mgos_gpio_hal.h"
 #include "fw/src/mgos_hal.h"
@@ -87,11 +89,11 @@ bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
   return (gpio_set_pull_mode(pin, pm) == ESP_OK);
 }
 
-bool mgos_gpio_read(int pin) {
+IRAM bool mgos_gpio_read(int pin) {
   return gpio_get_level(pin);
 }
 
-void mgos_gpio_write(int pin, bool level) {
+IRAM void mgos_gpio_write(int pin, bool level) {
   gpio_set_level(pin, level);
 }
 
@@ -152,10 +154,28 @@ bool mgos_gpio_disable_int(int pin) {
   return true;
 }
 
+void esp32_nsleep100_80(uint32_t n);
+void esp32_nsleep100_160(uint32_t n);
+void esp32_nsleep100_240(uint32_t n);
+void (*mgos_nsleep100)(uint32_t n);
+uint32_t mgos_bitbang_n100_cal;
+
 enum mgos_init_result mgos_gpio_dev_init() {
   esp_err_t r = gpio_isr_register(esp32_gpio_isr, NULL, 0, &s_int_handle);
   if (r != ESP_OK) return MGOS_INIT_GPIO_INIT_FAILED;
   r = esp_intr_enable(s_int_handle);
   if (r != ESP_OK) return MGOS_INIT_GPIO_INIT_FAILED;
+#if CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ == 240
+  mgos_nsleep100 = &esp32_nsleep100_240;
+  mgos_bitbang_n100_cal = 2;
+#elif CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ == 160
+  mgos_nsleep100 = &esp32_nsleep100_160;
+  mgos_bitbang_n100_cal = 3;
+#elif CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ == 80
+  mgos_nsleep100 = &esp32_nsleep100_80;
+  mgos_bitbang_n100_cal = 6;
+#else
+#error Unsupported CPU frequency
+#endif
   return MGOS_INIT_OK;
 }

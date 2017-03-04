@@ -88,7 +88,7 @@ VPATH += $(APP_MODULES)
 
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c*))) $(APP_EXTRA_SRCS)
 
-MGOS_OBJS = $(addsuffix .o,$(basename $(MGOS_SRCS)))
+MGOS_OBJS = $(addsuffix .o,$(basename $(MGOS_SRCS))) esp32_nsleep100.o
 APP_OBJS = $(addsuffix .o,$(basename $(APP_SRCS)))
 BUILD_INFO_OBJS = $(addsuffix .o,$(basename $(notdir $(BUILD_INFO_C)) $(notdir $(MG_BUILD_INFO_C))))
 COMPONENT_OBJS = $(MGOS_OBJS) $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_OBJS)

@@ -15,6 +15,6 @@
 #define EXIT_CRITICAL(type) ETS_INTR_ENABLE(type)
 
 /* Returns true if next reboot will boot into the boot loader. */
-bool esp_strapping_to_bootloader();
+bool esp_strapping_to_bootloader(void);
 
 #endif /* CS_FW_PLATFORMS_ESP8266_USER_ESP_GPIO_H_ */

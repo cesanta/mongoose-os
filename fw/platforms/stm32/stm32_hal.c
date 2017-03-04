@@ -64,14 +64,18 @@ size_t mgos_get_heap_size(void) {
   return 0;
 }
 
-void mgos_usleep(int usecs) {
+void mgos_msleep(uint32_t msecs) {
+  HAL_Delay(msecs);
+}
+
+void mgos_usleep(uint32_t usecs) {
   /* STM HAL_Tick has a milliseconds resolution */
+  /* TODO(alashkin): try to use RTC timer to get usecs resolution */
   uint32_t msecs = usecs / 1000;
   if (msecs == 0) {
     msecs = 1;
   }
-  HAL_Delay(msecs);
-  /* TODO(alashkin): try to use RTC timer to get usecs resolution */
+  mgos_msleep(msecs);
 }
 
 enum mgos_init_result mgos_sys_config_init_platform(struct sys_config *cfg) {
@@ -129,4 +133,8 @@ int mgos_adc_read(int pin) {
   (void) pin;
   /* TODO(alashkin): implement */
   return 0;
+}
+
+void mgos_bitbang_write_bits_js(void) {
+  /* TODO */
 }

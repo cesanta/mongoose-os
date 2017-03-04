@@ -112,8 +112,25 @@ void mgos_system_restart(int exit_code) {
   MAP_PRCMHibernateEnter();
 }
 
-void mgos_usleep(int usecs) {
+void mgos_msleep(uint32_t msecs) {
+  osi_Sleep(msecs);
+}
+
+void mgos_usleep(uint32_t usecs) {
   osi_Sleep(usecs / 1000 /* ms */);
+}
+
+uint32_t mgos_bitbang_n100_cal;
+void mgos_nsleep100(uint32_t n) {
+  /* TODO(rojer) */
+}
+
+void mgos_ints_disable(void) {
+  MAP_IntMasterDisable();
+}
+
+void mgos_ints_enable(void) {
+  MAP_IntMasterEnable();
 }
 
 void mongoose_poll_cb(void *arg);

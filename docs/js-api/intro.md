@@ -4,8 +4,10 @@ items:
   - { name: api_adc.js }
   - { name: api_file.js }
   - { name: api_i2c.js }
+  - { name: api_neopixel.js }
   - { name: api_mqtt.js }
   - { name: api_timer.js }
+  - { name: api_bitbang.js }
   - { name: api_grove.js }
   - { name: api_net.js }
   - { name: api_http.js }

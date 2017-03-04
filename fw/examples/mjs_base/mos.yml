@@ -10,7 +10,9 @@ ffi_symbols:
   - fclose
   - fopen
   - fread
+  - free
   - fwrite
+  - malloc
   - strdup
   - get_led_gpio_pin
   - get_cfg
@@ -20,6 +22,7 @@ ffi_symbols:
   - mgos_add_http_endpoint
   - mgos_bind
   - mgos_bind_http
+  - mgos_bitbang_write_bits_js
   - mgos_connect
   - mgos_connect_http
   - mgos_connect_http_ssl

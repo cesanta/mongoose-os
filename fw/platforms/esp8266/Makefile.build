@@ -248,7 +248,9 @@ endif
 
 include $(MGOS_PATH)/fw/src/spiffs.mk
 
-MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o)) $(BUILD_DIR)/esp_exc_vectors.S.o
+MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o)) \
+            $(BUILD_DIR)/esp_exc_vectors.S.o \
+            $(BUILD_DIR)/esp_nsleep100.S.o
 APP_OBJS = $(addprefix $(BUILD_DIR)/,$(APP_SRCS:=.o))
 
 APP_BIN = $(BUILD_DIR)/$(APP).bin

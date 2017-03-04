@@ -62,13 +62,25 @@ void mgos_system_restart(int exit_code) {
   system_restart();
 }
 
-void mgos_usleep(int usecs) {
+void mgos_msleep(uint32_t msecs) {
+  mgos_usleep(msecs * 1000);
+}
+
+void mgos_usleep(uint32_t usecs) {
 #ifdef RTOS_SDK
   int ticks = usecs / (1000000 / configTICK_RATE_HZ);
   usecs = usecs % (1000000 / configTICK_RATE_HZ);
   if (ticks > 0) vTaskDelay(ticks);
 #endif
   os_delay_us(usecs);
+}
+
+IRAM void mgos_ints_disable(void) {
+  __asm volatile("rsil a2, 3" : : : "a2");
+}
+
+IRAM void mgos_ints_enable(void) {
+  __asm volatile("rsil a2, 0" : : : "a2");
 }
 
 #ifdef RTOS_SDK

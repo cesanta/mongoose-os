@@ -2,6 +2,11 @@
 // [mgos_hal.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_hal.h)
 
 let Sys = {
+  // **`Sys.calloc(nmemb, size)`** - allocate a memory region.
+  // Note: currently memory allocated this way must be explicitly released with `free()`.
+  malloc: ffi('void *malloc(int, int)'),
+  free: ffi('void free(void *)'),
+
   // **`Sys.peek(ptr, offset)`** - return byte value (a number) for given
   // pointer at offset.
   peek: ffi('int mgos_peek(void *, int)'),

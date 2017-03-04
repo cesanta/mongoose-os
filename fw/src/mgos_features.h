@@ -10,6 +10,10 @@
 #define MGOS_ENABLE_ARDUINO_API 0
 #endif
 
+#ifndef MGOS_ENABLE_BITBANG
+#define MGOS_ENABLE_BITBANG 0
+#endif
+
 #ifndef MGOS_ENABLE_DEBUG_UDP
 #define MGOS_ENABLE_DEBUG_UDP 0
 #endif

@@ -53,7 +53,7 @@ INNER_MAKE?=$(MAKE)
 #
 # NOTE that $(MAKEFILES) should be given _before_ our own variable definitions,
 # because MAKEFLAGS contains MGOS_PATH which we want to override.
-MAKE_CMD=$(INNER_MAKE) -j1 \
+MAKE_CMD=$(INNER_MAKE) -j4 \
       -C $(MAKE_APP_PATH) -f $(MAKEFILE_BUILD) \
       -$(MAKEFLAGS) \
       APP=$(APP) \

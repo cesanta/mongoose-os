@@ -51,8 +51,12 @@ void mgos_wdt_disable(void);
 /* Restart system */
 void mgos_system_restart(int exit_code);
 
-/* Delay usecs */
-void mgos_usleep(int usecs);
+/* Delay routines */
+void mgos_msleep(uint32_t secs);
+void mgos_usleep(uint32_t usecs);
+
+void mgos_ints_disable(void);
+void mgos_ints_enable(void);
 
 /*
  * Invoke a callback in the main MGOS event loop.
