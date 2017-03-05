@@ -100,7 +100,28 @@ MGOS_SRCS = cs_file.c cs_rbuf.c \
             json_utils.c \
             umm_malloc.c \
             mongoose.c frozen.c
-MGOS_SRCS += $(notdir $(foreach m,$(MGOS_ESP_SRC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_PATH),$(wildcard $(m)/*.c)))
+
+MGOS_SRCS += esp_adc.c \
+             esp_config.c \
+             esp_coredump.c \
+             esp_debug.c \
+             esp_exc.c \
+             esp_flash_writer.c \
+             esp_fs.c \
+             esp_gpio.c \
+             esp_hal.c \
+             esp_heap_trace.c \
+             esp_hw_wdt.c \
+             esp_libc.c \
+             esp_main.c \
+             esp_mdns.c \
+             esp_periph.c \
+             esp_pwm.c \
+             esp_uart.c \
+             esp_updater.c \
+             esp_wifi.c
+
+MGOS_SRCS += $(notdir $(foreach m,$(SPIFFS_PATH) $(COMMON_ESP_PATH),$(wildcard $(m)/*.c)))
 APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c) $(wildcard $(m)/*.cpp))) $(APP_EXTRA_SRCS)
 
 MGOS_FEATURES ?=
@@ -187,33 +208,35 @@ FW_FILE_2_OUT = $(FW_STAGING_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_2_ADDR))
 IMAGE_HEADER_SIZE = 0
 
 ifeq "$(MGOS_ESP8266_RTOS)" "1"
-	SDK_PATH = /opt/Espressif/ESP8266_RTOS_SDK
+  SDK_PATH = /opt/Espressif/ESP8266_RTOS_SDK
+  MGOS_SRCS += esp_exc_rtos.c
   MGOS_CFLAGS += -DRTOS_SDK
-	LWIP_LIB =
+  LWIP_LIB =
   LWIP_PATH = $(SDK_PATH)/lwip
-	SDK_LIBS += freertos lwip main mirom
+  SDK_LIBS += freertos lwip main mirom
   IPATH += $(SDK_PATH)/include/espressif \
            $(SDK_PATH)/extra_include \
            $(SDK_PATH)/include/lwip/ipv4 \
            $(SDK_PATH)/include/lwip/ipv6
-	LD_SCRIPT_TEMPL = $(MGOS_ESP_PATH)/ld/rtos.ld
+  LD_SCRIPT_TEMPL = $(MGOS_ESP_PATH)/ld/rtos.ld
   LDFLAGS += -Wl,--wrap=user_fatal_exception_handler \
              -Wl,--wrap=ShowCritical
 else
-	SDK_PATH = /opt/Espressif/ESP8266_NONOS_SDK
-	MGOS_CFLAGS += -DLWIP_OPEN_SRC
-	LWIP_LIB = $(LWIP_BUILD_DIR)/liblwip_cs.a
-	LWIP_PATH = $(COMMON_ESP_PATH)/lwip
-	SDK_LIBS += m main_ota
-	IPATH += $(LWIP_PATH)/src/include \
+  SDK_PATH = /opt/Espressif/ESP8266_NONOS_SDK
+  MGOS_SRCS += esp_exc_non_os.c
+  MGOS_CFLAGS += -DLWIP_OPEN_SRC
+  LWIP_LIB = $(LWIP_BUILD_DIR)/liblwip_cs.a
+  LWIP_PATH = $(COMMON_ESP_PATH)/lwip
+  SDK_LIBS += m main_ota
+  IPATH += $(LWIP_PATH)/src/include \
            $(LWIP_PATH)/src/include/ipv4 \
            $(LWIP_PATH)/espressif/include
   LD_SCRIPT_TEMPL = $(MGOS_ESP_PATH)/ld/non_os.ld
 
 $(LWIP_LIB): $(LWIP_PATH)
 	$(Q) $(MAKE) -C $(LWIP_PATH) -j3 all \
-	  APP=liblwip_cs BUILD_DIR=$(abspath $(LWIP_BUILD_DIR)) \
-	  CFLAGS_EXTRA="$(HEAP_LOG_FLAGS)"
+		APP=liblwip_cs BUILD_DIR=$(abspath $(LWIP_BUILD_DIR)) \
+		CFLAGS_EXTRA="$(HEAP_LOG_FLAGS)"
 endif
 
 # Intercept Cache_Read_Enable_New for rBoot's big flash support.
@@ -234,8 +257,8 @@ ifeq "$(SSL)" "mbedTLS"
 
 $(SSL_LIBS):
 	$(Q) $(MAKE) -j4 -C $(MBEDTLS_PATH)/library $(notdir $@) \
-	  CC=$(CC) AR=$(AR) \
-	  CFLAGS="$(MBEDTLS_CFLAGS)"
+		CC=$(CC) AR=$(AR) \
+		CFLAGS="$(MBEDTLS_CFLAGS)"
 	$(Q) $(OBJCOPY) --rename-section .rodata=.irom0.text $@
 	$(Q) $(OBJCOPY) --rename-section .rodata.str1.1=.irom0.text $@
 else
@@ -344,8 +367,8 @@ $(APP_ELF): $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MG
 	# some weird reason mgos_app_init() from that lib can't override a weak symbol
 	# from MGOS_LIB.
 	for i in $(APP_OBJS); do \
-	  $(OBJCOPY) --rename-section .rodata=.irom0.text $$i; \
-	  $(OBJCOPY) --rename-section .rodata.str1.1=.irom0.text $$i; \
+		$(OBJCOPY) --rename-section .rodata=.irom0.text $$i; \
+		$(OBJCOPY) --rename-section .rodata.str1.1=.irom0.text $$i; \
 	done
 ifeq "$(MGOS_ESP8266_RTOS)" "1"
 	$(OBJCOPY) --weaken-symbol printf --weaken-symbol puts /opt/Espressif/esp-open-sdk/xtensa-lx106-elf/xtensa-lx106-elf/lib/libc.a
@@ -440,10 +463,10 @@ $(ESPTOOL2):
 
 $(BUILD_DIR)/rboot.bin: $(ESPTOOL2)
 	$(Q) $(MAKE) --no-print-directory -C $(BOOTLOADER_PATH)/rboot -f rboot.mk \
-	  RBOOT_BUILD_BASE=$(abspath $(BUILD_DIR)) \
-	  RBOOT_GEN_BASE=$(abspath $(GEN_DIR)) \
-	  ESPTOOL2=$(abspath $(ESPTOOL2)) SDK_BASE=$(SDK_PATH) \
-	  RBOOT_BIG_FLASH=1 CFLAGS_EXTRA="$(BOOTLOADER_FLAGS)"
+		RBOOT_BUILD_BASE=$(abspath $(BUILD_DIR)) \
+		RBOOT_GEN_BASE=$(abspath $(GEN_DIR)) \
+		ESPTOOL2=$(abspath $(ESPTOOL2)) SDK_BASE=$(SDK_PATH) \
+		RBOOT_BIG_FLASH=1 CFLAGS_EXTRA="$(BOOTLOADER_FLAGS)"
 
 clean:
 	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)
