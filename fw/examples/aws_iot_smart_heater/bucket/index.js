@@ -1,3 +1,5 @@
+const GRAPH_UPDATE_PERIOD = 10 * 1000;
+
 var mqttClientAuth;
 var mqttClientUnauth;
 var getStateIntervalId;
@@ -6,6 +8,8 @@ var heaterOn = false;
 var GoogleAuth;
 
 var heaterUser;
+
+var tempChart;
 
 window.fbAsyncInit = function() {
   if (heaterVars.facebookOAuthClientId) {
@@ -163,28 +167,29 @@ var dynamodb = new AWS.DynamoDB({
   credentials: myAnonymousAccessCreds,
 });
 
-var timestamp = Math.floor(Date.now() / 1000);
+function getDynamodbQueryParams() {
+  var timestamp = Math.floor(Date.now() / 1000);
 
-var params = {
-  TableName: heaterVars.tableName,
-  KeyConditionExpression: 'deviceid = :d AND #t > :p',
-  ExpressionAttributeNames: {
-    "#t": "timestamp",
-  },
-  ExpressionAttributeValues: {
-    ":d": {S: heaterVars.deviceId},
-    ":p": {S: String(timestamp - 600)},
-  },
-};
+  return {
+    TableName: heaterVars.tableName,
+    KeyConditionExpression: 'deviceid = :d AND #t > :p',
+    ExpressionAttributeNames: {
+      "#t": "timestamp",
+    },
+    ExpressionAttributeValues: {
+      ":d": {S: heaterVars.deviceId},
+      ":p": {S: String(timestamp - 600)},
+    },
+  };
+}
 
-dynamodb.query(params, function (err, awsData) {
+dynamodb.query(getDynamodbQueryParams(), function (err, awsData) {
   if (err) {
     $("#msg").text(
       "Error:\n" + JSON.stringify(err, null, '  ') + "\n\n" + JSON.stringify(err.stack, null, '  ')
     );
   } else {
     console.log('dynamodb data:', awsData);
-    //$("#msg").text(JSON.stringify(awsData, null, '  '));
 
     var data = [];
     var labels = [];
@@ -195,8 +200,8 @@ dynamodb.query(params, function (err, awsData) {
       labels.push(item.payload.M.temp.N + " (timestamp: " + item.timestamp.S + ")");
     }
 
-    var ctx = document.getElementById("myChart");
-    var myChart = new Chart(ctx, {
+    var ctx = document.getElementById("tempChart");
+    tempChart = new Chart(ctx, {
       type: 'line',
       data: {
         labels: labels,
@@ -234,6 +239,27 @@ dynamodb.query(params, function (err, awsData) {
     });
   }
 });
+
+setInterval(function() {
+  dynamodb.query(getDynamodbQueryParams(), function (err, awsData) {
+    if (err) {
+      console.log("error querying dynamodb:", err);
+    } else {
+      console.log('dynamodb data:', awsData);
+      var data = [];
+      var labels = [];
+
+      for (var i = 0; i < awsData.Items.length; i++) {
+        var item = awsData.Items[i];
+        data.push(Number(item.payload.M.temp.N));
+        labels.push(item.payload.M.temp.N + " (timestamp: " + item.timestamp.S + ")");
+      }
+
+      tempChart.data.datasets[0].data = data;
+      tempChart.update();
+    }
+  });
+}, GRAPH_UPDATE_PERIOD);
 
 function initClient(requestUrl, opts) {
   var clientId = String(Math.random()).replace('.', '');
