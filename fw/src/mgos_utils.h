@@ -18,6 +18,8 @@ extern "C" {
 
 void mgos_system_restart_after(int delay_ms);
 
+float mgos_rand_range(float from, float to);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

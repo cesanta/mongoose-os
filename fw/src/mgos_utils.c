@@ -3,7 +3,9 @@
  * All rights reserved
  */
 
-#include "fw/src/mgos_console.h"
+#include <stdlib.h>
+
+#include "common/cs_dbg.h"
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_timers.h"
 
@@ -13,6 +15,10 @@ static void reboot_timer_cb(void *param) {
 }
 
 void mgos_system_restart_after(int delay_ms) {
-  CONSOLE_LOG(LL_INFO, ("Rebooting in %d ms", delay_ms));
+  LOG(LL_INFO, ("Rebooting in %d ms", delay_ms));
   mgos_set_timer(delay_ms, 0 /*repeat*/, reboot_timer_cb, NULL);
+}
+
+float mgos_rand_range(float from, float to) {
+  return from + (((float) (to - from)) / RAND_MAX * rand());
 }

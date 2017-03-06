@@ -15,6 +15,7 @@
 #include "fw/src/mgos_mqtt.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_timers.h"
+#include "fw/src/mgos_utils.h"
 #include "fw/src/mgos_wifi.h"
 
 #if MGOS_ENABLE_MQTT
@@ -27,23 +28,27 @@ struct topic_handler {
   SLIST_ENTRY(topic_handler) entries;
 };
 
-static mg_event_handler_t s_user_handler = NULL;
-static void *s_user_data = NULL;
-static int s_reconnect_timeout = 0;
-static mgos_timer_id reconnect_timer_id = MGOS_INVALID_TIMER_ID;
+struct global_handler {
+  mg_event_handler_t handler;
+  void *user_data;
+  SLIST_ENTRY(global_handler) entries;
+};
+
+static int s_reconnect_timeout_ms = 0;
+static mgos_timer_id s_reconnect_timer_id = MGOS_INVALID_TIMER_ID;
 static struct mg_connection *s_conn = NULL;
 
 SLIST_HEAD(topic_handlers, topic_handler) s_topic_handlers;
+SLIST_HEAD(global_handlers, global_handler) s_global_handlers;
 
-static bool mqtt_global_connect(void);
+static void mqtt_global_reconnect(void);
 
 static bool call_topic_handler(struct mg_connection *nc, int ev,
                                void *ev_data) {
   struct mg_mqtt_message *msg = (struct mg_mqtt_message *) ev_data;
   struct topic_handler *th;
   SLIST_FOREACH(th, &s_topic_handlers, entries) {
-    if ((ev == MG_EV_CLOSE) ||
-        (ev == MG_EV_MQTT_SUBACK && th->sub_id == msg->message_id) ||
+    if ((ev == MG_EV_MQTT_SUBACK && th->sub_id == msg->message_id) ||
         mg_mqtt_match_topic_expression(th->topic, msg->topic)) {
       nc->user_data = th->user_data;
       th->handler(nc, ev, ev_data);
@@ -53,24 +58,16 @@ static bool call_topic_handler(struct mg_connection *nc, int ev,
   return false;
 }
 
-static void call_global_handler(struct mg_connection *nc, int ev,
-                                void *ev_data) {
-  if (s_user_handler != NULL) {
-    nc->user_data = s_user_data;
-    s_user_handler(nc, ev, ev_data);
+static void call_global_handlers(struct mg_connection *nc, int ev,
+                                 void *ev_data) {
+  struct global_handler *gh;
+  SLIST_FOREACH(gh, &s_global_handlers, entries) {
+    nc->user_data = gh->user_data;
+    gh->handler(nc, ev, ev_data);
   }
 }
 
-static void reconnect_timer_cb(void *user_data) {
-  reconnect_timer_id = MGOS_INVALID_TIMER_ID;
-  mqtt_global_connect();
-
-  (void) user_data;
-}
-
-static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
-  const struct sys_config_mqtt *smcfg = &get_cfg()->mqtt;
-
+static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
   if (ev > MG_MQTT_EVENT_BASE) {
     LOG(LL_DEBUG, ("MQTT event: %d", ev));
   }
@@ -79,31 +76,13 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
     case MG_EV_CONNECT: {
       int success = (*(int *) ev_data == 0);
       LOG(LL_INFO, ("MQTT Connect (%d)", success));
-      if (success) {
-        s_conn = nc;
-        s_reconnect_timeout = smcfg->reconnect_timeout_min;
-      }
       break;
     }
     case MG_EV_CLOSE: {
       LOG(LL_INFO, ("MQTT Disconnect"));
       s_conn = NULL;
-      call_topic_handler(nc, ev, NULL);
-
-      /* Schedule reconnect after a timeout */
-      if (s_reconnect_timeout > smcfg->reconnect_timeout_max) {
-        s_reconnect_timeout = smcfg->reconnect_timeout_max;
-      }
-      LOG(LL_DEBUG,
-          ("MQTT reconnecting after %d seconds", s_reconnect_timeout));
-      reconnect_timer_id = mgos_set_timer(s_reconnect_timeout * 1000 /* ms */,
-                                          0, reconnect_timer_cb, NULL);
-
-      /*
-       * If that connection fails, next reconnect timeout will be larger
-       * (but not larger than reconnect_timeout_max from the config)
-       */
-      s_reconnect_timeout = s_reconnect_timeout * 2;
+      call_global_handlers(nc, ev, NULL);
+      mqtt_global_reconnect();
       break;
     }
     case MG_EV_POLL: {
@@ -126,14 +105,20 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
       struct topic_handler *th;
       uint16_t sub_id = 1;
       int code = ((struct mg_mqtt_message *) ev_data)->connack_ret_code;
-      LOG(LL_DEBUG, ("CONNACK %d", code));
-      SLIST_FOREACH(th, &s_topic_handlers, entries) {
-        struct mg_mqtt_topic_expression te = {.topic = th->topic.p, .qos = 0};
-        th->sub_id = sub_id++;
-        mg_mqtt_subscribe(nc, &te, 1, th->sub_id);
-        LOG(LL_INFO, ("Subscribing to '%s'", te.topic));
+      LOG((code == 0 ? LL_INFO : LL_ERROR), ("MQTT CONNACK %d", code));
+      if (code == 0) {
+        s_conn = nc;
+        s_reconnect_timeout_ms = 0;
+        call_global_handlers(nc, ev, ev_data);
+        SLIST_FOREACH(th, &s_topic_handlers, entries) {
+          struct mg_mqtt_topic_expression te = {.topic = th->topic.p, .qos = 0};
+          th->sub_id = sub_id++;
+          mg_mqtt_subscribe(nc, &te, 1, th->sub_id);
+          LOG(LL_INFO, ("Subscribing to '%s'", te.topic));
+        }
+      } else {
+        nc->flags |= MG_F_CLOSE_IMMEDIATELY;
       }
-      call_global_handler(nc, ev, ev_data);
       break;
     }
     /* Delegate almost all MQTT events to the user's handler */
@@ -151,7 +136,7 @@ static void ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
     case MG_EV_MQTT_UNSUBACK:
     case MG_EV_MQTT_PINGREQ:
     case MG_EV_MQTT_DISCONNECT:
-      call_global_handler(nc, ev, ev_data);
+      call_global_handlers(nc, ev, ev_data);
       break;
   }
 }
@@ -167,23 +152,28 @@ void mgos_mqtt_global_subscribe(const struct mg_str topic,
   SLIST_INSERT_HEAD(&s_topic_handlers, th, entries);
 }
 
+void mgos_mqtt_add_global_handler(mg_event_handler_t handler, void *ud) {
+  struct global_handler *gh = (struct global_handler *) calloc(1, sizeof(*gh));
+  gh->handler = handler;
+  gh->user_data = ud;
+  SLIST_INSERT_HEAD(&s_global_handlers, gh, entries);
+}
+
 #if MGOS_ENABLE_WIFI
 static void mg_mqtt_wifi_ready(enum mgos_wifi_status event, void *arg) {
   if (event != MGOS_WIFI_IP_ACQUIRED) return;
 
-  mqtt_global_connect();
+  mqtt_global_reconnect();
   (void) arg;
 }
 #endif
 
 enum mgos_init_result mgos_mqtt_global_init(void) {
   enum mgos_init_result ret = MGOS_INIT_OK;
-  const struct sys_config_mqtt *smcfg = &get_cfg()->mqtt;
-  s_reconnect_timeout = smcfg->reconnect_timeout_min;
 #if MGOS_ENABLE_WIFI
   mgos_wifi_add_on_change_cb(mg_mqtt_wifi_ready, NULL);
 #else
-  mqtt_global_connect();
+  mqtt_global_reconnect();
 #endif
   return ret;
 }
@@ -196,11 +186,6 @@ static bool mqtt_global_connect(void) {
 
   /* If we're already connected, do nothing */
   if (s_conn != NULL) return ret;
-
-  if (reconnect_timer_id != MGOS_INVALID_TIMER_ID) {
-    mgos_clear_timer(reconnect_timer_id);
-    reconnect_timer_id = MGOS_INVALID_TIMER_ID;
-  }
 
   memset(&opts, 0, sizeof(opts));
 
@@ -217,7 +202,7 @@ static bool mqtt_global_connect(void) {
 #endif
 
     struct mg_connection *nc =
-        mg_connect_opt(mgr, scfg->mqtt.server, ev_handler, opts);
+        mg_connect_opt(mgr, scfg->mqtt.server, mqtt_ev_handler, opts);
     if (nc == NULL) {
       ret = false;
     } else {
@@ -241,9 +226,32 @@ static bool mqtt_global_connect(void) {
   return ret;
 }
 
-void mgos_mqtt_set_global_handler(mg_event_handler_t handler, void *ud) {
-  s_user_handler = handler;
-  s_user_data = ud;
+static void reconnect_timer_cb(void *user_data) {
+  s_reconnect_timer_id = MGOS_INVALID_TIMER_ID;
+  if (!mqtt_global_connect()) {
+    mqtt_global_reconnect();
+  }
+  (void) user_data;
+}
+
+static void mqtt_global_reconnect(void) {
+  const struct sys_config_mqtt *smcfg = &get_cfg()->mqtt;
+  int rt_ms = s_reconnect_timeout_ms * 2;
+
+  if (rt_ms < smcfg->reconnect_timeout_min * 1000) {
+    rt_ms = smcfg->reconnect_timeout_min * 1000;
+  }
+  if (rt_ms > smcfg->reconnect_timeout_max * 1000) {
+    rt_ms = smcfg->reconnect_timeout_max * 1000;
+  }
+  /* Fuzz the time a little. */
+  rt_ms = (int) mgos_rand_range(rt_ms * 0.9, rt_ms * 1.1);
+  LOG(LL_INFO, ("MQTT connecting after %d ms", rt_ms));
+  s_reconnect_timeout_ms = rt_ms;
+  if (s_reconnect_timer_id != MGOS_INVALID_TIMER_ID) {
+    mgos_clear_timer(s_reconnect_timer_id);
+  }
+  s_reconnect_timer_id = mgos_set_timer(rt_ms, 0, reconnect_timer_cb, NULL);
 }
 
 struct mg_connection *mgos_mqtt_get_global_conn(void) {

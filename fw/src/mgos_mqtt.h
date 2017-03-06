@@ -29,7 +29,7 @@ void mgos_mqtt_global_subscribe(const struct mg_str topic,
                                 mg_event_handler_t handler, void *ud);
 
 /* Registers a mongoose handler to be invoked on the global MQTT connection */
-void mgos_mqtt_set_global_handler(mg_event_handler_t handler, void *ud);
+void mgos_mqtt_add_global_handler(mg_event_handler_t handler, void *ud);
 
 /*
  * Returns current MQTT connection if it is established; otherwise returns

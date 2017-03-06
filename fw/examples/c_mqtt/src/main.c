@@ -133,14 +133,7 @@ static void ev_handler(struct mg_connection *c, int ev, void *p) {
   }
 }
 
-static void on_wifi_event(enum mgos_wifi_status ev, void *data) {
-  if (ev == MGOS_WIFI_IP_ACQUIRED) {
-    mgos_mqtt_set_global_handler(ev_handler, NULL);
-  }
-  (void) data;
-}
-
 enum mgos_app_init_result mgos_app_init(void) {
-  mgos_wifi_add_on_change_cb(on_wifi_event, 0);
+  mgos_mqtt_add_global_handler(ev_handler, NULL);
   return MGOS_APP_INIT_SUCCESS;
 }

@@ -17,6 +17,8 @@
 #include "fw/src/mgos_mqtt.h"
 #include "fw/src/mgos_sys_config.h"
 
+#define CHANNEL_OPEN MG_F_USER_1
+
 static char *mgos_rpc_mqtt_topic_name(const struct mg_str device_id,
                                       bool wildcard) {
   char *topic = NULL;
@@ -31,6 +33,7 @@ static void mg_rpc_mqtt_handler(struct mg_connection *nc, int ev,
   struct mg_rpc_channel *ch = (struct mg_rpc_channel *) nc->user_data;
   switch (ev) {
     case MG_EV_MQTT_SUBACK:
+      nc->flags |= CHANNEL_OPEN;
       ch->ev_handler(ch, MG_RPC_CHANNEL_OPEN, NULL);
       break;
     case MG_EV_MQTT_PUBLISH: {
@@ -52,9 +55,12 @@ static void mg_rpc_mqtt_handler(struct mg_connection *nc, int ev,
         ch->ev_handler(ch, MG_RPC_CHANNEL_FRAME_RECD_PARSED, &frame);
       }
     } break;
-    case MG_EV_CLOSE:
-      ch->ev_handler(ch, MG_RPC_CHANNEL_CLOSED, NULL);
+    case MG_EV_CLOSE: {
+      if (nc->flags & CHANNEL_OPEN) {
+        ch->ev_handler(ch, MG_RPC_CHANNEL_CLOSED, NULL);
+      }
       break;
+    }
   }
 }
 
@@ -115,6 +121,8 @@ struct mg_rpc_channel *mg_rpc_channel_mqtt(const struct mg_str device_id) {
   mgos_mqtt_global_subscribe(mg_mk_str(topic), mg_rpc_mqtt_handler, ch);
   mgos_mqtt_global_subscribe(mg_mk_str_n(topic, strlen(topic) - 2 /* /# */),
                              mg_rpc_mqtt_handler, ch);
+  /* For CLOSE event. */
+  mgos_mqtt_add_global_handler(mg_rpc_mqtt_handler, ch);
 
   LOG(LL_INFO, ("%p %s", ch, topic));
   free(topic);
