@@ -1,6 +1,7 @@
-# AWS IoT button example
+# AWS IoT Smart Heater
 
-This is a draft of the "AWS IoT Smart Heater" example.
+This is an "AWS IoT Smart Heater" example: the heater device reports current
+temperature, responds to the status requests and to the heater on/off command.
 
 ## Build instructions
 
