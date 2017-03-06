@@ -26,16 +26,17 @@ var timestamp = Math.floor(Date.now() / 1000);
 
 var params = {
   TableName: heaterVars.tableName,
-  FilterExpression: '#t > :p',
+  KeyConditionExpression: 'deviceid = :d AND #t > :p',
   ExpressionAttributeNames: {
     "#t": "timestamp",
   },
   ExpressionAttributeValues: {
+    ":d": {S: heaterVars.deviceId},
     ":p": {S: String(timestamp - 600)},
   },
 };
 
-dynamodb.scan(params, function (err, awsData) {
+dynamodb.query(params, function (err, awsData) {
   if (err) {
     $("#msg").text(
       "Error:\n" + JSON.stringify(err, null, '  ') + "\n\n" + JSON.stringify(err.stack, null, '  ')
