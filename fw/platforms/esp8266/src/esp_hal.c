@@ -68,8 +68,14 @@ void mgos_msleep(uint32_t msecs) {
 
 void mgos_usleep(uint32_t usecs) {
 #ifdef RTOS_SDK
-  int ticks = usecs / (1000000 / configTICK_RATE_HZ);
-  usecs = usecs % (1000000 / configTICK_RATE_HZ);
+/*
+ * configTICK_RATE_HZ is 100, implying 10 ms ticks.
+ * But we run CPU at 160 and tick timer is not updated, hence / 2 below.
+ * https://github.com/espressif/ESP8266_RTOS_SDK/issues/90
+ */
+#define USECS_PER_TICK (1000000 / configTICK_RATE_HZ / 2)
+  uint32_t ticks = usecs / USECS_PER_TICK;
+  usecs = usecs % USECS_PER_TICK;
   if (ticks > 0) vTaskDelay(ticks);
 #endif
   os_delay_us(usecs);

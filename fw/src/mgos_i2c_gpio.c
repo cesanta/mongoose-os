@@ -45,8 +45,8 @@ enum i2c_rw {
 /* This function delays for half of a SCL pulse, i.e. quarter of a period. */
 static void mgos_i2c_half_delay(struct mgos_i2c *c) {
   (void) c;
-  /* This is ~50 KHz. TODO(rojer): Make speed configurable. */
-  mgos_usleep(3);
+  /* This is ~70 KHz. TODO(rojer): Make speed configurable. */
+  mgos_usleep(1);
 }
 
 static void set_gpio_val(int pin, uint8_t val) {
@@ -113,6 +113,7 @@ static enum i2c_ack_type mgos_i2c_send_byte(struct mgos_i2c *c, uint8_t data) {
   enum i2c_ack_type ret_val;
   int8_t i;
 
+  mgos_ints_disable();
   for (i = 7; i >= 0; i--) {
     int8_t bit = (data >> i) & 1;
     mgos_i2c_set_sda_scl(c, bit, I2C_LOW);
@@ -130,6 +131,7 @@ static enum i2c_ack_type mgos_i2c_send_byte(struct mgos_i2c *c, uint8_t data) {
   mgos_i2c_set_sda_scl(c, I2C_INPUT, I2C_HIGH);
   mgos_i2c_half_delay(c);
   ret_val = mgos_gpio_read(c->sda_gpio);
+  mgos_ints_enable();
   if (get_cfg()->i2c.debug) {
     LOG(LL_DEBUG,
         ("sent 0x%02x, got %s", data, (ret_val == I2C_ACK ? "ACK" : "NAK")));
@@ -142,6 +144,7 @@ static enum i2c_ack_type mgos_i2c_send_byte(struct mgos_i2c *c, uint8_t data) {
 }
 
 static void mgos_i2c_send_ack(struct mgos_i2c *c, enum i2c_ack_type ack_type) {
+  mgos_ints_disable();
   mgos_i2c_set_sda_scl(c, ack_type, I2C_LOW);
   mgos_i2c_half_delay(c);
   mgos_i2c_set_sda_scl(c, ack_type, I2C_HIGH);
@@ -149,6 +152,7 @@ static void mgos_i2c_send_ack(struct mgos_i2c *c, enum i2c_ack_type ack_type) {
   mgos_i2c_half_delay(c);
   mgos_i2c_set_sda_scl(c, ack_type, I2C_LOW);
   mgos_i2c_half_delay(c);
+  mgos_ints_enable();
   if (get_cfg()->i2c.debug) {
     LOG(LL_DEBUG, ("sent %s", (ack_type == I2C_ACK ? "ACK" : "NAK")));
   }
@@ -158,6 +162,7 @@ static uint8_t mgos_i2c_read_byte(struct mgos_i2c *c,
                                   enum i2c_ack_type ack_type) {
   uint8_t i, ret_val = 0;
 
+  mgos_ints_disable();
   mgos_i2c_set_sda_scl(c, I2C_INPUT, I2C_LOW);
   mgos_i2c_half_delay(c);
 
@@ -171,6 +176,7 @@ static uint8_t mgos_i2c_read_byte(struct mgos_i2c *c,
     mgos_i2c_set_sda_scl(c, I2C_INPUT, I2C_LOW);
     mgos_i2c_half_delay(c);
   }
+  mgos_ints_enable();
   if (get_cfg()->i2c.debug) {
     LOG(LL_DEBUG, ("read 0x%02x", ret_val));
   }
