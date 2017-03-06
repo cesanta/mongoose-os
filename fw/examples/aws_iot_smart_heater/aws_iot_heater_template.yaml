@@ -44,9 +44,11 @@ Parameters:
   GoogleClientID:
     Description: Google OAuth2 Client ID
     Type: String
-    AllowedPattern: ".+"
-    MinLength: '1'
-    MaxLength: '2048'
+    Default: ''
+  FacebookClientID:
+    Description: Facebook OAuth2 Client ID
+    Type: String
+    Default: ''
 
 Conditions:
   EMPTY_CognitoIdentityPoolName:
@@ -60,6 +62,14 @@ Conditions:
   EMPTY_CognitoUserPoolClientName:
     Fn::Equals:
     - Ref: CognitoUserPoolClientName
+    - ''
+  EMPTY_GoogleClientID:
+    Fn::Equals:
+    - Ref: GoogleClientID
+    - ''
+  EMPTY_FacebookClientID:
+    Fn::Equals:
+    - Ref: FacebookClientID
     - ''
 
 Resources:
@@ -237,6 +247,7 @@ Resources:
           {"Fn::Join": ["", ["  accountId: '", { "Ref": "AWS::AccountId" }, "',"]]},
           {"Fn::Join": ["", ["  addIotPolicyLambdaName: '", { "Ref": "myAddIotPolicyLambdaFunction" }, "',"]]},
           {"Fn::Join": ["", ["  googleOAuthClientId: '", { "Ref": "GoogleClientID" }, "',"]]},
+          {"Fn::Join": ["", ["  facebookOAuthClientId: '", { "Ref": "FacebookClientID" }, "',"]]},
           "};",
           ""
         ]]
@@ -377,19 +388,17 @@ Resources:
           - EMPTY_CognitoIdentityPoolName
           - { "Fn::Join": ["", ["identity_pool_for_", {"Ref": "DeviceID"}]] }
           - Ref: CognitoIdentityPoolName
-
-        #DeveloperProviderName:
-          #Fn::If:
-          #- EMPTY_DeveloperProviderName
-          #- Ref: AWS::NoValue
-          #- Ref: DeveloperProviderName
-        #OpenIdConnectProviderARNs:
-          #Fn::If:
-          #- EMPTY_OpenIdConnectProviderARNs
-          #- Ref: AWS::NoValue
-          #- Ref: OpenIdConnectProviderARNs
         SupportedLoginProviders:
-          accounts.google.com: { "Ref": "GoogleClientID" }
+          accounts.google.com:
+            Fn::If:
+            - EMPTY_GoogleClientID
+            - Ref: AWS::NoValue
+            - Ref: GoogleClientID
+          graph.facebook.com:
+            Fn::If:
+            - EMPTY_FacebookClientID
+            - Ref: AWS::NoValue
+            - Ref: FacebookClientID
 
   CognitoIdentityPoolRoles:
     Type: Custom::CognitoIdentityPoolRoles

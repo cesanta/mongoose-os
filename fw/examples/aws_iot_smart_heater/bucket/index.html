@@ -6,6 +6,9 @@
       }
     </style>
     <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/themes/black-tie/jquery-ui.min.css" />
+
+    <script>
+    </script>
   </head>
   <body>
 
@@ -25,7 +28,23 @@
     <script src="vars.js"></script>
     <script src="index.js"></script>
 
-    <div id="my-signin2"></div>
+    <div id="signedout_div">
+      <table>
+        <tr>
+          <td>
+            <div id="google_signin" class="hidden"></div>
+          </td><td>
+            <div id="facebook_signin" class="hidden">
+              <fb:login-button scope="public_profile,email" size="xlarge" onlogin="facebookCheckLoginState();">
+              </fb:login-button>
+            </div>
+          </td>
+        </tr>
+      </table>
+      <div id="none_signin" class="hidden">
+        <p>You did not provide any authentication provider, so you won't be able to log in</p>
+      </div>
+    </div>
 
     <div id="signedin_div" class="hidden">
       <p>

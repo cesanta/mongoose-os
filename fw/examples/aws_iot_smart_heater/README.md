@@ -4,14 +4,21 @@ This is a draft of the "AWS IoT Smart Heater" example.
 
 ## Build instructions
 
-First of all, you'll need to create Google OAuth2 Client, so that users will
-be able to login into the heater application. Visit
-[Google Cloud Console](https://console.cloud.google.com/apis/credentials),
+First of all, you'll need to create Google and/or Facebook OAuth2 Client, so
+that users will be able to login into the heater application.
+
+For Google: visit [Google Cloud Console](https://console.cloud.google.com/apis/credentials),
 click Create credentials -> OAuth client ID -> Web application, and enter some
 name, e.g. "AWS Heater", and click "Create". It will show your client ID and
 secret; copy client ID, you'll need it soon. And don't close the tab for now:
 when your stack is instantiated, you'll need to get back here and enter the
 Authorized JavaScript origin.
+
+For Facebook: visit [Facebook Apps](https://developers.facebook.com/apps), click
+"Add a New App", enter some name, like, "My Heater", pick a category, click
+"Create App ID". When the app creation is done, you'll see the app dashboard.
+Don't close the tab for now: when your stack is instantiated, you'll need to
+get back here and enter the Website URL.
 
 ```bash
 # Flash the firmware (you might need to adjust the architecture)
@@ -50,8 +57,10 @@ aws cloudformation package \
 
 # The command above has created a new template file: packaged-template.yaml.
 # Now, instantiate AWS stack (replace <device_id> with the ID you obtained by
-# config-get in the beginning, and <google_client_id> with your Google Client
-# ID)
+# config-get in the beginning. Also, depending on the authentication
+# provider(s) you have created apps for, provide client IDs. The command below
+# contains parameters for both Google and Facebook; if you don't use some of
+# those, just omit the whole parameter)
 #
 # In the example command I use stack name "my-heater", but you can
 # use any other name.
@@ -60,6 +69,7 @@ aws cloudformation create-stack \
     --parameters \
         ParameterKey=DeviceID,ParameterValue=<device_id> \
         ParameterKey=GoogleClientID,ParameterValue=<google_client_id> \
+        ParameterKey=FacebookClientID,ParameterValue=<facebook_client_id> \
     --capabilities CAPABILITY_IAM \
     --template-body file://packaged_template.yaml
 
@@ -89,11 +99,14 @@ aws cloudformation describe-stacks --stack-name my-heater
 # <my-s3bucket-name> is the name of the bucket, and <app-url> is the URL at
 # which your files can be accessed.
 #
-# Copy the actual value of "<app-url>", go back to the Google Console, and add
-# it as an Authorized JavaScript origin.
+# Copy the actual value of "<app-url>", and then enter it in the Google and/or
+# Facebook app settings: For Google: go back to the Google Console, and add the
+# URL as an Authorized JavaScript origin.  For Facebook: go back to the app's
+# dashboard, click "Settings" in the sidebar, then click "Add Platform" at the
+# bottom, select "Website", and enter Site URL.
 #
-# Then, copy the actual value of "<my-s3bucket-name>", and use it to put two
-# files on the S3 bucket:
+# Then, copy the actual value of "<my-s3bucket-name>" (from the describe-stacks
+# output), and use it to put two files on the S3 bucket:
 aws s3 cp bucket/index.html s3://<my-s3bucket-name> --acl public-read
 aws s3 cp bucket/index.js s3://<my-s3bucket-name> --acl public-read
 

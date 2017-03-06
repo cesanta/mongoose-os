@@ -3,8 +3,149 @@ var mqttClientUnauth;
 var getStateIntervalId;
 var heaterOn = false;
 
-var googleUser;
 var GoogleAuth;
+
+var heaterUser;
+
+window.fbAsyncInit = function() {
+  if (heaterVars.facebookOAuthClientId) {
+    FB.init({
+      appId      : heaterVars.facebookOAuthClientId,
+      xfbml      : true,
+      version    : 'v2.8'
+    });
+    FB.AppEvents.logPageView();
+
+    facebookCheckLoginState();
+  }
+};
+
+(function(d, s, id){
+  var js, fjs = d.getElementsByTagName(s)[0];
+  if (d.getElementById(id)) {return;}
+  js = d.createElement(s); js.id = id;
+  js.src = "//connect.facebook.net/en_US/sdk.js";
+  fjs.parentNode.insertBefore(js, fjs);
+}(document, 'script', 'facebook-jssdk'));
+
+function awsCredentialsRefresh(getUsername) {
+  // expire the credentials so they'll be refreshed on the next request
+  AWS.config.credentials.expired = true;
+
+  // call refresh method in order to authenticate user and get new temp credentials
+  AWS.config.credentials.refresh((error) => {
+    var eventHandler = uiEventHandler;
+    if (error) {
+      console.error(error);
+      eventHandler(EV_STATUS, "Error: " + JSON.stringify(error));
+      eventHandler(EV_SIGN_DONE);
+    } else {
+      console.log('Successfully logged!');
+      console.log('identityId:', AWS.config.credentials.identityId);
+      console.log('accessKeyId:', AWS.config.credentials.accessKeyId);
+
+      eventHandler(EV_STATUS, "Attaching IoT policy...");
+
+      //-- Call lambda to attach IoT policy
+      var lambda = new AWS.Lambda({
+        region: heaterVars.region,
+        credentials: myAnonymousAccessCreds,
+      });
+      lambda.invoke({
+        FunctionName: heaterVars.addIotPolicyLambdaName,
+        Payload: JSON.stringify({identityId: AWS.config.credentials.identityId}),
+      }, function(err, data) {
+        if (err) {
+          console.log('lambda err:', err, err.stack);
+          eventHandler(EV_STATUS, "Error: " + JSON.stringify(err));
+          eventHandler(EV_SIGN_DONE);
+        } else {
+          console.log('lambda ok:', data);
+          eventHandler(EV_STATUS, "");
+          eventHandler(EV_SIGNED_IN, {
+            username: heaterUser.getUsername(),
+            provider: heaterUser.getAuthProvider(),
+          });
+          eventHandler(EV_SIGN_DONE);
+
+          // connect to MQTT
+          var requestUrl = SigV4Utils.getSignedUrl(
+            'wss',
+            'data.iot.' + heaterVars.region + '.amazonaws.com',
+            '/mqtt',
+            'iotdevicegateway',
+            heaterVars.region,
+            AWS.config.credentials.accessKeyId,
+            AWS.config.credentials.secretAccessKey,
+            AWS.config.credentials.sessionToken
+          );
+
+          var initClientAuthOpts = {
+            onConnected: function(client) {
+              mqttClientAuth = client;
+            },
+            onDisconnected: function(reconnect) {
+              mqttClientAuth = undefined;
+              if (reconnect) {
+                console.log('reconnecting authenticated...');
+                setTimeout(function() {
+                  initClient(requestUrl, initClientAuthOpts);
+                }, 100);
+              } else {
+                console.log('do not reconnect authenticated');
+              }
+            },
+          };
+
+          initClient(requestUrl, initClientAuthOpts);
+        }
+      });
+    }
+  });
+}
+
+function facebookCheckLoginState() {
+  console.log('facebook checking...');
+  FB.getLoginStatus(function(response) {
+    console.log('facebook resp:', response);
+
+    // Check if the user logged in successfully.
+    if (response.authResponse) {
+
+      console.log('You are now logged in.');
+
+      // Add the Facebook access token to the Cognito credentials login map.
+      AWS.config.credentials.params.Logins = {
+        'graph.facebook.com': response.authResponse.accessToken
+      };
+      awsCredentialsRefresh();
+
+      FB.api(
+        "/" + encodeURIComponent(response.authResponse.userID),
+        function (userResp) {
+          if (userResp && !userResp.error) {
+            console.log("userResp:", userResp);
+
+            heaterUser = {
+              getUsername: () => userResp.name,
+              signOut: () => {
+                console.log("signing out of facebook")
+                return new Promise((resolve, reject) => {
+                  FB.logout(() => {
+                    resolve();
+                  });
+                });
+              },
+              getAuthProvider: () => "Facebook",
+            };
+          }
+        }
+      );
+    } else {
+      console.log('There was a problem logging you in.');
+    }
+  });
+}
 
 // Configure Cognito identity pool
 AWS.config.region = heaterVars.region;
@@ -149,8 +290,7 @@ function initClient(requestUrl, opts) {
   };
 }
 
-function onSuccess(_googleUser) {
-  googleUser = _googleUser;
+function onSuccess(googleUser) {
   console.log('Logged in as: ' + googleUser.getBasicProfile().getName());
   console.log('authResponse: ', googleUser.getAuthResponse());
   console.log('authResponse2: ', googleUser.getAuthResponse(true));
@@ -164,81 +304,19 @@ function onSuccess(_googleUser) {
         //serviceUser = resp;
 
         // Add the User's Id Token to the Cognito credentials login map.
-        var logins = {
+        AWS.config.credentials.params.Logins = {
           'accounts.google.com': googleUser.getAuthResponse().id_token,
         };
+        awsCredentialsRefresh();
 
-        AWS.config.credentials.params.Logins = logins;
-        // expire the credentials so they'll be refreshed on the next request
-        AWS.config.credentials.expired = true;
-
-        // call refresh method in order to authenticate user and get new temp credentials
-        AWS.config.credentials.refresh((error) => {
-          var eventHandler = uiEventHandler;
-          if (error) {
-            console.error(error);
-            eventHandler(EV_STATUS, "Error: " + JSON.stringify(error));
-            eventHandler(EV_SIGN_DONE);
-          } else {
-            console.log('Successfully logged!');
-            console.log('identityId:', AWS.config.credentials.identityId);
-            console.log('accessKeyId:', AWS.config.credentials.accessKeyId);
-
-            eventHandler(EV_STATUS, "Attaching IoT policy...");
-
-            //-- Call lambda to attach IoT policy
-            var lambda = new AWS.Lambda({
-              region: heaterVars.region,
-              credentials: myAnonymousAccessCreds,
-            });
-            lambda.invoke({
-              FunctionName: heaterVars.addIotPolicyLambdaName,
-              Payload: JSON.stringify({identityId: AWS.config.credentials.identityId}),
-            }, function(err, data) {
-              if (err) {
-                console.log('lambda err:', err, err.stack);
-                eventHandler(EV_STATUS, "Error: " + JSON.stringify(err));
-                eventHandler(EV_SIGN_DONE);
-              } else {
-                console.log('lambda ok:', data);
-                eventHandler(EV_STATUS, "");
-                eventHandler(EV_SIGNED_IN, {username: googleUser.getBasicProfile().getName()});
-                eventHandler(EV_SIGN_DONE);
-
-                // connect to MQTT
-                var requestUrl = SigV4Utils.getSignedUrl(
-                  'wss',
-                  'data.iot.' + heaterVars.region + '.amazonaws.com',
-                  '/mqtt',
-                  'iotdevicegateway',
-                  heaterVars.region,
-                  AWS.config.credentials.accessKeyId,
-                  AWS.config.credentials.secretAccessKey,
-                  AWS.config.credentials.sessionToken
-                );
-
-                var initClientAuthOpts = {
-                  onConnected: function(client) {
-                    mqttClientAuth = client;
-                  },
-                  onDisconnected: function(reconnect) {
-                    mqttClientAuth = undefined;
-                    if (reconnect) {
-                      console.log('reconnecting authenticated...');
-                      setTimeout(function() {
-                        initClient(requestUrl, initClientAuthOpts);
-                      }, 100);
-                    } else {
-                      console.log('do not reconnect authenticated');
-                    }
-                  },
-                };
-
-                initClient(requestUrl, initClientAuthOpts);
-              }
-            });
-          }
-        });
+        heaterUser = {
+          getUsername: () => googleUser.getBasicProfile().getName(),
+          signOut: () => {
+            console.log("signing out of google")
+            return GoogleAuth.signOut();
+          },
+          getAuthProvider: () => "Google",
+        };
       }
     );
   });
@@ -247,23 +325,25 @@ function onFailure(error) {
   console.log(error);
 }
 function gapiLoaded() {
-  gapi.load('auth2', function() {
-    gapi.auth2.init({
-      'client_id': heaterVars.googleOAuthClientId,
-    }).then((_GoogleAuth) => {
-      GoogleAuth = _GoogleAuth;
-      console.log("google auth initialized", GoogleAuth);
-    });
-    gapi.signin2.render('my-signin2', {
-      'scope': 'email',
-      'width': 240,
-      'height': 50,
-      'longtitle': true,
-      'theme': 'dark',
-      'onsuccess': onSuccess,
-      'onfailure': onFailure
+  if (heaterVars.googleOAuthClientId) {
+    gapi.load('auth2', function() {
+      gapi.auth2.init({
+        'client_id': heaterVars.googleOAuthClientId,
+      }).then((_GoogleAuth) => {
+        GoogleAuth = _GoogleAuth;
+        console.log("google auth initialized", GoogleAuth);
       });
-  });
+      gapi.signin2.render('google_signin', {
+        'scope': 'email',
+        'width': 240,
+        'height': 50,
+        'longtitle': true,
+        'theme': 'dark',
+        'onsuccess': onSuccess,
+        'onfailure': onFailure
+      });
+    });
+  }
 }
 
 AWS.config.credentials.params.Logins = {};
@@ -351,17 +431,19 @@ function signOut() {
   AWS.config.credentials.clearCachedId();
   AWS.config.credentials.refresh((error) => {
 
-    GoogleAuth.signOut().then(() => {
-      eventHandler(EV_STATUS, "");
-      eventHandler(EV_SIGNED_OUT);
-    });
-    console.log(gapi.auth2.GoogleAuth);
-
     if (error) {
       // TODO: figure why the error arises
       console.error(error);
       //eventHandler(EV_STATUS, "Error: " + JSON.stringify(error));
+    } else {
+      heaterUser.signOut()
+        .then(() => {
+          eventHandler(EV_STATUS, "");
+          eventHandler(EV_SIGNED_OUT);
+          heaterUser = undefined;
+        });
     }
+
   });
 }
 
@@ -434,10 +516,12 @@ function uiEventHandler(ev, data) {
       enableLoginInputs(true);
       break;
     case EV_SIGNED_IN:
+      $("#signedout_div").hide();
       $("#signedin_div").show();
-      $("#signedin_username_span").text(data.username);
+      $("#signedin_username_span").text(data.username + " via " + data.provider);
       break;
     case EV_SIGNED_OUT:
+      $("#signedout_div").show();
       $("#signedin_div").hide();
       break;
     case EV_STATUS:
@@ -447,6 +531,22 @@ function uiEventHandler(ev, data) {
 }
 
 $(document).ready(function() {
+  var authPresent = false;
+
+  if (heaterVars.googleOAuthClientId) {
+    $('#google_signin').removeClass("hidden");
+    authPresent = true;
+  }
+
+  if (heaterVars.facebookOAuthClientId) {
+    $('#facebook_signin').removeClass("hidden");
+    authPresent = true;
+  }
+
+  if (!authPresent) {
+    $('#none_signin').removeClass("hidden");
+  }
+
   $("#signout_button").click(function() {
     signOut(uiEventHandler);
   });
