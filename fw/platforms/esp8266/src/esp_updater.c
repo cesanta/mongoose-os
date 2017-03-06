@@ -5,7 +5,7 @@
  * Implements mg_upd interface defined in mgos_updater_hal.h
  */
 
-#include <inttypes.h>
+#include <stdint.h>
 #include <strings.h>
 
 #include <c_types.h>

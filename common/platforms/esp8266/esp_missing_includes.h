@@ -17,9 +17,14 @@ void system_soft_wdt_stop(void); /* Alias for pp_soft_wdt_stop */
 
 void uart_div_modify(int no, unsigned int freq);
 
-void Cache_Read_Disable_2();
-void Cache_Read_Enable_2();
+void Cache_Read_Disable(void);
+void Cache_Read_Enable(uint32_t, uint32_t, uint32_t);
+void Cache_Read_Disable_2(void);
+void Cache_Read_Enable_2(void);
+void Cache_Read_Enable_New(void);
+
 int SPIEraseBlock(uint32_t block);
+uint32_t SPIRead(uint32_t addr, void *dst, uint32_t size);
 
 #ifndef RTOS_SDK
 

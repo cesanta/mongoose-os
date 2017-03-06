@@ -16,7 +16,7 @@ typedef unsigned char uint8;
 
 #include <rboot.h>
 
-#ifdef BOOT_BIG_FLASH
+#if 0 //def BOOT_BIG_FLASH
 
 // plain sdk defaults to iram
 #ifndef IRAM_ATTR

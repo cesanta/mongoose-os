@@ -149,7 +149,7 @@ ifeq "$(MGOS_ENABLE_WIFI)" "1"
 endif
 
 # libraries used in this project, mainly provided by the SDK
-SDK_LIBS = c crypto gcc hal net80211 pp phy wpa
+SDK_LIBS = c crypto gcc hal main net80211 pp phy wpa
 LIBS = $(addprefix -l,$(SDK_LIBS))
 
 SHIMS = -DNDEBUG
@@ -213,7 +213,7 @@ ifeq "$(MGOS_ESP8266_RTOS)" "1"
   MGOS_CFLAGS += -DRTOS_SDK
   LWIP_LIB =
   LWIP_PATH = $(SDK_PATH)/lwip
-  SDK_LIBS += freertos lwip main mirom
+  SDK_LIBS += freertos lwip mirom
   IPATH += $(SDK_PATH)/include/espressif \
            $(SDK_PATH)/extra_include \
            $(SDK_PATH)/include/lwip/ipv4 \
@@ -227,7 +227,7 @@ else
   MGOS_CFLAGS += -DLWIP_OPEN_SRC
   LWIP_LIB = $(LWIP_BUILD_DIR)/liblwip_cs.a
   LWIP_PATH = $(COMMON_ESP_PATH)/lwip
-  SDK_LIBS += m main_ota
+  SDK_LIBS += m
   IPATH += $(LWIP_PATH)/src/include \
            $(LWIP_PATH)/src/include/ipv4 \
            $(LWIP_PATH)/espressif/include
@@ -238,9 +238,6 @@ $(LWIP_LIB): $(LWIP_PATH)
 		APP=liblwip_cs BUILD_DIR=$(abspath $(LWIP_BUILD_DIR)) \
 		CFLAGS_EXTRA="$(HEAP_LOG_FLAGS)"
 endif
-
-# Intercept Cache_Read_Enable_New for rBoot's big flash support.
-LDFLAGS += -Wl,--wrap=Cache_Read_Enable_New
 
 ifeq "$(SSL)" "mbedTLS"
   IPATH += $(MBEDTLS_PATH)/include
@@ -360,7 +357,8 @@ $(APP_BIN): $(APP_ELF)
 # -- Linking.
 
 # Link the main ELF output file.
-$(APP_ELF): $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(ATCA_LIB) $(LWIP_LIB) $(SSL_LIBS) $(LD_SCRIPT)
+BIN_PARTS = $(BUILD_DIR)/esp_cache.c.o $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(ATCA_LIB) $(LWIP_LIB) $(SSL_LIBS)
+$(APP_ELF): $(BIN_PARTS) $(LD_SCRIPT)
 	# Before linking, rename .rodata section in APP_OBJS.
 	#
 	# We can't build a library APP_LIB and rename section there, because for
@@ -373,7 +371,7 @@ $(APP_ELF): $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MG
 ifeq "$(MGOS_ESP8266_RTOS)" "1"
 	$(OBJCOPY) --weaken-symbol printf --weaken-symbol puts /opt/Espressif/esp-open-sdk/xtensa-lx106-elf/xtensa-lx106-elf/lib/libc.a
 endif
-	$(call link,$(APP_OBJS) $(MG_BUILD_INFO_O) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MGOS_LIB) $(ATCA_LIB) $(LWIP_LIB) $(SSL_LIBS) $(LIBS) $(LD_WRAPPERS))
+	$(call link,$(BIN_PARTS) $(LIBS) $(LD_WRAPPERS))
 
 $(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(MGOS_ESP_PATH)/Makefile.build
 	$(vecho) "GEN   $@"
