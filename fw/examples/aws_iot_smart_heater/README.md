@@ -4,6 +4,15 @@ This is a draft of the "AWS IoT Smart Heater" example.
 
 ## Build instructions
 
+First of all, you'll need to create Google OAuth2 Client, so that users will
+be able to login into the heater application. Visit
+[Google Cloud Console](https://console.cloud.google.com/apis/credentials),
+click Create credentials -> OAuth client ID -> Web application, and enter some
+name, e.g. "AWS Heater", and click "Create". It will show your client ID and
+secret; copy client ID, you'll need it soon. And don't close the tab for now:
+when your stack is instantiated, you'll need to get back here and enter the
+Authorized JavaScript origin.
+
 ```bash
 # Flash the firmware (you might need to adjust the architecture)
 mos flash mos-esp8266
@@ -41,7 +50,8 @@ aws cloudformation package \
 
 # The command above has created a new template file: packaged-template.yaml.
 # Now, instantiate AWS stack (replace <device_id> with the ID you obtained by
-# config-get in the beginning)
+# config-get in the beginning, and <google_client_id> with your Google Client
+# ID)
 #
 # In the example command I use stack name "my-heater", but you can
 # use any other name.
@@ -49,6 +59,7 @@ aws cloudformation create-stack \
     --stack-name my-heater \
     --parameters \
         ParameterKey=DeviceID,ParameterValue=<device_id> \
+        ParameterKey=GoogleClientID,ParameterValue=<google_client_id> \
     --capabilities CAPABILITY_IAM \
     --template-body file://packaged_template.yaml
 
@@ -67,11 +78,22 @@ aws cloudformation describe-stacks --stack-name my-heater
 #      "Description": "Name of the newly created S3 bucket", 
 #      "OutputKey": "S3BucketName", 
 #      "OutputValue": "<my-s3bucket-name>"
+#  },
+#  {
+#      "Description": "URL of the s3 bucket", 
+#      "OutputKey": "S3BucketWebsite", 
+#      "OutputValue": "<app-url>"
 #  }
 #  ...
 #
-# Copy the actual value of "<my-s3bucket-name>", and use it to put two files
-# on the S3 bucket:
+# <my-s3bucket-name> is the name of the bucket, and <app-url> is the URL at
+# which your files can be accessed.
+#
+# Copy the actual value of "<app-url>", go back to the Google Console, and add
+# it as an Authorized JavaScript origin.
+#
+# Then, copy the actual value of "<my-s3bucket-name>", and use it to put two
+# files on the S3 bucket:
 aws s3 cp bucket/index.html s3://<my-s3bucket-name> --acl public-read
 aws s3 cp bucket/index.js s3://<my-s3bucket-name> --acl public-read
 
@@ -81,25 +103,28 @@ wget https://raw.githubusercontent.com/aws/amazon-cognito-identity-js/master/dis
 aws s3 cp aws-cognito-sdk.min.js s3://<my-s3bucket-name> --acl public-read
 aws s3 cp amazon-cognito-identity.min.js s3://<my-s3bucket-name> --acl public-read
 
-# Now, navigate to the index page of your S3 bucket:
-# https://<my-s3bucket-name>.s3.amazonaws.com/index.html
+# Now, navigate to the index page of your app (<app-url>).
 ```
 
 You'll see latest graph of the temperature reported from the device, current
 heater status (on/off), and the switch. Switching the heater is possible only
-for authenticated and authorized users; first of all, you need to sign up:
-click the "Sign Up" link at the top of the page, enter credentials, and push
-the "Sign Up" button. You'll be prompted for the verification code sent to your
-email, and after the code is entered, you'll be signed in.
+for authenticated and authorized users; click "Sign in with Google".
+
+NOTE: if it complains about mismatched redirect URI, just wait a couple of
+minutes: the settings in Google Console might need some time to take effect.
 
 If you try to switch the heater status, you'll get the message saying that
 you are not authorized to do that. Now, you need to authorize your user to
 manage heater.
 
-For that, navigate to the [AWS Cognito console](https://console.aws.amazon.com/cognito/home), click "Manage your User
-Pools", select "user_pool_for_<device_id>", click "Users and groups", and
-you'll see the list of your registered users. At this point, you should see
-your user there; click on it, then click "Add to group", select the group
-"heater_admins", and finally click "Add to group". After that, you can sign out
-from your heater app, sign in back, and switching the heater should result
-in the state being changed.
+For that, navigate to the [AWS Cognito console](https://console.aws.amazon.com/cognito/home),
+click "Manage Federated Identities", select "identity_pool_for_<device_id>",
+click "Edit identity pool", expand "Authentication providers", click on the
+"Google+" tab, and in the section "Authenticated role selection" change
+"Use default role" to "Choose role with rules". Here, you can use whatever
+rule you want. For example, in order to authorize some particular user, you
+can specify Claim: "email", match type: "Equals", value: "addr@domain.com",
+and pick a role "my-heater-myHeaterAdminRole-XXXXXXXX".
+
+After that, you can sign out from your heater app, sign in back, and switching
+the heater should result in the state being changed.

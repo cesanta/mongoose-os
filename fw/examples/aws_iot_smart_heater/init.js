@@ -40,7 +40,7 @@ let getStatus = function() {
 RPC.addHandler('Heater.SetState', function(args) {
   //GPIO.write(pin, args.state || 0);
   print('setstate', JSON.stringify(args));
-  heaterOn = args.state;
+  heaterOn = args.on;
   return true;
 });
 

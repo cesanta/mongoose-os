@@ -41,6 +41,12 @@ Parameters:
     MinValue: '5'
     MaxValue: '10000'
     ConstraintDescription: must be between 5 and 10000
+  GoogleClientID:
+    Description: Google OAuth2 Client ID
+    Type: String
+    AllowedPattern: ".+"
+    MinLength: '1'
+    MaxLength: '2048'
 
 Conditions:
   EMPTY_CognitoIdentityPoolName:
@@ -206,6 +212,8 @@ Resources:
     Type: AWS::S3::Bucket
     Properties:
       AccessControl: PublicRead
+      WebsiteConfiguration:
+        IndexDocument: index.html
 
   heaterVarsFile:
     Type: Custom::heaterVarsFile
@@ -228,8 +236,7 @@ Resources:
           {"Fn::Join": ["", ["  identityPoolId: '", { "Ref": "CognitoIdentityPool" }, "',"]]},
           {"Fn::Join": ["", ["  accountId: '", { "Ref": "AWS::AccountId" }, "',"]]},
           {"Fn::Join": ["", ["  addIotPolicyLambdaName: '", { "Ref": "myAddIotPolicyLambdaFunction" }, "',"]]},
-          {"Fn::Join": ["", ["  userPoolId: '", { "Ref": "CognitoUserPool" }, "',"]]},
-          {"Fn::Join": ["", ["  userPoolClientId: '", { "Ref": "CognitoUserPoolClient" }, "',"]]},
+          {"Fn::Join": ["", ["  googleOAuthClientId: '", { "Ref": "GoogleClientID" }, "',"]]},
           "};",
           ""
         ]]
@@ -371,15 +378,6 @@ Resources:
           - { "Fn::Join": ["", ["identity_pool_for_", {"Ref": "DeviceID"}]] }
           - Ref: CognitoIdentityPoolName
 
-        CognitoIdentityProviders:
-          - ProviderName:
-              Fn::Join:
-              - ''
-              - - 'cognito-idp.'
-                - Ref: AWS::Region
-                - ".amazonaws.com/"
-                - Ref: CognitoUserPool
-            ClientId: { "Ref": "CognitoUserPoolClient" }
         #DeveloperProviderName:
           #Fn::If:
           #- EMPTY_DeveloperProviderName
@@ -390,11 +388,8 @@ Resources:
           #- EMPTY_OpenIdConnectProviderARNs
           #- Ref: AWS::NoValue
           #- Ref: OpenIdConnectProviderARNs
-        #SupportedLoginProviders:
-          #Fn::If:
-          #- EMPTY_SupportedLoginProviders
-          #- Ref: AWS::NoValue
-          #- Ref: SupportedLoginProviders
+        SupportedLoginProviders:
+          accounts.google.com: { "Ref": "GoogleClientID" }
 
   CognitoIdentityPoolRoles:
     Type: Custom::CognitoIdentityPoolRoles
@@ -417,24 +412,6 @@ Resources:
             Fn::GetAtt:
             - CognitoUnauthenticatedRole
             - Arn
-        # Actual parameter name for setIdentityPoolRoles is "RoleMappings", but
-        # it's a mapping from the non-constant id to an object, and it cannot
-        # be expressed directly. So here we have to use our own parameter
-        # "MyRoleMappings" with Key and Val properties, and our custom resource
-        # handler converts it to a proper RoleMappings.
-        MyRoleMappings:
-          - Key:
-              Fn::Join:
-              - ''
-              - - 'cognito-idp.'
-                - Ref: AWS::Region
-                - ".amazonaws.com/"
-                - Ref: CognitoUserPool
-                - ":"
-                - Ref: CognitoUserPoolClient
-            Val:
-              AmbiguousRoleResolution: AuthenticatedRole
-              Type: Token
 
   CognitoUnauthenticatedRole:
     Type: AWS::IAM::Role
@@ -597,70 +574,6 @@ Resources:
                 - Ref: AWS::AccountId
                 - ":topicfilter/smart_heater_*/rpc"
 
-  CognitoUserPool:
-    Type: Custom::CognitoUserPool
-    Properties:
-      ServiceToken:
-        Fn::GetAtt:
-        - CognitoLambdaFunction
-        - Arn
-      Options:
-        PoolName:
-          Fn::If:
-          - EMPTY_CognitoUserPoolName
-          - { "Fn::Join": ["", ["user_pool_for_", {"Ref": "DeviceID"}]] }
-          - Ref: CognitoUserPoolName
-        AutoVerifiedAttributes:
-          - email
-        Policies:
-          PasswordPolicy:
-            MinimumLength: 6
-            RequireLowercase: false
-            RequireNumbers: false
-            RequireSymbols: false
-            RequireUppercase: false
-        Schema:
-          - Name: email
-            StringAttributeConstraints:
-              MinLength: "0"
-              MaxLength: "2048"
-            DeveloperOnlyAttribute: false
-            Required: true
-            AttributeDataType: "String"
-            Mutable: true
-
-  CognitoUserPoolClient:
-    Type: Custom::CognitoUserPoolClient
-    Properties:
-      ServiceToken:
-        Fn::GetAtt:
-        - CognitoLambdaFunction
-        - Arn
-      Options:
-        ClientName:
-          Fn::If:
-          - EMPTY_CognitoUserPoolClientName
-          - { "Fn::Join": ["", ["user_pool_client_for_", {"Ref": "DeviceID"}]] }
-          - Ref: CognitoUserPoolClientName
-        UserPoolId: { "Ref": "CognitoUserPool" }
-        # NOTE: App with a secret won't work in SDK for browser, so we have to
-        # switch off secret generation
-        GenerateSecret: false
-
-  CognitoUserGroup:
-    Type: Custom::CognitoUserGroup
-    Properties:
-      ServiceToken:
-        Fn::GetAtt:
-        - CognitoLambdaFunction
-        - Arn
-      Options:
-        UserPoolId: { "Ref": "CognitoUserPool" }
-        GroupName: heater_admins
-        RoleArn:
-          Fn::GetAtt:
-          - myHeaterAdminRole
-          - Arn
   # }}}
 
   # Permissive IoT policy {{{
@@ -736,6 +649,16 @@ Outputs:
     Value:
       Ref: myS3Bucket
     Description: Name of the newly created S3 bucket
+  S3BucketWebsite:
+    Value:
+      Fn::Join:
+      - ""
+      - - "http://"
+        - Ref: myS3Bucket
+        - ".s3-website-"
+        - Ref: AWS::Region
+        - ".amazonaws.com"
+    Description: URL of the s3 bucket
   TableName:
     Value:
       Ref: myDynamoDBTable

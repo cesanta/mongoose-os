@@ -1,20 +1,16 @@
-var cognitoUser;
 var mqttClientAuth;
 var mqttClientUnauth;
 var getStateIntervalId;
 var heaterOn = false;
+
+var googleUser;
+var GoogleAuth;
 
 // Configure Cognito identity pool
 AWS.config.region = heaterVars.region;
 AWS.config.credentials = new AWS.CognitoIdentityCredentials({
   IdentityPoolId: heaterVars.identityPoolId,
 });
-
-var poolData = {
-  UserPoolId: heaterVars.userPoolId,
-  ClientId: heaterVars.userPoolClientId,
-};
-var userPool = new AWSCognito.CognitoIdentityServiceProvider.CognitoUserPool(poolData);
 
 var myAnonymousAccessCreds = new AWS.Credentials({
   accessKeyId: heaterVars.anonUserAccessKeyId,
@@ -132,9 +128,7 @@ function initClient(requestUrl, opts) {
 
   client.onConnectionLost = function (resp) {
     console.log('onConnectionLost, resp:', resp);
-    if (opts.onDisconnected) {
-      opts.onDisconnected();
-    }
+    var reconnect = false;
     if (resp.errorCode === 8 && resp.errorMessage === "AMQJS0008I Socket closed.") {
       // Error reporting in case of permission violation in MQTT is awful: when
       // the client tries to do something which is not allowed, the connection
@@ -146,10 +140,130 @@ function initClient(requestUrl, opts) {
           delete client.myrequests[key];
         }
       }
+      reconnect = true;
+    }
+    if (opts.onDisconnected) {
+      opts.onDisconnected(reconnect);
     }
   };
 }
 
+function onSuccess(_googleUser) {
+  googleUser = _googleUser;
+  console.log('Logged in as: ' + googleUser.getBasicProfile().getName());
+  console.log('authResponse: ', googleUser.getAuthResponse());
+  console.log('authResponse2: ', googleUser.getAuthResponse(true));
+  console.log("all:", googleUser);
+
+  gapi.client.load('oauth2', 'v2', function() {
+    var request = gapi.client.oauth2.userinfo.get();
+    request.execute(
+      function(resp) {
+        console.log('HEY resp:', resp);
+        //serviceUser = resp;
+
+        // Add the User's Id Token to the Cognito credentials login map.
+        var logins = {
+          'accounts.google.com': googleUser.getAuthResponse().id_token,
+        };
+
+        AWS.config.credentials.params.Logins = logins;
+        // expire the credentials so they'll be refreshed on the next request
+        AWS.config.credentials.expired = true;
+
+        // call refresh method in order to authenticate user and get new temp credentials
+        AWS.config.credentials.refresh((error) => {
+          var eventHandler = uiEventHandler;
+          if (error) {
+            console.error(error);
+            eventHandler(EV_STATUS, "Error: " + JSON.stringify(error));
+            eventHandler(EV_SIGN_DONE);
+          } else {
+            console.log('Successfully logged!');
+            console.log('identityId:', AWS.config.credentials.identityId);
+            console.log('accessKeyId:', AWS.config.credentials.accessKeyId);
+
+            eventHandler(EV_STATUS, "Attaching IoT policy...");
+
+            //-- Call lambda to attach IoT policy
+            var lambda = new AWS.Lambda({
+              region: heaterVars.region,
+              credentials: myAnonymousAccessCreds,
+            });
+            lambda.invoke({
+              FunctionName: heaterVars.addIotPolicyLambdaName,
+              Payload: JSON.stringify({identityId: AWS.config.credentials.identityId}),
+            }, function(err, data) {
+              if (err) {
+                console.log('lambda err:', err, err.stack);
+                eventHandler(EV_STATUS, "Error: " + JSON.stringify(err));
+                eventHandler(EV_SIGN_DONE);
+              } else {
+                console.log('lambda ok:', data);
+                eventHandler(EV_STATUS, "");
+                eventHandler(EV_SIGNED_IN, {username: googleUser.getBasicProfile().getName()});
+                eventHandler(EV_SIGN_DONE);
+
+                // connect to MQTT
+                var requestUrl = SigV4Utils.getSignedUrl(
+                  'wss',
+                  'data.iot.' + heaterVars.region + '.amazonaws.com',
+                  '/mqtt',
+                  'iotdevicegateway',
+                  heaterVars.region,
+                  AWS.config.credentials.accessKeyId,
+                  AWS.config.credentials.secretAccessKey,
+                  AWS.config.credentials.sessionToken
+                );
+
+                var initClientAuthOpts = {
+                  onConnected: function(client) {
+                    mqttClientAuth = client;
+                  },
+                  onDisconnected: function(reconnect) {
+                    mqttClientAuth = undefined;
+                    if (reconnect) {
+                      console.log('reconnecting authenticated...');
+                      setTimeout(function() {
+                        initClient(requestUrl, initClientAuthOpts);
+                      }, 100);
+                    } else {
+                      console.log('do not reconnect authenticated');
+                    }
+                  },
+                };
+
+                initClient(requestUrl, initClientAuthOpts);
+              }
+            });
+          }
+        });
+      }
+    );
+  });
+}
+function onFailure(error) {
+  console.log(error);
+}
+function gapiLoaded() {
+  gapi.load('auth2', function() {
+    gapi.auth2.init({
+      'client_id': heaterVars.googleOAuthClientId,
+    }).then((_GoogleAuth) => {
+      GoogleAuth = _GoogleAuth;
+      console.log("google auth initialized", GoogleAuth);
+    });
+    gapi.signin2.render('my-signin2', {
+      'scope': 'email',
+      'width': 240,
+      'height': 50,
+      'longtitle': true,
+      'theme': 'dark',
+      'onsuccess': onSuccess,
+      'onfailure': onFailure
+      });
+  });
+}
 
 AWS.config.credentials.params.Logins = {};
 AWS.config.credentials.Logins = {};
@@ -225,190 +339,28 @@ AWS.config.credentials.get(function(err) {
   initClient(requestUrl, initClientOpts);
 });
 
-function signIn(username, password, confirmationCode, eventHandler) {
-  eventHandler(EV_SIGN_START);
-  eventHandler(EV_STATUS, "Signing in...");
-
-  var userData = {
-    Username: username,
-    Pool: userPool
-  };
-
-  cognitoUser = new AWSCognito.CognitoIdentityServiceProvider.CognitoUser(userData);
-
-  var doSignIn = function() {
-    var authenticationData = {
-      Username: username,
-      Password: password,
-    };
-    var authenticationDetails = new AWSCognito.CognitoIdentityServiceProvider.AuthenticationDetails(authenticationData);
-    cognitoUser.authenticateUser(authenticationDetails, {
-      onSuccess: function (result) {
-        console.log('result:', result);
-        console.log('access token: ' + result.getAccessToken().getJwtToken());
-
-        console.log('You are now logged in.');
-
-        // Add the User's Id Token to the Cognito credentials login map.
-        var logins = {};
-        logins['cognito-idp.' + heaterVars.region + '.amazonaws.com/' + heaterVars.userPoolId] = result.getIdToken().getJwtToken();
-
-        AWS.config.credentials.params.Logins = logins;
-        // expire the credentials so they'll be refreshed on the next request
-        AWS.config.credentials.expired = true;
-
-        // call refresh method in order to authenticate user and get new temp credentials
-        AWS.config.credentials.refresh((error) => {
-          if (error) {
-            console.error(error);
-            eventHandler(EV_STATUS, "Error: " + JSON.stringify(error));
-            eventHandler(EV_SIGN_DONE);
-          } else {
-            console.log('Successfully logged!');
-            console.log('identityId:', AWS.config.credentials.identityId);
-            console.log('accessKeyId:', AWS.config.credentials.accessKeyId);
-
-            eventHandler(EV_STATUS, "Attaching IoT policy...");
-
-            //-- Call lambda to attach IoT policy
-            var lambda = new AWS.Lambda({
-              region: heaterVars.region,
-              credentials: myAnonymousAccessCreds,
-            });
-            lambda.invoke({
-              FunctionName: heaterVars.addIotPolicyLambdaName,
-              Payload: JSON.stringify({identityId: AWS.config.credentials.identityId}),
-            }, function(err, data) {
-              if (err) {
-                console.log('lambda err:', err, err.stack);
-                eventHandler(EV_STATUS, "Error: " + JSON.stringify(err));
-                eventHandler(EV_SIGN_DONE);
-              } else {
-                console.log('lambda ok:', data);
-                eventHandler(EV_STATUS, "");
-                eventHandler(EV_SIGNED_IN, {username: username});
-                eventHandler(EV_SIGN_DONE);
-
-                // connect to MQTT
-                var requestUrl = SigV4Utils.getSignedUrl(
-                  'wss',
-                  'data.iot.' + heaterVars.region + '.amazonaws.com',
-                  '/mqtt',
-                  'iotdevicegateway',
-                  heaterVars.region,
-                  AWS.config.credentials.accessKeyId,
-                  AWS.config.credentials.secretAccessKey,
-                  AWS.config.credentials.sessionToken
-                );
-
-                var initClientAuthOpts = {
-                  onConnected: function(client) {
-                    mqttClientAuth = client;
-                  },
-                  onDisconnected: function(client) {
-                    mqttClientAuth = undefined;
-                    console.log('reconnecting authenticated...');
-                    setTimeout(function() {
-                      initClient(requestUrl, initClientAuthOpts);
-                    }, 100);
-
-                  },
-                };
-
-                initClient(requestUrl, initClientAuthOpts);
-              }
-            });
-          }
-        });
-      },
-
-      onFailure: function (err) {
-        eventHandler(EV_SIGN_DONE);
-        eventHandler(EV_STATUS, "Error: " + JSON.stringify(err));
-        alert(err);
-      },
-
-      newPasswordRequired: function(userAttributes, requiredAttributes) {
-        // User was signed up by an admin and must provide new
-        // password and required attributes, if any, to complete
-        // authentication.
-
-        // the api doesn't accept this field back
-        delete userAttributes.email_verified;
-
-        var newPassword = prompt('Enter new password ', '');
-        // Get these details and call
-        cognitoUser.completeNewPasswordChallenge(newPassword, userAttributes, this);
-      },
-    });
-  }
-
-  if (confirmationCode) {
-    cognitoUser.confirmRegistration(confirmationCode, true, function(err, result) {
-      if (err) {
-        alert(err);
-        eventHandler(EV_SIGN_DONE);
-        eventHandler(EV_STATUS, "Error: " + JSON.stringify(err));
-        return;
-      }
-      console.log('call result: ' + result);
-      doSignIn();
-    });
-  } else {
-    doSignIn();
-  }
-
-}
-
-function signUp(username, password, email, eventHandler) {
-  eventHandler(EV_SIGN_START);
-  eventHandler(EV_STATUS, "Signing up...");
-
-  var attributeList = [
-    new AWSCognito.CognitoIdentityServiceProvider.CognitoUserAttribute({
-      Name : 'email',
-      Value : email
-    })
-  ];
-
-  userPool.signUp(username, password, attributeList, null, function(err, result) {
-    if (err) {
-      alert(err);
-      eventHandler(EV_SIGN_DONE);
-      eventHandler(EV_STATUS, "Error: " + JSON.stringify(err));
-      return;
-    }
-    var cognitoUser = result.user;
-    console.log('user', result.user);
-    console.log('username is ' + cognitoUser.getUsername());
-
-    openEmailCodeDialog(function(code) {
-      signIn(
-        cognitoUser.getUsername(), password,
-        code,
-        eventHandler
-      );
-    });
-  });
-}
-
-function signOut(eventHandler) {
-  eventHandler(EV_STATUS, "Signing out...");
+function signOut() {
+  var eventHandler = uiEventHandler;
   mqttClientAuth.disconnect();
+  eventHandler(EV_STATUS, "Signing out...");
+
   AWS.config.credentials.params.Logins = {};
   AWS.config.credentials.Logins = {};
   AWS.config.credentials.expired = true;
-  cognitoUser.signOut();
+  AWS.config.credentials.clearCachedId();
   AWS.config.credentials.refresh((error) => {
+
+    GoogleAuth.signOut().then(() => {
+      eventHandler(EV_STATUS, "");
+      eventHandler(EV_SIGNED_OUT);
+    });
+    console.log(gapi.auth2.GoogleAuth);
+
     if (error) {
       // TODO: figure why the error arises
       console.error(error);
       //eventHandler(EV_STATUS, "Error: " + JSON.stringify(error));
-      eventHandler(EV_STATUS, "");
-    } else {
-      eventHandler(EV_STATUS, "");
     }
-    eventHandler(EV_SIGNED_OUT);
   });
 }
 
@@ -481,15 +433,11 @@ function uiEventHandler(ev, data) {
       enableLoginInputs(true);
       break;
     case EV_SIGNED_IN:
-      $("#signup_div").hide();
-      $("#signin_div").hide();
       $("#signedin_div").show();
       $("#signedin_username_span").text(data.username);
       break;
     case EV_SIGNED_OUT:
-      $("#signup_div").hide();
       $("#signedin_div").hide();
-      $("#signin_div").show();
       break;
     case EV_STATUS:
       $("#status").text(data);
@@ -498,29 +446,6 @@ function uiEventHandler(ev, data) {
 }
 
 $(document).ready(function() {
-  $("#signup_link").click(function() {
-    $("#signup_div").show();
-    $("#signin_div").hide();
-  });
-
-  $("#signin_link").click(function() {
-    $("#signin_div").show();
-    $("#signup_div").hide();
-  });
-
-  $("#signin_button").click(function() {
-    signIn($("#signin_username").val(), $("#signin_password").val(), undefined, uiEventHandler);
-  });
-
-  $("#signup_button").click(function() {
-    signUp(
-      $("#signup_username").val(),
-      $("#signup_password").val(),
-      $("#signup_email").val(),
-      uiEventHandler
-    );
-  });
-
   $("#signout_button").click(function() {
     signOut(uiEventHandler);
   });
