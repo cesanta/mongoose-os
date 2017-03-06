@@ -695,11 +695,12 @@ static void mg_rpc_describe_handler(struct mg_rpc_request_info *ri,
   struct mg_str name = mg_mk_str_n(t.ptr, t.len);
   SLIST_FOREACH(hi, &ri->rpc->handlers, handlers) {
     if (mg_vcmp(&name, hi->method) == 0) {
-      char buf[100];
-      struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+      struct mbuf mbuf;
+      struct json_out out = JSON_OUT_MBUF(&mbuf);
       json_printf(&out, "{name: %.*Q, args_fmt: %Q}", t.len, t.ptr,
                   hi->args_fmt);
-      mg_rpc_send_responsef(ri, "%s", buf);
+      mg_rpc_send_responsef(ri, "%.*s", mbuf.len, mbuf.buf);
+      mbuf_free(&mbuf);
       return;
     }
   }
