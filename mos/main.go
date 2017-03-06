@@ -6,7 +6,10 @@ package main
 
 import (
 	"context"
+	cRand "crypto/rand"
 	"fmt"
+	"math/big"
+	mRand "math/rand"
 	"os"
 	"path/filepath"
 	"time"
@@ -142,6 +145,10 @@ func consoleJunkHandler(data []byte) {
 }
 
 func main() {
+	seed1 := time.Now().UnixNano()
+	seed2, _ := cRand.Int(cRand.Reader, big.NewInt(4000000000))
+	mRand.Seed(seed1 ^ seed2.Int64())
+
 	// If no arguments are given, show help and start UI
 	isUI = len(os.Args) == 1
 

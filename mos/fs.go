@@ -7,16 +7,23 @@ import (
 	"io"
 	"os"
 	"path"
+	"time"
 
 	"cesanta.com/clubby"
 	fwfilesystem "cesanta.com/fw/defs/fs"
 	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"
+	"github.com/golang/glog"
 	flag "github.com/spf13/pflag"
 )
 
 const (
 	chunkSize = 512
+)
+
+var (
+	fsOpTimeout  = 3 * time.Second
+	fsOpAttempts = 3
 )
 
 func listFiles(ctx context.Context, devConn *dev.DevConn) ([]string, error) {
@@ -44,18 +51,26 @@ func getFile(ctx context.Context, devConn *dev.DevConn, name string) (string, er
 	contents := []byte{}
 	var offset int64
 
+	attempts := fsOpAttempts
 	for {
 		// Get the next chunk of data
-		chunk, err := devConn.CFilesystem.Get(ctx, &fwfilesystem.GetArgs{
+		ctx2, _ := context.WithTimeout(ctx, fsOpTimeout)
+		glog.V(1).Infof("Getting %s %d @ %d (attempts %d)", name, chunkSize, offset, attempts)
+		chunk, err := devConn.CFilesystem.Get(ctx2, &fwfilesystem.GetArgs{
 			Filename: &name,
 			Offset:   clubby.Int64(offset),
 			Len:      clubby.Int64(chunkSize),
 		})
 		if err != nil {
+			attempts -= 1
+			if errors.Cause(err) == context.DeadlineExceeded && attempts > 0 {
+				continue
+			}
 			// TODO(dfrank): probably handle out of memory error by retrying with a
 			// smaller chunk size
 			return "", errors.Trace(err)
 		}
+		attempts = fsOpAttempts
 
 		decoded, err := base64.StdEncoding.DecodeString(*chunk.Data)
 		if err != nil {
@@ -123,19 +138,31 @@ func fsPutData(ctx context.Context, devConn *dev.DevConn, r io.Reader, devFilena
 	data := make([]byte, chunkSize)
 	appendFlag := false
 
+	attempts := fsOpAttempts
 	for {
 		// Read the next chunk from the file.
 		n, readErr := r.Read(data)
 		if n > 0 {
-			err := devConn.CFilesystem.Put(ctx, &fwfilesystem.PutArgs{
-				Filename: &devFilename,
-				Data:     clubby.String(base64.StdEncoding.EncodeToString(data[:n])),
-				Append:   clubby.Bool(appendFlag),
-			})
-			if err != nil {
-				return errors.Trace(err)
+			for attempts > 0 {
+				ctx2, _ := context.WithTimeout(ctx, fsOpTimeout)
+				glog.V(1).Infof("Sending %s %d (attempts %d)", devFilename, n, attempts)
+				err := devConn.CFilesystem.Put(ctx2, &fwfilesystem.PutArgs{
+					Filename: &devFilename,
+					Data:     clubby.String(base64.StdEncoding.EncodeToString(data[:n])),
+					Append:   clubby.Bool(appendFlag),
+				})
+				if err != nil {
+					if errors.Cause(err) == context.DeadlineExceeded && attempts > 0 {
+						attempts -= 1
+						continue
+					}
+					return errors.Trace(err)
+				} else {
+					break
+				}
 			}
 		}
+		attempts = fsOpAttempts
 		if readErr != nil {
 			if errors.Cause(readErr) == io.EOF {
 				// Reached EOF, quit the loop normally.
