@@ -697,6 +697,7 @@ static void mg_rpc_describe_handler(struct mg_rpc_request_info *ri,
     if (mg_vcmp(&name, hi->method) == 0) {
       struct mbuf mbuf;
       struct json_out out = JSON_OUT_MBUF(&mbuf);
+      mbuf_init(&mbuf, 100);
       json_printf(&out, "{name: %.*Q, args_fmt: %Q}", t.len, t.ptr,
                   hi->args_fmt);
       mg_rpc_send_responsef(ri, "%.*s", mbuf.len, mbuf.buf);
