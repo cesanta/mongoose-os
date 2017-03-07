@@ -290,6 +290,7 @@ $(FW_MANIFEST): $(BOOT_BIN) $(BOOT_CFG_0) $(BOOT_CFG_1) \
 $(BOOT_BIN) $(MK_BOOT_CFG_BIN): $(wildcard $(BOOT_PATH)/src/*) \
                                 $(wildcard $(BOOT_PATH)/tools/mkcfg.c)
 	$(vecho) "MAKE  $@"
+	$(Q) mkdir -p $(BOOT_BUILD_DIR)
 	$(Q) $(MAKE) -C $(BOOT_PATH) -f Makefile.build \
 	             MGOS_PATH=$(realpath $(MGOS_PATH)) \
 	             APP=mg-boot TOOLCHAIN=gcc \
