@@ -21,7 +21,8 @@ In more detail, this is what happens:
 mos flash mos-esp8266
 
 # Get device id (e.g. esp8266_DA84C1), we'll need it later
-mos config-get device.id
+DEVICE_ID=$(mos config-get device.id)
+MY_EMAIL=my@email.com
 
 # Instantiate AWS stack. In the command below, replace <device_id> with the ID
 # you obtained above, and <your_email_address> with your actual email address.
@@ -30,8 +31,8 @@ mos config-get device.id
 aws cloudformation create-stack \
     --stack-name my-internet-button \
     --parameters \
-        ParameterKey=TopicName,ParameterValue=<device_id>/button_pressed \
-        ParameterKey=SubscriptionEmail,ParameterValue=<your_email_address> \
+        ParameterKey=TopicName,ParameterValue=$DEVICE_ID/button_pressed \
+        ParameterKey=SubscriptionEmail,ParameterValue=$MY_EMAIL \
     --capabilities CAPABILITY_IAM \
     --template-body file://aws_button_template.json
 
@@ -48,8 +49,7 @@ aws cloudformation wait stack-create-complete --stack-name my-internet-button
 mos put init.js
 
 # Set wifi configuration
-mos config-set wifi.sta.enable=true wifi.ap.enable=false \
-               wifi.sta.ssid=WIFI_SSID wifi.sta.pass=WIFI_PASS
+mos wifi WIFI_SSID WIFI_PASSWORD
 
 # Setup device to connect to AWS IoT
 mos aws-iot-setup --aws-iot-policy=mos-default
