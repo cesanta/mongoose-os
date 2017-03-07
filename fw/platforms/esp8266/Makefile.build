@@ -281,11 +281,10 @@ HEAP_LOG_FLAGS =
 
 ifneq "${MGOS_ENABLE_HEAP_LOG}${MGOS_ENABLE_CALL_TRACE}" "00"
   HEAP_LOG_FLAGS += -DMGOS_ENABLE_HEAP_LOG
-  LD_WRAPPERS += -Wl,--wrap=pvPortCalloc \
-                 -Wl,--wrap=pvPortMalloc \
-                 -Wl,--wrap=pvPortZalloc \
-                 -Wl,--wrap=pvPortRealloc \
-                 -Wl,--wrap=vPortFree
+  LD_WRAPPERS += -Wl,--wrap=umm_calloc \
+                 -Wl,--wrap=umm_malloc \
+                 -Wl,--wrap=umm_realloc \
+                 -Wl,--wrap=umm_free
 endif
 ifeq "${MGOS_ENABLE_CALL_TRACE}" "1"
   MGOS_SRCS += cs_heap_trace.c

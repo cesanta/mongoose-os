@@ -16,7 +16,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "esp_mem_layout.h"
+#include "umm_malloc_cfg.h"
 
 /*
  * global flag that is needed for heap trace: we shouldn't send anything to
@@ -29,14 +29,10 @@ extern int cs_heap_shim;
 /* Defined in linker script. */
 extern unsigned int _heap_start;
 
-extern void *__real_pvPortRealloc(void *pv, size_t size, const char *file,
-                                  int line);
-extern void *__real_pvPortMalloc(size_t xWantedSize, const char *file,
-                                 int line);
-extern void *__real_pvPortCalloc(size_t num, size_t xWantedSize,
-                                 const char *file, int line);
-extern void *__real_pvPortZalloc(size_t size, const char *file, int line);
-extern void __real_vPortFree(void *pv, const char *file, int line);
+extern void *__real_umm_malloc(size_t size);
+extern void *__real_umm_calloc(size_t num, size_t size);
+extern void *__real_umm_realloc(void *ptr, size_t size);
+extern void __real_umm_free(void *ptr);
 
 extern void mgos_wdt_feed(void);
 
@@ -182,7 +178,7 @@ static void add_log_item(enum item_type type, void *ptr, size_t size,
   }
 
   if (plog == NULL) {
-    plog = __real_pvPortCalloc(1, sizeof(*plog), NULL, 0);
+    plog = __real_umm_calloc(1, sizeof(*plog));
     plog_allocated = 1;
   }
 
@@ -251,7 +247,8 @@ static void flush_log_items(void) {
     }
 
     fprintf(stderr, "\nhlog_param:{\"heap_start\":%u, \"heap_end\":%u}\n",
-            (unsigned int) (&_heap_start), (unsigned int) ESP_DRAM0_END);
+            (unsigned int) UMM_MALLOC_CFG__HEAP_ADDR,
+            (unsigned int) UMM_MALLOC_CFG__HEAP_END);
 
     /* fprintf above may have use malloc and already flushed the log.
      * Ideally, we should not be touching heap while flushing the log,
@@ -263,7 +260,7 @@ static void flush_log_items(void) {
       echo_log_item(&plog->items[i]);
     }
 
-    __real_vPortFree(plog, NULL, 0);
+    __real_umm_free(plog);
     plog = NULL;
     fprintf(stderr, "--- uart initialized ---\n");
     mgos_wdt_feed();
@@ -274,13 +271,13 @@ static void flush_log_items(void) {
  * Wrappers for heap functions
  */
 
-void *__wrap_pvPortRealloc(void *pv, size_t size, const char *file, int line) {
+void *__wrap_umm_realloc(void *ptr, size_t size) {
   void *ret = NULL;
   if (uart_initialized) {
     flush_log_items();
-    echo_log_realloc_req(size, cs_heap_shim, pv);
+    echo_log_realloc_req(size, cs_heap_shim, ptr);
   }
-  ret = __real_pvPortRealloc(pv, size, file, line);
+  ret = __real_umm_realloc(ptr, size);
   if (uart_initialized) {
     mgos_wdt_feed();
     echo_log_alloc_res(ret);
@@ -296,70 +293,52 @@ void *__wrap_pvPortRealloc(void *pv, size_t size, const char *file, int line) {
   return ret;
 }
 
-void *__wrap_pvPortMalloc(size_t xWantedSize, const char *file, int line) {
+void *__wrap_umm_malloc(size_t size) {
   void *ret = NULL;
   if (uart_initialized) {
     flush_log_items();
-    echo_log_malloc_req(xWantedSize, cs_heap_shim);
+    echo_log_malloc_req(size, cs_heap_shim);
   }
-  ret = __real_pvPortMalloc(xWantedSize, file, line);
+  ret = __real_umm_malloc(size);
   if (uart_initialized) {
     mgos_wdt_feed();
     echo_log_alloc_res(ret);
   } else {
-    add_log_item(ITEM_TYPE_MALLOC, ret, xWantedSize, cs_heap_shim);
+    add_log_item(ITEM_TYPE_MALLOC, ret, size, cs_heap_shim);
   }
 
   cs_heap_shim = 0;
   return ret;
 }
 
-void *__wrap_pvPortZalloc(size_t xWantedSize, const char *file, int line) {
+void *__wrap_umm_calloc(size_t num, size_t size) {
   void *ret = NULL;
   if (uart_initialized) {
     flush_log_items();
-    echo_log_malloc_req(xWantedSize, cs_heap_shim);
+    echo_log_calloc_req(num * size, cs_heap_shim);
   }
-  ret = __real_pvPortZalloc(xWantedSize, file, line);
-  if (uart_initialized) {
-    mgos_wdt_feed();
-    echo_log_alloc_res(ret);
-  } else {
-    add_log_item(ITEM_TYPE_ZALLOC, ret, xWantedSize, cs_heap_shim);
-  }
-  cs_heap_shim = 0;
-  return ret;
-}
-
-void *__wrap_pvPortCalloc(size_t num, size_t xWantedSize, const char *file,
-                          int line) {
-  void *ret = NULL;
-  if (uart_initialized) {
-    flush_log_items();
-    echo_log_calloc_req(xWantedSize, cs_heap_shim);
-  }
-  ret = __real_pvPortCalloc(num, xWantedSize, file, line);
+  ret = __real_umm_calloc(num, size);
 
   if (uart_initialized) {
     mgos_wdt_feed();
     echo_log_alloc_res(ret);
   } else {
-    add_log_item(ITEM_TYPE_CALLOC, ret, xWantedSize, cs_heap_shim);
+    add_log_item(ITEM_TYPE_CALLOC, ret, size, cs_heap_shim);
   }
 
   cs_heap_shim = 0;
   return ret;
 }
 
-void __wrap_vPortFree(void *pv, const char *file, int line) {
+void __wrap_umm_free(void *ptr) {
   if (uart_initialized) {
     flush_log_items();
     mgos_wdt_feed();
-    echo_log_free(pv, cs_heap_shim);
+    echo_log_free(ptr, cs_heap_shim);
   } else {
-    add_log_item(ITEM_TYPE_FREE, pv, 0, cs_heap_shim);
+    add_log_item(ITEM_TYPE_FREE, ptr, 0, cs_heap_shim);
   }
-  __real_vPortFree(pv, file, line);
+  __real_umm_free(ptr);
   cs_heap_shim = 0;
 }
 
