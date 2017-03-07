@@ -42,10 +42,8 @@ type CreateSnapshotResult struct {
 
 type UpdateArgs struct {
 	Blob           *string `json:"blob,omitempty"`
-	Blob_type      *string `json:"blob_type,omitempty"`
-	Blob_url       *string `json:"blob_url,omitempty"`
 	Commit_timeout *int64  `json:"commit_timeout,omitempty"`
-	Section        *string `json:"section,omitempty"`
+	Url            *string `json:"url,omitempty"`
 	Version        *string `json:"version,omitempty"`
 }
 
@@ -382,20 +380,12 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
           "doc": "Image as a string, if appropriate.",
           "type": "string"
         },
-        "blob_type": {
-          "doc": "Type of the blob. Valid values: manifest, zip.",
-          "type": "string"
-        },
-        "blob_url": {
-          "doc": "URL pointing to the image if it's too big to fit in the ` + "`" + `blob` + "`" + `.",
-          "type": "string"
-        },
         "commit_timeout": {
           "doc": "Normally update is committed if firmware init succeeds, If timeout is set and non-zero, the update will require an explicit commit. If the specified time expires without a commit, update is rolled back.",
           "type": "integer"
         },
-        "section": {
-          "doc": "Name of the section to update.",
+        "url": {
+          "doc": "URL pointing to the image if it's too big to fit in the ` + "`" + `blob` + "`" + `.",
           "type": "string"
         },
         "version": {

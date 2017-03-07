@@ -29,9 +29,7 @@ static void handle_update_req(struct mg_rpc_request_info *ri, void *cb_arg,
                               struct mg_rpc_frame_info *fi,
                               struct mg_str args) {
   char *blob_url = NULL;
-  struct json_token section_tok = JSON_INVALID_TOKEN;
-  struct json_token blob_url_tok = JSON_INVALID_TOKEN;
-  struct json_token blob_type_tok = JSON_INVALID_TOKEN;
+  struct json_token url_tok = JSON_INVALID_TOKEN;
   int commit_timeout = 0;
   struct update_context *ctx = NULL;
 
@@ -43,35 +41,25 @@ static void handle_update_req(struct mg_rpc_request_info *ri, void *cb_arg,
     goto clean;
   }
 
-  json_scanf(args.p, args.len, ri->args_fmt, &section_tok, &blob_url_tok,
-             &blob_type_tok, &commit_timeout);
+  json_scanf(args.p, args.len, ri->args_fmt, &url_tok, &commit_timeout);
 
-  /*
-   * TODO(alashkin): enable update for another files, not
-   * firmware only
-   */
-  if (section_tok.len == 0 || section_tok.type != JSON_TYPE_STRING ||
-      strncmp(section_tok.ptr, "firmware", section_tok.len) != 0 ||
-      blob_url_tok.len == 0 || blob_url_tok.type != JSON_TYPE_STRING) {
-    goto clean;
-  }
+  if (url_tok.len == 0 || url_tok.type != JSON_TYPE_STRING) goto clean;
 
-  LOG(LL_DEBUG,
-      ("Blob url: %.*s blob type: %.*s commit_timeout: %d", blob_url_tok.len,
-       blob_url_tok.ptr, blob_type_tok.len, blob_type_tok.ptr, commit_timeout));
+  LOG(LL_DEBUG, ("URL: %.*s commit_timeout: %d", url_tok.len, url_tok.ptr,
+                 commit_timeout));
 
   /*
    * If user setup callback for updater, just call it.
    * User can start update with Sys.updater.start()
    */
 
-  blob_url = calloc(1, blob_url_tok.len + 1);
+  blob_url = calloc(1, url_tok.len + 1);
   if (blob_url == NULL) {
     CONSOLE_LOG(LL_ERROR, ("Out of memory"));
     return;
   }
 
-  memcpy(blob_url, blob_url_tok.ptr, blob_url_tok.len);
+  memcpy(blob_url, url_tok.ptr, url_tok.len);
 
   ctx = updater_context_create();
   if (ctx == NULL) {
@@ -213,10 +201,8 @@ static void handle_set_boot_state_req(struct mg_rpc_request_info *ri,
 void mgos_updater_rpc_init(void) {
   struct mg_rpc *mg_rpc = mgos_rpc_get_global();
   if (mg_rpc == NULL) return;
-  mg_rpc_add_handler(
-      mg_rpc, "OTA.Update",
-      "{section: %T, blob_url: %T, blob_type: %T, commit_timeout: %d}",
-      handle_update_req, NULL);
+  mg_rpc_add_handler(mg_rpc, "OTA.Update", "{url: %T, commit_timeout: %d}",
+                     handle_update_req, NULL);
   mg_rpc_add_handler(mg_rpc, "OTA.Commit", "", handle_commit_req, NULL);
   mg_rpc_add_handler(mg_rpc, "OTA.Revert", "", handle_revert_req, NULL);
   mg_rpc_add_handler(mg_rpc, "OTA.CreateSnapshot",

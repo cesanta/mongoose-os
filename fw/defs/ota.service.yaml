@@ -6,22 +6,15 @@ methods:
   Update:
     doc: Instructs the device to perform firmware update.
     args:
-      section:
-        type: string
-        doc: Name of the section to update.
       version:
         type: string
         doc: Optional version of the new image.
       blob:
         type: string
         doc: Image as a string, if appropriate.
-      blob_url:
+      url:
         type: string
         doc: URL pointing to the image if it's too big to fit in the `blob`.
-      blob_type:
-        type: string
-        doc: >-
-          Type of the blob. Valid values: manifest, zip.
       commit_timeout:
         type: integer
         doc: >-
