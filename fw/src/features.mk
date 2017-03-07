@@ -67,6 +67,7 @@ ifeq "$(MGOS_ENABLE_ATCA)" "1"
   endif
 
 $(BUILD_DIR)/atca/libatca.a:
+	$(Q) mkdir -p $(BUILD_DIR)/atca
 	$(Q) make -C $(ATCA_PATH)/lib \
 		CC=$(CC) AR=$(AR) BUILD_DIR=$(BUILD_DIR)/atca \
 	  CFLAGS="$(CFLAGS)"
