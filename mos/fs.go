@@ -63,7 +63,8 @@ func getFile(ctx context.Context, devConn *dev.DevConn, name string) (string, er
 		})
 		if err != nil {
 			attempts -= 1
-			if errors.Cause(err) == context.DeadlineExceeded && attempts > 0 {
+			if attempts > 0 {
+				glog.Warningf("Error: %s", err)
 				continue
 			}
 			// TODO(dfrank): probably handle out of memory error by retrying with a
@@ -152,8 +153,9 @@ func fsPutData(ctx context.Context, devConn *dev.DevConn, r io.Reader, devFilena
 					Append:   clubby.Bool(appendFlag),
 				})
 				if err != nil {
-					if errors.Cause(err) == context.DeadlineExceeded && attempts > 0 {
-						attempts -= 1
+					attempts -= 1
+					if attempts > 0 {
+						glog.Warningf("Error: %s", err)
 						continue
 					}
 					return errors.Trace(err)
