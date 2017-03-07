@@ -187,40 +187,40 @@ static bool mqtt_global_connect(void) {
   /* If we're already connected, do nothing */
   if (s_conn != NULL) return ret;
 
+  if (scfg->mqtt.server == NULL) {
+    return false;
+  }
+
+  LOG(LL_INFO, ("MQTT connecting to %s", scfg->mqtt.server));
   memset(&opts, 0, sizeof(opts));
-
-  if (scfg->mqtt.server != NULL) {
-    LOG(LL_INFO, ("MQTT connecting to %s", scfg->mqtt.server));
-
 #if MG_ENABLE_SSL
-    opts.ssl_cert = scfg->mqtt.ssl_cert;
-    opts.ssl_key = scfg->mqtt.ssl_key;
-    opts.ssl_ca_cert = scfg->mqtt.ssl_ca_cert;
-    opts.ssl_cipher_suites = scfg->mqtt.ssl_cipher_suites;
-    opts.ssl_psk_identity = scfg->mqtt.ssl_psk_identity;
-    opts.ssl_psk_key = scfg->mqtt.ssl_psk_key;
+  opts.ssl_cert = scfg->mqtt.ssl_cert;
+  opts.ssl_key = scfg->mqtt.ssl_key;
+  opts.ssl_ca_cert = scfg->mqtt.ssl_ca_cert;
+  opts.ssl_cipher_suites = scfg->mqtt.ssl_cipher_suites;
+  opts.ssl_psk_identity = scfg->mqtt.ssl_psk_identity;
+  opts.ssl_psk_key = scfg->mqtt.ssl_psk_key;
 #endif
 
-    struct mg_connection *nc =
-        mg_connect_opt(mgr, scfg->mqtt.server, mqtt_ev_handler, opts);
-    if (nc == NULL) {
-      ret = false;
-    } else {
-      struct mg_send_mqtt_handshake_opts opts;
-      memset(&opts, 0, sizeof(opts));
+  struct mg_connection *nc =
+      mg_connect_opt(mgr, scfg->mqtt.server, mqtt_ev_handler, opts);
+  if (nc == NULL) {
+    ret = false;
+  } else {
+    struct mg_send_mqtt_handshake_opts opts;
+    memset(&opts, 0, sizeof(opts));
 
-      opts.user_name = scfg->mqtt.user;
-      opts.password = scfg->mqtt.pass;
-      if (scfg->mqtt.clean_session) {
-        opts.flags |= MG_MQTT_CLEAN_SESSION;
-      }
-      opts.keep_alive = scfg->mqtt.keep_alive;
-      opts.will_topic = scfg->mqtt.will_topic;
-      opts.will_message = scfg->mqtt.will_message;
-
-      mg_set_protocol_mqtt(nc);
-      mg_send_mqtt_handshake_opt(nc, scfg->device.id, opts);
+    opts.user_name = scfg->mqtt.user;
+    opts.password = scfg->mqtt.pass;
+    if (scfg->mqtt.clean_session) {
+      opts.flags |= MG_MQTT_CLEAN_SESSION;
     }
+    opts.keep_alive = scfg->mqtt.keep_alive;
+    opts.will_topic = scfg->mqtt.will_topic;
+    opts.will_message = scfg->mqtt.will_message;
+
+    mg_set_protocol_mqtt(nc);
+    mg_send_mqtt_handshake_opt(nc, scfg->device.id, opts);
   }
 
   return ret;
@@ -237,6 +237,7 @@ static void reconnect_timer_cb(void *user_data) {
 static void mqtt_global_reconnect(void) {
   const struct sys_config_mqtt *smcfg = &get_cfg()->mqtt;
   int rt_ms = s_reconnect_timeout_ms * 2;
+  if (smcfg->server == NULL) return;
 
   if (rt_ms < smcfg->reconnect_timeout_min * 1000) {
     rt_ms = smcfg->reconnect_timeout_min * 1000;

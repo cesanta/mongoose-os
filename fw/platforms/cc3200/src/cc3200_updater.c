@@ -88,23 +88,27 @@ static int sha1_update_cb(_u8 *data, int len, void *arg) {
 
 void bin2hex(const uint8_t *src, int src_len, char *dst);
 
-int verify_checksum(const char *fn, int fs, const struct json_token *expected) {
-  int r;
+static bool verify_checksum(const char *fn, int fs,
+                            const struct json_token *expected) {
+  _u8 digest[20];
+  char digest_str[41];
 
-  if (expected->len != 40) return -1;
+  if (expected->len != 40) {
+    return false;
+  }
 
   struct cc3200_hash_ctx ctx;
   cc3200_hash_init(&ctx, CC3200_HASH_ALGO_SHA1);
-  if ((r = read_file(fn, 0, fs, sha1_update_cb, &ctx)) < 0) return r;
-  _u8 digest[20];
+  if (read_file(fn, 0, fs, sha1_update_cb, &ctx) < 0) {
+    return false;
+  }
   cc3200_hash_final(&ctx, digest);
-
-  char digest_str[41];
   bin2hex(digest, 20, digest_str);
 
-  DBG(("%s: have %.*s, want %.*s", fn, 40, digest_str, 40, expected->ptr));
+  LOG(LL_INFO,
+      ("%s: have %.*s, want %.*s", fn, 40, digest_str, 40, expected->ptr));
 
-  return (strncasecmp(expected->ptr, digest_str, 40) == 0 ? 1 : 0);
+  return (strncasecmp(expected->ptr, digest_str, 40) == 0);
 }
 
 /* Create file name by appending ".$idx" to prefix. */
@@ -122,7 +126,7 @@ static int prepare_to_write(struct mgos_upd_dev_ctx *ctx,
                             struct json_token *part) {
   struct json_token expected_sha1 = JSON_INVALID_TOKEN;
   json_scanf(part->ptr, part->len, "{cs_sha1: %T}", &expected_sha1);
-  if (verify_checksum(fname, fi->size, &expected_sha1) > 0) {
+  if (verify_checksum(fname, fi->size, &expected_sha1)) {
     LOG(LL_INFO, ("Digest matched for %s %u (%.*s)", fname, fi->size,
                   (int) expected_sha1.len, expected_sha1.ptr));
     return 0;
@@ -312,8 +316,7 @@ int mgos_upd_file_end(struct mgos_upd_dev_ctx *ctx,
   } else {
     struct json_token sha1 = JSON_INVALID_TOKEN;
     json_scanf(ctx->cur_part.ptr, ctx->cur_part.len, "{cs_sha1: %T}", &sha1);
-    r = verify_checksum((const char *) ctx->cur_fn, fi->size, &sha1);
-    if (r <= 0) {
+    if (!verify_checksum((const char *) ctx->cur_fn, fi->size, &sha1)) {
       ctx->status_msg = "Checksum mismatch";
       r = -1;
     }
