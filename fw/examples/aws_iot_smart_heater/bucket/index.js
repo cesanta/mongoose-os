@@ -184,6 +184,11 @@ function getDynamodbQueryParams(timestamp, period) {
   };
 }
 
+function getLabel(awsItem) {
+  var date = new Date(Number(awsItem.timestamp.S));
+  return awsItem.payload.M.temp.N + " (" + date + ")";
+}
+
 dynamodb.query(getDynamodbQueryParams(Math.floor(Date.now() / 1000), GRAPH_PERIOD), function (err, awsData) {
   if (err) {
     $("#msg").text(
@@ -197,7 +202,7 @@ dynamodb.query(getDynamodbQueryParams(Math.floor(Date.now() / 1000), GRAPH_PERIO
     for (var i = 0; i < awsData.Items.length; i++) {
       var item = awsData.Items[i];
       data.push(Number(item.payload.M.temp.N));
-      labels.push(item.payload.M.temp.N + " (timestamp: " + item.timestamp.S + ")");
+      labels.push(getLabel(item));
     }
 
     lastAWSData = awsData;
@@ -258,7 +263,7 @@ setInterval(function() {
       for (var i = 0; i < awsData.Items.length; i++) {
         var item = awsData.Items[i];
         data.push(Number(item.payload.M.temp.N));
-        labels.push(item.payload.M.temp.N + " (timestamp: " + item.timestamp.S + ")");
+        labels.push(getLabel(item));
       }
 
       tempChart.data.datasets[0].data = data;
