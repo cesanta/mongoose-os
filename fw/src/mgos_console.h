@@ -24,6 +24,10 @@ void mgos_console_printf(const char *fmt, ...);
 int mgos_console_is_waiting_for_resp(void);
 #endif
 
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
 #define CONSOLE_LOG(l, x)          \
   if (cs_log_level >= l) {         \
     cs_log_print_prefix(__func__); \
@@ -34,10 +38,6 @@ int mgos_console_is_waiting_for_resp(void);
 #else
 
 #define CONSOLE_LOG(l, x) LOG(l, x)
-
-#ifdef __cplusplus
-}
-#endif /* __cplusplus */
 
 #endif /* MGOS_ENABLE_CONSOLE */
 
