@@ -5,5 +5,6 @@ skeleton_version: 2016-09-20
 sources:
   - src
 build_vars:
+  APP_CONF_SCHEMA: src/conf_schema.yaml
   MGOS_ENABLE_MQTT: 1
   MGOS_ENABLE_AWS_SHADOW: 1
