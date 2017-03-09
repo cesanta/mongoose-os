@@ -123,6 +123,6 @@ enum mgos_app_init_result mgos_app_init(void) {
   update_led();
   mgos_gpio_set_button_handler(BUTTON_GPIO, BUTTON_PULL, BUTTON_EDGE,
                                50 /* debounce_ms */, button_cb, NULL);
-  mgos_aws_shadow_set_handlers(aws_shadow_state_handler, NULL, NULL);
+  mgos_aws_shadow_set_state_handler(aws_shadow_state_handler, NULL);
   return MGOS_APP_INIT_SUCCESS;
 }

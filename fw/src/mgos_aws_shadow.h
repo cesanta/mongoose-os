@@ -44,9 +44,10 @@ typedef void (*mgos_aws_shadow_error_handler)(void *arg,
                                               enum mgos_aws_shadow_event ev,
                                               int code, const char *message);
 
-void mgos_aws_shadow_set_handlers(mgos_aws_shadow_state_handler state_cb,
-                                  mgos_aws_shadow_error_handler error_cb,
-                                  void *arg);
+void mgos_aws_shadow_set_state_handler(mgos_aws_shadow_state_handler state_cb,
+                                       void *arg);
+void mgos_aws_shadow_set_error_handler(mgos_aws_shadow_error_handler state_cb,
+                                       void *arg);
 
 /*
  * Request shadow state. Response will arrive via GET_ACCEPTED topic.

@@ -47,7 +47,8 @@ struct aws_shadow_state {
   struct mbuf update;
   mgos_aws_shadow_state_handler state_cb;
   mgos_aws_shadow_error_handler error_cb;
-  void *cb_arg;
+  void *state_cb_arg;
+  void *error_cb_arg;
 };
 
 static struct aws_shadow_state *s_shadow_state;
@@ -325,8 +326,8 @@ static void mgos_aws_shadow_ev(struct mg_connection *nc, int ev,
                        "{state:{reported:%T, desired:%T}}", &reported,
                        &desired);
           }
-          if (ss->state_cb(ss->cb_arg, topic_id_to_aws_ev(topic_id), version,
-                           mg_mk_str_n(reported.ptr, reported.len),
+          if (ss->state_cb(ss->state_cb_arg, topic_id_to_aws_ev(topic_id),
+                           version, mg_mk_str_n(reported.ptr, reported.len),
                            mg_mk_str_n(desired.ptr, desired.len))) {
             mgos_unlock();
             mg_mqtt_puback(nc, msg->message_id);
@@ -345,7 +346,7 @@ static void mgos_aws_shadow_ev(struct mg_connection *nc, int ev,
           LOG(LL_ERROR, ("Error: %d %s", code, (message ? message : "")));
           if (ss->error_cb != NULL) {
             mgos_unlock();
-            ss->error_cb(ss->cb_arg, topic_id_to_aws_ev(topic_id), code,
+            ss->error_cb(ss->error_cb_arg, topic_id_to_aws_ev(topic_id), code,
                          message ? message : "");
             mgos_lock();
           }
@@ -364,14 +365,21 @@ static void mgos_aws_shadow_ev(struct mg_connection *nc, int ev,
   mgos_unlock();
 }
 
-void mgos_aws_shadow_set_handlers(mgos_aws_shadow_state_handler state_cb,
-                                  mgos_aws_shadow_error_handler error_cb,
-                                  void *arg) {
+void mgos_aws_shadow_set_state_handler(mgos_aws_shadow_state_handler state_cb,
+                                       void *arg) {
   if (s_shadow_state == NULL) return;
   mgos_lock();
   s_shadow_state->state_cb = state_cb;
+  s_shadow_state->state_cb_arg = arg;
+  mgos_unlock();
+}
+
+void mgos_aws_shadow_set_error_handler(mgos_aws_shadow_error_handler error_cb,
+                                       void *arg) {
+  if (s_shadow_state == NULL) return;
+  mgos_lock();
   s_shadow_state->error_cb = error_cb;
-  s_shadow_state->cb_arg = arg;
+  s_shadow_state->error_cb_arg = arg;
   mgos_unlock();
 }
 
