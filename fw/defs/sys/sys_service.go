@@ -26,11 +26,26 @@ var _ = trace.New
 
 const ServiceID = "http://mongoose-iot.com/fwSys"
 
+type GetInfoResult struct {
+	App          *string `json:"app,omitempty"`
+	Arch         *string `json:"arch,omitempty"`
+	Fs_free      *int64  `json:"fs_free,omitempty"`
+	Fs_size      *int64  `json:"fs_size,omitempty"`
+	Fw_id        *string `json:"fw_id,omitempty"`
+	Fw_version   *string `json:"fw_version,omitempty"`
+	Mac          *string `json:"mac,omitempty"`
+	Ram_free     *int64  `json:"ram_free,omitempty"`
+	Ram_min_free *int64  `json:"ram_min_free,omitempty"`
+	Ram_size     *int64  `json:"ram_size,omitempty"`
+	Uptime       *int64  `json:"uptime,omitempty"`
+}
+
 type RebootArgs struct {
 	Delay_ms *int64 `json:"delay_ms,omitempty"`
 }
 
 type Service interface {
+	GetInfo(ctx context.Context) (*GetInfoResult, error)
 	Reboot(ctx context.Context, args *RebootArgs) error
 }
 
@@ -45,6 +60,26 @@ func NewClient(i Instance, addr string) Service {
 type _Client struct {
 	i    Instance
 	addr string
+}
+
+func (c *_Client) GetInfo(ctx context.Context) (res *GetInfoResult, err error) {
+	cmd := &frame.Command{
+		Cmd: "Sys.GetInfo",
+	}
+	resp, err := c.i.Call(ctx, c.addr, cmd)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	if resp.Status != 0 {
+		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+	}
+
+	var r *GetInfoResult
+	err = resp.Response.UnmarshalInto(&r)
+	if err != nil {
+		return nil, errors.Annotatef(err, "unmarshaling response")
+	}
+	return r, nil
 }
 
 func (c *_Client) Reboot(ctx context.Context, args *RebootArgs) (err error) {
@@ -65,6 +100,7 @@ func (c *_Client) Reboot(ctx context.Context, args *RebootArgs) (err error) {
 
 //func RegisterService(i *clubby.Instance, impl Service) error {
 //s := &_Server{impl}
+//i.RegisterCommandHandler("Sys.GetInfo", s.GetInfo)
 //i.RegisterCommandHandler("Sys.Reboot", s.Reboot)
 //i.RegisterService(ServiceID, _ServiceDefinition)
 //return nil
@@ -72,6 +108,10 @@ func (c *_Client) Reboot(ctx context.Context, args *RebootArgs) (err error) {
 
 type _Server struct {
 	impl Service
+}
+
+func (s *_Server) GetInfo(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
+	return s.impl.GetInfo(ctx)
 }
 
 func (s *_Server) Reboot(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
@@ -86,6 +126,58 @@ func (s *_Server) Reboot(ctx context.Context, src string, cmd *frame.Command) (i
 
 var _ServiceDefinition = json.RawMessage([]byte(`{
   "methods": {
+    "GetInfo": {
+      "doc": "Get device information",
+      "result": {
+        "properties": {
+          "app": {
+            "doc": "Application name",
+            "type": "string"
+          },
+          "arch": {
+            "doc": "Platform name",
+            "type": "string"
+          },
+          "fs_free": {
+            "doc": "Filesystem free bytes",
+            "type": "integer"
+          },
+          "fs_size": {
+            "doc": "Filesystem size",
+            "type": "integer"
+          },
+          "fw_id": {
+            "doc": "Firmware build ID",
+            "type": "string"
+          },
+          "fw_version": {
+            "doc": "Firmware version",
+            "type": "string"
+          },
+          "mac": {
+            "doc": "Device MAC address",
+            "type": "string"
+          },
+          "ram_free": {
+            "doc": "Heap free",
+            "type": "integer"
+          },
+          "ram_min_free": {
+            "doc": "Minimum value of ram_free since boot",
+            "type": "integer"
+          },
+          "ram_size": {
+            "doc": "Heap size",
+            "type": "integer"
+          },
+          "uptime": {
+            "doc": "Time since boot, in seconds",
+            "type": "integer"
+          }
+        },
+        "type": "object"
+      }
+    },
     "Reboot": {
       "args": {
         "delay_ms": {

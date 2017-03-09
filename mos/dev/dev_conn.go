@@ -9,7 +9,7 @@ import (
 	"cesanta.com/common/go/ourjson"
 	fwconfig "cesanta.com/fw/defs/config"
 	fwfilesystem "cesanta.com/fw/defs/fs"
-	fwvars "cesanta.com/fw/defs/vars"
+	fwsys "cesanta.com/fw/defs/sys"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 )
@@ -29,7 +29,7 @@ type DevConn struct {
 	Reconnect   bool
 
 	CConf       fwconfig.Service
-	CVars       fwvars.Service
+	CSys        fwsys.Service
 	CFilesystem fwfilesystem.Service
 }
 
@@ -76,7 +76,6 @@ func (dc *DevConn) GetConfig(ctx context.Context) (*DevConf, error) {
 	}
 
 	return &devConf, nil
-	return nil, nil
 }
 
 func (dc *DevConn) SetConfig(ctx context.Context, devConf *DevConf) error {
@@ -88,6 +87,10 @@ func (dc *DevConn) SetConfig(ctx context.Context, devConf *DevConf) error {
 	}
 
 	return nil
+}
+
+func (dc *DevConn) GetInfo(ctx context.Context) (*fwsys.GetInfoResult, error) {
+	return dc.CSys.GetInfo(ctx)
 }
 
 func (dc *DevConn) Disconnect(ctx context.Context) error {
@@ -136,7 +139,7 @@ func (dc *DevConn) ConnectWithJunkHandler(ctx context.Context, junkHandler func(
 	}
 
 	dc.CConf = fwconfig.NewClient(dc.RPC, debugDevId)
-	dc.CVars = fwvars.NewClient(dc.RPC, debugDevId)
+	dc.CSys = fwsys.NewClient(dc.RPC, debugDevId)
 	dc.CFilesystem = fwfilesystem.NewClient(dc.RPC, debugDevId)
 	return nil
 }

@@ -7,3 +7,41 @@ methods:
       delay_ms:
         type: integer
         doc: Optional delay, in milliseconds. Default is 100.
+  GetInfo:
+    doc: Get device information
+    result:
+      type: object
+      properties:
+        app:
+          type: string
+          doc: Application name
+        arch:
+          type: string
+          doc: Platform name
+        fw_version:
+          type: string
+          doc: Firmware version
+        fw_id:
+          type: string
+          doc: Firmware build ID
+        mac:
+          type: string
+          doc: Device MAC address
+        uptime:
+          type: integer
+          doc: Time since boot, in seconds
+        ram_size:
+          type: integer
+          doc: Heap size
+        ram_free:
+          type: integer
+          doc: Heap free
+        ram_min_free:
+          type: integer
+          doc: Minimum value of ram_free since boot
+        fs_size:
+          type: integer
+          doc: Filesystem size
+        fs_free:
+          type: integer
+          doc: Filesystem free bytes

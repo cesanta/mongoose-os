@@ -9,7 +9,6 @@ import (
 	"crypto/rand"
 	"crypto/rsa"
 	"crypto/x509"
-	"encoding/base32"
 	"encoding/pem"
 	"fmt"
 	"io/ioutil"
@@ -65,9 +64,11 @@ func init() {
 	flag.BoolVar(&useATCA, "use-atca", false, "Use ATCA (AECC508A) to store private key.")
 	flag.IntVar(&atcaSlot, "atca-slot", 0, "When using ATCA, use this slot for key storage.")
 	flag.StringVar(&certType, "cert-type", "", "Type of the key for new cert, RSA or ECDSA. Default is ECDSA.")
-	flag.StringVar(&certCN, "cert-cn", "", "Common name for the certificate. By default, a random one is generated.")
+	flag.StringVar(&certCN, "cert-cn", "", "Common name for the certificate. By default uses device ID.")
 	flag.StringVar(&awsIoTPolicy, "aws-iot-policy", "", "Attach this policy to the generated certificate")
-	flag.StringVar(&awsIoTThing, "aws-iot-thing", "", "Attach the generated certificate to this thing")
+	flag.StringVar(&awsIoTThing, "aws-iot-thing", "",
+		"Attach the generated certificate to this thing. "+
+			"By default uses device ID. Set to '-' to not attach certificate to any thing.")
 	flag.StringVar(&certFile, "cert-file", "", "Certificate file name")
 	flag.StringVar(&keyFile, "key-file", "", "Key file name")
 	hiddenFlags = append(hiddenFlags, "aws-region", "use-atca", "atca-slot", "cert-cn")
@@ -274,7 +275,7 @@ func genCert(ctx context.Context, iotSvc *iot.IoT, devConn *dev.DevConn, devConf
 	if err != nil {
 		return "", "", errors.Annotatef(err, "failed to obtain certificate from AWS")
 	}
-	glog.Infof("AWS response:\n%s", ccResp)
+	glog.Infof("AWS response:\n%s", cn)
 	reportf("Certificate ID: %s", *ccResp.CertificateId)
 	reportf("Certificate ARN: %s", *ccResp.CertificateArn)
 	certFile := fmt.Sprintf("aws-iot-%s.crt.pem", (*ccResp.CertificateId)[:10])
@@ -288,8 +289,8 @@ func genCert(ctx context.Context, iotSvc *iot.IoT, devConn *dev.DevConn, devConf
 		}
 		reportf("Wrote private key to %s", pkFile)
 	}
-	certFileData := fmt.Sprintf("ID: %s\r\nARN: %s\r\n%s",
-		*ccResp.CertificateId, *ccResp.CertificateArn, *ccResp.CertificatePem)
+	certFileData := fmt.Sprintf("CN: %s\r\nID: %s\r\nARN: %s\r\n%s",
+		certCN, *ccResp.CertificateId, *ccResp.CertificateArn, *ccResp.CertificatePem)
 	err = ioutil.WriteFile(certFile, []byte(certFileData), 0400)
 	if err != nil {
 		return "", "", errors.Annotatef(err, "failed to write certificate to %s", pkFile)
@@ -330,9 +331,24 @@ func genCert(ctx context.Context, iotSvc *iot.IoT, devConn *dev.DevConn, devConf
 		}
 	}
 
-	if awsIoTThing != "" {
+	if awsIoTThing != "-" {
+		if awsIoTThing == "" {
+			awsIoTThing = cn
+		}
+		/* Try creating the thing, in case it doesn't exist. */
+		_, err := iotSvc.CreateThing(&iot.CreateThingInput{
+			ThingName: aws.String(awsIoTThing),
+		})
+		if err != nil && err.Error() != iot.ErrCodeResourceAlreadyExistsException {
+			reportf("Error creating thing: %s", err)
+			/*
+			 * Don't fail right away, maybe we don't have sufficient permissions to
+			 * create things but we can attach certs to existing things.
+			 * If the thing does not exist, attaching will fail.
+			 */
+		}
 		reportf("Attaching the certificate to %q...", awsIoTThing)
-		_, err := iotSvc.AttachThingPrincipal(&iot.AttachThingPrincipalInput{
+		_, err = iotSvc.AttachThingPrincipal(&iot.AttachThingPrincipalInput{
 			ThingName: aws.String(awsIoTThing),
 			Principal: ccResp.CertificateArn,
 		})
@@ -418,22 +434,29 @@ func awsIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	if err != nil {
 		return err
 	}
-	if certCN == "" {
-		randBytes := make([]byte, 10)
-		rand.Read(randBytes)
-		certCN = fmt.Sprintf("mos-%s", base32.HexEncoding.EncodeToString(randBytes))
-	}
 
 	reportf("Connecting to the device...")
-	devConf, err := devConn.GetConfig(ctx)
+	devInfo, err := devConn.GetInfo(ctx)
 	if err != nil {
 		return errors.Annotatef(err, "failed to connect to device")
+	}
+	devArch, devMAC := *devInfo.Arch, *devInfo.Mac
+	reportf("  %s %s running %s", devArch, devMAC, *devInfo.App)
+	devID := fmt.Sprintf("%s_%s", devArch, devMAC[6:])
+
+	devConf, err := devConn.GetConfig(ctx)
+	if err != nil {
+		return errors.Annotatef(err, "failed to get config")
 	}
 	mqttConf, err := devConf.Get("mqtt")
 	if err != nil {
 		return errors.Annotatef(err, "failed to get device MQTT config")
 	}
 	reportf("Current MQTT config: %+v", mqttConf)
+
+	if certCN == "" {
+		certCN = devID
+	}
 
 	if certFile == "" {
 		certFile, keyFile, err = genCert(ctx, iotSvc, devConn, devConf, certCN)
