@@ -110,10 +110,12 @@ static bool aws_shadow_state_handler(void *arg, enum mgos_aws_shadow_event ev,
 
 static void button_cb(int pin, void *arg) {
   int new_foo = s_foo + 1;
-  LOG(LL_INFO, ("Click! %d", new_foo));
+  int new_led = !s_led;
   /* We do not change local state here. In response to this update AWS will
    * generate a delta event which will be processed as any other. */
-  mgos_aws_shadow_updatef(0, "{desired:{foo: %d}}", new_foo);
+  bool upd_res = mgos_aws_shadow_updatef(0, "{desired:{foo: %d, led: %B}}",
+                                         new_foo, new_led);
+  LOG(LL_INFO, ("Click! %d, Updated: %d", new_foo, upd_res));
   (void) pin;
   (void) arg;
 }
