@@ -67,7 +67,7 @@ static void call_global_handlers(struct mg_connection *nc, int ev,
   }
 }
 
-static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
+static void mgos_mqtt_ev(struct mg_connection *nc, int ev, void *ev_data) {
   if (ev > MG_MQTT_EVENT_BASE) {
     LOG(LL_DEBUG, ("MQTT event: %d", ev));
   }
@@ -94,6 +94,7 @@ static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
         mg_mqtt_ping(nc);
         nc->last_io_time = (time_t) mg_time();
       }
+      call_global_handlers(nc, ev, NULL);
       break;
     }
     case MG_EV_MQTT_PINGRESP: {
@@ -113,7 +114,7 @@ static void mqtt_ev_handler(struct mg_connection *nc, int ev, void *ev_data) {
         SLIST_FOREACH(th, &s_topic_handlers, entries) {
           struct mg_mqtt_topic_expression te = {.topic = th->topic.p, .qos = 0};
           th->sub_id = sub_id++;
-          mg_mqtt_subscribe(nc, &te, 1, th->sub_id);
+          mg_mqtt_subscribe(nc, &te, 1 /* len */, th->sub_id);
           LOG(LL_INFO, ("Subscribing to '%s'", te.topic));
         }
       } else {
@@ -169,13 +170,18 @@ static void mg_mqtt_wifi_ready(enum mgos_wifi_status event, void *arg) {
 #endif
 
 enum mgos_init_result mgos_mqtt_global_init(void) {
-  enum mgos_init_result ret = MGOS_INIT_OK;
+  const struct sys_config_mqtt *mcfg = &get_cfg()->mqtt;
+  if (!mcfg->enable) return MGOS_INIT_OK;
+  if (mcfg->server == NULL) {
+    LOG(LL_ERROR, ("MQTT requires server name"));
+    return MGOS_INIT_MQTT_INIT_FAILED;
+  }
 #if MGOS_ENABLE_WIFI
   mgos_wifi_add_on_change_cb(mg_mqtt_wifi_ready, NULL);
 #else
   mqtt_global_reconnect();
 #endif
-  return ret;
+  return MGOS_INIT_OK;
 }
 
 static bool mqtt_global_connect(void) {
@@ -187,7 +193,7 @@ static bool mqtt_global_connect(void) {
   /* If we're already connected, do nothing */
   if (s_conn != NULL) return ret;
 
-  if (scfg->mqtt.server == NULL) {
+  if (!scfg->mqtt.enable) {
     return false;
   }
 
@@ -203,7 +209,7 @@ static bool mqtt_global_connect(void) {
 #endif
 
   struct mg_connection *nc =
-      mg_connect_opt(mgr, scfg->mqtt.server, mqtt_ev_handler, opts);
+      mg_connect_opt(mgr, scfg->mqtt.server, mgos_mqtt_ev, opts);
   if (nc == NULL) {
     ret = false;
   } else {

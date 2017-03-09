@@ -54,7 +54,7 @@ MGOS_SRCS = $(notdir $(wildcard *.c)) mgos_init.c  \
             mgos_config.c mgos_sys_config.c \
             $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
             json_utils.c cs_rbuf.c mgos_uart.c \
-            mgos_utils.c cs_file.c
+            mgos_utils.c cs_file.c cs_crc32.c
 
 include $(MGOS_PATH)/fw/src/features.mk
 

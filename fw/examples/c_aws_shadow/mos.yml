@@ -1,0 +1,9 @@
+name: c_aws_shadow
+# arch: PLATFORM
+version: 1.0
+skeleton_version: 2016-09-20
+sources:
+  - src
+build_vars:
+  MGOS_ENABLE_MQTT: 1
+  MGOS_ENABLE_AWS_SHADOW: 1

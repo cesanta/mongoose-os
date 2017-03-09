@@ -117,7 +117,7 @@ SRCS = $(SDK_SRCS) $(ADD_SRCS) $(APP_SRCS) $(MGOS_SRCS)
 MGOS_SRCS +=  $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
 			 $(notdir $(MG_BUILD_INFO_C)) $(notdir $(BUILD_INFO_C)) \
              mgos_gpio.c mgos_sys_config.c mgos_config.c mongoose.c \
-             mgos_timers_mongoose.c cs_file.c mgos_mongoose.c \
+             mgos_timers_mongoose.c cs_crc32.c cs_file.c mgos_mongoose.c \
              json_utils.c frozen.c mgos_uart.c cs_rbuf.c mgos_init.c \
              cs_dbg.c mgos_dlsym.c mgos_utils.c
 

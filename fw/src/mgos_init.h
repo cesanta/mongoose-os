@@ -34,6 +34,8 @@ enum mgos_init_result {
   MGOS_INIT_CONSOLE_INIT_FAILED = -22,
   MGOS_INIT_GPIO_INIT_FAILED = -23,
   MGOS_INIT_DEBUG_INIT_FAILED = -24,
+  MGOS_INIT_MQTT_INIT_FAILED = -25,
+  MGOS_INIT_AWS_SHADOW_INIT_FAILED = -26,
 };
 
 enum mgos_init_result mgos_init(void);

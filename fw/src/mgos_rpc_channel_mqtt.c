@@ -27,41 +27,48 @@ static char *mgos_rpc_mqtt_topic_name(const struct mg_str device_id,
   return topic;
 }
 
-static void mg_rpc_mqtt_handler(struct mg_connection *nc, int ev,
-                                void *ev_data) {
-  struct mg_mqtt_message *msg = (struct mg_mqtt_message *) ev_data;
+static void mgos_rpc_mqtt_sub_handler(struct mg_connection *nc, int ev,
+                                      void *ev_data) {
   struct mg_rpc_channel *ch = (struct mg_rpc_channel *) nc->user_data;
-  switch (ev) {
-    case MG_EV_MQTT_SUBACK:
+  if (ev == MG_EV_MQTT_SUBACK) {
+    if (!(nc->flags & CHANNEL_OPEN)) {
+      /* Ideally we should wait for both subscriptions, but - meh. */
       nc->flags |= CHANNEL_OPEN;
       ch->ev_handler(ch, MG_RPC_CHANNEL_OPEN, NULL);
-      break;
-    case MG_EV_MQTT_PUBLISH: {
-      char *bare_topic =
-          mgos_rpc_mqtt_topic_name(mg_mk_str(get_cfg()->device.id), false);
-      size_t bare_topic_len = strlen(bare_topic);
-      free(bare_topic);
+    }
+    return;
+  } else if (ev != MG_EV_MQTT_PUBLISH) {
+    return;
+  }
+  struct mg_mqtt_message *msg = (struct mg_mqtt_message *) ev_data;
+  if (msg->qos > 0) mg_mqtt_puback(nc, msg->message_id);
+  char *bare_topic =
+      mgos_rpc_mqtt_topic_name(mg_mk_str(get_cfg()->device.id), false);
+  size_t bare_topic_len = strlen(bare_topic);
+  free(bare_topic);
 
-      if (bare_topic_len == msg->topic.len) {
-        ch->ev_handler(ch, MG_RPC_CHANNEL_FRAME_RECD, &msg->payload);
-      } else {
-        struct mg_rpc_frame frame;
-        /* Parse frame and ignore errors: they will be handled afterwards */
-        mg_rpc_parse_frame(msg->payload, &frame);
-        /* Replace method with the one from the topic name */
-        frame.method =
-            mg_mk_str_n(msg->topic.p + bare_topic_len + 1 /* slash */,
-                        msg->topic.len - bare_topic_len - 1 /* slash */);
-        ch->ev_handler(ch, MG_RPC_CHANNEL_FRAME_RECD_PARSED, &frame);
-      }
-    } break;
-    case MG_EV_CLOSE: {
-      if (nc->flags & CHANNEL_OPEN) {
-        ch->ev_handler(ch, MG_RPC_CHANNEL_CLOSED, NULL);
-      }
-      break;
+  if (bare_topic_len == msg->topic.len) {
+    ch->ev_handler(ch, MG_RPC_CHANNEL_FRAME_RECD, &msg->payload);
+  } else {
+    struct mg_rpc_frame frame;
+    /* Parse frame and ignore errors: they will be handled afterwards */
+    mg_rpc_parse_frame(msg->payload, &frame);
+    /* Replace method with the one from the topic name */
+    frame.method = mg_mk_str_n(msg->topic.p + bare_topic_len + 1 /* slash */,
+                               msg->topic.len - bare_topic_len - 1 /* slash */);
+    ch->ev_handler(ch, MG_RPC_CHANNEL_FRAME_RECD_PARSED, &frame);
+  }
+}
+
+static void mgos_rpc_mqtt_handler(struct mg_connection *nc, int ev,
+                                  void *ev_data) {
+  struct mg_rpc_channel *ch = (struct mg_rpc_channel *) nc->user_data;
+  if (ev == MG_EV_CLOSE) {
+    if (nc->flags & CHANNEL_OPEN) {
+      ch->ev_handler(ch, MG_RPC_CHANNEL_CLOSED, NULL);
     }
   }
+  (void) ev_data;
 }
 
 static void mg_rpc_channel_mqtt_ch_connect(struct mg_rpc_channel *ch) {
@@ -118,11 +125,11 @@ struct mg_rpc_channel *mg_rpc_channel_mqtt(const struct mg_str device_id) {
   ch->is_persistent = mg_rpc_channel_mqtt_is_persistent;
 
   /* subscribe on both wildcard topic, and bare /rpc topic */
-  mgos_mqtt_global_subscribe(mg_mk_str(topic), mg_rpc_mqtt_handler, ch);
+  mgos_mqtt_global_subscribe(mg_mk_str(topic), mgos_rpc_mqtt_sub_handler, ch);
   mgos_mqtt_global_subscribe(mg_mk_str_n(topic, strlen(topic) - 2 /* /# */),
-                             mg_rpc_mqtt_handler, ch);
+                             mgos_rpc_mqtt_sub_handler, ch);
   /* For CLOSE event. */
-  mgos_mqtt_add_global_handler(mg_rpc_mqtt_handler, ch);
+  mgos_mqtt_add_global_handler(mgos_rpc_mqtt_handler, ch);
 
   LOG(LL_INFO, ("%p %s", ch, topic));
   free(topic);

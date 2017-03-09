@@ -7,6 +7,7 @@
 #define CS_FW_SRC_MGOS_MQTT_GLOBAL_H_
 
 #include <stdbool.h>
+#include "fw/src/mgos_features.h"
 #include "fw/src/mgos_init.h"
 #include "fw/src/mgos_mongoose.h"
 
