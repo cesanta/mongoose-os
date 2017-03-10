@@ -189,7 +189,7 @@ _FS_SIZE = $(shell echo $$((`echo $(FS_SIZE) | \
 
 MGOS_LIB = $(BUILD_DIR)/mongoose-os.a
 SYS_CONFIG_C = $(GEN_DIR)/sys_config.c
-SYS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/sys_config_defaults.json
+SYS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/conf0.json
 SYS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/sys_config_schema.json
 SYS_RO_VARS_C = $(GEN_DIR)/sys_ro_vars.c
 SYS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/sys_ro_vars_schema.json

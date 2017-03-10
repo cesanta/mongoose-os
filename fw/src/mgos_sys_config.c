@@ -27,6 +27,12 @@
 #define MGOS_F_RELOAD_CONFIG MG_F_USER_5
 #define PLACEHOLDER_CHAR '?'
 
+#define CONF_USER_FILE "conf9.json"
+
+/* FOr backward compatibility */
+#define CONF_USER_FILE_OLD "conf.json"
+#define CONF_VENDOR_FILE "conf_vendor.json"
+
 /* Must be provided externally, usually auto-generated. */
 extern const char *build_id;
 extern const char *build_timestamp;
@@ -73,12 +79,24 @@ void mgos_expand_mac_address_placeholders(char *str) {
 }
 
 static bool load_config_defaults(struct sys_config *cfg) {
+  int i;
+  char fname[sizeof(CONF_USER_FILE)];
   memset(cfg, 0, sizeof(*cfg));
-  if (!load_config_file(CONF_DEFAULTS_FILE, "*", cfg)) {
-    return false;
+  memcpy(fname, CONF_USER_FILE, sizeof(fname));
+  const char *acl = "*";
+  for (i = 0; i < 9; i++) {
+    fname[4] = '0' + i;
+    if (!load_config_file(fname, acl, cfg)) {
+      /* conf0 must exist, everything else is optional. */
+      if (i == 0) return false;
+    }
+    acl = cfg->conf_acl;
+    /* Backward compat: load conf_vendor.json at level 5.5 */
+    if (i == 5) {
+      load_config_file(CONF_VENDOR_FILE, cfg->conf_acl, cfg);
+      acl = cfg->conf_acl;
+    }
   }
-  /* Vendor config is optional. */
-  load_config_file(CONF_VENDOR_FILE, cfg->conf_acl, cfg);
   return true;
 }
 
@@ -96,8 +114,8 @@ bool save_cfg(const struct sys_config *cfg, char **msg) {
     goto clean;
   }
   if (mgos_conf_emit_f(cfg, &defaults, sys_config_schema(), true /* pretty */,
-                       CONF_FILE)) {
-    LOG(LL_INFO, ("Saved to %s", CONF_FILE));
+                       CONF_USER_FILE)) {
+    LOG(LL_INFO, ("Saved to %s", CONF_USER_FILE));
     result = true;
   } else {
     *msg = "failed to write file";
@@ -157,8 +175,8 @@ static void conf_handler(struct mg_connection *c, int ev, void *p) {
     if (status == 0) c->flags |= MGOS_F_RELOAD_CONFIG;
   } else if (mg_vcmp(&hm->uri, "/conf/reset") == 0) {
     struct stat st;
-    if (stat(CONF_FILE, &st) == 0) {
-      status = remove(CONF_FILE);
+    if (stat(CONF_USER_FILE, &st) == 0) {
+      status = remove(CONF_USER_FILE);
     } else {
       status = 0;
     }
@@ -444,7 +462,8 @@ enum mgos_init_result mgos_sys_config_init(void) {
   }
 
   /*
-   * Check factory reset GPIO. We intentionally do it before loading CONF_FILE
+   * Check factory reset GPIO. We intentionally do it before loading
+   * CONF_USER_FILE
    * so that it cannot be overridden by the end user.
    */
   if (s_cfg.debug.factory_reset_gpio >= 0) {
@@ -453,15 +472,21 @@ enum mgos_init_result mgos_sys_config_init(void) {
     mgos_gpio_set_pull(gpio, MGOS_GPIO_PULL_UP);
     if (mgos_gpio_read(gpio) == 0) {
       LOG(LL_WARN, ("Factory reset requested via GPIO%d", gpio));
-      if (remove(CONF_FILE) == 0) {
-        LOG(LL_WARN, ("Removed %s", CONF_FILE));
+      if (remove(CONF_USER_FILE) == 0) {
+        LOG(LL_WARN, ("Removed %s", CONF_USER_FILE));
       }
       /* Continue as if nothing happened, no reboot necessary. */
     }
   }
 
+#if CS_PLATFORM != CS_P_PIC32
+  struct stat st;
+  if (stat(CONF_USER_FILE_OLD, &st) == 0) {
+    rename(CONF_USER_FILE_OLD, CONF_USER_FILE);
+  }
+#endif
   /* Successfully loaded system config. Try overrides - they are optional. */
-  load_config_file(CONF_FILE, s_cfg.conf_acl, &s_cfg);
+  load_config_file(CONF_USER_FILE, s_cfg.conf_acl, &s_cfg);
 
   s_initialized = true;
 

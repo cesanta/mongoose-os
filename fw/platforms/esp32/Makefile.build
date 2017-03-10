@@ -106,19 +106,16 @@ SDKCONFIG = $(MGOS_ESP_PATH)/sdkconfig
 ifeq "$(MGOS_ESP32_ENABLE_FLASH_ENCRYPTION)" "1"
 override CONFIG_FLASH_ENCRYPTION_ENABLED = y
 ENCRYPT = true
-MKSPIFFS_CFLAGS = -DMGOS_ESP32_ENABLE_FLASH_ENCRYPTION=1
-MKSPIFFS = $(BUILD_DIR)/mkspiffs8
+MKSPIFFS = /usr/local/bin/mkspiffs8
 PARTITION_TABLE_CSV_PATH = $(MGOS_ESP_PATH)/src/partitions_mgos_encrypted.csv
 else
 ENCRYPT = false
 MKSPIFFS_CFLAGS = -DMGOS_ESP32_ENABLE_FLASH_ENCRYPTION=0
-MKSPIFFS = $(BUILD_DIR)/mkspiffs
+MKSPIFFS = /usr/local/bin/mkspiffs
 PARTITION_TABLE_CSV_PATH = $(MGOS_ESP_PATH)/src/partitions_mgos.csv
 endif
 
 include $(IDF_PATH)/make/project.mk
-
-CFLAGS += $(MKSPIFFS_CFLAGS)
 
 LDFLAGS += -L$(BUILD_DIR)/src
 
@@ -136,10 +133,7 @@ include $(MGOS_PATH)/fw/src/spiffs.mk
 
 all: $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(FW_ZIP)
 
-FS_FILES += $(GEN_DIR)/sys_config_schema.json $(GEN_DIR)/sys_ro_vars_schema.json
-
-# Put defaults on the filesystem under the old name, for compatibility.
-FS_FILES += $(GEN_DIR)/conf_defaults.json
+FS_FILES += $(GEN_DIR)/conf0.json $(GEN_DIR)/sys_config_schema.json $(GEN_DIR)/sys_ro_vars_schema.json
 
 $(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
 	$(vecho) "MKDIR $@ $(BUILD_INFO_C)"
@@ -147,19 +141,14 @@ $(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
 
 $(FW_MANIFEST): $(APP_BIN) $(BOOTLOADER_BIN) $(PARTITION_TABLE_BIN) $(FS_IMG)
 
-$(GEN_DIR)/conf_defaults.json: $(GEN_DIR)/sys_config_defaults.json
-	$(Q) cp $< $@
-
 # sys_config is generated during binary build
-$(GEN_DIR)/sys_config_defaults.json $(GEN_DIR)/sys_config_schema.json $(GEN_DIR)/sys_ro_vars_schema.json: all_binaries
+$(GEN_DIR)/sys_config_schema.json $(GEN_DIR)/sys_ro_vars_schema.json: all_binaries
+
+$(GEN_DIR)/conf0.json: all_binaries
+	$(Q) cp -f $(GEN_DIR)/sys_config_defaults.json $(GEN_DIR)/conf0.json
 
 $(FS_IMG): $(MKSPIFFS) $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES)
 	$(call mkspiffs,$(FS_SIZE))
-
-SPIFFS_SRCS = $(SPIFFS_PATH)/*.c $(SPIFFS_PATH)/tools/mem_spiffs.c $(SPIFFS_PATH)/tools/mkspiffs.c
-$(MKSPIFFS): $(SPIFFS_SRCS) $(SPIFFS_PATH)/*.h
-	$(vecho) "GCC   $@"
-	$(Q) gcc -Wall -Werror -I$(MGOS_ESP_PATH)/include -I$(SPIFFS_PATH) $(MKSPIFFS_CFLAGS) -o $@ $(SPIFFS_SRCS)
 
 clean:
 	rm -rf $(BUILD_DIR) $(FW_DIR)

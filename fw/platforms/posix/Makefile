@@ -138,7 +138,7 @@ LIBS = $(addprefix -l,$(ADD_LIBS))
 
 APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(MGOS_SRCS))
 SYS_CONFIG_C = $(BUILD_DIR)/sys_config.c
-SYS_CONFIG_DEFAULTS_JSON = $(BUILD_DIR)/sys_config_defaults.json
+SYS_CONFIG_DEFAULTS_JSON = $(BUILD_DIR)/conf0.json
 SYS_RO_VARS_C = $(BUILD_DIR)/sys_ro_vars.c
 BUILD_INFO_C = $(BUILD_DIR)/build_info.c
 OBJS = $(APP_OBJS) $(BUILD_DIR)/build_info.o
@@ -208,8 +208,7 @@ $(BIN_DIR)/$(APP): $(BIN_DIR) $(OBJS)
 fs: $(BIN_DIR) $(FS_FILES) $(SYS_CONFIG_C)
 	@echo "MKFS $@"
 	$(Q) cp $(FS_FILES) $(BIN_DIR)
-	$(Q) cp $(SYS_CONFIG_DEFAULTS_JSON) $(BIN_DIR)/conf_defaults.json
-	$(Q) perl -pi"" -e 's/"80"/"9080"/' $(BIN_DIR)/conf_defaults.json
+	$(Q) perl -pi"" -e 's/"80"/"9080"/' $(BIN_DIR)/conf0.json
 
 clean:
 	$(Q) rm -rf $(BIN_DIR) $(BUILD_DIR)

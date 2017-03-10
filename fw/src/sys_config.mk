@@ -23,12 +23,7 @@ $(SYS_RO_VARS_C) $(SYS_RO_VARS_SCHEMA_JSON): $(SYS_RO_VARS_SCHEMA) $(GSC_TOOL)
 	  --c_name=sys_ro_vars --c_const_char=true \
 	  --dest_dir=$(dir $@) $(SYS_RO_VARS_SCHEMA)
 
-FS_FILES += $(SYS_CONFIG_SCHEMA_JSON) $(SYS_RO_VARS_SCHEMA_JSON)
+$(SYS_CONFIG_DEFAULTS_JSON): $(SYS_CONFIG_C)
+	$(Q) cp $(dir $(SYS_CONFIG_C))/sys_config_defaults.json $@
 
-# Put defaults on the filesystem under the old name, for compatibility.
-FS_FILES += $(GEN_DIR)/conf_defaults.json
-
-$(GEN_DIR)/conf_defaults.json: $(SYS_CONFIG_C)
-	$(vecho) "CP    $(SYS_CONFIG_DEFAULTS_JSON) $@"
-	$(Q) mkdir -p $(dir $@)
-	$(Q) cp $(SYS_CONFIG_DEFAULTS_JSON) $@
+FS_FILES += $(SYS_CONFIG_DEFAULTS_JSON) $(SYS_CONFIG_SCHEMA_JSON) $(SYS_RO_VARS_SCHEMA_JSON)
