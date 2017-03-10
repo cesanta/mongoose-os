@@ -422,18 +422,24 @@ bool mgos_aws_shadow_update_simple(double version, const char *state_json) {
 
 enum mgos_init_result mgos_aws_shadow_init(void) {
   struct sys_config *cfg = get_cfg();
-  if (!cfg->aws.shadow.enable) return MGOS_INIT_OK;
+  struct sys_config_aws_shadow *scfg = &cfg->aws.shadow;
+  if (!scfg->enable) return MGOS_INIT_OK;
   if (!cfg->mqtt.enable) {
     LOG(LL_ERROR, ("AWS Device Shadow requires MQTT"));
     return MGOS_INIT_AWS_SHADOW_INIT_FAILED;
   }
-  if (cfg->device.id == NULL) {
-    LOG(LL_ERROR, ("AWS Device Shadow requires device.id"));
+  const char *thing_name = NULL;
+  if (scfg->thing_name != NULL) {
+    thing_name = scfg->thing_name;
+  } else if (cfg->device.id != NULL) {
+    thing_name = cfg->device.id;
+  } else {
+    LOG(LL_ERROR, ("AWS Device Shadow requires thing_name or device.id"));
     return MGOS_INIT_AWS_SHADOW_INIT_FAILED;
   }
   struct aws_shadow_state *ss =
       (struct aws_shadow_state *) calloc(1, sizeof(*ss));
-  ss->thing_name = mg_mk_str(get_cfg()->device.id);
+  ss->thing_name = mg_mk_str(thing_name);
   mgos_mqtt_add_global_handler(mgos_aws_shadow_ev, ss);
   s_shadow_state = ss;
   char token[TOKEN_BUF_SIZE];
