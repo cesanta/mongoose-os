@@ -46,8 +46,18 @@ typedef void (*mgos_aws_shadow_error_handler)(void *arg,
 
 void mgos_aws_shadow_set_state_handler(mgos_aws_shadow_state_handler state_cb,
                                        void *arg);
-void mgos_aws_shadow_set_error_handler(mgos_aws_shadow_error_handler state_cb,
+void mgos_aws_shadow_set_error_handler(mgos_aws_shadow_error_handler error_cb,
                                        void *arg);
+
+typedef bool (*mgos_aws_shadow_state_handler_simple)(
+    void *arg, enum mgos_aws_shadow_event ev, const char *reported,
+    const char *desired);
+
+/*
+ * "Simple" version of mgos_aws_shadow_set_state_handler, primarily for FFI.
+ */
+void mgos_aws_shadow_set_state_handler_simple(
+    mgos_aws_shadow_state_handler_simple state_cb_simple, void *arg);
 
 /*
  * Request shadow state. Response will arrive via GET_ACCEPTED topic.
@@ -65,6 +75,11 @@ bool mgos_aws_shadow_get(void);
  * specify the version. Otherwise set it to 0 to apply to any version.
  */
 bool mgos_aws_shadow_updatef(uint64_t version, const char *state_jsonf, ...);
+
+/*
+ * "Simple" version of mgos_aws_shadow_updatef, primarily for FFI.
+ */
+bool mgos_aws_shadow_update_simple(double version, const char *state_json);
 
 enum mgos_init_result mgos_aws_shadow_init(void);
 

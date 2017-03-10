@@ -416,6 +416,10 @@ bool mgos_aws_shadow_updatef(uint64_t version, const char *state_jsonf, ...) {
   return true;
 }
 
+bool mgos_aws_shadow_update_simple(double version, const char *state_json) {
+  return mgos_aws_shadow_updatef(version, "%s", state_json);
+}
+
 enum mgos_init_result mgos_aws_shadow_init(void) {
   struct sys_config *cfg = get_cfg();
   if (!cfg->aws.shadow.enable) return MGOS_INIT_OK;
@@ -437,4 +441,54 @@ enum mgos_init_result mgos_aws_shadow_init(void) {
   LOG(LL_INFO, ("Device shadow name: %.*s (token %s)", (int) ss->thing_name.len,
                 ss->thing_name.p, token));
   return MGOS_INIT_OK;
+}
+
+/*
+ * Data for the FFI-able wrapper
+ */
+struct mgos_aws_shadow_cb_simple_data {
+  /* FFI-able callback and its userdata */
+  mgos_aws_shadow_state_handler_simple cb_simple;
+  void *cb_arg;
+};
+
+static bool state_cb_oplya(void *arg, enum mgos_aws_shadow_event ev,
+                           uint64_t version, const struct mg_str reported,
+                           const struct mg_str desired) {
+  bool ret = false;
+  struct mgos_aws_shadow_cb_simple_data *oplya_arg =
+      (struct mgos_aws_shadow_cb_simple_data *) arg;
+
+  /*
+   * FFI expects strings to be null-terminated, so we have to reallocate
+   * `mg_str`s.
+   *
+   * TODO(dfrank): implement a way to ffi strings via pointer + length
+   */
+
+  char *reported2 = calloc(1, reported.len + 1 /* null-terminate */);
+  char *desired2 = calloc(1, desired.len + 1 /* null-terminate */);
+
+  memcpy(reported2, reported.p, reported.len);
+  memcpy(desired2, desired.p, desired.len);
+
+  ret = oplya_arg->cb_simple(oplya_arg->cb_arg, ev, reported2, desired2);
+
+  free(reported2);
+  free(desired2);
+
+  (void) version;
+
+  return ret;
+}
+
+void mgos_aws_shadow_set_state_handler_simple(
+    mgos_aws_shadow_state_handler_simple state_cb_simple, void *arg) {
+  /* NOTE: it won't be freed */
+  struct mgos_aws_shadow_cb_simple_data *oplya_arg =
+      calloc(1, sizeof(*oplya_arg));
+  oplya_arg->cb_simple = state_cb_simple;
+  oplya_arg->cb_arg = arg;
+
+  mgos_aws_shadow_set_state_handler(state_cb_oplya, oplya_arg);
 }
