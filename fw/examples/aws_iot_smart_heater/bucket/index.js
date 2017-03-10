@@ -1,5 +1,5 @@
 const GRAPH_UPDATE_PERIOD = 10 /* seconds */;
-const GRAPH_PERIOD = 60 * 60 * 10 /* seconds */;
+const GRAPH_PERIOD = 60 * 60 * 24 * 2 /* seconds */;
 
 var mqttClientAuth;
 var mqttClientUnauth;
@@ -12,6 +12,8 @@ var heaterUser;
 
 var tempChart;
 var lastAWSData;
+
+var statusChanging = false;
 
 window.fbAsyncInit = function() {
   if (heaterVars.facebookOAuthClientId) {
@@ -208,6 +210,7 @@ dynamodb.query(getDynamodbQueryParams(Math.floor(Date.now() / 1000), GRAPH_PERIO
     lastAWSData = awsData;
 
     var ctx = document.getElementById("tempChart");
+    var color = '#f0ad4e';
     tempChart = new Chart(ctx, {
       type: 'line',
       data: {
@@ -217,17 +220,17 @@ dynamodb.query(getDynamodbQueryParams(Math.floor(Date.now() / 1000), GRAPH_PERIO
           fill: false,
           lineTension: 0.1,
           backgroundColor: "rgba(75,192,192,0.4)",
-          borderColor: "rgba(75,192,192,1)",
+          borderColor: color,
           borderCapStyle: "butt",
           borderDash: [],
           borderDashOffset: 0.0,
           borderJoinStyle: 'miter',
           borderWidth: 2,
-          pointBorderColor: "rgba(75,192,192,1)",
+          pointBorderColor: color,
           pointBackgroundColor: "#fff",
           pointBorderWidth: 1,
           pointHoverRadius: 3,
-          pointHoverBackgroundColor: "rgba(75,192,192,1)",
+          pointHoverBackgroundColor: color,
           pointHoverBorderColor: "rgba(220,220,220,1)",
           pointHoverBorderWidth: 2,
           pointRadius: 0,
@@ -375,9 +378,9 @@ function gapiLoaded() {
       });
       gapi.signin2.render('google_signin', {
         'scope': 'email',
-        'width': 240,
-        'height': 50,
-        'longtitle': true,
+        // 'width': 40,
+        // 'height': 20,
+        'longtitle': false,
         'theme': 'dark',
         'onsuccess': onSuccess,
         'onfailure': onFailure
@@ -428,7 +431,13 @@ AWS.config.credentials.get(function(err) {
           handler: function(resp) {
             console.log('hey', resp);
             heaterOn = !!resp.on;
-            $("#heater_status").text("Heater status: " + (resp.on ? "on" : "off"));
+            // $("#heater_status").text("Heater status: " + (resp.on ? "on" : "off"));
+            statusChanging = true;
+            $('#status').bootstrapToggle(heaterOn ? 'on' : 'off');
+            statusChanging = false;
+            if (resp.temp) $('#temp').text(resp.temp.toFixed(1));
+            // var now = Date.now();
+            $('#time').text(moment().format('MMM DD HH:mm:ss'));
           },
           topic: topic,
         };
@@ -556,22 +565,24 @@ function uiEventHandler(ev, data) {
       enableLoginInputs(true);
       break;
     case EV_SIGNED_IN:
-      $("#signedout_div").hide();
-      $("#signedin_div").show();
+      $("#signedout_div").addClass("hidden");
+      $("#signedin_div").removeClass("hidden");
       $("#signedin_username_span").text(data.username + " via " + data.provider);
       break;
     case EV_SIGNED_OUT:
-      $("#signedout_div").show();
-      $("#signedin_div").hide();
+      $("#signedout_div").removeClass("hidden");
+      $("#signedin_div").addClass("hidden");
       break;
     case EV_STATUS:
-      $("#status").text(data);
+      $("#status_msg").text(data);
       break;
   }
 }
 
 $(document).ready(function() {
+  gapiLoaded();
   var authPresent = false;
+  $('#devid').text(heaterVars.deviceId);
 
   if (heaterVars.googleOAuthClientId) {
     $('#google_signin').removeClass("hidden");
@@ -591,10 +602,12 @@ $(document).ready(function() {
     signOut(uiEventHandler);
   });
 
-  $("#heater_switch_button").click(function() {
-    switchHeater(true);
+  $("#status").change(function() {
+    if (!statusChanging) {
+      switchHeater(true);
+    }
+    return false;
   });
-
 });
 
 function openEmailCodeDialog(callback) {
