@@ -14,6 +14,6 @@ struct gpio_info {
   uint32_t func;
 };
 
-struct gpio_info *get_gpio_info(uint8_t gpio_no);
+const struct gpio_info *get_gpio_info(uint8_t gpio_no);
 
 #endif /* CS_FW_PLATFORMS_ESP8266_USER_ESP_PERIPH_H_ */

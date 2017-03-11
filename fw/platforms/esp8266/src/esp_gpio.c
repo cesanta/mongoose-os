@@ -84,7 +84,7 @@ bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
     return true;
   }
 
-  struct gpio_info *gi = get_gpio_info(pin);
+  const struct gpio_info *gi = get_gpio_info(pin);
   if (gi == NULL) return false;
 
   switch (mode) {
@@ -116,7 +116,7 @@ void gpio_pin_intr_state_set(uint32 i, GPIO_INT_TYPE intr_state) {
 }
 
 bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
-  struct gpio_info *gi = get_gpio_info(pin);
+  const struct gpio_info *gi = get_gpio_info(pin);
   if (gi == NULL) return false;
 
   switch (pull) {
