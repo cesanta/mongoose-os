@@ -95,37 +95,6 @@ SECTIONS
   .rodata : ALIGN(4)
   {
     _rodata_start = ABSOLUTE(.);
-    *(.sdk.version)
-    *(.rodata)
-    *(.rodata.*)
-    *(.gnu.linkonce.r.*)
-    *(.rodata1)
-    __XT_EXCEPTION_TABLE__ = ABSOLUTE(.);
-    *(.xt_except_table)
-    *(.gcc_except_table)
-    *(.gnu.linkonce.e.*)
-    *(.gnu.version_r)
-    *(.eh_frame)
-    . = (. + 3) & ~ 3;
-    /*  C++ constructor and destructor tables, properly ordered:  */
-    __init_array_start = ABSOLUTE(.);
-    KEEP (*crtbegin.o(.ctors))
-    KEEP (*(EXCLUDE_FILE (*crtend.o) .ctors))
-    KEEP (*(SORT(.ctors.*)))
-    KEEP (*(.ctors))
-    __init_array_end = ABSOLUTE(.);
-    KEEP (*crtbegin.o(.dtors))
-    KEEP (*(EXCLUDE_FILE (*crtend.o) .dtors))
-    KEEP (*(SORT(.dtors.*)))
-    KEEP (*(.dtors))
-    /*  C++ exception handlers table:  */
-    __XT_EXCEPTION_DESCS__ = ABSOLUTE(.);
-    *(.xt_except_desc)
-    *(.gnu.linkonce.h.*)
-    __XT_EXCEPTION_DESCS_END__ = ABSOLUTE(.);
-    *(.xt_except_desc_end)
-    *(.dynamic)
-    *(.gnu.version_d)
     . = ALIGN(4);		/* this table MUST be 4-byte aligned */
     _bss_table_start = ABSOLUTE(.);
     LONG(_bss_start)
@@ -196,6 +165,40 @@ SECTIONS
   .irom0.text : ALIGN(4)
   {
     _irom0_text_start = ABSOLUTE(.);
+
+    /* This is actually read-only data, but section names have to be kept the way esptool expects them. */
+    *(.sdk.version)
+    *(.rodata)
+    *(.rodata.*)
+    *(.gnu.linkonce.r.*)
+    *(.rodata1)
+    __XT_EXCEPTION_TABLE__ = ABSOLUTE(.);
+    *(.xt_except_table)
+    *(.gcc_except_table)
+    *(.gnu.linkonce.e.*)
+    *(.gnu.version_r)
+    *(.eh_frame)
+    . = (. + 3) & ~ 3;
+    /*  C++ constructor and destructor tables, properly ordered:  */
+    __init_array_start = ABSOLUTE(.);
+    KEEP (*crtbegin.o(.ctors))
+    KEEP (*(EXCLUDE_FILE (*crtend.o) .ctors))
+    KEEP (*(SORT(.ctors.*)))
+    KEEP (*(.ctors))
+    __init_array_end = ABSOLUTE(.);
+    KEEP (*crtbegin.o(.dtors))
+    KEEP (*(EXCLUDE_FILE (*crtend.o) .dtors))
+    KEEP (*(SORT(.dtors.*)))
+    KEEP (*(.dtors))
+    /*  C++ exception handlers table:  */
+    __XT_EXCEPTION_DESCS__ = ABSOLUTE(.);
+    *(.xt_except_desc)
+    *(.gnu.linkonce.h.*)
+    __XT_EXCEPTION_DESCS_END__ = ABSOLUTE(.);
+    *(.xt_except_desc_end)
+    *(.dynamic)
+    *(.gnu.version_d)
+
     *(.irom0.literal .irom.literal .irom.text.literal .irom0.text .irom.text)
     *(.literal.* .text.*)
     _irom0_text_end = ABSOLUTE(.);
