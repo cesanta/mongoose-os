@@ -221,14 +221,14 @@ def cmd_gen_ffi_exports(args):
 
     print >>out, """\
 
-struct mgos_ffi_export ffi_exports[] = {"""
+const struct mgos_ffi_export ffi_exports[] = {"""
 
     # Emit all symbols
     for symbol in symbols:
         print >>out, "  {\"%s\", %s}," % (symbol, symbol)
 
     print >>out, "};"
-    print >>out, "int ffi_exports_cnt = %d;" % len(symbols)
+    print >>out, "const int ffi_exports_cnt = %d;" % len(symbols)
 
 def cmd_get_build_info(args):
     manifest = json.load(open(args.manifest))
