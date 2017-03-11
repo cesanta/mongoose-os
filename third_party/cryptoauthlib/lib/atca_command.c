@@ -60,7 +60,7 @@
  */
 struct atca_command {
 	ATCADeviceType dt;
-	uint16_t *execution_times;
+	const uint16_t *execution_times;
 };
 
 
@@ -530,7 +530,7 @@ void deleteATCACommand( ATCACommand *cacmd )  // destructor
 
 /** \brief execution times for x08a family, these are based on the typical value from the datasheet
  */
-uint16_t exectimes_x08a[] = {   // in milleseconds
+const uint16_t exectimes_x08a[] = {   // in milleseconds
 	1,                          // WAKE_TWHI
 	13,                         // CMD_CHECKMAC
 	20,                         // CMD_COUNTER
@@ -557,7 +557,7 @@ uint16_t exectimes_x08a[] = {   // in milleseconds
 
 /** \brief execution times for 204a, these are based on the typical value from the datasheet
  */
-uint16_t exectimes_204a[] = {
+const uint16_t exectimes_204a[] = {
 	3,  // WAKE_TWHI
 	38, // CMD_CHECKMAC
 	0,
