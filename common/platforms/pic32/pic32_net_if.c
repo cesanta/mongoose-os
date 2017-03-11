@@ -287,9 +287,9 @@ void mg_pic32_if_connect_udp(struct mg_connection *nc) {
   }
 /* clang-format on */
 
-struct mg_iface_vtable mg_pic32_iface_vtable = MG_PIC32_IFACE_VTABLE;
+const struct mg_iface_vtable mg_pic32_iface_vtable = MG_PIC32_IFACE_VTABLE;
 #if MG_NET_IF == MG_NET_IF_PIC32
-struct mg_iface_vtable mg_default_iface_vtable = MG_PIC32_IFACE_VTABLE;
+const struct mg_iface_vtable mg_default_iface_vtable = MG_PIC32_IFACE_VTABLE;
 #endif
 
 #endif /* MG_ENABLE_NET_IF_PIC32 */

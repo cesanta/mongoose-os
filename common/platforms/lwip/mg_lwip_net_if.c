@@ -608,9 +608,9 @@ void mg_lwip_if_sock_set(struct mg_connection *nc, sock_t sock) {
   }
 /* clang-format on */
 
-struct mg_iface_vtable mg_lwip_iface_vtable = MG_LWIP_IFACE_VTABLE;
+const struct mg_iface_vtable mg_lwip_iface_vtable = MG_LWIP_IFACE_VTABLE;
 #if MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL
-struct mg_iface_vtable mg_default_iface_vtable = MG_LWIP_IFACE_VTABLE;
+const struct mg_iface_vtable mg_default_iface_vtable = MG_LWIP_IFACE_VTABLE;
 #endif
 
 #endif /* MG_ENABLE_NET_IF_LWIP_LOW_LEVEL */

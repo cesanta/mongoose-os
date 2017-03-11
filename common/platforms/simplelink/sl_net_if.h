@@ -16,7 +16,7 @@ extern "C" {
 #define MG_ENABLE_NET_IF_SIMPLELINK MG_NET_IF == MG_NET_IF_SIMPLELINK
 #endif
 
-extern struct mg_iface_vtable mg_simplelink_iface_vtable;
+extern const struct mg_iface_vtable mg_simplelink_iface_vtable;
 
 #ifdef __cplusplus
 }

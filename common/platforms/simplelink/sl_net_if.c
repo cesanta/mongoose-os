@@ -460,9 +460,9 @@ void sl_restart_cb(struct mg_mgr *mgr) {
   }
 /* clang-format on */
 
-struct mg_iface_vtable mg_simplelink_iface_vtable = MG_SL_IFACE_VTABLE;
+const struct mg_iface_vtable mg_simplelink_iface_vtable = MG_SL_IFACE_VTABLE;
 #if MG_NET_IF == MG_NET_IF_SIMPLELINK
-struct mg_iface_vtable mg_default_iface_vtable = MG_SL_IFACE_VTABLE;
+const struct mg_iface_vtable mg_default_iface_vtable = MG_SL_IFACE_VTABLE;
 #endif
 
 #endif /* MG_ENABLE_NET_IF_SIMPLELINK */

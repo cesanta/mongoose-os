@@ -14,7 +14,7 @@
 
 #include <stdint.h>
 
-extern struct mg_iface_vtable mg_lwip_iface_vtable;
+extern const struct mg_iface_vtable mg_lwip_iface_vtable;
 
 struct mg_lwip_conn_state {
   struct mg_connection *nc;

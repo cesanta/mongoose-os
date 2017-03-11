@@ -16,7 +16,7 @@ extern "C" {
 #define MG_ENABLE_NET_IF_PIC32 MG_NET_IF == MG_NET_IF_PIC32
 #endif
 
-extern struct mg_iface_vtable mg_pic32_iface_vtable;
+extern const struct mg_iface_vtable mg_pic32_iface_vtable;
 
 #ifdef __cplusplus
 }
