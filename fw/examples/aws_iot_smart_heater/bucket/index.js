@@ -1,19 +1,13 @@
 const GRAPH_UPDATE_PERIOD = 10 /* seconds */;
 const GRAPH_PERIOD = 60 * 60 * 24 * 2 /* seconds */;
 
-var mqttClientAuth;
-var mqttClientUnauth;
-var getStateIntervalId;
 var heaterOn = false;
-
 var GoogleAuth;
-
 var heaterUser;
-
 var tempChart;
 var lastAWSData;
-
 var statusChanging = false;
+var getShadowInterval;
 
 window.fbAsyncInit = function() {
   if (heaterVars.facebookOAuthClientId) {
@@ -75,37 +69,6 @@ function awsCredentialsRefresh(getUsername) {
             provider: heaterUser.getAuthProvider(),
           });
           eventHandler(EV_SIGN_DONE);
-
-          // connect to MQTT
-          var requestUrl = SigV4Utils.getSignedUrl(
-            'wss',
-            'data.iot.' + heaterVars.region + '.amazonaws.com',
-            '/mqtt',
-            'iotdevicegateway',
-            heaterVars.region,
-            AWS.config.credentials.accessKeyId,
-            AWS.config.credentials.secretAccessKey,
-            AWS.config.credentials.sessionToken
-          );
-
-          var initClientAuthOpts = {
-            onConnected: function(client) {
-              mqttClientAuth = client;
-            },
-            onDisconnected: function(reconnect) {
-              mqttClientAuth = undefined;
-              if (reconnect) {
-                console.log('reconnecting authenticated...');
-                setTimeout(function() {
-                  initClient(requestUrl, initClientAuthOpts);
-                }, 100);
-              } else {
-                console.log('do not reconnect authenticated');
-              }
-            },
-          };
-
-          initClient(requestUrl, initClientAuthOpts);
         }
       });
     }
@@ -278,60 +241,41 @@ setInterval(function() {
   });
 }, GRAPH_UPDATE_PERIOD * 1000);
 
-function initClient(requestUrl, opts) {
-  var clientId = String(Math.random()).replace('.', '');
-  var client = new Paho.MQTT.Client(requestUrl, clientId);
-  client.myrequests = {};
-  var connectOptions = {
-    onSuccess: function () {
-      console.log('connected');
-      if (opts.onConnected) {
-        opts.onConnected(client);
-      }
-    },
-    useSSL: true,
-    timeout: 3,
-    mqttVersion: 4,
-    onFailure: function (err) {
-      console.error('connect failed', err);
-    }
-  };
-  client.connect(connectOptions);
+function setShadowInterval() {
+  if (getShadowInterval !== undefined) {
+    clearInterval(getShadowInterval);
+  }
+  getShadowInterval = setInterval(function() {
+    var iotdata = new AWS.IotData({
+      endpoint: heaterVars.endpointAddress,
+    });
+    iotdata.getThingShadow({thingName: heaterVars.deviceId}, function (err, data) {
+      if (err) {
+        console.log(err, err.stack); // an error occurred
+      } else {
+        var payload = JSON.parse(data.payload);
+        console.log("payload:", payload);
+        if ("state" in payload && "reported" in payload.state) {
+          var temp;
+          if (lastAWSData && lastAWSData.Items && lastAWSData.Items.length > 0) {
+            var item = lastAWSData.Items[lastAWSData.Items.length - 1];
+            temp = Number(item.payload.M.temp.N);
+          }
 
-  client.onMessageArrived = function (message) {
-    if (typeof message === "object" && typeof message.payloadString === "string") {
-      console.log("msg arrived: " +  message.payloadString);
-      var payload = JSON.parse(message.payloadString);
-      if (typeof payload === "object" && typeof payload.id === "number") {
-        if (payload.id in client.myrequests) {
-          client.myrequests[payload.id].handler(payload.result);
-          delete client.myrequests[payload.id];
+          var rs = payload.state.reported;
+          heaterOn = !!rs.on;
+          statusChanging = true;
+          $('#status').bootstrapToggle(heaterOn ? 'on' : 'off');
+          statusChanging = false;
+          if (temp) $('#temp').text(temp.toFixed(1));
+          $('#time').text(moment().format('MMM DD HH:mm:ss'));
         }
       }
-    }
-  };
-
-  client.onConnectionLost = function (resp) {
-    console.log('onConnectionLost, resp:', resp);
-    var reconnect = false;
-    if (resp.errorCode === 8 && resp.errorMessage === "AMQJS0008I Socket closed.") {
-      // Error reporting in case of permission violation in MQTT is awful: when
-      // the client tries to do something which is not allowed, the connection
-      // gets lost with this error message, so we have to handle errors in this
-      // ugly way.
-      for (key in client.myrequests) {
-        if (client.myrequests.hasOwnProperty(key)) {
-          alert("Not authorized to publish to " + client.myrequests[key].topic);
-          delete client.myrequests[key];
-        }
-      }
-      reconnect = true;
-    }
-    if (opts.onDisconnected) {
-      opts.onDisconnected(reconnect);
-    }
-  };
+    });
+  }, 1000);
 }
+
+setShadowInterval();
 
 function onSuccess(googleUser) {
   console.log('Logged in as: ' + googleUser.getBasicProfile().getName());
@@ -405,73 +349,10 @@ AWS.config.credentials.get(function(err) {
     console.log(err);
     return;
   }
-  var requestUrl = SigV4Utils.getSignedUrl(
-    'wss',
-    'data.iot.' + heaterVars.region + '.amazonaws.com',
-    '/mqtt',
-    'iotdevicegateway',
-    heaterVars.region,
-    AWS.config.credentials.accessKeyId,
-    AWS.config.credentials.secretAccessKey,
-    AWS.config.credentials.sessionToken
-  );
-
-  var initClientOpts = {
-    onConnected: function(client) {
-      mqttClientUnauth = client;
-      var rpcId = "smart_heater_" + String(Math.random()).replace('.', '');
-      console.log('subscribing to:', rpcId + "/rpc");
-      client.subscribe(rpcId + "/rpc");
-
-      getStateIntervalId = setInterval(function() {
-        var msgId = Number(String(Math.random()).replace('.', ''));
-        var topic = heaterVars.deviceId + '/rpc/Heater.GetState'
-        console.log('msgId:', msgId);
-        client.myrequests[msgId] = {
-          handler: function(resp) {
-            console.log('hey', resp);
-            heaterOn = !!resp.on;
-            // $("#heater_status").text("Heater status: " + (resp.on ? "on" : "off"));
-            statusChanging = true;
-            $('#status').bootstrapToggle(heaterOn ? 'on' : 'off');
-            statusChanging = false;
-            if (resp.temp) $('#temp').text(resp.temp.toFixed(1));
-            // var now = Date.now();
-            $('#time').text(moment().format('MMM DD HH:mm:ss'));
-          },
-          topic: topic,
-        };
-        msgObj = {
-          id: msgId,
-          src: rpcId,
-          dst: heaterVars.deviceId,
-          args: {},
-        };
-        message = new Paho.MQTT.Message(JSON.stringify(msgObj));
-        message.destinationName = topic;
-        var sendRes = client.send(message);
-        console.log(message, 'result:', sendRes);
-      }, 2000);
-    },
-
-    onDisconnected: function() {
-      console.log("stopping requesting state");
-      mqttClientUnauth = undefined;
-      clearInterval(getStateIntervalId);
-
-      console.log('reconnecting...');
-      setTimeout(function() {
-        initClient(requestUrl, initClientOpts);
-      }, 100);
-    }
-  };
-
-  initClient(requestUrl, initClientOpts);
 });
 
 function signOut() {
   var eventHandler = uiEventHandler;
-  mqttClientAuth.disconnect();
   eventHandler(EV_STATUS, "Signing out...");
 
   AWS.config.credentials.params.Logins = {};
@@ -496,47 +377,33 @@ function signOut() {
   });
 }
 
-function switchHeater(on) {
-  var client = mqttClientAuth;
-
-  if (!client) {
-    alert('please login first');
-    return
-  }
-
+function switchHeater() {
   try {
-    var rpcId = "smart_heater_" + String(Math.random()).replace('.', '');
-    console.log('subscribing to:', rpcId + "/rpc");
-    client.subscribe(rpcId + "/rpc");
+    var iotdata = new AWS.IotData({
+      endpoint: heaterVars.endpointAddress,
+      credentials: AWS.config.credentials,
+    });
 
-    var msgId = Number(String(Math.random()).replace('.', ''));
-    console.log('msgId:', msgId);
-    var topic = heaterVars.deviceId + '/rpc/Heater.SetState';
-    client.myrequests[msgId] = {
-      handler: function(resp) {
-        console.log('heater switch resp:', resp);
-        console.log('unsubscribing from:', rpcId + "/rpc");
-        try {
-          client.unsubscribe(rpcId + "/rpc");
-        } catch (e) {
-          console.log(e);
-        }
-      },
-      topic: topic,
+    var updateShadowParams = {
+      payload: JSON.stringify({
+        state: {
+          desired: {
+            on: !heaterOn,
+          },
+        },
+      }),
+      thingName: heaterVars.deviceId,
     };
-    msgObj = {
-      id: msgId,
-      src: rpcId,
-      dst: heaterVars.deviceId,
-      args: {
-        on: !heaterOn,
-      },
-    };
-    message = new Paho.MQTT.Message(JSON.stringify(msgObj));
-    message.destinationName = topic;
-    $("#heater_status").text("Heater status: ...");
-    var sendRes = client.send(message);
-    console.log(message, 'result:', sendRes);
+    iotdata.updateThingShadow(updateShadowParams, function(err, data) {
+      if (err) {
+        // an error occurred
+        alert(err.message);
+        console.log(err, err.stack);
+      } else {
+        // successful response
+        console.log('switch success:', data);
+      }
+    });
   } catch (e) {
     console.log(e);
   }
@@ -604,34 +471,9 @@ $(document).ready(function() {
 
   $("#status").change(function() {
     if (!statusChanging) {
-      switchHeater(true);
+      setShadowInterval();
+      switchHeater();
     }
     return false;
   });
 });
-
-function openEmailCodeDialog(callback) {
-  var codeDialog = $("#code_dialog");
-  codeDialog.dialog({
-    buttons: [
-      {
-        id: "code-button-ok",
-        text: "Ok",
-        click: function() {
-          callback(codeDialog.find("#email_code").val());
-          $(this).dialog("close");
-        },
-      }
-    ],
-    autoOpen: false,
-    modal: true,
-    minWidth: 400,
-    maxHeight: 300,
-    title: "Enter verification code",
-  });
-  codeDialog.on("dialogopen", function(event, ui) {
-    codeDialog.find("#email_code").val("");
-  });
-
-  codeDialog.dialog("open");
-}

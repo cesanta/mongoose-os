@@ -31,6 +31,9 @@ mos config-get device.id
 # Put init.js on the device
 mos put init.js
 
+# Enable aws shadow
+mos config-set aws.shadow.enable=true
+
 # Set wifi configuration
 mos config-set wifi.sta.enable=true wifi.ap.enable=false \
                wifi.sta.ssid=WIFI_SSID wifi.sta.pass=WIFI_PASS
@@ -48,6 +51,10 @@ npm --prefix ../helpers/cloudformation-helpers install ../helpers/cloudformation
 # We'll also need to create a separate S3 bucket for helper functions:
 aws s3 mb s3://my-cf-helpers
 
+# Get the endpoint address for your AWS account, you'll need to provide it as
+# a parameter for your stack:
+aws iot describe-endpoint
+
 # Now, "package" the template. Packaging includes copying source code of the
 # helper functions from local machine to the s3 bucket we created above,
 # and adjusting the template appropriately. It's all done in one step:
@@ -58,7 +65,8 @@ aws cloudformation package \
 
 # The command above has created a new template file: packaged-template.yaml.
 # Now, instantiate AWS stack (replace <device_id> with the ID you obtained by
-# config-get in the beginning. Also, depending on the authentication
+# config-get in the beginning, and <endpoint_address> with the address returned
+# by aws iot describe-endpoint. Also, depending on the authentication
 # provider(s) you have created apps for, provide client IDs. The command below
 # contains parameters for both Google and Facebook; if you don't use some of
 # those, just omit the whole parameter)
@@ -69,6 +77,7 @@ aws cloudformation create-stack \
     --stack-name my-heater \
     --parameters \
         ParameterKey=DeviceID,ParameterValue=<device_id> \
+        ParameterKey=EndpointAddress,ParameterValue=<endpoint_address> \
         ParameterKey=GoogleClientID,ParameterValue=<google_client_id> \
         ParameterKey=FacebookClientID,ParameterValue=<facebook_client_id> \
     --capabilities CAPABILITY_IAM \

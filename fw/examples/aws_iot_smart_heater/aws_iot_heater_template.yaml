@@ -49,6 +49,13 @@ Parameters:
     Description: Facebook OAuth2 Client ID
     Type: String
     Default: ''
+  EndpointAddress:
+    Description: |
+      Endpoint address, can be fetched from the command line as follows:
+      aws iot describe-endpoint
+    Type: String
+    MinLength: '1'
+    MaxLength: '2048'
 
 Conditions:
   EMPTY_CognitoIdentityPoolName:
@@ -248,6 +255,7 @@ Resources:
           {"Fn::Join": ["", ["  addIotPolicyLambdaName: '", { "Ref": "myAddIotPolicyLambdaFunction" }, "',"]]},
           {"Fn::Join": ["", ["  googleOAuthClientId: '", { "Ref": "GoogleClientID" }, "',"]]},
           {"Fn::Join": ["", ["  facebookOAuthClientId: '", { "Ref": "FacebookClientID" }, "',"]]},
+          {"Fn::Join": ["", ["  endpointAddress: '", { "Ref": "EndpointAddress" }, "',"]]},
           "};",
           ""
         ]]
@@ -447,14 +455,7 @@ Resources:
           Statement:
           - Effect: Allow
             Action:
-            - "iot:Connect"
-            - "iot:Receive" # It would be better to limit it in the same way
-                            # as iot:Subscribe, but apparently topicfilter
-                            # doesn't work for Receive
-            Resource: "*"
-          - Effect: Allow
-            Action:
-            - "iot:Publish"
+            - "iot:GetThingShadow"
             Resource:
               Fn::Join:
               - ''
@@ -462,20 +463,8 @@ Resources:
                 - Ref: AWS::Region
                 - ":"
                 - Ref: AWS::AccountId
-                - ":topic/"
+                - ":thing/"
                 - Ref: DeviceID
-                - "/rpc/Heater.GetState"
-          - Effect: Allow
-            Action:
-            - "iot:Subscribe"
-            Resource:
-              Fn::Join:
-              - ''
-              - - 'arn:aws:iot:'
-                - Ref: AWS::Region
-                - ":"
-                - Ref: AWS::AccountId
-                - ":topicfilter/smart_heater_*/rpc"
 
   CognitoAuthenticatedRole:
     Type: AWS::IAM::Role
@@ -505,14 +494,7 @@ Resources:
           Statement:
           - Effect: Allow
             Action:
-            - "iot:Connect"
-            - "iot:Receive" # It would be better to limit it in the same way
-                            # as iot:Subscribe, but apparently topicfilter
-                            # doesn't work for Receive
-            Resource: "*"
-          - Effect: Allow
-            Action:
-            - "iot:Publish"
+            - "iot:GetThingShadow"
             Resource:
               Fn::Join:
               - ''
@@ -520,20 +502,8 @@ Resources:
                 - Ref: AWS::Region
                 - ":"
                 - Ref: AWS::AccountId
-                - ":topic/"
+                - ":thing/"
                 - Ref: DeviceID
-                - "/rpc/Heater.GetState"
-          - Effect: Allow
-            Action:
-            - "iot:Subscribe"
-            Resource:
-              Fn::Join:
-              - ''
-              - - 'arn:aws:iot:'
-                - Ref: AWS::Region
-                - ":"
-                - Ref: AWS::AccountId
-                - ":topicfilter/smart_heater_*/rpc"
 
   # Heater Admin role
   myHeaterAdminRole:
@@ -553,14 +523,7 @@ Resources:
           Statement:
           - Effect: Allow
             Action:
-            - "iot:Connect"
-            - "iot:Receive" # It would be better to limit it in the same way
-                            # as iot:Subscribe, but apparently topicfilter
-                            # doesn't work for Receive
-            Resource: "*"
-          - Effect: Allow
-            Action:
-            - "iot:Publish"
+            - "iot:GetThingShadow"
             Resource:
               Fn::Join:
               - ''
@@ -568,12 +531,11 @@ Resources:
                 - Ref: AWS::Region
                 - ":"
                 - Ref: AWS::AccountId
-                - ":topic/"
+                - ":thing/"
                 - Ref: DeviceID
-                - "/rpc/*"
           - Effect: Allow
             Action:
-            - "iot:Subscribe"
+            - "iot:UpdateThingShadow"
             Resource:
               Fn::Join:
               - ''
@@ -581,7 +543,8 @@ Resources:
                 - Ref: AWS::Region
                 - ":"
                 - Ref: AWS::AccountId
-                - ":topicfilter/smart_heater_*/rpc"
+                - ":thing/"
+                - Ref: DeviceID
 
   # }}}
 

@@ -5,13 +5,27 @@ load('api_gpio.js');
 load('api_i2c.js');
 load('api_mqtt.js');
 load('api_rpc.js');
-load('api_sys.js');
 load('api_timer.js');
 load('api_config.js');
+load('api_aws.js');
 
 // GPIO pin which has a on/off relay connected
 let pin = 13;
 GPIO.set_mode(pin, GPIO.MODE_OUTPUT);
+
+function updateState(newSt) {
+  if (newSt.on !== undefined) {
+    state.on = newSt.on;
+  }
+}
+
+function applyHeater() {
+  GPIO.write(pin, state.on || 0);
+}
+
+let state = {
+  on: false,
+};
 
 // Milliseconds. How often to send temperature readings to the cloud
 let freq = 10000;
@@ -41,6 +55,11 @@ let getStatus = function() {
 
 RPC.addHandler('Heater.SetState', function(args) {
   GPIO.write(pin, args.on || 0);
+  AWS.Shadow.update(0, {
+    desired: {
+      on: !state.on,
+    },
+  });
   return true;
 });
 
@@ -54,3 +73,34 @@ Timer.set(freq, 1, function() {
   let ok = MQTT.pub(topic, message, message.length);
   print('MQTT pubish: topic ', topic, 'msg: ', message, 'status: ', ok);
 }, null);
+
+AWS.Shadow.setStateHandler(function(ud, ev, reported, desired) {
+  print('Event:', ev);
+  print('Reported state:', JSON.stringify(reported));
+  print('Desired state:', JSON.stringify(desired));
+
+  // mOS will request state on reconnect and deltas will arrive on changes.
+  if (ev !== AWS.Shadow.GET_ACCEPTED && ev !== AWS.Shadow.UPDATE_DELTA) {
+    return true;
+  }
+
+  // Here we extract values from previosuly reported state (if any)
+  // and then override it with desired state (if present).
+  updateState(reported);
+  updateState(desired);
+
+  print('New state:', JSON.stringify(state));
+
+  applyHeater();
+
+  if (ev === AWS.Shadow.UPDATE_DELTA) {
+    // Report current state
+    AWS.Shadow.update(0, {
+      reported: state,
+    });
+  }
+
+  return true;
+}, null);
+
+applyHeater();
