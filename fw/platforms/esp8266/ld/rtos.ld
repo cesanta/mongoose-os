@@ -29,24 +29,6 @@ EXTERN(_UserExceptionVector)
 EXTERN(_OurUserExceptionVector)
 EXTERN(_DoubleExceptionVector)
 EXTERN(_OurDoubleExceptionVector)
-PROVIDE(_memmap_vecbase_reset = 0x40000000);
-/* Various memory-map dependent cache attribute settings: */
-_memmap_cacheattr_wb_base = 0x00000110;
-_memmap_cacheattr_wt_base = 0x00000110;
-_memmap_cacheattr_bp_base = 0x00000220;
-_memmap_cacheattr_unused_mask = 0xFFFFF00F;
-_memmap_cacheattr_wb_trapnull = 0x2222211F;
-_memmap_cacheattr_wba_trapnull = 0x2222211F;
-_memmap_cacheattr_wbna_trapnull = 0x2222211F;
-_memmap_cacheattr_wt_trapnull = 0x2222211F;
-_memmap_cacheattr_bp_trapnull = 0x2222222F;
-_memmap_cacheattr_wb_strict = 0xFFFFF11F;
-_memmap_cacheattr_wt_strict = 0xFFFFF11F;
-_memmap_cacheattr_bp_strict = 0xFFFFF22F;
-_memmap_cacheattr_wb_allvalid = 0x22222112;
-_memmap_cacheattr_wt_allvalid = 0x22222112;
-_memmap_cacheattr_bp_allvalid = 0x22222222;
-PROVIDE(_memmap_cacheattr_reset = _memmap_cacheattr_wb_trapnull);
 
 SECTIONS
 {
@@ -78,17 +60,14 @@ SECTIONS
   .data : ALIGN(4)
   {
     _data_start = ABSOLUTE(.);
+    */libc.a:(.data .data.*)
+    */ESP8266_*_SDK/lib*.a:(.data .data.*)
+    */liblwip*.a:(.data .data.*)
+    */libmbed*.a:(.data .data.*)
+    */lib*.a:(.data .data.*)
+    */mongoose-os.a:(.data .data.*)
     *(.data)
     *(.data.*)
-    *(.gnu.linkonce.d.*)
-    *(.data1)
-    *(.sdata)
-    *(.sdata.*)
-    *(.gnu.linkonce.s.*)
-    *(.sdata2)
-    *(.sdata2.*)
-    *(.gnu.linkonce.s2.*)
-    *(.jcr)
     _data_end = ABSOLUTE(.);
   } >dram0_0_seg :dram0_0_phdr
 
@@ -123,9 +102,7 @@ SECTIONS
     . = ALIGN (8);
     _bss_end = ABSOLUTE(.);
     _heap_start = ABSOLUTE(.);
-/*    _stack_sentry = ALIGN(0x8); */
   } >dram0_0_seg :dram0_0_bss_phdr
-/* __stack = 0x3ffc8000; */
 
   .text : ALIGN(4)
   {
@@ -140,26 +117,16 @@ SECTIONS
     *(.DoubleExceptionVector.text)
     *(.UserEnter.text)
     . = ALIGN (16);
-    *(.entry.text)
-    *(.init.literal)
-    *(.init)
-    *libfreertos.a:(.literal .text .literal.* .text.*)
-    *(.literal .text .fast.text .stub .gnu.warning .gnu.linkonce.literal.* .gnu.linkonce.t.*.literal .gnu.linkonce.t.*)
-    *(.fast.text)
-    *(.fini.literal)
-    *(.fini)
-    *(.gnu.version)
+    */libfreertos.a:(.literal .text .literal.* .text.*)
+    */libc.a:(.literal .fast.literal .text .fast.text)
+    */ESP8266_*_SDK/lib*.a:(.literal .fast.literal .text .fast.text)
+    */liblwip*.a:(.fast.literal .fast.text)
+    */libmbed*.a:(.fast.literal .fast.text)
+    */mongoose-os.a:(.fast.literal .fast.text)
+    *(.literal .fast.literal .fast.text)
+    *(.fini.literal .fini)
     _text_end = ABSOLUTE(.);
     _etext = .;
-  } >iram1_0_seg :iram1_0_phdr
-
-  .lit4 : ALIGN(4)
-  {
-    _lit4_start = ABSOLUTE(.);
-    *(*.lit4)
-    *(.lit4.*)
-    *(.gnu.linkonce.lit4.*)
-    _lit4_end = ABSOLUTE(.);
   } >iram1_0_seg :iram1_0_phdr
 
   .irom0.text : ALIGN(4)
@@ -168,18 +135,10 @@ SECTIONS
 
     /* This is actually read-only data, but section names have to be kept the way esptool expects them. */
     *(.sdk.version)
-    *(.rodata)
-    *(.rodata.*)
-    *(.gnu.linkonce.r.*)
-    *(.rodata1)
-    __XT_EXCEPTION_TABLE__ = ABSOLUTE(.);
-    *(.xt_except_table)
-    *(.gcc_except_table)
-    *(.gnu.linkonce.e.*)
-    *(.gnu.version_r)
-    *(.eh_frame)
-    . = (. + 3) & ~ 3;
+    *(.rodata SORT_BY_NAME(.rodata.*))
+
     /*  C++ constructor and destructor tables, properly ordered:  */
+    . = ALIGN(4);
     __init_array_start = ABSOLUTE(.);
     KEEP (*crtbegin.o(.ctors))
     KEEP (*(EXCLUDE_FILE (*crtend.o) .ctors))
@@ -190,17 +149,15 @@ SECTIONS
     KEEP (*(EXCLUDE_FILE (*crtend.o) .dtors))
     KEEP (*(SORT(.dtors.*)))
     KEEP (*(.dtors))
-    /*  C++ exception handlers table:  */
-    __XT_EXCEPTION_DESCS__ = ABSOLUTE(.);
-    *(.xt_except_desc)
-    *(.gnu.linkonce.h.*)
-    __XT_EXCEPTION_DESCS_END__ = ABSOLUTE(.);
-    *(.xt_except_desc_end)
-    *(.dynamic)
-    *(.gnu.version_d)
 
-    *(.irom0.literal .irom.literal .irom.text.literal .irom0.text .irom.text)
-    *(.literal.* .text.*)
+    . = ALIGN(4096);
+    */libc.a:(SORT_BY_NAME(.literal.*) .irom.text .irom0.text SORT_BY_NAME(.text.*))
+    */ESP8266_*_SDK/lib*.a:(.irom.text .irom0.text SORT_BY_NAME(.text.*))
+    */liblwip*.a:(SORT_BY_NAME(.literal.*) SORT_BY_NAME(.text.*))
+    */libmbed*.a:(SORT_BY_NAME(.literal.*) SORT_BY_NAME(.text.*))
+    */lib*.a:(.literal SORT_BY_NAME(.literal.*) .irom.text .irom0.text SORT_BY_NAME(.text.*))
+    */mongoose-os.a:(SORT_BY_NAME(.literal.*) SORT_BY_NAME(.text.*))
+    *(SORT_BY_NAME(.literal.*) .irom.text .irom0.text SORT_BY_NAME(.text.*))
     _irom0_text_end = ABSOLUTE(.);
   } >irom0_0_seg :irom0_0_phdr
 }

@@ -28,6 +28,7 @@
 
 #define IMAGE_PADDING 16
 #define SECTION_PADDING 4
+#define IROM_SECTION_PADDING 4096
 #define CHECKSUM_INIT 0xEF
 #define BIN_MAGIC_IROM 0xEA
 #define BIN_MAGIC_FLASH 0xE9
@@ -45,7 +46,7 @@ typedef struct {
     Elf32_Addr          entry;
 } Image_Header;
 
-static const char PADDING[IMAGE_PADDING] = {0};
+static const char PADDING[IROM_SECTION_PADDING] = {0};
 
 static bool debugon = false;
 static bool quieton = false;
@@ -310,7 +311,7 @@ bool CreateBinFile(char *elffile, char *imagefile, int bootver, unsigned char mo
 			error("Error: Failed to write header to image file.\r\n");
 			goto end_function;
 		}
-		if(!WriteElfSection(elf, outfile, ".irom0.text", true, true, IMAGE_PADDING, (iromchksum ? &chksum : 0))) {
+		if(!WriteElfSection(elf, outfile, ".irom0.text", true, true, IROM_SECTION_PADDING, (iromchksum ? &chksum : 0))) {
 			goto end_function;
 		}
 	}

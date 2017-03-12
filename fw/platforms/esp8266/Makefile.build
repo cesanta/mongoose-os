@@ -72,7 +72,7 @@ LWIP_BUILD_DIR = $(BUILD_DIR)/lwip
 FS_STAGING_DIR = $(BUILD_DIR)/fs
 RBOOT_FW_NAME = 0x00000.bin
 FW_SECTS = .text .data .rodata
-FW_USER_ARGS  = -quiet -bin -boot2
+FW_USER_ARGS = -quiet -bin -boot2
 
 # SSL can be None or mbedTLS
 SSL ?= mbedTLS
@@ -256,8 +256,6 @@ $(SSL_LIBS):
 	$(Q) $(MAKE) -j4 -C $(MBEDTLS_PATH)/library $(notdir $@) \
 		CC=$(CC) AR=$(AR) \
 		CFLAGS="$(MBEDTLS_CFLAGS)"
-	$(Q) $(OBJCOPY) --rename-section .rodata=.irom0.text $@
-	$(Q) $(OBJCOPY) --rename-section .rodata.str1.1=.irom0.text $@
 else
   SSL_LIBS =
 endif
@@ -358,15 +356,6 @@ $(APP_BIN): $(APP_ELF)
 # Link the main ELF output file.
 BIN_PARTS = $(BUILD_DIR)/esp_cache.c.o $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(ATCA_LIB) $(LWIP_LIB) $(SSL_LIBS)
 $(APP_ELF): $(BIN_PARTS) $(LD_SCRIPT)
-	# Before linking, rename .rodata section in APP_OBJS.
-	#
-	# We can't build a library APP_LIB and rename section there, because for
-	# some weird reason mgos_app_init() from that lib can't override a weak symbol
-	# from MGOS_LIB.
-	for i in $(APP_OBJS); do \
-		$(OBJCOPY) --rename-section .rodata=.irom0.text $$i; \
-		$(OBJCOPY) --rename-section .rodata.str1.1=.irom0.text $$i; \
-	done
 ifeq "$(MGOS_ESP8266_RTOS)" "1"
 	$(OBJCOPY) --weaken-symbol printf --weaken-symbol puts /opt/Espressif/esp-open-sdk/xtensa-lx106-elf/xtensa-lx106-elf/lib/libc.a
 endif
@@ -384,8 +373,6 @@ $(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(MGOS_ESP_PATH)/Makefile.build
 $(MGOS_LIB): $(MGOS_OBJS)
 	$(vecho) "AR    $@"
 	$(Q) $(AR) cru $@ $^
-	$(Q) $(OBJCOPY) --rename-section .rodata=.irom0.text $@
-	$(Q) $(OBJCOPY) --rename-section .rodata.str1.1=.irom0.text $@
 
 # This rule is for normal (pre-existing) C sources from VPATH.
 $(BUILD_DIR)/%.c.o: %.c $(GENFILES_FLAG)
