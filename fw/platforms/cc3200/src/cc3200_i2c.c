@@ -49,9 +49,9 @@ struct mgos_i2c *mgos_i2c_create(const struct sys_config_i2c *cfg) {
   int mode;
   if (scl_pin == PIN_01) {
     mode = PIN_MODE_1;
-  } else if (scl_pin == PIN_03 || sda_pin == PIN_05) {
+  } else if (scl_pin == PIN_03 || scl_pin == PIN_05) {
     mode = PIN_MODE_5;
-  } else if (sda_pin == PIN_16) {
+  } else if (scl_pin == PIN_16) {
     mode = PIN_MODE_9;
   } else {
     goto out_err;
