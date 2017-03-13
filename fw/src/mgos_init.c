@@ -22,6 +22,7 @@
 #include "fw/src/mgos_rpc.h"
 #include "fw/src/mgos_service_config.h"
 #include "fw/src/mgos_service_filesystem.h"
+#include "fw/src/mgos_sntp.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_updater_rpc.h"
 #include "fw/src/mgos_updater_http.h"
@@ -52,6 +53,10 @@ enum mgos_init_result mgos_init(void) {
 #endif
 #if MGOS_ENABLE_DNS_SD
   r = mgos_dns_sd_init(); /* Before mgos_rpc_init */
+  if (r != MGOS_INIT_OK) return r;
+#endif
+#if MGOS_ENABLE_SNTP
+  r = mgos_sntp_init();
   if (r != MGOS_INIT_OK) return r;
 #endif
 

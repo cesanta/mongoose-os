@@ -97,6 +97,7 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 				}
 			}
 			if err != nil {
+				reportf("read err %s", err)
 				cancel()
 				return
 			}

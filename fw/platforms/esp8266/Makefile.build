@@ -41,6 +41,7 @@ MGOS_ENABLE_HEAP_LOG ?= 0
 # In addition to logging allocations, print call traces for them.
 # This instruments every function and increases code size significantly.
 MGOS_ENABLE_CALL_TRACE ?= 0
+MGOS_ENABLE_SNTP ?= 1
 MGOS_ESP8266_RTOS ?= 0
 
 FLASH_SIZE ?= 4M

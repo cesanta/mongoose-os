@@ -5,10 +5,11 @@
 
 #include <fw/src/mgos_timers.h>
 
-#include <fw/src/mgos_mongoose.h>
 #include <fw/src/mgos_features.h>
+#include <fw/src/mgos_mongoose.h>
+#include <fw/src/mgos_sntp.h>
 
-static mgos_timer_id s_next_timer_id = 0;
+static mgos_timer_id s_next_timer_id = MGOS_INVALID_TIMER_ID;
 
 struct timer_info {
   mgos_timer_id id;
@@ -52,13 +53,32 @@ static struct mg_connection *mgos_find_timer(mgos_timer_id id) {
   return NULL;
 }
 
+#if MGOS_ENABLE_SNTP
+static void mgos_time_change_cb(void *arg, double delta) {
+  struct mg_mgr *mgr = (struct mg_mgr *) arg;
+  struct mg_connection *nc;
+  for (nc = mg_next(mgr, NULL); nc != NULL; nc = mg_next(mgr, nc)) {
+    if (nc->ev_timer_time > 0) {
+      nc->ev_timer_time += delta;
+    }
+  }
+}
+#endif
+
 static mgos_timer_id mgos_set_timer_common(struct timer_info *ti, int msecs,
                                            int repeat) {
   struct mg_connection *c;
   struct mg_add_sock_opts opts;
+  if (s_next_timer_id == MGOS_INVALID_TIMER_ID) {
+/* First time init. */
+#if MGOS_ENABLE_SNTP
+    mgos_sntp_add_time_change_cb(mgos_time_change_cb, mgos_get_mgr());
+#endif
+  }
   do {
     ti->id = s_next_timer_id++;
   } while (ti->id == MGOS_INVALID_TIMER_ID || mgos_find_timer(ti->id) != NULL);
+  if (s_next_timer_id == MGOS_INVALID_TIMER_ID) s_next_timer_id++;
   ti->interval_ms = (repeat ? msecs : -1);
   memset(&opts, 0, sizeof(opts));
   opts.user_data = ti;

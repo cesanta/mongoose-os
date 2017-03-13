@@ -161,7 +161,7 @@ void mgos_mqtt_add_global_handler(mg_event_handler_t handler, void *ud) {
 }
 
 #if MGOS_ENABLE_WIFI
-static void mg_mqtt_wifi_ready(enum mgos_wifi_status event, void *arg) {
+static void mgos_mqtt_wifi_ready(enum mgos_wifi_status event, void *arg) {
   if (event != MGOS_WIFI_IP_ACQUIRED) return;
 
   mqtt_global_reconnect();
@@ -177,7 +177,7 @@ enum mgos_init_result mgos_mqtt_global_init(void) {
     return MGOS_INIT_MQTT_INIT_FAILED;
   }
 #if MGOS_ENABLE_WIFI
-  mgos_wifi_add_on_change_cb(mg_mqtt_wifi_ready, NULL);
+  mgos_wifi_add_on_change_cb(mgos_mqtt_wifi_ready, NULL);
 #else
   mqtt_global_reconnect();
 #endif

@@ -70,6 +70,14 @@
 #define MGOS_ENABLE_MQTT 0
 #endif
 
+#ifndef MGOS_ENABLE_RPC
+#define MGOS_ENABLE_RPC 0
+#endif
+
+#ifndef MGOS_ENABLE_SNTP
+#define MGOS_ENABLE_SNTP 0
+#endif
+
 #ifndef MGOS_ENABLE_UPDATER
 #define MGOS_ENABLE_UPDATER 0
 #endif

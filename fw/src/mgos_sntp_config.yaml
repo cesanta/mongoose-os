@@ -1,0 +1,8 @@
+[
+  ["sntp", "o", {title: "SNTP settings"}],
+  ["sntp.enable", "b", false, {title: "Enable SNTP"}],
+  ["sntp.server", "s", "pool.ntp.org", {title: "Server address"}],
+  ["sntp.retry_min", "i", 1, {title: "Minimum retry interval"}],
+  ["sntp.retry_max", "i", 30, {title: "Maximum retry interval"}],
+  ["sntp.update_interval", "i", 7200, {title: "Update interval. If 0, performs a one-off sync"}],
+]

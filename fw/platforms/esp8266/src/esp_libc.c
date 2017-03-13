@@ -17,6 +17,7 @@
 #include "user_interface.h"
 #endif
 
+#include "fw/src/mgos_hal.h"
 #include "fw/platforms/esp8266/src/esp_features.h"
 
 #if MGOS_ENABLE_HEAP_LOG
@@ -120,17 +121,35 @@ void _exit(int status) {
  * This will prevent counter wrap if time is read regularly.
  * At least Mongoose poll queries time, so we're covered.
  */
-int _gettimeofday_r(struct _reent *r, struct timeval *tp, void *tzp) {
+
+static int64_t get_time64_micros(void) {
   static uint32_t prev_time = 0;
   static uint32_t num_overflows = 0;
+  mgos_ints_disable();
   uint32_t time = system_get_time();
-  uint64_t time64 = time;
+  int64_t time64 = time;
   if (prev_time > 0 && time < prev_time) num_overflows++;
   time64 += (((uint64_t) num_overflows) * (1ULL << 32));
-  tp->tv_sec = time64 / 1000000ULL;
-  tp->tv_usec = time64 % 1000000ULL;
   prev_time = time;
+  mgos_ints_enable();
+  return time64;
+}
+
+static int64_t sys_time_adj = 0;
+
+int _gettimeofday_r(struct _reent *r, struct timeval *tv, struct timezone *tz) {
+  int64_t time64 = get_time64_micros() + sys_time_adj;
+  tv->tv_sec = time64 / 1000000ULL;
+  tv->tv_usec = time64 % 1000000ULL;
   return 0;
   (void) r;
-  (void) tzp;
+  (void) tz;
+}
+
+int settimeofday(const struct timeval *tv, const struct timezone *tz) {
+  int64_t time64_cur = get_time64_micros();
+  int64_t time64_new = tv->tv_sec * 1000000LL + tv->tv_usec;
+  sys_time_adj = (time64_new - time64_cur);
+  (void) tz;
+  return 0;
 }
