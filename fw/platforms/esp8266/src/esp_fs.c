@@ -158,6 +158,11 @@ size_t mgos_get_free_fs_size(void) {
   return total - used;
 }
 
+void mgos_fs_gc(void) {
+  /* https://github.com/pellepl/spiffs/issues/135 */
+  SPIFFS_gc(&fs, mgos_get_free_fs_size() - 2 * fs.cfg.log_page_size);
+}
+
 int _open_r(struct _reent *r, const char *filename, int flags, int mode) {
   int res = spiffs_vfs_open(&fs, filename, flags, mode);
   if (res >= 0) {

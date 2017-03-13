@@ -19,6 +19,19 @@
 extern "C" {
 #endif /* __cplusplus */
 
+enum mgos_config_level {
+  MGOS_CONFIG_LEVEL_DEFAULTS = 0,
+  MGOS_CONFIG_LEVEL_VENDOR_1 = 1,
+  MGOS_CONFIG_LEVEL_VENDOR_2 = 2,
+  MGOS_CONFIG_LEVEL_VENDOR_3 = 3,
+  MGOS_CONFIG_LEVEL_VENDOR_4 = 4,
+  MGOS_CONFIG_LEVEL_VENDOR_5 = 5,
+  MGOS_CONFIG_LEVEL_VENDOR_6 = 6,
+  MGOS_CONFIG_LEVEL_VENDOR_7 = 7,
+  MGOS_CONFIG_LEVEL_VENDOR_8 = 8,
+  MGOS_CONFIG_LEVEL_USER = 9,
+};
+
 /*
  * Returns global instance of the config.
  * Note: Will return NULL before mgos_sys_config_init.
@@ -32,6 +45,13 @@ struct sys_config *get_cfg(void);
  * If non-NULL, it must be free()d.
  */
 bool save_cfg(const struct sys_config *cfg, char **msg);
+
+/*
+ * Reset config down to and including |level|.
+ * 0 - defaults, 1-8 - vendor levels, 9 - user.
+ * mgos_config_reset(MGOS_CONFIG_LEVEL_USER) will wipe user settings.
+ */
+void mgos_config_reset(int level);
 
 /*
  * Register a config validator.

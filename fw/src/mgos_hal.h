@@ -36,6 +36,8 @@ size_t mgos_get_fs_size(void);
 /* Get filesystem free space. */
 size_t mgos_get_free_fs_size(void);
 
+void mgos_fs_gc(void);
+
 /* Feed watchdog */
 void mgos_wdt_feed(void);
 

@@ -28,6 +28,7 @@
 #define PLACEHOLDER_CHAR '?'
 
 #define CONF_USER_FILE "conf9.json"
+#define CONF_USER_FILE_NUM_IDX 4
 
 /* FOr backward compatibility */
 #define CONF_USER_FILE_OLD "conf.json"
@@ -84,8 +85,8 @@ static bool load_config_defaults(struct sys_config *cfg) {
   memset(cfg, 0, sizeof(*cfg));
   memcpy(fname, CONF_USER_FILE, sizeof(fname));
   const char *acl = "*";
-  for (i = 0; i < 9; i++) {
-    fname[4] = '0' + i;
+  for (i = 0; i < MGOS_CONFIG_LEVEL_USER; i++) {
+    fname[CONF_USER_FILE_NUM_IDX] = '0' + i;
     if (!load_config_file(fname, acl, cfg)) {
       /* conf0 must exist, everything else is optional. */
       if (i == 0) return false;
@@ -123,6 +124,18 @@ bool save_cfg(const struct sys_config *cfg, char **msg) {
 clean:
   mgos_conf_free(sys_config_schema(), &defaults);
   return result;
+}
+
+void mgos_config_reset(int level) {
+  int i;
+  char fname[sizeof(CONF_USER_FILE)];
+  memcpy(fname, CONF_USER_FILE, sizeof(fname));
+  for (i = MGOS_CONFIG_LEVEL_USER; i >= level && i > 0; i--) {
+    fname[CONF_USER_FILE_NUM_IDX] = '0' + i;
+    if (remove(fname) == 0) {
+      LOG(LL_INFO, ("Removed %s", fname));
+    }
+  }
 }
 
 #if MGOS_ENABLE_WEB_CONFIG
