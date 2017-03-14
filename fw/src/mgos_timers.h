@@ -8,6 +8,8 @@
 
 #include <stdint.h>
 
+#include "fw/src/mgos_init.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -20,7 +22,7 @@ extern "C" {
 typedef void (*timer_callback)(void *param);
 
 /* Timer ID type */
-typedef uint32_t mgos_timer_id;
+typedef uintptr_t mgos_timer_id;
 
 /*
  * Setup timer with `msecs` timeout and `cb` as a callback.
@@ -35,6 +37,8 @@ mgos_timer_id mgos_set_timer(int msecs, int repeat, timer_callback cb,
  * Disable timer with a given timer ID.
  */
 void mgos_clear_timer(mgos_timer_id id);
+
+enum mgos_init_result mgos_timers_init(void);
 
 #ifdef __cplusplus
 }

@@ -133,6 +133,16 @@ void mgos_sntp_add_time_change_cb(mgos_sntp_time_change_cb cb, void *arg) {
   SLIST_INSERT_HEAD(&s_state.time_change_cbs, tccb, entries);
 }
 
+static void mgos_time_change_cb(void *arg, double delta) {
+  struct mg_mgr *mgr = (struct mg_mgr *) arg;
+  struct mg_connection *nc;
+  for (nc = mg_next(mgr, NULL); nc != NULL; nc = mg_next(mgr, nc)) {
+    if (nc->ev_timer_time > 0) {
+      nc->ev_timer_time += delta;
+    }
+  }
+}
+
 #if MGOS_ENABLE_WIFI
 static void mgos_sntp_wifi_ready(enum mgos_wifi_status event, void *arg) {
   if (event != MGOS_WIFI_IP_ACQUIRED) return;
@@ -149,6 +159,7 @@ enum mgos_init_result mgos_sntp_init(void) {
     LOG(LL_ERROR, ("sntp.server is required"));
     return MGOS_INIT_SNTP_INIT_FAILED;
   }
+  mgos_sntp_add_time_change_cb(mgos_time_change_cb, mgos_get_mgr());
 #if MGOS_ENABLE_WIFI
   mgos_wifi_add_on_change_cb(mgos_sntp_wifi_ready, NULL);
 #else

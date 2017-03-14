@@ -32,3 +32,11 @@ void mgos_system_restart(int exit_code) {
   /* TODO(dfrank) */
   (void) exit_code;
 }
+
+void mgos_lock(void) {
+  /* TODO(dfrank) */
+}
+
+void mgos_unlock(void) {
+  /* TODO(dfrank) */
+}

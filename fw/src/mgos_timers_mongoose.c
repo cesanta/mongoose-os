@@ -5,105 +5,127 @@
 
 #include <fw/src/mgos_timers.h>
 
+#include "common/queue.h"
+
 #include <fw/src/mgos_features.h>
+#include <fw/src/mgos_hal.h>
 #include <fw/src/mgos_mongoose.h>
 #include <fw/src/mgos_sntp.h>
 
-static mgos_timer_id s_next_timer_id = MGOS_INVALID_TIMER_ID;
-
 struct timer_info {
-  mgos_timer_id id;
   int interval_ms;
+  double next_invocation;
   timer_callback cb;
-  void *arg;
+  void *cb_arg;
+  LIST_ENTRY(timer_info) entries;
 };
 
-static void mgos_timer_handler(struct mg_connection *c, int ev, void *p) {
-  struct timer_info *ti = (struct timer_info *) c->user_data;
-  (void) p;
-  if (ti == NULL) return;
-  switch (ev) {
-    case MG_EV_TIMER: {
-      if (c->flags & MG_F_CLOSE_IMMEDIATELY) break;
-      if (ti->cb != NULL) ti->cb(ti->arg);
-      if (ti->interval_ms > 0) {
-        c->ev_timer_time = mg_time() + ti->interval_ms / 1000.0;
-      } else {
-        c->flags |= MG_F_CLOSE_IMMEDIATELY;
-      }
-      break;
-    }
-    case MG_EV_CLOSE: {
-      free(ti);
-      c->user_data = NULL;
-      break;
-    }
-  }
-}
-
-static struct mg_connection *mgos_find_timer(mgos_timer_id id) {
-  struct mg_connection *c;
-  for (c = mg_next(mgos_get_mgr(), NULL); c != NULL;
-       c = mg_next(mgos_get_mgr(), c)) {
-    if (c->handler == mgos_timer_handler) {
-      struct timer_info *ti = (struct timer_info *) c->user_data;
-      if (ti != NULL && ti->id == id) return c;
-    }
-  }
-  return NULL;
-}
-
-#if MGOS_ENABLE_SNTP
-static void mgos_time_change_cb(void *arg, double delta) {
-  struct mg_mgr *mgr = (struct mg_mgr *) arg;
+struct timer_data {
+  struct timer_info *current;
   struct mg_connection *nc;
-  for (nc = mg_next(mgr, NULL); nc != NULL; nc = mg_next(mgr, nc)) {
-    if (nc->ev_timer_time > 0) {
-      nc->ev_timer_time += delta;
+  LIST_HEAD(timers, timer_info) timers;
+};
+
+static struct timer_data *s_timer_data = NULL;
+
+static void schedule_next_timer(struct timer_data *td) {
+  struct timer_info *ti;
+  struct timer_info *min_ti = NULL;
+  LIST_FOREACH(ti, &td->timers, entries) {
+    if (min_ti == NULL || ti->next_invocation < min_ti->next_invocation) {
+      min_ti = ti;
     }
   }
+  td->current = min_ti;
+  if (min_ti != NULL) {
+    td->nc->ev_timer_time = min_ti->next_invocation;
+  } else {
+    td->nc->ev_timer_time = 0;
+  }
 }
-#endif
 
-static mgos_timer_id mgos_set_timer_common(struct timer_info *ti, int msecs,
-                                           int repeat) {
-  struct mg_connection *c;
-  struct mg_add_sock_opts opts;
-  if (s_next_timer_id == MGOS_INVALID_TIMER_ID) {
-/* First time init. */
-#if MGOS_ENABLE_SNTP
-    mgos_sntp_add_time_change_cb(mgos_time_change_cb, mgos_get_mgr());
-#endif
+static void mgos_timer_ev(struct mg_connection *nc, int ev, void *ev_data) {
+  if (ev != MG_EV_TIMER) return;
+  timer_callback cb = NULL;
+  void *cb_arg = NULL;
+  {
+    mgos_lock();
+    struct timer_data *td = (struct timer_data *) nc->user_data;
+    struct timer_info *ti = td->current;
+    /* Current can be NULL if it was the first to fire but was cleared. */
+    if (ti != NULL) {
+      cb = ti->cb;
+      cb_arg = ti->cb_arg;
+      if (ti->interval_ms > 0) {
+        ti->next_invocation = nc->ev_timer_time + ti->interval_ms / 1000.0;
+        ti = NULL;
+      } else {
+        LIST_REMOVE(ti, entries);
+      }
+    }
+    schedule_next_timer(td);
+    mgos_unlock();
+    if (ti != NULL) free(ti);
   }
-  do {
-    ti->id = s_next_timer_id++;
-  } while (ti->id == MGOS_INVALID_TIMER_ID || mgos_find_timer(ti->id) != NULL);
-  if (s_next_timer_id == MGOS_INVALID_TIMER_ID) s_next_timer_id++;
-  ti->interval_ms = (repeat ? msecs : -1);
-  memset(&opts, 0, sizeof(opts));
-  opts.user_data = ti;
-  c = mg_add_sock_opt(mgos_get_mgr(), INVALID_SOCKET, mgos_timer_handler, opts);
-  if (c == NULL) {
-    free(ti);
-    return 0;
-  }
-  c->ev_timer_time = mg_time() + (msecs / 1000.0);
-  mongoose_schedule_poll(false /* from_isr */);
-  return 1;
+  if (cb != NULL) cb(cb_arg);
+  (void) ev_data;
 }
 
 mgos_timer_id mgos_set_timer(int msecs, int repeat, timer_callback cb,
                              void *arg) {
   struct timer_info *ti = (struct timer_info *) calloc(1, sizeof(*ti));
   if (ti == NULL) return MGOS_INVALID_TIMER_ID;
+  ti->next_invocation = mg_time() + msecs / 1000.0;
+  if (repeat) ti->interval_ms = msecs;
   ti->cb = cb;
-  ti->arg = arg;
-  if (!mgos_set_timer_common(ti, msecs, repeat)) return MGOS_INVALID_TIMER_ID;
-  return ti->id;
+  ti->cb_arg = arg;
+  {
+    mgos_lock();
+    LIST_INSERT_HEAD(&s_timer_data->timers, ti, entries);
+    schedule_next_timer(s_timer_data);
+    mgos_unlock();
+  }
+  mongoose_schedule_poll(false /* from_isr */);
+  return (mgos_timer_id) ti;
 }
 
 void mgos_clear_timer(mgos_timer_id id) {
-  struct mg_connection *c = mgos_find_timer(id);
-  if (c == NULL) return;
-  c->flags |= MG_F_CLOSE_IMMEDIATELY;
+  if (id == MGOS_INVALID_TIMER_ID) return;
+  struct timer_info *ti = (struct timer_info *) id;
+  mgos_lock();
+  LIST_REMOVE(ti, entries);
+  if (s_timer_data->current == ti) {
+    schedule_next_timer(s_timer_data);
+    /* Removing a timer can only push back invocation, no need to do a poll. */
+  }
+  mgos_unlock();
+  free(ti);
+}
+
+#if MGOS_ENABLE_SNTP
+static void mgos_time_change_cb(void *arg, double delta) {
+  struct timer_data *td = (struct timer_data *) arg;
+  mgos_lock();
+  struct timer_info *ti;
+  LIST_FOREACH(ti, &td->timers, entries) {
+    ti->next_invocation += delta;
+  }
+  mgos_unlock();
+}
+#endif
+
+enum mgos_init_result mgos_timers_init(void) {
+  struct timer_data *td = (struct timer_data *) calloc(1, sizeof(*td));
+  struct mg_add_sock_opts opts;
+  memset(&opts, 0, sizeof(opts));
+  opts.user_data = td;
+  td->nc = mg_add_sock_opt(mgos_get_mgr(), INVALID_SOCKET, mgos_timer_ev, opts);
+  if (td->nc == NULL) {
+    return MGOS_INIT_TIMERS_INIT_FAILED;
+  }
+  s_timer_data = td;
+#if MGOS_ENABLE_SNTP
+  mgos_sntp_add_time_change_cb(mgos_time_change_cb, td);
+#endif
+  return MGOS_INIT_OK;
 }

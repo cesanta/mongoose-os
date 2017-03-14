@@ -24,12 +24,16 @@
 #include "fw/src/mgos_service_filesystem.h"
 #include "fw/src/mgos_sntp.h"
 #include "fw/src/mgos_sys_config.h"
+#include "fw/src/mgos_timers.h"
 #include "fw/src/mgos_updater_rpc.h"
 #include "fw/src/mgos_updater_http.h"
 #include "fw/src/mgos_wifi.h"
 
 enum mgos_init_result mgos_init(void) {
   enum mgos_init_result r;
+
+  r = mgos_timers_init();
+  if (r != MGOS_INIT_OK) return r;
 
   r = mgos_gpio_init();
   if (r != MGOS_INIT_OK) return r;
