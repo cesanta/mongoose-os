@@ -45,6 +45,11 @@ enum mg_ssl_if_result mg_ssl_if_conn_init(
   return MG_SSL_OK;
 }
 
+void mg_ssl_if_conn_close_notify(struct mg_connection *nc) {
+  /* Nothing to do */
+  (void) nc;
+}
+
 void mg_ssl_if_conn_free(struct mg_connection *nc) {
   struct mg_ssl_if_ctx *ctx = (struct mg_ssl_if_ctx *) nc->ssl_if_data;
   if (ctx == NULL) return;
