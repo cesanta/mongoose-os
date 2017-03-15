@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -223,6 +224,14 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		w.Header().Set("Content-Type", "application/json")
 		awsRegion = r.FormValue("region")
 		arr, err := getAWSIoTPolicyNames()
+		if err == nil {
+			sort.Strings(arr)
+			// Include the default policy, even if not present - it will be created.
+			if sort.SearchStrings(arr, awsIoTPolicyMOS) >= len(arr) {
+				arr = append(arr, awsIoTPolicyMOS)
+				sort.Strings(arr)
+			}
+		}
 		httpReply(w, arr, err)
 	})
 
