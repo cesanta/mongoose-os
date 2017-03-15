@@ -207,6 +207,8 @@ GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 FW_FILE_1_OUT = $(FW_STAGING_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_1_ADDR))
 FW_FILE_2_OUT = $(FW_STAGING_DIR)/$(shell printf "0x%05x.bin" $(FW_FILE_2_ADDR))
 IMAGE_HEADER_SIZE = 0
+MAP_FILE = $(BUILD_DIR)/$(APP).elf.map
+BREAKDOWN_FILE = $(BUILD_DIR)/breakdown.txt
 
 ifeq "$(MGOS_ESP8266_RTOS)" "1"
   SDK_PATH = /opt/Espressif/ESP8266_RTOS_SDK
@@ -331,7 +333,7 @@ FW_PARTS = boot:src=$(FW_FILE_1_OUT),addr=0 \
 
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
 
-all: $(FW_DIR) $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(PREREQ) $(FW_ZIP)
+all: $(FW_DIR) $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(PREREQ) $(FW_ZIP) $(BREAKDOWN_FILE)
 
 $(FW_MANIFEST): $(FW_FILE_1_OUT) $(RBOOT_CFG_INIT) $(RF_CAL_DATA_INIT) \
                 $(FW_FILE_2_OUT) $(FS_IMG) $(FS_FILES)
@@ -351,6 +353,10 @@ $(FW_FILE_2_OUT): $(APP_BIN)
 $(APP_BIN): $(APP_ELF)
 	$(vecho) "FW    $< -> $@"
 	$(Q) $(ESPTOOL2) $(FW_USER_ARGS) $< $@ $(FW_SECTS)
+
+$(BREAKDOWN_FILE) : $(APP_ELF)
+	$(vecho) "Generating breakdown"
+	$(Q) python $(COMMON_PATH)/tools/breakdown.py $(MAP_FILE) .text,.irom0.text .bss,.data,.rodata /opt > $(BREAKDOWN_FILE)
 
 # -- Linking.
 

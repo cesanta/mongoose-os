@@ -40,6 +40,8 @@ NVS_ADDR = 0x9000
 NVS_SIZE = 0x4000
 OTA_DATA_ADDR = 0xd000
 OTA_DATA_SIZE = 0x2000
+MAP_FILE = $(BUILD_DIR)/$(APP).map
+BREAKDOWN_FILE = $(BUILD_DIR)/breakdown.txt
 
 # Absolutize all paths which can be given by the caller
 override APP_MODULES := $(abspath $(APP_MODULES))
@@ -133,7 +135,7 @@ FW_PARTS = boot:type=boot,addr=0x1000,src=$(BOOTLOADER_BIN),encrypt=$(ENCRYPT) \
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
 include $(MGOS_PATH)/fw/src/spiffs.mk
 
-all: $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(FW_ZIP)
+all: $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(FW_ZIP) $(BREAKDOWN_FILE)
 
 FS_FILES += $(GEN_DIR)/conf0.json $(GEN_DIR)/sys_config_schema.json $(GEN_DIR)/sys_ro_vars_schema.json
 
@@ -151,6 +153,12 @@ $(GEN_DIR)/conf0.json: all_binaries
 
 $(FS_IMG): $(MKSPIFFS) $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES)
 	$(call mkspiffs,$(FS_SIZE))
+
+$(BREAKDOWN_FILE) : $(APP_BIN)
+	$(vecho) "Generating breakdown"
+	$(Q) python $(COMMON_PATH)/tools/breakdown.py $(MAP_FILE) \
+         .iram0.vectors,.iram0.text,.flash.rodata,.flash.text \
+         .dram0.data,.dram0.bss /opt > $(BREAKDOWN_FILE)
 
 clean:
 	rm -rf $(BUILD_DIR) $(FW_DIR)
