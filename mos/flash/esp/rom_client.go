@@ -176,7 +176,7 @@ func (rc *ROMClient) simpleCmd(cmd romCmd, arg []byte, csum uint8, timeout time.
 	return err
 }
 
-func (rc *ROMClient) sync() error {
+func (rc *ROMClient) trySync() error {
 	argBuf := bytes.NewBuffer(nil)
 	binary.Write(argBuf, binary.LittleEndian, uint32(syncValue))
 	for i := 0; i < 32; i++ {
@@ -184,10 +184,8 @@ func (rc *ROMClient) sync() error {
 	}
 	rc.sd.Flush()
 	rc.sd.SetReadTimeout(200 * time.Millisecond)
-	for i := 0; i < 2; i++ {
-		if err := rc.sendCommand(cmdSync, argBuf.Bytes(), 0); err != nil {
-			return errors.Trace(err)
-		}
+	if err := rc.sendCommand(cmdSync, argBuf.Bytes(), 0); err != nil {
+		return errors.Trace(err)
 	}
 	for i := 1; i <= 8; i++ {
 		var r *romResponse
@@ -201,6 +199,7 @@ func (rc *ROMClient) sync() error {
 					continue
 				} else {
 					return errors.Annotatef(err, "error reading sync response #%d", i)
+					break
 				}
 			} else {
 				break
@@ -211,6 +210,18 @@ func (rc *ROMClient) sync() error {
 		}
 	}
 	return nil
+}
+
+func (rc *ROMClient) sync() error {
+	var err error
+	// Usually there is no response to the first command, and the second is successful.
+	for i := 0; i < 2; i++ {
+		err = rc.trySync()
+		if err == nil {
+			return nil
+		}
+	}
+	return errors.Trace(err)
 }
 
 func checksum(data []byte) (cs uint8) {
