@@ -38,7 +38,8 @@ static void set_heater(bool on) {
   s_heater = on;
 }
 
-static void handle_heater(struct mg_connection *nc, int ev, void *ev_data) {
+static void handle_heater(struct mg_connection *nc, int ev, void *ev_data,
+                          void *user_data) {
   if (ev != MG_EV_HTTP_REQUEST) return;
   mg_send_response_line(nc, 200,
                         "Content-Type: text/html\r\n"
@@ -57,10 +58,11 @@ static void handle_heater(struct mg_connection *nc, int ev, void *ev_data) {
             get_ro_vars()->fw_id);
   nc->flags |= MG_F_SEND_AND_CLOSE;
   (void) ev_data;
+  (void) user_data;
 }
 
 static void handle_heater_action(struct mg_connection *nc, int ev,
-                                 void *ev_data) {
+                                 void *ev_data, void *user_data) {
   if (ev != MG_EV_HTTP_REQUEST) return;
   struct http_message *hm = (struct http_message *) ev_data;
   if (mg_vcmp(&hm->uri, "/heater/on") == 0) {
@@ -70,9 +72,11 @@ static void handle_heater_action(struct mg_connection *nc, int ev,
   }
   mg_http_send_redirect(nc, 302, mg_mk_str("/heater"), mg_mk_str(NULL));
   nc->flags |= MG_F_SEND_AND_CLOSE;
+  (void) user_data;
 }
 
-static void handle_debug(struct mg_connection *nc, int ev, void *ev_data) {
+static void handle_debug(struct mg_connection *nc, int ev, void *ev_data,
+                         void *user_data) {
   if (ev != MG_EV_HTTP_REQUEST) return;
   struct http_message *hm = (struct http_message *) ev_data;
   mg_send_response_line(nc, 200,
@@ -82,12 +86,13 @@ static void handle_debug(struct mg_connection *nc, int ev, void *ev_data) {
             mgos_get_free_heap_size());
   nc->flags |= MG_F_SEND_AND_CLOSE;
   (void) hm;
+  (void) user_data;
 }
 
 struct mg_connection *s_sensor_conn = NULL;
 
-static void handle_sensor_conn(struct mg_connection *nc, int ev,
-                               void *ev_data) {
+static void handle_sensor_conn(struct mg_connection *nc, int ev, void *ev_data,
+                               void *user_data) {
   switch (ev) {
     case MG_EV_HTTP_REPLY: {
       nc->flags |= MG_F_CLOSE_IMMEDIATELY;
@@ -99,6 +104,7 @@ static void handle_sensor_conn(struct mg_connection *nc, int ev,
     }
   }
   (void) ev_data;
+  (void) user_data;
 }
 
 static void sensor_timer_cb(void *arg) {
@@ -111,7 +117,7 @@ static void sensor_timer_cb(void *arg) {
     mg_asprintf(&eh, 0, "Authorization: %s\r\n", get_cfg()->hsw.auth);
   }
   s_sensor_conn =
-      mg_connect_http(mgos_get_mgr(), handle_sensor_conn,
+      mg_connect_http(mgos_get_mgr(), handle_sensor_conn, NULL,
                       get_cfg()->hsw.sensor_data_url, eh, post_data);
   free(eh);
   free(post_data);

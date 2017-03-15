@@ -20,8 +20,12 @@ struct mg_rpc_channel_ws_data {
   unsigned int free_data : 1;
 };
 
-static void mg_rpc_ws_handler(struct mg_connection *nc, int ev, void *ev_data) {
-  struct mg_rpc_channel *ch = (struct mg_rpc_channel *) nc->user_data;
+static void mg_rpc_ws_handler(struct mg_connection *nc, int ev, void *ev_data,
+                              void *user_data) {
+#if !MG_ENABLE_CALLBACK_USERDATA
+  void *user_data = nc->user_data;
+#endif
+  struct mg_rpc_channel *ch = (struct mg_rpc_channel *) user_data;
   struct mg_rpc_channel_ws_data *chd =
       (struct mg_rpc_channel_ws_data *) ch->channel_data;
   switch (ev) {
@@ -125,8 +129,11 @@ struct mg_rpc_channel_ws_out_data {
 static void mg_rpc_channel_ws_out_reconnect(struct mg_rpc_channel *ch);
 
 static void mg_rpc_ws_out_handler(struct mg_connection *nc, int ev,
-                                  void *ev_data) {
-  struct mg_rpc_channel *ch = (struct mg_rpc_channel *) nc->user_data;
+                                  void *ev_data, void *user_data) {
+#if !MG_ENABLE_CALLBACK_USERDATA
+  void *user_data = nc->user_data;
+#endif
+  struct mg_rpc_channel *ch = (struct mg_rpc_channel *) user_data;
   struct mg_rpc_channel_ws_out_data *chd =
       (struct mg_rpc_channel_ws_out_data *) ch->channel_data;
   switch (ev) {
@@ -137,17 +144,17 @@ static void mg_rpc_ws_out_handler(struct mg_connection *nc, int ev,
       break;
     }
     case MG_EV_WEBSOCKET_HANDSHAKE_DONE: {
-      mg_rpc_ws_handler(nc, ev, ev_data);
+      mg_rpc_ws_handler(nc, ev, ev_data, user_data);
       chd->reconnect_interval = chd->cfg->reconnect_interval_min;
       break;
     }
     case MG_EV_WEBSOCKET_FRAME:
     case MG_EV_SEND: {
-      mg_rpc_ws_handler(nc, ev, ev_data);
+      mg_rpc_ws_handler(nc, ev, ev_data, user_data);
       break;
     }
     case MG_EV_CLOSE: {
-      mg_rpc_ws_handler(nc, ev, ev_data);
+      mg_rpc_ws_handler(nc, ev, ev_data, user_data);
       chd->wsd.nc = NULL;
       chd->wsd.sending = false;
       mg_rpc_channel_ws_out_reconnect(ch);
@@ -176,10 +183,12 @@ static void mg_rpc_channel_ws_out_ch_connect(struct mg_rpc_channel *ch) {
 #endif
                     ));
   chd->wsd.nc =
-      mg_connect_ws_opt(chd->mgr, mg_rpc_ws_out_handler, opts,
+      mg_connect_ws_opt(chd->mgr, MG_CB(mg_rpc_ws_out_handler, ch), opts,
                         cfg->server_address, MG_RPC_WS_PROTOCOL, NULL);
   if (chd->wsd.nc != NULL) {
+#if !MG_ENABLE_CALLBACK_USERDATA
     chd->wsd.nc->user_data = ch;
+#endif
   } else {
     mg_rpc_channel_ws_out_reconnect(ch);
   }
@@ -202,9 +211,13 @@ static bool mg_rpc_channel_ws_out_is_persistent(struct mg_rpc_channel *ch) {
   return (chd->cfg->reconnect_interval_max > 0);
 }
 
-static void reconnect_ev_handler(struct mg_connection *c, int ev, void *p) {
+static void reconnect_ev_handler(struct mg_connection *c, int ev, void *p,
+                                 void *user_data) {
   if (ev != MG_EV_TIMER) return;
-  struct mg_rpc_channel *ch = (struct mg_rpc_channel *) c->user_data;
+#if !MG_ENABLE_CALLBACK_USERDATA
+  void *user_data = nc->user_data;
+#endif
+  struct mg_rpc_channel *ch = (struct mg_rpc_channel *) user_data;
   struct mg_rpc_channel_ws_out_data *chd =
       (struct mg_rpc_channel_ws_out_data *) ch->channel_data;
   if (c->flags & MG_F_CLOSE_IMMEDIATELY) return;
@@ -228,8 +241,11 @@ static void mg_rpc_channel_ws_out_reconnect(struct mg_rpc_channel *ch) {
     struct mg_add_sock_opts opts;
     struct mg_connection *c;
     memset(&opts, 0, sizeof(opts));
+#if !MG_ENABLE_CALLBACK_USERDATA
     opts.user_data = ch;
-    c = mg_add_sock_opt(chd->mgr, INVALID_SOCKET, reconnect_ev_handler, opts);
+#endif
+    c = mg_add_sock_opt(chd->mgr, INVALID_SOCKET,
+                        MG_CB(reconnect_ev_handler, ch), opts);
     if (c != NULL) {
       c->ev_timer_time = mg_time() + chd->reconnect_interval;
       chd->reconnect_interval *= 2;

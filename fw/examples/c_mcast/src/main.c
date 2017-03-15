@@ -9,7 +9,8 @@
 #include "fw/src/mgos_wifi.h"
 #include "fw/src/mgos_sys_config.h"
 
-static void handler(struct mg_connection *nc, int ev, void *p) {
+static void handler(struct mg_connection *nc, int ev, void *p,
+                    void *user_data) {
   struct mbuf *io = &nc->recv_mbuf;
   (void) p;
 
@@ -21,6 +22,7 @@ static void handler(struct mg_connection *nc, int ev, void *p) {
       nc->flags |= MG_F_SEND_AND_CLOSE;
       break;
   }
+  (void) user_data;
 }
 
 static void on_wifi_change(enum mgos_wifi_status event, void *ud) {
@@ -60,7 +62,8 @@ static int init_listener(struct mg_mgr *mgr) {
   LOG(LL_INFO, ("Listening on %s", listener_spec));
 
   memset(&bopts, 0, sizeof(bopts));
-  struct mg_connection *lc = mg_bind_opt(mgr, listener_spec, handler, bopts);
+  struct mg_connection *lc =
+      mg_bind_opt(mgr, listener_spec, handler, NULL, bopts);
   if (lc == NULL) {
     LOG(LL_ERROR, ("Failed to create listener"));
     return 0;

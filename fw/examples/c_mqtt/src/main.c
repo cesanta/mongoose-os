@@ -58,7 +58,8 @@ static void gpio_int_handler(int pin, void *arg) {
   (void) arg;
 }
 
-static void ev_handler(struct mg_connection *c, int ev, void *p) {
+static void ev_handler(struct mg_connection *c, int ev, void *p,
+                       void *user_data) {
   struct mg_mqtt_message *msg = (struct mg_mqtt_message *) p;
 
   if (ev == MG_EV_MQTT_CONNACK) {
@@ -131,6 +132,7 @@ static void ev_handler(struct mg_connection *c, int ev, void *p) {
           "unknown command");
     }
   }
+  (void) user_data;
 }
 
 enum mgos_app_init_result mgos_app_init(void) {

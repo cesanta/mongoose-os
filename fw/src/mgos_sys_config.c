@@ -150,7 +150,8 @@ static void send_cfg(const void *cfg, const struct mgos_conf_entry *schema,
   mgos_conf_emit_cb(cfg, NULL, schema, pretty, &c->send_mbuf, NULL, NULL);
 }
 
-static void conf_handler(struct mg_connection *c, int ev, void *p) {
+static void conf_handler(struct mg_connection *c, int ev,
+                         void *p, void *user_data)) {
   struct http_message *hm = (struct http_message *) p;
   if (ev != MG_EV_HTTP_REQUEST) return;
   LOG(LL_DEBUG, ("[%.*s] requested", (int) hm->uri.len, hm->uri.p));
@@ -214,22 +215,33 @@ static void conf_handler(struct mg_connection *c, int ev, void *p) {
   c->flags |= MG_F_SEND_AND_CLOSE;
   mbuf_free(&jsmb);
   free(msg);
+#if MG_ENABLE_CALLBACK_USERDATA
+  (void) user_data;
+#endif
 }
 
-static void reboot_handler(struct mg_connection *c, int ev, void *p) {
+static void reboot_handler(struct mg_connection *c, int ev, void *p,
+                           void *user_data) {
   (void) p;
   if (ev != MG_EV_HTTP_REQUEST) return;
   LOG(LL_DEBUG, ("Reboot requested"));
   mg_send_head(c, 200, 0, JSON_HEADERS);
   c->flags |= (MG_F_SEND_AND_CLOSE | MGOS_F_RELOAD_CONFIG);
+#if MG_ENABLE_CALLBACK_USERDATA
+  (void) user_data;
+#endif
 }
 
-static void ro_vars_handler(struct mg_connection *c, int ev, void *p) {
+static void ro_vars_handler(struct mg_connection *c, int ev, void *p,
+                            void *user_data) {
   if (ev != MG_EV_HTTP_REQUEST) return;
   LOG(LL_DEBUG, ("RO-vars requested"));
   struct http_message *hm = (struct http_message *) p;
   send_cfg(&s_ro_vars, sys_ro_vars_schema(), hm, c);
   c->flags |= MG_F_SEND_AND_CLOSE;
+#if MG_ENABLE_CALLBACK_USERDATA
+  (void) user_data;
+#endif
 }
 #endif /* MGOS_ENABLE_WEB_CONFIG */
 
@@ -244,12 +256,14 @@ static struct mg_str upload_fname(struct mg_connection *nc,
   return res;
 }
 
-static void upload_handler(struct mg_connection *c, int ev, void *p) {
-  mg_file_upload_handler(c, ev, p, upload_fname);
+static void upload_handler(struct mg_connection *c, int ev, void *p,
+                           void *user_data) {
+  mg_file_upload_handler(c, ev, p, upload_fname, user_data);
 }
 #endif
 
-static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p) {
+static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p,
+                                void *user_data) {
   switch (ev) {
     case MG_EV_ACCEPT: {
       char addr[32];
@@ -283,6 +297,7 @@ static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p) {
       break;
     }
   }
+  (void) user_data;
 }
 
 #if MGOS_ENABLE_WIFI && MGOS_ENABLE_TUNNEL
@@ -368,8 +383,8 @@ enum mgos_init_result mgos_sys_config_init_http(
         "TLS-RSA-WITH-AES-128-CBC-SHA";
 #endif /* CS_PLATFORM == CS_P_ESP8266 */
 #endif /* MG_ENABLE_SSL */
-  listen_conn =
-      mg_bind_opt(mgos_get_mgr(), cfg->listen_addr, mongoose_ev_handler, opts);
+  listen_conn = mg_bind_opt(mgos_get_mgr(), cfg->listen_addr,
+                            mongoose_ev_handler, NULL, opts);
 
   if (!listen_conn) {
     LOG(LL_ERROR, ("Error binding to [%s]", cfg->listen_addr));

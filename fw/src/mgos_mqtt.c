@@ -43,31 +43,35 @@ SLIST_HEAD(global_handlers, global_handler) s_global_handlers;
 
 static void mqtt_global_reconnect(void);
 
-static bool call_topic_handler(struct mg_connection *nc, int ev,
-                               void *ev_data) {
+static bool call_topic_handler(struct mg_connection *nc, int ev, void *ev_data,
+                               void *user_data) {
   struct mg_mqtt_message *msg = (struct mg_mqtt_message *) ev_data;
   struct topic_handler *th;
   SLIST_FOREACH(th, &s_topic_handlers, entries) {
     if ((ev == MG_EV_MQTT_SUBACK && th->sub_id == msg->message_id) ||
         mg_mqtt_match_topic_expression(th->topic, msg->topic)) {
-      nc->user_data = th->user_data;
-      th->handler(nc, ev, ev_data);
+      th->handler(nc, ev, ev_data, th->user_data);
       return true;
     }
   }
+  (void) user_data;
   return false;
 }
 
 static void call_global_handlers(struct mg_connection *nc, int ev,
-                                 void *ev_data) {
+                                 void *ev_data, void *user_data) {
   struct global_handler *gh;
   SLIST_FOREACH(gh, &s_global_handlers, entries) {
-    nc->user_data = gh->user_data;
-    gh->handler(nc, ev, ev_data);
+    gh->handler(nc, ev, ev_data, gh->user_data);
   }
+  (void) user_data;
 }
 
-static void mgos_mqtt_ev(struct mg_connection *nc, int ev, void *ev_data) {
+static void mgos_mqtt_ev(struct mg_connection *nc, int ev, void *ev_data,
+                         void *user_data) {
+#if !MG_ENABLE_CALLBACK_USERDATA
+  void *user_data = nc->user_data;
+#endif
   if (ev > MG_MQTT_EVENT_BASE) {
     LOG(LL_DEBUG, ("MQTT event: %d", ev));
   }
@@ -81,7 +85,7 @@ static void mgos_mqtt_ev(struct mg_connection *nc, int ev, void *ev_data) {
     case MG_EV_CLOSE: {
       LOG(LL_INFO, ("MQTT Disconnect"));
       s_conn = NULL;
-      call_global_handlers(nc, ev, NULL);
+      call_global_handlers(nc, ev, NULL, user_data);
       mqtt_global_reconnect();
       break;
     }
@@ -94,7 +98,7 @@ static void mgos_mqtt_ev(struct mg_connection *nc, int ev, void *ev_data) {
         mg_mqtt_ping(nc);
         nc->last_io_time = (time_t) mg_time();
       }
-      call_global_handlers(nc, ev, NULL);
+      call_global_handlers(nc, ev, NULL, user_data);
       break;
     }
     case MG_EV_MQTT_PINGRESP: {
@@ -110,7 +114,7 @@ static void mgos_mqtt_ev(struct mg_connection *nc, int ev, void *ev_data) {
       if (code == 0) {
         s_conn = nc;
         s_reconnect_timeout_ms = 0;
-        call_global_handlers(nc, ev, ev_data);
+        call_global_handlers(nc, ev, ev_data, user_data);
         SLIST_FOREACH(th, &s_topic_handlers, entries) {
           struct mg_mqtt_topic_expression te = {.topic = th->topic.p, .qos = 0};
           th->sub_id = sub_id++;
@@ -125,7 +129,7 @@ static void mgos_mqtt_ev(struct mg_connection *nc, int ev, void *ev_data) {
     /* Delegate almost all MQTT events to the user's handler */
     case MG_EV_MQTT_SUBACK:
     case MG_EV_MQTT_PUBLISH:
-      if (call_topic_handler(nc, ev, ev_data)) break;
+      if (call_topic_handler(nc, ev, ev_data, user_data)) break;
     /* fall through */
     case MG_EV_MQTT_PUBACK:
     case MG_EV_MQTT_CONNECT:
@@ -137,7 +141,7 @@ static void mgos_mqtt_ev(struct mg_connection *nc, int ev, void *ev_data) {
     case MG_EV_MQTT_UNSUBACK:
     case MG_EV_MQTT_PINGREQ:
     case MG_EV_MQTT_DISCONNECT:
-      call_global_handlers(nc, ev, ev_data);
+      call_global_handlers(nc, ev, ev_data, user_data);
       break;
   }
 }
@@ -209,7 +213,7 @@ static bool mqtt_global_connect(void) {
 #endif
 
   struct mg_connection *nc =
-      mg_connect_opt(mgr, scfg->mqtt.server, mgos_mqtt_ev, opts);
+      mg_connect_opt(mgr, scfg->mqtt.server, mgos_mqtt_ev, NULL, opts);
   if (nc == NULL) {
     ret = false;
   } else {
@@ -279,9 +283,13 @@ struct sub_data {
   void *user_data;
 };
 
-static void mqttsubtrampoline(struct mg_connection *c, int ev, void *ev_data) {
+static void mqttsubtrampoline(struct mg_connection *c, int ev, void *ev_data,
+                              void *user_data) {
+#if !MG_ENABLE_CALLBACK_USERDATA
+  void *user_data = c->user_data;
+#endif
   if (ev != MG_EV_MQTT_PUBLISH) return;
-  struct sub_data *sd = (struct sub_data *) c->user_data;
+  struct sub_data *sd = (struct sub_data *) user_data;
   struct mg_mqtt_message *mm = (struct mg_mqtt_message *) ev_data;
   const struct mg_str *s = &mm->payload;
   struct mbuf *m = &c->recv_mbuf;

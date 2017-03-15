@@ -41,7 +41,7 @@ struct mg_rpc_cfg *mgos_rpc_cfg_from_sys(const struct sys_config *scfg) {
 
 #if MGOS_ENABLE_RPC_CHANNEL_HTTP
 static void mgos_rpc_http_handler(struct mg_connection *nc, int ev,
-                                  void *ev_data) {
+                                  void *ev_data, void *user_data) {
   if (ev == MG_EV_HTTP_REQUEST) {
     /* Create and add the channel to mg_rpc */
     struct mg_rpc_channel *ch = mg_rpc_channel_http(nc);
@@ -78,6 +78,8 @@ static void mgos_rpc_http_handler(struct mg_connection *nc, int ev,
     ch->ev_handler(ch, MG_RPC_CHANNEL_OPEN, NULL);
 #endif
   }
+
+  (void) user_data;
 }
 #endif
 
@@ -225,7 +227,7 @@ struct mg_rpc *mgos_rpc_get_global(void) {
  * Data for the FFI-able wrapper
  */
 struct mgos_rpc_req_eh_data {
-  /* FFI-able callback and its userdata */
+  /* FFI-able callback and its user_data */
   mgos_rpc_eh_t cb;
   void *cb_arg;
 };
@@ -280,7 +282,7 @@ bool mgos_rpc_send_response(struct mg_rpc_request_info *ri,
  * Data for the FFI-able wrapper
  */
 struct mgos_rpc_call_eh_data {
-  /* FFI-able callback and its userdata */
+  /* FFI-able callback and its user_data */
   mgos_rpc_result_cb_t cb;
   void *cb_arg;
 };

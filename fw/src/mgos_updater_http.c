@@ -15,9 +15,13 @@
 
 #if MGOS_ENABLE_UPDATER
 
-static void fw_download_handler(struct mg_connection *c, int ev, void *p) {
+static void fw_download_handler(struct mg_connection *c, int ev, void *p,
+                                void *user_data) {
   struct mbuf *io = &c->recv_mbuf;
-  struct update_context *ctx = (struct update_context *) c->user_data;
+#if !MG_ENABLE_CALLBACK_USERDATA
+  void *user_data = nc->user_data;
+#endif
+  struct update_context *ctx = (struct update_context *) user_data;
   int res = 0;
   struct mg_str *loc;
   (void) p;
@@ -144,7 +148,7 @@ void mgos_updater_http_start(struct update_context *ctx, const char *url) {
               rv->mac_address, rv->arch, rv->fw_version, rv->fw_id);
 
   struct mg_connection *c = mg_connect_http_opt(
-      mgos_get_mgr(), fw_download_handler, opts, url, extra_headers, NULL);
+      mgos_get_mgr(), fw_download_handler, ctx, opts, url, extra_headers, NULL);
 
   if (extra_headers != ehb) free(extra_headers);
 
@@ -157,7 +161,9 @@ void mgos_updater_http_start(struct update_context *ctx, const char *url) {
     return;
   }
 
+#if !MG_ENABLE_CALLBACK_USERDATA
   c->user_data = ctx;
+#endif
   ctx->nc = c;
 }
 
@@ -294,7 +300,8 @@ static void mgos_update_timer_cb(void *arg) {
   (void) arg;
 }
 
-static void update_handler(struct mg_connection *c, int ev, void *ev_data) {
+static void update_handler(struct mg_connection *c, int ev, void *ev_data,
+                           void *user_data) {
   switch (ev) {
     case MG_EV_HTTP_MULTIPART_REQUEST:
     case MG_EV_HTTP_PART_BEGIN:
@@ -368,9 +375,11 @@ static void update_handler(struct mg_connection *c, int ev, void *ev_data) {
       break;
     }
   }
+  (void) user_data;
 }
 
-static void update_action_handler(struct mg_connection *c, int ev, void *p) {
+static void update_action_handler(struct mg_connection *c, int ev, void *p,
+                                  void *user_data) {
   if (ev != MG_EV_HTTP_REQUEST) return;
   struct http_message *hm = (struct http_message *) p;
   bool is_commit = (mg_vcmp(&hm->uri, "/update/commit") == 0);
@@ -382,6 +391,7 @@ static void update_action_handler(struct mg_connection *c, int ev, void *p) {
   mg_printf(c, "\r\n%s\r\n", (ok ? "Ok" : "Error"));
   c->flags |= MG_F_SEND_AND_CLOSE;
   if (ok && !is_commit) mgos_system_restart_after(100);
+  (void) user_data;
 }
 
 enum mgos_init_result mgos_updater_http_init(void) {

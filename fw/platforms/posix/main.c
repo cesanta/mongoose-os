@@ -30,10 +30,11 @@ int main(int argc, char *argv[]) {
   return EXIT_SUCCESS;
 }
 
-static void dummy_handler(struct mg_connection *nc, int ev, void *ev_data) {
+static void dummy_handler(struct mg_connection *nc, int ev, void *ev_data, void *user_data) {
   (void) nc;
   (void) ev;
   (void) ev_data;
+  (void) user_data;
 }
 
 void mongoose_schedule_poll(bool from_isr) {

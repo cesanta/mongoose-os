@@ -278,7 +278,8 @@ static void advertise_host(const char *hostname, struct mg_dns_reply *reply,
   }
 }
 
-static void handler(struct mg_connection *nc, int ev, void *ev_data) {
+static void handler(struct mg_connection *nc, int ev, void *ev_data,
+                    void *user_data) {
   if (!get_cfg()->dns_sd.enable) return;
 
   switch (ev) {
@@ -359,6 +360,8 @@ static void handler(struct mg_connection *nc, int ev, void *ev_data) {
       break;
     }
   }
+
+  (void) user_data;
 }
 
 /*

@@ -8,7 +8,8 @@
 
 #define LISTENER_SPEC "8910"
 
-static void lc_handler(struct mg_connection *nc, int ev, void *ev_data) {
+static void lc_handler(struct mg_connection *nc, int ev, void *ev_data,
+                       void *user_data) {
   switch (ev) {
     case MG_EV_ACCEPT: {
       char addr[32];
@@ -29,13 +30,15 @@ static void lc_handler(struct mg_connection *nc, int ev, void *ev_data) {
     }
   }
   (void) ev_data;
+  (void) user_data;
 }
 
 static int init_listener(struct mg_mgr *mgr) {
   struct mg_bind_opts bopts;
   memset(&bopts, 0, sizeof(bopts));
   LOG(LL_INFO, ("Listening on %s", LISTENER_SPEC));
-  struct mg_connection *lc = mg_bind_opt(mgr, LISTENER_SPEC, lc_handler, bopts);
+  struct mg_connection *lc =
+      mg_bind_opt(mgr, LISTENER_SPEC, lc_handler, NULL, bopts);
   if (lc == NULL) {
     LOG(LL_ERROR, ("Failed to create listener"));
     return 0;
@@ -43,7 +46,8 @@ static int init_listener(struct mg_mgr *mgr) {
   return 1;
 }
 
-static void handle_index(struct mg_connection *nc, int ev, void *ev_data) {
+static void handle_index(struct mg_connection *nc, int ev, void *ev_data,
+                         void *user_data) {
   struct http_message *hm = (struct http_message *) ev_data;
   char addr[32];
   mg_sock_addr_to_str(&nc->sa, addr, sizeof(addr),
@@ -57,6 +61,7 @@ static void handle_index(struct mg_connection *nc, int ev, void *ev_data) {
             addr, (int) hm->uri.len, hm->uri.p);
   nc->flags |= MG_F_SEND_AND_CLOSE;
   (void) ev;
+  (void) user_data;
 }
 
 enum mgos_app_init_result mgos_app_init(void) {

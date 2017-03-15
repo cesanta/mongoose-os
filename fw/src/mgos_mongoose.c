@@ -91,27 +91,26 @@ void mgos_set_enable_min_heap_free_reporting(bool enable) {
   s_min_free_heap_size = (enable ? mgos_get_min_free_heap_size() : 0);
 }
 
-static void oplya(struct mg_connection *c, int ev, void *ev_data) {
+static void oplya(struct mg_connection *c, int ev, void *ev_data,
+                  void *user_data) {
   mg_eh_t f = (mg_eh_t) c->priv_1.f;
   if (c->flags & MG_F_LISTENING) return;
   if (c->listener != NULL) f = (mg_eh_t) c->listener->priv_1.f;
-  if (f != NULL) f(c, ev, ev_data, c->user_data);
+  if (f != NULL) f(c, ev, ev_data, user_data);
 }
 
 struct mg_connection *mgos_bind(const char *addr, mg_eh_t f, void *ud) {
-  struct mg_connection *c = mg_bind(mgos_get_mgr(), addr, oplya);
+  struct mg_connection *c = mg_bind(mgos_get_mgr(), addr, oplya, ud);
   if (c != NULL) {
     c->priv_1.f = (mg_event_handler_t) f;
-    c->user_data = ud;
   }
   return c;
 }
 
 struct mg_connection *mgos_connect(const char *addr, mg_eh_t f, void *ud) {
-  struct mg_connection *c = mg_connect(mgos_get_mgr(), addr, oplya);
+  struct mg_connection *c = mg_connect(mgos_get_mgr(), addr, oplya, ud);
   if (c != NULL) {
     c->priv_1.f = (mg_event_handler_t) f;
-    c->user_data = ud;
   }
   return c;
 }
@@ -123,10 +122,10 @@ struct mg_connection *mgos_connect_ssl(const char *addr, mg_eh_t f, void *ud,
   memset(&opts, 0, sizeof(opts));
   opts.ssl_cert = cert;
   opts.ssl_ca_cert = ca_cert;
-  struct mg_connection *c = mg_connect_opt(mgos_get_mgr(), addr, oplya, opts);
+  struct mg_connection *c =
+      mg_connect_opt(mgos_get_mgr(), addr, oplya, ud, opts);
   if (c != NULL) {
     c->priv_1.f = (mg_event_handler_t) f;
-    c->user_data = ud;
   }
   return c;
 }
@@ -136,7 +135,8 @@ void mgos_disconnect(struct mg_connection *c) {
   c->flags |= MG_F_SEND_AND_CLOSE;
 }
 
-static void def_http_handler(struct mg_connection *c, int ev, void *p) {
+static void def_http_handler(struct mg_connection *c, int ev, void *p,
+                             void *user_data) {
   switch (ev) {
     case MG_EV_ACCEPT: {
       char addr[32];
@@ -159,11 +159,13 @@ static void def_http_handler(struct mg_connection *c, int ev, void *p) {
       break;
     }
   }
+
+  (void) user_data;
 }
 
 struct mg_connection *mgos_bind_http(const char *addr) {
   struct mg_mgr *mgr = mgos_get_mgr();
-  struct mg_connection *c = mg_bind(mgr, addr, def_http_handler);
+  struct mg_connection *c = mg_bind(mgr, addr, def_http_handler, NULL);
   if (c != NULL) mg_set_protocol_http_websocket(c);
   return c;
 }
@@ -175,9 +177,10 @@ struct uri_handler {
   void *user_data;
 };
 
-static void uri_handler_trampl(struct mg_connection *c, int ev, void *ev_data) {
+static void uri_handler_trampl(struct mg_connection *c, int ev, void *ev_data,
+                               void *user_data) {
   struct http_message *hm = (struct http_message *) ev_data;
-  struct uri_handler *found = NULL, *uh = (struct uri_handler *) c->user_data;
+  struct uri_handler *found = NULL, *uh = (struct uri_handler *) user_data;
   int matched, matched_max = 0;
   if (ev != MG_EV_HTTP_REQUEST) return;
   while (uh != NULL) {

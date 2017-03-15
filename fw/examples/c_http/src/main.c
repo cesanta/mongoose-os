@@ -7,7 +7,8 @@
 #include "fw/src/mgos_gpio.h"
 #include "fw/src/mgos_mongoose.h"
 
-static void ctl_handler(struct mg_connection *c, int ev, void *p) {
+static void ctl_handler(struct mg_connection *c, int ev, void *p,
+                        void *user_data) {
   if (ev == MG_EV_HTTP_REQUEST) {
     struct http_message *hm = (struct http_message *) p;
     struct mg_str *s = hm->body.len > 0 ? &hm->body : &hm->query_string;
@@ -22,6 +23,7 @@ static void ctl_handler(struct mg_connection *c, int ev, void *p) {
     c->flags |= MG_F_SEND_AND_CLOSE;
     LOG(LL_INFO, ("Got: [%.*s]", (int) s->len, s->p));
   }
+  (void) user_data;
 }
 
 enum mgos_app_init_result mgos_app_init(void) {

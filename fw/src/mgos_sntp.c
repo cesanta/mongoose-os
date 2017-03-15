@@ -31,7 +31,8 @@ struct mgos_sntp_state {
 static struct mgos_sntp_state s_state;
 static void mgos_sntp_retry(void);
 
-static void mgos_sntp_ev(struct mg_connection *nc, int ev, void *ev_data) {
+static void mgos_sntp_ev(struct mg_connection *nc, int ev, void *ev_data,
+                         void *user_data) {
   switch (ev) {
     case MG_EV_CONNECT: {
       LOG(LL_DEBUG, ("SNTP query sent"));
@@ -80,6 +81,7 @@ static void mgos_sntp_ev(struct mg_connection *nc, int ev, void *ev_data) {
       break;
   }
   (void) nc;
+  (void) user_data;
 }
 
 static bool mgos_sntp_query(const char *server) {
@@ -87,7 +89,7 @@ static bool mgos_sntp_query(const char *server) {
     s_state.nc->flags |= MG_F_CLOSE_IMMEDIATELY;
     return false;
   }
-  s_state.nc = mg_sntp_connect(mgos_get_mgr(), mgos_sntp_ev, server);
+  s_state.nc = mg_sntp_connect(mgos_get_mgr(), mgos_sntp_ev, NULL, server);
   LOG(LL_INFO, ("SNTP query to %s", server));
   return (s_state.nc != NULL);
 }

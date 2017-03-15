@@ -28,8 +28,11 @@ static char *mgos_rpc_mqtt_topic_name(const struct mg_str device_id,
 }
 
 static void mgos_rpc_mqtt_sub_handler(struct mg_connection *nc, int ev,
-                                      void *ev_data) {
-  struct mg_rpc_channel *ch = (struct mg_rpc_channel *) nc->user_data;
+                                      void *ev_data, void *user_data) {
+#if !MG_ENABLE_CALLBACK_USERDATA
+  void *user_data = nc->user_data;
+#endif
+  struct mg_rpc_channel *ch = (struct mg_rpc_channel *) user_data;
   if (ev == MG_EV_MQTT_SUBACK) {
     if (!(nc->flags & CHANNEL_OPEN)) {
       /* Ideally we should wait for both subscriptions, but - meh. */
@@ -61,8 +64,11 @@ static void mgos_rpc_mqtt_sub_handler(struct mg_connection *nc, int ev,
 }
 
 static void mgos_rpc_mqtt_handler(struct mg_connection *nc, int ev,
-                                  void *ev_data) {
-  struct mg_rpc_channel *ch = (struct mg_rpc_channel *) nc->user_data;
+                                  void *ev_data, void *user_data) {
+#if !MG_ENABLE_CALLBACK_USERDATA
+  void *user_data = nc->user_data;
+#endif
+  struct mg_rpc_channel *ch = (struct mg_rpc_channel *) user_data;
   if (ev == MG_EV_CLOSE) {
     if (nc->flags & CHANNEL_OPEN) {
       ch->ev_handler(ch, MG_RPC_CHANNEL_CLOSED, NULL);

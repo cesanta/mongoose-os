@@ -43,7 +43,7 @@ size_t mgos_get_free_heap_size(void) {
 #elif defined(_SC_PHYS_PAGES) && defined(_SC_PAGE_SIZE)
   /* TODO(alashkin): What kind of free memory we want to see? */
   return sysconf(_SC_PHYS_PAGES) * sysconf(_SC_PAGESIZE);
-#elif __APPLE__
+#elif defined(__APPLE__)
 
   mach_msg_type_number_t count = HOST_VM_INFO_COUNT;
 

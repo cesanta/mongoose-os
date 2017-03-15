@@ -47,14 +47,13 @@ void mgos_mdns_remove_handler(mg_event_handler_t handler, void *ud) {
   }
 }
 
-static void handler(struct mg_connection *nc, int ev, void *ev_data) {
+static void handler(struct mg_connection *nc, int ev, void *ev_data,
+                    void *user_data) {
   struct mdns_handler *e;
   (void) ev_data;
+  (void) user_data;
   SLIST_FOREACH(e, &s_mdns_handlers, entries) {
-    void *old_ud = nc->user_data;
-    nc->user_data = e->ud;
-    e->handler(nc, ev, ev_data);
-    nc->user_data = old_ud;
+    e->handler(nc, ev, ev_data, e->ud);
   }
 }
 
@@ -68,7 +67,7 @@ enum mgos_init_result mgos_mdns_init(void) {
   snprintf(listener_spec, sizeof(listener_spec), "udp://:%d", MDNS_PORT);
   LOG(LL_INFO, ("Listening on %s", listener_spec));
 
-  lc = mg_bind(mgr, listener_spec, handler);
+  lc = mg_bind(mgr, listener_spec, handler, NULL);
   if (lc == NULL) {
     LOG(LL_ERROR, ("Failed to create listener"));
     return MGOS_INIT_MDNS_FAILED;

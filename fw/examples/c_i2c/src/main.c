@@ -13,7 +13,8 @@ static uint8_t from_hex(const char *s) {
   return (HEXTOI(a) << 4) | HEXTOI(b);
 }
 
-static void i2c_handler(struct mg_connection *c, int ev, void *p) {
+static void i2c_handler(struct mg_connection *c, int ev, void *p,
+                        void *user_data) {
   if (ev == MG_EV_HTTP_REQUEST) {
     struct http_message *hm = (struct http_message *) p;
     struct mg_str *s = hm->body.len > 0 ? &hm->body : &hm->query_string;
@@ -34,6 +35,7 @@ static void i2c_handler(struct mg_connection *c, int ev, void *p) {
     mg_printf_http_chunk(c, "{\"status\": %d}\n", ret);
     mg_printf_http_chunk(c, "");  // Zero chunk, end of output
   }
+  (void) user_data;
 }
 
 enum mgos_app_init_result mgos_app_init(void) {

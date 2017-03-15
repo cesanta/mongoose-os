@@ -5,7 +5,8 @@
 #include "fw/src/mgos_gpio.h"
 #include "fw/src/mgos_wifi.h"
 
-static void ev_handler(struct mg_connection *c, int ev, void *ev_data) {
+static void ev_handler(struct mg_connection *c, int ev, void *ev_data,
+                       void *user_data) {
   struct websocket_message *wm = (struct websocket_message *) ev_data;
   int pin, state, status = 0;
 
@@ -28,6 +29,7 @@ static void ev_handler(struct mg_connection *c, int ev, void *ev_data) {
     status = 1; /* Error */
   }
   mg_printf_websocket_frame(c, WEBSOCKET_OP_TEXT, "{\"status\": %d}", status);
+  (void) user_data;
 }
 
 enum mgos_app_init_result mgos_app_init(void) {
@@ -40,7 +42,7 @@ enum mgos_app_init_result mgos_app_init(void) {
   bind_opts.ssl_key = "server.key";
   bind_opts.error_string = &err;
 
-  c = mg_bind_opt(mgos_get_mgr(), "443", ev_handler, bind_opts);
+  c = mg_bind_opt(mgos_get_mgr(), "443", ev_handler, NULL, bind_opts);
   if (c == NULL) {
     LOG(LL_ERROR, ("FAIL: %s", err));
     return MGOS_APP_INIT_ERROR;

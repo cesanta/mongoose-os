@@ -44,13 +44,14 @@ static void schedule_next_timer(struct timer_data *td) {
   }
 }
 
-static void mgos_timer_ev(struct mg_connection *nc, int ev, void *ev_data) {
+static void mgos_timer_ev(struct mg_connection *nc, int ev, void *ev_data,
+                          void *user_data) {
   if (ev != MG_EV_TIMER) return;
   timer_callback cb = NULL;
   void *cb_arg = NULL;
   {
     mgos_lock();
-    struct timer_data *td = (struct timer_data *) nc->user_data;
+    struct timer_data *td = (struct timer_data *) user_data;
     struct timer_info *ti = td->current;
     /* Current can be NULL if it was the first to fire but was cleared. */
     if (ti != NULL) {
@@ -118,8 +119,8 @@ enum mgos_init_result mgos_timers_init(void) {
   struct timer_data *td = (struct timer_data *) calloc(1, sizeof(*td));
   struct mg_add_sock_opts opts;
   memset(&opts, 0, sizeof(opts));
-  opts.user_data = td;
-  td->nc = mg_add_sock_opt(mgos_get_mgr(), INVALID_SOCKET, mgos_timer_ev, opts);
+  td->nc =
+      mg_add_sock_opt(mgos_get_mgr(), INVALID_SOCKET, mgos_timer_ev, td, opts);
   if (td->nc == NULL) {
     return MGOS_INIT_TIMERS_INIT_FAILED;
   }
