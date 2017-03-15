@@ -395,9 +395,9 @@ static void update_action_handler(struct mg_connection *c, int ev, void *p,
 }
 
 enum mgos_init_result mgos_updater_http_init(void) {
-  mgos_register_http_endpoint("/update/commit", update_action_handler);
-  mgos_register_http_endpoint("/update/revert", update_action_handler);
-  mgos_register_http_endpoint("/update", update_handler);
+  mgos_register_http_endpoint("/update/commit", update_action_handler, NULL);
+  mgos_register_http_endpoint("/update/revert", update_action_handler, NULL);
+  mgos_register_http_endpoint("/update", update_handler, NULL);
   struct sys_config_update *scu = &get_cfg()->update;
   if (scu->url != NULL && scu->interval > 0) {
     LOG(LL_INFO,

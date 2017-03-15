@@ -66,6 +66,7 @@ static void handle_index(struct mg_connection *nc, int ev, void *ev_data,
 
 enum mgos_app_init_result mgos_app_init(void) {
   if (!init_listener(mgos_get_mgr())) return MGOS_APP_INIT_ERROR;
-  mgos_register_http_endpoint("/*" /* Handle all requests */, handle_index);
+  mgos_register_http_endpoint("/*" /* Handle all requests */, handle_index,
+                              NULL);
   return MGOS_APP_INIT_SUCCESS;
 }

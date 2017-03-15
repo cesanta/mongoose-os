@@ -12,7 +12,7 @@ let HTTP = {
   // Avoid using this, use `HTTP.get_system_server()` instead.
   bind: ffi('void *mgos_bind_http(char *)'),
 
-  // **`HTTP.add_endpoint(listener, uri, handler)`** - register URI
+  // **`HTTP.add_endpoint(listener, uri, handler, userdata)`** - register URI
   // handler. Avoid using this, use `RPC.addHandler()` instead.
   // Handler function is Mongoose event handler, which receives an opaque
   // connection, event number, and event data pointer.
@@ -28,7 +28,7 @@ let HTTP = {
   //   }
   // }, null);
   // ```
-  add_endpoint: ffi('int mgos_add_http_endpoint(void *, char *, void (*)(void *, int, void *, userdata), userdata)'),
+  add_endpoint: ffi('int mg_register_http_endpoint(void *, char *, void (*)(void *, int, void *, userdata), userdata)'),
 
   // **`HTTP.connect(addr, handler, userdata)`** - The same as `Net.connect`,
   // but with HTTP-specific handler attached, so that the callback can receive

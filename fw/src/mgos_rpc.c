@@ -154,7 +154,7 @@ enum mgos_init_result mgos_rpc_init(void) {
 #endif /* MGOS_ENABLE_RPC_CHANNEL_WS */
 
 #if MGOS_ENABLE_RPC_CHANNEL_HTTP
-  mgos_register_http_endpoint(HTTP_URI_PREFIX, mgos_rpc_http_handler);
+  mgos_register_http_endpoint(HTTP_URI_PREFIX, mgos_rpc_http_handler, NULL);
 #endif
 
 #if MGOS_ENABLE_RPC_CHANNEL_MQTT

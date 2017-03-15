@@ -93,13 +93,14 @@ void mgos_set_enable_min_heap_free_reporting(bool enable) {
 
 static void oplya(struct mg_connection *c, int ev, void *ev_data,
                   void *user_data) {
-  mg_eh_t f = (mg_eh_t) c->priv_1.f;
+  mg_event_handler_t f = (mg_event_handler_t) c->priv_1.f;
   if (c->flags & MG_F_LISTENING) return;
-  if (c->listener != NULL) f = (mg_eh_t) c->listener->priv_1.f;
+  if (c->listener != NULL) f = (mg_event_handler_t) c->listener->priv_1.f;
   if (f != NULL) f(c, ev, ev_data, user_data);
 }
 
-struct mg_connection *mgos_bind(const char *addr, mg_eh_t f, void *ud) {
+struct mg_connection *mgos_bind(const char *addr, mg_event_handler_t f,
+                                void *ud) {
   struct mg_connection *c = mg_bind(mgos_get_mgr(), addr, oplya, ud);
   if (c != NULL) {
     c->priv_1.f = (mg_event_handler_t) f;
@@ -107,7 +108,8 @@ struct mg_connection *mgos_bind(const char *addr, mg_eh_t f, void *ud) {
   return c;
 }
 
-struct mg_connection *mgos_connect(const char *addr, mg_eh_t f, void *ud) {
+struct mg_connection *mgos_connect(const char *addr, mg_event_handler_t f,
+                                   void *ud) {
   struct mg_connection *c = mg_connect(mgos_get_mgr(), addr, oplya, ud);
   if (c != NULL) {
     c->priv_1.f = (mg_event_handler_t) f;
@@ -116,8 +118,9 @@ struct mg_connection *mgos_connect(const char *addr, mg_eh_t f, void *ud) {
 }
 
 #if MG_ENABLE_SSL
-struct mg_connection *mgos_connect_ssl(const char *addr, mg_eh_t f, void *ud,
-                                       const char *cert, const char *ca_cert) {
+struct mg_connection *mgos_connect_ssl(const char *addr, mg_event_handler_t f,
+                                       void *ud, const char *cert,
+                                       const char *ca_cert) {
   struct mg_connect_opts opts;
   memset(&opts, 0, sizeof(opts));
   opts.ssl_cert = cert;
@@ -170,57 +173,17 @@ struct mg_connection *mgos_bind_http(const char *addr) {
   return c;
 }
 
-struct uri_handler {
-  struct uri_handler *next;
-  char *uri;
-  mg_eh_t handler;
-  void *user_data;
-};
-
-static void uri_handler_trampl(struct mg_connection *c, int ev, void *ev_data,
-                               void *user_data) {
-  struct http_message *hm = (struct http_message *) ev_data;
-  struct uri_handler *found = NULL, *uh = (struct uri_handler *) user_data;
-  int matched, matched_max = 0;
-  if (ev != MG_EV_HTTP_REQUEST) return;
-  while (uh != NULL) {
-    const struct mg_str name_s = mg_mk_str(uh->uri);
-    if ((matched = mg_match_prefix_n(name_s, hm->uri)) != -1) {
-      if (matched > matched_max) {
-        /* Looking for the longest suitable handler */
-        found = uh;
-        matched_max = matched;
-      }
-    }
-    uh = uh->next;
-  }
-  if (found != NULL) found->handler(c, ev, ev_data, found->user_data);
-}
-
-bool mgos_add_http_endpoint(struct mg_connection *c, const char *uri,
-                            mg_eh_t handler, void *user_data) {
-  struct uri_handler *uh;
-  if (c == NULL || uri == NULL || handler == NULL) return false;
-  /* NOTE(lsm): this is not deallocated anywhere */
-  if ((uh = malloc(sizeof(*uh))) == NULL) return false;
-  uh->uri = strdup(uri);
-  uh->handler = handler;
-  uh->user_data = user_data;
-  uh->next = c->user_data;
-  c->user_data = uh;
-  mg_register_http_endpoint(c, uri, uri_handler_trampl);
-  return true;
-}
-
-struct mg_connection *mgos_connect_http(const char *addr, mg_eh_t f, void *ud) {
+struct mg_connection *mgos_connect_http(const char *addr, mg_event_handler_t f,
+                                        void *ud) {
   struct mg_connection *c = mgos_connect(addr, f, ud);
   if (c != NULL) mg_set_protocol_http_websocket(c);
   return c;
 }
 
 #if MG_ENABLE_SSL
-struct mg_connection *mgos_connect_http_ssl(const char *addr, mg_eh_t f,
-                                            void *ud, const char *cert,
+struct mg_connection *mgos_connect_http_ssl(const char *addr,
+                                            mg_event_handler_t f, void *ud,
+                                            const char *cert,
                                             const char *ca_cert) {
   struct mg_connection *c = mgos_connect_ssl(addr, f, ud, cert, ca_cert);
   if (c != NULL) mg_set_protocol_http_websocket(c);

@@ -443,12 +443,12 @@ enum mgos_init_result mgos_sys_config_init_http(
 #endif
 
 #if MGOS_ENABLE_WEB_CONFIG
-  mgos_register_http_endpoint("/conf/", conf_handler);
-  mgos_register_http_endpoint("/reboot", reboot_handler);
-  mgos_register_http_endpoint("/ro_vars", ro_vars_handler);
+  mgos_register_http_endpoint("/conf/", conf_handler, NULL);
+  mgos_register_http_endpoint("/reboot", reboot_handler, NULL);
+  mgos_register_http_endpoint("/ro_vars", ro_vars_handler, NULL);
 #endif
 #if MGOS_ENABLE_FILE_UPLOAD
-  mgos_register_http_endpoint("/upload", upload_handler);
+  mgos_register_http_endpoint("/upload", upload_handler, NULL);
 #endif
 
   return MGOS_INIT_OK;
@@ -580,13 +580,13 @@ void mgos_register_config_validator(mgos_config_validator_fn fn) {
 }
 
 void mgos_register_http_endpoint(const char *uri_path,
-                                 mg_event_handler_t handler) {
+                                 mg_event_handler_t handler, void *user_data) {
   if (listen_conn != NULL) {
-    mg_register_http_endpoint(listen_conn, uri_path, handler);
+    mg_register_http_endpoint(listen_conn, uri_path, handler, user_data);
   }
 
   if (listen_conn_tun != NULL) {
-    mg_register_http_endpoint(listen_conn_tun, uri_path, handler);
+    mg_register_http_endpoint(listen_conn_tun, uri_path, handler, user_data);
   }
 }
 

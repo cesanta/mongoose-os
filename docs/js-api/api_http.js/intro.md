@@ -20,7 +20,7 @@ items:
 
 
 
- **`HTTP.add_endpoint(listener, uri, handler)`** - register URI
+ **`HTTP.add_endpoint(listener, uri, handler, userdata)`** - register URI
  handler. Avoid using this, use `RPC.addHandler()` instead.
  Handler function is Mongoose event handler, which receives an opaque
  connection, event number, and event data pointer.

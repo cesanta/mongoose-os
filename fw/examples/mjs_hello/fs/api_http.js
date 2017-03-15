@@ -1,7 +1,7 @@
 let HTTP = {
   get_system_server: ffi('void *mgos_get_sys_http_server()'),
   bind: ffi('void *mgos_bind_http(char *)'),
-  add_endpoint: ffi('int mgos_add_http_endpoint(void *, char *, void (*)(void *, int, void *, userdata), userdata)'),
+  add_endpoint: ffi('int mg_register_http_endpoint(void *, char *, void (*)(void *, int, void *, userdata), userdata)'),
   connect: ffi('void *mgos_connect_http(char *, void (*)(void *, int, void *, userdata), userdata)'),
 
   // HTTP Events

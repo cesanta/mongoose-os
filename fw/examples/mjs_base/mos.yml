@@ -16,10 +16,10 @@ ffi_symbols:
   - strdup
   - get_led_gpio_pin
   - get_cfg
+  - mg_register_http_endpoint
   - mg_send
   - mg_time
   - mgos_adc_read
-  - mgos_add_http_endpoint
   - mgos_aws_shadow_set_state_handler_simple
   - mgos_aws_shadow_update_simple
   - mgos_bind

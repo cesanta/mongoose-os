@@ -27,6 +27,6 @@ static void ctl_handler(struct mg_connection *c, int ev, void *p,
 }
 
 enum mgos_app_init_result mgos_app_init(void) {
-  mgos_register_http_endpoint("/ctl", ctl_handler);
+  mgos_register_http_endpoint("/ctl", ctl_handler, NULL);
   return MGOS_APP_INIT_SUCCESS;
 }

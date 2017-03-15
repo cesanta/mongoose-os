@@ -129,9 +129,9 @@ enum mgos_app_init_result mgos_app_init(void) {
   mgos_gpio_set_mode(RELAY_GPIO, MGOS_GPIO_MODE_OUTPUT);
   mgos_gpio_write(LED_GPIO, 0);
   mgos_gpio_write(RELAY_GPIO, 0);
-  mgos_register_http_endpoint("/heater/", handle_heater_action);
-  mgos_register_http_endpoint("/heater", handle_heater);
-  mgos_register_http_endpoint("/debug", handle_debug);
+  mgos_register_http_endpoint("/heater/", handle_heater_action, NULL);
+  mgos_register_http_endpoint("/heater", handle_heater, NULL);
+  mgos_register_http_endpoint("/debug", handle_debug, NULL);
 
   struct sys_config_hsw *hcfg = &get_cfg()->hsw;
   if (hcfg->sensor_report_interval_ms > 0 && hcfg->sensor_data_url != NULL) {

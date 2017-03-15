@@ -13,7 +13,7 @@ ffi_symbols:
   - fwrite
   - get_led_gpio_pin
   - mg_send
-  - mgos_add_http_endpoint
+  - mg_register_http_endpoint
   - mgos_bind
   - mgos_bind_http
   - mgos_connect
