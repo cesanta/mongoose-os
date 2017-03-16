@@ -14,11 +14,30 @@ MAKEFLAGS += --warn-undefined-variables
 
 APP ?= mongoose-os
 APP_PLATFORM = esp8266
-APP_MODULES ?=
 APP_CFLAGS ?=
-APP_FS_PATH ?=
 APP_EXTRA_SRCS ?=
 FFI_SYMBOLS ?=
+# List of app source files, globs are supported
+APP_SOURCES ?=
+# List of app files to put into the device's filesystem, globs are supported
+APP_FS_FILES ?=
+
+# NOTE: those two are deprecated. Use APP_SOURCES and APP_FS_FILES instead.
+APP_MODULES ?=
+APP_FS_PATH ?=
+
+# For backward compatibility, convert old APP_MODULES and APP_FS_PATH into
+# new APP_SOURCES and APP_FS_FILES
+ifneq "$(APP_MODULES)" ""
+APP_SOURCES += $(foreach m,$(APP_MODULES),$(m)/*.c $(m)/*.cpp)
+endif
+ifneq "$(APP_FS_PATH)" ""
+APP_FS_FILES += $(foreach m,$(APP_FS_PATH),$(m)/*)
+endif
+
+# Get list of dirs which contain sources and filesystem files
+APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
+APP_FS_DIRS = $(sort $(dir $(APP_FS_FILES)))
 
 MGOS_DEBUG_UART = 0
 
@@ -123,17 +142,17 @@ MGOS_SRCS += esp_adc.c \
              esp_wifi.c
 
 MGOS_SRCS += $(notdir $(foreach m,$(SPIFFS_PATH) $(COMMON_ESP_PATH),$(wildcard $(m)/*.c)))
-APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c) $(wildcard $(m)/*.cpp))) $(APP_EXTRA_SRCS)
+APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 
 MGOS_FEATURES ?=
 
 MGOS_ENABLE_I2C_GPIO = 1
 
-VPATH = $(APP_MODULES) $(MGOS_SRC_PATH) $(MONGOOSE_PATH) \
+VPATH = $(APP_SOURCE_DIRS) $(MGOS_SRC_PATH) $(MONGOOSE_PATH) \
         $(FROZEN_PATH) $(UMM_MALLOC_PATH) \
         $(BOOTLOADER_PATH)/rboot/appcode $(COMMON_PATH) $(COMMON_PATH)/mg_rpc \
         $(MGOS_ESP_SRC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_PATH)
-IPATH = $(APP_MODULES) $(MGOS_PATH) $(MGOS_ESP_PATH)/include $(SPIFFS_PATH) \
+IPATH = $(APP_SOURCE_DIRS) $(MGOS_PATH) $(MGOS_ESP_PATH)/include $(SPIFFS_PATH) \
         $(BOOTLOADER_PATH)/rboot $(SDK_PATH)/include/lwip \
         $(SDK_PATH) $(SDK_PATH)/include \
         $(COMMON_ESP_PATH) \
@@ -440,7 +459,7 @@ $(MG_BUILD_INFO_C): $(MGOS_OBJS)
 
 # -- Filesystem.
 
-$(FS_IMG): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
+$(FS_IMG): $(APP_FS_DIRS) $(COMMON_FS_PATH) $(FS_FILES) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 	$(call mkspiffs,$(_FS_SIZE))
 
 #

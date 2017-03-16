@@ -127,8 +127,8 @@ func buildLocal() (err error) {
 		moduleLocations[parts[0]] = parts[1]
 	}
 
-	appModules := manifest.Sources
-	appFilesystem := manifest.Filesystem
+	appSources := manifest.Sources
+	appFSFiles := manifest.Filesystem
 
 	var mosDirEffective string
 	if *mosRepo != "" {
@@ -172,9 +172,12 @@ func buildLocal() (err error) {
 			fmt.Printf("Using module %q located at %q\n", name, targetDir)
 		}
 
-		appModules = append(appModules, m.GetSourceDirs(targetDir)...)
-		appFilesystem = append(appFilesystem, m.GetFilesystemDirs(targetDir)...)
+		appSources = append(appSources, m.GetSourceDirs(targetDir)...)
+		appFSFiles = append(appFSFiles, m.GetFilesystemDirs(targetDir)...)
 	}
+
+	appSources = globify(appSources, []string{"*.c", "*.cpp"})
+	appFSFiles = globify(appFSFiles, []string{"*"})
 
 	ffiSymbols := manifest.FFISymbols
 
@@ -202,8 +205,8 @@ func buildLocal() (err error) {
 		"FS_STAGING_DIR": fsDir,
 		"APP":            appName,
 		"APP_VERSION":    manifest.Version,
-		"APP_MODULES":    strings.Join(appModules, " "),
-		"APP_FS_PATH":    strings.Join(appFilesystem, " "),
+		"APP_SOURCES":    strings.Join(appSources, " "),
+		"APP_FS_FILES":   strings.Join(appFSFiles, " "),
 		"FFI_SYMBOLS":    strings.Join(ffiSymbols, " "),
 	} {
 		err := addBuildVar(manifest, k, v)
@@ -258,6 +261,24 @@ func buildLocal() (err error) {
 	}
 
 	return nil
+}
+
+// globify takes a list of paths, and for each of them which resolves to a
+// directory adds each glob from provided globs. Other paths are added as they
+// are.
+func globify(srcPaths []string, globs []string) []string {
+	ret := []string{}
+	for _, p := range srcPaths {
+		finfo, err := os.Stat(p)
+		if err == nil && finfo.IsDir() {
+			for _, glob := range globs {
+				ret = append(ret, filepath.Join(p, glob))
+			}
+		} else {
+			ret = append(ret, p)
+		}
+	}
+	return ret
 }
 
 // addBuildVar adds a given build variable to manifest.BuildVars,

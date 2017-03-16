@@ -4,12 +4,15 @@
 
 override APP_CONF_SCHEMA = $(_APP_CONF_SCHEMA)
 override APP_EXTRA_SRCS = $(_APP_EXTRA_SRCS)
-override APP_FS_PATH = $(_APP_FS_PATH)
-override APP_MODULES = $(_APP_MODULES)
+override APP_FS_FILES = $(_APP_FS_FILES)
+override APP_SOURCES = $(_APP_SOURCES)
 override BUILD_DIR = $(_BUILD_DIR)
 override FW_DIR := $(_FW_DIR)
 override GEN_DIR := $(_GEN_DIR)
 override MGOS_PATH = $(_MGOS_PATH)
+
+# Get list of dirs which contain sources (used for IPATH and VPATH)
+APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
 
 MGOS_ENABLE_CONSOLE ?= 0
 # Use bitbang I2C for now.
@@ -34,7 +37,8 @@ FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.o
 
 NM = xtensa-esp32-elf-nm
 
-COMPONENT_EXTRA_INCLUDES = $(MGOS_PATH) $(MGOS_ESP_PATH)/include $(SPIFFS_PATH) $(GEN_DIR) $(APP_MODULES)
+COMPONENT_EXTRA_INCLUDES = $(MGOS_PATH) $(MGOS_ESP_PATH)/include $(SPIFFS_PATH) \
+                           $(GEN_DIR) $(APP_SOURCE_DIRS)
 
 MGOS_SRCS = mgos_config.c mgos_gpio.c mgos_init.c mgos_mongoose.c \
             mgos_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
@@ -84,9 +88,9 @@ MGOS_SRCS += mongoose.c
 
 VPATH += $(GEN_DIR)
 
-VPATH += $(APP_MODULES)
+VPATH += $(APP_SOURCE_DIRS)
 
-APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c*))) $(APP_EXTRA_SRCS)
+APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 
 MGOS_OBJS = $(addsuffix .o,$(basename $(MGOS_SRCS))) esp32_nsleep100.o
 APP_OBJS = $(addsuffix .o,$(basename $(APP_SRCS)))

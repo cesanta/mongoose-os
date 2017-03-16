@@ -4,10 +4,29 @@ MAKEFLAGS += --warn-undefined-variables
 
 APP ?= mongoose-os
 APP_PLATFORM = pic32
-APP_MODULES ?=
 APP_CFLAGS ?=
-APP_FS_PATH ?=
 APP_EXTRA_SRCS ?=
+# List of app source files, globs are supported
+APP_SOURCES ?=
+# List of app files to put into the device's filesystem, globs are supported
+APP_FS_FILES ?=
+
+# NOTE: those two are deprecated. Use APP_SOURCES and APP_FS_FILES instead.
+APP_MODULES ?=
+APP_FS_PATH ?=
+
+# For backward compatibility, convert old APP_MODULES and APP_FS_PATH into
+# new APP_SOURCES and APP_FS_FILES
+ifneq "$(APP_MODULES)" ""
+APP_SOURCES += $(foreach m,$(APP_MODULES),$(m)/*.c $(m)/*.cpp)
+endif
+ifneq "$(APP_FS_PATH)" ""
+APP_FS_FILES += $(foreach m,$(APP_FS_PATH),$(m)/*)
+endif
+
+# Get list of dirs which contain sources and filesystem files
+APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
+APP_FS_DIRS = $(sort $(dir $(APP_FS_FILES)))
 
 MGOS_ENABLE_ATCA = 0
 MGOS_ENABLE_ATCA_SERVICE = 0
@@ -59,12 +78,12 @@ FS_STAGING_DIR = $(BUILD_DIR)/fs
 # For FW_VERSION, MG_FEATURES_TINY
 include $(MGOS_PATH)/fw/common.mk
 
-VPATH = $(APP_MODULES) $(MGOS_PIC32_SRC_PATH) \
+VPATH = $(APP_SOURCE_DIRS) $(MGOS_PIC32_SRC_PATH) \
         $(BUILD_DIR) \
         $(MONGOOSE_PATH) $(FROZEN_PATH)
 ###VPATH += $(BOOT_PATH)/lib
 
-IPATH = $(APP_MODULES) $(MGOS_PIC32_SRC_PATH) $(GEN_DIR) $(MGOS_PATH)
+IPATH = $(APP_SOURCE_DIRS) $(MGOS_PIC32_SRC_PATH) $(GEN_DIR) $(MGOS_PATH)
 ###IPATH += $(BOOT_PATH)/lib
 
 MGOS_PIC32_FEATURES ?= -DMGOS_NUM_GPIO=16
@@ -219,7 +238,7 @@ include $(MGOS_PATH)/common/scripts/fw_meta.mk
 include $(MGOS_PATH)/common/platforms/pic32/xc32.mk
 CFLAGS += $(patsubst %,-I%,$(subst :, ,$(IPATH)))
 
-###APP_SRCS = $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
+###APP_SRCS = $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 
 all: $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(FS_STAGING_DIR) $(FW_ZIP)
 
@@ -232,7 +251,7 @@ include $(MGOS_PATH)/fw/src/features.mk
 clean:
 	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)
 
-$(BUILD_DIR) $(FW_DIR) $(APP_FS_PATH) $(FS_STAGING_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
+$(BUILD_DIR) $(FW_DIR) $(FS_STAGING_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
 	$(vecho) "MKDIR $@"
 	$(Q) mkdir -p $@
 

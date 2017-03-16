@@ -23,11 +23,31 @@ endif
 
 APP ?= mongoose-os
 APP_PLATFORM = stm32
-APP_MODULES ?=
 APP_CFLAGS ?=
-APP_FS_PATH ?=
 APP_EXTRA_SRCS ?=
 FFI_SYMBOLS ?=
+
+# List of app source files, globs are supported
+APP_SOURCES ?=
+# List of app files to put into the device's filesystem, globs are supported
+APP_FS_FILES ?=
+
+# NOTE: those two are deprecated. Use APP_SOURCES and APP_FS_FILES instead.
+APP_MODULES ?=
+APP_FS_PATH ?=
+
+# For backward compatibility, convert old APP_MODULES and APP_FS_PATH into
+# new APP_SOURCES and APP_FS_FILES
+ifneq "$(APP_MODULES)" ""
+APP_SOURCES += $(foreach m,$(APP_MODULES),$(m)/*.c $(m)/*.cpp)
+endif
+ifneq "$(APP_FS_PATH)" ""
+APP_FS_FILES += $(foreach m,$(APP_FS_PATH),$(m)/*)
+endif
+
+# Get list of dirs which contain sources and filesystem files
+APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
+APP_FS_DIRS = $(sort $(dir $(APP_FS_FILES)))
 
 MGOS_PATH ?= ../../..
 COMMON_PATH ?= $(MGOS_PATH)/common
@@ -123,9 +143,9 @@ MGOS_SRCS +=  $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
 
 MGOS_SRCS += $(notdir $(foreach m, $(SPIFFS_PATH),$(wildcard $(m)/*.c)))
 
-APP_SRCS := $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
+APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 
-VPATH += $(MGOS_PATH)/fw/platforms/stm32 $(GEN_DIR) $(APP_MODULES) \
+VPATH += $(MGOS_PATH)/fw/platforms/stm32 $(GEN_DIR) $(APP_SOURCE_DIRS) \
          $(MGOS_SRC_PATH) $(MONGOOSE_PATH) $(COMMON_PATH) $(FROZEN_PATH) \
          $(SPIFFS_PATH) $(COMMON_PATH)/mg_rpc $(PLATFORM_SDK_PATH)/CS/extras
 
@@ -153,7 +173,7 @@ endif
 
 LDLIBS += -lc -lgcc -lnosys -Wl,--end-group
 
-IPATH += $(addprefix -I, $(SDK_INCLUDES) $(APP_MODULES))
+IPATH += $(addprefix -I, $(SDK_INCLUDES) $(APP_SOURCE_DIRS))
 IPATH += -I$(MGOS_PATH) -I$(GEN_DIR) -I$(PLATFORM_SDK_PATH) \
 		 -I$(SPIFFS_PATH) -I$(MGOS_PLATFORM_PATH) \
 		 -I$(PLATFORM_SDK_PATH)/CS/mbedtls/include \
@@ -208,7 +228,7 @@ $(MG_BUILD_INFO_C): $(FW_STAGING_DIR)
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)
 
-$(FS_IMG): $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
+$(FS_IMG): $(APP_FS_DIRS) $(COMMON_FS_PATH) $(FS_FILES) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 	$(call mkspiffs,$(FS_SIZE))
 
 $(FS_HEADER) : $(FS_IMG)

@@ -9,12 +9,31 @@ MAKEFLAGS += --warn-undefined-variables
 
 APP ?= mongoose-os
 APP_PLATFORM = cc3200
-APP_MODULES ?=
 APP_CFLAGS ?=
-APP_FS_PATH ?=
 APP_SLFS_PATH ?=
 APP_EXTRA_SRCS ?=
 FFI_SYMBOLS ?=
+# List of app source files, globs are supported
+APP_SOURCES ?=
+# List of app files to put into the device's filesystem, globs are supported
+APP_FS_FILES ?=
+
+# NOTE: those two are deprecated. Use APP_SOURCES and APP_FS_FILES instead.
+APP_MODULES ?=
+APP_FS_PATH ?=
+
+# For backward compatibility, convert old APP_MODULES and APP_FS_PATH into
+# new APP_SOURCES and APP_FS_FILES
+ifneq "$(APP_MODULES)" ""
+APP_SOURCES += $(foreach m,$(APP_MODULES),$(m)/*.c $(m)/*.cpp)
+endif
+ifneq "$(APP_FS_PATH)" ""
+APP_FS_FILES += $(foreach m,$(APP_FS_PATH),$(m)/*)
+endif
+
+# Get list of dirs which contain sources and filesystem files
+APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
+APP_FS_DIRS = $(sort $(dir $(APP_FS_FILES)))
 
 MGOS_ENABLE_ATCA = 0
 MGOS_ENABLE_ATCA_SERVICE = 0
@@ -79,10 +98,10 @@ FS_STAGING_DIR = $(BUILD_DIR)/fs
 # For FW_VERSION, MG_FEATURES_TINY
 include $(MGOS_PATH)/fw/common.mk
 
-VPATH = $(APP_MODULES) $(MGOS_CC3200_SRC_PATH) \
+VPATH = $(APP_SOURCE_DIRS) $(MGOS_CC3200_SRC_PATH) \
         $(BOOT_PATH)/lib $(BUILD_DIR) \
         $(MONGOOSE_PATH) $(FROZEN_PATH)
-IPATH = $(APP_MODULES) $(MGOS_CC3200_SRC_PATH) $(BOOT_PATH)/lib $(GEN_DIR) $(MGOS_PATH)
+IPATH = $(APP_SOURCE_DIRS) $(MGOS_CC3200_SRC_PATH) $(BOOT_PATH)/lib $(GEN_DIR) $(MGOS_PATH)
 
 # Note: CC3200 has only 32 GPIO but our port uses pin-based numbering
 # and those go from 1 to 64.
@@ -163,7 +182,7 @@ VPATH += $(SDK_PATH)/driverlib $(SDK_PATH)/oslib $(SDK_PATH)/simplelink \
 SDK_CFLAGS = -DTARGET_IS_CC3200 -DUSE_FREERTOS -DSL_PLATFORM_MULTI_THREADED
 
 MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3200_SRC_PATH)/*.c))
-APP_SRCS = $(notdir $(foreach m,$(APP_MODULES),$(wildcard $(m)/*.c))) $(APP_EXTRA_SRCS)
+APP_SRCS = $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 
 MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" -DCS_PLATFORM=CS_P_CC3200 \
               -DCC3200_FS_SPIFFS -DCS_SPIFFS_ENABLE_VFS \
@@ -181,7 +200,7 @@ endif
 clean:
 	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)
 
-$(BUILD_DIR) $(FW_DIR) $(APP_FS_PATH) $(FS_STAGING_DIR) $(APP_SLFS_PATH) $(FW_STAGING_DIR) $(GEN_DIR):
+$(BUILD_DIR) $(FW_DIR) $(FS_STAGING_DIR) $(APP_SLFS_PATH) $(FW_STAGING_DIR) $(GEN_DIR):
 	$(vecho) "MKDIR $@"
 	$(Q) mkdir -p $@
 
@@ -229,7 +248,7 @@ SYS_CONF_SCHEMA += $(MGOS_CC3200_SRC_PATH)/cc3200_sys_config.yaml
 
 $(BUILD_DIR)/miniz.o: CFLAGS += -DMINIZ_NO_STDIO
 
-$(FS_IMG): $(APP_FS_PATH) $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(FS_FILES) $(MK_FS_META_BIN)
+$(FS_IMG): $(APP_FS_DIRS) $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(FS_FILES) $(MK_FS_META_BIN)
 	$(call mkspiffs,$(FS_SIZE))
 	$(Q) $(MK_FS_META_BIN) $(FS_SIZE) $(FS_BLOCK_SIZE) $(FS_PAGE_SIZE) $(FS_ERASE_SIZE) >> $@
 

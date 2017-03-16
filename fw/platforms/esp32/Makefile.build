@@ -3,14 +3,31 @@ MAKEFLAGS += --warn-undefined-variables --silent
 
 APP ?= mongoose-os
 APP_PLATFORM = esp32
-APP_MODULES ?=
 APP_CFLAGS ?=
 APP_CONF_SCHEMA ?=
-APP_FS_PATH ?=
 APP_EXTRA_SRCS ?=
 APP_VERSION ?=
 APP_BUILD_ID ?=
 FFI_SYMBOLS ?=
+# List of app source files, globs are supported
+APP_SOURCES ?=
+# List of app files to put into the device's filesystem, globs are supported
+APP_FS_FILES ?=
+
+# NOTE: those two are deprecated. Use APP_SOURCES and APP_FS_FILES instead.
+APP_MODULES ?=
+APP_FS_PATH ?=
+
+# For backward compatibility, convert old APP_MODULES and APP_FS_PATH into
+# new APP_SOURCES and APP_FS_FILES
+ifneq "$(APP_MODULES)" ""
+APP_SOURCES += $(foreach m,$(APP_MODULES),$(m)/*.c $(m)/*.cpp)
+endif
+ifneq "$(APP_FS_PATH)" ""
+APP_FS_FILES += $(foreach m,$(APP_FS_PATH),$(m)/*)
+endif
+
+APP_FS_DIRS = $(sort $(dir $(APP_FS_FILES)))
 
 MGOS_ENABLE_ATCA ?= 1
 MGOS_ENABLE_SNTP ?= 1
@@ -44,10 +61,10 @@ MAP_FILE = $(BUILD_DIR)/$(APP).map
 BREAKDOWN_FILE = $(BUILD_DIR)/breakdown.txt
 
 # Absolutize all paths which can be given by the caller
-override APP_MODULES := $(abspath $(APP_MODULES))
+override APP_SOURCES := $(abspath $(APP_SOURCES))
+override APP_FS_FILES := $(abspath $(APP_FS_FILES))
 override APP_CONF_SCHEMA := $(abspath $(APP_CONF_SCHEMA))
 override APP_EXTRA_SRCS := $(abspath $(APP_EXTRA_SRCS))
-override APP_FS_PATH := $(abspath $(APP_FS_PATH))
 override BUILD_DIR := $(abspath $(BUILD_DIR))
 override FW_STAGING_DIR := $(abspath $(FW_STAGING_DIR))
 override FW_DIR := $(abspath $(FW_DIR))
@@ -60,8 +77,8 @@ override _MGOS_PATH = $(MGOS_PATH)
 export APP_BUILD_ID
 export _APP_CONF_SCHEMA = $(APP_CONF_SCHEMA)
 export _APP_EXTRA_SRCS = $(APP_EXTRA_SRCS)
-export _APP_FS_PATH = $(APP_FS_PATH)
-export _APP_MODULES = $(APP_MODULES)
+export _APP_FS_FILES = $(APP_FS_FILES)
+export _APP_SOURCES = $(APP_SOURCES)
 export APP_VERSION
 export _BUILD_DIR = $(BUILD_DIR)
 export FFI_SYMBOLS
@@ -151,7 +168,7 @@ $(GEN_DIR)/sys_config_schema.json $(GEN_DIR)/sys_ro_vars_schema.json: all_binari
 $(GEN_DIR)/conf0.json: all_binaries
 	$(Q) cp -f $(GEN_DIR)/sys_config_defaults.json $(GEN_DIR)/conf0.json
 
-$(FS_IMG): $(MKSPIFFS) $(APP_FS_PATH) $(COMMON_FS_PATH) $(FS_FILES)
+$(FS_IMG): $(MKSPIFFS) $(APP_FS_DIRS) $(COMMON_FS_PATH) $(FS_FILES)
 	$(call mkspiffs,$(FS_SIZE))
 
 $(BREAKDOWN_FILE) : $(APP_BIN)
