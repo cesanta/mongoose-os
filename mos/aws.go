@@ -20,6 +20,7 @@ import (
 
 	"cesanta.com/clubby"
 	atcaService "cesanta.com/fw/defs/atca"
+	fwsys "cesanta.com/fw/defs/sys"
 	"cesanta.com/mos/atca"
 	"cesanta.com/mos/dev"
 	"github.com/aws/aws-sdk-go/aws"
@@ -186,7 +187,7 @@ func getAWSIoTPolicyNames() ([]string, error) {
 	return policies, nil
 }
 
-func genCert(ctx context.Context, iotSvc *iot.IoT, devConn *dev.DevConn, devConf *dev.DevConf, cn string) (string, string, error) {
+func genCert(ctx context.Context, iotSvc *iot.IoT, devConn *dev.DevConn, devConf *dev.DevConf, devInfo *fwsys.GetInfoResult, cn string) (string, string, error) {
 	var err error
 	var pk crypto.Signer
 	var pkFile, pkPEMBlockType string
@@ -235,9 +236,13 @@ func genCert(ctx context.Context, iotSvc *iot.IoT, devConn *dev.DevConn, devConf
 		pkFile = fmt.Sprintf("%s%d", atca.KeyFilePrefix, atcaSlot)
 		pkPEMBlockType = "EC PRIVATE KEY"
 	} else {
-		reportf("Generating private key locally")
 		if certType == "" {
-			certType = defaultCertType
+			if strings.ToLower(*devInfo.Arch) == "cc3200" {
+				// CC3200 only supports RSA.
+				certType = "RSA"
+			} else {
+				certType = defaultCertType
+			}
 		}
 		switch strings.ToUpper(certType) {
 		case "RSA":
@@ -257,6 +262,7 @@ func genCert(ctx context.Context, iotSvc *iot.IoT, devConn *dev.DevConn, devConf
 		default:
 			return "", "", errors.Errorf("unknown cert type %q", certType)
 		}
+		reportf("Generating %s private key locally", certType)
 	}
 	csrTmpl := &x509.CertificateRequest{}
 	csrTmpl.Subject.CommonName = certCN
@@ -459,7 +465,7 @@ func awsIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	}
 
 	if certFile == "" {
-		certFile, keyFile, err = genCert(ctx, iotSvc, devConn, devConf, certCN)
+		certFile, keyFile, err = genCert(ctx, iotSvc, devConn, devConf, devInfo, certCN)
 		if err != nil {
 			return errors.Annotatef(err, "failed to generate certificate")
 		}
