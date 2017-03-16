@@ -15,6 +15,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"unicode"
 
 	"cesanta.com/cloud/common/ide"
 	"cesanta.com/cloud/common/swmodule"
@@ -121,14 +122,13 @@ func buildLocal() (err error) {
 	}
 
 	// Create map of given module locations, via --module flag(s)
-	moduleLocations := map[string]string{}
+	customModuleLocations := map[string]string{}
 	for _, m := range *modules {
 		parts := strings.SplitN(m, ":", 2)
-		moduleLocations[parts[0]] = parts[1]
+		customModuleLocations[parts[0]] = parts[1]
 	}
 
-	appSources := manifest.Sources
-	appFSFiles := manifest.Filesystem
+	mVars := NewManifestVars()
 
 	var mosDirEffective string
 	if *mosRepo != "" {
@@ -151,6 +151,7 @@ func buildLocal() (err error) {
 			return errors.Trace(err)
 		}
 	}
+	setModuleVars(mVars, "mongoose-os", mosDirEffective)
 
 	for _, m := range manifest.Modules {
 		name, err := m.GetName()
@@ -158,7 +159,7 @@ func buildLocal() (err error) {
 			return errors.Trace(err)
 		}
 
-		targetDir, ok := moduleLocations[name]
+		targetDir, ok := customModuleLocations[name]
 		if !ok {
 			// Custom module location wasn't provided in command line, so, we'll
 			// use the module name and will clone/pull it if necessary
@@ -172,10 +173,22 @@ func buildLocal() (err error) {
 			fmt.Printf("Using module %q located at %q\n", name, targetDir)
 		}
 
-		appSources = append(appSources, m.GetSourceDirs(targetDir)...)
-		appFSFiles = append(appFSFiles, m.GetFilesystemDirs(targetDir)...)
+		setModuleVars(mVars, name, targetDir)
 	}
 
+	// Get sources and filesystem files from the manifest, expanding placeholders
+	appSources := []string{}
+	for _, s := range manifest.Sources {
+		appSources = append(appSources, mVars.ExpandVars(s))
+	}
+
+	appFSFiles := []string{}
+	for _, s := range manifest.Filesystem {
+		appFSFiles = append(appFSFiles, mVars.ExpandVars(s))
+	}
+
+	// Makefile expects globs, not dir names, so we convert source and filesystem
+	// dirs to the appropriate globs. Non-dir items will stay intact.
 	appSources = globify(appSources, []string{"*.c", "*.cpp"})
 	appFSFiles = globify(appFSFiles, []string{"*"})
 
@@ -593,4 +606,42 @@ func setManifestArch(
 
 func identityTransformer(r io.ReadCloser) (io.ReadCloser, error) {
 	return r, nil
+}
+
+type manifestVars struct {
+	subst map[string]string
+}
+
+func NewManifestVars() *manifestVars {
+	return &manifestVars{
+		subst: make(map[string]string),
+	}
+}
+
+func (mv *manifestVars) SetVar(name, value string) {
+	// Note: we opted to use ${foo} instead of {{foo}}, because {{foo}} needs to
+	// be quoted in yaml, whereas ${foo} does not.
+	mv.subst[fmt.Sprintf("${%s}", name)] = value
+}
+
+func (mv *manifestVars) ExpandVars(s string) string {
+	for k, v := range mv.subst {
+		s = strings.Replace(s, k, v, -1)
+	}
+	return s
+}
+
+func setModuleVars(mVars *manifestVars, moduleName, path string) {
+	mVars.SetVar(fmt.Sprintf("%s_path", cleanupModuleName(moduleName)), path)
+}
+
+func cleanupModuleName(name string) string {
+	ret := ""
+	for _, c := range name {
+		if !unicode.IsLetter(c) {
+			c = '_'
+		}
+		ret += string(c)
+	}
+	return ret
 }

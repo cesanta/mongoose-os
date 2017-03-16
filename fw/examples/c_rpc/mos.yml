@@ -1,7 +1,7 @@
 name: c_rpc
 # arch: PLATFORM
 version: 1.0
-skeleton_version: 2016-09-20
+skeleton_version: 2017-03-17
 sources:
   - src
 build_vars:

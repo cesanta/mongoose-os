@@ -6,7 +6,7 @@ version: 1.0
 # master), or, if you want to freeze the mongoose-os version, you can use a
 # SHA hash of the desired revision, or a tag.
 mongoose_os_version: master
-skeleton_version: 2016-11-24
+skeleton_version: 2017-03-17
 sources:
   - src
 filesystem:
