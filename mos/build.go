@@ -128,6 +128,7 @@ func buildLocal() (err error) {
 	}
 
 	appModules := manifest.Sources
+	appFilesystem := manifest.Filesystem
 
 	var mosDirEffective string
 	if *mosRepo != "" {
@@ -171,7 +172,14 @@ func buildLocal() (err error) {
 			fmt.Printf("Using module %q located at %q\n", name, targetDir)
 		}
 
-		appModules = append(appModules, targetDir)
+		switch m.GetType() {
+		case swmodule.SWModuleTypeSource:
+			appModules = append(appModules, targetDir)
+		case swmodule.SWModuleTypeFilesystem:
+			appFilesystem = append(appFilesystem, targetDir)
+		default:
+			fmt.Printf("Warning: unknown module type for the module \"%s\"", name)
+		}
 	}
 
 	ffiSymbols := manifest.FFISymbols
@@ -201,7 +209,7 @@ func buildLocal() (err error) {
 		"APP":            appName,
 		"APP_VERSION":    manifest.Version,
 		"APP_MODULES":    strings.Join(appModules, " "),
-		"APP_FS_PATH":    strings.Join(manifest.Filesystem, " "),
+		"APP_FS_PATH":    strings.Join(appFilesystem, " "),
 		"FFI_SYMBOLS":    strings.Join(ffiSymbols, " "),
 	} {
 		err := addBuildVar(manifest, k, v)
