@@ -32,7 +32,7 @@ ffi_symbols:
   - mgos_system_restart
   - mgos_usleep
 modules:
-  - src: https://github.com/cesanta/mjs
+  - origin: https://github.com/cesanta/mjs
 build_vars:
   MGOS_ENABLE_MQTT: 1
   SSL: mbedTLS

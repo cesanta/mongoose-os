@@ -143,7 +143,7 @@ func buildLocal() (err error) {
 			// TODO(dfrank) get upstream repo URL from a flag
 			// (and this flag needs to be forwarded to fwbuild as well, which should
 			// forward it to the mos invocation)
-			Src:     "https://github.com/cesanta/mongoose-os",
+			Origin:  "https://github.com/cesanta/mongoose-os",
 			Version: manifest.MongooseOsVersion,
 		}
 
@@ -172,14 +172,8 @@ func buildLocal() (err error) {
 			fmt.Printf("Using module %q located at %q\n", name, targetDir)
 		}
 
-		switch m.GetType() {
-		case swmodule.SWModuleTypeSource:
-			appModules = append(appModules, targetDir)
-		case swmodule.SWModuleTypeFilesystem:
-			appFilesystem = append(appFilesystem, targetDir)
-		default:
-			fmt.Printf("Warning: unknown module type for the module \"%s\"", name)
-		}
+		appModules = append(appModules, m.GetSourceDirs(targetDir)...)
+		appFilesystem = append(appFilesystem, m.GetFilesystemDirs(targetDir)...)
 	}
 
 	ffiSymbols := manifest.FFISymbols
