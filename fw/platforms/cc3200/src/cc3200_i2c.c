@@ -38,6 +38,13 @@ struct mgos_i2c {
   unsigned long base;
 };
 
+static void reset_pin_mode_if_i2c(int pin, int i2c_mode) {
+  if (MAP_PinModeGet(pin) == i2c_mode) {
+    /* GPIO is always mode 0 */
+    MAP_PinModeSet(pin, PIN_MODE_0);
+  }
+}
+
 struct mgos_i2c *mgos_i2c_create(const struct sys_config_i2c *cfg) {
   struct mgos_i2c *c = (struct mgos_i2c *) calloc(1, sizeof(*c));
   if (c == NULL) return NULL;
@@ -49,10 +56,19 @@ struct mgos_i2c *mgos_i2c_create(const struct sys_config_i2c *cfg) {
   int mode;
   if (scl_pin == PIN_01) {
     mode = PIN_MODE_1;
+    reset_pin_mode_if_i2c(PIN_03, PIN_MODE_5);
+    reset_pin_mode_if_i2c(PIN_05, PIN_MODE_5);
+    reset_pin_mode_if_i2c(PIN_16, PIN_MODE_9);
   } else if (scl_pin == PIN_03 || scl_pin == PIN_05) {
     mode = PIN_MODE_5;
+    reset_pin_mode_if_i2c(PIN_01, PIN_MODE_1);
+    reset_pin_mode_if_i2c((scl_pin == PIN_03 ? PIN_05 : PIN_03), PIN_MODE_5);
+    reset_pin_mode_if_i2c(PIN_16, PIN_MODE_9);
   } else if (scl_pin == PIN_16) {
     mode = PIN_MODE_9;
+    reset_pin_mode_if_i2c(PIN_01, PIN_MODE_1);
+    reset_pin_mode_if_i2c(PIN_03, PIN_MODE_5);
+    reset_pin_mode_if_i2c(PIN_05, PIN_MODE_5);
   } else {
     goto out_err;
   }
@@ -60,10 +76,19 @@ struct mgos_i2c *mgos_i2c_create(const struct sys_config_i2c *cfg) {
 
   if (sda_pin == PIN_02) {
     mode = PIN_MODE_1;
+    reset_pin_mode_if_i2c(PIN_04, PIN_MODE_5);
+    reset_pin_mode_if_i2c(PIN_06, PIN_MODE_5);
+    reset_pin_mode_if_i2c(PIN_17, PIN_MODE_9);
   } else if (sda_pin == PIN_04 || sda_pin == PIN_06) {
     mode = PIN_MODE_5;
+    reset_pin_mode_if_i2c(PIN_02, PIN_MODE_1);
+    reset_pin_mode_if_i2c((scl_pin == PIN_04 ? PIN_06 : PIN_04), PIN_MODE_5);
+    reset_pin_mode_if_i2c(PIN_17, PIN_MODE_9);
   } else if (sda_pin == PIN_17) {
     mode = PIN_MODE_9;
+    reset_pin_mode_if_i2c(PIN_02, PIN_MODE_1);
+    reset_pin_mode_if_i2c(PIN_04, PIN_MODE_5);
+    reset_pin_mode_if_i2c(PIN_06, PIN_MODE_5);
   } else {
     goto out_err;
   }
