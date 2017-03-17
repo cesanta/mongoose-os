@@ -7,6 +7,7 @@ sources:
   - ${mjs_path}
 filesystem:
   - fs
+  - ${mongoose_os_path}/fw/mjs_api/api_*.js
 ffi_symbols:
   - fclose
   - fopen
