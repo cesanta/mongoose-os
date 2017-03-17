@@ -1292,6 +1292,9 @@ static void _umm_free( void *ptr ) {
   {
     unsigned short originalBlockSize = ((UMM_NBLOCK(c) & ~UMM_FREELIST_MASK) - c);
     umm_stat.free_blocks_cnt += originalBlockSize;
+#if defined(UMM_ONFREE)
+    UMM_ONFREE(ptr, originalBlockSize * sizeof(umm_block) - sizeof(((umm_block *)0)->header));
+#endif
   }
 
   umm_stat.free_entries_cnt++;

@@ -105,7 +105,7 @@ IPATH = $(APP_SOURCE_DIRS) $(MGOS_CC3200_SRC_PATH) $(BOOT_PATH)/lib $(GEN_DIR) $
 
 # Note: CC3200 has only 32 GPIO but our port uses pin-based numbering
 # and those go from 1 to 64.
-MGOS_CC3200_FEATURES ?= -DMGOS_ENABLE_FILE_UPLOAD -DMGOS_NUM_GPIO=65
+MGOS_CC3200_FEATURES ?= -DMGOS_ENABLE_FILE_UPLOAD -DMGOS_NUM_GPIO=65 '-DUMM_ONFREE(ptr, size)=memset(ptr, 0xff, size)'
 
 MG_FEATURES ?= $(MG_FEATURES_TINY) \
                -DMG_LOCALS -DMG_ENABLE_SSL \
