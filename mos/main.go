@@ -14,8 +14,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"cesanta.com/cloud/common/ide"
 	"cesanta.com/common/go/pflagenv"
+	"cesanta.com/mos/build"
 	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
@@ -38,7 +38,7 @@ var (
 	mosRepo    = flag.String("repo", "", "Path to the mongoose-os repository; if omitted, the mongoose-os repository will be cloned as ./mongoose-os")
 	deviceID   = flag.String("device-id", "", "Device ID")
 	devicePass = flag.String("device-pass", "", "Device pass/key")
-	firmware   = flag.String("firmware", filepath.Join(buildDir, ide.FirmwareFileName), "Firmware .zip file location (file of HTTP URL)")
+	firmware   = flag.String("firmware", filepath.Join(buildDir, build.FirmwareFileName), "Firmware .zip file location (file of HTTP URL)")
 	portFlag   = flag.String("port", "auto", "Serial port where the device is connected. "+
 		"If set to 'auto', ports on the system will be enumerated and the first will be used.")
 	timeout   = flag.Duration("timeout", 10*time.Second, "Timeout for the device connection")
@@ -58,7 +58,7 @@ var (
 	commands = []command{
 		{"ui", startUI, `Start GUI`, nil, nil, false},
 		{"init", initFW, `Initialise firmware directory structure in the current directory`, nil, []string{"arch", "force"}, false},
-		{"build", build, `Build a firmware from the sources located in the current directory`, nil, []string{"arch", "local", "repo", "clean", "server"}, false},
+		{"build", doBuild, `Build a firmware from the sources located in the current directory`, nil, []string{"arch", "local", "repo", "clean", "server"}, false},
 		{"flash", flash, `Flash firmware to the device`, nil, []string{"port", "firmware"}, false},
 		{"console", console, `Simple serial port console`, nil, []string{"port"}, false}, //TODO: needDevConn
 		{"ls", fsLs, `List files at the local device's filesystem`, nil, []string{"port"}, true},

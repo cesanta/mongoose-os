@@ -17,10 +17,9 @@ import (
 	"strings"
 	"unicode"
 
-	"cesanta.com/cloud/common/ide"
-	"cesanta.com/cloud/common/swmodule"
-	"cesanta.com/cloud/util/archive"
 	"cesanta.com/common/go/multierror"
+	"cesanta.com/mos/build"
+	"cesanta.com/mos/build/archive"
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/flash/common"
 	"github.com/cesanta/errors"
@@ -51,7 +50,7 @@ func init() {
 	hiddenFlags = append(hiddenFlags, "docker_images")
 }
 
-func build(ctx context.Context, devConn *dev.DevConn) error {
+func doBuild(ctx context.Context, devConn *dev.DevConn) error {
 	var err error
 	if *local {
 		err = buildLocal()
@@ -62,7 +61,7 @@ func build(ctx context.Context, devConn *dev.DevConn) error {
 		return errors.Trace(err)
 	}
 
-	fwFilename := filepath.Join(buildDir, ide.FirmwareFileName)
+	fwFilename := filepath.Join(buildDir, build.FirmwareFileName)
 
 	fw, err := common.NewZipFirmwareBundle(fwFilename)
 	if err == nil {
@@ -90,7 +89,7 @@ func buildLocal() (err error) {
 	objsDir := filepath.Join(buildDir, "objs")
 	genDir := filepath.Join(buildDir, "gen")
 	fsDir := filepath.Join(buildDir, "fs")
-	fwFilename := filepath.Join(buildDir, ide.FirmwareFileName)
+	fwFilename := filepath.Join(buildDir, build.FirmwareFileName)
 	elfFilename := filepath.Join(objsDir, "fw.elf")
 
 	if *cleanBuild {
@@ -138,7 +137,7 @@ func buildLocal() (err error) {
 		fmt.Printf("The flag --repo is not given, going to use mongoose-os repository\n")
 		mosDirEffective = "mongoose-os"
 
-		m := swmodule.SWModule{
+		m := build.SWModule{
 			Type: "git",
 			// TODO(dfrank) get upstream repo URL from a flag
 			// (and this flag needs to be forwarded to fwbuild as well, which should
@@ -296,12 +295,12 @@ func globify(srcPaths []string, globs []string) []string {
 
 // addBuildVar adds a given build variable to manifest.BuildVars,
 // but if the variable already exists, returns an error.
-func addBuildVar(manifest *ide.FWAppManifest, name, value string) error {
+func addBuildVar(manifest *build.FWAppManifest, name, value string) error {
 	if _, ok := manifest.BuildVars[name]; ok {
 		return errors.Errorf(
 			"Build variable %q should not be given in %q "+
 				"since it's set by the mos tool automatically",
-			name, ide.ManifestFileName,
+			name, build.ManifestFileName,
 		)
 	}
 	manifest.BuildVars[name] = value
@@ -325,7 +324,7 @@ func runCmd(cmd *exec.Cmd, logFile io.Writer) error {
 	return nil
 }
 
-func detectArch(manifest *ide.FWAppManifest) (string, error) {
+func detectArch(manifest *build.FWAppManifest) (string, error) {
 	a := *arch
 	if a == "" {
 		a = manifest.Arch
@@ -337,13 +336,13 @@ func detectArch(manifest *ide.FWAppManifest) (string, error) {
 	return a, nil
 }
 
-func readManifest() (*ide.FWAppManifest, error) {
-	manifestSrc, err := ioutil.ReadFile(filepath.Join(codeDir, ide.ManifestFileName))
+func readManifest() (*build.FWAppManifest, error) {
+	manifestSrc, err := ioutil.ReadFile(filepath.Join(codeDir, build.ManifestFileName))
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
 
-	var manifest ide.FWAppManifest
+	var manifest build.FWAppManifest
 	if err := yaml.Unmarshal(manifestSrc, &manifest); err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -366,8 +365,8 @@ func buildRemote() error {
 	}
 
 	whitelist := map[string]bool{
-		ide.ManifestFileName: true,
-		".":                  true,
+		build.ManifestFileName: true,
+		".": true,
 	}
 	for _, v := range manifest.Sources {
 		whitelist[v] = true
@@ -382,7 +381,7 @@ func buildRemote() error {
 	transformers := make(map[string]fileTransformer)
 
 	// We need to preprocess mos.yml (see setManifestArch())
-	transformers[ide.ManifestFileName] = func(r io.ReadCloser) (io.ReadCloser, error) {
+	transformers[build.ManifestFileName] = func(r io.ReadCloser) (io.ReadCloser, error) {
 		var buildVars map[string]string
 		if len(*buildVarsSlice) > 0 {
 			buildVars = make(map[string]string)
@@ -570,7 +569,7 @@ func setManifestArch(
 		return nil, errors.Trace(err)
 	}
 
-	var manifest ide.FWAppManifest
+	var manifest build.FWAppManifest
 	if err := yaml.Unmarshal(manifestData, &manifest); err != nil {
 		return nil, errors.Trace(err)
 	}

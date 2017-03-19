@@ -9,8 +9,8 @@ import (
 	"os"
 	"path/filepath"
 
-	"cesanta.com/cloud/common/ide"
-	"cesanta.com/cloud/util/archive"
+	"cesanta.com/mos/build"
+	"cesanta.com/mos/build/archive"
 	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"
 	yaml "gopkg.in/yaml.v2"
@@ -64,14 +64,14 @@ func initFW(ctx context.Context, devConn *dev.DevConn) error {
 	// If arch was provided, update yaml
 	if *arch != "" {
 		fmt.Printf("Setting arch %q...\n", *arch)
-		manifestFilename := filepath.Join(".", ide.ManifestFileName)
+		manifestFilename := filepath.Join(".", build.ManifestFileName)
 
 		manifestData, err := ioutil.ReadFile(manifestFilename)
 		if err != nil {
 			return errors.Trace(err)
 		}
 
-		var manifest ide.FWAppManifest
+		var manifest build.FWAppManifest
 		if err := yaml.Unmarshal(manifestData, &manifest); err != nil {
 			return errors.Trace(err)
 		}
