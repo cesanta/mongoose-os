@@ -19,3 +19,13 @@ int mgos_adc_read(int pin) {
 double mgos_adc_read_voltage(int pin) {
   return mgos_adc_read(pin) / 1024.0; /* ESP8266 has a 10-bit ADC */
 }
+
+static int s_adc_at_boot = 0;
+
+int esp_adc_value_at_boot(void) {
+  return s_adc_at_boot;
+}
+
+void esp_adc_init(void) {
+  s_adc_at_boot = mgos_adc_read(0);
+}

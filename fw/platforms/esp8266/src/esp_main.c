@@ -27,6 +27,7 @@
 #include "fw/src/mgos_updater_hal.h"
 #include "common/platforms/esp8266/esp_umm_malloc.h"
 
+#include "fw/platforms/esp8266/src/esp_adc.h"
 #include "fw/platforms/esp8266/src/esp_exc.h"
 #include "fw/platforms/esp8266/src/esp_fs.h"
 #include "fw/platforms/esp8266/src/esp_hw.h"
@@ -231,7 +232,8 @@ void sdk_init_done_cb(void) {
 
 void user_init(void) {
   uart_div_modify(0, UART_CLK_FREQ / 115200);
-  srand(system_get_rtc_time());
+  esp_adc_init();
+  srand(system_get_time() ^ system_get_rtc_time() ^ esp_adc_value_at_boot());
   os_timer_disarm(&s_mg_poll_tmr);
   os_timer_setfn(&s_mg_poll_tmr, (void (*) (void *)) mongoose_schedule_poll,
                  /* RTOS callbacks are executed in ISR context; for non-OS it

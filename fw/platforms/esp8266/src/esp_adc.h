@@ -6,8 +6,8 @@
 #ifndef CS_FW_PLATFORMS_ESP8266_USER_ESP_ADC_H_
 #define CS_FW_PLATFORMS_ESP8266_USER_ESP_ADC_H_
 
-#include <stdint.h>
+int esp_adc_value_at_boot(void);
 
-#include "fw/src/mgos_adc.h"
+void esp_adc_init(void);
 
 #endif /* CS_FW_PLATFORMS_ESP8266_USER_ESP_ADC_H_ */
