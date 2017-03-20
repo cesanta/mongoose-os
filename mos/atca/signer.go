@@ -13,7 +13,7 @@ import (
 	"math/big"
 	"os"
 
-	"cesanta.com/clubby"
+	"cesanta.com/common/go/lptr"
 	atcaService "cesanta.com/fw/defs/atca"
 	"github.com/cesanta/errors"
 )
@@ -36,7 +36,7 @@ func (s *Signer) Public() crypto.PublicKey {
 		Y:     big.NewInt(0),
 	}
 
-	req := &atcaService.GetPubKeyArgs{Slot: clubby.Int64(int64(s.slot))}
+	req := &atcaService.GetPubKeyArgs{Slot: lptr.Int64(int64(s.slot))}
 
 	r, err := s.cl.GetPubKey(s.ctx, req)
 	if err != nil {
@@ -68,7 +68,7 @@ func (s *Signer) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts) ([]
 	b64d := base64.StdEncoding.EncodeToString(digest)
 	cs := int64(crc32.ChecksumIEEE(digest))
 	req := &atcaService.SignArgs{
-		Slot:   clubby.Int64(int64(s.slot)),
+		Slot:   lptr.Int64(int64(s.slot)),
 		Digest: &b64d,
 		Crc32:  &cs,
 	}

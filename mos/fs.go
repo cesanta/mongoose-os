@@ -9,7 +9,7 @@ import (
 	"path"
 	"time"
 
-	"cesanta.com/clubby"
+	"cesanta.com/common/go/lptr"
 	fwfilesystem "cesanta.com/fw/defs/fs"
 	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"
@@ -58,8 +58,8 @@ func getFile(ctx context.Context, devConn *dev.DevConn, name string) (string, er
 		glog.V(1).Infof("Getting %s %d @ %d (attempts %d)", name, chunkSize, offset, attempts)
 		chunk, err := devConn.CFilesystem.Get(ctx2, &fwfilesystem.GetArgs{
 			Filename: &name,
-			Offset:   clubby.Int64(offset),
-			Len:      clubby.Int64(chunkSize),
+			Offset:   lptr.Int64(offset),
+			Len:      lptr.Int64(chunkSize),
 		})
 		if err != nil {
 			attempts -= 1
@@ -149,8 +149,8 @@ func fsPutData(ctx context.Context, devConn *dev.DevConn, r io.Reader, devFilena
 				glog.V(1).Infof("Sending %s %d (attempts %d)", devFilename, n, attempts)
 				err := devConn.CFilesystem.Put(ctx2, &fwfilesystem.PutArgs{
 					Filename: &devFilename,
-					Data:     clubby.String(base64.StdEncoding.EncodeToString(data[:n])),
-					Append:   clubby.Bool(appendFlag),
+					Data:     lptr.String(base64.StdEncoding.EncodeToString(data[:n])),
+					Append:   lptr.Bool(appendFlag),
 				})
 				if err != nil {
 					attempts -= 1

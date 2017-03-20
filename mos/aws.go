@@ -18,7 +18,7 @@ import (
 	"strings"
 	"time"
 
-	"cesanta.com/clubby"
+	"cesanta.com/common/go/lptr"
 	atcaService "cesanta.com/fw/defs/atca"
 	fwsys "cesanta.com/fw/defs/sys"
 	"cesanta.com/mos/atca"
@@ -225,7 +225,7 @@ func genCert(ctx context.Context, iotSvc *iot.IoT, devConn *dev.DevConn, devConf
 		}
 		if keyFile == "" {
 			reportf("Generating new private key in slot %d", atcaSlot)
-			_, err := cl.GenKey(ctx, &atcaService.GenKeyArgs{Slot: clubby.Int64(int64(atcaSlot))})
+			_, err := cl.GenKey(ctx, &atcaService.GenKeyArgs{Slot: lptr.Int64(int64(atcaSlot))})
 			if err != nil {
 				return "", "", errors.Annotatef(err, "failed to generate private key in slot %d", atcaSlot)
 			}

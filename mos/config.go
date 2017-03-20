@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"cesanta.com/clubby"
+	"cesanta.com/common/go/lptr"
 	fwconfig "cesanta.com/fw/defs/config"
 	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"
@@ -108,7 +108,7 @@ func configSetAndSave(ctx context.Context, devConn *dev.DevConn, devConf *dev.De
 			reportf("Saving and rebooting...")
 		}
 		err = devConn.CConf.Save(ctx, &fwconfig.SaveArgs{
-			Reboot: clubby.Bool(!noReboot),
+			Reboot: lptr.Bool(!noReboot),
 		})
 		if err != nil {
 			return errors.Trace(err)
