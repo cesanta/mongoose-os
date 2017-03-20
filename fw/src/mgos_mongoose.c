@@ -9,6 +9,9 @@
 #include "common/queue.h"
 
 #include "fw/src/mgos_hal.h"
+#include "fw/src/mgos_sys_config.h"
+#include "fw/src/mgos_utils.h"
+#include "fw/src/mgos_wifi.h"
 
 #ifndef IRAM
 #define IRAM
@@ -223,4 +226,18 @@ const char *mgos_get_http_message_param(const struct http_message *m,
 
 int mgos_peek(const void *ptr, int offset) {
   return ((unsigned char *) ptr)[offset];
+}
+
+char *mgos_get_nameserver() {
+#if MGOS_ENABLE_WIFI
+  char *dns = NULL;
+  if (get_cfg()->wifi.sta.nameserver != NULL) {
+    dns = strdup(get_cfg()->wifi.sta.nameserver);
+  } else {
+    dns = mgos_wifi_get_sta_default_dns();
+  }
+  return dns;
+#else
+  return NULL;
+#endif
 }

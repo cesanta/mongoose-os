@@ -33,6 +33,8 @@ void mgos_wdt_set_feed_on_poll(bool enable);
 
 void mgos_set_enable_min_heap_free_reporting(bool enable);
 
+char *mgos_get_nameserver(void);
+
 /* HAL */
 
 /* Schedule MG poll ASAP. Note: may be called from ISR context. */

@@ -27,3 +27,8 @@ char *mgos_wifi_get_ap_ip(void) {
   /* TODO(alashkin): implement */
   return NULL;
 }
+
+char *mgos_wifi_get_sta_default_dns(void) {
+  /* TODO(alashkin): implement */
+  return NULL;
+}

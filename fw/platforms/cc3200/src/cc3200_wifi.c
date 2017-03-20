@@ -355,3 +355,8 @@ char *mgos_wifi_get_sta_default_gw() {
   if (s_wifi_sta_config.gw == NULL) return NULL;
   return strdup(s_wifi_sta_config.gw);
 }
+
+char *mgos_wifi_get_sta_default_dns(void) {
+  /* TODO(rojer? alex?): implement */
+  return NULL;
+}

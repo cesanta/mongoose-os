@@ -49,6 +49,7 @@ char *mgos_wifi_get_connected_ssid(void);
 char *mgos_wifi_get_sta_ip(void);
 char *mgos_wifi_get_sta_default_gw(void);
 char *mgos_wifi_get_ap_ip(void);
+char *mgos_wifi_get_sta_default_dns(void);
 
 /*
  * Callback must be invoked, with list of SSIDs or NULL on error.

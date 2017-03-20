@@ -10,7 +10,11 @@
 
 #include "common/cs_dbg.h"
 #include "common/queue.h"
+
+#include "fw/src/mgos_mongoose.h"
 #include "fw/src/mgos_sys_config.h"
+
+#include "mongoose/mongoose.h"
 
 struct wifi_cb {
   SLIST_ENTRY(wifi_cb) entries;
@@ -31,7 +35,11 @@ void mgos_wifi_on_change_cb(enum mgos_wifi_status event) {
     case MGOS_WIFI_IP_ACQUIRED: {
       char *ip = mgos_wifi_get_sta_ip();
       if (ip != NULL) {
-        LOG(LL_INFO, ("WiFi: ready, IP %s", ip));
+        char *nameserver = mgos_get_nameserver();
+        LOG(LL_INFO, ("WiFi: ready, IP %s DNS %s", ip,
+                      nameserver ? nameserver : "default"));
+        mg_set_nameserver(mgos_get_mgr(), nameserver);
+        free(nameserver);
         free(ip);
       }
       break;

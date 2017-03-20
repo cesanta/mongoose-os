@@ -19,6 +19,7 @@
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_wifi.h"
+#include "lwip/dns.h"
 
 static mgos_wifi_scan_cb_t s_wifi_scan_cb;
 static void *s_wifi_scan_cb_arg;
@@ -417,4 +418,16 @@ char *mgos_wifi_get_sta_default_gw() {
     return NULL;
   }
   return ip;
+}
+
+char *mgos_wifi_get_sta_default_dns() {
+  char *dns;
+  ip_addr_t dns_addr = dns_getserver(0);
+  if (dns_addr.addr == 0) {
+    return NULL;
+  }
+  if (asprintf(&dns, IPSTR, IP2STR(&dns_addr)) < 0) {
+    return NULL;
+  }
+  return dns;
 }

@@ -9,6 +9,7 @@
 #include "esp_wifi.h"
 #include "tcpip_adapter.h"
 #include "apps/dhcpserver.h"
+#include "lwip/ip_addr.h"
 
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_sys_config.h"
@@ -401,4 +402,16 @@ char *mgos_wifi_get_sta_default_gw() {
     return NULL;
   }
   return ip;
+}
+
+char *mgos_wifi_get_sta_default_dns() {
+  char *dns;
+  ip_addr_t dns_addr = dns_getserver(0);
+  if (dns_addr.u_addr.ip4.addr == 0 || dns_addr.type != IPADDR_TYPE_V4) {
+    return NULL;
+  }
+  if (asprintf(&dns, IPSTR, IP2STR(&dns_addr.u_addr.ip4)) < 0) {
+    return NULL;
+  }
+  return dns;
 }
