@@ -336,8 +336,28 @@ func detectArch(manifest *build.FWAppManifest) (string, error) {
 	return a, nil
 }
 
+func getCodeDir() (string, error) {
+	absCodeDir, err := filepath.Abs(codeDir)
+	if err != nil {
+		return "", errors.Trace(err)
+	}
+
+	for _, c := range absCodeDir {
+		if unicode.IsSpace(c) {
+			return "", errors.Errorf("code dir (%q) should not contain spaces", absCodeDir)
+		}
+	}
+
+	return absCodeDir, nil
+}
+
 func readManifest() (*build.FWAppManifest, error) {
-	manifestSrc, err := ioutil.ReadFile(filepath.Join(codeDir, build.ManifestFileName))
+	wd, err := getCodeDir()
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	manifestSrc, err := ioutil.ReadFile(filepath.Join(wd, build.ManifestFileName))
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -549,12 +569,19 @@ func zipUp(
 
 func fixupAppName(appName string) (string, error) {
 	if appName == "" {
-		wd, err := os.Getwd()
+		wd, err := getCodeDir()
 		if err != nil {
 			return "", errors.Trace(err)
 		}
-		return filepath.Base(wd), nil
+		appName = filepath.Base(wd)
 	}
+
+	for _, c := range appName {
+		if unicode.IsSpace(c) {
+			return "", errors.Errorf("app name (%q) should not contain spaces", appName)
+		}
+	}
+
 	return appName, nil
 }
 
