@@ -39,7 +39,11 @@ The OTA can be triggered by:
 
 - Calling an `OTA.Update` RPC, asking Mongoose to pull new firmware:
 ```bash
-mos call OTA.Update '{"section": "firmware", "commit_timeout": 300, "blob_url": "http://MY-SITE/fw.zip"}'
+mos call OTA.Update '{
+  "section": "firmware",
+  "commit_timeout": 300,
+  "blob_url": "http://MY-SITE/fw.zip"
+}'
 ```
 
 - Pushing new firmware directly by HTTP POST to a special `/update` endpoint:
