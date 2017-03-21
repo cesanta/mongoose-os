@@ -3,16 +3,17 @@
 //
 // Usage example:
 //
-// let s = NeoPixelStrip(
-//    5 /* pin */,
-//    16 /* number of pixels */,
-//    NeoPixel.GRB /* order of colors on the wire */);
+// ```javascript
+// let pin = 5, numPixels = 16, colorOrder = NeoPixel.GRB;
+// let s = NeoPixelStrip(pin, numPixels, colorOrder);
 // NeoPixel.setPixel(s, 0 /* pixel */, 12, 34, 56);
 // NeoPixel.show(s);
 //
 // NeoPixel.clear(s);
 // NeoPixel.setPixel(s, 1 /* pixel */, 12, 34, 56);
 // NeoPixel.show(s);
+// ```
+
 
 load("api_bitbang.js");
 load("api_gpio.js");
