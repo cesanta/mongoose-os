@@ -3,7 +3,7 @@
 
 #include "common/sha1.h"
 
-#if !DISABLE_SHA1 && !defined(EXCLUDE_COMMON)
+#if !CS_DISABLE_SHA1 && !defined(EXCLUDE_COMMON)
 
 #include "common/cs_endian.h"
 

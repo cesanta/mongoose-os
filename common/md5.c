@@ -19,7 +19,7 @@
 #include "common/str_util.h"
 
 #if !defined(EXCLUDE_COMMON)
-#if !DISABLE_MD5
+#if !CS_DISABLE_MD5
 
 #include "common/cs_endian.h"
 
@@ -206,7 +206,7 @@ void MD5_Final(unsigned char digest[16], MD5_CTX *ctx) {
   memcpy(digest, ctx->buf, 16);
   memset((char *) ctx, 0, sizeof(*ctx));
 }
-#endif /* DISABLE_MD5 */
+#endif /* CS_DISABLE_MD5 */
 
 char *cs_md5(char buf[33], ...) {
   unsigned char hash[16];
