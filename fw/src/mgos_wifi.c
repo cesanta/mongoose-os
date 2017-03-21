@@ -36,7 +36,7 @@ void mgos_wifi_on_change_cb(enum mgos_wifi_status event) {
       char *ip = mgos_wifi_get_sta_ip();
       if (ip != NULL) {
         char *nameserver = mgos_get_nameserver();
-        LOG(LL_INFO, ("WiFi: ready, IP %s DNS %s", ip,
+        LOG(LL_INFO, ("WiFi: ready, IP %s, DNS %s", ip,
                       nameserver ? nameserver : "default"));
         mg_set_nameserver(mgos_get_mgr(), nameserver);
         free(nameserver);

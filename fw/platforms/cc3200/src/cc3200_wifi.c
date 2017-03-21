@@ -27,8 +27,7 @@
 struct cc3200_wifi_config {
   char *ssid;
   char *pass;
-  char *ip;
-  char *gw;
+  SlIpV4AcquiredAsync_t acquired_ip;
   SlNetCfgIpV4Args_t static_ip;
   unsigned int status : 4;
   unsigned int reconnect : 1;
@@ -40,8 +39,6 @@ static int s_current_role = -1;
 static void free_wifi_config(void) {
   free(s_wifi_sta_config.ssid);
   free(s_wifi_sta_config.pass);
-  free(s_wifi_sta_config.ip);
-  free(s_wifi_sta_config.gw);
   memset(&s_wifi_sta_config, 0, sizeof(s_wifi_sta_config));
 }
 
@@ -97,14 +94,7 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *e) {
 void sl_net_app_eh(SlNetAppEvent_t *e) {
   if (e->Event == SL_NETAPP_IPV4_IPACQUIRED_EVENT) {
     SlIpV4AcquiredAsync_t *ed = &e->EventData.ipAcquiredV4;
-    free(s_wifi_sta_config.ip);
-    asprintf(&s_wifi_sta_config.ip, "%lu.%lu.%lu.%lu", SL_IPV4_BYTE(ed->ip, 3),
-             SL_IPV4_BYTE(ed->ip, 2), SL_IPV4_BYTE(ed->ip, 1),
-             SL_IPV4_BYTE(ed->ip, 0));
-    free(s_wifi_sta_config.gw);
-    asprintf(&s_wifi_sta_config.gw, "%lu.%lu.%lu.%lu",
-             SL_IPV4_BYTE(ed->gateway, 3), SL_IPV4_BYTE(ed->gateway, 2),
-             SL_IPV4_BYTE(ed->gateway, 1), SL_IPV4_BYTE(ed->gateway, 0));
+    memcpy(&s_wifi_sta_config.acquired_ip, ed, sizeof(*ed));
     s_wifi_sta_config.status = MGOS_WIFI_IP_ACQUIRED;
     mgos_invoke_cb(invoke_wifi_on_change_cb,
                    (void *) (int) s_wifi_sta_config.status,
@@ -319,9 +309,35 @@ char *mgos_wifi_get_connected_ssid(void) {
   return NULL;
 }
 
+static char *ip2str(uint32_t ip) {
+  char *ipstr = NULL;
+  asprintf(&ipstr, "%lu.%lu.%lu.%lu", SL_IPV4_BYTE(ip, 3), SL_IPV4_BYTE(ip, 2),
+           SL_IPV4_BYTE(ip, 1), SL_IPV4_BYTE(ip, 0));
+  return ipstr;
+}
+
 char *mgos_wifi_get_sta_ip(void) {
-  if (s_wifi_sta_config.ip == NULL) return NULL;
-  return strdup(s_wifi_sta_config.ip);
+  if (s_wifi_sta_config.status != MGOS_WIFI_IP_ACQUIRED ||
+      s_wifi_sta_config.acquired_ip.ip == 0) {
+    return NULL;
+  }
+  return ip2str(s_wifi_sta_config.acquired_ip.ip);
+}
+
+char *mgos_wifi_get_sta_default_gw() {
+  if (s_wifi_sta_config.status != MGOS_WIFI_IP_ACQUIRED ||
+      s_wifi_sta_config.acquired_ip.gateway == 0) {
+    return NULL;
+  }
+  return ip2str(s_wifi_sta_config.acquired_ip.gateway);
+}
+
+char *mgos_wifi_get_sta_default_dns(void) {
+  if (s_wifi_sta_config.status != MGOS_WIFI_IP_ACQUIRED ||
+      s_wifi_sta_config.acquired_ip.dns == 0) {
+    return NULL;
+  }
+  return ip2str(s_wifi_sta_config.acquired_ip.dns);
 }
 
 char *mgos_wifi_get_ap_ip(void) {
@@ -349,14 +365,4 @@ out:
 }
 
 void mgos_wifi_hal_init(void) {
-}
-
-char *mgos_wifi_get_sta_default_gw() {
-  if (s_wifi_sta_config.gw == NULL) return NULL;
-  return strdup(s_wifi_sta_config.gw);
-}
-
-char *mgos_wifi_get_sta_default_dns(void) {
-  /* TODO(rojer? alex?): implement */
-  return NULL;
 }
