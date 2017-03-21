@@ -44,6 +44,9 @@ const (
 	codeDir  = "."
 
 	buildLog = "build.log"
+
+	minSkeletonVersion = "2017-03-17"
+	maxSkeletonVersion = "2017-03-17"
 )
 
 func init() {
@@ -365,6 +368,21 @@ func readManifest() (*build.FWAppManifest, error) {
 	var manifest build.FWAppManifest
 	if err := yaml.Unmarshal(manifestSrc, &manifest); err != nil {
 		return nil, errors.Trace(err)
+	}
+
+	// Check if manifest skeleton version is supported by the mos tool
+	if manifest.SkeletonVersion < minSkeletonVersion {
+		return nil, errors.Errorf(
+			"too old skeleton_version %q in %s (oldest supported is %q)",
+			manifest.SkeletonVersion, build.ManifestFileName, minSkeletonVersion,
+		)
+	}
+
+	if manifest.SkeletonVersion > maxSkeletonVersion {
+		return nil, errors.Errorf(
+			"too new skeleton_version %q in %s (latest supported is %q)",
+			manifest.SkeletonVersion, build.ManifestFileName, maxSkeletonVersion,
+		)
 	}
 
 	if manifest.BuildVars == nil {
