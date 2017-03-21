@@ -171,12 +171,6 @@
 			"revisionTime": "2017-01-05T15:26:49Z"
 		},
 		{
-			"checksumSHA1": "C+ufqvOQ+wDxyolIN22rhYHK4Ik=",
-			"path": "github.com/cesanta/ubjson",
-			"revision": "3758bbe9c1d8afeedee478db8c928be86a5cf3c7",
-			"revisionTime": "2016-05-05T14:36:22Z"
-		},
-		{
 			"checksumSHA1": "YJQqkH5JJ/h8r8245J9GCP4zG38=",
 			"path": "github.com/eclipse/paho.mqtt.golang",
 			"revision": "dfe35ae8bd6ead198596c5e5f4af1f55914741cf",

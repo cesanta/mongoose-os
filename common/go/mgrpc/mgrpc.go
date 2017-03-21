@@ -5,7 +5,6 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
-	"strings"
 	"sync"
 	"time"
 
@@ -125,13 +124,7 @@ func (r *mgRPCImpl) wsConnect(url string, opts *connectOptions) (codec.Codec, er
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
-	encodings := []string{"json"}
-	if opts.enableUBJSON {
-		encodings = append([]string{"ubjson"}, encodings...)
-	}
-	s := strings.Join(encodings, "|")
 	config.Protocol = []string{codec.WSProtocol}
-	config.OutboundExtensions = []string{fmt.Sprintf("%s; in=%s; out=%s", codec.WSEncodingExtension, s, s)}
 	config.TlsConfig = opts.tlsConfig
 	conn, err := wsDialConfig(config)
 	if err != nil {
@@ -161,7 +154,7 @@ func (r *mgRPCImpl) serialConnect(
 }
 
 func (r *mgRPCImpl) connect(ctx context.Context, opts ...ConnectOption) error {
-	r.opts = &connectOptions{enableUBJSON: true}
+	r.opts = &connectOptions{}
 
 	for _, opt := range opts {
 		if err := opt(r.opts); err != nil {

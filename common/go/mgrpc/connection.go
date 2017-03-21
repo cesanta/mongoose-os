@@ -21,7 +21,6 @@ type connectOptions struct {
 	caPool          *x509.CertPool
 	tlsConfig       *tls.Config
 	psk             string
-	enableUBJSON    bool
 	enableTracing   bool
 	enableReconnect bool
 	junkHandler     func(junk []byte)
@@ -171,14 +170,6 @@ func VerifyServerWithCAsFromFile(file string) ConnectOption {
 func SendPSK(psk string) ConnectOption {
 	return func(c *connectOptions) error {
 		c.psk = psk
-		return nil
-	}
-}
-
-// UBJSON enables the binary UBJSON protocol.
-func UBJSON(enable bool) ConnectOption {
-	return func(c *connectOptions) error {
-		c.enableUBJSON = enable
 		return nil
 	}
 }
