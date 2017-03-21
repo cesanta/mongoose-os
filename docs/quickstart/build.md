@@ -76,11 +76,48 @@ Second way is suitable for Git-managed libraries:
 ```yaml
 sources:
   - src
+  - ${mjs_path}
 modules:
-  - src: https://github.com/cesanta/mjs
+  - origin: https://github.com/cesanta/mjs
 ```
 
 The example above includes an external library from Github, an embedded
-scripting engine. This is how a default Mongoose OS firmware is build, which
-included mJS scripting engine, see
+scripting engine. Notice that other than specifying the external module origin,
+we need to reference that module from `sources` and/or `filesystem` sections,
+by using the `${}` syntax, otherwise there won't be any effect of that module.
+
+Each external module has a name. By default it's equal to the last path
+component of the origin, but it can also be overridden explicitly with the
+`name` property, like this:
+
+```yaml
+modules:
+  - name: mymjs
+    origin: https://github.com/cesanta/mjs
+```
+
+For each module, `mos` tool creates a variable named `<modulename>_path`, where
+`<modulename>` is a name of the module, with all non-alphanumeric characters
+replaced with `_`.
+
+Apart from explicit modules which you can include in your `mos.yml` file as
+demonstrated above, there is one implicit module: `mongoose-os`, which refers
+to the mongoose-os repository: https://github.com/cesanta/mongoose-os. Of
+course, this module also has a corresponding path variable: `mongoose_os_path`
+(notice that the dash `-` was replaced with the underscore here), and one could
+take advantage of it as follows:
+
+```yaml
+sources:
+  - src
+  - ${mjs_path}
+filesystem:
+  - fs
+  - ${mongoose_os_path}/fw/mjs_api/api_*.js
+modules:
+  - origin: https://github.com/cesanta/mjs
+```
+
+This is how a default Mongoose OS firmware is build, which includes mJS
+scripting engine, see
 https://github.com/cesanta/mongoose-os/tree/master/fw/examples/mjs_base 
