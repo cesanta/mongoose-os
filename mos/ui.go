@@ -24,7 +24,6 @@ import (
 	"github.com/cesanta/errors"
 	"github.com/elazarl/go-bindata-assetfs"
 	"github.com/golang/glog"
-	"github.com/skratchdot/open-golang/open"
 
 	"golang.org/x/net/websocket"
 )
@@ -371,8 +370,10 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 	url := fmt.Sprintf("http://%s", addr)
 	fmt.Printf("To get a list of available commands, start with --help\n")
 	fmt.Printf("Starting Web UI. If the browser does not start, navigate to %s\n", url)
-	open.Start(url)
-	log.Fatal(http.ListenAndServe(addr, nil))
+	go func() {
+		log.Fatal(http.ListenAndServe(addr, nil))
+	}()
+	showUI(url)
 
 	// Unreacahble
 	return nil
