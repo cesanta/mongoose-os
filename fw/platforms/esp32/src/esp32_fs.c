@@ -105,10 +105,6 @@ enum mgos_init_result esp32_fs_mount(const esp_partition_t *part,
     free(m);
     return MGOS_INIT_FS_INIT_FAILED;
   } else {
-    /* https://github.com/pellepl/spiffs/issues/137#issuecomment-287192259 */
-    if (SPIFFS_check(&m->fs) != SPIFFS_OK) {
-      LOG(LL_ERROR, ("Filesystem is corrupted, continuing anyway"));
-    }
 #if CS_SPIFFS_ENABLE_ENCRYPTION
     if (!spiffs_vfs_enc_fs(&m->fs)) {
       return MGOS_INIT_FS_INIT_FAILED;

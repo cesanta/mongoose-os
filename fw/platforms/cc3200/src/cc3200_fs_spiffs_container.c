@@ -303,11 +303,6 @@ static _i32 fs_mount_spiffs(struct mount_info *m, _u32 fs_size, _u32 block_size,
     free(m->fds);
     m->work = m->fds = NULL;
   }
-  /* https://github.com/pellepl/spiffs/issues/137#issuecomment-287192259 */
-  r = SPIFFS_check(&m->fs);
-  if (r != SPIFFS_OK) {
-    LOG(LL_ERROR, ("Filesystem is corrupted, continuing anyway"));
-  }
   return r;
 }
 
