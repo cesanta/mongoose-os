@@ -14,7 +14,7 @@ let MQTT = {
   // ```javascript
   // MQTT.sub('my/topic', function(conn, message) {
   //   print('Got message:', message);
-  // });
+  // }, null);
   // ```
   sub: ffi('void mgos_mqtt_sub(char *, void (*)(void *, char *, userdata), userdata)'),
 

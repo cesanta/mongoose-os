@@ -20,7 +20,7 @@ items:
  ```javascript
  MQTT.sub('my/topic', function(conn, message) {
    print('Got message:', message);
- });
+ }, null);
  ```
 
 
