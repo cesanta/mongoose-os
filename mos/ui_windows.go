@@ -19,7 +19,7 @@ func showUI(url string) {
 	procFreeConsole.Call()
 	_, err := MainWindow{
 		Title:   "Mongoose OS",
-		MinSize: Size{1024, 768},
+		MinSize: Size{1280, 720},
 		Layout:  VBox{MarginsZero: true},
 		Children: []Widget{
 			LineEdit{
