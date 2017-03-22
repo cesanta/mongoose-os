@@ -79,6 +79,8 @@ var (
 		{"atca-set-key", atcaSetKey, `Set key in a given slot`, nil, []string{"dry-run", "port", "write-key"}, true},
 		{"atca-gen-key", atcaGenKey, `Generate a random key in a given slot`, nil, []string{"dry-run", "port"}, true},
 		{"atca-get-pub-key", atcaGetPubKey, `Retrieve public ECC key from a given slot`, nil, []string{"port"}, true},
+		{"esp32-efuse-get", esp32EFuseGet, `Get ESP32 eFuses`, nil, nil, false},
+		{"esp32-efuse-set", esp32EFuseSet, `Set ESP32 eFuses`, nil, nil, false},
 		{"esp32-encrypt-image", esp32EncryptImage, `Encrypt a ESP32 firmware image`, []string{"esp32-encryption-key-file", "esp32-flash-address"}, nil, false},
 	}
 )

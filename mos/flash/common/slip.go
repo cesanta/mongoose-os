@@ -1,4 +1,4 @@
-package esp
+package common
 
 import (
 	"encoding/hex"
@@ -18,6 +18,10 @@ const (
 
 type SLIPReaderWriter struct {
 	rw io.ReadWriter
+}
+
+func NewSLIPReaderWriter(rw io.ReadWriter) *SLIPReaderWriter {
+	return &SLIPReaderWriter{rw: rw}
 }
 
 func (srw *SLIPReaderWriter) Read(buf []byte) (int, error) {

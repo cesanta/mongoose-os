@@ -3,7 +3,6 @@ package esp
 import (
 	"crypto/md5"
 	"encoding/hex"
-	"fmt"
 	"io/ioutil"
 	"sort"
 	"strconv"
@@ -11,29 +10,12 @@ import (
 	"time"
 
 	"cesanta.com/mos/flash/common"
+	"cesanta.com/mos/flash/esp"
+	"cesanta.com/mos/flash/esp/rom_client"
+	"cesanta.com/mos/flash/esp32"
 	"github.com/cesanta/errors"
-	"github.com/cesanta/go-serial/serial"
 	"github.com/golang/glog"
 )
-
-type ChipType int
-
-const (
-	ChipESP8266 ChipType = iota
-	ChipESP32
-)
-
-type FlashOpts struct {
-	ControlPort            string
-	DataPort               string
-	BaudRate               uint
-	FlashParams            string
-	EraseChip              bool
-	MinimizeWrites         bool
-	BootFirmware           bool
-	ESP32EncryptionKeyFile string
-	ESP32FlashCryptConf    uint32
-}
 
 const (
 	flashSectorSize   = 0x1000
@@ -58,7 +40,7 @@ func (pp imagesByAddr) Less(i, j int) bool {
 	return pp[i].addr < pp[j].addr
 }
 
-func Flash(ct ChipType, fw *common.FirmwareBundle, opts *FlashOpts) error {
+func Flash(ct esp.ChipType, fw *common.FirmwareBundle, opts *esp.FlashOpts) error {
 	var err error
 
 	if opts.BaudRate < 0 || opts.BaudRate > 4000000 {
@@ -78,7 +60,7 @@ func Flash(ct ChipType, fw *common.FirmwareBundle, opts *FlashOpts) error {
 		if err != nil {
 			return errors.Annotatef(err, "failed to read encryption key")
 		}
-		if ct != ChipESP32 {
+		if ct != esp.ChipESP32 {
 			return errors.Errorf("flash encryption is only supported by ESP32")
 		}
 		if len(encryptionKey) != 32 {
@@ -86,36 +68,13 @@ func Flash(ct ChipType, fw *common.FirmwareBundle, opts *FlashOpts) error {
 		}
 	}
 
-	common.Reportf("Opening %s...", opts.ControlPort)
-	commonOpts := serial.OpenOptions{
-		BaudRate:              115200,
-		DataBits:              8,
-		ParityMode:            serial.PARITY_NONE,
-		StopBits:              1,
-		InterCharacterTimeout: 200.0,
-	}
-	scOpts := commonOpts
-	scOpts.PortName = opts.ControlPort
-	sc, err := serial.Open(scOpts)
+	rc, err := rom_client.ConnectToROM(ct, opts)
 	if err != nil {
-		return errors.Annotate(err, "failed to open control port")
+		return errors.Trace(err)
 	}
-	defer sc.Close()
+	defer rc.Disconnect()
 
-	var sd serial.Serial
-	if opts.DataPort != opts.ControlPort {
-		common.Reportf("Opening %s...", opts.DataPort)
-		sdOpts := commonOpts
-		sdOpts.PortName = opts.DataPort
-		sd, err = serial.Open(sdOpts)
-		if err != nil {
-			return errors.Annotate(err, "failed to open data port")
-		}
-	} else {
-		sd = sc
-	}
-
-	fc, err := NewFlasherClient(ct, sc, sd, opts.BaudRate)
+	fc, err := NewFlasherClient(ct, rc, opts.BaudRate)
 	if err != nil {
 		return errors.Annotatef(err, "failed to run flasher")
 	}
@@ -130,9 +89,9 @@ func Flash(ct ChipType, fw *common.FirmwareBundle, opts *FlashOpts) error {
 		}
 		var flashSizes []int
 		switch ct {
-		case ChipESP8266:
+		case esp.ChipESP8266:
 			flashSizes = flashSizesESP8266
-		case ChipESP32:
+		case esp.ChipESP32:
 			flashSizes = flashSizesESP32
 		}
 		for i, s := range flashSizes {
@@ -144,7 +103,7 @@ func Flash(ct ChipType, fw *common.FirmwareBundle, opts *FlashOpts) error {
 	}
 	common.Reportf("Flash size: %d, params: 0x%04x", flashSize, flashParams)
 
-	if ct == ChipESP8266 {
+	if ct == esp.ChipESP8266 {
 		// Based on our knowledge of flash size, adjust type=sys_params image.
 		adjustSysParamsLocation(fw, flashSize)
 	}
@@ -165,7 +124,7 @@ func Flash(ct ChipType, fw *common.FirmwareBundle, opts *FlashOpts) error {
 			im.data[3] = byte(flashParams & 0xff)
 		}
 		if p.ESP32Encrypt && encryptionKey != nil {
-			encData, err := ESP32EncryptImageData(
+			encData, err := esp32.ESP32EncryptImageData(
 				im.data, encryptionKey, im.addr, opts.ESP32FlashCryptConf)
 			if err != nil {
 				return errors.Annotatef(err, "%s: failed to encrypt", p.Name)
@@ -277,7 +236,7 @@ func adjustSysParamsLocation(fw *common.FirmwareBundle, flashSize int) {
 	}
 }
 
-func sanityCheckImages(chipType ChipType, images []*image, flashSize, flashSectorSize int) error {
+func sanityCheckImages(ct esp.ChipType, images []*image, flashSize, flashSectorSize int) error {
 	// Note: we require that images are sorted by address.
 	sort.Sort(imagesByAddr(images))
 	for i, im := range images {
@@ -297,7 +256,7 @@ func sanityCheckImages(chipType ChipType, images []*image, flashSize, flashSecto
 				return errors.Errorf("Invalid magic byte in the first image")
 			}
 		}
-		if chipType == ChipESP8266 {
+		if ct == esp.ChipESP8266 {
 			sysParamsBegin := flashSize - sysParamsAreaSize
 			if imageBegin == sysParamsBegin && im.part.Type == sysParamsPartType {
 				// Ok, a sys_params image.
@@ -417,14 +376,14 @@ var (
 	flashSizesESP32 = []int{1048576, 2097152, 4194304, 8388608, 16777216}
 )
 
-func parseFlashParams(ct ChipType, ps string) (int, int, error) {
+func parseFlashParams(ct esp.ChipType, ps string) (int, int, error) {
 	var flashSizeToId map[string]int
 	var flashSizes []int
 	switch ct {
-	case ChipESP8266:
+	case esp.ChipESP8266:
 		flashSizeToId = flashSizeToIdESP8266
 		flashSizes = flashSizesESP8266
-	case ChipESP32:
+	case esp.ChipESP32:
 		flashSizeToId = flashSizeToIdESP32
 		flashSizes = flashSizesESP32
 	}
@@ -464,16 +423,5 @@ func parseFlashParams(ct ChipType, ps string) (int, int, error) {
 		return ((flashMode << 8) | (flashSizeId << 4) | flashFreq), flashSize, nil
 	default:
 		return -1, -1, errors.Errorf("invalid flash params format")
-	}
-}
-
-func (ct ChipType) String() string {
-	switch ct {
-	case ChipESP8266:
-		return "ESP8266"
-	case ChipESP32:
-		return "ESP32"
-	default:
-		return fmt.Sprintf("???(%d)", ct)
 	}
 }

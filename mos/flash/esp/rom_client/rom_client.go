@@ -1,4 +1,4 @@
-package esp
+package rom_client
 
 import (
 	"bytes"
@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"cesanta.com/mos/flash/common"
+	"cesanta.com/mos/flash/esp"
 	"github.com/cesanta/errors"
 	"github.com/cesanta/go-serial/serial"
 	"github.com/golang/glog"
@@ -41,11 +42,17 @@ const (
 	cmdReadReg               = 0x0a
 )
 
+type RegReaderWriter interface {
+	ReadReg(reg uint32) (uint32, error)
+	WriteReg(reg, value uint32) error
+	Disconnect()
+}
+
 type ROMClient struct {
-	ct        ChipType
+	ct        esp.ChipType
 	sc        serial.Serial
 	sd        serial.Serial
-	srw       *SLIPReaderWriter
+	srw       *common.SLIPReaderWriter
 	connected bool
 	inverted  bool
 }
@@ -58,12 +65,51 @@ type romResponse struct {
 	body      []byte
 }
 
-func NewROMClient(chipType ChipType, sc, sd serial.Serial) (*ROMClient, error) {
-	rc := &ROMClient{ct: chipType, sc: sc, sd: sd, srw: &SLIPReaderWriter{rw: sd}}
+func ConnectToROM(ct esp.ChipType, opts *esp.FlashOpts) (*ROMClient, error) {
+	commonOpts := serial.OpenOptions{
+		BaudRate:              115200,
+		DataBits:              8,
+		ParityMode:            serial.PARITY_NONE,
+		StopBits:              1,
+		InterCharacterTimeout: 200.0,
+	}
+	scOpts := commonOpts
+	scOpts.PortName = opts.ControlPort
+	common.Reportf("Opening %s...", scOpts.PortName)
+	sc, err := serial.Open(scOpts)
+	if err != nil {
+		return nil, errors.Annotate(err, "failed to open control port")
+	}
+	sd := sc
+	if opts.DataPort != "" {
+		sdOpts := commonOpts
+		sdOpts.PortName = opts.DataPort
+		common.Reportf("Opening %s...", sdOpts.PortName)
+		sd, err = serial.Open(sdOpts)
+		if err != nil {
+			sc.Close()
+			return nil, errors.Annotate(err, "failed to open data port")
+		}
+	}
+	rc, err := NewROMClient(ct, sc, sd)
+	if err != nil {
+		sc.Close()
+		sd.Close()
+		return nil, errors.Annotatef(err, "failed to create ROM client")
+	}
+	return rc, nil
+}
+
+func NewROMClient(chipType esp.ChipType, sc, sd serial.Serial) (*ROMClient, error) {
+	rc := &ROMClient{ct: chipType, sc: sc, sd: sd, srw: common.NewSLIPReaderWriter(sd)}
 	if err := rc.connect(); err != nil {
 		return nil, errors.Annotatef(err, "failed to connect to ROM")
 	}
 	return rc, nil
+}
+
+func (rc *ROMClient) DataPort() serial.Serial {
+	return rc.sd
 }
 
 func (rc *ROMClient) connect() error {
@@ -80,7 +126,7 @@ func (rc *ROMClient) connect() error {
 		rc.sc.SetRTSDTR(mTrue, mFalse)
 		time.Sleep(50 * time.Millisecond)
 		rc.sc.SetRTSDTR(mFalse, mTrue)
-		if rc.ct == ChipESP8266 {
+		if rc.ct == esp.ChipESP8266 {
 			time.Sleep(100 * time.Millisecond)
 		} else {
 			// Workaround for https://github.com/espressif/esptool/issues/136
@@ -98,6 +144,16 @@ func (rc *ROMClient) connect() error {
 		rc.inverted = !rc.inverted
 	}
 	return errors.Errorf("failed to connect to %s ROM", rc.ct)
+}
+
+func (rc *ROMClient) Disconnect() {
+	rc.connected = false
+	rc.sc.Close()
+	if rc.sd != rc.sc {
+		rc.sd.Close()
+	}
+	rc.sc = nil
+	rc.sd = nil
 }
 
 func (rc *ROMClient) sendCommand(cmd romCmd, arg []byte, csum uint8) error {
@@ -136,9 +192,9 @@ func (rc *ROMClient) recvResponse() (*romResponse, error) {
 	}
 	var statusLen uint16
 	switch rc.ct {
-	case ChipESP8266:
+	case esp.ChipESP8266:
 		statusLen = 2
-	case ChipESP32:
+	case esp.ChipESP32:
 		statusLen = 4
 	}
 	if bodyLen == statusLen {
@@ -358,6 +414,7 @@ func (rc *ROMClient) ReadReg(reg uint32) (uint32, error) {
 	if err != nil {
 		return 0, errors.Annotatef(err, "failed to read reg 0x%08x", reg)
 	}
+	glog.V(3).Infof("ReadReg(0x%08x) => 0x%08x", reg, r.value)
 	return r.value, nil
 }
 
@@ -371,6 +428,7 @@ func (rc *ROMClient) WriteReg(reg, value uint32) error {
 	if err != nil {
 		return errors.Annotatef(err, "failed to write reg 0x%08x", reg)
 	}
+	glog.V(3).Infof("WriteReg(0x%08x, 0x%08x)", reg, value)
 	return nil
 }
 

@@ -13,6 +13,7 @@ import (
 	"cesanta.com/mos/flash/cc3200"
 	"cesanta.com/mos/flash/common"
 	"cesanta.com/mos/flash/esp"
+	espFlasher "cesanta.com/mos/flash/esp/flasher"
 	"cesanta.com/mos/flash/stm32"
 	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
@@ -106,16 +107,10 @@ func flash(ctx context.Context, devConn *dev.DevConn) error {
 		err = cc3200.Flash(fw, &cc3200FlashOpts)
 	case "esp32":
 		espFlashOpts.ControlPort = port
-		if espFlashOpts.DataPort == "" {
-			espFlashOpts.DataPort = port
-		}
-		err = esp.Flash(esp.ChipESP32, fw, &espFlashOpts)
+		err = espFlasher.Flash(esp.ChipESP32, fw, &espFlashOpts)
 	case "esp8266":
 		espFlashOpts.ControlPort = port
-		if espFlashOpts.DataPort == "" {
-			espFlashOpts.DataPort = port
-		}
-		err = esp.Flash(esp.ChipESP8266, fw, &espFlashOpts)
+		err = espFlasher.Flash(esp.ChipESP8266, fw, &espFlashOpts)
 	case "stm32":
 		stm32FlashOpts.ShareName = port
 		err = stm32.Flash(fw, &stm32FlashOpts)

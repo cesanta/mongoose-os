@@ -7,7 +7,7 @@ import (
 	"io/ioutil"
 
 	"cesanta.com/mos/dev"
-	"cesanta.com/mos/flash/esp"
+	"cesanta.com/mos/flash/esp32"
 	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 )
@@ -34,7 +34,7 @@ func esp32EncryptImage(ctx context.Context, devConn *dev.DevConn) error {
 	if err != nil {
 		return errors.Annotatef(err, "failed to read encryption key")
 	}
-	outData, err := esp.ESP32EncryptImageData(
+	outData, err := esp32.ESP32EncryptImageData(
 		inData, key, esp32FlashAddress, espFlashOpts.ESP32FlashCryptConf)
 	if err != nil {
 		return errors.Annotatef(err, "failed to encrypt data")

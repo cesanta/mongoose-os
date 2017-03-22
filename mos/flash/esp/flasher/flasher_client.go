@@ -10,16 +10,14 @@ import (
 	"time"
 
 	"cesanta.com/mos/flash/common"
+	"cesanta.com/mos/flash/esp"
+	"cesanta.com/mos/flash/esp/rom_client"
+	"cesanta.com/mos/flash/esp32"
+	"cesanta.com/mos/flash/esp8266"
 	"github.com/cesanta/errors"
 	"github.com/cesanta/go-serial/serial"
 	"github.com/golang/glog"
 )
-
-// When doing stub development, enable the line below and run:
-//  go generate cesanta.com/mos/flash/esp && go build -v && ./mgos flash ...
-//
-// DISABLED go:generate ./genstubs.sh
-//go:generate go-bindata -pkg esp -modtime 1 -mode 420 data/
 
 const (
 	flasherGreeting   = "OHAI"
@@ -46,24 +44,19 @@ const (
 )
 
 type FlasherClient struct {
-	ct        ChipType
+	ct        esp.ChipType
 	s         serial.Serial
-	srw       *SLIPReaderWriter
-	rom       *ROMClient
+	srw       *common.SLIPReaderWriter
+	rom       *rom_client.ROMClient
 	connected bool
 }
 
-func NewFlasherClient(ct ChipType, sc, sd serial.Serial, baudRate uint) (*FlasherClient, error) {
+func NewFlasherClient(ct esp.ChipType, rc *rom_client.ROMClient, baudRate uint) (*FlasherClient, error) {
 	if baudRate < 0 || baudRate > 4000000 {
 		return nil, errors.Errorf("invalid flashing baud rate (%d)", baudRate)
 	}
-	rc, err := NewROMClient(ct, sc, sd)
-	if err != nil {
-		return nil, errors.Annotatef(err, "failed to create ROM client")
-	}
-	fc := &FlasherClient{ct: ct, s: sd, srw: &SLIPReaderWriter{rw: sd}, rom: rc}
-	err = fc.connect(baudRate)
-	if err != nil {
+	fc := &FlasherClient{ct: ct, s: rc.DataPort(), srw: common.NewSLIPReaderWriter(rc.DataPort()), rom: rc}
+	if err := fc.connect(baudRate); err != nil {
 		return nil, errors.Trace(err)
 	}
 	return fc, nil
@@ -72,10 +65,10 @@ func NewFlasherClient(ct ChipType, sc, sd serial.Serial, baudRate uint) (*Flashe
 func (fc *FlasherClient) connect(baudRate uint) error {
 	var stubJSON []byte
 	switch fc.ct {
-	case ChipESP8266:
-		stubJSON = MustAsset("data/stub_flasher_esp8266.json")
-	case ChipESP32:
-		stubJSON = MustAsset("data/stub_flasher_esp32.json")
+	case esp.ChipESP8266:
+		stubJSON = esp8266.MustAsset("data/stub_flasher.json")
+	case esp.ChipESP32:
+		stubJSON = esp32.MustAsset("data/stub_flasher.json")
 	default:
 		return errors.Errorf("unknown chip type %d", fc.ct)
 	}
