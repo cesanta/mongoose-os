@@ -3915,8 +3915,8 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
                               <span class="sr-only">Toggle Dropdown</span>
                             </button>
                             <ul class="dropdown-menu" id="dropdown-firmware">
-                              <li><a href="#">Generic MQTT server</a></li>
-                               <li><a href="#">AWS IoT</a></li> 
+                              <li><a href="#">MQTT server</a></li>
+                               <li><a href="#">AWS IoT</a></li>
                             </ul>
                           </div>
                         </span>
@@ -4065,7 +4065,7 @@ func web_rootIndexHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/index.html", size: 15468, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/index.html", size: 15459, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4994,6 +4994,8 @@ var _web_rootJsWizardJs = []byte(`(function($) {
         new PNotify({title: 'Success', text: 'Cloud configured, MQTT settings: ' + JSON.stringify(json.result.mqtt, null, '  '), type: 'success'});
         document.cookie = 'mqtt=' + mqtt;
         return this;
+      }).then(function(json) {
+        return $.ajax({url: '/call', data: {method: 'Config.Save', args: '{"reboot":true}'}});
       });
     } else {
       var policy = $('#input-policy').val();
@@ -5120,7 +5122,7 @@ func web_rootJsWizardJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 9575, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 9701, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -5286,8 +5288,10 @@ var _web_rootPage_configurationHtml = []byte(`<div data-title="Device configurat
 
     $.ajax({url: '/call', data: {
       method: 'Config.Set',
-      args: JSON.stringify({config: config})
-    }}).then(function() {
+      args: JSON.stringify({config: config})}
+    }).then(function() {
+        return $.ajax({url: '/call', data: {method: 'Config.Save', args: '{"reboot":true}'}});
+    }).then(function(json) {
       new PNotify({title: 'Configuration saved', type: 'success' });
       return loadConfig();
     });
@@ -5307,7 +5311,7 @@ func web_rootPage_configurationHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_configuration.html", size: 3828, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_configuration.html", size: 3952, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
