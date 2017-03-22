@@ -1,0 +1,10 @@
+name: c_blynk
+# arch: PLATFORM
+version: 1.0
+skeleton_version: 2017-03-17
+sources:
+  - src
+filesystem:
+  - fs
+build_vars:
+  APP_CONF_SCHEMA: src/conf_schema.yaml
