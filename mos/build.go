@@ -507,7 +507,7 @@ func buildRemote() error {
 
 	default:
 		// Unexpected response
-		return errors.Errorf("error response: %d: ", resp.StatusCode, strings.TrimSpace(body.String()))
+		return errors.Errorf("error response: %d: %s", resp.StatusCode, strings.TrimSpace(body.String()))
 	}
 
 }
