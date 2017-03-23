@@ -151,7 +151,7 @@ static void send_cfg(const void *cfg, const struct mgos_conf_entry *schema,
 }
 
 static void conf_handler(struct mg_connection *c, int ev,
-                         void *p, void *user_data)) {
+                         void *p, void *user_data) {
   struct http_message *hm = (struct http_message *) p;
   if (ev != MG_EV_HTTP_REQUEST) return;
   LOG(LL_DEBUG, ("[%.*s] requested", (int) hm->uri.len, hm->uri.p));
