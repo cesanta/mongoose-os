@@ -5,6 +5,8 @@
 
 #if MG_ENABLE_SSL && MG_SSL_IF == MG_SSL_IF_SIMPLELINK
 
+#include "common/mg_mem.h"
+
 struct mg_ssl_if_ctx {
   char *ssl_cert;
   char *ssl_key;
@@ -127,7 +129,7 @@ static char *sl_pem2der(const char *pem_file) {
     /* Strip the SL: prefix we added since NWP does not expect it. */
     memmove(der_file, der_file + 3, l - 2 /* including \0 */);
   } else {
-    free(der_file);
+    MG_FREE(der_file);
     der_file = NULL;
   }
   return der_file;
@@ -163,8 +165,8 @@ int sl_set_ssl_opts(struct mg_connection *nc) {
       } else {
         err = -1;
       }
-      free(ssl_cert);
-      free(ssl_key);
+      MG_FREE(ssl_cert);
+      MG_FREE(ssl_key);
       if (err != 0) return err;
     }
     if (ctx->ssl_ca_cert != NULL) {
@@ -178,7 +180,7 @@ int sl_set_ssl_opts(struct mg_connection *nc) {
         } else {
           err = -1;
         }
-        free(ssl_ca_cert);
+        MG_FREE(ssl_ca_cert);
         if (err != 0) return err;
       }
     }

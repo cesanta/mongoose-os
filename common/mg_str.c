@@ -3,6 +3,7 @@
  * All rights reserved
  */
 
+#include "common/mg_mem.h"
 #include "common/mg_str.h"
 
 #include <stdlib.h>
@@ -47,7 +48,7 @@ struct mg_str mg_strdup(const struct mg_str s) WEAK;
 struct mg_str mg_strdup(const struct mg_str s) {
   struct mg_str r = {NULL, 0};
   if (s.len > 0 && s.p != NULL) {
-    r.p = (char *) malloc(s.len);
+    r.p = (char *) MG_MALLOC(s.len);
     if (r.p != NULL) {
       memcpy((char *) r.p, s.p, s.len);
       r.len = s.len;

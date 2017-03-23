@@ -5,6 +5,8 @@
 
 #if MG_ENABLE_NET_IF_LWIP_LOW_LEVEL
 
+#include "common/mg_mem.h"
+
 #include <lwip/pbuf.h>
 #include <lwip/tcp.h>
 #if CS_PLATFORM != CS_P_STM32
@@ -174,7 +176,7 @@ static void mg_lwip_handle_recv_tcp(struct mg_connection *nc) {
   while (cs->rx_chain != NULL) {
     struct pbuf *seg = cs->rx_chain;
     size_t len = (seg->len - cs->rx_offset);
-    char *data = (char *) malloc(len);
+    char *data = (char *) MG_MALLOC(len);
     if (data == NULL) {
       mgos_unlock();
       DBG(("OOM"));
@@ -296,7 +298,7 @@ static void mg_lwip_handle_recv_udp(struct mg_connection *nc) {
     struct pbuf *p = sap->next;
     cs->rx_chain = pbuf_dechain(p);
     size_t data_len = p->len;
-    char *data = (char *) malloc(data_len);
+    char *data = (char *) MG_MALLOC(data_len);
     if (data != NULL) {
       pbuf_copy_partial(p, data, data_len, 0);
       pbuf_free(p);
@@ -519,7 +521,7 @@ void mg_lwip_if_recved(struct mg_connection *nc, size_t len) {
 
 int mg_lwip_if_create_conn(struct mg_connection *nc) {
   struct mg_lwip_conn_state *cs =
-      (struct mg_lwip_conn_state *) calloc(1, sizeof(*cs));
+      (struct mg_lwip_conn_state *) MG_CALLOC(1, sizeof(*cs));
   if (cs == NULL) return 0;
   cs->nc = nc;
   nc->sock = (intptr_t) cs;
@@ -543,7 +545,7 @@ void mg_lwip_if_destroy_conn(struct mg_connection *nc) {
       pbuf_free(seg);
     }
     memset(cs, 0, sizeof(*cs));
-    free(cs);
+    MG_FREE(cs);
   } else if (nc->listener == NULL) {
     /* Only close outgoing UDP pcb or listeners. */
     struct udp_pcb *upcb = cs->pcb.udp;
@@ -552,7 +554,7 @@ void mg_lwip_if_destroy_conn(struct mg_connection *nc) {
       udp_remove(upcb);
     }
     memset(cs, 0, sizeof(*cs));
-    free(cs);
+    MG_FREE(cs);
   }
   nc->sock = INVALID_SOCKET;
 }

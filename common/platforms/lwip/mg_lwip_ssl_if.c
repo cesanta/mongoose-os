@@ -5,6 +5,7 @@
 
 #if MG_ENABLE_SSL && MG_NET_IF == MG_NET_IF_LWIP_LOW_LEVEL
 
+#include "common/mg_mem.h"
 #include "common/cs_dbg.h"
 
 #include <lwip/pbuf.h>
@@ -104,12 +105,12 @@ void mg_lwip_ssl_recv(struct mg_connection *nc) {
   /* Don't deliver data before connect callback */
   if (nc->flags & MG_F_CONNECTING) return;
   while (nc->recv_mbuf.len < MG_LWIP_SSL_RECV_MBUF_LIMIT) {
-    char *buf = (char *) malloc(MG_LWIP_SSL_IO_SIZE);
+    char *buf = (char *) MG_MALLOC(MG_LWIP_SSL_IO_SIZE);
     if (buf == NULL) return;
     int ret = mg_ssl_if_read(nc, buf, MG_LWIP_SSL_IO_SIZE);
     DBG(("%p %p SSL_read %u = %d", nc, cs->rx_chain, MG_LWIP_SSL_IO_SIZE, ret));
     if (ret <= 0) {
-      free(buf);
+      MG_FREE(buf);
       if (ret == MG_SSL_WANT_WRITE) {
         nc->flags |= MG_F_WANT_WRITE;
         return;
