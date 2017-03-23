@@ -9,6 +9,7 @@
   ["wifi.sta.netmask", "s", {title: "Static Netmask"}],
   ["wifi.sta.gw", "s", {title: "Static Default Gateway"}],
   ["wifi.sta.nameserver", "s", {title: "DNS Server"}],
+  ["wifi.sta.dhcp_hostname", "s", {title: "Host name to include in DHCP requests"}],
 
   ["wifi.ap", "o", {title: "WiFi Access Point"}],
   ["wifi.ap.enable", "b", true, {title: "Enable"}],
