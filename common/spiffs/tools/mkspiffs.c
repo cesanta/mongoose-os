@@ -132,7 +132,8 @@ int main(int argc, char **argv) {
 
   u32_t total, used;
   SPIFFS_info(&fs, &total, &used);
-  fprintf(stderr, "     Image stats: size=%u, space: total=%u, used=%u, free=%u\n",
+  fprintf(stderr,
+          "     Image stats: size=%u, space: total=%u, used=%u, free=%u\n",
           (unsigned int) image_size, total, used, total - used);
 
   FILE *out = stdout;
