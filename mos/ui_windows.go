@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"strings"
 
 	"github.com/lxn/walk"
 	. "github.com/lxn/walk/declarative"
@@ -14,7 +13,6 @@ var (
 )
 
 func showUI(url string) {
-	var le *walk.LineEdit
 	var wv *walk.WebView
 	procFreeConsole.Call()
 	_, err := MainWindow{
@@ -22,7 +20,7 @@ func showUI(url string) {
 		MinSize: Size{1280, 720},
 		Layout:  VBox{MarginsZero: true},
 		Children: []Widget{
-			LineEdit{
+			/*LineEdit{
 				AssignTo: &le,
 				Text:     Bind("wv.URL"),
 				OnKeyDown: func(key walk.Key) {
@@ -30,21 +28,15 @@ func showUI(url string) {
 						wv.SetURL(le.Text())
 					}
 				},
-			},
+			},*/
 			WebView{
 				AssignTo: &wv,
 				Name:     "wv",
 				URL:      url,
 			},
 		},
-		Functions: map[string]func(args ...interface{}) (interface{}, error){
-			"icon": func(args ...interface{}) (interface{}, error) {
-				if strings.HasPrefix(args[0].(string), "https") {
-					return "check", nil
-				}
-				return "stop", nil
-			},
-		},
 	}.Run()
-	log.Fatal(err)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
