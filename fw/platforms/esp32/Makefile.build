@@ -46,17 +46,17 @@ FW_STAGING_DIR ?= $(BUILD_DIR)/fw_temp
 FW_DIR ?= $(CURDIR)/firmware
 GEN_DIR ?= $(BUILD_DIR)/gen
 
+export APP_SLOT_SIZE = 0x100000
 FS_IMG = $(FW_STAGING_DIR)/fs.img
-# Keep in sync with partitions_mgos.csv
-FS_ADDR = 0x110000
-FS_SIZE = 131072
+export FS_ADDR = 0x110000
+export FS_SIZE = 131072
 FS_BLOCK_SIZE = 4096
 FS_PAGE_SIZE = 256
 FS_ERASE_SIZE = 4096
-NVS_ADDR = 0x9000
-NVS_SIZE = 0x4000
-OTA_DATA_ADDR = 0xd000
-OTA_DATA_SIZE = 0x2000
+export NVS_ADDR = 0x9000
+export NVS_SIZE = 0x4000
+export OTA_DATA_ADDR = 0xd000
+export OTA_DATA_SIZE = 0x2000
 MAP_FILE = $(BUILD_DIR)/$(APP).map
 BREAKDOWN_FILE = $(BUILD_DIR)/breakdown.txt
 
@@ -124,16 +124,18 @@ ESPBAUD = 1500000
 
 SDKCONFIG = $(MGOS_ESP_PATH)/sdkconfig
 
+PARTITION_TABLE_CSV_PATH = $(MGOS_ESP_PATH)/src/partitions_mgos.csv
 ifeq "$(MGOS_ESP32_ENABLE_FLASH_ENCRYPTION)" "1"
 override CONFIG_FLASH_ENCRYPTION_ENABLED = y
-ENCRYPT = true
+export PART_ENCR_FLAG=encrypted
+ENCR_FLAG = true
 MKSPIFFS = /usr/local/bin/mkspiffs8
-PARTITION_TABLE_CSV_PATH = $(MGOS_ESP_PATH)/src/partitions_mgos_encrypted.csv
+CFLAGS += -DMGOS_ESP32_ENABLE_FLASH_ENCRYPTION=1
 else
-ENCRYPT = false
-MKSPIFFS_CFLAGS = -DMGOS_ESP32_ENABLE_FLASH_ENCRYPTION=0
+export PART_ENCR_FLAG=
+ENCR_FLAG = false
 MKSPIFFS = /usr/local/bin/mkspiffs
-PARTITION_TABLE_CSV_PATH = $(MGOS_ESP_PATH)/src/partitions_mgos.csv
+CFLAGS += -DMGOS_ESP32_ENABLE_FLASH_ENCRYPTION=0
 endif
 
 include $(IDF_PATH)/make/project.mk
@@ -142,12 +144,14 @@ LDFLAGS += -L$(BUILD_DIR)/src
 
 include $(MGOS_PATH)/fw/common.mk
 
-FW_PARTS = boot:type=boot,addr=0x1000,src=$(BOOTLOADER_BIN),encrypt=$(ENCRYPT) \
-           pt:type=pt,addr=$(PARTITION_TABLE_OFFSET),src=$(PARTITION_TABLE_BIN),encrypt=$(ENCRYPT) \
-           nvs:type=nvs,addr=$(NVS_ADDR),size=$(NVS_SIZE),fill=0xff \
-           otadata:type=otadata,addr=$(OTA_DATA_ADDR),fill=0xff,size=0x2000,encrypt=$(ENCRYPT) \
-           app:type=app,addr=$(CONFIG_APP_OFFSET),src=$(APP_BIN),encrypt=$(ENCRYPT) \
+FW_PARTS = boot:type=boot,addr=0x1000,src=$(BOOTLOADER_BIN),encrypt=$(ENCR_FLAG) \
+           pt:type=pt,addr=$(PARTITION_TABLE_OFFSET),src=$(PARTITION_TABLE_BIN),encrypt=$(ENCR_FLAG) \
+           nvs:type=nvs,addr=$(NVS_ADDR),size=$(NVS_SIZE),fill=0xff,encrypt=false \
+           otadata:type=otadata,addr=$(OTA_DATA_ADDR),size=$(OTA_DATA_SIZE),fill=0xff,encrypt=$(ENCR_FLAG) \
+           app:type=app,addr=$(CONFIG_APP_OFFSET),src=$(APP_BIN),encrypt=$(ENCR_FLAG) \
            fs:src=$(FS_IMG),type=fs,addr=$(FS_ADDR),fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
+
+export CONFIG_APP_OFFSET
 
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
 include $(MGOS_PATH)/fw/src/spiffs.mk
