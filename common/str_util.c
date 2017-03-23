@@ -5,6 +5,7 @@
 
 #ifndef EXCLUDE_COMMON
 
+#include "common/mg_mem.h"
 #include "common/platform.h"
 #include "common/str_util.h"
 
