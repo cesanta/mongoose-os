@@ -25,7 +25,7 @@ $(BUILD_DIR)/spls: spls.c $(COMMON_FILES)
 	$(call compile,)
 
 $(BUILD_DIR)/spls8: spls.c $(COMMON_FILES)
-	$(call compile,-DSPIFFS_OBJ_META_LEN=8)
+	$(call compile,-DCS_SPIFFS_ENABLE_METADATA)
 
 $(BUILD_DIR)/mkspiffs: mkspiffs.c $(COMMON_FILES)
 	$(vecho) "GCC mkspiffs"
@@ -33,7 +33,7 @@ $(BUILD_DIR)/mkspiffs: mkspiffs.c $(COMMON_FILES)
 
 $(BUILD_DIR)/mkspiffs8: mkspiffs.c $(COMMON_FILES)
 	$(vecho) "GCC mkspiffs8"
-	$(call compile,-DSPIFFS_OBJ_META_LEN=8)
+	$(call compile,-DCS_SPIFFS_ENABLE_METADATA)
 
 $(BUILD_DIR)/unspiffs: unspiffs.c $(COMMON_FILES)
 	$(vecho) "GCC unspiffs"
@@ -41,7 +41,7 @@ $(BUILD_DIR)/unspiffs: unspiffs.c $(COMMON_FILES)
 
 $(BUILD_DIR)/unspiffs8: unspiffs.c $(COMMON_FILES)
 	$(vecho) "GCC unspiffs8"
-	$(call compile,-DSPIFFS_OBJ_META_LEN=8)
+	$(call compile,-DCS_SPIFFS_ENABLE_METADATA)
 
 clean:
 	$(vecho) "CLEAN"
