@@ -28,7 +28,7 @@ let state = {
 };
 
 // Milliseconds. How often to send temperature readings to the cloud
-let freq = 10000;
+let freq = 20000;
 
 // MQTT topic to publish to.
 let topic = Cfg.get('device.id') + '/temp';
@@ -69,9 +69,11 @@ RPC.addHandler('Heater.GetState', function(args) {
 
 // Send temperature readings to the cloud
 Timer.set(freq, 1, function() {
-  let message = JSON.stringify(getStatus());
+  let state = getStatus();
+  let message = JSON.stringify(state);
   let ok = MQTT.pub(topic, message, message.length);
   print('MQTT pubish: topic ', topic, 'msg: ', message, 'status: ', ok);
+  AWS.Shadow.update(0, { reported: state });
 }, null);
 
 AWS.Shadow.setStateHandler(function(ud, ev, reported, desired) {

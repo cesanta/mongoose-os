@@ -308,29 +308,24 @@ function onSuccess(googleUser) {
     );
   });
 }
-function onFailure(error) {
-  console.log(error);
-}
 function gapiLoaded() {
-  if (heaterVars.googleOAuthClientId) {
-    gapi.load('auth2', function() {
-      gapi.auth2.init({
-        'client_id': heaterVars.googleOAuthClientId,
-      }).then((_GoogleAuth) => {
-        GoogleAuth = _GoogleAuth;
-        console.log("google auth initialized", GoogleAuth);
-      });
-      gapi.signin2.render('google_signin', {
-        'scope': 'email',
-        // 'width': 40,
-        // 'height': 20,
-        'longtitle': false,
-        'theme': 'dark',
-        'onsuccess': onSuccess,
-        'onfailure': onFailure
-      });
+  gapi.load('auth2', function() {
+    var auth2 = gapi.auth2.init({
+      'client_id': heaterVars.googleOAuthClientId,
+    }).then((res) => {
+      GoogleAuth = res;
+      console.log("google auth initialized", GoogleAuth);
+
+      var el = document.getElementById('google_signin');
+      res.attachClickHandler(el, {},
+        function(googleUser) {
+          el.innerText = "Signed in: " + googleUser.getBasicProfile().getName();
+          onSuccess(googleUser);
+        }, function(error) {
+          console.log(error);
+        });
     });
-  }
+  });
 }
 
 AWS.config.credentials.params.Logins = {};
