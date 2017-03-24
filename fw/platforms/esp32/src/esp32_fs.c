@@ -10,6 +10,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "esp_flash_encrypt.h"
 #include "esp_ota_ops.h"
 #include "esp_partition.h"
 #include "esp_spi_flash.h"
@@ -110,7 +111,7 @@ enum mgos_init_result esp32_fs_mount(const esp_partition_t *part,
       LOG(LL_ERROR, ("Filesystem is corrupted, continuing anyway"));
     }
 #if CS_SPIFFS_ENABLE_ENCRYPTION
-    if (!spiffs_vfs_enc_fs(&m->fs)) {
+    if (esp_flash_encryption_enabled() && !spiffs_vfs_enc_fs(&m->fs)) {
       return MGOS_INIT_FS_INIT_FAILED;
     }
 #endif
@@ -230,7 +231,7 @@ enum mgos_init_result esp32_fs_init() {
     return MGOS_INIT_FS_INIT_FAILED;
   }
 #if CS_SPIFFS_ENABLE_ENCRYPTION
-  if (esp32_fs_crypt_init() != MGOS_INIT_OK) {
+  if (esp_flash_encryption_enabled() && esp32_fs_crypt_init() != MGOS_INIT_OK) {
     LOG(LL_ERROR, ("Failed to initialize FS encryption key"));
     return MGOS_INIT_FS_INIT_FAILED;
   }

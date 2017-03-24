@@ -18,6 +18,10 @@
 #define SPIFFS_OBJ_META_LEN 8
 #endif
 
+#ifndef CS_SPIFFS_ENABLE_ENCRYPTION
+#define CS_SPIFFS_ENABLE_ENCRYPTION 0
+#endif
+
 // ----------- 8< ------------
 // Following includes are for the linux test build of spiffs
 // These may/should/must be removed/altered/replaced in your target

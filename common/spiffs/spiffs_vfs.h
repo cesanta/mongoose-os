@@ -56,12 +56,15 @@ bool spiffs_vfs_enc_fs(spiffs *fs);
  * SPIFFS_OBJ_NAME_LEN bytes long. Outputs are guaranteed to be
  * NUL-terminated.
  */
-bool spiffs_vfs_enc_name(const char *name, char *enc_name, size_t enc_name_size);
+bool spiffs_vfs_enc_name(const char *name, char *enc_name,
+                         size_t enc_name_size);
 bool spiffs_vfs_dec_name(const char *enc_name, char *name, size_t name_size);
 
 /* Functions that must be provided by the platform */
-bool spiffs_vfs_encrypt_block(spiffs_obj_id obj_id, uint32_t offset, void *data, uint32_t len);
-bool spiffs_vfs_decrypt_block(spiffs_obj_id obj_id, uint32_t offset, void *data, uint32_t len);
+bool spiffs_vfs_encrypt_block(spiffs_obj_id obj_id, uint32_t offset, void *data,
+                              uint32_t len);
+bool spiffs_vfs_decrypt_block(spiffs_obj_id obj_id, uint32_t offset, void *data,
+                              uint32_t len);
 #endif
 
 #endif /* CS_SPIFFS_ENABLE_VFS */

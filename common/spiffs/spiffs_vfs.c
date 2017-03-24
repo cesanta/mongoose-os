@@ -31,16 +31,13 @@ struct file_meta {
  * Names are Base64 encoded and must be NUL terminated.
  * They are also encrypted in blocks, so must come in block-sized chunks.
  */
-#define MAX_PLAIN_NAME_LEN \
-    ((((SPIFFS_OBJ_NAME_LEN - 1) * 6 / 8) / \
-      CS_SPIFFS_ENCRYPTION_BLOCK_SIZE) * \
-     CS_SPIFFS_ENCRYPTION_BLOCK_SIZE)
+#define MAX_PLAIN_NAME_LEN                                                   \
+  ((((SPIFFS_OBJ_NAME_LEN - 1) * 6 / 8) / CS_SPIFFS_ENCRYPTION_BLOCK_SIZE) * \
+   CS_SPIFFS_ENCRYPTION_BLOCK_SIZE)
 
 /* file_meta size must match SPIFFS_OBJ_META_LEN. */
 typedef char sizeof_file_meta_is_wrong
     [(SPIFFS_OBJ_META_LEN == sizeof(struct file_meta)) ? 1 : -1];
-
-static bool s_names_encrypted = false;
 
 #endif
 
@@ -105,54 +102,60 @@ int spiffs_vfs_open(spiffs *fs, const char *path, int flags, int mode) {
   path = drop_dir(path);
 
 #if CS_SPIFFS_ENABLE_ENCRYPTION
-  sm |= SPIFFS_RDONLY;  /* Encryption always needs to be able to read. */
-
-  char enc_path[SPIFFS_OBJ_NAME_LEN];
-  if (s_names_encrypted) {
+  if (fs->encrypted) {
+    char enc_path[SPIFFS_OBJ_NAME_LEN];
     if (!spiffs_vfs_enc_name(path, enc_path, sizeof(enc_path))) {
       errno = ENXIO;
       return -1;
     }
     path = enc_path;
-  }
 
-  int fd = SPIFFS_open(fs, path, sm, 0);
-  if (fd >= 0 && (rw & O_WRONLY)) {
-    spiffs_stat s;
-    s32_t r = SPIFFS_fstat(fs, fd, &s);
-    if (r < 0) return set_spiffs_errno(fs, "read", r);
-    struct file_meta *fm = (struct file_meta *) s.meta;
-    if (fm->plain_size == DEFAULT_PLAIN_SIZE || (flags & O_TRUNC)) {
-      /* Can only happen to new files. */
-      if (s.size != 0) {
-        LOG(LL_ERROR, ("Corrupted encrypted file %s (es %u ps %u)", s.name, s.size, fm->plain_size));
+    sm |= SPIFFS_RDONLY; /* Encryption always needs to be able to read. */
+    int fd = SPIFFS_open(fs, path, sm, 0);
+    if (fd >= 0 && (rw & O_WRONLY)) {
+      spiffs_stat s;
+      s32_t r = SPIFFS_fstat(fs, fd, &s);
+      if (r < 0) {
+        set_spiffs_errno(fs, path, r);
         SPIFFS_close(fs, fd);
-        errno = ENXIO;
         return -1;
       }
-      fm->plain_size = 0;
-      fm->encryption_not_started = false;
+      struct file_meta *fm = (struct file_meta *) s.meta;
+      if (fm->plain_size == DEFAULT_PLAIN_SIZE || (flags & O_TRUNC)) {
+        /* Can only happen to new files. */
+        if (s.size != 0) {
+          LOG(LL_ERROR, ("Corrupted encrypted file %s (es %u ps %u)", s.name,
+                         s.size, fm->plain_size));
+          SPIFFS_close(fs, fd);
+          errno = ENXIO;
+          return -1;
+        }
+        fm->plain_size = 0;
+        fm->encryption_not_started = false;
+      }
+      /*
+       * O_APPEND requires special handling during write and must not be set on
+       * the underlying file. It does not really need to be persisted, but we
+       * don't have a per-fd state that we can use for it and creating one for
+       * just one flag seems like an overkill. Yes, this may result in
+       * additional
+       * churn, but should be ok in most cases.
+       */
+      fm->not_o_append = !(flags & O_APPEND);
+      r = SPIFFS_fupdate_meta(fs, fd, fm);
+      if (r < 0) {
+        set_spiffs_errno(fs, path, r);
+        SPIFFS_close(fs, fd);
+        return -1;
+      }
     }
-    /*
-     * O_APPEND requires special handling during write and must not be set on
-     * the underlying file. It does not really need to be persisted, but we
-     * don't have a per-fd state that we can use for it and creating one for
-     * just one flag seems like an overkill. Yes, this may result in additional
-     * churn, but should be ok in most cases.
-     */
-    fm->not_o_append = !(flags & O_APPEND);
-    r = SPIFFS_fupdate_meta(fs, fd, fm);
-    if (r < 0) {
-      set_spiffs_errno(fs, path, fd);
-      SPIFFS_close(fs, fd);
-      return -1;
-    }
-  }
-  return set_spiffs_errno(fs, path, fd);
-#else
-  if (flags & O_APPEND) sm |= SPIFFS_APPEND;
-  return set_spiffs_errno(fs, path, SPIFFS_open(fs, drop_dir(path), sm, 0));
+    return set_spiffs_errno(fs, path, fd);
+  } else
 #endif
+  {
+    if (flags & O_APPEND) sm |= SPIFFS_APPEND;
+    return set_spiffs_errno(fs, path, SPIFFS_open(fs, drop_dir(path), sm, 0));
+  }
 }
 
 int spiffs_vfs_close(spiffs *fs, int fd) {
@@ -165,14 +168,16 @@ ssize_t spiffs_vfs_read(spiffs *fs, int fd, void *dstv, size_t size) {
   s32_t r = SPIFFS_fstat(fs, fd, &s);
   if (r < 0) return set_spiffs_errno(fs, "read", r);
   const struct file_meta *fm = (const struct file_meta *) s.meta;
-  LOG(LL_DEBUG, ("enc_read %s (%u) %d", s.name, s.obj_id, size));
-  if (!fm->encryption_not_started) {
-    if (fm->plain_size == DEFAULT_PLAIN_SIZE || (s.size % CS_SPIFFS_ENCRYPTION_BLOCK_SIZE != 0)) {
+  if (fs->encrypted && !fm->encryption_not_started) {
+    LOG(LL_DEBUG, ("enc_read %s (%u) %d", s.name, s.obj_id, size));
+    if (fm->plain_size == DEFAULT_PLAIN_SIZE ||
+        (s.size % CS_SPIFFS_ENCRYPTION_BLOCK_SIZE != 0)) {
       goto out_enc_err;
     }
     s32_t plain_off = SPIFFS_tell(fs, fd);
     if (plain_off < 0) return set_spiffs_errno(fs, "enc_read_tell", plain_off);
-    s32_t block_off = (plain_off - (plain_off % CS_SPIFFS_ENCRYPTION_BLOCK_SIZE));
+    s32_t block_off =
+        (plain_off - (plain_off % CS_SPIFFS_ENCRYPTION_BLOCK_SIZE));
     if (block_off != plain_off) {
       r = SPIFFS_lseek(fs, fd, block_off, SPIFFS_SEEK_SET);
       if (r != block_off) {
@@ -195,12 +200,14 @@ ssize_t spiffs_vfs_read(spiffs *fs, int fd, void *dstv, size_t size) {
           if (r < 0) {
             return set_spiffs_errno(fs, "enc_read_read", r);
           } else {
-            LOG(LL_ERROR, ("Expected to read %d @ %d, got %d", sizeof(block), block_off, r));
+            LOG(LL_ERROR, ("Expected to read %d @ %d, got %d", sizeof(block),
+                           block_off, r));
             goto out_enc_err;
           }
         }
       }
-      if (!spiffs_vfs_decrypt_block(s.obj_id, block_off, block, sizeof(block))) {
+      if (!spiffs_vfs_decrypt_block(s.obj_id, block_off, block,
+                                    sizeof(block))) {
         LOG(LL_ERROR, ("Decryption failed"));
         goto out_enc_err;
       }
@@ -210,7 +217,8 @@ ssize_t spiffs_vfs_read(spiffs *fs, int fd, void *dstv, size_t size) {
       to_copy -= to_skip;
       if (to_copy > (size - num_read)) to_copy = (size - num_read);
       memcpy(dst, block + to_skip, to_copy);
-      LOG(LL_DEBUG, ("enc_read po %d bo %d ts %d tc %d nr %d", plain_off, block_off, to_skip, to_copy, num_read));
+      LOG(LL_DEBUG, ("enc_read po %d bo %d ts %d tc %d nr %d", plain_off,
+                     block_off, to_skip, to_copy, num_read));
       block_off += sizeof(block);
       num_read += to_copy;
       dst += to_copy;
@@ -219,8 +227,9 @@ ssize_t spiffs_vfs_read(spiffs *fs, int fd, void *dstv, size_t size) {
     SPIFFS_lseek(fs, fd, plain_off + num_read, SPIFFS_SEEK_SET);
     return num_read;
 
-out_enc_err:
-    LOG(LL_ERROR, ("Corrupted encrypted file %s (es %u ps %u)", s.name, s.size, fm->plain_size));
+  out_enc_err:
+    LOG(LL_ERROR, ("Corrupted encrypted file %s (es %u ps %u)", s.name, s.size,
+                   fm->plain_size));
     errno = ENXIO;
     return -1;
   } else
@@ -241,14 +250,16 @@ size_t spiffs_vfs_write(spiffs *fs, int fd, const void *datav, size_t size) {
   s32_t r = SPIFFS_fstat(fs, fd, &s);
   if (r < 0) return set_spiffs_errno(fs, "read", r);
   struct file_meta *fm = (struct file_meta *) s.meta;
-  if (!fm->encryption_not_started) {
-    if (fm->plain_size == DEFAULT_PLAIN_SIZE || (s.size % CS_SPIFFS_ENCRYPTION_BLOCK_SIZE != 0)) {
+  if (fs->encrypted && !fm->encryption_not_started) {
+    if (fm->plain_size == DEFAULT_PLAIN_SIZE ||
+        (s.size % CS_SPIFFS_ENCRYPTION_BLOCK_SIZE != 0)) {
       goto out_enc_err;
     }
     s32_t plain_off = SPIFFS_tell(fs, fd);
     if (plain_off < 0) return set_spiffs_errno(fs, "enc_write_tell", plain_off);
     if (!(fm->not_o_append)) plain_off = fm->plain_size;
-    s32_t block_off = (plain_off - (plain_off % CS_SPIFFS_ENCRYPTION_BLOCK_SIZE));
+    s32_t block_off =
+        (plain_off - (plain_off % CS_SPIFFS_ENCRYPTION_BLOCK_SIZE));
     uint8_t block[CS_SPIFFS_ENCRYPTION_BLOCK_SIZE];
     int prefix_len = plain_off - block_off;
     if (prefix_len > 0) {
@@ -265,11 +276,13 @@ size_t spiffs_vfs_write(spiffs *fs, int fd, const void *datav, size_t size) {
         if (r < 0) {
           return set_spiffs_errno(fs, "enc_write_read", r);
         } else {
-          LOG(LL_ERROR, ("Expected to read %d @ %d, got %d", prefix_len, block_off, r));
+          LOG(LL_ERROR,
+              ("Expected to read %d @ %d, got %d", prefix_len, block_off, r));
           goto out_enc_err;
         }
       }
-      if (!spiffs_vfs_decrypt_block(s.obj_id, block_off, block, sizeof(block))) {
+      if (!spiffs_vfs_decrypt_block(s.obj_id, block_off, block,
+                                    sizeof(block))) {
         LOG(LL_ERROR, ("Decryption failed"));
         goto out_enc_err;
       }
@@ -292,7 +305,8 @@ size_t spiffs_vfs_write(spiffs *fs, int fd, const void *datav, size_t size) {
       for (int i = to_skip + to_copy; i < sizeof(block); i++) {
         block[i] = 0;
       }
-      if (!spiffs_vfs_encrypt_block(s.obj_id, block_off, block, sizeof(block))) {
+      if (!spiffs_vfs_encrypt_block(s.obj_id, block_off, block,
+                                    sizeof(block))) {
         LOG(LL_ERROR, ("Encryption failed"));
         if (num_written > 0) break;
         goto out_enc_err;
@@ -303,11 +317,13 @@ size_t spiffs_vfs_write(spiffs *fs, int fd, const void *datav, size_t size) {
         if (r < 0) {
           return set_spiffs_errno(fs, "enc_write_write", r);
         } else {
-          LOG(LL_ERROR, ("Expected to write %d @ %d, got %d", sizeof(block), block_off, r));
+          LOG(LL_ERROR, ("Expected to write %d @ %d, got %d", sizeof(block),
+                         block_off, r));
           goto out_enc_err;
         }
       }
-      LOG(LL_DEBUG, ("enc_write s %d po %d bo %d ts %d tc %d nw %d", size, plain_off, block_off, to_skip, to_copy, num_written));
+      LOG(LL_DEBUG, ("enc_write s %d po %d bo %d ts %d tc %d nw %d", size,
+                     plain_off, block_off, to_skip, to_copy, num_written));
       block_off += sizeof(block);
       num_written += to_copy;
       data += to_copy;
@@ -322,12 +338,14 @@ size_t spiffs_vfs_write(spiffs *fs, int fd, const void *datav, size_t size) {
         LOG(LL_ERROR, ("enc_write_update_meta: %d", r));
       }
     }
-    LOG(LL_DEBUG, ("%d @ %d => %d, po %d ps %d", size, plain_off, num_written, new_plain_off, (int) fm->plain_size));
+    LOG(LL_DEBUG, ("%d @ %d => %d, po %d ps %d", size, plain_off, num_written,
+                   new_plain_off, (int) fm->plain_size));
     SPIFFS_lseek(fs, fd, new_plain_off, SPIFFS_SEEK_SET);
     return num_written;
 
-out_enc_err:
-    LOG(LL_ERROR, ("Corrupted encrypted file %s (es %u ps %u)", s.name, s.size, fm->plain_size));
+  out_enc_err:
+    LOG(LL_ERROR, ("Corrupted encrypted file %s (es %u ps %u)", s.name, s.size,
+                   fm->plain_size));
     errno = ENXIO;
     return -1;
   } else
@@ -338,16 +356,19 @@ out_enc_err:
   }
 }
 
-static void spiffs_vfs_xlate_stat(spiffs_stat *ss, struct stat *st) {
+static void spiffs_vfs_xlate_stat(spiffs *fs, spiffs_stat *ss,
+                                  struct stat *st) {
   st->st_ino = ss->obj_id;
   st->st_mode = S_IFREG | 0666;
   st->st_nlink = 1;
   st->st_size = ss->size;
 #if CS_SPIFFS_ENABLE_ENCRYPTION
   const struct file_meta *fm = (const struct file_meta *) ss->meta;
-  if (fm->plain_size != DEFAULT_PLAIN_SIZE) {
+  if (fs->encrypted) {
     st->st_size = fm->plain_size;
   }
+#else
+  (void) fs;
 #endif
 }
 
@@ -366,17 +387,17 @@ int spiffs_vfs_stat(spiffs *fs, const char *path, struct stat *st) {
   }
 #if CS_SPIFFS_ENABLE_ENCRYPTION
   char enc_fname[SPIFFS_OBJ_NAME_LEN];
-  if (s_names_encrypted) {
+  if (fs->encrypted) {
     if (!spiffs_vfs_enc_name(fname, enc_fname, sizeof(enc_fname))) {
       errno = ENXIO;
       return -1;
     }
+    fname = enc_fname;
   }
-  fname = enc_fname;
 #endif
   res = SPIFFS_stat(fs, fname, &ss);
   if (res == SPIFFS_OK) {
-    spiffs_vfs_xlate_stat(&ss, st);
+    spiffs_vfs_xlate_stat(fs, &ss, st);
   }
   return set_spiffs_errno(fs, path, res);
 }
@@ -387,7 +408,7 @@ int spiffs_vfs_fstat(spiffs *fs, int fd, struct stat *st) {
   memset(st, 0, sizeof(*st));
   res = SPIFFS_fstat(fs, fd, &ss);
   if (res == SPIFFS_OK) {
-    spiffs_vfs_xlate_stat(&ss, st);
+    spiffs_vfs_xlate_stat(fs, &ss, st);
   }
   return set_spiffs_errno(fs, "fstat", res);
 }
@@ -428,7 +449,7 @@ int spiffs_vfs_rename(spiffs *fs, const char *src, const char *dst) {
   dst = drop_dir(dst);
 #if CS_SPIFFS_ENABLE_ENCRYPTION
   char enc_src[SPIFFS_OBJ_NAME_LEN], enc_dst[SPIFFS_OBJ_NAME_LEN];
-  if (s_names_encrypted) {
+  if (fs->encrypted) {
     if (!spiffs_vfs_enc_name(src, enc_src, sizeof(enc_src)) ||
         !spiffs_vfs_enc_name(dst, enc_dst, sizeof(enc_dst))) {
       errno = ENXIO;
@@ -458,7 +479,7 @@ int spiffs_vfs_unlink(spiffs *fs, const char *path) {
   path = drop_dir(path);
 #if CS_SPIFFS_ENABLE_ENCRYPTION
   char enc_path[SPIFFS_OBJ_NAME_LEN];
-  if (s_names_encrypted) {
+  if (fs->encrypted) {
     if (!spiffs_vfs_enc_name(path, enc_path, sizeof(enc_path))) {
       errno = ENXIO;
       return -1;
@@ -506,17 +527,18 @@ struct dirent *spiffs_vfs_readdir(spiffs *fs, DIR *dir) {
   }
   sd->de.d_ino = sd->sde.obj_id;
 #if CS_SPIFFS_ENABLE_ENCRYPTION
-  if (s_names_encrypted) {
+  if (fs->encrypted) {
     if (!spiffs_vfs_dec_name((const char *) sd->sde.name, sd->de.d_name,
                              sizeof(sd->de.d_name))) {
       LOG(LL_ERROR, ("Name decryption failed (%s)", sd->sde.name));
       errno = ENXIO;
       return NULL;
     }
-  }
-#else
-  memcpy(sd->de.d_name, sd->sde.name, SPIFFS_OBJ_NAME_LEN);
+  } else
 #endif
+  {
+    memcpy(sd->de.d_name, sd->sde.name, SPIFFS_OBJ_NAME_LEN);
+  }
   (void) fs;
   return &sd->de;
 }
@@ -532,7 +554,8 @@ int spiffs_vfs_closedir(spiffs *fs, DIR *dir) {
 }
 
 #if CS_SPIFFS_ENABLE_ENCRYPTION
-bool spiffs_vfs_enc_name(const char *name, char *enc_name, size_t enc_name_size) {
+bool spiffs_vfs_enc_name(const char *name, char *enc_name,
+                         size_t enc_name_size) {
   uint8_t tmp[SPIFFS_OBJ_NAME_LEN];
   char tmp2[SPIFFS_OBJ_NAME_LEN];
   int name_len = strlen(name);
@@ -544,12 +567,13 @@ bool spiffs_vfs_enc_name(const char *name, char *enc_name, size_t enc_name_size)
   memcpy(tmp, name, name_len);
   memset(tmp + name_len, 0, sizeof(tmp) - name_len);
   while (enc_name_len < name_len) {
-    if (!spiffs_vfs_encrypt_block(0, enc_name_len, tmp + enc_name_len, CS_SPIFFS_ENCRYPTION_BLOCK_SIZE)) {
+    if (!spiffs_vfs_encrypt_block(0, enc_name_len, tmp + enc_name_len,
+                                  CS_SPIFFS_ENCRYPTION_BLOCK_SIZE)) {
       return false;
     }
     enc_name_len += CS_SPIFFS_ENCRYPTION_BLOCK_SIZE;
   }
-  cs_base64_encode(tmp, enc_name_len, tmp2);  /* NUL-terminates output. */
+  cs_base64_encode(tmp, enc_name_len, tmp2); /* NUL-terminates output. */
   LOG(LL_DEBUG, ("%s -> %s", name, tmp2));
   strncpy(enc_name, tmp2, enc_name_size);
   return true;
@@ -559,12 +583,15 @@ bool spiffs_vfs_dec_name(const char *enc_name, char *name, size_t name_size) {
   int i;
   char tmp[SPIFFS_OBJ_NAME_LEN];
   int enc_name_len = 0;
-  cs_base64_decode((const unsigned char *) enc_name, strlen(enc_name), tmp, &enc_name_len);
-  if (enc_name_len == 0 || (enc_name_len % CS_SPIFFS_ENCRYPTION_BLOCK_SIZE != 0)) {
+  cs_base64_decode((const unsigned char *) enc_name, strlen(enc_name), tmp,
+                   &enc_name_len);
+  if (enc_name_len == 0 ||
+      (enc_name_len % CS_SPIFFS_ENCRYPTION_BLOCK_SIZE != 0)) {
     return false;
   }
   for (i = 0; i < enc_name_len; i += CS_SPIFFS_ENCRYPTION_BLOCK_SIZE) {
-    if (!spiffs_vfs_decrypt_block(0, i, tmp + i, CS_SPIFFS_ENCRYPTION_BLOCK_SIZE)) {
+    if (!spiffs_vfs_decrypt_block(0, i, tmp + i,
+                                  CS_SPIFFS_ENCRYPTION_BLOCK_SIZE)) {
       LOG(LL_ERROR, ("Decryption failed"));
       return false;
     }
@@ -589,17 +616,20 @@ bool spiffs_vfs_enc_fs(spiffs *fs) {
   while (SPIFFS_readdir(&d, &e) != NULL) {
     char enc_name[SPIFFS_OBJ_NAME_LEN];
     struct file_meta *fm = (struct file_meta *) e.meta;
-    LOG(LL_DEBUG, ("%s (%u) es %u ps %u", e.name, e.obj_id, e.size, fm->plain_size));
-    if (fm->plain_size != DEFAULT_PLAIN_SIZE) continue;  /* Already encrypted */
+    LOG(LL_DEBUG,
+        ("%s (%u) es %u ps %u", e.name, e.obj_id, e.size, fm->plain_size));
+    if (fm->plain_size != DEFAULT_PLAIN_SIZE) continue; /* Already encrypted */
     if (!fm->encryption_not_started) {
       LOG(LL_ERROR, ("%s is half-encrypted; FS is corrupted."));
       continue;
     }
-    if (!spiffs_vfs_enc_name((const char *) e.name, enc_name, sizeof(enc_name))) {
+    if (!spiffs_vfs_enc_name((const char *) e.name, enc_name,
+                             sizeof(enc_name))) {
       LOG(LL_ERROR, ("%s: name encryption failed", e.name));
       goto out;
     }
-    LOG(LL_INFO, ("Encrypting %s (id %u, size %d) -> %s", e.name, e.obj_id, (int) e.size, enc_name));
+    LOG(LL_INFO, ("Encrypting %s (id %u, size %d) -> %s", e.name, e.obj_id,
+                  (int) e.size, enc_name));
     fd = SPIFFS_open_by_dirent(fs, &e, SPIFFS_RDWR, 0);
     if (fd < 0) {
       LOG(LL_ERROR, ("%s: open failed: %d", e.name, SPIFFS_errno(fs)));
@@ -626,11 +656,13 @@ bool spiffs_vfs_enc_fs(spiffs *fs) {
       for (int i = n; i < sizeof(block); i++) {
         block[i] = 0;
       }
-      if (!spiffs_vfs_encrypt_block(e.obj_id, fm->plain_size, block, sizeof(block))) {
+      if (!spiffs_vfs_encrypt_block(e.obj_id, fm->plain_size, block,
+                                    sizeof(block))) {
         LOG(LL_ERROR, ("%s: encrypt failed", e.name));
         goto out;
       }
-      if (SPIFFS_lseek(fs, fd, fm->plain_size, SPIFFS_SEEK_SET) != fm->plain_size) {
+      if (SPIFFS_lseek(fs, fd, fm->plain_size, SPIFFS_SEEK_SET) !=
+          fm->plain_size) {
         LOG(LL_ERROR, ("%s: seek failed: %d", e.name, SPIFFS_errno(fs)));
         goto out;
       }
@@ -643,7 +675,8 @@ bool spiffs_vfs_enc_fs(spiffs *fs) {
       enc_size += sizeof(block);
     }
     if (SPIFFS_fupdate_meta(fs, fd, fm) != SPIFFS_OK) {
-      LOG(LL_ERROR, ("%s: final update_meta failed: %d", e.name, SPIFFS_errno(fs)));
+      LOG(LL_ERROR,
+          ("%s: final update_meta failed: %d", e.name, SPIFFS_errno(fs)));
       goto out;
     }
     SPIFFS_close(fs, fd);
@@ -661,7 +694,7 @@ bool spiffs_vfs_enc_fs(spiffs *fs) {
       return false;
     }
   }
-  s_names_encrypted = true;
+  fs->encrypted = true;
   res = true;
 out:
   if (fd >= 0) SPIFFS_close(fs, fd);
