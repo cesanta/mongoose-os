@@ -290,7 +290,7 @@ Resources:
       TopicRulePayload:
         RuleDisabled: 'false'
         Sql:
-          Fn::Join: [ "", ["SELECT temp FROM '", { "Ref": "DeviceID" }, "/temp'"] ]
+          Fn::Join: [ "", ["SELECT state.reported.temp FROM '$aws/things/", { "Ref": "DeviceID" }, "/shadow/update'"] ]
         Actions:
         - DynamoDB:
             TableName:

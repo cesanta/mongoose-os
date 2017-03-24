@@ -3,7 +3,6 @@
 // Load Mongoose OS API
 load('api_gpio.js');
 load('api_i2c.js');
-load('api_mqtt.js');
 load('api_rpc.js');
 load('api_timer.js');
 load('api_config.js');
@@ -23,15 +22,8 @@ function applyHeater() {
   GPIO.write(pin, state.on || 0);
 }
 
-let state = {
-  on: false,
-};
-
 // Milliseconds. How often to send temperature readings to the cloud
 let freq = 20000;
-
-// MQTT topic to publish to.
-let topic = Cfg.get('device.id') + '/temp';
 
 // This function reads temperature from the MCP9808 temperature sensor.
 // Data sheet: http://www.microchip.com/wwwproducts/en/en556182
@@ -44,6 +36,11 @@ let getTemp = function() {
     if (v & 0x1000) t = -t;
   }
   return t;
+};
+
+let state = {
+  on: false,
+  temp: getTemp(),
 };
 
 let getStatus = function() {
@@ -69,10 +66,8 @@ RPC.addHandler('Heater.GetState', function(args) {
 
 // Send temperature readings to the cloud
 Timer.set(freq, 1, function() {
-  let state = getStatus();
-  let message = JSON.stringify(state);
-  let ok = MQTT.pub(topic, message, message.length);
-  print('MQTT pubish: topic ', topic, 'msg: ', message, 'status: ', ok);
+  state = getStatus();
+  reportState();
 }, null);
 
 function reportState() {
