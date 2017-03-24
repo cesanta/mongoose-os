@@ -868,7 +868,7 @@ static void json_scanf_cb(void *callback_data, const char *name,
     return;
   }
 
-  if (token->ptr == NULL) {
+  if (token->ptr == NULL || token->type == JSON_TYPE_NULL) {
     /*
      * We're not interested here in the events for which we have no value;
      * namely, JSON_TYPE_OBJECT_START and JSON_TYPE_ARRAY_START
