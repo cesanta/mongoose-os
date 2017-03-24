@@ -126,7 +126,6 @@ SDKCONFIG = $(MGOS_ESP_PATH)/sdkconfig
 
 PARTITION_TABLE_CSV_PATH = $(MGOS_ESP_PATH)/src/partitions_mgos.csv
 ifeq "$(MGOS_ESP32_ENABLE_FLASH_ENCRYPTION)" "1"
-override CONFIG_FLASH_ENCRYPTION_ENABLED = y
 export PART_ENCR_FLAG=encrypted
 ENCR_FLAG = true
 MKSPIFFS = /usr/local/bin/mkspiffs8
