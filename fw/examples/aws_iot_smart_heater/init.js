@@ -73,7 +73,6 @@ Timer.set(freq, 1, function() {
   let message = JSON.stringify(state);
   let ok = MQTT.pub(topic, message, message.length);
   print('MQTT pubish: topic ', topic, 'msg: ', message, 'status: ', ok);
-  AWS.Shadow.update(0, { reported: state });
 }, null);
 
 function reportState() {
