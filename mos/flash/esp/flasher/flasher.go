@@ -55,13 +55,10 @@ func Flash(ct esp.ChipType, fw *common.FirmwareBundle, opts *esp.FlashOpts) erro
 	}
 
 	var encryptionKey []byte
-	if opts.ESP32EncryptionKeyFile != "" {
+	if ct == esp.ChipESP32 && opts.ESP32EncryptionKeyFile != "" {
 		encryptionKey, err = ioutil.ReadFile(opts.ESP32EncryptionKeyFile)
 		if err != nil {
 			return errors.Annotatef(err, "failed to read encryption key")
-		}
-		if ct != esp.ChipESP32 {
-			return errors.Errorf("flash encryption is only supported by ESP32")
 		}
 		if len(encryptionKey) != 32 {
 			return errors.Errorf("encryption key must be 32 bytes, got %d", len(encryptionKey))
