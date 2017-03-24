@@ -76,14 +76,26 @@ Timer.set(freq, 1, function() {
   AWS.Shadow.update(0, { reported: state });
 }, null);
 
+function reportState() {
+  print('Reporting state:', JSON.stringify(state));
+  AWS.Shadow.update(0, {
+    reported: state,
+  });
+}
+
 AWS.Shadow.setStateHandler(function(ud, ev, reported, desired) {
   print('Event:', ev);
   print('Reported state:', JSON.stringify(reported));
   print('Desired state:', JSON.stringify(desired));
 
+  if (ev === AWS.Shadow.CONNECTED) {
+    reportState();
+    return;
+  }
+
   // mOS will request state on reconnect and deltas will arrive on changes.
   if (ev !== AWS.Shadow.GET_ACCEPTED && ev !== AWS.Shadow.UPDATE_DELTA) {
-    return true;
+    return;
   }
 
   // Here we extract values from previosuly reported state (if any)
@@ -97,12 +109,8 @@ AWS.Shadow.setStateHandler(function(ud, ev, reported, desired) {
 
   if (ev === AWS.Shadow.UPDATE_DELTA) {
     // Report current state
-    AWS.Shadow.update(0, {
-      reported: state,
-    });
+    reportState();
   }
-
-  return true;
 }, null);
 
 applyHeater();
