@@ -6,7 +6,7 @@
       .col-md-3 h1 { margin-top: 10px; }
     </style>
     <link rel="stylesheet" href="https://ajax.googleapis.com/ajax/libs/jqueryui/1.12.1/themes/black-tie/jquery-ui.min.css" />
-
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css" />
 
     <script src="https://code.jquery.com/jquery-3.1.1.min.js"></script>
     <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js" integrity="sha256-VazP97ZCwtekAsvgPBSUwPFKdrwD3unUfSGVYrahUqU=" crossorigin="anonymous"></script>
@@ -54,25 +54,23 @@
             </a>
           </div>
 
-          <div id="navbar" class="navbar-collapse collapse">
-            <div id="signedout_div">
-              <ul class="nav navbar-nav navbar-right">
-                <li><a href="#">Sign in using Google or Facebook</a></li>
-                <li><div id="google_signin"></div>&nbsp;</li>
-                <li>
-                  <div id="facebook_signin">
-                  <fb:login-button scope="public_profile,email" onlogin="facebookCheckLoginState();"></fb:login-button>
-                  </div>
-              </li>
-              </ul>
-            </div>
-            <div id="signedin_div" class="hidden">
-              <ul class="nav navbar-nav navbar-right">
-                <li>Signed in as <span id="signedin_username_span">...</span></li>
-                <li><input type="button" value="Sign out" id="signout_button" /></li>
-              </ul>
-            </div>
 
+        <div id="signedin_div" class="hidden">
+          <p>
+            Signed in as <span id="signedin_username_span">...</span>
+            <input type="button" value="Sign out" id="signout_button" />
+          </p>
+        </div>
+
+          <div id="navbar" class="navbar-collapse collapse">
+            <ul class="nav navbar-nav navbar-right">
+              <li><a href="#" id="google_signin"><i class="fa fa-google"></i> Sign in using Google</a></li>
+              <li><a href="#" id="facebook_signin">
+                <fb:login-button scope="public_profile,email" onlogin="facebookCheckLoginState();">
+                  <i class="fa fa-facebook"></i> Sign in using Facebook
+                </fb:login-button>
+              </a></li>
+            </ul>
           </div>
 
         </div>
@@ -84,7 +82,7 @@
           <input style="padding-top: 15px;" id="status"
             type="checkbox" data-toggle="toggle" data-size="large">
           <h3>Status</h3>
-          <span class="text-muted">(sign in to make changes)</span>
+          <span class="text-muted">(sign in to switch on/off)</span>
         </div>
         <div class="col-md-3 text-center">
           <h1><span class="label label-info" id="temp">loading...</span></h1>
