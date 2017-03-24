@@ -868,7 +868,7 @@ static void json_scanf_cb(void *callback_data, const char *name,
     return;
   }
 
-  if (token->ptr == NULL || token->type == JSON_TYPE_NULL) {
+  if (token->ptr == NULL) {
     /*
      * We're not interested here in the events for which we have no value;
      * namely, JSON_TYPE_OBJECT_START and JSON_TYPE_ARRAY_START
@@ -892,12 +892,16 @@ static void json_scanf_cb(void *callback_data, const char *name,
     }
     case 'Q': {
       char **dst = (char **) info->target;
-      int unescaped_len = json_unescape(token->ptr, token->len, NULL, 0);
-      if (unescaped_len >= 0 &&
-          (*dst = (char *) malloc(unescaped_len + 1)) != NULL) {
-        info->num_conversions++;
-        json_unescape(token->ptr, token->len, *dst, unescaped_len);
-        (*dst)[unescaped_len] = '\0';
+      if (token->type == JSON_TYPE_NULL) {
+        *dst = NULL;
+      } else {
+        int unescaped_len = json_unescape(token->ptr, token->len, NULL, 0);
+        if (unescaped_len >= 0 &&
+            (*dst = (char *) malloc(unescaped_len + 1)) != NULL) {
+          info->num_conversions++;
+          json_unescape(token->ptr, token->len, *dst, unescaped_len);
+          (*dst)[unescaped_len] = '\0';
+        }
       }
       break;
     }
