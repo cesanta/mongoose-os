@@ -82,16 +82,19 @@ void update_led(void) {
   mgos_gpio_write(LED_GPIO, (s_led ? LED_ON : LED_OFF));
 }
 
-static bool aws_shadow_state_handler(void *arg, enum mgos_aws_shadow_event ev,
+static void aws_shadow_state_handler(void *arg, enum mgos_aws_shadow_event ev,
                                      uint64_t version,
                                      const struct mg_str reported,
                                      const struct mg_str desired) {
-  /* mOS will request state on reconnect and deltas will arrive on changes. */
+  LOG(LL_INFO, ("Event: %d, version: %llu", ev, version));
+  if (ev == MGOS_AWS_SHADOW_CONNECTED) {
+    report_state();
+    return;
+  }
   if (ev != MGOS_AWS_SHADOW_GET_ACCEPTED &&
       ev != MGOS_AWS_SHADOW_UPDATE_DELTA) {
-    return true;
+    return;
   }
-  LOG(LL_INFO, ("Event: %d, version: %llu", ev, version));
   LOG(LL_INFO, ("Reported state: %.*s", (int) reported.len, reported.p));
   LOG(LL_INFO, ("Desired state : %.*s", (int) desired.len, desired.p));
   /*
@@ -105,7 +108,6 @@ static bool aws_shadow_state_handler(void *arg, enum mgos_aws_shadow_event ev,
     report_state();
   }
   (void) arg;
-  return true;
 }
 
 static void button_cb(int pin, void *arg) {

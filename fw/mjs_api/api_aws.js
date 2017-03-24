@@ -46,10 +46,11 @@ let AWS = {
     },
 
     // Events given to the state handler callback.
-    GET_ACCEPTED: 0,
-    GET_REJECTED: 1,
-    UPDATE_ACCEPTED: 2,
-    UPDATE_REJECTED: 3,
-    UPDATE_DELTA: 4,
+    CONNECTED: 0,
+    GET_ACCEPTED: 1,
+    GET_REJECTED: 2,
+    UPDATE_ACCEPTED: 3,
+    UPDATE_REJECTED: 4,
+    UPDATE_DELTA: 5,
   },
 };

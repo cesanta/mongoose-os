@@ -255,7 +255,11 @@ static void mgos_aws_shadow_ev(struct mg_connection *nc, int ev, void *ev_data,
       if (msg->message_id == AWS_SHADOW_SUB_ID) {
         LOG(LL_INFO, ("Subscribed"));
         ss->online = true;
-        ss->want_get = get_cfg()->aws.shadow.get_on_connect;
+        ss->sent_get = false;
+        if (ss->state_cb != NULL) {
+          ss->state_cb(ss->state_cb_arg, MGOS_AWS_SHADOW_CONNECTED, 0,
+                       mg_mk_str_n("", 0), mg_mk_str_n("", 0));
+        }
       }
       break;
     }
@@ -329,14 +333,13 @@ static void mgos_aws_shadow_ev(struct mg_connection *nc, int ev, void *ev_data,
                        "{state:{reported:%T, desired:%T}}", &reported,
                        &desired);
           }
-          if (ss->state_cb(ss->state_cb_arg, topic_id_to_aws_ev(topic_id),
-                           version, mg_mk_str_n(reported.ptr, reported.len),
-                           mg_mk_str_n(desired.ptr, desired.len))) {
-            mgos_unlock();
-            mg_mqtt_puback(nc, msg->message_id);
-            mgos_lock();
-            ss->current_version = version;
-          }
+          mgos_unlock();
+          ss->state_cb(ss->state_cb_arg, topic_id_to_aws_ev(topic_id), version,
+                       mg_mk_str_n(reported.ptr, reported.len),
+                       mg_mk_str_n(desired.ptr, desired.len));
+          mg_mqtt_puback(nc, msg->message_id);
+          mgos_lock();
+          ss->current_version = version;
           break;
         }
         case MGOS_AWS_SHADOW_TOPIC_GET_REJECTED:
@@ -461,10 +464,9 @@ struct mgos_aws_shadow_cb_simple_data {
   void *cb_arg;
 };
 
-static bool state_cb_oplya(void *arg, enum mgos_aws_shadow_event ev,
+static void state_cb_oplya(void *arg, enum mgos_aws_shadow_event ev,
                            uint64_t version, const struct mg_str reported,
                            const struct mg_str desired) {
-  bool ret = false;
   struct mgos_aws_shadow_cb_simple_data *oplya_arg =
       (struct mgos_aws_shadow_cb_simple_data *) arg;
 
@@ -481,14 +483,12 @@ static bool state_cb_oplya(void *arg, enum mgos_aws_shadow_event ev,
   memcpy(reported2, reported.p, reported.len);
   memcpy(desired2, desired.p, desired.len);
 
-  ret = oplya_arg->cb_simple(oplya_arg->cb_arg, ev, reported2, desired2);
+  oplya_arg->cb_simple(oplya_arg->cb_arg, ev, reported2, desired2);
 
   free(reported2);
   free(desired2);
 
   (void) version;
-
-  return ret;
 }
 
 void mgos_aws_shadow_set_state_handler_simple(

@@ -20,22 +20,25 @@ extern "C" {
 #endif /* __cplusplus */
 
 enum mgos_aws_shadow_event {
-  MGOS_AWS_SHADOW_GET_ACCEPTED = 0,
-  MGOS_AWS_SHADOW_GET_REJECTED = 1,
-  MGOS_AWS_SHADOW_UPDATE_ACCEPTED = 2,
-  MGOS_AWS_SHADOW_UPDATE_REJECTED = 3,
-  MGOS_AWS_SHADOW_UPDATE_DELTA = 4,
+  MGOS_AWS_SHADOW_CONNECTED = 0,
+  MGOS_AWS_SHADOW_GET_ACCEPTED = 1,
+  MGOS_AWS_SHADOW_GET_REJECTED = 2,
+  MGOS_AWS_SHADOW_UPDATE_ACCEPTED = 3,
+  MGOS_AWS_SHADOW_UPDATE_REJECTED = 4,
+  MGOS_AWS_SHADOW_UPDATE_DELTA = 5,
 };
 
 /*
  * Main AWS Device Shadow state callback handler.
- * Will get invoked when new versions of the state arrive via one of the topics.
- * If true is returned, this version is recorded.
- * If false is returned, this version is discarded and may be presented again
- * in the future (e.g. through periodic GET).
- * For DELTA messages, state is passed as "desired", reported is not set.
+ *
+ * Will get invoked when connection is established or when new versions
+ * of the state arrive via one of the topics.
+ *
+ * CONNECTED event comes with no state.
+ *
+ * For DELTA events, state is passed as "desired", reported is not set.
  */
-typedef bool (*mgos_aws_shadow_state_handler)(void *arg,
+typedef void (*mgos_aws_shadow_state_handler)(void *arg,
                                               enum mgos_aws_shadow_event ev,
                                               uint64_t version,
                                               const struct mg_str reported,
