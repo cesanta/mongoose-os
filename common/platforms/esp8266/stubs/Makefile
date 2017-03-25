@@ -12,7 +12,7 @@ BUILD_DIR = .build
 COMMON_STUB_DIR = ../../esp
 STUB_ELF = $(BUILD_DIR)/$(patsubst %.c,%.elf,$(notdir $(STUB)))
 STUB_JSON ?= $(BUILD_DIR)/$(patsubst %.c,%.json,$(notdir $(STUB)))
-SDK = docker.cesanta.com/esp8266-build-oss:2.0.0-r7
+SDK = docker.cesanta.com/esp8266-build:2.0.0-1.5.0-r4
 XT_CC = xtensa-lx106-elf-gcc
 
 .PHONY: all clean run wrap

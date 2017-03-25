@@ -5,6 +5,7 @@
 
 #if CS_PLATFORM == CS_P_CC3200
 
+#include "common/mg_mem.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -30,7 +31,7 @@ int asprintf(char **strp, const char *fmt, ...) {
   va_list ap;
   int len;
 
-  *strp = malloc(BUFSIZ);
+  *strp = MG_MALLOC(BUFSIZ);
   if (*strp == NULL) return -1;
 
   va_start(ap, fmt);
@@ -38,7 +39,7 @@ int asprintf(char **strp, const char *fmt, ...) {
   va_end(ap);
 
   if (len > 0) {
-    *strp = realloc(*strp, len + 1);
+    *strp = MG_REALLOC(*strp, len + 1);
     if (*strp == NULL) return -1;
   }
 

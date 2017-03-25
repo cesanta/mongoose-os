@@ -284,6 +284,9 @@ typedef struct spiffs_t {
   spiffs_file_callback file_cb_f;
   // mounted flag
   u8_t mounted;
+#if CS_SPIFFS_ENABLE_ENCRYPTION
+  u8_t encrypted;
+#endif
   // user data
   void *user_data;
   // config magic

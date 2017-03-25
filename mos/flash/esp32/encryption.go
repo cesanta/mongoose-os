@@ -1,4 +1,4 @@
-package esp
+package esp32
 
 import (
 	"bytes"

@@ -171,6 +171,13 @@ int mgos_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
     return false;
   }
 
+  char *host_name =
+      cfg->dhcp_hostname ? cfg->dhcp_hostname : get_cfg()->device.id;
+  if (host_name != NULL && !wifi_station_set_hostname(host_name)) {
+    LOG(LL_ERROR, ("WiFi STA: Failed to set host name"));
+    return false;
+  }
+
   if (!wifi_station_connect()) {
     LOG(LL_ERROR, ("WiFi STA: Connect failed"));
     return false;

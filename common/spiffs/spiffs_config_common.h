@@ -8,6 +8,20 @@
 #ifndef SPIFFS_CONFIG_COMMON_H_
 #define SPIFFS_CONFIG_COMMON_H_
 
+/* A build of SPIFFS with metadata and longer object names. */
+#ifndef CS_SPIFFS_ENABLE_METADATA
+#define CS_SPIFFS_ENABLE_METADATA 0
+#endif
+
+#if CS_SPIFFS_ENABLE_METADATA
+#define SPIFFS_OBJ_NAME_LEN 48
+#define SPIFFS_OBJ_META_LEN 8
+#endif
+
+#ifndef CS_SPIFFS_ENABLE_ENCRYPTION
+#define CS_SPIFFS_ENABLE_ENCRYPTION 0
+#endif
+
 // ----------- 8< ------------
 // Following includes are for the linux test build of spiffs
 // These may/should/must be removed/altered/replaced in your target

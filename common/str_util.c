@@ -5,6 +5,7 @@
 
 #ifndef EXCLUDE_COMMON
 
+#include "common/mg_mem.h"
 #include "common/platform.h"
 #include "common/str_util.h"
 
@@ -12,13 +13,7 @@
 #define C_DISABLE_BUILTIN_SNPRINTF 0
 #endif
 
-#ifndef MG_MALLOC
-#define MG_MALLOC malloc
-#endif
-
-#ifndef MG_FREE
-#define MG_FREE free
-#endif
+#include "common/mg_mem.h"
 
 size_t c_strnlen(const char *s, size_t maxlen) WEAK;
 size_t c_strnlen(const char *s, size_t maxlen) {
@@ -284,7 +279,7 @@ const char *c_strnstr(const char *s, const char *find, size_t slen) {
 char *strdup(const char *src) WEAK;
 char *strdup(const char *src) {
   size_t len = strlen(src) + 1;
-  char *ret = malloc(len);
+  char *ret = MG_MALLOC(len);
   if (ret != NULL) {
     strcpy(ret, src);
   }

@@ -18,6 +18,7 @@
 #include <simplelink/include/fs.h>
 
 #include "common/cs_dbg.h"
+#include "common/mg_mem.h"
 
 /* From sl_fs.c */
 extern int set_errno(int e);
@@ -103,7 +104,7 @@ int fs_slfs_open(const char *pathname, int flags, mode_t mode) {
         if (s_sl_file_size_hints[i].name != NULL &&
             strcmp(s_sl_file_size_hints[i].name, pathname) == 0) {
           size = s_sl_file_size_hints[i].size;
-          free(s_sl_file_size_hints[i].name);
+          MG_FREE(s_sl_file_size_hints[i].name);
           s_sl_file_size_hints[i].name = NULL;
           break;
         }

@@ -3,5 +3,4 @@
   ["aws.shadow", "o", {title: "AWS Device Shadow settings"}],
   ["aws.shadow.enable", "b", false, {title: "Enable AWS Device Shadow"}],
   ["aws.shadow.thing_name", "s", "", {title: "Set thing name. If not specified, device.id is used"}],
-  ["aws.shadow.get_on_connect", "b", true, {title: "Request state on (re)connect"}],
 ]

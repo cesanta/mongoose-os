@@ -1,0 +1,2 @@
+target extended-remote | openocd -c "gdb_port pipe; log_output openocd.log" -f ocd.cfg
+

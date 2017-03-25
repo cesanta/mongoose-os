@@ -179,6 +179,16 @@ static esp_err_t mgos_wifi_remove_mode(wifi_mode_t mode) {
   return mgos_wifi_set_mode(mode);
 }
 
+static esp_err_t wifi_sta_set_host_name(const struct sys_config_wifi_sta *cfg) {
+  esp_err_t r = ESP_OK;
+  char *host_name =
+      cfg->dhcp_hostname ? cfg->dhcp_hostname : get_cfg()->device.id;
+  if (host_name != NULL) {
+    r = tcpip_adapter_set_hostname(TCPIP_ADAPTER_IF_STA, host_name);
+  }
+  return r;
+}
+
 int mgos_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
   esp_err_t r;
   wifi_config_t wcfg;
@@ -231,9 +241,24 @@ int mgos_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
 
   s_sta_should_connect = true;
 
+  esp_err_t host_r = wifi_sta_set_host_name(cfg);
+  if (host_r != ESP_OK && host_r != ESP_ERR_TCPIP_ADAPTER_IF_NOT_READY) {
+    LOG(LL_ERROR, ("WiFi STA: Failed to set host name"));
+    return false;
+  }
+
   r = esp_wifi_connect();
   if (r == ESP_ERR_WIFI_NOT_STARTED) {
     r = esp_wifi_start();
+
+    if (host_r != ESP_OK) {
+      host_r = wifi_sta_set_host_name(cfg);
+      if (host_r != ESP_OK) {
+        LOG(LL_ERROR, ("WiFi STA: Failed to set host name"));
+        return false;
+      }
+    }
+
     if (r != ESP_OK) {
       LOG(LL_ERROR, ("Failed to start WiFi: %d", r));
       return false;

@@ -141,6 +141,8 @@
         new PNotify({title: 'Success', text: 'Cloud configured, MQTT settings: ' + JSON.stringify(json.result.mqtt, null, '  '), type: 'success'});
         document.cookie = 'mqtt=' + mqtt;
         return this;
+      }).then(function(json) {
+        return $.ajax({url: '/call', data: {method: 'Config.Save', args: '{"reboot":true}'}});
       });
     } else {
       var policy = $('#input-policy').val();

@@ -19,6 +19,7 @@ cc_library(
         "cs_strtod.h",
         "cs_time.h",
         "mbuf.h",
+        "mg_mem.h",
         "mg_str.h",
         "platform.h",
         "queue.h",

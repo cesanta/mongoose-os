@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2017 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>

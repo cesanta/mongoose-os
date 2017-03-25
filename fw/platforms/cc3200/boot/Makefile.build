@@ -31,7 +31,7 @@ BUILD_INFO_JSON = $(BUILD_DIR)/build_info.json
 
 .PHONY: all clean flash
 
-DRIVER_SRCS = cpu.c flash.c interrupt.c pin.c prcm.c spi.c uart.c utils.c
+DRIVER_SRCS = cpu.c flash.c interrupt.c pin.c prcm.c spi.c timer.c uart.c utils.c
 SL_SRCS = cc_pal.c device.c driver.c fs.c nonos.c socket.c netapp.c
 SDK_SRCS = $(DRIVER_SRCS) $(SL_SRCS)
 IPATH += $(SDK_PATH) $(SDK_PATH)/inc $(SDK_PATH)/driverlib $(SDK_PATH)/oslib \

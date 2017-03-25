@@ -41,7 +41,7 @@ MGOS_ENABLE_DEBUG_UDP = 0
 MGOS_ENABLE_DNS_SD = 0
 MGOS_DEBUG_UART = 0
 
-TOOLCHAIN ?= /opt/arm_5.2.8
+TOOLCHAIN ?= $(wildcard /opt/*arm_*)
 APP_ORG = 0x20000000
 RAM_SIZE = 0x40000
 BOOT_LOADER_SIZE = 0x4000
@@ -168,7 +168,7 @@ VPATH += $(SPIFFS_PATH)
 MGOS_SRCS += $(notdir $(wildcard $(SPIFFS_PATH)/*.c))
 
 FREERTOS_SRCS = timers.c list.c queue.c tasks.c port.c heap_3.c osi_freertos.c
-DRIVER_SRCS = cpu.c flash.c i2c.c interrupt.c pin.c prcm.c spi.c uart.c udma.c utils.c
+DRIVER_SRCS = cpu.c flash.c i2c.c interrupt.c pin.c prcm.c spi.c timer.c uart.c udma.c utils.c
 SL_SRCS = socket.c wlan.c driver.c device.c netapp.c netcfg.c network_common.c \
           cc_pal.c fs.c
 SDK_SRCS = $(FREERTOS_SRCS) $(DRIVER_SRCS) $(SL_SRCS)

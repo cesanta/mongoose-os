@@ -2,9 +2,9 @@ PLATFORM ?= esp8266
 
 REPO_ROOT = $(abspath ../..)
 
-EXAMPLES_cc3200 = c_aws_shadow c_hello c_network c_mqtt
-EXAMPLES_esp32 = c_aws_shadow c_hello c_hello_arduino c_mdns c_mqtt c_rpc c_websocket
-EXAMPLES_esp8266 = c_aws_shadow c_heater c_hello c_hello_arduino c_mcast c_mdns c_mqtt c_network c_websocket
+EXAMPLES_cc3200 = c_aws_shadow c_hello c_http c_network c_mqtt
+EXAMPLES_esp32 = c_aws_shadow c_hello c_hello_arduino c_http c_mdns c_mqtt c_rpc c_websocket
+EXAMPLES_esp8266 = c_aws_shadow c_heater c_hello c_hello_arduino c_http c_mcast c_mdns c_mqtt c_network c_websocket
 EXAMPLES_pic32 =
 EXAMPLES_stm32 = c_aws_shadow c_hello c_http c_i2c c_mqtt c_mcast c_mdns c_network c_rpc c_websocket mjs_hello mjs_base
 

@@ -5,20 +5,13 @@
 
 #ifndef EXCLUDE_COMMON
 
+#include "common/mg_mem.h"
 #include "common/cs_dirent.h"
 
 /*
  * This file contains POSIX opendir/closedir/readdir API implementation
  * for systems which do not natively support it (e.g. Windows).
  */
-
-#ifndef MG_FREE
-#define MG_FREE free
-#endif
-
-#ifndef MG_MALLOC
-#define MG_MALLOC malloc
-#endif
 
 #ifdef _WIN32
 struct win32_dir {

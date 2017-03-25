@@ -134,6 +134,11 @@ int fs_mount(spiffs *spf, uint32_t addr, uint32_t size, uint8_t *workbuf,
     return SPIFFS_errno(spf);
   }
 
+  /* https://github.com/pellepl/spiffs/issues/137#issuecomment-287192259 */
+  if (SPIFFS_check(spf) != SPIFFS_OK) {
+    LOG(LL_ERROR, ("Filesystem is corrupted, continuing anyway"));
+  }
+
   return 0;
 }
 

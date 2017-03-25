@@ -106,8 +106,10 @@
 
     $.ajax({url: '/call', data: {
       method: 'Config.Set',
-      args: JSON.stringify({config: config})
-    }}).then(function() {
+      args: JSON.stringify({config: config})}
+    }).then(function() {
+        return $.ajax({url: '/call', data: {method: 'Config.Save', args: '{"reboot":true}'}});
+    }).then(function(json) {
       new PNotify({title: 'Configuration saved', type: 'success' });
       return loadConfig();
     });
