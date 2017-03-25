@@ -169,7 +169,7 @@ ifeq "$(MGOS_ENABLE_WIFI)" "1"
 endif
 
 # libraries used in this project, mainly provided by the SDK
-SDK_LIBS = c crypto gcc hal main net80211 pp phy wpa
+SDK_LIBS = c crypto gcc hal main net80211 pp phy stdc++ wpa
 LIBS = $(addprefix -l,$(SDK_LIBS))
 
 SHIMS = -DNDEBUG
@@ -270,7 +270,7 @@ ifeq "$(SSL)" "mbedTLS"
   ifeq "$(MGOS_ENABLE_ATCA)" "1"
     MBEDTLS_CFLAGS += -DMBEDTLS_ECP_ATCA -I$(ATCA_PATH)/lib
     SSL_LIBS = $(addprefix $(MBEDTLS_PATH)/library/,libmbedcrypto_atca.a libmbedtls_atca.a libmbedx509.a)
-	else
+  else
     SSL_LIBS = $(addprefix $(MBEDTLS_PATH)/library/,libmbedcrypto.a libmbedtls.a libmbedx509.a)
   endif
 
