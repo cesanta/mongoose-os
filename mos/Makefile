@@ -26,7 +26,9 @@ downloads: generate
 
 deploy:
 	cd ../prod && ansible-playbook website.yml -t mos
-	
+
+# in order to build a valid osx bundle, chromium framework should be installed, as described here:
+# github.com/alexflint/gallium#installation
 osx_bundle:
 	gallium-bundle mos
 
