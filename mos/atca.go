@@ -21,7 +21,6 @@ import (
 )
 
 var (
-	dryRun   bool
 	format   string
 	writeKey string
 )
@@ -30,7 +29,6 @@ func initATCAFlags() {
 	if !extendedMode {
 		return
 	}
-	flag.BoolVar(&dryRun, "dry-run", true, "Do not apply changes, print what would be done")
 	flag.StringVar(&format, "format", "", "Config format, hex or json")
 	flag.StringVar(&writeKey, "write-key", "", "Write key file")
 }
@@ -141,7 +139,7 @@ func atcaSetConfig(ctx context.Context, dc *dev.DevConn) error {
 		Crc32:  &cs,
 	}
 
-	if dryRun {
+	if *dryRun {
 		reportf("This is a dry run, would have set the following config:\n\n"+
 			"%s\n"+
 			"SetConfig %s\n\n"+
@@ -183,7 +181,7 @@ func atcaLockZone(ctx context.Context, dc *dev.DevConn) error {
 	zoneInt := int64(zone)
 	req := &atcaService.LockZoneArgs{Zone: &zoneInt}
 
-	if dryRun {
+	if *dryRun {
 		reportf("This is a dry run, would have sent the following request:\n\n"+
 			"LockZone %s\n\n"+
 			"Set --dry-run=false to confirm.", atca.JSONStr(req))
@@ -318,7 +316,7 @@ func atcaSetKey(ctx context.Context, dc *dev.DevConn) error {
 	req.Slot = &slot
 	req.Crc32 = &cs
 
-	if dryRun {
+	if *dryRun {
 		reportf("This is a dry run, would have set the following key on slot %d:\n\n%s\n"+
 			"SetKey %s\n\n"+
 			"Set --dry-run=false to confirm.",
@@ -396,7 +394,7 @@ func atcaGenKey(ctx context.Context, dc *dev.DevConn) error {
 
 	req := &atcaService.GenKeyArgs{Slot: &slot}
 
-	if dryRun {
+	if *dryRun {
 		reportf("This is a dry run, would have sent the following request:\n\n"+
 			"GenKey %s\n\n"+
 			"Set --dry-run=false to confirm.",

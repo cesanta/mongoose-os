@@ -13,6 +13,10 @@ import (
 	"github.com/golang/glog"
 )
 
+const (
+	KeyLen = 32
+)
+
 var (
 	blockReadBases       = []uint32{0x6001a000, 0x6001a038, 0x6001a058, 0x6001a078}
 	blockWriteBases      = []uint32{0x6001a01c, 0x6001a098, 0x6001a0b8, 0x6001a0d8}
@@ -252,6 +256,12 @@ func (f *Fuse) Value(withDiffs bool) (*big.Int, error) {
 	return &v, nil
 }
 
+func (f *Fuse) HasDiffs() bool {
+	v, err1 := f.Value(false /* withDiffs */)
+	vd, err2 := f.Value(true /* withDiffs */)
+	return err1 == nil && err2 == nil && vd.Cmp(v) != 0
+}
+
 func (f *Fuse) SetValue(v *big.Int) error {
 	if !f.IsWritable() {
 		return errors.Errorf("fuse %q is not writable", f.Name())
@@ -285,8 +295,8 @@ func (f *Fuse) IsKey() bool {
 
 // Reverse and convert BE -> LE
 func reverseKey(kb []byte) {
-	if len(kb) != 32 {
-		glog.Exitf("want 32 bytes, got %d", len(kb))
+	if len(kb) != KeyLen {
+		glog.Exitf("want %d bytes, got %d", KeyLen, len(kb))
 	}
 	for wi := 0; wi < 4; wi++ {
 		for bi := 0; bi < 4; bi++ {
@@ -301,8 +311,8 @@ func (f *Fuse) SetKeyValue(kb []byte) error {
 	if !f.IsKey() {
 		return errors.Errorf("not a key slot")
 	}
-	if len(kb) != 32 {
-		return errors.Errorf("want 32 bytes, got %d", len(kb))
+	if len(kb) != KeyLen {
+		return errors.Errorf("want %d bytes, got %d", KeyLen, len(kb))
 	}
 	reverseKey(kb)
 	v := big.NewInt(0)
@@ -321,13 +331,7 @@ func (f *Fuse) String() string {
 			vflen = 1
 		}
 		if f.d.block > 0 {
-			fmt.Fprintf(b, fmt.Sprintf(" 0x%%0%dx", vflen), vd)
-			// Key blocks store key values in reversed order.
-			// Pad to 32 bytes, adding leading zeroes if needed.
-			kb := make([]byte, 32)
-			copy(kb[32-len(vd.Bytes()):32], vd.Bytes())
-			reverseKey(kb)
-			fmt.Fprintf(b, " (key: %s)", hex.EncodeToString(kb))
+			fmt.Fprintf(b, " (key) %s", f.KeyString())
 		} else {
 			fmt.Fprintf(b, fmt.Sprintf(" 0x%%0%dx", vflen), v)
 			if vd.Cmp(v) != 0 {
@@ -341,6 +345,19 @@ func (f *Fuse) String() string {
 		fmt.Fprint(b, " (WD)")
 	}
 	return b.String()
+}
+
+func (f *Fuse) KeyString() string {
+	if !f.IsKey() || !f.IsReadable() {
+		return ""
+	}
+	vd, _ := f.Value(true /* withDiff */)
+	// Key blocks store key values in reversed order.
+	// Pad to 32 bytes, adding leading zeroes if needed.
+	kb := make([]byte, KeyLen)
+	copy(kb[KeyLen-len(vd.Bytes()):KeyLen], vd.Bytes())
+	reverseKey(kb)
+	return hex.EncodeToString(kb)
 }
 
 func readFuseBlock(rrw rom_client.RegReaderWriter, num int) (*FuseBlock, error) {
@@ -396,27 +413,30 @@ func eFuseCtlDoOp(rrw rom_client.RegReaderWriter, ctlOp eFuseCtlOp) error {
 	return nil
 }
 
-func ReadFuses(rrw rom_client.RegReaderWriter) ([]*FuseBlock, []*Fuse, error) {
+func ReadFuses(rrw rom_client.RegReaderWriter) ([]*FuseBlock, []*Fuse, map[string]*Fuse, error) {
 	var blocks []*FuseBlock
 
 	if err := eFuseCtlDoOp(rrw, eFuseCtlOpRead); err != nil {
-		return nil, nil, errors.Annotatef(err, "failed to perform eFuse read operation")
+		return nil, nil, nil, errors.Annotatef(err, "failed to perform eFuse read operation")
 	}
 
 	for i := 0; i < 4; i++ {
 		b, err := readFuseBlock(rrw, i)
 		if err != nil {
-			return nil, nil, errors.Annotatef(err, "failed to read eFuse block %d", i)
+			return nil, nil, nil, errors.Annotatef(err, "failed to read eFuse block %d", i)
 		}
 		blocks = append(blocks, b)
 	}
 
-	var fuses []*Fuse
+	fuses := []*Fuse{}
+	fusesByName := map[string]*Fuse{}
 	for _, fd := range fuseDescriptors {
-		fuses = append(fuses, newFuse(fd, blocks))
+		f := newFuse(fd, blocks)
+		fuses = append(fuses, f)
+		fusesByName[f.Name()] = f
 	}
 
-	return blocks, fuses, nil
+	return blocks, fuses, fusesByName, nil
 }
 
 func ProgramFuses(rrw rom_client.RegReaderWriter) error {

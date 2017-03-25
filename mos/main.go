@@ -38,6 +38,7 @@ var (
 	mosRepo    = flag.String("repo", "", "Path to the mongoose-os repository; if omitted, the mongoose-os repository will be cloned as ./mongoose-os")
 	deviceID   = flag.String("device-id", "", "Device ID")
 	devicePass = flag.String("device-pass", "", "Device pass/key")
+	dryRun     = flag.Bool("dry-run", true, "Do not apply changes, print what would be done")
 	firmware   = flag.String("firmware", filepath.Join(buildDir, build.FirmwareFileName), "Firmware .zip file location (file of HTTP URL)")
 	portFlag   = flag.String("port", "auto", "Serial port where the device is connected. "+
 		"If set to 'auto', ports on the system will be enumerated and the first will be used.")
@@ -82,6 +83,7 @@ var (
 		{"esp32-efuse-get", esp32EFuseGet, `Get ESP32 eFuses`, nil, nil, false},
 		{"esp32-efuse-set", esp32EFuseSet, `Set ESP32 eFuses`, nil, nil, false},
 		{"esp32-encrypt-image", esp32EncryptImage, `Encrypt a ESP32 firmware image`, []string{"esp32-encryption-key-file", "esp32-flash-address"}, nil, false},
+		{"esp32-gen-key", esp32GenKey, `Generate and program an encryption key`, nil, nil, false},
 	}
 )
 

@@ -49,17 +49,12 @@ func esp32EFuseGet(ctx context.Context, devConn *dev.DevConn) error {
 	}
 	defer rrw.Disconnect()
 
-	_, fuses, err := esp32.ReadFuses(rrw)
+	_, fuses, fusesByName, err := esp32.ReadFuses(rrw)
 	if err != nil {
 		return errors.Annotatef(err, "failed to read eFuses")
 	}
 
 	if len(flag.Args()) >= 2 {
-		fusesByName := map[string]*esp32.Fuse{}
-		for _, f := range fuses {
-			fusesByName[f.Name()] = f
-		}
-
 		for _, fuseName := range flag.Args()[1:] {
 			f, found := fusesByName[fuseName]
 			if !found {
@@ -88,14 +83,9 @@ func esp32EFuseSet(ctx context.Context, devConn *dev.DevConn) error {
 	}
 	defer rrw.Disconnect()
 
-	blocks, fuses, err := esp32.ReadFuses(rrw)
+	blocks, fuses, fusesByName, err := esp32.ReadFuses(rrw)
 	if err != nil {
 		return errors.Annotatef(err, "failed to read eFuses")
-	}
-
-	fusesByName := map[string]*esp32.Fuse{}
-	for _, f := range fuses {
-		fusesByName[f.Name()] = f
 	}
 
 	printFuses := map[string]bool{}
@@ -173,7 +163,7 @@ func esp32EFuseSet(ctx context.Context, devConn *dev.DevConn) error {
 	}
 
 	if haveDiffs {
-		if !dryRun {
+		if !*dryRun {
 			reportf("Programming eFuses...")
 			err = esp32.ProgramFuses(rrw)
 			if err == nil {
