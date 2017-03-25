@@ -166,8 +166,13 @@ dynamodb.query(getDynamodbQueryParams(Math.floor(Date.now() / 1000), GRAPH_PERIO
     var labels = [];
     for (var i = 0; i < awsData.Items.length; i++) {
       var item = awsData.Items[i];
-      data.push(Number(item.payload.M.temp.N));
-      labels.push(getLabel(item));
+      if (typeof item === "object"
+          && typeof item.payload === "object"
+          && typeof item.payload.M === "object"
+          && typeof item.payload.M.temp === "object") {
+        data.push(Number(item.payload.M.temp.N));
+        labels.push(getLabel(item));
+      }
     }
 
     lastAWSData = awsData;
