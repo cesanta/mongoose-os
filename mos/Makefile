@@ -26,6 +26,9 @@ downloads: generate
 
 deploy:
 	cd ../prod && ansible-playbook website.yml -t mos
+	
+osx_bundle:
+	gallium-bundle mos
 
 clean:
-	rm -rf mos_* mos.exe mos gobuild-cache downloads/mos/{mac,linux,win} version*
+	rm -rf mos_* mos.exe mos gobuild-cache downloads/mos/{mac,linux,win} version* mos.app

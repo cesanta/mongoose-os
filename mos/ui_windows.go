@@ -20,15 +20,6 @@ func showUI(url string) {
 		MinSize: Size{1280, 720},
 		Layout:  VBox{MarginsZero: true},
 		Children: []Widget{
-			/*LineEdit{
-				AssignTo: &le,
-				Text:     Bind("wv.URL"),
-				OnKeyDown: func(key walk.Key) {
-					if key == walk.KeyReturn {
-						wv.SetURL(le.Text())
-					}
-				},
-			},*/
 			WebView{
 				AssignTo: &wv,
 				Name:     "wv",

@@ -375,6 +375,5 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 	}()
 	showUI(url)
 
-	// Unreacahble
 	return nil
 }
