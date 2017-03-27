@@ -153,6 +153,8 @@ func main() {
 	seed2, _ := cRand.Int(cRand.Reader, big.NewInt(4000000000))
 	mRand.Seed(seed1 ^ seed2.Int64())
 
+	defer glog.Flush()
+
 	// If no arguments are given, show help and start UI
 	isUI = len(os.Args) == 1
 
@@ -202,6 +204,7 @@ func main() {
 	if err := run(cmd, ctx, devConn); err != nil {
 		glog.Infof("Error: %+v", err)
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
+		glog.Flush()
 		os.Exit(1)
 	}
 }
