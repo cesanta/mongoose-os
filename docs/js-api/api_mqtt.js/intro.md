@@ -18,8 +18,13 @@ items:
 
  Example:
  ```javascript
- MQTT.sub('my/topic', function(conn, message) {
-   print('Got message:', message);
+ MQTT.sub('dfrank_topic', function(conn, topic_ptr, topic_len, msg_ptr, msg_len) {
+   print(
+     'Got message:',
+     fstr(msg_ptr, msg_len),
+     'from topic:',
+     fstr(topic_ptr, topic_len)
+   );
  }, null);
  ```
 

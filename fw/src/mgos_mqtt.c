@@ -291,24 +291,8 @@ static void mqttsubtrampoline(struct mg_connection *c, int ev, void *ev_data,
   if (ev != MG_EV_MQTT_PUBLISH) return;
   struct sub_data *sd = (struct sub_data *) user_data;
   struct mg_mqtt_message *mm = (struct mg_mqtt_message *) ev_data;
-  const struct mg_str *s = &mm->payload;
-  struct mbuf *m = &c->recv_mbuf;
-  /*
-   * MQTT message is not NUL terminated. In order to preserve memory,
-   * we're not making a copy of a message just to NUL terminate it.
-   * NUL terminate it directly in the recv mbuf, expanding it if needed.
-   */
-  uint8_t term = 0;
-  bool must_expand = m->buf + m->size <= s->p + s->len;
-  if (must_expand) {
-    mbuf_append(m, &term, 1);
-    m->len--;
-  } else {
-    term = s->p[s->len];             // Remember existing byte value
-    ((char *) s->p)[s->len] = '\0';  // Change it to 0
-  }
-  sd->handler(c, s->p, sd->user_data);
-  if (!must_expand) ((char *) s->p)[s->len] = term;  // Restore that byte
+  sd->handler(c, mm->topic.p, mm->topic.len, mm->payload.p, mm->payload.len,
+              sd->user_data);
 }
 
 void mgos_mqtt_sub(const char *topic, sub_handler_t handler, void *user_data) {

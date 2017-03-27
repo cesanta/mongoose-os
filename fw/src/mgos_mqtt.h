@@ -43,7 +43,9 @@ struct mg_connection *mgos_mqtt_get_global_conn(void);
  */
 bool mgos_mqtt_pub(const char *topic, const void *message, size_t len);
 
-typedef void (*sub_handler_t)(struct mg_connection *, const char *msg, void *);
+typedef void (*sub_handler_t)(struct mg_connection *nc, const char *topic,
+                              int topic_len, const char *msg, int msg_len,
+                              void *ud);
 /*
  * Subscribe on a topic on a configured MQTT server.
  */

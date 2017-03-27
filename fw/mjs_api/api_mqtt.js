@@ -12,11 +12,16 @@ let MQTT = {
   //
   // Example:
   // ```javascript
-  // MQTT.sub('my/topic', function(conn, message) {
-  //   print('Got message:', message);
+  // MQTT.sub('dfrank_topic', function(conn, topic_ptr, topic_len, msg_ptr, msg_len) {
+  //   print(
+  //     'Got message:',
+  //     fstr(msg_ptr, msg_len),
+  //     'from topic:',
+  //     fstr(topic_ptr, topic_len)
+  //   );
   // }, null);
   // ```
-  sub: ffi('void mgos_mqtt_sub(char *, void (*)(void *, char *, userdata), userdata)'),
+  sub: ffi('void mgos_mqtt_sub(char *, void (*)(void *, void *, int, void *, int, userdata), userdata)'),
 
   _pub: ffi('int mgos_mqtt_pub(char *, char *, int)'),
 
