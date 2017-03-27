@@ -6,27 +6,30 @@
 #ifndef CS_FW_PLATFORMS_CC3200_SRC_CC3200_FS_SPIFFS_CONTAINER_H_
 #define CS_FW_PLATFORMS_CC3200_SRC_CC3200_FS_SPIFFS_CONTAINER_H_
 
-#include "boot_cfg.h"
+#include <stdint.h>
+
 #include "cc3200_fs.h"
-#include "cc3200_fs_spiffs.h"
-#include "spiffs.h"
 
 #include "common/platform.h"
 
-typedef unsigned long long _u64;
+#include <osi.h>
+
+#include <spiffs.h>
+
+typedef uint64_t _u64;
 
 struct mount_info {
-  char *cpfx; /* Container filename prefix. */
-  spiffs fs;
-  _i32 fh;           /* FailFS file handle, or -1 if not open yet. */
-  _u64 seq;          /* Sequence counter for the mounted container. */
-  _u32 valid : 1;    /* 1 if this filesystem has been mounted. */
-  _u32 cidx : 1;     /* Which of the two containers is currently mounted. */
-  _u32 rw : 1;       /* 1 if the underlying fh is r/w. */
+  OsiLockObj_t lock; /* Lock guarding access to all the members below. */
+  char *cpfx;        /* Container filename prefix. */
+  _i32 fh;           /* SLFS file handle, or -1 if not open yet. */
+  struct spiffs_t fs;
+  uint64_t seq;      /* Sequence counter for the mounted container. */
+  uint32_t cidx : 1; /* Which of the two containers is currently mounted. */
+  uint32_t rw : 1;   /* 1 if the underlying fh is r/w. */
   double last_write; /* Last time container was written (systick) */
   /* SPIFFS work area and file descriptor space (malloced). */
-  _u8 *work;
-  _u8 *fds;
+  uint8_t *work;
+  uint8_t *fds;
 };
 
 /* TI recommends rounding to nearest multiple of 4K - 512 bytes.
@@ -51,5 +54,8 @@ _i32 fs_write_meta(_i32 fh, _u64 seq, _u32 fs_size, _u32 fs_block_size,
 void fs_close_container(struct mount_info *m);
 
 _i32 fs_umount(struct mount_info *m);
+
+void fs_lock(struct mount_info *m);
+void fs_unlock(struct mount_info *m);
 
 #endif /* CS_FW_PLATFORMS_CC3200_SRC_CC3200_FS_SPIFFS_CONTAINER_H_ */

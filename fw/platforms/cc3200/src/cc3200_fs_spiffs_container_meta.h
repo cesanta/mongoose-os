@@ -1,7 +1,7 @@
 #ifndef CS_FW_PLATFORMS_CC3200_SRC_CC3200_FS_SPIFFS_CONTAINER_META_H_
 #define CS_FW_PLATFORMS_CC3200_SRC_CC3200_FS_SPIFFS_CONTAINER_META_H_
 
-#include <inttypes.h>
+#include <stdint.h>
 
 struct fs_container_info {
   uint64_t seq;

@@ -182,19 +182,18 @@ out_close_old:
 }
 
 void fs_close_container(struct mount_info *m) {
-  if (!m->valid || m->fh == -1) return;
+  if (m->fh == -1) return;
   LOG(LL_DEBUG, ("fh %d", (int) m->fh));
   sl_FsClose(m->fh, NULL, NULL, 0);
   m->fh = -1;
   m->rw = 0;
 }
 
-static s32_t failfs_read(spiffs *fs, u32_t addr, u32_t size, u8_t *dst) {
+static s32_t slfs_read(spiffs *fs, u32_t addr, u32_t size, u8_t *dst) {
   struct mount_info *m = (struct mount_info *) fs->user_data;
   _i32 r;
-  DBG(("failfs_read %d @ %d, cidx %u # %llu, fh %d, valid %d, rw %d",
-       (int) size, (int) addr, m->cidx, m->seq, (int) m->fh, m->valid, m->rw));
-  if (!m->valid) return SPIFFS_ERR_NOT_READABLE;
+  DBG(("slfs_read %d @ %d, cidx %u # %llu, fh %d, valid %d, rw %d", (int) size,
+       (int) addr, m->cidx, m->seq, (int) m->fh, m->valid, m->rw));
   do {
     if (m->fh < 0) {
       _u8 fname[MAX_FS_CONTAINER_FNAME_LEN];
@@ -216,12 +215,11 @@ static s32_t failfs_read(spiffs *fs, u32_t addr, u32_t size, u8_t *dst) {
   return (r == size) ? SPIFFS_OK : SPIFFS_ERR_NOT_READABLE;
 }
 
-static s32_t failfs_write(spiffs *fs, u32_t addr, u32_t size, u8_t *src) {
+static s32_t slfs_write(spiffs *fs, u32_t addr, u32_t size, u8_t *src) {
   struct mount_info *m = (struct mount_info *) fs->user_data;
   _i32 r;
-  DBG(("failfs_write %d @ %d, cidx %d # %llu, fh %d, valid %d, rw %d",
-       (int) size, (int) addr, m->cidx, m->seq, (int) m->fh, m->valid, m->rw));
-  if (!m->valid) return SPIFFS_ERR_NOT_WRITABLE;
+  DBG(("slfs_write %d @ %d, cidx %d # %llu, fh %d, valid %d, rw %d", (int) size,
+       (int) addr, m->cidx, m->seq, (int) m->fh, m->valid, m->rw));
   if (!m->rw) {
     /* Remount rw. */
     if (fs_switch_container(m, 0, 0) != 0) return SPIFFS_ERR_NOT_WRITABLE;
@@ -232,9 +230,9 @@ static s32_t failfs_write(spiffs *fs, u32_t addr, u32_t size, u8_t *src) {
   return (r == size) ? SPIFFS_OK : SPIFFS_ERR_NOT_WRITABLE;
 }
 
-static s32_t failfs_erase(spiffs *fs, u32_t addr, u32_t size) {
+static s32_t slfs_erase(spiffs *fs, u32_t addr, u32_t size) {
   struct mount_info *m = (struct mount_info *) fs->user_data;
-  DBG(("failfs_erase %d @ %d", (int) size, (int) addr));
+  DBG(("slfs_erase %d @ %d", (int) size, (int) addr));
   return fs_switch_container(m, addr, size) == 0 ? SPIFFS_OK
                                                  : SPIFFS_ERR_ERASE_FAIL;
 }
@@ -285,9 +283,9 @@ static _i32 fs_mount_spiffs(struct mount_info *m, _u32 fs_size, _u32 block_size,
                             _u32 page_size, _u32 erase_size) {
   int r;
   spiffs_config cfg;
-  cfg.hal_read_f = failfs_read;
-  cfg.hal_write_f = failfs_write;
-  cfg.hal_erase_f = failfs_erase;
+  cfg.hal_read_f = slfs_read;
+  cfg.hal_write_f = slfs_write;
+  cfg.hal_erase_f = slfs_erase;
   cfg.phys_size = fs_size;
   cfg.phys_addr = 0;
   cfg.phys_erase_block = erase_size;
@@ -314,13 +312,13 @@ static int fs_mount_idx(const char *cpfx, int cidx, struct mount_info *m) {
   int r;
   struct fs_container_info fsi;
   memset(m, 0, sizeof(*m));
+  osi_LockObjCreate(&m->lock);
   m->fh = -1;
   m->cidx = cidx;
   r = fs_get_info(cpfx, cidx, &fsi);
   if (r != 0) return r;
   m->cpfx = strdup(cpfx);
   m->seq = fsi.seq;
-  m->valid = 1;
   LOG(LL_INFO, ("Mounting %s.%d 0x%llx", cpfx, cidx, fsi.seq));
   r = fs_mount_spiffs(m, fsi.fs_size, fsi.fs_block_size, fsi.fs_page_size,
                       fsi.fs_erase_size);
@@ -363,6 +361,7 @@ _i32 fs_umount(struct mount_info *m) {
   free(m->work);
   free(m->fds);
   fs_close_container(m);
+  osi_LockObjDelete(&m->lock);
   memset(m, 0, sizeof(*m));
   return 1;
 }
@@ -372,4 +371,12 @@ _i32 fs_delete_inactive_container(const char *cpfx) {
   if (active_idx < 0) return -1000;
   int inactive_idx = (active_idx == 0 ? 1 : 0);
   return fs_delete_container(cpfx, inactive_idx);
+}
+
+void fs_lock(struct mount_info *m) {
+  osi_LockObjLock(&m->lock, OSI_WAIT_FOREVER);
+}
+
+void fs_unlock(struct mount_info *m) {
+  osi_LockObjUnlock(&m->lock);
 }

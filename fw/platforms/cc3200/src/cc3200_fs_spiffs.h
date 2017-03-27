@@ -11,7 +11,6 @@
 #include <common/platform.h>
 
 #include <dirent.h>
-#include "spiffs.h"
 
 #define MAX_OPEN_SPIFFS_FILES 8
 

@@ -24,6 +24,8 @@
 #include "simplelink.h"
 #include "device.h"
 #include "oslib/osi.h"
+#include "FreeRTOS.h"
+#include "semphr.h"
 
 #include "fw/src/mgos_hal.h"
 
@@ -148,10 +150,20 @@ void mongoose_poll_cb(void *arg) {
   (void) arg;
 }
 
+SemaphoreHandle_t s_mgos_mux = NULL;
+
+void mgos_lock_init(void) {
+  s_mgos_mux = xSemaphoreCreateRecursiveMutex();
+}
+
 void mgos_lock(void) {
+  while (!xSemaphoreTakeRecursive(s_mgos_mux, 10)) {
+  }
 }
 
 void mgos_unlock(void) {
+  while (!xSemaphoreGiveRecursive(s_mgos_mux)) {
+  }
 }
 
 int mgos_adc_read(int pin) {

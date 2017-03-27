@@ -52,13 +52,18 @@ void invoke_wifi_on_change_cb(void *arg) {
 }
 
 static int restart_nwp(void) {
-  /* Properly close FS container if it's open for writing. */
-  cc3200_fs_flush();
+  /*
+   * Properly close FS container if it's open for writing.
+   * Suspend FS I/O while NWP is being restarted.
+   */
+  cc3200_fs_lock();
+  cc3200_fs_flush_locked();
   /* We don't need TI's web server. */
   sl_NetAppStop(SL_NET_APP_HTTP_SERVER_ID);
   /* Without a delay in sl_Stop subsequent sl_Start gets stuck sometimes. */
   sl_Stop(10);
   s_current_role = sl_Start(NULL, NULL, NULL);
+  cc3200_fs_unlock();
   sl_restart_cb(mgos_get_mgr());
   return (s_current_role >= 0);
 }

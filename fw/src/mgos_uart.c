@@ -69,7 +69,9 @@ void mgos_uart_flush(int uart_no) {
   if (us == NULL) return;
   cs_rbuf_t *txb = &us->tx_buf;
   while (txb->used > 0) {
+    mgos_lock();
     mgos_uart_dev_dispatch_tx_top(us);
+    mgos_unlock();
   }
   mgos_uart_dev_flush_fifo(us);
 }

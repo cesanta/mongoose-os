@@ -10,7 +10,7 @@
 
 #include "fw/platforms/cc3200/boot/lib/boot.h"
 
-void main_task(void *arg);
+void cc3200_main_task(void *arg);
 
 extern int g_boot_cfg_idx;
 extern struct boot_cfg g_boot_cfg;

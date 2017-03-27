@@ -155,9 +155,12 @@ static enum cc3200_init_result cc3200_init(void *arg) {
 
 void mongoose_poll_cb(void *arg);
 
-void main_task(void *arg) {
+void mgos_lock_init(void);
+
+void cc3200_main_task(void *arg) {
   struct mgos_event e;
   osi_MsgQCreate(&s_main_queue, "main", sizeof(e), 32 /* len */);
+  mgos_lock_init();
 
   enum cc3200_init_result r = cc3200_init(NULL);
   bool success = (r == CC3200_INIT_OK);

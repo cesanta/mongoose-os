@@ -1,5 +1,5 @@
-/* rojer: This is SDK_1.1.0/third_party/FreeRTOS/source/FreeRTOSConfig.h with
- * configUSE_TIMERS set to 1 */
+/* rojer: This is SDK_1.3.0/third_party/FreeRTOS/source/FreeRTOSConfig.h with
+ * configUSE_TIMERS and configUSE_RECURSIVE_MUTEXES set to 1 */
 /* clang-format off */
 
 /*
@@ -95,7 +95,7 @@
 #define configIDLE_SHOULD_YIELD			0
 #define configUSE_CO_ROUTINES 			0
 #define configUSE_MUTEXES				1
-#define configUSE_RECURSIVE_MUTEXES		0
+#define configUSE_RECURSIVE_MUTEXES		1
 #define configCHECK_FOR_STACK_OVERFLOW	1
 #define configUSE_QUEUE_SETS			1
 #define configUSE_COUNTING_SEMAPHORES	1

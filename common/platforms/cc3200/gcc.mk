@@ -9,7 +9,7 @@ IPATH += $(SDK_PATH)/third_party/FreeRTOS/source/portable/GCC/ARM_CM4
 VPATH += $(SDK_PATH)/third_party/FreeRTOS/source/portable/GCC/ARM_CM4
 
 CFLAGS = -mthumb -mcpu=cortex-m4 -ffunction-sections -fdata-sections \
-         -MD -std=c99 -Os -Wall -Werror -Dgcc
+         -MD -std=c99 -Os -ggdb -Wall -Werror -Dgcc
 
 AR = arm-none-eabi-ar
 LD = arm-none-eabi-ld

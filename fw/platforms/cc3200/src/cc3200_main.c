@@ -30,6 +30,8 @@
 #include "device.h"
 
 #include "oslib/osi.h"
+#include "FreeRTOS.h"
+#include "semphr.h"
 
 #include "fw/src/mgos_app.h"
 #include "fw/src/mgos_hal.h"
@@ -91,7 +93,7 @@ int main(void) {
   cs_log_set_level(MGOS_EARLY_DEBUG_LEVEL);
 
   VStartSimpleLinkSpawnTask(8);
-  osi_TaskCreate(main_task, (const signed char *) "main",
+  osi_TaskCreate(cc3200_main_task, (const signed char *) "main",
                  CC3200_MAIN_TASK_STACK_SIZE, NULL, 3, NULL);
   osi_start();
 
