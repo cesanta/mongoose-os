@@ -113,7 +113,8 @@ func configSetAndSave(ctx context.Context, devConn *dev.DevConn, devConf *dev.De
 		} else {
 			reportf("Saving and rebooting...")
 		}
-		err = devConn.CConf.Save(ctx, &fwconfig.SaveArgs{
+		ctx2, _ := context.WithTimeout(ctx, saveTimeout)
+		err = devConn.CConf.Save(ctx2, &fwconfig.SaveArgs{
 			Reboot: lptr.Bool(!noReboot),
 		})
 		if err != nil {
