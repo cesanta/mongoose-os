@@ -18,6 +18,9 @@ const (
 	// we use empty destination so that device will receive the frame over uart
 	// and handle it
 	debugDevId = ""
+
+	confOpTimeout  = 5 * time.Second
+	confOpAttempts = 3
 )
 
 type DevConn struct {
@@ -63,9 +66,21 @@ func (c *Client) CreateDevConnWithJunkHandler(ctx context.Context, connectAddr s
 }
 
 func (dc *DevConn) GetConfig(ctx context.Context) (*DevConf, error) {
-	devConfRaw, err := dc.CConf.Get(ctx, &fwconfig.GetArgs{})
-	if err != nil {
-		return nil, errors.Trace(err)
+	var devConfRaw ourjson.RawMessage
+	var err error
+	attempts := confOpAttempts
+	for {
+		ctx2, _ := context.WithTimeout(ctx, confOpTimeout)
+		devConfRaw, err = dc.CConf.Get(ctx2, &fwconfig.GetArgs{})
+		if err != nil {
+			attempts -= 1
+			if attempts > 0 {
+				glog.Warningf("Error: %s", err)
+				continue
+			}
+			return nil, errors.Trace(err)
+		}
+		break
 	}
 
 	var devConf DevConf
@@ -79,11 +94,21 @@ func (dc *DevConn) GetConfig(ctx context.Context) (*DevConf, error) {
 }
 
 func (dc *DevConn) SetConfig(ctx context.Context, devConf *DevConf) error {
-	err := dc.CConf.Set(ctx, &fwconfig.SetArgs{
-		Config: ourjson.DelayMarshaling(devConf.data),
-	})
-	if err != nil {
-		return errors.Trace(err)
+	attempts := confOpAttempts
+	for {
+		ctx2, _ := context.WithTimeout(ctx, confOpTimeout)
+		err := dc.CConf.Set(ctx2, &fwconfig.SetArgs{
+			Config: ourjson.DelayMarshaling(devConf.data),
+		})
+		if err != nil {
+			attempts -= 1
+			if attempts > 0 {
+				glog.Warningf("Error: %s", err)
+				continue
+			}
+			return errors.Trace(err)
+		}
+		break
 	}
 
 	return nil

@@ -42,7 +42,7 @@ var (
 	firmware   = flag.String("firmware", filepath.Join(buildDir, build.FirmwareFileName), "Firmware .zip file location (file of HTTP URL)")
 	portFlag   = flag.String("port", "auto", "Serial port where the device is connected. "+
 		"If set to 'auto', ports on the system will be enumerated and the first will be used.")
-	timeout   = flag.Duration("timeout", 10*time.Second, "Timeout for the device connection")
+	timeout   = flag.Duration("timeout", 10*time.Second, "Timeout for the device connection and call operation")
 	reconnect = flag.Bool("reconnect", false, "Enable reconnection")
 	force     = flag.Bool("force", false, "Use the force")
 	verbose   = flag.Bool("verbose", false, "Verbose output")

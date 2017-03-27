@@ -4,17 +4,22 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	"cesanta.com/common/go/lptr"
 	fwconfig "cesanta.com/fw/defs/config"
 	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"
+	"github.com/golang/glog"
 	flag "github.com/spf13/pflag"
 )
 
 var (
 	noSave   bool
 	noReboot bool
+
+	saveTimeout  = 10 * time.Second
+	saveAttempts = 3
 )
 
 // register advanced flash specific commands
@@ -101,7 +106,8 @@ func configSetAndSave(ctx context.Context, devConn *dev.DevConn, devConf *dev.De
 		return errors.Trace(err)
 	}
 
-	if !noSave {
+	attempts := saveAttempts
+	for !noSave {
 		if noReboot {
 			reportf("Saving...")
 		} else {
@@ -111,12 +117,18 @@ func configSetAndSave(ctx context.Context, devConn *dev.DevConn, devConf *dev.De
 			Reboot: lptr.Bool(!noReboot),
 		})
 		if err != nil {
+			attempts -= 1
+			if attempts > 0 {
+				glog.Warningf("Error: %s", err)
+				continue
+			}
 			return errors.Trace(err)
 		}
 
 		if !noReboot {
 			waitForReboot()
 		}
+		break
 	}
 
 	return nil

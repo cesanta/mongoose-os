@@ -70,6 +70,10 @@ func call(ctx context.Context, devConn *dev.DevConn) error {
 		params = args[1]
 	}
 
+	if *timeout > 0 {
+		ctx, _ = context.WithTimeout(ctx, *timeout)
+	}
+
 	result, err := callDeviceService(ctx, devConn, args[0], params)
 	if err != nil {
 		return err
