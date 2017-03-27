@@ -1,7 +1,7 @@
 [
   ["mqtt", "o", {title: "MQTT settings"}],
   ["mqtt.enable", "b", true, {title: "Enable MQTT"}],
-  ["mqtt.server", "s", "test.mosquitto.org:1883", {title: "MQTT server"}],
+  ["mqtt.server", "s", "broker.hivemq.com:1883", {title: "MQTT server"}],
   ["mqtt.user", "s", "", {title: "User name"}],
   ["mqtt.pass", "s", "", {title: "Password"}],
   ["mqtt.reconnect_timeout_min", "i", 2, {title: "Starting reconnect timeout"}],

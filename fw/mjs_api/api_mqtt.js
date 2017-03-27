@@ -2,7 +2,7 @@
 // [mgos_mqtt.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_mqtt.h)
 // This API provides publish and subscribe functions. The MQTT server should
 // be configured via the `mqtt` configuration section, or dynamically, like
-// `mos config-set mqtt.server=test.mosquitto.org:1883`.
+// `mos config-set mqtt.server=broker.hivemq.com:1883`.
 
 let MQTT = {
   // **`MQTT.sub(topic, handler)`** - subscribe to a topic, and call given
