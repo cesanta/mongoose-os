@@ -144,12 +144,12 @@ func (c *serialCodec) Write(b []byte) (written int, err error) {
 	// Device is ready, send data.
 	for i := 0; i < len(b); i += chunkSize {
 		n, err := c.connWrite(b[i:min(i+chunkSize, len(b))])
-		glog.V(4).Infof("written to serial: [%s]", string(b[i:i+n]))
 		written += n
 		if err != nil {
 			c.Close()
 			return written, errors.Trace(err)
 		}
+		glog.V(4).Infof("sent %d [%s]", n, string(b[i:i+n]))
 		time.Sleep(chunkDelay)
 	}
 	return written, nil
