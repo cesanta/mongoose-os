@@ -169,7 +169,7 @@ ifeq "$(MGOS_ENABLE_WIFI)" "1"
 endif
 
 # libraries used in this project, mainly provided by the SDK
-SDK_LIBS = c crypto gcc hal main net80211 pp phy stdc++ wpa
+SDK_LIBS = c crypto espnow gcc hal main net80211 pp phy stdc++ wpa
 LIBS = $(addprefix -l,$(SDK_LIBS))
 
 SHIMS = -DNDEBUG
