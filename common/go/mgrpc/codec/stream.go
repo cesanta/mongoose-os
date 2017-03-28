@@ -5,8 +5,13 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"hash/crc32"
 	"io"
+	"strconv"
+	"strings"
 	"sync"
+	"unicode"
+	"unicode/utf8"
 
 	"cesanta.com/common/go/mgrpc/frame"
 	"github.com/cesanta/errors"
@@ -49,14 +54,19 @@ type streamConnectionCodec struct {
 	closeNotifier chan struct{}
 	closeOnce     sync.Once
 
+	// Whether to add a CRC32 checksum after each frame.
+	addChecksum bool
+
 	junkHandler func(junk []byte)
 }
 
-func StreamConn(conn streamConn, junkHandler func(junk []byte)) Codec {
+func newStreamConn(conn streamConn, addChecksum bool, junkHandler func(junk []byte)) Codec {
 	return &streamConnectionCodec{
 		conn:          conn,
 		closeNotifier: make(chan struct{}),
-		junkHandler:   junkHandler,
+
+		addChecksum: addChecksum,
+		junkHandler: junkHandler,
 	}
 }
 
@@ -157,9 +167,32 @@ func (scc *streamConnectionCodec) frameFromRxBuf() (*frame.Frame, error) {
 			return nil, nil
 		}
 
-		// Try to parse frameData.
-		frame := &frame.Frame{SizeHint: len(frameData)}
-		err = json.Unmarshal(frameData, frame)
+		// See if the frame comes with a checksum. If yes, strip and verify it.
+		frameData = trimWhitespace(frameData)
+		framePayload := frameData
+		var meta []byte
+		i := len(frameData) - 1
+		for i > 0 && frameData[i] != '}' {
+			meta = frameData[i:]
+			framePayload = frameData[:i]
+			i--
+		}
+		if len(meta) > 0 {
+			fields := strings.Split(string(meta), ",")
+			expectedCRC, err := strconv.ParseInt(fields[0], 16, 64)
+			glog.V(4).Infof("frame metadata: %q, expected CRC: %08x", fields, expectedCRC)
+			if err != nil {
+				return nil, errors.Annotatef(err, "malformed frame metadata: %q", meta)
+			}
+			crc := crc32.ChecksumIEEE(framePayload)
+			if crc != uint32(expectedCRC) {
+				return nil, errors.Errorf("CRC mismatch: expected 0x%08x, got 0x%08x", expectedCRC, crc)
+			}
+		}
+
+		// Try to parse framePayload.
+		frame := &frame.Frame{SizeHint: len(framePayload)}
+		err = json.Unmarshal(framePayload, frame)
 
 		if err != nil {
 			// There was an error during parsing, so just log the error and drop the
@@ -174,6 +207,21 @@ func (scc *streamConnectionCodec) frameFromRxBuf() (*frame.Frame, error) {
 		}
 		return nil, err
 	}
+}
+
+func trimWhitespace(b []byte) []byte {
+	for {
+		r, l := utf8.DecodeLastRune(b)
+		if r == utf8.RuneError {
+			return nil
+		}
+		if unicode.IsSpace(r) {
+			b = b[:len(b)-l]
+		} else {
+			break
+		}
+	}
+	return b
 }
 
 func (scc *streamConnectionCodec) Recv(ctx context.Context) (*frame.Frame, error) {
@@ -225,7 +273,12 @@ func (scc *streamConnectionCodec) Send(ctx context.Context, f *frame.Frame) erro
 	if err != nil {
 		return errors.Trace(err)
 	}
+	framePayload = trimWhitespace(framePayload)
 	frameData = append(frameData, framePayload...)
+	if scc.addChecksum {
+		crcHex := fmt.Sprintf("%08x", crc32.ChecksumIEEE(framePayload))
+		frameData = append(frameData, []byte(crcHex)...)
+	}
 	frameData = append(frameData, []byte(streamFrameDelimiter)...)
 	_, err = scc.conn.Write(frameData)
 	if err != nil {

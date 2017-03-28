@@ -126,7 +126,7 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 
 func removeNonText(data []byte) {
 	for i, c := range data {
-		if c < 0x20 && c != 0x0a && c != 0x0d && c != 0x1b /* Esc */ {
+		if (c < 0x20 && c != 0x0a && c != 0x0d && c != 0x1b /* Esc */) || c >= 0x80 {
 			data[i] = 0x20
 		}
 	}

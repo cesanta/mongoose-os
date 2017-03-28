@@ -143,6 +143,7 @@ func (r *mgRPCImpl) tcpConnect(tcpAddress string, opts *connectOptions) (codec.C
 	conn.(*net.TCPConn).SetKeepAlivePeriod(tcpKeepAliveInterval)
 	return codec.TCP(conn), nil
 }
+
 func (r *mgRPCImpl) serialConnect(
 	ctx context.Context, portName string, opts *connectOptions,
 ) (codec.Codec, error) {

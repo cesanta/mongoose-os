@@ -7,9 +7,9 @@ type tcpCodec struct {
 }
 
 func TCP(conn net.Conn) Codec {
-	return StreamConn(&tcpCodec{
+	return newStreamConn(&tcpCodec{
 		conn: conn,
-	}, nil)
+	}, false /* addChecksum */, nil)
 }
 
 func (c *tcpCodec) Read(b []byte) (n int, err error) {

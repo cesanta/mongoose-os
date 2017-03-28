@@ -67,11 +67,11 @@ func Serial(ctx context.Context, portName string, junkHandler func(junk []byte))
 	// Flush any data that might be not yet read
 	s.Flush()
 
-	return StreamConn(&serialCodec{
+	return newStreamConn(&serialCodec{
 		portName:    portName,
 		conn:        s,
 		handsShaken: false,
-	}, junkHandler), nil
+	}, true /* addChecksum */, junkHandler), nil
 }
 
 func (c *serialCodec) connRead(buf []byte) (read int, err error) {

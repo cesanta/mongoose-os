@@ -9,6 +9,7 @@
 
 #if MGOS_ENABLE_RPC
 
+#include "common/cs_crc32.h"
 #include "common/cs_dbg.h"
 #include "common/mbuf.h"
 #include "common/str_util.h"
@@ -83,7 +84,36 @@ void mg_rpc_channel_uart_dispatcher(struct mgos_uart_state *us) {
           mbuf_append(&chd->send_mbuf, FRAME_DELIMETER, FRAME_DELIMETER_LEN);
           chd->sending = true;
         } else {
-          ch->ev_handler(ch, MG_RPC_CHANNEL_FRAME_RECD, &f);
+          /*
+           * Frame may be followed by metadata, which is a comma-separated
+           * list of values. Right now, only one field is epxected:
+           * CRC32 checksum as a hex number.
+           * TODO(rojer): Make it mandatory when updated mos has been out for
+           * a while (today is 2017/03/28).
+           */
+          struct mg_str meta = mg_mk_str_n(f.p + f.len, 0);
+          while (meta.p > f.p) {
+            if (*(meta.p - 1) == '}') break;
+            meta.p--;
+            f.len--;
+            meta.len++;
+          }
+          if (meta.len >= 8) {
+            ((char *) meta.p)[meta.len] =
+                '\0'; /* Stomps first char of the delimiter. */
+            uint32_t crc = cs_crc32(0, f.p, f.len);
+            uint32_t expected_crc = 0;
+            if (sscanf(meta.p, "%x", (int *) &expected_crc) != 1 ||
+                crc != expected_crc) {
+              LOG(LL_WARN, ("%p Corrupt frame (%d): '%.*s' '%.*s' %08x %08x",
+                            ch, (int) f.len, (int) f.len, f.p, (int) meta.len,
+                            meta.p, expected_crc, crc));
+              f.len = 0;
+            }
+          }
+          if (f.len > 0) {
+            ch->ev_handler(ch, MG_RPC_CHANNEL_FRAME_RECD, &f);
+          }
         }
       }
       mbuf_remove(&chd->recv_mbuf, flen + 3);
@@ -129,6 +159,17 @@ static bool mg_rpc_channel_uart_send_frame(struct mg_rpc_channel *ch,
   if (!chd->connected || chd->sending) return false;
   mbuf_append(&chd->send_mbuf, FRAME_DELIMETER, FRAME_DELIMETER_LEN);
   mbuf_append(&chd->send_mbuf, f.p, f.len);
+/*
+ * TODO(rojer): Enable once updated mos has been out for a while
+ * (today is 2017/03/28).
+ */
+#if 0
+  {
+    char crc_hex[9];
+    sprintf(crc_hex, "%08x", cs_crc32(0, f.p, f.len));
+    mbuf_append(&chd->send_mbuf, crc_hex, 8);
+  }
+#endif
   mbuf_append(&chd->send_mbuf, FRAME_DELIMETER, FRAME_DELIMETER_LEN);
   chd->sending = chd->sending_user_frame = true;
   /* Disable UART console while sending. */
