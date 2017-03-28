@@ -61,6 +61,8 @@
 #ifdef RTOS_SDK
 #include "freertos/FreeRTOS.h"
 #include "freertos/portmacro.h"
+#else
+#include "fw/src/mgos_hal.h"
 #endif
 
 /* Defined in linker script. */
@@ -112,8 +114,8 @@ extern unsigned int _heap_start;
 #define UMM_CRITICAL_ENTRY() vPortEnterCritical()
 #define UMM_CRITICAL_EXIT() vPortExitCritical()
 #else
-#define UMM_CRITICAL_ENTRY()
-#define UMM_CRITICAL_EXIT()
+#define UMM_CRITICAL_ENTRY() mgos_ints_disable()
+#define UMM_CRITICAL_EXIT() mgos_ints_enable()
 #endif
 
 /*
