@@ -11,7 +11,12 @@ func showUI(url string) {
 	err := gallium.Loop(os.Args, func(app *gallium.App) {
 		opts := gallium.FramedWindow
 		opts.Title = "Mongoose OS"
-		opts.CloseButton = false
+		opts.Shape = gallium.Rect{
+			Width:  1280,
+			Height: 720,
+			Left:   320,
+			Bottom: 180,
+		}
 		_, err := app.OpenWindow(url, opts)
 		if err != nil {
 			log.Fatal(err)
