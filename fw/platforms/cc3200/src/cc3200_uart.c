@@ -23,6 +23,7 @@
 
 #include "oslib/osi.h"
 
+#include "common/cs_rbuf.h"
 #include "fw/src/mgos_utils.h"
 
 #define UART_RX_INTS (UART_INT_RX | UART_INT_RT)
@@ -84,30 +85,29 @@ static void cc3200_int_handler(struct mgos_uart_state *us) {
 }
 
 void mgos_uart_dev_dispatch_rx_top(struct mgos_uart_state *us) {
-  bool recd = false;
-  int num_recd = 0;
+  bool recd;
   struct cc3200_uart_state *ds = (struct cc3200_uart_state *) us->dev_data;
-  cs_rbuf_t *rxb = &us->rx_buf;
   cs_rbuf_t *irxb = &ds->isr_rx_buf;
-  /* First, check the ISR buffer. */
-  if (irxb->used > 0) {
-    MAP_UARTIntDisable(ds->base, UART_RX_INTS);
+  MAP_UARTIntDisable(ds->base, UART_RX_INTS);
+recv_more:
+  recd = false;
+  cc3200_uart_rx_bytes(ds->base, irxb);
+  while (irxb->used > 0) {
+    int num_recd = 0;
     do {
       uint8_t *data;
-      num_recd = cs_rbuf_get(irxb, MIN(rxb->avail, irxb->used), &data);
-      cs_rbuf_append(rxb, data, num_recd);
+      int num_to_get = MIN(mgos_uart_rxb_avail(us), irxb->used);
+      num_recd = cs_rbuf_get(irxb, num_to_get, &data);
+      mbuf_append(&us->rx_buf, data, num_recd);
       cs_rbuf_consume(irxb, num_recd);
       us->stats.rx_bytes += num_recd;
-      recd = recd || (num_recd > 0);
+      if (num_recd > 0) recd = true;
+      cc3200_uart_rx_bytes(ds->base, irxb);
     } while (num_recd > 0);
   }
-recv_more:
-  num_recd = cc3200_uart_rx_bytes(ds->base, rxb);
-  us->stats.rx_bytes += num_recd;
-  recd = recd || (num_recd > 0);
   /* If we received something during this cycle and there is buffer space
    * available, "linger" for some more, maybe there's more to come. */
-  if (recd && rxb->avail > 0 && us->cfg->rx_linger_micros > 0) {
+  if (recd && mgos_uart_rxb_avail(us) > 0 && us->cfg->rx_linger_micros > 0) {
     /* Magic constants below are tweaked so that the loop takes at most the
      * configured number of microseconds. */
     int ctr = us->cfg->rx_linger_micros * 31 / 12;
@@ -125,24 +125,22 @@ recv_more:
 
 void mgos_uart_dev_dispatch_tx_top(struct mgos_uart_state *us) {
   struct cc3200_uart_state *ds = (struct cc3200_uart_state *) us->dev_data;
-  cs_rbuf_t *txb = &us->tx_buf;
-  while (txb->used > 0 && MAP_UARTSpaceAvail(ds->base)) {
-    uint8_t *cp;
-    if (cs_rbuf_get(txb, 1, &cp) == 1) {
-      HWREG(ds->base + UART_O_DR) = *cp;
-      cs_rbuf_consume(txb, 1);
-      us->stats.tx_bytes++;
-    }
+  struct mbuf *txb = &us->tx_buf;
+  size_t len = 0;
+  while (len < txb->len && MAP_UARTSpaceAvail(ds->base)) {
+    HWREG(ds->base + UART_O_DR) = *(txb->buf + len);
+    len++;
   }
+  mbuf_remove(txb, len);
+  us->stats.tx_bytes += len;
   MAP_UARTIntClear(ds->base, UART_TX_INTS);
 }
 
 void mgos_uart_dev_dispatch_bottom(struct mgos_uart_state *us) {
   struct cc3200_uart_state *ds = (struct cc3200_uart_state *) us->dev_data;
-  cs_rbuf_t *txb = &us->tx_buf;
   uint32_t int_ena = UART_INFO_INTS;
   if (us->rx_enabled && ds->isr_rx_buf.avail > 0) int_ena |= UART_RX_INTS;
-  if (txb->used > 0) int_ena |= UART_TX_INTS;
+  if (us->tx_buf.len > 0) int_ena |= UART_TX_INTS;
   MAP_UARTIntEnable(ds->base, int_ena);
 }
 

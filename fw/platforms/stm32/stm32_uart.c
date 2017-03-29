@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdarg.h>
 #include "fw/src/mgos_uart.h"
+#include "fw/src/mgos_utils.h"
 #include "common/cs_dbg.h"
 
 #define UART_TRANSMIT_TIMEOUT 100
@@ -37,21 +38,25 @@ void uart_dprintf(char *fmt, ...) {
   UART_Transmit(&UART_2, (uint8_t *) buf, result, UART_TRANSMIT_TIMEOUT);
 }
 
-static void move_rbuf_data(cs_rbuf_t *dst, cs_rbuf_t *src) {
-  if (dst->avail == 0 || src->used == 0) {
+static void move_rbuf_data(cs_rbuf_t *dst, struct mbuf *src) {
+  if (dst->avail == 0 || src->len == 0) {
     return;
   }
-  uint8_t *cp;
-  int len = dst->avail > src->used ? src->used : dst->avail;
-  cs_rbuf_get(src, len, &cp);
-  cs_rbuf_append(dst, cp, len);
-  cs_rbuf_consume(src, len);
+  size_t len = MIN(dst->avail, src->len);
+  cs_rbuf_append(dst, src->buf, len);
+  mbuf_remove(src, len);
 }
 
 void mgos_uart_dev_dispatch_rx_top(struct mgos_uart_state *us) {
   UART_Handle *huart = (UART_Handle *) us->dev_data;
   struct UART_State *state = get_state_by_huart(huart);
-  move_rbuf_data(&us->rx_buf, &state->rx_buf);
+  cs_rbuf_t *rxb = &state->rx_buf;
+  while (rxb->used > 0 && mgos_uart_rxb_avail(us) > 0) {
+    uint8_t *data;
+    int len = cs_rbuf_get(rxb, mgos_uart_rxb_avail(us), &data);
+    mbuf_append(&us->rx_buf, data, len);
+    cs_rbuf_consume(rxb, len);
+  }
 }
 
 void mgos_uart_dev_dispatch_bottom(struct mgos_uart_state *us) {
@@ -71,7 +76,7 @@ void mgos_uart_dev_dispatch_bottom(struct mgos_uart_state *us) {
 void mgos_uart_dev_dispatch_tx_top(struct mgos_uart_state *us) {
   UART_Handle *huart = (UART_Handle *) us->dev_data;
   struct UART_State *state = get_state_by_huart(huart);
-  if (state->tx_in_progress || us->tx_buf.used == 0) {
+  if (state->tx_in_progress || us->tx_buf.len == 0) {
     return;
   }
 

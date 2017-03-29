@@ -10,7 +10,7 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "common/cs_rbuf.h"
+#include "common/mbuf.h"
 #include "common/platform.h"
 
 #include "fw/src/mgos_init.h"
@@ -65,8 +65,8 @@ typedef void (*mgos_uart_dispatcher_t)(struct mgos_uart_state *us);
 struct mgos_uart_state {
   int uart_no;
   struct mgos_uart_config *cfg;
-  cs_rbuf_t rx_buf;
-  cs_rbuf_t tx_buf;
+  struct mbuf rx_buf;
+  struct mbuf tx_buf;
   unsigned int rx_enabled : 1;
   unsigned int write_enabled : 1;
   struct mgos_uart_stats stats;
@@ -92,6 +92,9 @@ mgos_uart_dispatcher_t mgos_uart_get_dispatcher(int uart_no);
 void mgos_uart_set_rx_enabled(int uart_no, bool enabled);
 
 /* HAL */
+
+size_t mgos_uart_rxb_avail(struct mgos_uart_state *us);
+size_t mgos_uart_txb_avail(struct mgos_uart_state *us);
 
 /* Set device-specific defaults. */
 void mgos_uart_dev_set_defaults(struct mgos_uart_config *cfg);

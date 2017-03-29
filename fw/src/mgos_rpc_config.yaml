@@ -1,5 +1,6 @@
 [
   ["rpc", "o", {title: "RPC settings"}],
   ["rpc.enable", "b", true, {title: "Enable RPC"}],
+  ["rpc.max_frame_size", "i", 4096, {title: "Max Frame Size"}],
   ["rpc.max_queue_size", "i", 25, {title: "Max Quueue Size"}],
 ]

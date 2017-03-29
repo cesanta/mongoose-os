@@ -4,6 +4,7 @@
  */
 
 #include "fw/src/mgos_rpc_channel_uart.h"
+#include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_uart.h"
 #include "fw/src/mgos_utils.h"
 
@@ -25,7 +26,6 @@ struct mg_rpc_channel_uart_data {
   unsigned int connected : 1;
   unsigned int sending : 1;
   unsigned int sending_user_frame : 1;
-  struct mbuf recv_mbuf;
   struct mbuf send_mbuf;
 };
 
@@ -53,20 +53,17 @@ void mg_rpc_channel_uart_dispatcher(struct mgos_uart_state *us) {
   struct mg_rpc_channel *ch = (struct mg_rpc_channel *) us->dispatcher_data;
   struct mg_rpc_channel_uart_data *chd =
       (struct mg_rpc_channel_uart_data *) ch->channel_data;
-  cs_rbuf_t *urxb = &us->rx_buf;
-  cs_rbuf_t *utxb = &us->tx_buf;
-  if (urxb->used > 0) {
-    uint8_t *data;
-    size_t len = cs_rbuf_get(urxb, urxb->used, &data);
-    mbuf_append(&chd->recv_mbuf, data, len);
-    cs_rbuf_consume(urxb, len);
+  struct mbuf *urxb = &us->rx_buf;
+  struct mbuf *utxb = &us->tx_buf;
+  us->cfg->rx_buf_size =
+      get_cfg()->rpc.max_frame_size + 2 * FRAME_DELIMETER_LEN;
+  if (urxb->len > 0) {
     size_t flen = 0;
     const char *end;
-    while ((end = c_strnstr(chd->recv_mbuf.buf, FRAME_DELIMETER,
-                            chd->recv_mbuf.len)) != NULL) {
-      flen = (end - chd->recv_mbuf.buf);
+    while ((end = c_strnstr(urxb->buf, FRAME_DELIMETER, urxb->len)) != NULL) {
+      flen = (end - urxb->buf);
       if (flen != 0) {
-        struct mg_str f = mg_mk_str_n((const char *) chd->recv_mbuf.buf, flen);
+        struct mg_str f = mg_mk_str_n((const char *) urxb->buf, flen);
         /*
          * EOF_CHAR is used to turn off interactive console. If the frame is
          * just EOF_CHAR by itself, we'll immediately send a frame containing
@@ -116,19 +113,19 @@ void mg_rpc_channel_uart_dispatcher(struct mgos_uart_state *us) {
           }
         }
       }
-      mbuf_remove(&chd->recv_mbuf, flen + 3);
-      if (chd->recv_mbuf.len == 0) {
-        mbuf_trim(&chd->recv_mbuf);
-      }
+      mbuf_remove(urxb, flen + FRAME_DELIMETER_LEN);
     }
-    if (chd->waiting_for_start_frame &&
-        chd->recv_mbuf.len > FRAME_DELIMETER_LEN) {
-      mbuf_remove(&chd->recv_mbuf, chd->recv_mbuf.len - FRAME_DELIMETER_LEN);
+    if (mgos_uart_rxb_avail(us) == 0) {
+      LOG(LL_ERROR, ("Incoming frame is too big, dropping."));
+      mbuf_remove(urxb, urxb->len);
+    }
+    if (chd->waiting_for_start_frame && urxb->len > FRAME_DELIMETER_LEN) {
+      mbuf_remove(urxb, urxb->len - FRAME_DELIMETER_LEN);
     }
   }
-  if (chd->sending && utxb->avail > 0) {
-    size_t len = MIN(chd->send_mbuf.len, utxb->avail);
-    cs_rbuf_append(utxb, (uint8_t *) chd->send_mbuf.buf, len);
+  if (chd->sending && mgos_uart_txb_avail(us) > 0) {
+    size_t len = MIN(chd->send_mbuf.len, mgos_uart_txb_avail(us));
+    mbuf_append(utxb, (uint8_t *) chd->send_mbuf.buf, len);
     mbuf_remove(&chd->send_mbuf, len);
     if (chd->send_mbuf.len == 0) {
       chd->sending = false;
@@ -208,7 +205,6 @@ struct mg_rpc_channel *mg_rpc_channel_uart(int uart_no,
       (struct mg_rpc_channel_uart_data *) calloc(1, sizeof(*chd));
   chd->uart_no = uart_no;
   chd->wait_for_start_frame = wait_for_start_frame;
-  mbuf_init(&chd->recv_mbuf, 0);
   mbuf_init(&chd->send_mbuf, 0);
   ch->channel_data = chd;
   LOG(LL_INFO, ("%p UART%d", ch, uart_no));

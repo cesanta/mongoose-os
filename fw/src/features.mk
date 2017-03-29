@@ -138,7 +138,7 @@ endif
 ifeq "$(MGOS_ENABLE_RPC_CHANNEL_UART)" "1"
   MGOS_SRCS += mgos_rpc_channel_uart.c
   MGOS_FEATURES += -DMGOS_ENABLE_RPC_CHANNEL_UART
-  SYS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_rpc_uart_config.yaml
+  SYS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_rpc_channel_uart_config.yaml
 endif
 ifeq "$(MGOS_ENABLE_RPC_CHANNEL_WS)" "1"
   MGOS_SRCS += mg_rpc_channel_ws.c

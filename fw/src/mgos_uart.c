@@ -38,6 +38,8 @@ void mgos_uart_dispatcher(void *arg) {
     us->dispatcher_cb(us);
   }
   mgos_uart_dev_dispatch_bottom(us);
+  if (us->rx_buf.len == 0) mbuf_trim(&us->rx_buf);
+  if (us->tx_buf.len == 0) mbuf_trim(&us->tx_buf);
   mgos_unlock();
 }
 
@@ -45,11 +47,10 @@ size_t mgos_uart_write(int uart_no, const void *buf, size_t len) {
   struct mgos_uart_state *us = s_uart_state[uart_no];
   if (us == NULL || !us->write_enabled) return 0;
   size_t n = 0;
-  cs_rbuf_t *txb = &us->tx_buf;
   while (n < len) {
     mgos_lock();
-    size_t nw = MIN(len - n, txb->avail);
-    cs_rbuf_append(txb, ((uint8_t *) buf) + n, nw);
+    size_t nw = MIN(len - n, mgos_uart_txb_avail(us));
+    mbuf_append(&us->tx_buf, ((uint8_t *) buf) + n, nw);
     mgos_unlock();
     n += nw;
     mgos_uart_flush(uart_no);
@@ -67,8 +68,7 @@ void mgos_uart_set_write_enabled(int uart_no, bool enabled) {
 void mgos_uart_flush(int uart_no) {
   struct mgos_uart_state *us = s_uart_state[uart_no];
   if (us == NULL) return;
-  cs_rbuf_t *txb = &us->tx_buf;
-  while (txb->used > 0) {
+  while (us->tx_buf.len > 0) {
     mgos_lock();
     mgos_uart_dev_dispatch_tx_top(us);
     mgos_unlock();
@@ -89,15 +89,15 @@ struct mgos_uart_state *mgos_uart_init(int uart_no,
   us->uart_no = uart_no;
   us->cfg = cfg;
   us->write_enabled = true;
-  cs_rbuf_init(&us->rx_buf, cfg->rx_buf_size);
-  cs_rbuf_init(&us->tx_buf, cfg->tx_buf_size);
+  mbuf_init(&us->rx_buf, 0);
+  mbuf_init(&us->tx_buf, 0);
   us->dispatcher_cb = cb;
   us->dispatcher_data = dispatcher_data;
   if (mgos_uart_dev_init(us)) {
     s_uart_state[uart_no] = us;
   } else {
-    cs_rbuf_deinit(&us->rx_buf);
-    cs_rbuf_deinit(&us->tx_buf);
+    mbuf_free(&us->rx_buf);
+    mbuf_free(&us->tx_buf);
     free(us);
     return NULL;
   }
@@ -116,8 +116,8 @@ void mgos_uart_deinit(int uart_no) {
   s_uart_state[uart_no] = NULL;
   mgos_remove_poll_cb(mgos_uart_dispatcher, (void *) (intptr_t) uart_no);
   mgos_uart_dev_deinit(us);
-  cs_rbuf_deinit(&us->rx_buf);
-  cs_rbuf_deinit(&us->tx_buf);
+  mbuf_free(&us->rx_buf);
+  mbuf_free(&us->tx_buf);
   free(us);
 }
 
@@ -140,6 +140,16 @@ void mgos_uart_set_rx_enabled(int uart_no, bool enabled) {
   if (us == NULL) return;
   us->rx_enabled = enabled;
   mgos_uart_dev_set_rx_enabled(us, enabled);
+}
+
+size_t mgos_uart_rxb_avail(struct mgos_uart_state *us) {
+  if (us == NULL || ((int) us->rx_buf.len) > us->cfg->rx_buf_size) return 0;
+  return us->cfg->rx_buf_size - us->rx_buf.len;
+}
+
+size_t mgos_uart_txb_avail(struct mgos_uart_state *us) {
+  if (us == NULL || ((int) us->tx_buf.len) > us->cfg->tx_buf_size) return 0;
+  return us->cfg->tx_buf_size - us->tx_buf.len;
 }
 
 struct mgos_uart_config *mgos_uart_default_config(void) {

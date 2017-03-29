@@ -82,10 +82,10 @@ IRAM NOINSTR static void esp32_handle_uart_int(void *arg) {
 
 IRAM void mgos_uart_dev_dispatch_rx_top(struct mgos_uart_state *us) {
   int uart_no = us->uart_no;
-  cs_rbuf_t *rxb = &us->rx_buf;
+  struct mbuf *rxb = &us->rx_buf;
   uint32_t rxn = 0;
   /* RX */
-  if (rxb->avail > 0 && esp32_uart_rx_fifo_len(uart_no) > 0) {
+  if (mgos_uart_rxb_avail(us) > 0 && esp32_uart_rx_fifo_len(uart_no) > 0) {
     int linger_counter = 0;
     /* 32 here is a constant measured (using system_get_time) to provide
      * linger time of rx_linger_micros. It basically means that one iteration
@@ -98,11 +98,12 @@ IRAM void mgos_uart_dev_dispatch_rx_top(struct mgos_uart_state *us) {
 #ifdef MEASURE_LINGER_TIME
     uint32_t st = system_get_time();
 #endif
-    while (rxb->avail > 0 && linger_counter <= max_linger) {
+    while (mgos_uart_rxb_avail(us) > 0 && linger_counter <= max_linger) {
       int rx_len = esp32_uart_rx_fifo_len(uart_no);
       if (rx_len > 0) {
-        while (rx_len-- > 0 && rxb->avail > 0) {
-          cs_rbuf_append_one(rxb, rx_byte(uart_no));
+        while (rx_len-- > 0 && mgos_uart_rxb_avail(us) > 0) {
+          uint8_t b = rx_byte(uart_no);
+          mbuf_append(rxb, &b, 1);
           rxn++;
         }
         if (linger_counter > 0) {
@@ -126,34 +127,29 @@ IRAM void mgos_uart_dev_dispatch_rx_top(struct mgos_uart_state *us) {
 
 IRAM void mgos_uart_dev_dispatch_tx_top(struct mgos_uart_state *us) {
   int uart_no = us->uart_no;
-  cs_rbuf_t *txb = &us->tx_buf;
+  struct mbuf *txb = &us->tx_buf;
   uint32_t txn = 0;
   /* TX */
-  if (txb->used > 0) {
-    while (txb->used > 0) {
-      int i;
-      uint8_t *data;
-      uint16_t len;
-      int tx_av = 127 - esp32_uart_tx_fifo_len(uart_no);
-      if (tx_av <= 0) break;
-      len = cs_rbuf_get(txb, tx_av, &data);
-      for (i = 0; i < len; i++, data++) {
-        tx_byte(uart_no, *data);
+  if (txb->len > 0) {
+    while (txb->len > 0) {
+      size_t tx_av = 127 - esp32_uart_tx_fifo_len(uart_no);
+      size_t len = MIN(txb->len, tx_av);
+      if (len == 0) break;
+      for (size_t i = 0; i < len; i++) {
+        tx_byte(uart_no, *(txb->buf + i));
       }
       txn += len;
-      cs_rbuf_consume(txb, len);
+      mbuf_remove(txb, len);
     }
     us->stats.tx_bytes += txn;
   }
 }
 
 IRAM void mgos_uart_dev_dispatch_bottom(struct mgos_uart_state *us) {
-  cs_rbuf_t *rxb = &us->rx_buf;
-  cs_rbuf_t *txb = &us->tx_buf;
   uint32_t int_ena = UART_INFO_INTS;
   /* Determine which interrupts we want. */
-  if (us->rx_enabled && rxb->avail > 0) int_ena |= UART_RX_INTS;
-  if (txb->used > 0) int_ena |= UART_TX_INTS;
+  if (us->rx_enabled && mgos_uart_rxb_avail(us)) int_ena |= UART_RX_INTS;
+  if (us->tx_buf.len > 0) int_ena |= UART_TX_INTS;
   WRITE_PERI_REG(UART_INT_ENA_REG(us->uart_no), int_ena);
 }
 
