@@ -12,7 +12,7 @@ BUILD_DIR = .build
 COMMON_STUB_DIR = ../../esp
 STUB_ELF = $(BUILD_DIR)/$(patsubst %.c,%.elf,$(notdir $(STUB)))
 STUB_JSON ?= $(BUILD_DIR)/$(patsubst %.c,%.json,$(notdir $(STUB)))
-SDK = docker.cesanta.com/esp32-build:1.0-r11
+SDK = $(shell cat ../../../../fw/platforms/esp32/sdk.version)
 XT_CC = xtensa-esp32-elf-gcc
 
 .PHONY: all clean run wrap

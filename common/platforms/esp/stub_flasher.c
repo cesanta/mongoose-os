@@ -41,8 +41,9 @@ uint32_t params[1] __attribute__((section(".params")));
 #define FLASH_SECTOR_SIZE 4096
 #define FLASH_PAGE_SIZE 256
 
+/* These consts should be in sync with flasher_client.go */
 #define UART_BUF_SIZE (8 * FLASH_SECTOR_SIZE)
-#define FLASH_WRITE_SIZE 512
+#define FLASH_WRITE_SIZE FLASH_SECTOR_SIZE
 
 #define UART_RX_INTS (UART_RXFIFO_FULL_INT_ENA | UART_RXFIFO_TOUT_INT_ENA)
 
@@ -89,15 +90,34 @@ struct uart_buf {
   uint8_t *pr, *pw;
 };
 
+uint32_t ccount(void) {
+  uint32_t r;
+  __asm volatile("rsr.ccount %0" : "=a"(r));
+  return r;
+}
+
+struct write_progress {
+  uint32_t num_written;
+  uint32_t buf_level;
+};
+
+struct write_result {
+  uint32_t wait_time;
+  uint32_t write_time;
+  uint32_t erase_time;
+  uint32_t total_time;
+  uint8_t digest[16];
+};
+
 static struct uart_buf ub;
 
 void uart_isr(void *arg) {
   uint32_t int_st = READ_PERI_REG(UART_INT_ST_REG(0));
-  while (1) {
-    uint32_t fifo_len = READ_PERI_REG(UART_STATUS_REG(0)) & 0xff;
-    if (fifo_len == 0) break;
-    while (fifo_len-- > 0) {
-      uint8_t byte = READ_PERI_REG(UART_FIFO_REG(0)) & 0xff;
+  uint8_t fifo_len;
+  while ((fifo_len = READ_PERI_REG(UART_STATUS_REG(0))) > 0 &&
+         ub.nr < UART_BUF_SIZE) {
+    while (fifo_len-- > 0 && ub.nr < UART_BUF_SIZE) {
+      uint8_t byte = READ_PERI_REG(UART_FIFO_REG(0));
       *ub.pw++ = byte;
       ub.nr++;
       if (ub.pw >= ub.data + UART_BUF_SIZE) ub.pw = ub.data;
@@ -108,8 +128,7 @@ void uart_isr(void *arg) {
 }
 
 int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
-  uint8_t digest[16];
-  uint32_t num_written = 0, num_erased = 0;
+  uint32_t num_erased = 0;
   struct MD5Context ctx;
   MD5Init(&ctx);
 
@@ -120,17 +139,27 @@ int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
   ub.nr = 0;
   ub.pr = ub.pw = ub.data;
   ets_isr_attach(ETS_UART0_INUM, uart_isr, &ub);
+  uint32_t saved_conf1 = READ_PERI_REG(UART_CONF1_REG(0));
+  /* Reduce frequency of UART interrupts */
+  WRITE_PERI_REG(UART_CONF1_REG(0), UART_RX_TOUT_EN |
+                                        (20 << UART_RX_TOUT_THRHD_S) |
+                                        (100 << UART_RXFIFO_FULL_THRHD_S));
   SET_PERI_REG_MASK(UART_INT_ENA_REG(0), UART_RX_INTS);
   ets_isr_unmask(1 << ETS_UART0_INUM);
 
-  SLIP_send(&num_written, 4);
+  struct write_result wr;
+  memset(&wr, 0, sizeof(wr));
 
-  while (num_written < len) {
+  struct write_progress wp = {.num_written = 0, .buf_level = ub.nr};
+  SLIP_send(&wp, sizeof(wp));
+  wr.total_time = ccount();
+  while (wp.num_written < len) {
     volatile uint32_t *nr = &ub.nr;
     /* Prepare the space ahead. */
-    while (erase && num_erased < num_written + FLASH_WRITE_SIZE) {
+    uint32_t start_count = ccount();
+    while (erase && num_erased < wp.num_written + FLASH_WRITE_SIZE) {
       const uint32_t num_left = (len - num_erased);
-      if (num_left > FLASH_BLOCK_SIZE && addr % FLASH_BLOCK_SIZE == 0) {
+      if (num_left >= FLASH_BLOCK_SIZE && addr % FLASH_BLOCK_SIZE == 0) {
         if (SPIEraseBlock(addr / FLASH_BLOCK_SIZE) != 0) return 0x35;
         num_erased += FLASH_BLOCK_SIZE;
       } else {
@@ -139,25 +168,33 @@ int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
         num_erased += FLASH_SECTOR_SIZE;
       }
     }
+    wr.erase_time += ccount() - start_count;
+    start_count = ccount();
     /* Wait for data to arrive. */
+    wp.buf_level = *nr;
     while (*nr < FLASH_WRITE_SIZE) {
     }
+    wr.wait_time += ccount() - start_count;
     MD5Update(&ctx, ub.pr, FLASH_WRITE_SIZE);
+    start_count = ccount();
     if (SPIWrite(addr, (uint32_t *) ub.pr, FLASH_WRITE_SIZE) != 0) return 0x37;
+    wr.write_time += ccount() - start_count;
     ets_intr_lock();
     *nr -= FLASH_WRITE_SIZE;
     ets_intr_unlock();
-    num_written += FLASH_WRITE_SIZE;
     addr += FLASH_WRITE_SIZE;
     ub.pr += FLASH_WRITE_SIZE;
     if (ub.pr >= ub.data + UART_BUF_SIZE) ub.pr = ub.data;
-    SLIP_send(&num_written, 4);
+    wp.num_written += FLASH_WRITE_SIZE;
+    SLIP_send(&wp, sizeof(wp));
   }
 
   ets_isr_mask(1 << ETS_UART0_INUM);
+  WRITE_PERI_REG(UART_CONF1_REG(0), saved_conf1);
+  MD5Final(wr.digest, &ctx);
 
-  MD5Final(digest, &ctx);
-  SLIP_send(digest, 16);
+  wr.total_time = ccount() - wr.total_time;
+  SLIP_send(&wr, sizeof(wr));
 
   return 0;
 }
@@ -311,6 +348,7 @@ void stub_main(void) {
 /* Selects SPI functions for flash pins. */
 #if defined(ESP8266)
   SelectSpiFunction();
+  SET_PERI_REG_MASK(0x3FF00014, 1); /* Switch to 160 MHz */
 #elif defined(ESP32)
   spi_flash_attach(0, 0);
 #endif

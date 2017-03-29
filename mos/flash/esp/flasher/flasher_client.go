@@ -25,11 +25,12 @@ const (
 	blockEraseTimeout = 5 * time.Second
 )
 
-// These consts should be in sync with stub_flasher.c
 const (
+	FLASH_BLOCK_SIZE  = 65536
 	FLASH_SECTOR_SIZE = 4096
-	UART_BUF_SIZE     = (8 * FLASH_SECTOR_SIZE)
-	FLASH_WRITE_SIZE  = 512
+	// These consts should be in sync with stub_flasher.c
+	UART_BUF_SIZE    = 8 * FLASH_SECTOR_SIZE
+	FLASH_WRITE_SIZE = FLASH_SECTOR_SIZE
 )
 
 /* Decls from stub_flasher.h */
@@ -187,6 +188,14 @@ func (fc *FlasherClient) EraseChip() error {
 	return err
 }
 
+type writeResult struct {
+	waitTime  uint32
+	writeTime uint32
+	eraseTime uint32
+	totalTime uint32
+	digest    [md5.Size]byte
+}
+
 func (fc *FlasherClient) Write(addr uint32, data []byte, erase bool) error {
 	if !fc.connected {
 		return errors.New("not connected")
@@ -201,17 +210,19 @@ func (fc *FlasherClient) Write(addr uint32, data []byte, erase bool) error {
 		return errors.Trace(err)
 	}
 	var numSent, numWritten uint32
-	h := md5.New()
 	for numWritten < uint32(len(data)) {
 		buf := make([]byte, 16)
 		n, err := fc.srw.Read(buf)
 		if err != nil {
 			return errors.Annotatef(err, "flash write failed @ %d/%d", numWritten, numSent)
 		}
-		if n != 4 {
+		if n != 8 {
 			return errors.Errorf("unexpected result packet %q", buf[:n])
 		}
-		binary.Read(bytes.NewBuffer(buf), binary.LittleEndian, &numWritten)
+		var bufLevel uint32
+		bb := bytes.NewBuffer(buf)
+		binary.Read(bb, binary.LittleEndian, &numWritten)
+		binary.Read(bb, binary.LittleEndian, &bufLevel)
 		for numSent < uint32(len(data)) {
 			inFlight := numSent - numWritten
 			canSend := int(UART_BUF_SIZE - FLASH_WRITE_SIZE - inFlight)
@@ -227,24 +238,38 @@ func (fc *FlasherClient) Write(addr uint32, data []byte, erase bool) error {
 			if err != nil {
 				return errors.Annotatef(err, "flash write failed @ %d/%d", numWritten, numSent)
 			}
-			h.Write(data[numSent : int(numSent)+ns])
 			numSent += uint32(ns)
 			glog.V(3).Infof("=> %d; %d/%d/%d", ns, numWritten, numSent, len(data))
 		}
 	}
-	digest, err := fc.recvResponse()
+	tail, err := fc.recvResponse()
 	if err != nil {
-		return errors.Annotatef(err, "failed to read digest")
+		return errors.Annotatef(err, "failed to read digest and stats")
 	}
-	expectedDigest := h.Sum(nil)
-	expectedDigestHex := strings.ToLower(hex.EncodeToString(expectedDigest))
-	if len(digest) != 1 || len(digest[0]) != 16 {
-		return errors.Errorf("unexpected digest packet %+v", digest)
+	if len(tail) != 1 || len(tail[0]) != 4*4+md5.Size {
+		return errors.Errorf("unexpected digest packet %+v", tail)
 	}
-	digestHex := strings.ToLower(hex.EncodeToString(digest[0]))
+	sdb := bytes.NewBuffer(tail[0])
+	var result writeResult
+	binary.Read(sdb, binary.LittleEndian, &result.waitTime)
+	binary.Read(sdb, binary.LittleEndian, &result.writeTime)
+	binary.Read(sdb, binary.LittleEndian, &result.eraseTime)
+	binary.Read(sdb, binary.LittleEndian, &result.totalTime)
+	sdb.Read(result.digest[:])
+	expectedDigest := md5.Sum(data)
+	expectedDigestHex := strings.ToLower(hex.EncodeToString(expectedDigest[:]))
+	digestHex := strings.ToLower(hex.EncodeToString(result.digest[:]))
 	if digestHex != expectedDigestHex {
 		return errors.Errorf("digest mismatch: expected %s, got %s", expectedDigestHex, digestHex)
 	}
+	miscTime := result.totalTime - result.waitTime - result.eraseTime - result.writeTime
+	glog.Infof("Write stats: waitTime:%.2f writeTime:%.2f eraseTime:%.2f miscTime:%.2f totalTime:%d",
+		float64(result.waitTime)/float64(result.totalTime),
+		float64(result.writeTime)/float64(result.totalTime),
+		float64(result.eraseTime)/float64(result.totalTime),
+		float64(miscTime)/float64(result.totalTime),
+		result.totalTime,
+	)
 	return nil
 }
 

@@ -87,6 +87,7 @@ MAKE_APP_PATH=$(DOCKER_APP_PATH)$(APP_SUBDIR)
 MAKE_MGOS_PATH=$(DOCKER_MGOS_PATH)
 INNER_MAKE=make
 all clean menuconfig:
+	@echo Using $(SDK_VERSION)
 	@docker run --rm -i --tty=$T \
 	  -v $(APP_MOUNT_PATH):$(DOCKER_APP_PATH) \
 	  -v $(MGOS_PATH_ABS):$(DOCKER_MGOS_PATH) \
