@@ -26,7 +26,7 @@ serial device,  e.g. `--port COM3` on Windows or `--port /dev/ttyUSB0` on Linux.
 You might need to install a USB-to-Serial driver on your OS:
 
 - [FTDI drivers](http://www.ftdichip.com/Drivers/VCP.htm) for CC3200
-- [Silabds drivers](https://www.silabs.com/products/mcu/Pages/USBtoUARTBridgeVCPDrivers.aspx) for Espressif boards
+- [Silabs drivers](https://www.silabs.com/products/mcu/Pages/USBtoUARTBridgeVCPDrivers.aspx) for Espressif boards
 
 It is possible to set `--port` value to be a network endpoint instead of
 serial port. Device listens for commands on serial, Websocket, and MQTT
