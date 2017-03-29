@@ -17,7 +17,11 @@
 #include "fw/src/mgos_mqtt.h"
 #include "fw/src/mgos_sys_config.h"
 
-#define CHANNEL_OPEN MG_F_USER_1
+#define CH_FLAGS(ch) ((uintptr_t)(ch)->channel_data)
+#define CH_FLAGS_SET(ch, v) (ch)->channel_data = (void *) (uintptr_t)(v)
+#define CH_F_SUB1_ACKED 1
+#define CH_F_SUB2_ACKED 2
+#define CHANNEL_OPEN (CH_F_SUB1_ACKED | CH_F_SUB2_ACKED)
 
 static char *mgos_rpc_mqtt_topic_name(const struct mg_str device_id,
                                       bool wildcard) {
@@ -29,14 +33,13 @@ static char *mgos_rpc_mqtt_topic_name(const struct mg_str device_id,
 
 static void mgos_rpc_mqtt_sub_handler(struct mg_connection *nc, int ev,
                                       void *ev_data, void *user_data) {
-#if !MG_ENABLE_CALLBACK_USERDATA
-  void *user_data = nc->user_data;
-#endif
   struct mg_rpc_channel *ch = (struct mg_rpc_channel *) user_data;
   if (ev == MG_EV_MQTT_SUBACK) {
-    if (!(nc->flags & CHANNEL_OPEN)) {
+    if (!(CH_FLAGS(ch) & CH_F_SUB1_ACKED)) {
+      CH_FLAGS_SET(ch, CH_FLAGS(ch) | CH_F_SUB1_ACKED);
+    } else if (!(CH_FLAGS(ch) & CH_F_SUB2_ACKED)) {
       /* Ideally we should wait for both subscriptions, but - meh. */
-      nc->flags |= CHANNEL_OPEN;
+      CH_FLAGS_SET(ch, CH_FLAGS(ch) | CH_F_SUB2_ACKED);
       ch->ev_handler(ch, MG_RPC_CHANNEL_OPEN, NULL);
     }
     return;
@@ -65,13 +68,11 @@ static void mgos_rpc_mqtt_sub_handler(struct mg_connection *nc, int ev,
 
 static void mgos_rpc_mqtt_handler(struct mg_connection *nc, int ev,
                                   void *ev_data, void *user_data) {
-#if !MG_ENABLE_CALLBACK_USERDATA
-  void *user_data = nc->user_data;
-#endif
   struct mg_rpc_channel *ch = (struct mg_rpc_channel *) user_data;
   if (ev == MG_EV_CLOSE) {
     if (nc->flags & CHANNEL_OPEN) {
       ch->ev_handler(ch, MG_RPC_CHANNEL_CLOSED, NULL);
+      CH_FLAGS_SET(ch, CH_FLAGS(ch) & ~CHANNEL_OPEN);
     }
   }
   (void) ev_data;
