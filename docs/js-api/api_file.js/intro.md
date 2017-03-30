@@ -30,3 +30,7 @@ items:
  File.write(JSON.stringify(obj, 'settings.json'));
  ```
 
+
+
+ if (n <= 0) break;
+

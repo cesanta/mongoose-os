@@ -64,7 +64,7 @@ let GPIO = {
   // Return value: 1 in case of success, 0 otherwise.
   // Example:
   // ```javascript
-  // GPIO.set_button_handler(pin, GPIO.PULL_UP, GPIO.INT_EDGE_NEG, 50, function(x) {
+  // GPIO.set_button_handler(pin, GPIO.PULL_UP, GPIO.INT_EDGE_NEG, 200, function(x) {
   //   print('Button press, pin: ', x);
   // }, null);
   // ```
