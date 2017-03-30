@@ -6,6 +6,7 @@ generate version.go version.json:
 	@go install cesanta.com/vendor/github.com/jteeuwen/go-bindata/go-bindata
 	@go install cesanta.com/vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
 	@go generate
+	@gofmt -w bindata_assetfs.go
 	@cat version.json
 	@echo
 
