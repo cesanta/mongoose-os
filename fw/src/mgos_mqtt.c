@@ -69,9 +69,6 @@ static void call_global_handlers(struct mg_connection *nc, int ev,
 
 static void mgos_mqtt_ev(struct mg_connection *nc, int ev, void *ev_data,
                          void *user_data) {
-#if !MG_ENABLE_CALLBACK_USERDATA
-  void *user_data = nc->user_data;
-#endif
   if (ev > MG_MQTT_EVENT_BASE) {
     LOG(LL_DEBUG, ("MQTT event: %d", ev));
   }
@@ -285,9 +282,6 @@ struct sub_data {
 
 static void mqttsubtrampoline(struct mg_connection *c, int ev, void *ev_data,
                               void *user_data) {
-#if !MG_ENABLE_CALLBACK_USERDATA
-  void *user_data = c->user_data;
-#endif
   if (ev != MG_EV_MQTT_PUBLISH) return;
   struct sub_data *sd = (struct sub_data *) user_data;
   struct mg_mqtt_message *mm = (struct mg_mqtt_message *) ev_data;

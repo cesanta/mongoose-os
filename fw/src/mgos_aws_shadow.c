@@ -185,9 +185,6 @@ static bool is_our_token(const struct aws_shadow_state *ss,
 
 static void mgos_aws_shadow_ev(struct mg_connection *nc, int ev, void *ev_data,
                                void *user_data) {
-#if !MG_ENABLE_CALLBACK_USERDATA
-  void *user_data = nc->user_data;
-#endif
   struct aws_shadow_state *ss = (struct aws_shadow_state *) user_data;
   mgos_lock();
   switch (ev) {

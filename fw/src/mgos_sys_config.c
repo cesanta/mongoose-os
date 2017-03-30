@@ -215,9 +215,7 @@ static void conf_handler(struct mg_connection *c, int ev, void *p,
   c->flags |= MG_F_SEND_AND_CLOSE;
   mbuf_free(&jsmb);
   free(msg);
-#if MG_ENABLE_CALLBACK_USERDATA
   (void) user_data;
-#endif
 }
 
 static void reboot_handler(struct mg_connection *c, int ev, void *p,
@@ -227,9 +225,7 @@ static void reboot_handler(struct mg_connection *c, int ev, void *p,
   LOG(LL_DEBUG, ("Reboot requested"));
   mg_send_head(c, 200, 0, JSON_HEADERS);
   c->flags |= (MG_F_SEND_AND_CLOSE | MGOS_F_RELOAD_CONFIG);
-#if MG_ENABLE_CALLBACK_USERDATA
   (void) user_data;
-#endif
 }
 
 static void ro_vars_handler(struct mg_connection *c, int ev, void *p,
@@ -239,9 +235,7 @@ static void ro_vars_handler(struct mg_connection *c, int ev, void *p,
   struct http_message *hm = (struct http_message *) p;
   send_cfg(&s_ro_vars, sys_ro_vars_schema(), hm, c);
   c->flags |= MG_F_SEND_AND_CLOSE;
-#if MG_ENABLE_CALLBACK_USERDATA
   (void) user_data;
-#endif
 }
 #endif /* MGOS_ENABLE_WEB_CONFIG */
 

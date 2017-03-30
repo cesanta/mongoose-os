@@ -18,9 +18,6 @@
 static void fw_download_handler(struct mg_connection *c, int ev, void *p,
                                 void *user_data) {
   struct mbuf *io = &c->recv_mbuf;
-#if !MG_ENABLE_CALLBACK_USERDATA
-  void *user_data = nc->user_data;
-#endif
   struct update_context *ctx = (struct update_context *) user_data;
   int res = 0;
   struct mg_str *loc;
@@ -161,9 +158,6 @@ void mgos_updater_http_start(struct update_context *ctx, const char *url) {
     return;
   }
 
-#if !MG_ENABLE_CALLBACK_USERDATA
-  c->user_data = ctx;
-#endif
   ctx->nc = c;
 }
 
