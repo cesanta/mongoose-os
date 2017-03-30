@@ -118,9 +118,9 @@ const (
 	KeyTypeNonECC         = "NonECC"
 )
 
-func parseSlotConfig(num int, scv uint16) SlotConfig {
+func parseSlotConfig(num int, scv uint16, kc *KeyConfig) SlotConfig {
 	sc := SlotConfig{}
-	if num < 8 {
+	if kc.Private {
 		pkc := &PrivateKeySlotConfig{}
 		pkc.ExtSignEnable = (scv&1 != 0)
 		pkc.IntSignEnable = (scv&2 != 0)
@@ -150,7 +150,7 @@ func parseLockMode(b uint8) (LockMode, error) {
 	}
 }
 
-func parseKeyConfig(kcv uint16) (*KeyConfig, error) {
+func parseKeyConfig(num int, kcv uint16) (*KeyConfig, error) {
 	var err error
 	kc := &KeyConfig{}
 	kc.Private = (kcv&1 != 0)
@@ -158,6 +158,9 @@ func parseKeyConfig(kcv uint16) (*KeyConfig, error) {
 	kc.KeyType, err = parseKeyType(uint8((kcv >> 2) & 0x7))
 	if err != nil {
 		return nil, err
+	}
+	if num > 7 && (kc.KeyType == KeyTypeECC || kc.Private) {
+		return nil, errors.Errorf("only slots 0-7 can be used for ECC keys (slot: %d)", num)
 	}
 	kc.Lockable = (kcv&0x20 != 0)
 	kc.ReqRandom = (kcv&0x40 != 0)
@@ -182,6 +185,9 @@ func ParseBinaryConfig(cd []byte) (*Config, error) {
 	cb := bytes.NewBuffer(cd)
 	var b uint8
 	var err error
+	if len(cd) != ConfigSize {
+		return nil, errors.Errorf("expected %d bytes, got %d", ConfigSize, len(cd))
+	}
 	c := &Config{}
 	c.SerialNum = make([]byte, 9)
 	cb.Read(c.SerialNum[0:4])
@@ -202,10 +208,10 @@ func ParseBinaryConfig(cd []byte) (*Config, error) {
 	} else {
 		c.ChipMode.WatchDogDuration = Watchdog1
 	}
+	var scvs [16]uint16
 	for i := 0; i < 16; i++ {
-		var scv uint16
-		binary.Read(cb, binary.LittleEndian, &scv)
-		c.SlotInfo = append(c.SlotInfo, SlotInfo{Num: uint8(i), SlotConfig: parseSlotConfig(i, scv)})
+		// We need to know slot's KeyConfig.Private setting to know how to parse SlotConfig.ReadKey.
+		binary.Read(cb, binary.LittleEndian, &scvs[i])
 	}
 	binary.Read(cb, binary.BigEndian, &c.Counter0)
 	binary.Read(cb, binary.BigEndian, &c.Counter1)
@@ -236,11 +242,15 @@ func ParseBinaryConfig(cd []byte) (*Config, error) {
 	for i := 0; i < 16; i++ {
 		var kcv uint16
 		binary.Read(cb, binary.LittleEndian, &kcv)
-		kc, err := parseKeyConfig(kcv)
+		kc, err := parseKeyConfig(i, kcv)
 		if err != nil {
 			return nil, errors.Annotatef(err, "KeyConfig %d", i)
 		}
-		c.SlotInfo[i].KeyConfig = *kc
+		c.SlotInfo = append(c.SlotInfo, SlotInfo{
+			Num:        uint8(i),
+			SlotConfig: parseSlotConfig(i, scvs[i], kc),
+			KeyConfig:  *kc,
+		})
 	}
 	return c, nil
 }
@@ -248,7 +258,7 @@ func ParseBinaryConfig(cd []byte) (*Config, error) {
 func writeSlotConfig(cb *bytes.Buffer, si SlotInfo) error {
 	var scv uint16
 	sc := &si.SlotConfig
-	if si.Num < 8 {
+	if si.KeyConfig.Private {
 		pkc := sc.PrivateKeySlotConfig
 		if pkc == nil {
 			return errors.Errorf("no PrivateKeyConfig")
