@@ -90,7 +90,7 @@ static int find_inactive_slot(const esp_partition_t **cur_app_partition,
   *cur_fs_partition = esp32_find_fs_for_app_slot(slot);
   /* Find next OTA slot */
   do {
-    slot = (slot + 1) & ESP_PARTITION_SUBTYPE_APP_OTA_MAX;
+    slot = (slot + 1) & (ESP_PARTITION_SUBTYPE_APP_OTA_MAX - 1);
     esp_partition_subtype_t subtype = ESP_PARTITION_SUBTYPE_OTA(slot);
     if (subtype == (*cur_app_partition)->subtype) break;
     *new_app_partition =
