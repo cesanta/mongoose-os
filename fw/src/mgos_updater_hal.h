@@ -20,16 +20,16 @@
 extern "C" {
 #endif /* __cplusplus */
 
-struct mgos_upd_dev_ctx *mgos_upd_dev_ctx_create(void);
+struct mgos_upd_hal_ctx *mgos_upd_hal_ctx_create(void);
 
-const char *mgos_upd_get_status_msg(struct mgos_upd_dev_ctx *ctx);
+const char *mgos_upd_get_status_msg(struct mgos_upd_hal_ctx *ctx);
 
 /*
  * Process the firmware manifest. Parsed manifest is available in ctx->manifest,
  * and for convenience the "parts" key within it is in ctx->parts.
  * Return >= 0 if ok, < 0 + ctx->status_msg on error.
  */
-int mgos_upd_begin(struct mgos_upd_dev_ctx *ctx, struct json_token *parts);
+int mgos_upd_begin(struct mgos_upd_hal_ctx *ctx, struct json_token *parts);
 
 /*
  * Decide what to do with the next file.
@@ -41,13 +41,13 @@ enum mgos_upd_file_action {
   MGOS_UPDATER_SKIP_FILE,
 };
 enum mgos_upd_file_action mgos_upd_file_begin(
-    struct mgos_upd_dev_ctx *ctx, const struct mgos_upd_file_info *fi);
+    struct mgos_upd_hal_ctx *ctx, const struct mgos_upd_file_info *fi);
 
 /*
  * Process batch of file data. Return number of bytes processed (0 .. data.len)
  * or < 0 for error. In case of error, message should be provided in status_msg.
  */
-int mgos_upd_file_data(struct mgos_upd_dev_ctx *ctx,
+int mgos_upd_file_data(struct mgos_upd_hal_ctx *ctx,
                        const struct mgos_upd_file_info *fi, struct mg_str data);
 
 /*
@@ -56,16 +56,16 @@ int mgos_upd_file_data(struct mgos_upd_dev_ctx *ctx,
  * Value equal to data.len is an indication of success,
  * < 0 + ctx->status_msg on error.
  */
-int mgos_upd_file_end(struct mgos_upd_dev_ctx *ctx,
+int mgos_upd_file_end(struct mgos_upd_hal_ctx *ctx,
                       const struct mgos_upd_file_info *fi, struct mg_str data);
 
 /*
  * Finalize the update.
  * Return >= 0 if ok, < 0 + ctx->status_msg on error.
  */
-int mgos_upd_finalize(struct mgos_upd_dev_ctx *ctx);
+int mgos_upd_finalize(struct mgos_upd_hal_ctx *ctx);
 
-void mgos_upd_dev_ctx_free(struct mgos_upd_dev_ctx *ctx);
+void mgos_upd_hal_ctx_free(struct mgos_upd_hal_ctx *ctx);
 
 /* Apply update on first boot, usually involves merging filesystem. */
 int mgos_upd_apply_update();

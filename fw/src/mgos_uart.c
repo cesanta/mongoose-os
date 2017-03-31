@@ -33,12 +33,12 @@ void mgos_uart_dispatcher(void *arg) {
   struct mgos_uart_state *us = s_uart_state[uart_no];
   if (us == NULL) return;
   mgos_lock();
-  if (us->rx_enabled) mgos_uart_dev_dispatch_rx_top(us);
-  mgos_uart_dev_dispatch_tx_top(us);
+  if (us->rx_enabled) mgos_uart_hal_dispatch_rx_top(us);
+  mgos_uart_hal_dispatch_tx_top(us);
   if (us->dispatcher_cb != NULL) {
     us->dispatcher_cb(us);
   }
-  mgos_uart_dev_dispatch_bottom(us);
+  mgos_uart_hal_dispatch_bottom(us);
   if (us->rx_buf.len == 0) mbuf_trim(&us->rx_buf);
   if (us->tx_buf.len == 0) mbuf_trim(&us->tx_buf);
   mgos_unlock();
@@ -71,10 +71,10 @@ void mgos_uart_flush(int uart_no) {
   if (us == NULL) return;
   while (us->tx_buf.len > 0) {
     mgos_lock();
-    mgos_uart_dev_dispatch_tx_top(us);
+    mgos_uart_hal_dispatch_tx_top(us);
     mgos_unlock();
   }
-  mgos_uart_dev_flush_fifo(us);
+  mgos_uart_hal_flush_fifo(us);
 }
 
 struct mgos_uart_state *mgos_uart_init(int uart_no,
@@ -94,7 +94,7 @@ struct mgos_uart_state *mgos_uart_init(int uart_no,
   mbuf_init(&us->tx_buf, 0);
   us->dispatcher_cb = cb;
   us->dispatcher_data = dispatcher_data;
-  if (mgos_uart_dev_init(us)) {
+  if (mgos_uart_hal_init(us)) {
     s_uart_state[uart_no] = us;
   } else {
     mbuf_free(&us->rx_buf);
@@ -111,7 +111,7 @@ void mgos_uart_deinit(int uart_no) {
   if (us == NULL) return;
   s_uart_state[uart_no] = NULL;
   mgos_remove_poll_cb(mgos_uart_dispatcher, (void *) (intptr_t) uart_no);
-  mgos_uart_dev_deinit(us);
+  mgos_uart_hal_deinit(us);
   mbuf_free(&us->rx_buf);
   mbuf_free(&us->tx_buf);
   free(us);
@@ -135,7 +135,7 @@ void mgos_uart_set_rx_enabled(int uart_no, bool enabled) {
   struct mgos_uart_state *us = s_uart_state[uart_no];
   if (us == NULL) return;
   us->rx_enabled = enabled;
-  mgos_uart_dev_set_rx_enabled(us, enabled);
+  mgos_uart_hal_set_rx_enabled(us, enabled);
 }
 
 size_t mgos_uart_rxb_avail(int uart_no) {
@@ -160,6 +160,6 @@ struct mgos_uart_config *mgos_uart_default_config(void) {
   cfg->baud_rate = 115200;
   cfg->rx_buf_size = cfg->tx_buf_size = 256;
   cfg->rx_linger_micros = 15;
-  mgos_uart_dev_set_defaults(cfg);
+  mgos_uart_hal_set_defaults(cfg);
   return cfg;
 }

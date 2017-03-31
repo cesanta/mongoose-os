@@ -33,19 +33,19 @@ IRAM static void esp32_gpio_isr(void *arg) {
   for (uint32_t i = 0, mask = 1; i < 32; i++, mask <<= 1) {
     if (s_int_ena[i] == 0 || !(int_st & mask)) continue;
     GPIO.pin[i].int_ena = 0;
-    mgos_gpio_dev_int_cb(i);
+    mgos_gpio_hal_int_cb(i);
   }
   GPIO.status_w1tc = int_st;
   int_st = GPIO.status1.intr_st;
   for (uint32_t i = 32, mask = 1; i < MGOS_NUM_GPIO; i++, mask <<= 1) {
     if (s_int_ena[i] == 0 || !(int_st & mask)) continue;
     GPIO.pin[i].int_ena = 0;
-    mgos_gpio_dev_int_cb(i);
+    mgos_gpio_hal_int_cb(i);
   }
   GPIO.status1_w1tc.intr_st = int_st;
 }
 
-IRAM void mgos_gpio_dev_int_done(int pin) {
+IRAM void mgos_gpio_hal_int_done(int pin) {
   GPIO.pin[pin].int_ena = s_int_ena[pin];
 }
 
@@ -110,7 +110,7 @@ bool mgos_gpio_toggle(int pin) {
   return !cur_out;
 }
 
-bool mgos_gpio_dev_set_int_mode(int pin, enum mgos_gpio_int_mode mode) {
+bool mgos_gpio_hal_set_int_mode(int pin, enum mgos_gpio_int_mode mode) {
   gpio_int_type_t it;
   switch (mode) {
     case MGOS_GPIO_INT_NONE:
@@ -160,7 +160,7 @@ void esp32_nsleep100_240(uint32_t n);
 void (*mgos_nsleep100)(uint32_t n);
 uint32_t mgos_bitbang_n100_cal;
 
-enum mgos_init_result mgos_gpio_dev_init() {
+enum mgos_init_result mgos_gpio_hal_init() {
   esp_err_t r = gpio_isr_register(esp32_gpio_isr, NULL, 0, &s_int_handle);
   if (r != ESP_OK) return MGOS_INIT_GPIO_INIT_FAILED;
   r = esp_intr_enable(s_int_handle);

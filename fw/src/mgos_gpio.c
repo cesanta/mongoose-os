@@ -31,7 +31,7 @@ static void mgos_gpio_int_cb(void *arg);
 static void mgos_gpio_int_done_cb(void *arg);
 
 /* In ISR context */
-IRAM void mgos_gpio_dev_int_cb(int pin) {
+IRAM void mgos_gpio_hal_int_cb(int pin) {
   struct mgos_gpio_state *s = &s_state[pin];
   if (s->cb_pending || s->cb == NULL) return;
   if (mgos_invoke_cb(mgos_gpio_int_cb, (void *) (intptr_t) pin,
@@ -42,7 +42,7 @@ IRAM void mgos_gpio_dev_int_cb(int pin) {
      * Hopefully it wasn't a level-triggered intr or we'll get into a loop.
      * But what else can we do?
      */
-    mgos_gpio_dev_int_done(pin);
+    mgos_gpio_hal_int_done(pin);
   }
 }
 
@@ -64,13 +64,13 @@ static void mgos_gpio_int_done_cb(void *arg) {
   struct mgos_gpio_state *s = (struct mgos_gpio_state *) &s_state[pin];
   if (!s->cb_pending) return;
   s->cb_pending = false;
-  mgos_gpio_dev_int_done(pin);
+  mgos_gpio_hal_int_done(pin);
 }
 
 bool mgos_gpio_set_int_handler(int pin, enum mgos_gpio_int_mode mode,
                                mgos_gpio_int_handler_f cb, void *arg) {
   if (pin < 0 || pin > MGOS_NUM_GPIO) return false;
-  if (!mgos_gpio_dev_set_int_mode(pin, mode)) return false;
+  if (!mgos_gpio_hal_set_int_mode(pin, mode)) return false;
   if (mode == MGOS_GPIO_INT_NONE) return true;
   struct mgos_gpio_state *s = (struct mgos_gpio_state *) &s_state[pin];
   s->cb = cb;
@@ -110,5 +110,5 @@ bool mgos_gpio_set_button_handler(int pin, enum mgos_gpio_pull_type pull_type,
 }
 
 enum mgos_init_result mgos_gpio_init() {
-  return mgos_gpio_dev_init();
+  return mgos_gpio_hal_init();
 }

@@ -35,7 +35,7 @@ static struct stm32_gpio_def *get_pin_def(int pin) {
   return def;
 }
 
-enum mgos_init_result mgos_gpio_dev_init(void) {
+enum mgos_init_result mgos_gpio_hal_init(void) {
   /* Do nothing here */
   return MGOS_INIT_OK;
 }
@@ -82,7 +82,7 @@ bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
   return true;
 }
 
-void mgos_gpio_dev_int_done(int pin) {
+void mgos_gpio_hal_int_done(int pin) {
   struct stm32_gpio_def *def = get_pin_def(pin);
   if (def == NULL) {
     return;
@@ -92,7 +92,7 @@ void mgos_gpio_dev_int_done(int pin) {
   }
 }
 
-bool mgos_gpio_dev_set_int_mode(int pin, enum mgos_gpio_int_mode mode) {
+bool mgos_gpio_hal_set_int_mode(int pin, enum mgos_gpio_int_mode mode) {
   struct stm32_gpio_def *def = get_pin_def(pin);
   if (def == NULL) {
     return false;
@@ -151,7 +151,7 @@ void mgos_gpio_irq_handler(IRQn_Type irq) {
       __HAL_GPIO_EXTI_CLEAR_IT(stm32_pins[i]);
       int mgos_pin = lookup_pin(irq, stm32_pins[i]);
       if (mgos_pin != -1) {
-        mgos_gpio_dev_int_cb(mgos_pin);
+        mgos_gpio_hal_int_cb(mgos_pin);
       }
     }
   }

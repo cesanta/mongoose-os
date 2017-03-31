@@ -51,7 +51,7 @@
 
 uint32_t g_boot_status = 0;
 
-struct mgos_upd_dev_ctx {
+struct mgos_upd_hal_ctx {
   const char *status_msg;
 
   const esp_partition_t *cur_app_partition;
@@ -66,13 +66,13 @@ struct mgos_upd_dev_ctx {
   size_t write_offset;
 };
 
-struct mgos_upd_dev_ctx *mgos_upd_dev_ctx_create(void) {
-  struct mgos_upd_dev_ctx *ctx =
-      (struct mgos_upd_dev_ctx *) calloc(1, sizeof(*ctx));
+struct mgos_upd_hal_ctx *mgos_upd_hal_ctx_create(void) {
+  struct mgos_upd_hal_ctx *ctx =
+      (struct mgos_upd_hal_ctx *) calloc(1, sizeof(*ctx));
   return ctx;
 }
 
-const char *mgos_upd_get_status_msg(struct mgos_upd_dev_ctx *ctx) {
+const char *mgos_upd_get_status_msg(struct mgos_upd_hal_ctx *ctx) {
   return ctx->status_msg;
 }
 
@@ -108,7 +108,7 @@ static int find_inactive_slot(const esp_partition_t **cur_app_partition,
   return slot;
 }
 
-int mgos_upd_begin(struct mgos_upd_dev_ctx *ctx, struct json_token *parts) {
+int mgos_upd_begin(struct mgos_upd_hal_ctx *ctx, struct json_token *parts) {
   const esp_partition_t *cur_fs_partition;
   int slot = find_inactive_slot(&ctx->cur_app_partition, &cur_fs_partition,
                                 &ctx->app_partition, &ctx->fs_partition,
@@ -178,7 +178,7 @@ static bool verify_checksum(const esp_partition_t *p, size_t len,
 }
 
 enum mgos_upd_file_action mgos_upd_file_begin(
-    struct mgos_upd_dev_ctx *ctx, const struct mgos_upd_file_info *fi) {
+    struct mgos_upd_hal_ctx *ctx, const struct mgos_upd_file_info *fi) {
   esp_err_t err;
   ctx->write_offset = 0;
   if (strncmp(fi->name, ctx->app_file_name.ptr, ctx->app_file_name.len) == 0) {
@@ -214,7 +214,7 @@ enum mgos_upd_file_action mgos_upd_file_begin(
   return MGOS_UPDATER_SKIP_FILE;
 }
 
-int mgos_upd_file_data(struct mgos_upd_dev_ctx *ctx,
+int mgos_upd_file_data(struct mgos_upd_hal_ctx *ctx,
                        const struct mgos_upd_file_info *fi,
                        struct mg_str data) {
   esp_err_t err = ESP_FAIL;
@@ -239,7 +239,7 @@ int mgos_upd_file_data(struct mgos_upd_dev_ctx *ctx,
   return to_process;
 }
 
-int mgos_upd_file_end(struct mgos_upd_dev_ctx *ctx,
+int mgos_upd_file_end(struct mgos_upd_hal_ctx *ctx,
                       const struct mgos_upd_file_info *fi, struct mg_str tail) {
   const esp_partition_t *p = NULL;
   struct json_token *cs_sha1 = NULL;
@@ -335,7 +335,7 @@ static bool esp32_set_boot_slot(int slot) {
   return (esp_ota_set_boot_partition(p) == ESP_OK);
 }
 
-int mgos_upd_finalize(struct mgos_upd_dev_ctx *ctx) {
+int mgos_upd_finalize(struct mgos_upd_hal_ctx *ctx) {
   if (!set_update_status(SUBTYPE_TO_SLOT(ctx->cur_app_partition->subtype),
                          SUBTYPE_TO_SLOT(ctx->app_partition->subtype),
                          true /* first_boot */, true /* merge_fs */)) {
@@ -349,7 +349,7 @@ int mgos_upd_finalize(struct mgos_upd_dev_ctx *ctx) {
   return 1;
 }
 
-void mgos_upd_dev_ctx_free(struct mgos_upd_dev_ctx *ctx) {
+void mgos_upd_hal_ctx_free(struct mgos_upd_hal_ctx *ctx) {
   if (ctx == NULL) return;
   if (ctx->app_ota_handle != 0) {
     esp_ota_end(ctx->app_ota_handle);

@@ -84,7 +84,7 @@ static void cc3200_int_handler(struct mgos_uart_state *us) {
   MAP_UARTIntClear(ds->base, int_st);
 }
 
-void mgos_uart_dev_dispatch_rx_top(struct mgos_uart_state *us) {
+void mgos_uart_hal_dispatch_rx_top(struct mgos_uart_state *us) {
   bool recd;
   struct cc3200_uart_state *ds = (struct cc3200_uart_state *) us->dev_data;
   cs_rbuf_t *irxb = &ds->isr_rx_buf;
@@ -124,7 +124,7 @@ recv_more:
   MAP_UARTIntClear(ds->base, UART_RX_INTS);
 }
 
-void mgos_uart_dev_dispatch_tx_top(struct mgos_uart_state *us) {
+void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us) {
   struct cc3200_uart_state *ds = (struct cc3200_uart_state *) us->dev_data;
   struct mbuf *txb = &us->tx_buf;
   size_t len = 0;
@@ -137,7 +137,7 @@ void mgos_uart_dev_dispatch_tx_top(struct mgos_uart_state *us) {
   MAP_UARTIntClear(ds->base, UART_TX_INTS);
 }
 
-void mgos_uart_dev_dispatch_bottom(struct mgos_uart_state *us) {
+void mgos_uart_hal_dispatch_bottom(struct mgos_uart_state *us) {
   struct cc3200_uart_state *ds = (struct cc3200_uart_state *) us->dev_data;
   uint32_t int_ena = UART_INFO_INTS;
   if (us->rx_enabled && ds->isr_rx_buf.avail > 0) int_ena |= UART_RX_INTS;
@@ -145,7 +145,7 @@ void mgos_uart_dev_dispatch_bottom(struct mgos_uart_state *us) {
   MAP_UARTIntEnable(ds->base, int_ena);
 }
 
-void mgos_uart_dev_set_rx_enabled(struct mgos_uart_state *us, bool enabled) {
+void mgos_uart_hal_set_rx_enabled(struct mgos_uart_state *us, bool enabled) {
   struct cc3200_uart_state *ds = (struct cc3200_uart_state *) us->dev_data;
   uint32_t ctl = HWREG(ds->base + UART_O_CTL);
   if (enabled) {
@@ -160,7 +160,7 @@ void mgos_uart_dev_set_rx_enabled(struct mgos_uart_state *us, bool enabled) {
   HWREG(ds->base + UART_O_CTL) = ctl;
 }
 
-void mgos_uart_dev_flush_fifo(struct mgos_uart_state *us) {
+void mgos_uart_hal_flush_fifo(struct mgos_uart_state *us) {
   struct cc3200_uart_state *ds = (struct cc3200_uart_state *) us->dev_data;
   while (MAP_UARTBusy(ds->base)) {
   }
@@ -174,11 +174,11 @@ static void u1_int(void) {
   cc3200_int_handler(s_us[1]);
 }
 
-void mgos_uart_dev_set_defaults(struct mgos_uart_config *cfg) {
+void mgos_uart_hal_set_defaults(struct mgos_uart_config *cfg) {
   (void) cfg;
 }
 
-bool mgos_uart_dev_init(struct mgos_uart_state *us) {
+bool mgos_uart_hal_init(struct mgos_uart_state *us) {
   uint32_t base = cc3200_uart_get_base(us->uart_no);
   uint32_t periph, int_no;
   void (*int_handler)();
@@ -233,7 +233,7 @@ bool mgos_uart_dev_init(struct mgos_uart_state *us) {
   return true;
 }
 
-void mgos_uart_dev_deinit(struct mgos_uart_state *us) {
+void mgos_uart_hal_deinit(struct mgos_uart_state *us) {
   struct cc3200_uart_state *ds = (struct cc3200_uart_state *) us->dev_data;
   MAP_UARTDisable(ds->base);
   MAP_UARTIntDisable(ds->base, ~0);

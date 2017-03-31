@@ -120,7 +120,7 @@ struct update_context *updater_context_create() {
     return NULL;
   }
 
-  s_ctx->dev_ctx = mgos_upd_dev_ctx_create();
+  s_ctx->dev_ctx = mgos_upd_hal_ctx_create();
 
   CONSOLE_LOG(LL_INFO,
               ("Starting update (timeout %d)", get_cfg()->update.timeout));
@@ -623,7 +623,7 @@ void updater_context_free(struct update_context *ctx) {
     CONSOLE_LOG(LL_ERROR, ("Update terminated unexpectedly"));
   }
   mgos_clear_timer(ctx->wdt);
-  mgos_upd_dev_ctx_free(ctx->dev_ctx);
+  mgos_upd_hal_ctx_free(ctx->dev_ctx);
   mbuf_free(&ctx->unprocessed);
   free(ctx->manifest_data);
   free(ctx);

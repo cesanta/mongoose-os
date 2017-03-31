@@ -19,6 +19,6 @@ bool mgos_gpio_read(int pin) {
   return false;
 }
 
-enum mgos_init_result mgos_gpio_dev_init(void) {
+enum mgos_init_result mgos_gpio_hal_init(void) {
   return MGOS_INIT_OK;
 }

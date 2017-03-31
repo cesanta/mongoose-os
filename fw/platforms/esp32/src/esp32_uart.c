@@ -80,7 +80,7 @@ IRAM NOINSTR static void esp32_handle_uart_int(void *arg) {
   esp_handle_uart_int((struct mgos_uart_state *) arg);
 }
 
-IRAM void mgos_uart_dev_dispatch_rx_top(struct mgos_uart_state *us) {
+IRAM void mgos_uart_hal_dispatch_rx_top(struct mgos_uart_state *us) {
   int uart_no = us->uart_no;
   struct mbuf *rxb = &us->rx_buf;
   uint32_t rxn = 0;
@@ -125,7 +125,7 @@ IRAM void mgos_uart_dev_dispatch_rx_top(struct mgos_uart_state *us) {
   }
 }
 
-IRAM void mgos_uart_dev_dispatch_tx_top(struct mgos_uart_state *us) {
+IRAM void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us) {
   int uart_no = us->uart_no;
   struct mbuf *txb = &us->tx_buf;
   uint32_t txn = 0;
@@ -145,7 +145,7 @@ IRAM void mgos_uart_dev_dispatch_tx_top(struct mgos_uart_state *us) {
   }
 }
 
-IRAM void mgos_uart_dev_dispatch_bottom(struct mgos_uart_state *us) {
+IRAM void mgos_uart_hal_dispatch_bottom(struct mgos_uart_state *us) {
   uint32_t int_ena = UART_INFO_INTS;
   /* Determine which interrupts we want. */
   if (us->rx_enabled && mgos_uart_rxb_avail(us->uart_no)) {
@@ -155,7 +155,7 @@ IRAM void mgos_uart_dev_dispatch_bottom(struct mgos_uart_state *us) {
   WRITE_PERI_REG(UART_INT_ENA_REG(us->uart_no), int_ena);
 }
 
-void mgos_uart_dev_flush_fifo(struct mgos_uart_state *us) {
+void mgos_uart_hal_flush_fifo(struct mgos_uart_state *us) {
   while (esp32_uart_tx_fifo_len(us->uart_no) > 0) {
   }
 }
@@ -171,14 +171,14 @@ bool esp32_uart_validate_config(struct mgos_uart_config *c) {
   return true;
 }
 
-void mgos_uart_dev_set_defaults(struct mgos_uart_config *cfg) {
+void mgos_uart_hal_set_defaults(struct mgos_uart_config *cfg) {
   cfg->rx_fifo_alarm = 10;
   cfg->rx_fifo_full_thresh = 120;
   cfg->rx_fifo_fc_thresh = 125;
   cfg->tx_fifo_empty_thresh = 10;
 }
 
-bool mgos_uart_dev_init(struct mgos_uart_state *us) {
+bool mgos_uart_hal_init(struct mgos_uart_state *us) {
   struct mgos_uart_config *cfg = us->cfg;
   if (us->uart_no < 0 || us->uart_no > 2 || !esp32_uart_validate_config(cfg)) {
     return false;
@@ -249,13 +249,13 @@ bool mgos_uart_dev_init(struct mgos_uart_state *us) {
   return true;
 }
 
-void mgos_uart_dev_deinit(struct mgos_uart_state *us) {
+void mgos_uart_hal_deinit(struct mgos_uart_state *us) {
   WRITE_PERI_REG(UART_INT_ENA_REG(us->uart_no), 0);
   esp_intr_free((intr_handle_t) us->dev_data);
   s_us[us->uart_no] = NULL;
 }
 
-void mgos_uart_dev_set_rx_enabled(struct mgos_uart_state *us, bool enabled) {
+void mgos_uart_hal_set_rx_enabled(struct mgos_uart_state *us, bool enabled) {
   int uart_no = us->uart_no;
   if (enabled) {
     if (us->cfg->rx_fc_ena) {

@@ -193,13 +193,13 @@ IRAM static void esp8266_gpio_isr(void *arg) {
   for (uint32_t i = 0, mask = 1; i < 16; i++, mask <<= 1) {
     if (!(s_int_config[i] & INT_ENA) || !(int_st & mask)) continue;
     gpio_pin_intr_state_set(i, GPIO_PIN_INTR_DISABLE);
-    mgos_gpio_dev_int_cb(i);
+    mgos_gpio_hal_int_cb(i);
   }
   GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, int_st);
   (void) arg;
 }
 
-IRAM void mgos_gpio_dev_int_done(int pin) {
+IRAM void mgos_gpio_hal_int_done(int pin) {
   if (s_int_config[pin] & INT_ENA) {
     gpio_pin_intr_state_set(pin, (s_int_config[pin] & INT_TYPE_MASK));
   }
@@ -210,7 +210,7 @@ void esp_nsleep100_160(uint32_t n);
 void (*mgos_nsleep100)(uint32_t n);
 uint32_t mgos_bitbang_n100_cal;
 
-enum mgos_init_result mgos_gpio_dev_init(void) {
+enum mgos_init_result mgos_gpio_hal_init(void) {
 #ifdef RTOS_SDK
   _xt_isr_attach(ETS_GPIO_INUM, (void *) esp8266_gpio_isr, NULL);
   _xt_isr_unmask(1 << ETS_GPIO_INUM);
@@ -223,7 +223,7 @@ enum mgos_init_result mgos_gpio_dev_init(void) {
   return MGOS_INIT_OK;
 }
 
-bool mgos_gpio_dev_set_int_mode(int pin, enum mgos_gpio_int_mode mode) {
+bool mgos_gpio_hal_set_int_mode(int pin, enum mgos_gpio_int_mode mode) {
   if (get_gpio_info(pin) == NULL) return false;
   GPIO_INT_TYPE it;
   switch (mode) {

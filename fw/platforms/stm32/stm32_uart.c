@@ -53,7 +53,7 @@ static void move_rbuf_data(cs_rbuf_t *dst, struct mbuf *src) {
   mbuf_remove(src, len);
 }
 
-void mgos_uart_dev_dispatch_rx_top(struct mgos_uart_state *us) {
+void mgos_uart_hal_dispatch_rx_top(struct mgos_uart_state *us) {
   UART_Handle *huart = (UART_Handle *) us->dev_data;
   struct UART_State *state = get_state_by_huart(huart);
   cs_rbuf_t *rxb = &state->rx_buf;
@@ -65,7 +65,7 @@ void mgos_uart_dev_dispatch_rx_top(struct mgos_uart_state *us) {
   }
 }
 
-void mgos_uart_dev_dispatch_bottom(struct mgos_uart_state *us) {
+void mgos_uart_hal_dispatch_bottom(struct mgos_uart_state *us) {
   UART_Handle *huart = (UART_Handle *) us->dev_data;
   struct UART_State *state = get_state_by_huart(huart);
   if (us->rx_enabled && !state->rx_in_progress) {
@@ -79,7 +79,7 @@ void mgos_uart_dev_dispatch_bottom(struct mgos_uart_state *us) {
   }
 }
 
-void mgos_uart_dev_dispatch_tx_top(struct mgos_uart_state *us) {
+void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us) {
   UART_Handle *huart = (UART_Handle *) us->dev_data;
   struct UART_State *state = get_state_by_huart(huart);
   if (state->tx_in_progress || us->tx_buf.len == 0) {
@@ -101,11 +101,11 @@ void mgos_uart_dev_dispatch_tx_top(struct mgos_uart_state *us) {
   }
 }
 
-void mgos_uart_dev_flush_fifo(struct mgos_uart_state *us) {
+void mgos_uart_hal_flush_fifo(struct mgos_uart_state *us) {
   /* TODO(alashkin): Implement. */
 }
 
-bool mgos_uart_dev_init(struct mgos_uart_state *us) {
+bool mgos_uart_hal_init(struct mgos_uart_state *us) {
   if (us->uart_no == 0 || us->uart_no == 1) {
     /* TODO(alashkin): reinit UART if cfg was changed */
     us->dev_data = (void *) s_huarts[us->uart_no];
@@ -114,11 +114,11 @@ bool mgos_uart_dev_init(struct mgos_uart_state *us) {
   return false;
 }
 
-void mgos_uart_dev_deinit(struct mgos_uart_state *us) {
+void mgos_uart_hal_deinit(struct mgos_uart_state *us) {
   us->dev_data = NULL;
 }
 
-void mgos_uart_dev_set_rx_enabled(struct mgos_uart_state *us, bool enabled) {
+void mgos_uart_hal_set_rx_enabled(struct mgos_uart_state *us, bool enabled) {
   UART_Handle *huart = (UART_Handle *) us->dev_data;
   struct UART_State *state = get_state_by_huart(huart);
   if (enabled && !state->rx_in_progress) {
@@ -137,7 +137,7 @@ void mgos_uart_dev_set_rx_enabled(struct mgos_uart_state *us, bool enabled) {
    */
 }
 
-void mgos_uart_dev_set_defaults(struct mgos_uart_config *cfg) {
+void mgos_uart_hal_set_defaults(struct mgos_uart_config *cfg) {
   (void) cfg;
   int i;
   for (i = 0; i < ARRAY_SIZE(s_uarts_state); i++) {
@@ -158,7 +158,7 @@ void HAL_UART_RxCpltCallback(UART_Handle *huart) {
     cs_rbuf_append_one(&state->rx_buf, state->received_byte);
   } else {
     LOG(LL_ERROR, ("UART RX buf overflow"));
-    /* Will be enabled back in mgos_uart_dev_dispatch_bottom */
+    /* Will be enabled back in mgos_uart_hal_dispatch_bottom */
     return;
   }
 

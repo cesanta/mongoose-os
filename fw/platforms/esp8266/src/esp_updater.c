@@ -42,7 +42,7 @@ struct slot_info {
   uint32_t fs_slot_size;
 };
 
-struct mgos_upd_dev_ctx {
+struct mgos_upd_hal_ctx {
   const char *status_msg;
   struct slot_info write_slot;
   struct json_token fw_file_name, fw_cs_sha1;
@@ -84,15 +84,15 @@ static void get_slot_info(int id, struct slot_info *si) {
   si->fs_slot_size = FS_SIZE;
 }
 
-struct mgos_upd_dev_ctx *mgos_upd_dev_ctx_create(void) {
-  return calloc(1, sizeof(struct mgos_upd_dev_ctx));
+struct mgos_upd_hal_ctx *mgos_upd_hal_ctx_create(void) {
+  return calloc(1, sizeof(struct mgos_upd_hal_ctx));
 }
 
-const char *mgos_upd_get_status_msg(struct mgos_upd_dev_ctx *ctx) {
+const char *mgos_upd_get_status_msg(struct mgos_upd_hal_ctx *ctx) {
   return ctx->status_msg;
 }
 
-int mgos_upd_begin(struct mgos_upd_dev_ctx *ctx, struct json_token *parts) {
+int mgos_upd_begin(struct mgos_upd_hal_ctx *ctx, struct json_token *parts) {
   struct json_token fs = JSON_INVALID_TOKEN, fw = JSON_INVALID_TOKEN;
   if (json_scanf(parts->ptr, parts->len, "{fw: %T, fs: %T}", &fw, &fs) != 2) {
     ctx->status_msg = "Invalid manifest";
@@ -166,7 +166,7 @@ static bool verify_checksum(uint32_t addr, size_t len, const char *exp_cs_hex,
 }
 
 enum mgos_upd_file_action mgos_upd_file_begin(
-    struct mgos_upd_dev_ctx *ctx, const struct mgos_upd_file_info *fi) {
+    struct mgos_upd_hal_ctx *ctx, const struct mgos_upd_file_info *fi) {
   bool res = false;
   struct esp_flash_write_ctx *wctx = &ctx->wctx;
   if (strncmp(fi->name, ctx->fw_file_name.ptr, ctx->fw_file_name.len) == 0) {
@@ -205,7 +205,7 @@ enum mgos_upd_file_action mgos_upd_file_begin(
   return MGOS_UPDATER_PROCESS_FILE;
 }
 
-int mgos_upd_file_data(struct mgos_upd_dev_ctx *ctx,
+int mgos_upd_file_data(struct mgos_upd_hal_ctx *ctx,
                        const struct mgos_upd_file_info *fi,
                        struct mg_str data) {
   int num_written = esp_flash_write(&ctx->wctx, data);
@@ -216,7 +216,7 @@ int mgos_upd_file_data(struct mgos_upd_dev_ctx *ctx,
   return num_written;
 }
 
-int mgos_upd_file_end(struct mgos_upd_dev_ctx *ctx,
+int mgos_upd_file_end(struct mgos_upd_hal_ctx *ctx,
                       const struct mgos_upd_file_info *fi, struct mg_str tail) {
   assert(tail.len < 4);
   if (tail.len > 0 && esp_flash_write(&ctx->wctx, tail) != (int) tail.len) {
@@ -231,7 +231,7 @@ int mgos_upd_file_end(struct mgos_upd_dev_ctx *ctx,
   return tail.len;
 }
 
-int mgos_upd_finalize(struct mgos_upd_dev_ctx *ctx) {
+int mgos_upd_finalize(struct mgos_upd_hal_ctx *ctx) {
   if (ctx->fw_size == 0) {
     ctx->status_msg = "Missing fw part";
     return -1;
@@ -268,7 +268,7 @@ int mgos_upd_finalize(struct mgos_upd_dev_ctx *ctx) {
   return 1;
 }
 
-void mgos_upd_dev_ctx_free(struct mgos_upd_dev_ctx *ctx) {
+void mgos_upd_hal_ctx_free(struct mgos_upd_hal_ctx *ctx) {
   memset(ctx, 0, sizeof(*ctx));
   free(ctx);
 }

@@ -35,22 +35,22 @@ bool mgos_gpio_disable_int(int pin);
  * Configure interrupt mode for the pin. Note that this should not implicitly
  * enable the interrupt, even if mode is not NONE.
  */
-bool mgos_gpio_dev_set_int_mode(int pin, enum mgos_gpio_int_mode mode);
+bool mgos_gpio_hal_set_int_mode(int pin, enum mgos_gpio_int_mode mode);
 
 /*
  * MGOS expect the device to handle and demultiplex interrupts for each pin
- * and invoke mgos_gpio_dev_int_cb with the pin number.
- * Interrupt should be cleared and disabled until mgos_gpio_dev_int_done is
+ * and invoke mgos_gpio_hal_int_cb with the pin number.
+ * Interrupt should be cleared and disabled until mgos_gpio_hal_int_done is
  * invoked by MGOS, which will be some time later. Device layer should then
  * re-enable interrupts for this pin, but it should expect that user may have
  * invoked mgos_gpio_disable_int in the interim, thus it should not blindly
  * re-enable the interrupt.
  */
-void mgos_gpio_dev_int_cb(int pin);
-void mgos_gpio_dev_int_done(int pin);
+void mgos_gpio_hal_int_cb(int pin);
+void mgos_gpio_hal_int_done(int pin);
 
 /* Note: sys-config is not yet available. */
-enum mgos_init_result mgos_gpio_dev_init(void);
+enum mgos_init_result mgos_gpio_hal_init(void);
 
 #ifdef __cplusplus
 }

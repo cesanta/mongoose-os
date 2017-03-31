@@ -144,7 +144,7 @@ struct gpio_event *get_gpio_event(int gpio_no) {
   return NULL;
 }
 
-void mgos_gpio_dev_int_done(int pin) {
+void mgos_gpio_hal_int_done(int pin) {
   (void) pin;
 }
 
@@ -168,7 +168,7 @@ void gpio_remove_handler(int gpio_no) {
   }
 }
 
-bool mgos_gpio_dev_set_int_mode(int gpio_no, enum mgos_gpio_int_mode mode) {
+bool mgos_gpio_hal_set_int_mode(int gpio_no, enum mgos_gpio_int_mode mode) {
   int fd, res;
   char tmp, buf[50];
   struct gpio_event *new_ev;
@@ -269,7 +269,7 @@ int gpio_poll(void) {
       lseek(fdset[i].fd, 0, SEEK_SET);
       res = read(fdset[i].fd, &val, sizeof(val));
       events_tmp[i]->enabled = 0;
-      mgos_gpio_dev_int_cb(events_tmp[i]->gpio_no);
+      mgos_gpio_hal_int_cb(events_tmp[i]->gpio_no);
     }
   }
 
@@ -312,6 +312,6 @@ bool mgos_gpio_toggle(int pin) {
   return false;
 }
 
-enum mgos_init_result mgos_gpio_dev_init(void) {
+enum mgos_init_result mgos_gpio_hal_init(void) {
   return MGOS_INIT_OK;
 }

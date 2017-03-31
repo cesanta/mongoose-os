@@ -55,35 +55,35 @@ void device_get_mac_address(uint8_t mac[6]) {
   }
 }
 
-void mgos_uart_dev_set_defaults(struct mgos_uart_config *cfg) {
+void mgos_uart_hal_set_defaults(struct mgos_uart_config *cfg) {
   (void) cfg;
 }
 
-bool mgos_uart_dev_init(struct mgos_uart_state *us) {
+bool mgos_uart_hal_init(struct mgos_uart_state *us) {
   (void) us;
   return false;
 }
 
-void mgos_uart_dev_deinit(struct mgos_uart_state *us) {
+void mgos_uart_hal_deinit(struct mgos_uart_state *us) {
   (void) us;
 }
 
-void mgos_uart_dev_dispatch_rx_top(struct mgos_uart_state *us) {
+void mgos_uart_hal_dispatch_rx_top(struct mgos_uart_state *us) {
   (void) us;
 }
-void mgos_uart_dev_dispatch_tx_top(struct mgos_uart_state *us) {
+void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us) {
   (void) us;
 }
-void mgos_uart_dev_dispatch_bottom(struct mgos_uart_state *us) {
+void mgos_uart_hal_dispatch_bottom(struct mgos_uart_state *us) {
   (void) us;
 }
 
-void mgos_uart_dev_set_rx_enabled(struct mgos_uart_state *us, bool enabled) {
+void mgos_uart_hal_set_rx_enabled(struct mgos_uart_state *us, bool enabled) {
   (void) us;
   (void) enabled;
 }
 
-void mgos_uart_dev_flush_fifo(struct mgos_uart_state *us) {
+void mgos_uart_hal_flush_fifo(struct mgos_uart_state *us) {
   (void) us;
 }
 

@@ -25,7 +25,7 @@ extern "C" {
 struct update_context;
 typedef void (*mgos_updater_result_cb)(struct update_context *ctx);
 
-struct mgos_upd_dev_ctx; /* This struct is defined by HAL and is opaque to us.
+struct mgos_upd_hal_ctx; /* This struct is defined by HAL and is opaque to us.
                             */
 struct update_context {
   int update_state;
@@ -50,7 +50,7 @@ struct update_context {
   int file_size;
   char file_name[50];
 
-  struct mgos_upd_dev_ctx *dev_ctx;
+  struct mgos_upd_hal_ctx *dev_ctx;
   mgos_timer_id wdt;
   /* Network connection associated with this update, if any.
    * It is only used in case update times out - it is closed. */
