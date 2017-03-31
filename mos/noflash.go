@@ -28,3 +28,7 @@ func esp32GenKey(ctx context.Context, devConn *dev.DevConn) error {
 func flash(ctx context.Context, devConn *dev.DevConn) error {
 	return errors.NotImplementedf("flash: this build was built without flashing support")
 }
+
+func flashRead(ctx context.Context, devConn *dev.DevConn) error {
+	return errors.NotImplementedf("flash-read: this build was built without flashing support")
+}

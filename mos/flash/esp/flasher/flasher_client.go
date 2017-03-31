@@ -1,4 +1,4 @@
-package esp
+package flasher
 
 import (
 	"bytes"
@@ -20,12 +20,6 @@ import (
 )
 
 const (
-	flasherGreeting   = "OHAI"
-	chipEraseTimeout  = 25 * time.Second
-	blockEraseTimeout = 5 * time.Second
-)
-
-const (
 	FLASH_BLOCK_SIZE  = 65536
 	FLASH_SECTOR_SIZE = 4096
 	// These consts should be in sync with stub_flasher.c
@@ -33,11 +27,19 @@ const (
 	FLASH_WRITE_SIZE = FLASH_SECTOR_SIZE
 )
 
+const (
+	flasherGreeting   = "OHAI"
+	chipEraseTimeout  = 25 * time.Second
+	blockEraseTimeout = 5 * time.Second
+	flashReadSize     = FLASH_SECTOR_SIZE
+)
+
 /* Decls from stub_flasher.h */
 type flasherCmd uint8
 
 const (
 	cmdFlashWrite      flasherCmd = 0x01
+	cmdFlashRead                  = 0x02
 	cmdFlashDigest                = 0x03
 	cmdFlashReadChipID            = 0x04
 	cmdFlashEraseChip             = 0x05
@@ -102,7 +104,7 @@ func (fc *FlasherClient) sendCommand(cmd flasherCmd, args []uint32) error {
 	if !fc.connected {
 		return errors.New("not connected")
 	}
-	glog.V(3).Infof("=> %s %+v", cmd, args)
+	glog.V(2).Infof("%s %+v", cmd, args)
 	buf := bytes.NewBuffer([]byte{byte(cmd)})
 	_, err := fc.srw.Write(buf.Bytes())
 	if err != nil {
@@ -273,6 +275,50 @@ func (fc *FlasherClient) Write(addr uint32, data []byte, erase bool) error {
 	return nil
 }
 
+func (fc *FlasherClient) Read(addr uint32, data []byte) error {
+	if !fc.connected {
+		return errors.New("not connected")
+	}
+	err := fc.sendCommand(cmdFlashRead, []uint32{
+		addr, uint32(len(data)), flashReadSize, flashReadSize})
+	if err != nil {
+		return errors.Trace(err)
+	}
+	numRead := 0
+	for numRead < len(data) {
+		buf := data[numRead:]
+		if len(buf) > flashReadSize {
+			buf = buf[:flashReadSize]
+		}
+		n, err := fc.srw.Read(buf)
+		if err != nil {
+			return errors.Annotatef(err, "flash read failed @ 0x%x", numRead)
+		}
+		if n != len(buf) {
+			return errors.Errorf("unexpected result packet length %d", n)
+		}
+		numRead += len(buf)
+		nrb := bytes.NewBuffer(nil)
+		binary.Write(nrb, binary.LittleEndian, uint32(numRead))
+		fc.srw.Write(nrb.Bytes())
+		glog.V(3).Infof("<= %d; %d/%d", len(buf), numRead, len(data))
+	}
+	tail, err := fc.recvResponse()
+	if err != nil {
+		return errors.Annotatef(err, "failed to read digest")
+	}
+	if len(tail) != 1 || len(tail[0]) != md5.Size {
+		return errors.Errorf("unexpected digest packet %+v", tail)
+	}
+	expectedDigest := md5.Sum(data)
+	expectedDigestHex := strings.ToLower(hex.EncodeToString(expectedDigest[:]))
+	digestHex := strings.ToLower(hex.EncodeToString(tail[0]))
+	if digestHex != expectedDigestHex {
+		return errors.Errorf("digest mismatch: expected %s, got %s", expectedDigestHex, digestHex)
+	}
+	return nil
+}
+
 func (fc *FlasherClient) Digest(addr, length, blockSize uint32) ([][]byte, error) {
 	if !fc.connected {
 		return nil, errors.New("not connected")
@@ -307,6 +353,8 @@ func (cmd flasherCmd) String() string {
 	switch cmd {
 	case cmdFlashWrite:
 		return fmt.Sprintf("FlashWrite(%d)", cmd)
+	case cmdFlashRead:
+		return fmt.Sprintf("FlashRead(%d)", cmd)
 	case cmdFlashDigest:
 		return fmt.Sprintf("FlashDigest(%d)", cmd)
 	case cmdFlashReadChipID:

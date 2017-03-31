@@ -1,17 +1,14 @@
-package esp
+package flasher
 
 import (
 	"crypto/md5"
 	"encoding/hex"
-	"io/ioutil"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 
 	"cesanta.com/mos/flash/common"
 	"cesanta.com/mos/flash/esp"
-	"cesanta.com/mos/flash/esp/rom_client"
 	"cesanta.com/mos/flash/esp32"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
@@ -41,68 +38,17 @@ func (pp imagesByAddr) Less(i, j int) bool {
 }
 
 func Flash(ct esp.ChipType, fw *common.FirmwareBundle, opts *esp.FlashOpts) error {
-	var err error
-
-	if opts.BaudRate < 0 || opts.BaudRate > 4000000 {
-		return errors.Errorf("invalid flashing baud rate (%d)", opts.BaudRate)
-	}
-	if len(opts.FlashParams) == 0 {
-		return errors.Errorf("flash params not provided")
-	}
-	flashParams, flashSize, err := parseFlashParams(ct, opts.FlashParams)
-	if err != nil {
-		return errors.Annotatef(err, "invalid flash params (%q)", opts.FlashParams)
-	}
-
-	var encryptionKey []byte
-	if ct == esp.ChipESP32 && opts.ESP32EncryptionKeyFile != "" {
-		encryptionKey, err = ioutil.ReadFile(opts.ESP32EncryptionKeyFile)
-		if err != nil {
-			return errors.Annotatef(err, "failed to read encryption key")
-		}
-		if len(encryptionKey) != 32 {
-			return errors.Errorf("encryption key must be 32 bytes, got %d", len(encryptionKey))
-		}
-	}
-
-	rc, err := rom_client.ConnectToROM(ct, opts)
+	cfr, err := ConnectToFlasherClient(ct, opts)
 	if err != nil {
 		return errors.Trace(err)
 	}
-	defer rc.Disconnect()
+	defer cfr.rc.Disconnect()
 
-	fc, err := NewFlasherClient(ct, rc, opts.BaudRate)
-	if err != nil {
-		return errors.Annotatef(err, "failed to run flasher")
-	}
-	if flashSize <= 0 {
-		flashSize, err = detectFlashSize(fc)
-		if err != nil {
-			return errors.Annotatef(err, "flash size is not specified and could not be detected")
-		}
-		if flashSize > 4194304 {
-			glog.Warningf("Clamping flash size to 32m (actual: %d)", flashSize)
-			flashSize = 4194304
-		}
-		var flashSizes []int
-		switch ct {
-		case esp.ChipESP8266:
-			flashSizes = flashSizesESP8266
-		case esp.ChipESP32:
-			flashSizes = flashSizesESP32
-		}
-		for i, s := range flashSizes {
-			if s == flashSize {
-				flashParams |= (i << 4)
-				break
-			}
-		}
-	}
-	common.Reportf("Flash size: %d, params: 0x%04x", flashSize, flashParams)
+	common.Reportf("Flash size: %d, params: 0x%04x", cfr.flashSize, cfr.flashParams)
 
 	if ct == esp.ChipESP8266 {
 		// Based on our knowledge of flash size, adjust type=sys_params image.
-		adjustSysParamsLocation(fw, flashSize)
+		adjustSysParamsLocation(fw, cfr.flashSize)
 	}
 
 	// Sort images by address
@@ -117,12 +63,12 @@ func Flash(ct esp.ChipType, fw *common.FirmwareBundle, opts *esp.FlashOpts) erro
 		}
 		im := &image{addr: p.ESPFlashAddress, data: data, part: p}
 		if im.addr == 0 || im.addr == 0x1000 && len(data) >= 4 && data[0] == 0xe9 {
-			im.data[2] = byte((flashParams >> 8) & 0xff)
-			im.data[3] = byte(flashParams & 0xff)
+			im.data[2] = byte((cfr.flashParams >> 8) & 0xff)
+			im.data[3] = byte(cfr.flashParams & 0xff)
 		}
-		if p.ESP32Encrypt && encryptionKey != nil {
+		if p.ESP32Encrypt && len(cfr.esp32EncryptionKey) > 0 {
 			encData, err := esp32.ESP32EncryptImageData(
-				im.data, encryptionKey, im.addr, opts.ESP32FlashCryptConf)
+				im.data, cfr.esp32EncryptionKey, im.addr, opts.ESP32FlashCryptConf)
 			if err != nil {
 				return errors.Annotatef(err, "%s: failed to encrypt", p.Name)
 			}
@@ -132,7 +78,7 @@ func Flash(ct esp.ChipType, fw *common.FirmwareBundle, opts *esp.FlashOpts) erro
 	}
 	sort.Sort(imagesByAddr(images))
 
-	err = sanityCheckImages(ct, images, flashSize, flashSectorSize)
+	err = sanityCheckImages(ct, images, cfr.flashSize, flashSectorSize)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -140,12 +86,12 @@ func Flash(ct esp.ChipType, fw *common.FirmwareBundle, opts *esp.FlashOpts) erro
 	imagesToWrite := images
 	if opts.EraseChip {
 		common.Reportf("Erasing chip...")
-		if err = fc.EraseChip(); err != nil {
+		if err = cfr.fc.EraseChip(); err != nil {
 			return errors.Annotatef(err, "failed to erase chip")
 		}
 	} else if opts.MinimizeWrites {
 		common.Reportf("Deduping...")
-		imagesToWrite, err = dedupImages(fc, images)
+		imagesToWrite, err = dedupImages(cfr.fc, images)
 		if err != nil {
 			return errors.Annotatef(err, "failed to dedup images")
 		}
@@ -167,7 +113,7 @@ func Flash(ct esp.ChipType, fw *common.FirmwareBundle, opts *esp.FlashOpts) erro
 				data = newData
 			}
 			common.Reportf("  %6d @ 0x%x", len(data), im.addr)
-			err = fc.Write(im.addr, data, true /* erase */)
+			err = cfr.fc.Write(im.addr, data, true /* erase */)
 			if err != nil {
 				return errors.Annotatef(err, "%s: failed to write", im.part.Name)
 			}
@@ -181,7 +127,7 @@ func Flash(ct esp.ChipType, fw *common.FirmwareBundle, opts *esp.FlashOpts) erro
 	common.Reportf("Verifying...")
 	for _, im := range images {
 		common.Reportf("  %6d @ 0x%x", len(im.data), im.addr)
-		digest, err := fc.Digest(im.addr, uint32(len(im.data)), 0 /* blockSize */)
+		digest, err := cfr.fc.Digest(im.addr, uint32(len(im.data)), 0 /* blockSize */)
 		if err != nil {
 			return errors.Annotatef(err, "%s: failed to compute digest %d @ 0x%x", im.part.Name, len(im.data), im.addr)
 		}
@@ -197,27 +143,11 @@ func Flash(ct esp.ChipType, fw *common.FirmwareBundle, opts *esp.FlashOpts) erro
 	}
 	if opts.BootFirmware {
 		common.Reportf("Booting firmware...")
-		if err = fc.BootFirmware(); err != nil {
+		if err = cfr.fc.BootFirmware(); err != nil {
 			return errors.Annotatef(err, "failed to reboot into firmware")
 		}
 	}
 	return nil
-}
-
-func detectFlashSize(fc *FlasherClient) (int, error) {
-	chipID, err := fc.GetFlashChipID()
-	if err != nil {
-		return 0, errors.Annotatef(err, "failed to get flash chip id")
-	}
-	// Parse the JEDEC ID.
-	mfg := (chipID & 0xff0000) >> 16
-	sizeExp := (chipID & 0xff)
-	glog.V(2).Infof("Flash chip ID: 0x%08x, mfg: 0x%02x, sizeExp: %d", chipID, mfg, sizeExp)
-	if mfg == 0 || sizeExp < 19 || sizeExp > 32 {
-		return 0, errors.Errorf("invalid chip id: 0x%08x", chipID)
-	}
-	// Capacity is the power of two.
-	return (1 << sizeExp), nil
 }
 
 func adjustSysParamsLocation(fw *common.FirmwareBundle, flashSize int) {
@@ -333,92 +263,4 @@ func dedupImages(fc *FlasherClient, images []*image) ([]*image, error) {
 		}
 	}
 	return dedupedImages, nil
-}
-
-var (
-	flashModes = map[string]int{
-		// +1, to distinguish from null-value
-		"qio":  1,
-		"qout": 2,
-		"dio":  3,
-		"dout": 4,
-	}
-	flashFreqs = map[string]int{
-		// +1, to distinguish from null-value
-		"40m": 1,
-		"26m": 2,
-		"20m": 3,
-		"80m": 0x10,
-	}
-	flashSizeToIdESP8266 = map[string]int{
-		// +1, to distinguish from null-value
-		"4m":     1,
-		"2m":     2,
-		"8m":     3,
-		"16m":    4,
-		"32m":    5,
-		"16m-c1": 6,
-		"32m-c1": 7,
-		"32m-c2": 8,
-	}
-	flashSizesESP8266  = []int{524288, 262144, 1048576, 2097152, 4194304, 2097152, 4194304, 4194304}
-	flashSizeToIdESP32 = map[string]int{
-		// +1, to distinguish from null-value
-		"8m":   1,
-		"16m":  2,
-		"32m":  3,
-		"64m":  4,
-		"128m": 7,
-	}
-	flashSizesESP32 = []int{1048576, 2097152, 4194304, 8388608, 16777216}
-)
-
-func parseFlashParams(ct esp.ChipType, ps string) (int, int, error) {
-	var flashSizeToId map[string]int
-	var flashSizes []int
-	switch ct {
-	case esp.ChipESP8266:
-		flashSizeToId = flashSizeToIdESP8266
-		flashSizes = flashSizesESP8266
-	case esp.ChipESP32:
-		flashSizeToId = flashSizeToIdESP32
-		flashSizes = flashSizesESP32
-	}
-	parts := strings.Split(ps, ",")
-	switch len(parts) {
-	case 1: // a number
-		p64, err := strconv.ParseInt(ps, 0, 16)
-		if err != nil {
-			return -1, -1, errors.Trace(err)
-		}
-		flashSizeId := (p64 >> 4) & 0xf
-		if flashSizeId > 7 {
-			return -1, -1, errors.Errorf("invalid flash size (%d)", flashSizeId)
-		}
-		return int(p64), flashSizes[flashSizeId], nil
-	case 3: // a mode,size,freq triplet
-		flashMode := flashModes[parts[0]]
-		if flashMode == 0 {
-			return -1, -1, errors.Errorf("invalid flash mode (%q)", parts[0])
-		}
-		flashMode--
-		flashSizeId := 0
-		flashSize := 0
-		if len(parts[1]) > 0 {
-			flashSizeId = flashSizeToId[parts[1]]
-			if flashSizeId == 0 {
-				return -1, -1, errors.Errorf("invalid flash size (%q)", parts[1])
-			}
-			flashSizeId--
-			flashSize = flashSizes[flashSizeId]
-		}
-		flashFreq := flashFreqs[parts[2]]
-		if flashFreq == 0 {
-			return -1, -1, errors.Errorf("invalid flash freq (%q)", parts[2])
-		}
-		flashFreq--
-		return ((flashMode << 8) | (flashSizeId << 4) | flashFreq), flashSize, nil
-	default:
-		return -1, -1, errors.Errorf("invalid flash params format")
-	}
 }

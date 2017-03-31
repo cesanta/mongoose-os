@@ -30,8 +30,11 @@ enum stub_cmd {
    *
    * Args: addr, len, block_size; no alignment requirements, block_size <= 4K.
    * Input: None.
-   * Output: Packets of up to block_size with data.
-   *         Last packet is the MD5 digest of the data.
+   * Output: Packets of up to block_size with data. An acknowledgement is
+   *expected
+   *         after every packet, in the form of a packet with total number of
+   *         bytes received so far.
+   *         Last packet is the MD5 digest of the data sent.
    *
    * Note: No flow control is performed, it is assumed that the host can cope
    * with the inbound stream.
