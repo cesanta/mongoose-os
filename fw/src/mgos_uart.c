@@ -9,6 +9,7 @@
 
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_mongoose.h"
+#include "fw/src/mgos_uart_hal.h"
 #include "fw/src/mgos_utils.h"
 
 #ifndef IRAM
@@ -45,11 +46,11 @@ void mgos_uart_dispatcher(void *arg) {
 
 size_t mgos_uart_write(int uart_no, const void *buf, size_t len) {
   struct mgos_uart_state *us = s_uart_state[uart_no];
-  if (us == NULL || !us->write_enabled) return 0;
+  if (us == NULL || !us->tx_enabled) return 0;
   size_t n = 0;
   while (n < len) {
     mgos_lock();
-    size_t nw = MIN(len - n, mgos_uart_txb_avail(us));
+    size_t nw = MIN(len - n, mgos_uart_txb_avail(uart_no));
     mbuf_append(&us->tx_buf, ((uint8_t *) buf) + n, nw);
     mgos_unlock();
     n += nw;
@@ -59,10 +60,10 @@ size_t mgos_uart_write(int uart_no, const void *buf, size_t len) {
   return len;
 }
 
-void mgos_uart_set_write_enabled(int uart_no, bool enabled) {
+void mgos_uart_set_tx_enabled(int uart_no, bool enabled) {
   struct mgos_uart_state *us = s_uart_state[uart_no];
   if (us == NULL) return;
-  us->write_enabled = enabled;
+  us->tx_enabled = enabled;
 }
 
 void mgos_uart_flush(int uart_no) {
@@ -88,7 +89,7 @@ struct mgos_uart_state *mgos_uart_init(int uart_no,
   us = (struct mgos_uart_state *) calloc(1, sizeof(*us));
   us->uart_no = uart_no;
   us->cfg = cfg;
-  us->write_enabled = true;
+  us->tx_enabled = true;
   mbuf_init(&us->rx_buf, 0);
   mbuf_init(&us->tx_buf, 0);
   us->dispatcher_cb = cb;
@@ -103,11 +104,6 @@ struct mgos_uart_state *mgos_uart_init(int uart_no,
   }
   mgos_add_poll_cb(mgos_uart_dispatcher, (void *) (intptr_t) uart_no);
   return us;
-}
-
-bool mgos_uart_is_inited(int uart_no) {
-  struct mgos_uart_state *us = s_uart_state[uart_no];
-  return (us != NULL);
 }
 
 void mgos_uart_deinit(int uart_no) {
@@ -142,12 +138,14 @@ void mgos_uart_set_rx_enabled(int uart_no, bool enabled) {
   mgos_uart_dev_set_rx_enabled(us, enabled);
 }
 
-size_t mgos_uart_rxb_avail(struct mgos_uart_state *us) {
+size_t mgos_uart_rxb_avail(int uart_no) {
+  struct mgos_uart_state *us = s_uart_state[uart_no];
   if (us == NULL || ((int) us->rx_buf.len) > us->cfg->rx_buf_size) return 0;
   return us->cfg->rx_buf_size - us->rx_buf.len;
 }
 
-size_t mgos_uart_txb_avail(struct mgos_uart_state *us) {
+size_t mgos_uart_txb_avail(int uart_no) {
+  struct mgos_uart_state *us = s_uart_state[uart_no];
   if (us == NULL || ((int) us->tx_buf.len) > us->cfg->tx_buf_size) return 0;
   return us->cfg->tx_buf_size - us->tx_buf.len;
 }

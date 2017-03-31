@@ -115,7 +115,7 @@ void mg_rpc_channel_uart_dispatcher(struct mgos_uart_state *us) {
       }
       mbuf_remove(urxb, flen + FRAME_DELIMETER_LEN);
     }
-    if (mgos_uart_rxb_avail(us) == 0) {
+    if (mgos_uart_rxb_avail(us->uart_no) == 0) {
       LOG(LL_ERROR, ("Incoming frame is too big, dropping."));
       mbuf_remove(urxb, urxb->len);
     }
@@ -123,13 +123,13 @@ void mg_rpc_channel_uart_dispatcher(struct mgos_uart_state *us) {
       mbuf_remove(urxb, urxb->len - FRAME_DELIMETER_LEN);
     }
   }
-  if (chd->sending && mgos_uart_txb_avail(us) > 0) {
-    size_t len = MIN(chd->send_mbuf.len, mgos_uart_txb_avail(us));
+  if (chd->sending && mgos_uart_txb_avail(us->uart_no) > 0) {
+    size_t len = MIN(chd->send_mbuf.len, mgos_uart_txb_avail(us->uart_no));
     mbuf_append(utxb, (uint8_t *) chd->send_mbuf.buf, len);
     mbuf_remove(&chd->send_mbuf, len);
     if (chd->send_mbuf.len == 0) {
       chd->sending = false;
-      mgos_uart_set_write_enabled(chd->uart_no, true);
+      mgos_uart_set_tx_enabled(chd->uart_no, true);
       if (chd->sending_user_frame) {
         chd->sending_user_frame = false;
         ch->ev_handler(ch, MG_RPC_CHANNEL_FRAME_SENT, (void *) 1);
@@ -170,7 +170,7 @@ static bool mg_rpc_channel_uart_send_frame(struct mg_rpc_channel *ch,
   mbuf_append(&chd->send_mbuf, FRAME_DELIMETER, FRAME_DELIMETER_LEN);
   chd->sending = chd->sending_user_frame = true;
   /* Disable UART console while sending. */
-  mgos_uart_set_write_enabled(chd->uart_no, false);
+  mgos_uart_set_tx_enabled(chd->uart_no, false);
   mgos_uart_schedule_dispatcher(chd->uart_no, false /* from_isr */);
   return true;
 }

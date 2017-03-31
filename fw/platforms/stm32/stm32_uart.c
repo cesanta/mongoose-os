@@ -1,9 +1,15 @@
+/*
+ * Copyright (c) 2014-2017 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #include <stm32_sdk_hal.h>
 #include <stdio.h>
 #include <stdarg.h>
-#include "fw/src/mgos_uart.h"
+#include "fw/src/mgos_uart_hal.h"
 #include "fw/src/mgos_utils.h"
 #include "common/cs_dbg.h"
+#include "common/cs_rbuf.h"
 
 #define UART_TRANSMIT_TIMEOUT 100
 #define UART_BUF_SIZE 1024
@@ -51,9 +57,9 @@ void mgos_uart_dev_dispatch_rx_top(struct mgos_uart_state *us) {
   UART_Handle *huart = (UART_Handle *) us->dev_data;
   struct UART_State *state = get_state_by_huart(huart);
   cs_rbuf_t *rxb = &state->rx_buf;
-  while (rxb->used > 0 && mgos_uart_rxb_avail(us) > 0) {
+  while (rxb->used > 0 && mgos_uart_rxb_avail(us->uart_no) > 0) {
     uint8_t *data;
-    int len = cs_rbuf_get(rxb, mgos_uart_rxb_avail(us), &data);
+    int len = cs_rbuf_get(rxb, mgos_uart_rxb_avail(us->uart_no), &data);
     mbuf_append(&us->rx_buf, data, len);
     cs_rbuf_consume(rxb, len);
   }

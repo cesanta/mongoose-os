@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "fw/src/mgos_uart.h"
+#include "fw/src/mgos_uart_hal.h"
 
 #ifdef RTOS_SDK
 #include <esp_common.h>
@@ -93,7 +93,7 @@ void mgos_uart_dev_dispatch_rx_top(struct mgos_uart_state *us) {
   struct mbuf *rxb = &us->rx_buf;
   uint32_t rxn = 0;
   /* RX */
-  if (mgos_uart_rxb_avail(us) > 0 && esp_uart_rx_fifo_len(uart_no) > 0) {
+  if (mgos_uart_rxb_avail(uart_no) > 0 && esp_uart_rx_fifo_len(uart_no) > 0) {
     int linger_counter = 0;
     /* 32 here is a constant measured (using system_get_time) to provide
      * linger time of rx_linger_micros. It basically means that one iteration
@@ -106,10 +106,10 @@ void mgos_uart_dev_dispatch_rx_top(struct mgos_uart_state *us) {
 #ifdef MEASURE_LINGER_TIME
     uint32_t st = system_get_time();
 #endif
-    while (mgos_uart_rxb_avail(us) > 0 && linger_counter <= max_linger) {
+    while (mgos_uart_rxb_avail(uart_no) > 0 && linger_counter <= max_linger) {
       int rx_len = esp_uart_rx_fifo_len(uart_no);
       if (rx_len > 0) {
-        while (rx_len-- > 0 && mgos_uart_rxb_avail(us) > 0) {
+        while (rx_len-- > 0 && mgos_uart_rxb_avail(uart_no) > 0) {
           uint8_t b = rx_byte(uart_no);
           mbuf_append(rxb, &b, 1);
           rxn++;
@@ -156,7 +156,9 @@ void mgos_uart_dev_dispatch_tx_top(struct mgos_uart_state *us) {
 void mgos_uart_dev_dispatch_bottom(struct mgos_uart_state *us) {
   uint32_t int_ena = UART_INFO_INTS;
   /* Determine which interrupts we want. */
-  if (us->rx_enabled && mgos_uart_rxb_avail(us) > 0) int_ena |= UART_RX_INTS;
+  if (us->rx_enabled && mgos_uart_rxb_avail(us->uart_no) > 0) {
+    int_ena |= UART_RX_INTS;
+  }
   if (us->tx_buf.len > 0) int_ena |= UART_TX_INTS;
   WRITE_PERI_REG(UART_INT_ENA(us->uart_no), int_ena);
 }

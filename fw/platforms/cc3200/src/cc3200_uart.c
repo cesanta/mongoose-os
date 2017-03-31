@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include "fw/src/mgos_uart.h"
+#include "fw/src/mgos_uart_hal.h"
 
 #include <stdlib.h>
 
@@ -96,7 +96,7 @@ recv_more:
     int num_recd = 0;
     do {
       uint8_t *data;
-      int num_to_get = MIN(mgos_uart_rxb_avail(us), irxb->used);
+      int num_to_get = MIN(mgos_uart_rxb_avail(us->uart_no), irxb->used);
       num_recd = cs_rbuf_get(irxb, num_to_get, &data);
       mbuf_append(&us->rx_buf, data, num_recd);
       cs_rbuf_consume(irxb, num_recd);
@@ -107,7 +107,8 @@ recv_more:
   }
   /* If we received something during this cycle and there is buffer space
    * available, "linger" for some more, maybe there's more to come. */
-  if (recd && mgos_uart_rxb_avail(us) > 0 && us->cfg->rx_linger_micros > 0) {
+  if (recd && mgos_uart_rxb_avail(us->uart_no) > 0 &&
+      us->cfg->rx_linger_micros > 0) {
     /* Magic constants below are tweaked so that the loop takes at most the
      * configured number of microseconds. */
     int ctr = us->cfg->rx_linger_micros * 31 / 12;

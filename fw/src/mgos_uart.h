@@ -68,7 +68,7 @@ struct mgos_uart_state {
   struct mbuf rx_buf;
   struct mbuf tx_buf;
   unsigned int rx_enabled : 1;
-  unsigned int write_enabled : 1;
+  unsigned int tx_enabled : 1;
   struct mgos_uart_stats stats;
   mgos_uart_dispatcher_t dispatcher_cb;
   void *dispatcher_data;
@@ -76,52 +76,26 @@ struct mgos_uart_state {
 };
 
 size_t mgos_uart_write(int uart_no, const void *buf, size_t len);
-void mgos_uart_set_write_enabled(int uart_no, bool enabled);
 
 struct mgos_uart_state *mgos_uart_init(int uart_no,
                                        struct mgos_uart_config *cfg,
                                        mgos_uart_dispatcher_t cb,
                                        void *disptcher_data);
-bool mgos_uart_is_inited(int uart_no);
 void mgos_uart_deinit(int uart_no);
 
 void mgos_uart_set_dispatcher(int uart_no, mgos_uart_dispatcher_t cb,
                               void *dispatcher_data);
 mgos_uart_dispatcher_t mgos_uart_get_dispatcher(int uart_no);
 
+size_t mgos_uart_rxb_avail(int uart_no);
+size_t mgos_uart_txb_avail(int uart_no);
+
 void mgos_uart_set_rx_enabled(int uart_no, bool enabled);
-
-/* HAL */
-
-size_t mgos_uart_rxb_avail(struct mgos_uart_state *us);
-size_t mgos_uart_txb_avail(struct mgos_uart_state *us);
-
-/* Set device-specific defaults. */
-void mgos_uart_dev_set_defaults(struct mgos_uart_config *cfg);
-
-/* Device-specific (de)initialization. */
-bool mgos_uart_dev_init(struct mgos_uart_state *us);
-void mgos_uart_dev_deinit(struct mgos_uart_state *us);
-
-/* Read any available chars into rx_buf. Ints should be kept disabled. */
-void mgos_uart_dev_dispatch_rx_top(struct mgos_uart_state *us);
-/* Push chars from tx_buf out. Ints should be kept disabled. */
-void mgos_uart_dev_dispatch_tx_top(struct mgos_uart_state *us);
-/*
- * Finish this dispatch. Set up interrupts depending on the state of rx/tx bufs:
- *  - If rx_buf has availabel space, RX ints should be enabled.
- *  - if there is data to send, TX empty ints should be enabled.
- */
-void mgos_uart_dev_dispatch_bottom(struct mgos_uart_state *us);
-
-void mgos_uart_dev_flush_fifo(struct mgos_uart_state *us);
-
-void mgos_uart_dev_set_rx_enabled(struct mgos_uart_state *us, bool enabled);
-
-/* Note: this is executed in ISR context, almost nothing can be done here. */
-void mgos_uart_schedule_dispatcher(int uart_no, bool from_isr);
+void mgos_uart_set_tx_enabled(int uart_no, bool enabled);
 
 void mgos_uart_flush(int uart_no);
+
+void mgos_uart_schedule_dispatcher(int uart_no, bool from_isr);
 
 #ifdef __cplusplus
 }
