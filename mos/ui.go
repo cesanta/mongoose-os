@@ -30,6 +30,7 @@ import (
 )
 
 var (
+	httpAddr     = "127.0.0.1"
 	httpPort     = 1992
 	wsClients    = make(map[*websocket.Conn]int)
 	wsClientsMtx = sync.Mutex{}
@@ -367,11 +368,22 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		http.Handle("/", http.FileServer(&assetfs.AssetFS{Asset: Asset,
 			AssetDir: AssetDir, AssetInfo: assetInfo, Prefix: "web_root"}))
 	}
-	addr := fmt.Sprintf("127.0.0.1:%d", httpPort)
-	url := fmt.Sprintf("http://%s", addr)
+
+	// Listen on httpAddr:httpPort by default, unless environment override.
+	// (Environment override is used by Dockerfile)
+	addr := os.Getenv("MOS_LISTEN_ADDR")
+	if len(addr) == 0 {
+		addr = fmt.Sprintf("%s:%d", httpAddr, httpPort)
+	}
 	fmt.Printf("To get a list of available commands, start with --help\n")
-	fmt.Printf("Starting Web UI. If the browser does not start, navigate to %s\n", url)
-	open.Start(url)
+	if strings.Index(addr, "0.0.0.0:") == 0 {
+		// We're listening on all interfaces (probably Dockerised)
+		fmt.Printf("UI is listenting on [%s].", addr)
+	} else {
+		url := fmt.Sprintf("http://%s", addr)
+		fmt.Printf("Starting Web UI. If the browser does not start, navigate to %s\n", url)
+		open.Start(url)
+	}
 	log.Fatal(http.ListenAndServe(addr, nil))
 
 	// Unreacahble
