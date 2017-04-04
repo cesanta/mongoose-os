@@ -144,9 +144,7 @@ size_t mgos_get_free_fs_size(void) {
 
 void mgos_fs_gc(void) {
   if (s_mount == NULL) return;
-  /* https://github.com/pellepl/spiffs/issues/135 */
-  SPIFFS_gc(&s_mount->fs,
-            mgos_get_free_fs_size() - 2 * s_mount->fs.cfg.log_page_size);
+  spiffs_vfs_gc_all(&s_mount->fs);
 }
 
 static int spiffs_open_p(void *ctx, const char *path, int flags, int mode) {

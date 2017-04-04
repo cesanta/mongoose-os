@@ -47,6 +47,12 @@ int spiffs_vfs_closedir(spiffs *fs, DIR *dir);
 
 int set_spiffs_errno(spiffs *fs, const char *op, int res);
 
+/*
+ * Perform a thorough GC of the filesystem, reclaim as many free pages
+ * as possible.
+ */
+bool spiffs_vfs_gc_all(spiffs *fs);
+
 #if CS_SPIFFS_ENABLE_ENCRYPTION
 bool spiffs_vfs_enc_fs(spiffs *fs);
 

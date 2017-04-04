@@ -553,6 +553,20 @@ int spiffs_vfs_closedir(spiffs *fs, DIR *dir) {
   return 0;
 }
 
+bool spiffs_vfs_gc_all(spiffs *fs) {
+  u32_t total, used;
+  if (SPIFFS_info(fs, &total, &used) != SPIFFS_OK) return false;
+  /* https://github.com/pellepl/spiffs/issues/135 */
+  uint32_t del_before, del_after;
+  do {
+    del_before = fs->stats_p_deleted;
+    int r = SPIFFS_gc(fs, total - used - 2 * fs->cfg.log_page_size);
+    del_after = fs->stats_p_deleted;
+    LOG(LL_DEBUG, ("GC result %d del pages %u -> %u", r, del_before, del_after));
+  } while (del_after < del_before);
+  return true;
+}
+
 #if CS_SPIFFS_ENABLE_ENCRYPTION
 bool spiffs_vfs_enc_name(const char *name, char *enc_name,
                          size_t enc_name_size) {
@@ -694,6 +708,8 @@ bool spiffs_vfs_enc_fs(spiffs *fs) {
       return false;
     }
   }
+  /* Erase all plaintext left in the garbage. */
+  spiffs_vfs_gc_all(fs);
   fs->encrypted = true;
   res = true;
 out:
