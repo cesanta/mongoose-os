@@ -41,7 +41,7 @@ func flashRead(ctx context.Context, devConn *dev.DevConn) error {
 		}
 		outFile = args[3]
 	default:
-		return errors.Errorf("unvalid arguments")
+		return errors.Errorf("invalid arguments")
 	}
 
 	port, err := getPort()
@@ -65,12 +65,14 @@ func flashRead(ctx context.Context, devConn *dev.DevConn) error {
 		err = errors.Errorf("unsupported platform '%s'", *arch)
 	}
 
-	if outFile == "-" {
-		_, err = os.Stdout.Write(data)
-	} else {
-		err = ioutil.WriteFile(outFile, data, 0644)
-		if err == nil {
-			reportf("Wrote %s", outFile)
+	if err == nil {
+		if outFile == "-" {
+			_, err = os.Stdout.Write(data)
+		} else {
+			err = ioutil.WriteFile(outFile, data, 0644)
+			if err == nil {
+				reportf("Wrote %s", outFile)
+			}
 		}
 	}
 

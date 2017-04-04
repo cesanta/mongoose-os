@@ -31,7 +31,8 @@ const (
 	flasherGreeting   = "OHAI"
 	chipEraseTimeout  = 25 * time.Second
 	blockEraseTimeout = 5 * time.Second
-	flashReadSize     = FLASH_SECTOR_SIZE
+	// This is made small to workaround slow Mac driver
+	flashReadSize = 256
 )
 
 /* Decls from stub_flasher.h */
