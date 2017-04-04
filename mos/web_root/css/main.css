@@ -18,7 +18,7 @@ body { color: #666;  background-color: #eee; }
 .upcontrol { position: absolute; top: 36px; bottom: 0; left: 10px; right: 10px; }
 #device-logs { font-size: 90%; overflow-y: auto; line-height: 1.2em; background: #fff; }
 
-#example-code, #file-textarea { height: 100%; background: #fff; border-radius: 3px; }
+#example-code, #file-textarea, #config { height: 100%; background: #fff; border-radius: 3px; }
 
 /* INFO PAGE */
 #app_view label { min-width: 10em; margin-left: 2em; }

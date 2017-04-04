@@ -369,7 +369,7 @@ body { color: #666;  background-color: #eee; }
 .upcontrol { position: absolute; top: 36px; bottom: 0; left: 10px; right: 10px; }
 #device-logs { font-size: 90%; overflow-y: auto; line-height: 1.2em; background: #fff; }
 
-#example-code, #file-textarea { height: 100%; background: #fff; border-radius: 3px; }
+#example-code, #file-textarea, #config { height: 100%; background: #fff; border-radius: 3px; }
 
 /* INFO PAGE */
 #app_view label { min-width: 10em; margin-left: 2em; }
@@ -569,7 +569,7 @@ func web_rootCssMainCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/css/main.css", size: 5167, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/css/main.css", size: 5176, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -5182,111 +5182,39 @@ func web_rootJsWsJs() (*asset, error) {
 }
 
 var _web_rootPage_configurationHtml = []byte(`<div data-title="Device configuration" style="height: 100%;">
-  <div style="margin: 1px 10px;">
+  <div class="col-xs-12" style="height: 100%;">
+    <div style="margin-top: 2px; ">
     <button class="btn btn-sm btn-primary" id="config-save-button"><i class="fa fa-save"></i> Save configuration</button>
-  </div>
-  <div class="upcontrol row" id="config">
+    </div>
+    <div class="form-group upcontrol">
+      <!--<textarea class="form-control" id="example-code" style="height: 100%"></textarea>-->
+      <div id="config"></div>
+    </div>
   </div>
 </div>
 
 <script>
-  var confGet = function(c, p) {
-    if (!p) return undefined;
-    var result, i;
-    var parts = p.split('.');
-    for (i = 0; i < parts.length && typeof(c) === 'object'; i++) {
-      c = c[parts[i]];
-    }
-    if (i < parts.length) c = undefined;
-    return c;
-  };
-
-  var renderConfig = function(schema, cfg, el) {
-    var html = [];
-    var currentObject = null;
-    for (var i in schema) {
-      var entry = schema[i];
-      var ep = entry[0], et = entry[1], ed = entry[2];
-      var val = confGet(cfg, ep);
-      var k = ep.split('.').pop();
-      // if (typeof(val) !== 'object') console.debug(ep, et, typeof(val), val);
-      if (et === 'o' && typeof(val) === 'object') {
-        if (currentObject) html.push('</div></div></div>')
-        currentObject = ep;
-        if (!ed.hide) {
-          html.push('<div class="col-sm-12 form-inline"><div class="x_panel"><div class="x_title">',
-                    ed.title || ep, '</div><div class="x_content form-inline">\n');
-        }
-      } else if (!ed.hide) {
-        html.push('<div rel="' + et + '" class="param">',
-        '<label for="', ep, '">', ed.title || k, '</label>');
-
-        // Look if the element should be disabled.
-        var extra_attrs = '';
-        if (ed.read_only) {
-          extra_attrs = ' disabled ';
-        }
-
-        if (et == 'b') {
-          html.push('<input type="checkbox" id="', ep,
-          '" ', extra_attrs, val ? ' checked' : '', '/>');
-        } else if (ed.type == 'select') {
-          html.push('<select ', extra_attrs, 'id="', ep, '">');
-          for (var i = 0; ed.values && i < ed.values.length; i++) {
-            var o = ed.values[i];
-            html.push('<option value="', o.value, '" ', extra_attrs,
-            o.value == val ? 'selected' : '', '>',
-            o.title, '</option>');
-          }
-          html.push('</select>');
-        } else {
-          html.push('<input ', extra_attrs, 'type="text" id="', ep,
-          '" value="', val, '" class="form-control input-sm"/>');
-        }
-        html.push('</div>\n');
-      }
-    }
-    el.html(html.join(''));
-  };
-
-  var schema, config;
   var loadConfig = function() {
     return $.ajax({url: '/call',
       data: {method: 'Config.Get'}}).then(function(json) {
-      config = json.result;
-      return $.ajax({url: '/get', data: {name: 'sys_config_schema.json'}});
-    }).then(function(json) {
-      var schema = JSON.parse(json.result);
-      renderConfig(schema, config, $('#config'));
+        var text = JSON.stringify(json.result, null, '  ');
+        $('#config').text(text || '');
+        var flask = new CodeFlask;
+        flask.run('#config', {language: 'json'});
     }).then(function() {
       new PNotify({title: 'Configuration loaded', type: 'success' });
     });
   };
   loadConfig();
 
-  function ev(id) {
-    var el = document.getElementById(id);
-    if (!el) return undefined;
-    if (el.type == 'checkbox') return el.checked ? true : false;
-    var type = $(el).closest('.param').attr('rel');
-    if (type == 'i') return parseInt(el.value);
-    return el.value;
-  };
-
   $(document).on('click', '#config-save-button', function() {
-    var walk = function(obj, prefix) {
-      for (var k in obj) {
-        var key = (prefix + '.' + k).replace(/^\./, '');
-        console.log(key);
-        if (typeof(obj[k]) === 'object') {
-          walk(obj[k], key);
-        } else {
-          obj[k] = ev(key);
-        }
-      }
-    };
-    walk(config, '');
-
+    var text = $('#config textarea').val();
+    try {
+      var config = JSON.parse(text);
+    } catch (e) {
+      new PNotify({title: 'Error in configuration JSON', type: 'error' });
+      return false;
+    }
     $.ajax({url: '/call', data: {
       method: 'Config.Set',
       args: JSON.stringify({config: config})}
@@ -5312,7 +5240,7 @@ func web_rootPage_configurationHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_configuration.html", size: 3952, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_configuration.html", size: 1601, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
