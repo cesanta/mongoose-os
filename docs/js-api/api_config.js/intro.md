@@ -3,17 +3,17 @@ title: "Cfg"
 items:
 ---
 
- System Config functions
+System Config functions
 
 
 
- **`Cfg.get(path)`** - get the config value by the path
+**`Cfg.get(path)`** - get the config value by the path
 
- Examples:
+Examples:
 
- `Cfg.get("device.id")` - returns a string
- `Cfg.get("debug.level")` - returns a number
- `Cfg.get("wifi.sta.enable")` - returns a boolean
+`Cfg.get("device.id")` - returns a string
+`Cfg.get("debug.level")` - returns a number
+`Cfg.get("wifi.sta.enable")` - returns a boolean
 
- Returning objects are not yet supported
+Returning objects are not yet supported
 

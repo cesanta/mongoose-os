@@ -3,21 +3,21 @@ title: "NeoPixel"
 items:
 ---
 
- Driver code for the AdaFruit NeoPixel RGB LED strips.
-   https://www.adafruit.com/category/168
+Driver code for the AdaFruit NeoPixel RGB LED strips.
+  https://www.adafruit.com/category/168
 
- Usage example:
+Usage example:
 
- ```javascript
- let pin = 5, numPixels = 16, colorOrder = NeoPixel.GRB;
- let s = NeoPixelStrip(pin, numPixels, colorOrder);
- NeoPixel.setPixel(s, 0 /* pixel */, 12, 34, 56);
- NeoPixel.show(s);
+```javascript
+let pin = 5, numPixels = 16, colorOrder = NeoPixel.GRB;
+let s = NeoPixelStrip(pin, numPixels, colorOrder);
+NeoPixel.setPixel(s, 0 /* pixel */, 12, 34, 56);
+NeoPixel.show(s);
 
- NeoPixel.clear(s);
- NeoPixel.setPixel(s, 1 /* pixel */, 12, 34, 56);
- NeoPixel.show(s);
- ```
+NeoPixel.clear(s);
+NeoPixel.setPixel(s, 1 /* pixel */, 12, 34, 56);
+NeoPixel.show(s);
+```
 
 
 load("api_bitbang.js");
@@ -30,8 +30,8 @@ function NeoPixelStrip(pin, numPixels, order) {
   let s = {
     pin: pin,
     len: numPixels * 3,
- Note: memory allocated here is currently not released.
- This should be ok for now, we don't expect strips to be re-created.
+Note: memory allocated here is currently not released.
+This should be ok for now, we don't expect strips to be re-created.
     data: Sys.malloc(numPixels * 3),
     order: order,
   };
@@ -41,19 +41,19 @@ function NeoPixelStrip(pin, numPixels, order) {
 
 
 
- Note: memory allocated here is currently not released.
- This should be ok for now, we don't expect strips to be re-created.
+Note: memory allocated here is currently not released.
+This should be ok for now, we don't expect strips to be re-created.
 
 
 
- **`NeoPixel.setPixel(s, i, r, g, b)`** - set i-th's pixel's RGB value.
- Note that this only affects in-memory value of the pixel.
+**`NeoPixel.setPixel(s, i, r, g, b)`** - set i-th's pixel's RGB value.
+Note that this only affects in-memory value of the pixel.
 
 
 
- **`NeoPixel.clear(s)`** - clear in-memory values of the pixels.
+**`NeoPixel.clear(s)`** - clear in-memory values of the pixels.
 
 
 
- **`NeoPixel.show(s)`** - output values of the pixels.
+**`NeoPixel.show(s)`** - output values of the pixels.
 
