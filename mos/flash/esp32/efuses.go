@@ -23,6 +23,7 @@ var (
 	blockLengths         = []int{7, 8, 8, 8}
 	ReadDisableFuseName  = "efuse_rd_disable"
 	WriteDisableFuseName = "efuse_wr_disable"
+	MACAddressFuseName   = "WIFI_MAC_Address"
 )
 
 var (
@@ -60,7 +61,7 @@ var (
 		{name: ReadDisableFuseName, block: 0, fields: []bitField{{0, 19, 16}}, wdBit: 0, rdBit: -1},
 		{name: "flash_crypt_cnt", block: 0, fields: []bitField{{0, 27, 20}}, wdBit: 2, rdBit: -1},
 		// 0, 31, 28 - ?
-		{name: "WIFI_MAC_Address", block: 0, fields: []bitField{{1, 31, 0}, {2, 23, 0}}, wdBit: 3, rdBit: -1},
+		{name: MACAddressFuseName, block: 0, fields: []bitField{{1, 31, 0}, {2, 23, 0}}, wdBit: 3, rdBit: -1},
 		// 2, 31, 24 - ?
 		// 3, 3, 0 - ?
 		{name: "SPI_pad_config_hd", block: 0, fields: []bitField{{3, 8, 4}}, wdBit: 3, rdBit: -1},
@@ -87,8 +88,8 @@ var (
 		{name: "download_dis_cache", block: 0, fields: []bitField{{6, 9, 9}}, wdBit: 15, rdBit: -1},
 		{name: "key_status", block: 0, fields: []bitField{{6, 10, 10}}, wdBit: 10, rdBit: 3},
 		// 6, 31, 11 - ?
-		{name: "flash_enc_key", block: 1, fields: []bitField{{0, 31, 0}, {1, 31, 0}, {2, 31, 0}, {3, 31, 0}, {4, 31, 0}, {5, 31, 0}, {6, 31, 0}, {7, 31, 0}}, wdBit: 7, rdBit: 0},
-		{name: "boot_sign_key", block: 2, fields: []bitField{{0, 31, 0}, {1, 31, 0}, {2, 31, 0}, {3, 31, 0}, {4, 31, 0}, {5, 31, 0}, {6, 31, 0}, {7, 31, 0}}, wdBit: 8, rdBit: 1},
+		{name: "flash_encryption_key", block: 1, fields: []bitField{{0, 31, 0}, {1, 31, 0}, {2, 31, 0}, {3, 31, 0}, {4, 31, 0}, {5, 31, 0}, {6, 31, 0}, {7, 31, 0}}, wdBit: 7, rdBit: 0},
+		{name: "secure_boot_key", block: 2, fields: []bitField{{0, 31, 0}, {1, 31, 0}, {2, 31, 0}, {3, 31, 0}, {4, 31, 0}, {5, 31, 0}, {6, 31, 0}, {7, 31, 0}}, wdBit: 8, rdBit: 1},
 		{name: "user_key", block: 3, fields: []bitField{{0, 31, 0}, {1, 31, 0}, {2, 31, 0}, {3, 31, 0}, {4, 31, 0}, {5, 31, 0}, {6, 31, 0}, {7, 31, 0}}, wdBit: 9, rdBit: 2},
 	}
 )
@@ -314,10 +315,28 @@ func (f *Fuse) SetKeyValue(kb []byte) error {
 	if len(kb) != KeyLen {
 		return errors.Errorf("want %d bytes, got %d", KeyLen, len(kb))
 	}
-	reverseKey(kb)
+	kbr := make([]byte, len(kb))
+	copy(kbr, kb)
+	reverseKey(kbr)
 	v := big.NewInt(0)
-	v.SetBytes(kb)
+	v.SetBytes(kbr)
 	return f.SetValue(v)
+}
+
+// c4 05 dd 9c b6 24 0a -> 24:0a:c4:05:dd:9c
+func (f *Fuse) MACAddressString() string {
+	var macBytes [7]byte
+	v, _ := f.Value(false)
+	vBytes := v.Bytes()
+	for i := len(macBytes) - len(vBytes); i < len(macBytes); {
+		for j := 0; j < len(vBytes); {
+			macBytes[i] = vBytes[j]
+			i++
+			j++
+		}
+	}
+	return fmt.Sprintf("%02x:%02x:%02x:%02x:%02x:%02x",
+		macBytes[5], macBytes[6], macBytes[0], macBytes[1], macBytes[2], macBytes[3])
 }
 
 func (f *Fuse) String() string {
@@ -331,9 +350,12 @@ func (f *Fuse) String() string {
 			vflen = 1
 		}
 		if f.d.block > 0 {
-			fmt.Fprintf(b, " (key) %s", f.KeyString())
+			fmt.Fprintf(b, " %s", f.KeyString())
 		} else {
 			fmt.Fprintf(b, fmt.Sprintf(" 0x%%0%dx", vflen), v)
+			if f.Name() == MACAddressFuseName {
+				fmt.Fprintf(b, fmt.Sprintf(" (MAC: %s)", f.MACAddressString()))
+			}
 			if vd.Cmp(v) != 0 {
 				fmt.Fprintf(b, fmt.Sprintf(" -> 0x%%0%dx", vflen), vd)
 			}

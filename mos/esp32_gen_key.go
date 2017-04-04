@@ -23,7 +23,7 @@ var (
 )
 
 func esp32GenKey(ctx context.Context, devConn *dev.DevConn) error {
-	if len(flag.Args()) < 2 {
+	if len(flag.Args()) < 3 {
 		return errors.Errorf("key slot and output file are required")
 	}
 
@@ -39,6 +39,8 @@ func esp32GenKey(ctx context.Context, devConn *dev.DevConn) error {
 	if err != nil {
 		return errors.Annotatef(err, "failed to read eFuses")
 	}
+
+	reportf("Device MAC address: %s", fusesByName[esp32.MACAddressFuseName].MACAddressString())
 
 	kf := fusesByName[keySlot]
 	if kf == nil || !kf.IsKey() {
@@ -60,12 +62,15 @@ func esp32GenKey(ctx context.Context, devConn *dev.DevConn) error {
 		return errors.Annotatef(err, "failed to set key value")
 	}
 
+	toPrint := []*esp32.Fuse{kf}
+
 	if *esp32ProtectKey {
 		kf.SetReadDisable()
 		kf.SetWriteDisable()
+		toPrint = append(toPrint, fusesByName[esp32.ReadDisableFuseName])
+		toPrint = append(toPrint, fusesByName[esp32.WriteDisableFuseName])
 	}
 
-	toPrint := []*esp32.Fuse{kf}
 	if *esp32EnableFlashEncryption {
 		for _, e := range []struct {
 			name  string
