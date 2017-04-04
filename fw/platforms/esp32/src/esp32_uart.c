@@ -24,7 +24,7 @@
 #define UART_INFO_INTS (UART_RXFIFO_OVF_INT_ENA | UART_CTS_CHG_INT_ENA)
 
 /* Active for CTS is 0, i.e. 0 = ok to send. */
-IRAM int esp32_uart_cts(int uart_no) {
+IRAM bool esp32_uart_cts(int uart_no) {
   return (READ_PERI_REG(UART_STATUS_REG(uart_no)) & UART_CTSN) ? 1 : 0;
 }
 
@@ -118,7 +118,7 @@ IRAM void mgos_uart_hal_dispatch_rx_top(struct mgos_uart_state *us) {
     us->stats.rx_bytes += rxn;
   }
   int rfl = esp32_uart_rx_fifo_len(uart_no);
-  if (rfl < us->cfg.rx_fifo_full_thresh) {
+  if (rfl < us->cfg.dev.rx_fifo_full_thresh) {
     CLEAR_PERI_REG_MASK(UART_INT_CLR_REG(uart_no), UART_RX_INTS);
   }
 }
@@ -160,10 +160,13 @@ void mgos_uart_hal_flush_fifo(struct mgos_uart_state *us) {
 
 bool esp32_uart_validate_config(const struct mgos_uart_config *c) {
   if (c->baud_rate < 0 || c->baud_rate > 4000000 || c->rx_buf_size < 0 ||
-      c->rx_fifo_full_thresh < 1 || c->rx_fifo_full_thresh > 127 ||
-      (c->rx_fc_ena && (c->rx_fifo_fc_thresh < c->rx_fifo_full_thresh)) ||
-      c->rx_linger_micros > 200 || c->tx_fifo_empty_thresh < 0 ||
-      c->tx_fifo_empty_thresh > 127) {
+      c->dev.rx_fifo_full_thresh < 1 ||
+      (c->rx_fc_ena &&
+       (c->dev.rx_fifo_fc_thresh < c->dev.rx_fifo_full_thresh)) ||
+      c->rx_linger_micros > 200 || c->dev.tx_fifo_empty_thresh < 0 ||
+      c->dev.rx_gpio < 0 || c->dev.tx_gpio < 0 ||
+      (c->rx_fc_ena && c->dev.rts_gpio < 0) ||
+      (c->tx_fc_ena && c->dev.cts_gpio < 0)) {
     return false;
   }
   return true;
@@ -171,11 +174,33 @@ bool esp32_uart_validate_config(const struct mgos_uart_config *c) {
 
 void mgos_uart_hal_config_set_defaults(int uart_no,
                                        struct mgos_uart_config *cfg) {
-  cfg->rx_fifo_alarm = 10;
-  cfg->rx_fifo_full_thresh = 120;
-  cfg->rx_fifo_fc_thresh = 125;
-  cfg->tx_fifo_empty_thresh = 10;
-  (void) uart_no;
+  struct mgos_uart_dev_config *dcfg = &cfg->dev;
+  dcfg->rx_fifo_alarm = 10;
+  dcfg->rx_fifo_full_thresh = 120;
+  dcfg->rx_fifo_fc_thresh = 125;
+  dcfg->tx_fifo_empty_thresh = 10;
+  switch (uart_no) {
+    case 0:
+      dcfg->rx_gpio = 3;
+      dcfg->tx_gpio = 1;
+      dcfg->cts_gpio = 16;
+      dcfg->rts_gpio = 15;
+      break;
+    case 1:
+      dcfg->rx_gpio = 9;
+      dcfg->tx_gpio = 10;
+      dcfg->cts_gpio = 6;
+      dcfg->rts_gpio = 11;
+      break;
+    case 2:
+    /* No default pin assignments for UART2 */
+    default:
+      dcfg->rx_gpio = -1;
+      dcfg->tx_gpio = -1;
+      dcfg->cts_gpio = -1;
+      dcfg->rts_gpio = -1;
+      break;
+  }
 }
 
 bool mgos_uart_hal_init(struct mgos_uart_state *us) {
@@ -221,21 +246,11 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
     WRITE_PERI_REG(UART_CLKDIV_REG(uart_no), clkdiv_v);
   }
 
-  /* TODO(rojer): Allow specifying pins via config. */
-  if (uart_no == 0) {
-    /* Keep defaults */
-  } else if (uart_no == 1) {
-    if (uart_set_pin(UART_NUM_1, 19 /* TX */, 18 /* RX */,
-                     UART_PIN_NO_CHANGE /* RTS */,
-                     UART_PIN_NO_CHANGE /* CTS */) != ESP_OK) {
-      return false;
-    }
-  } else {
-    if (uart_set_pin(UART_NUM_1, 17 /* TX */, 16 /* RX */,
-                     UART_PIN_NO_CHANGE /* RTS */,
-                     UART_PIN_NO_CHANGE /* CTS */) != ESP_OK) {
-      return false;
-    }
+  if (uart_set_pin(uart_no, cfg->dev.tx_gpio, cfg->dev.rx_gpio,
+                   cfg->rx_fc_ena ? cfg->dev.rts_gpio : UART_PIN_NO_CHANGE,
+                   cfg->tx_fc_ena ? cfg->dev.cts_gpio : UART_PIN_NO_CHANGE) !=
+      ESP_OK) {
+    return false;
   }
 
   uint32_t conf0 = UART_TICK_REF_ALWAYS_ON | (3 << UART_BIT_NUM_S) | /* 8 */
@@ -246,19 +261,20 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
   }
   WRITE_PERI_REG(UART_CONF0_REG(us->uart_no), conf0);
 
-  uint32_t conf1 = ((cfg->tx_fifo_empty_thresh & UART_TXFIFO_EMPTY_THRHD_V)
+  uint32_t conf1 = ((cfg->dev.tx_fifo_empty_thresh & UART_TXFIFO_EMPTY_THRHD_V)
                     << UART_TXFIFO_EMPTY_THRHD_S) |
-                   ((cfg->rx_fifo_full_thresh & UART_RXFIFO_FULL_THRHD_V)
+                   ((cfg->dev.rx_fifo_full_thresh & UART_RXFIFO_FULL_THRHD_V)
                     << UART_RXFIFO_FULL_THRHD_S);
-  conf1 |= (cfg->tx_fifo_empty_thresh << 8);
-  if (cfg->rx_fifo_alarm >= 0) {
-    conf1 |= UART_RX_TOUT_EN | ((cfg->rx_fifo_alarm & UART_RX_TOUT_THRHD_V)
+  conf1 |= (cfg->dev.tx_fifo_empty_thresh << 8);
+  if (cfg->dev.rx_fifo_alarm >= 0) {
+    conf1 |= UART_RX_TOUT_EN | ((cfg->dev.rx_fifo_alarm & UART_RX_TOUT_THRHD_V)
                                 << UART_RX_TOUT_THRHD_S);
   }
-  if (cfg->rx_fc_ena && cfg->rx_fifo_fc_thresh > 0) {
+  if (cfg->rx_fc_ena && cfg->dev.rx_fifo_fc_thresh > 0) {
     /* UART_RX_FLOW_EN will be set in uart_start. */
-    conf1 |= UART_RX_FLOW_EN | ((cfg->rx_fifo_fc_thresh & UART_RX_FLOW_THRHD_V)
-                                << UART_RX_FLOW_THRHD_S);
+    conf1 |=
+        UART_RX_FLOW_EN | ((cfg->dev.rx_fifo_fc_thresh & UART_RX_FLOW_THRHD_V)
+                           << UART_RX_FLOW_THRHD_S);
   }
   WRITE_PERI_REG(UART_CONF1_REG(us->uart_no), conf1);
   return true;

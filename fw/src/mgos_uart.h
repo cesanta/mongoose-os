@@ -15,6 +15,16 @@
 
 #include "fw/src/mgos_init.h"
 
+#if CS_PLATFORM == CS_P_CC3200
+#include "fw/platforms/cc3200/src/cc3200_uart.h"
+#elif CS_PLATFORM == CS_P_ESP32
+#include "fw/platforms/esp32/src/esp32_uart.h"
+#elif CS_PLATFORM == CS_P_ESP8266
+#include "fw/platforms/esp8266/src/esp_uart.h"
+#else
+struct mgos_uart_dev_config {};
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -29,15 +39,8 @@ struct mgos_uart_config {
   int tx_buf_size;
   bool tx_fc_ena;
 
-#if CS_PLATFORM == CS_P_ESP32 || CS_PLATFORM == CS_P_ESP8266
-  int rx_fifo_full_thresh;
-  int rx_fifo_fc_thresh;
-  int rx_fifo_alarm;
-  int tx_fifo_empty_thresh;
-#if CS_PLATFORM == CS_P_ESP8266
-  bool swap_rxcts_txrts;
-#endif
-#endif
+  /* Platform-specific configuration options. */
+  struct mgos_uart_dev_config dev;
 };
 
 bool mgos_uart_configure(int uart_no, const struct mgos_uart_config *cfg);

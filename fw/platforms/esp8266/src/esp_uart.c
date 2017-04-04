@@ -36,7 +36,7 @@
 #define UART_INFO_INTS (UART_RXFIFO_OVF_INT_ENA | UART_CTS_CHG_INT_ENA)
 
 /* Active for CTS is 0, i.e. 0 = ok to send. */
-IRAM int esp_uart_cts(int uart_no) {
+IRAM bool esp_uart_cts(int uart_no) {
   return (READ_PERI_REG(UART_STATUS(uart_no)) & UART_CTSN) ? 1 : 0;
 }
 
@@ -126,7 +126,7 @@ void mgos_uart_hal_dispatch_rx_top(struct mgos_uart_state *us) {
     us->stats.rx_bytes += rxn;
   }
   int rfl = esp_uart_rx_fifo_len(uart_no);
-  if (rfl < us->cfg.rx_fifo_full_thresh) {
+  if (rfl < us->cfg.dev.rx_fifo_full_thresh) {
     CLEAR_PERI_REG_MASK(UART_INT_CLR(uart_no), UART_RX_INTS);
   }
 }
@@ -168,10 +168,10 @@ void mgos_uart_hal_flush_fifo(struct mgos_uart_state *us) {
 
 static bool esp_uart_validate_config(const struct mgos_uart_config *c) {
   if (c->baud_rate < 0 || c->baud_rate > 4000000 || c->rx_buf_size < 0 ||
-      c->rx_fifo_full_thresh < 1 || c->rx_fifo_full_thresh > 127 ||
-      (c->rx_fc_ena && (c->rx_fifo_fc_thresh < c->rx_fifo_full_thresh)) ||
-      c->rx_linger_micros > 200 || c->tx_fifo_empty_thresh < 0 ||
-      c->tx_fifo_empty_thresh > 127) {
+      c->dev.rx_fifo_full_thresh < 1 ||
+      (c->rx_fc_ena &&
+       (c->dev.rx_fifo_fc_thresh < c->dev.rx_fifo_full_thresh)) ||
+      c->rx_linger_micros > 200 || c->dev.tx_fifo_empty_thresh < 0) {
     return false;
   }
   return true;
@@ -179,10 +179,11 @@ static bool esp_uart_validate_config(const struct mgos_uart_config *c) {
 
 void mgos_uart_hal_config_set_defaults(int uart_no,
                                        struct mgos_uart_config *cfg) {
-  cfg->rx_fifo_alarm = 10;
-  cfg->rx_fifo_full_thresh = 120;
-  cfg->rx_fifo_fc_thresh = 125;
-  cfg->tx_fifo_empty_thresh = 10;
+  cfg->dev.rx_fifo_alarm = 10;
+  cfg->dev.rx_fifo_full_thresh = 120;
+  cfg->dev.rx_fifo_fc_thresh = 125;
+  cfg->dev.tx_fifo_empty_thresh = 10;
+  cfg->dev.swap_rxcts_txrts = false;
   (void) uart_no;
 }
 
@@ -213,7 +214,7 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
   if (us->uart_no == 0) {
     PIN_PULLUP_DIS(PERIPHS_IO_MUX_U0TXD_U);
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0TXD_U, FUNC_U0TXD);
-    if (cfg->swap_rxcts_txrts) {
+    if (cfg->dev.swap_rxcts_txrts) {
       SET_PERI_REG_MASK(PERIPHS_DPORT_BASEADDR + HOST_INF_SEL,
                         PERI_IO_UART0_PIN_SWAP);
     } else {
@@ -223,7 +224,7 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
   } else {
     PIN_PULLUP_DIS(PERIPHS_IO_MUX_GPIO2_U);
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO2_U, FUNC_U1TXD_BK);
-    if (cfg->swap_rxcts_txrts) {
+    if (cfg->dev.swap_rxcts_txrts) {
       SET_PERI_REG_MASK(PERIPHS_DPORT_BASEADDR + HOST_INF_SEL,
                         PERI_IO_UART1_PIN_SWAP);
     } else {
@@ -239,14 +240,14 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
   }
   WRITE_PERI_REG(UART_CONF0(us->uart_no), conf0);
 
-  unsigned int conf1 = cfg->rx_fifo_full_thresh;
-  conf1 |= (cfg->tx_fifo_empty_thresh << 8);
-  if (cfg->rx_fifo_alarm >= 0) {
-    conf1 |= UART_RX_TOUT_EN | ((cfg->rx_fifo_alarm & 0x7f) << 24);
+  unsigned int conf1 = cfg->dev.rx_fifo_full_thresh;
+  conf1 |= (cfg->dev.tx_fifo_empty_thresh << 8);
+  if (cfg->dev.rx_fifo_alarm >= 0) {
+    conf1 |= UART_RX_TOUT_EN | ((cfg->dev.rx_fifo_alarm & 0x7f) << 24);
   }
-  if (cfg->rx_fc_ena && cfg->rx_fifo_fc_thresh > 0) {
+  if (cfg->rx_fc_ena && cfg->dev.rx_fifo_fc_thresh > 0) {
     /* UART_RX_FLOW_EN will be set in uart_start. */
-    conf1 |= ((cfg->rx_fifo_fc_thresh & 0x7f) << 16);
+    conf1 |= ((cfg->dev.rx_fifo_fc_thresh & 0x7f) << 16);
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U, FUNC_U0RTS);
   }
   WRITE_PERI_REG(UART_CONF1(us->uart_no), conf1);

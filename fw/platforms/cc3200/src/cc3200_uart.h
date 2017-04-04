@@ -6,8 +6,18 @@
 #ifndef CS_FW_PLATFORMS_CC3200_SRC_CC3200_UART_H_
 #define CS_FW_PLATFORMS_CC3200_SRC_CC3200_UART_H_
 
-#include <inttypes.h>
 #include <stdbool.h>
+#include <stdint.h>
+
+struct mgos_uart_dev_config {
+/* TODO(rojer) */
+#if 0
+  int8_t tx_pin;
+  int8_t rx_pin;
+  int8_t cts_pin;
+  int8_t rts_pin;
+#endif
+};
 
 uint32_t cc3200_uart_get_base(int uart_no);
 bool cc3200_uart_cts(int uart_no);

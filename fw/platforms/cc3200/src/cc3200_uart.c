@@ -239,7 +239,7 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
   return true;
 }
 
-int cc3200_uart_cts(int uart_no) {
+bool cc3200_uart_cts(int uart_no) {
   uint32_t base = cc3200_uart_get_base(uart_no);
   return (UARTModemStatusGet(base) != 0);
 }

@@ -8,6 +8,18 @@
 
 #include <stdint.h>
 
+struct mgos_uart_dev_config {
+  int8_t rx_fifo_full_thresh;
+  int8_t rx_fifo_fc_thresh;
+  int8_t rx_fifo_alarm;
+  int8_t tx_fifo_empty_thresh;
+
+  int8_t rx_gpio;
+  int8_t tx_gpio;
+  int8_t cts_gpio;
+  int8_t rts_gpio;
+};
+
 int esp32_uart_rx_fifo_len(int uart_no);
 int esp32_uart_tx_fifo_len(int uart_no);
 bool esp32_uart_cts(int uart_no);

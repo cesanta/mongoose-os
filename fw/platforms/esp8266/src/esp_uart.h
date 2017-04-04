@@ -6,7 +6,16 @@
 #ifndef CS_FW_PLATFORMS_ESP8266_USER_ESP_UART_H_
 #define CS_FW_PLATFORMS_ESP8266_USER_ESP_UART_H_
 
-#include <inttypes.h>
+#include <stdint.h>
+
+struct mgos_uart_dev_config {
+  int8_t rx_fifo_full_thresh;
+  int8_t rx_fifo_fc_thresh;
+  int8_t rx_fifo_alarm;
+  int8_t tx_fifo_empty_thresh;
+
+  bool swap_rxcts_txrts;
+};
 
 #include "common/platforms/esp8266/uart_register.h"
 
