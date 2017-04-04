@@ -80,10 +80,8 @@
   // Let tool know the port we want to use
   $.ajax({
     url: '/connect',
-    data: {port: getCookie('port')},
     success: function() {
       connected = true;
-
       // If there is a deferred page to load, load it
       if (deferredLoadPage !== undefined) {
         loadPage(deferredLoadPage);
@@ -100,8 +98,6 @@
   $('#d1').height($(document.body).height() - 60);
   $('#app_view').height($(d1).height() * 0.75);
   $('#device-logs-panel').height($(d1).height() * 0.25);
-
-
 
   // Instance the tour
   var tour = new Tour({

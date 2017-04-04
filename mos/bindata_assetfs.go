@@ -4438,10 +4438,8 @@ var _web_rootJsDashJs = []byte(`(function($) {
   // Let tool know the port we want to use
   $.ajax({
     url: '/connect',
-    data: {port: getCookie('port')},
     success: function() {
       connected = true;
-
       // If there is a deferred page to load, load it
       if (deferredLoadPage !== undefined) {
         loadPage(deferredLoadPage);
@@ -4458,8 +4456,6 @@ var _web_rootJsDashJs = []byte(`(function($) {
   $('#d1').height($(document.body).height() - 60);
   $('#app_view').height($(d1).height() * 0.75);
   $('#device-logs-panel').height($(d1).height() * 0.25);
-
-
 
   // Instance the tour
   var tour = new Tour({
@@ -4546,7 +4542,7 @@ func web_rootJsDashJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/dash.js", size: 4926, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/dash.js", size: 4886, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4943,9 +4939,10 @@ var _web_rootJsWizardJs = []byte(`(function($) {
 
   tabHandlers.tab1 = function() {
     var port = $('#input-serial').val();
-    return $.ajax({url: '/connect', data: {port: port, reconnect: true}}).done(function(json) {
+    var data = {reconnect: true};
+    if (portEdited) data.port = port;
+    return $.ajax({url: '/connect', data: data}).done(function(json) {
       new PNotify({ title: 'Success', text: 'Successfully connected to ' + port, type: 'success' });
-      document.cookie = 'port=' + port;
     }).fail(function(err) {
       return err;
     });
@@ -5060,13 +5057,17 @@ var _web_rootJsWizardJs = []byte(`(function($) {
     }
   });
 
-  $('#input-serial').val(getCookie('port'));
   $('#input-firmware').val(getCookie('firmware'));
   $('#input-ssid').val(getCookie('ssid'));
   $('#input-pass').val(getCookie('pass'));
   $('#input-region').val(getCookie('region'));
   $('#input-policy').val(getCookie('policy'));
   $('#input-mqtt').val(getCookie('mqtt') || defaultMqttServer);
+
+  var portEdited = false;
+  $(document).on('keyup paste', '#input-serial', function() {
+    portEdited = !!$('#input-serial').val();
+  });
 
   // Repeatedly pull list of serial ports when we're on the first tab
   setInterval(function() {
@@ -5079,21 +5080,21 @@ var _web_rootJsWizardJs = []byte(`(function($) {
           $('<li><a href="#">' + v + '</a></li>').appendTo('#dropdown-ports');
         });
         if (!$('#input-serial').val()) {
-          $('#input-serial').val(json.result[0]);
+          $('#input-serial').val(json.result[0] || '');
         }
         $('#noports-warning').fadeOut();
       } else {
+        if (!portEdited) $('#input-serial').val('');
         $('#noports-warning').fadeIn();
       }
     });
   }, 1000);
 
   // Let the tool know the port we want to use
-  $.ajax({url: '/connect', data: {port: getCookie('port')}});
+  $.ajax({url: '/connect'});
 
   $.get('https://mongoose-os.com/downloads/builds.json', function(data) {
     if (!data || !data.builds || !data.builds.length) return;
-    console.log('JEEY', data);
     $('#dropdown-firmware').empty();
     $.each(data.builds, function(i, v) {
       $('<li><a href="#">https://mongoose-os.com/downloads/' + v + '</a></li>').appendTo('#dropdown-firmware');
@@ -5123,7 +5124,7 @@ func web_rootJsWizardJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 9701, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 9798, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

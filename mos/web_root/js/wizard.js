@@ -89,9 +89,10 @@
 
   tabHandlers.tab1 = function() {
     var port = $('#input-serial').val();
-    return $.ajax({url: '/connect', data: {port: port, reconnect: true}}).done(function(json) {
+    var data = {reconnect: true};
+    if (portEdited) data.port = port;
+    return $.ajax({url: '/connect', data: data}).done(function(json) {
       new PNotify({ title: 'Success', text: 'Successfully connected to ' + port, type: 'success' });
-      document.cookie = 'port=' + port;
     }).fail(function(err) {
       return err;
     });
@@ -206,13 +207,17 @@
     }
   });
 
-  $('#input-serial').val(getCookie('port'));
   $('#input-firmware').val(getCookie('firmware'));
   $('#input-ssid').val(getCookie('ssid'));
   $('#input-pass').val(getCookie('pass'));
   $('#input-region').val(getCookie('region'));
   $('#input-policy').val(getCookie('policy'));
   $('#input-mqtt').val(getCookie('mqtt') || defaultMqttServer);
+
+  var portEdited = false;
+  $(document).on('keyup paste', '#input-serial', function() {
+    portEdited = !!$('#input-serial').val();
+  });
 
   // Repeatedly pull list of serial ports when we're on the first tab
   setInterval(function() {
@@ -225,21 +230,21 @@
           $('<li><a href="#">' + v + '</a></li>').appendTo('#dropdown-ports');
         });
         if (!$('#input-serial').val()) {
-          $('#input-serial').val(json.result[0]);
+          $('#input-serial').val(json.result[0] || '');
         }
         $('#noports-warning').fadeOut();
       } else {
+        if (!portEdited) $('#input-serial').val('');
         $('#noports-warning').fadeIn();
       }
     });
   }, 1000);
 
   // Let the tool know the port we want to use
-  $.ajax({url: '/connect', data: {port: getCookie('port')}});
+  $.ajax({url: '/connect'});
 
   $.get('https://mongoose-os.com/downloads/builds.json', function(data) {
     if (!data || !data.builds || !data.builds.length) return;
-    console.log('JEEY', data);
     $('#dropdown-firmware').empty();
     $.each(data.builds, function(i, v) {
       $('<li><a href="#">https://mongoose-os.com/downloads/' + v + '</a></li>').appendTo('#dropdown-firmware');
