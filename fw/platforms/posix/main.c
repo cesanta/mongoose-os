@@ -15,7 +15,7 @@
 #include "fw/src/mgos_init.h"
 #include "fw/src/mgos_mongoose.h"
 #include "fw/src/mgos_sys_config.h"
-#include "fw/src/mgos_uart.h"
+#include "fw/src/mgos_uart_hal.h"
 
 #include "fw.h"
 
@@ -64,8 +64,17 @@ bool mgos_uart_hal_init(struct mgos_uart_state *us) {
   return false;
 }
 
-void mgos_uart_hal_deinit(struct mgos_uart_state *us) {
+bool mgos_uart_hal_configure(struct mgos_uart_state *us,
+                             const struct mgos_uart_config *cfg) {
   (void) us;
+  (void) cfg;
+  return false;
+}
+
+void mgos_uart_hal_config_set_defaults(int uart_no,
+                                       struct mgos_uart_config *cfg) {
+  (void) uart_no;
+  (void) cfg;
 }
 
 void mgos_uart_hal_dispatch_rx_top(struct mgos_uart_state *us) {

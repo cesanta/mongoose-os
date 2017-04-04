@@ -32,8 +32,6 @@
 
 #define CC3200_UART_ISR_RX_BUF_SIZE 64
 
-static struct mgos_uart_state *s_us[2];
-
 struct cc3200_uart_state {
   uint32_t base;
   /*
@@ -96,7 +94,7 @@ recv_more:
     int num_recd = 0;
     do {
       uint8_t *data;
-      int num_to_get = MIN(mgos_uart_rxb_avail(us->uart_no), irxb->used);
+      int num_to_get = MIN(mgos_uart_rxb_free(us), irxb->used);
       num_recd = cs_rbuf_get(irxb, num_to_get, &data);
       mbuf_append(&us->rx_buf, data, num_recd);
       cs_rbuf_consume(irxb, num_recd);
@@ -107,11 +105,10 @@ recv_more:
   }
   /* If we received something during this cycle and there is buffer space
    * available, "linger" for some more, maybe there's more to come. */
-  if (recd && mgos_uart_rxb_avail(us->uart_no) > 0 &&
-      us->cfg->rx_linger_micros > 0) {
+  if (recd && mgos_uart_rxb_free(us) > 0 && us->cfg.rx_linger_micros > 0) {
     /* Magic constants below are tweaked so that the loop takes at most the
      * configured number of microseconds. */
-    int ctr = us->cfg->rx_linger_micros * 31 / 12;
+    int ctr = us->cfg.rx_linger_micros * 31 / 12;
     // HWREG(GPIOA1_BASE + GPIO_O_GPIO_DATA + 8) = 0xFF; /* Pin 64 */
     while (ctr-- > 0) {
       if (MAP_UARTCharsAvail(ds->base)) {
@@ -149,7 +146,7 @@ void mgos_uart_hal_set_rx_enabled(struct mgos_uart_state *us, bool enabled) {
   struct cc3200_uart_state *ds = (struct cc3200_uart_state *) us->dev_data;
   uint32_t ctl = HWREG(ds->base + UART_O_CTL);
   if (enabled) {
-    if (us->cfg->rx_fc_ena) {
+    if (us->cfg.rx_fc_ena) {
       ctl |= UART_CTL_RTSEN;
     }
   } else {
@@ -167,14 +164,16 @@ void mgos_uart_hal_flush_fifo(struct mgos_uart_state *us) {
 }
 
 static void u0_int(void) {
-  cc3200_int_handler(s_us[0]);
+  cc3200_int_handler(mgos_uart_hal_get_state(0));
 }
 
 static void u1_int(void) {
-  cc3200_int_handler(s_us[1]);
+  cc3200_int_handler(mgos_uart_hal_get_state(1));
 }
 
-void mgos_uart_hal_set_defaults(struct mgos_uart_config *cfg) {
+void mgos_uart_hal_config_set_defaults(int uart_no,
+                                       struct mgos_uart_config *cfg) {
+  (void) uart_no;
   (void) cfg;
 }
 
@@ -190,10 +189,6 @@ bool mgos_uart_hal_init(struct mgos_uart_state *us) {
     int_handler = u0_int;
     MAP_PinTypeUART(PIN_55, PIN_MODE_3); /* UART0_TX */
     MAP_PinTypeUART(PIN_57, PIN_MODE_3); /* UART0_RX */
-    if (us->cfg->tx_fc_ena || us->cfg->rx_fc_ena) {
-      /* No FC on UART0, according to the TRM. */
-      return false;
-    }
   } else if (us->uart_no == 1) {
     periph = PRCM_UARTA1;
     int_no = INT_UARTA1;
@@ -208,17 +203,32 @@ bool mgos_uart_hal_init(struct mgos_uart_state *us) {
   ds->base = base;
   cs_rbuf_init(&ds->isr_rx_buf, CC3200_UART_ISR_RX_BUF_SIZE);
   MAP_PRCMPeripheralClkEnable(periph, PRCM_RUN_MODE_CLK);
+  MAP_UARTIntDisable(base, ~0); /* Start with ints disabled. */
+  osi_InterruptRegister(int_no, int_handler, INT_PRIORITY_LVL_1);
+  us->dev_data = ds;
+  return true;
+}
+
+bool mgos_uart_hal_configure(struct mgos_uart_state *us,
+                             const struct mgos_uart_config *cfg) {
+  uint32_t base = cc3200_uart_get_base(us->uart_no);
+  if (us->uart_no == 0 && (cfg->tx_fc_ena || cfg->rx_fc_ena)) {
+    /* No FC on UART0, according to the TRM. */
+    return false;
+  }
+  MAP_UARTIntDisable(base, ~0);
+  uint32_t periph = (us->uart_no == 0 ? PRCM_UARTA0 : PRCM_UARTA1);
   MAP_UARTConfigSetExpClk(
-      base, MAP_PRCMPeripheralClockGet(periph), us->cfg->baud_rate,
+      base, MAP_PRCMPeripheralClockGet(periph), cfg->baud_rate,
       (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
-  if (us->cfg->tx_fc_ena || us->cfg->rx_fc_ena) {
+  if (cfg->tx_fc_ena || cfg->rx_fc_ena) {
     /* Note: only UART1 */
     uint32_t ctl = HWREG(base + UART_O_CTL);
-    if (us->cfg->tx_fc_ena) {
+    if (cfg->tx_fc_ena) {
       ctl |= UART_CTL_CTSEN;
       MAP_PinTypeUART(PIN_61, PIN_MODE_3); /* UART1_CTS */
     }
-    if (us->cfg->rx_fc_ena) {
+    if (cfg->rx_fc_ena) {
       ctl |= UART_CTL_RTSEN;
       MAP_PinTypeUART(PIN_62, PIN_MODE_3); /* UART1_RTS */
     }
@@ -226,19 +236,7 @@ bool mgos_uart_hal_init(struct mgos_uart_state *us) {
   }
   MAP_UARTFIFOLevelSet(base, UART_FIFO_TX1_8, UART_FIFO_RX7_8);
   MAP_UARTFIFOEnable(base);
-  MAP_UARTIntDisable(base, ~0); /* Start with ints disabled. */
-  osi_InterruptRegister(int_no, int_handler, INT_PRIORITY_LVL_1);
-  us->dev_data = ds;
-  s_us[us->uart_no] = us;
   return true;
-}
-
-void mgos_uart_hal_deinit(struct mgos_uart_state *us) {
-  struct cc3200_uart_state *ds = (struct cc3200_uart_state *) us->dev_data;
-  MAP_UARTDisable(ds->base);
-  MAP_UARTIntDisable(ds->base, ~0);
-  s_us[us->uart_no] = NULL;
-  free(ds);
 }
 
 int cc3200_uart_cts(int uart_no) {

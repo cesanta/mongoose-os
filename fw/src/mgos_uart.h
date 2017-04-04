@@ -23,24 +23,63 @@ struct mgos_uart_config {
   int baud_rate;
 
   int rx_buf_size;
-  int rx_fc_ena;
+  bool rx_fc_ena;
   int rx_linger_micros;
+
+  int tx_buf_size;
+  bool tx_fc_ena;
+
 #if CS_PLATFORM == CS_P_ESP32 || CS_PLATFORM == CS_P_ESP8266
   int rx_fifo_full_thresh;
   int rx_fifo_fc_thresh;
   int rx_fifo_alarm;
-#endif
-
-  int tx_buf_size;
-  int tx_fc_ena;
-#if CS_PLATFORM == CS_P_ESP32 || CS_PLATFORM == CS_P_ESP8266
   int tx_fifo_empty_thresh;
-#endif
-
 #if CS_PLATFORM == CS_P_ESP8266
-  int swap_rxcts_txrts;
+  bool swap_rxcts_txrts;
+#endif
 #endif
 };
+
+bool mgos_uart_configure(int uart_no, const struct mgos_uart_config *cfg);
+void mgos_uart_config_set_defaults(int uart_no, struct mgos_uart_config *cfg);
+
+/*
+ * UART dispatcher gets when there is data in the input buffer
+ * or space available in the output buffer.
+ */
+typedef void (*mgos_uart_dispatcher_t)(int uart_no, void *arg);
+void mgos_uart_set_dispatcher(int uart_no, mgos_uart_dispatcher_t cb,
+                              void *arg);
+
+/*
+ * Write data to the UART.
+ * Note: if there is enough space in the output buffer, the call will return
+ * immediately, otherwise it will wait for buffer to drain.
+ * If you want the call to not block, check mgos_uart_write_avail() first.
+ */
+size_t mgos_uart_write(int uart_no, const void *buf, size_t len);
+/* Returns amount of space availabe in the output buffer. */
+size_t mgos_uart_write_avail(int uart_no);
+
+/*
+ * Read data from UART input buffer.
+ * The _mbuf variant is a convenice function that reads into an mbuf.
+ * Note: unlike write, read will not block if there are not enough bytes in the
+ * input buffer.
+ */
+size_t mgos_uart_read(int uart_no, void *buf, size_t len);
+size_t mgos_uart_read_mbuf(int uart_no, struct mbuf *mb, size_t len);
+/* Returns the number of bytes available for reading. */
+size_t mgos_uart_read_avail(int uart_no);
+
+/* Controls whether UART receiver is enabled. */
+void mgos_uart_set_rx_enabled(int uart_no, bool enabled);
+bool mgos_uart_rx_enabled(int uart_no);
+
+/* Flush the UART output buffer - waits for data to be sent. */
+void mgos_uart_flush(int uart_no);
+
+void mgos_uart_schedule_dispatcher(int uart_no, bool from_isr);
 
 struct mgos_uart_stats {
   uint32_t ints;
@@ -57,45 +96,7 @@ struct mgos_uart_stats {
   void *dev_data;
 };
 
-struct mgos_uart_config *mgos_uart_default_config(void);
-
-struct mgos_uart_state;
-typedef void (*mgos_uart_dispatcher_t)(struct mgos_uart_state *us);
-
-struct mgos_uart_state {
-  int uart_no;
-  struct mgos_uart_config *cfg;
-  struct mbuf rx_buf;
-  struct mbuf tx_buf;
-  unsigned int rx_enabled : 1;
-  unsigned int tx_enabled : 1;
-  struct mgos_uart_stats stats;
-  mgos_uart_dispatcher_t dispatcher_cb;
-  void *dispatcher_data;
-  void *dev_data;
-};
-
-size_t mgos_uart_write(int uart_no, const void *buf, size_t len);
-
-struct mgos_uart_state *mgos_uart_init(int uart_no,
-                                       struct mgos_uart_config *cfg,
-                                       mgos_uart_dispatcher_t cb,
-                                       void *disptcher_data);
-void mgos_uart_deinit(int uart_no);
-
-void mgos_uart_set_dispatcher(int uart_no, mgos_uart_dispatcher_t cb,
-                              void *dispatcher_data);
-mgos_uart_dispatcher_t mgos_uart_get_dispatcher(int uart_no);
-
-size_t mgos_uart_rxb_avail(int uart_no);
-size_t mgos_uart_txb_avail(int uart_no);
-
-void mgos_uart_set_rx_enabled(int uart_no, bool enabled);
-void mgos_uart_set_tx_enabled(int uart_no, bool enabled);
-
-void mgos_uart_flush(int uart_no);
-
-void mgos_uart_schedule_dispatcher(int uart_no, bool from_isr);
+const struct mgos_uart_stats *mgos_uart_get_stats(int uart_no);
 
 #ifdef __cplusplus
 }

@@ -170,11 +170,12 @@ enum mgos_init_result mgos_rpc_init(void) {
 #if MGOS_ENABLE_RPC_CHANNEL_UART
   if (sccfg->uart.uart_no >= 0) {
     const struct sys_config_rpc_uart *scucfg = &get_cfg()->rpc.uart;
-    struct mgos_uart_config *ucfg = mgos_uart_default_config();
-    ucfg->baud_rate = scucfg->baud_rate;
-    ucfg->rx_fc_ena = ucfg->tx_fc_ena = scucfg->fc_enable;
+    struct mgos_uart_config ucfg;
+    mgos_uart_config_set_defaults(scucfg->uart_no, &ucfg);
+    ucfg.baud_rate = scucfg->baud_rate;
+    ucfg.rx_fc_ena = ucfg.tx_fc_ena = scucfg->fc_enable;
     mgos_uart_flush(scucfg->uart_no);
-    if (mgos_uart_init(scucfg->uart_no, ucfg, NULL, NULL) != NULL) {
+    if (mgos_uart_configure(scucfg->uart_no, &ucfg)) {
       struct mg_rpc_channel *uch =
           mg_rpc_channel_uart(scucfg->uart_no, scucfg->wait_for_start_frame);
       mg_rpc_add_channel(c, mg_mk_str(""), uch, true /* is_trusted */,

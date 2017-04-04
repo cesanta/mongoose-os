@@ -148,6 +148,7 @@ int fs_init(uint32_t addr, uint32_t size) {
 }
 
 void fs_umount(void) {
+  LOG(LL_INFO, ("Unmounting FS"));
   SPIFFS_unmount(&fs);
 }
 

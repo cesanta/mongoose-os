@@ -57,9 +57,9 @@ void mgos_uart_hal_dispatch_rx_top(struct mgos_uart_state *us) {
   UART_Handle *huart = (UART_Handle *) us->dev_data;
   struct UART_State *state = get_state_by_huart(huart);
   cs_rbuf_t *rxb = &state->rx_buf;
-  while (rxb->used > 0 && mgos_uart_rxb_avail(us->uart_no) > 0) {
+  while (rxb->used > 0 && mgos_uart_rxb_free(us) > 0) {
     uint8_t *data;
-    int len = cs_rbuf_get(rxb, mgos_uart_rxb_avail(us->uart_no), &data);
+    int len = cs_rbuf_get(rxb, mgos_uart_rxb_free(us), &data);
     mbuf_append(&us->rx_buf, data, len);
     cs_rbuf_consume(rxb, len);
   }

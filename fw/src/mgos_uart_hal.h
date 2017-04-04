@@ -8,12 +8,44 @@
 
 #include "fw/src/mgos_uart.h"
 
-/* Set device-specific defaults. */
-void mgos_uart_hal_set_defaults(struct mgos_uart_config *cfg);
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
-/* Device-specific (de)initialization. */
+struct mgos_uart_state {
+  int uart_no;
+  struct mgos_uart_config cfg;
+  struct mbuf rx_buf;
+  struct mbuf tx_buf;
+  bool rx_enabled;
+  struct mgos_uart_stats stats;
+  mgos_uart_dispatcher_t dispatcher_cb;
+  void *dispatcher_data;
+  void *dev_data;
+};
+
+struct mgos_uart_state *mgos_uart_hal_get_state(int uart_no);
+
+/* Returns number of bytes available in the RX buffer. */
+size_t mgos_uart_rxb_free(const struct mgos_uart_state *us);
+
+/*
+ * Device-specific initialization. Note that at this point config is not yet
+ * set,
+ * The only field that is valis uart_no.
+ */
 bool mgos_uart_hal_init(struct mgos_uart_state *us);
-void mgos_uart_hal_deinit(struct mgos_uart_state *us);
+
+/*
+ * Configure UART.
+ * Note that this can be called repeatedly after init when UART is already
+ * running.
+ */
+bool mgos_uart_hal_configure(struct mgos_uart_state *us,
+                             const struct mgos_uart_config *cfg);
+/* Set device-specific config defaults. */
+void mgos_uart_hal_config_set_defaults(int uart_no,
+                                       struct mgos_uart_config *cfg);
 
 /* Read any available chars into rx_buf. Ints should be kept disabled. */
 void mgos_uart_hal_dispatch_rx_top(struct mgos_uart_state *us);

@@ -14,6 +14,7 @@
 
 #include "driver/adc.h"
 
+#include "fw/src/mgos_debug.h"
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_wifi.h"
 #include "fw/src/mgos_sys_config.h"
@@ -39,6 +40,7 @@ void mgos_system_restart(int exit_code) {
   mgos_wifi_disconnect();
 #endif
   LOG(LL_INFO, ("Restarting"));
+  mgos_debug_flush();
   esp_restart();
 }
 

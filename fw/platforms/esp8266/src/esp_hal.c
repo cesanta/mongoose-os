@@ -17,6 +17,8 @@
 #include <user_interface.h>
 #endif
 
+#include "common/cs_dbg.h"
+
 #include "fw/src/mgos_timers.h"
 #include "fw/src/mgos_hal.h"
 
@@ -58,6 +60,7 @@ void mgos_wdt_set_timeout(int secs) {
 void mgos_system_restart(int exit_code) {
   (void) exit_code;
   fs_umount();
+  LOG(LL_INFO, ("Restarting"));
   mgos_debug_flush();
   system_restart();
 }
