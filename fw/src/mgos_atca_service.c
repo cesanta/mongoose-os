@@ -57,20 +57,11 @@ static void mgos_atca_set_config(struct mg_rpc_request_info *ri, void *cb_arg,
 
   uint8_t *config = NULL;
   uint32_t config_len = 0;
-  uint32_t crc32 = 0;
-  json_scanf(args.p, args.len, ri->args_fmt, &config, &config_len, &crc32);
+  json_scanf(args.p, args.len, ri->args_fmt, &config, &config_len);
 
   if (config_len != ATCA_CONFIG_SIZE) {
     mg_rpc_send_errorf(ri, 400, "Expected %d bytes, got %d",
                        (int) ATCA_CONFIG_SIZE, (int) config_len);
-    ri = NULL;
-    goto clean;
-  }
-
-  uint32_t got_crc32 = cs_crc32(0, config, config_len);
-  if (got_crc32 != crc32) {
-    mg_rpc_send_errorf(ri, 400, "CRC mismatch (expected %u, got %u)", crc32,
-                       got_crc32);
     ri = NULL;
     goto clean;
   }
@@ -142,10 +133,10 @@ static void mgos_atca_set_key(struct mg_rpc_request_info *ri, void *cb_arg,
   int slot = -1;
   uint8_t *key = NULL, *write_key = NULL;
   uint32_t key_len = 0, write_key_len = 0;
-  uint32_t crc32 = 0, wk_slot = 0;
+  uint32_t wk_slot = 0;
   bool is_ecc = false;
   json_scanf(args.p, args.len, ri->args_fmt, &slot, &is_ecc, &key, &key_len,
-             &crc32, &write_key, &write_key_len, &wk_slot);
+             &write_key, &write_key_len, &wk_slot);
 
   if (slot < 0 || slot > 15 || (is_ecc && slot > 7)) {
     mg_rpc_send_errorf(ri, 400, "Invalid slot");
@@ -157,14 +148,6 @@ static void mgos_atca_set_key(struct mg_rpc_request_info *ri, void *cb_arg,
   if (key_len != exp_key_len) {
     mg_rpc_send_errorf(ri, 400, "Expected %d bytes, got %d", (int) exp_key_len,
                        (int) key_len);
-    ri = NULL;
-    goto clean;
-  }
-
-  uint32_t got_crc32 = cs_crc32(0, key, key_len);
-  if (got_crc32 != crc32) {
-    mg_rpc_send_errorf(ri, 400, "CRC mismatch (expected %u, got %u)", crc32,
-                       got_crc32);
     ri = NULL;
     goto clean;
   }
@@ -251,9 +234,7 @@ static void mgos_atca_sign(struct mg_rpc_request_info *ri, void *cb_arg,
   int slot = -1;
   uint8_t *digest = NULL;
   uint32_t digest_len = 0;
-  uint32_t crc32 = 0;
-  json_scanf(args.p, args.len, ri->args_fmt, &slot, &digest, &digest_len,
-             &crc32);
+  json_scanf(args.p, args.len, ri->args_fmt, &slot, &digest, &digest_len);
 
   if (slot < 0 || slot > 7) {
     mg_rpc_send_errorf(ri, 400, "Invalid slot");
@@ -268,14 +249,6 @@ static void mgos_atca_sign(struct mg_rpc_request_info *ri, void *cb_arg,
     goto clean;
   }
 
-  uint32_t got_crc32 = cs_crc32(0, digest, digest_len);
-  if (got_crc32 != crc32) {
-    mg_rpc_send_errorf(ri, 400, "CRC mismatch (expected %u, got %u)", crc32,
-                       got_crc32);
-    ri = NULL;
-    goto clean;
-  }
-
   uint8_t signature[ATCA_SIG_SIZE];
   ATCA_STATUS status = atcab_sign(slot, digest, signature);
   if (status != ATCA_SUCCESS) {
@@ -284,7 +257,7 @@ static void mgos_atca_sign(struct mg_rpc_request_info *ri, void *cb_arg,
     goto clean;
   }
 
-  crc32 = cs_crc32(0, signature, sizeof(signature));
+  uint32_t crc32 = cs_crc32(0, signature, sizeof(signature));
   mg_rpc_send_responsef(ri, "{signature: %V, crc32: %u}", signature,
                         sizeof(signature), crc32);
   ri = NULL;
@@ -304,19 +277,19 @@ enum mgos_init_result mgos_atca_service_init(void) {
     return MGOS_INIT_ATCA_FAILED;
   }
   mg_rpc_add_handler(c, "ATCA.GetConfig", "", mgos_atca_get_config, NULL);
-  mg_rpc_add_handler(c, "ATCA.SetConfig", "{config: %V, crc32: %u}",
-                     mgos_atca_set_config, NULL);
+  mg_rpc_add_handler(c, "ATCA.SetConfig", "{config: %V}", mgos_atca_set_config,
+                     NULL);
   mg_rpc_add_handler(c, "ATCA.LockZone", "{zone: %d}", mgos_atca_lock_zone,
                      NULL);
   mg_rpc_add_handler(c, "ATCA.SetKey",
-                     "{slot:%d, ecc:%B, key:%V, crc32:%u, wkey:%V, wkslot:%u}",
+                     "{slot:%d, ecc:%B, key:%V, wkey:%V, wkslot:%u}",
                      mgos_atca_set_key, NULL);
   mg_rpc_add_handler(c, "ATCA.GenKey", "{slot: %d}", mgos_atca_get_or_gen_key,
                      "ATCA.GenKey");
   mg_rpc_add_handler(c, "ATCA.GetPubKey", "{slot: %d}",
                      mgos_atca_get_or_gen_key, "ATCA.GetPubKey");
-  mg_rpc_add_handler(c, "ATCA.Sign", "{slot: %d, digest: %V, crc32: %u}",
-                     mgos_atca_sign, NULL);
+  mg_rpc_add_handler(c, "ATCA.Sign", "{slot: %d, digest: %V}", mgos_atca_sign,
+                     NULL);
   return MGOS_INIT_OK;
 }
 

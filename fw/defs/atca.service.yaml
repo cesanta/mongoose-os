@@ -9,9 +9,6 @@ methods:
         config:
           type: string
           doc: Base64 encoded contents of the config zone
-        crc32:
-          type: integer
-          doc: CRC32 of the config data
 
   SetConfig:
     doc: Set device config
@@ -64,9 +61,6 @@ methods:
         pubkey:
           type: string
           doc: Base64 encoded public key corresponding to the newly generated private key
-        crc32:
-          type: integer
-          doc: CRC32 of the public key
 
   GetPubKey:
     doc: Retrieve the public key corresponding to a private key
@@ -80,9 +74,6 @@ methods:
         pubkey:
           type: string
           doc: Base64 encoded public key corresponding to the private key stored in the given slot
-        crc32:
-          type: integer
-          doc: CRC32 of the public key
 
   Sign:
     doc: Sign a 32-byte digest with a private ECC key
@@ -102,6 +93,3 @@ methods:
         signature:
           type: string
           doc: Base64 encoded signature
-        crc32:
-          type: integer
-          doc: CRC32 of the signature

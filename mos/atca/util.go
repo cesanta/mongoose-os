@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"hash/crc32"
 	"os"
 	"regexp"
 	"strings"
@@ -38,15 +37,6 @@ func Connect(ctx context.Context, dc *dev.DevConn) (atcaService.Service, []byte,
 	}
 	if len(confData) != ConfigSize {
 		return nil, nil, nil, errors.Errorf("expected %d bytes, got %d", ConfigSize, len(confData))
-	}
-
-	if r.Crc32 == nil {
-		return nil, nil, nil, errors.New("no checksum in response")
-	}
-	cs := crc32.ChecksumIEEE(confData)
-
-	if cs != uint32(*r.Crc32) {
-		return nil, nil, nil, errors.Errorf("checksum mismatch: expected 0x%08x, got 0x%08x", *r.Crc32, cs)
 	}
 
 	cfg, err := ParseBinaryConfig(confData)

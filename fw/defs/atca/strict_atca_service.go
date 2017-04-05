@@ -36,13 +36,11 @@ type GenKeyArgs struct {
 }
 
 type GenKeyResult struct {
-	Crc32  *int64  `json:"crc32,omitempty"`
 	Pubkey *string `json:"pubkey,omitempty"`
 }
 
 type GetConfigResult struct {
 	Config *string `json:"config,omitempty"`
-	Crc32  *int64  `json:"crc32,omitempty"`
 }
 
 type GetPubKeyArgs struct {
@@ -50,7 +48,6 @@ type GetPubKeyArgs struct {
 }
 
 type GetPubKeyResult struct {
-	Crc32  *int64  `json:"crc32,omitempty"`
 	Pubkey *string `json:"pubkey,omitempty"`
 }
 
@@ -79,7 +76,6 @@ type SignArgs struct {
 }
 
 type SignResult struct {
-	Crc32     *int64  `json:"crc32,omitempty"`
 	Signature *string `json:"signature,omitempty"`
 }
 
@@ -771,10 +767,6 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
       "doc": "Generate a new private ECC key in the specified slot",
       "result": {
         "properties": {
-          "crc32": {
-            "doc": "CRC32 of the public key",
-            "type": "integer"
-          },
           "pubkey": {
             "doc": "Base64 encoded public key corresponding to the newly generated private key",
             "type": "string"
@@ -790,10 +782,6 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
           "config": {
             "doc": "Base64 encoded contents of the config zone",
             "type": "string"
-          },
-          "crc32": {
-            "doc": "CRC32 of the config data",
-            "type": "integer"
           }
         },
         "type": "object"
@@ -809,10 +797,6 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
       "doc": "Retrieve the public key corresponding to a private key",
       "result": {
         "properties": {
-          "crc32": {
-            "doc": "CRC32 of the public key",
-            "type": "integer"
-          },
           "pubkey": {
             "doc": "Base64 encoded public key corresponding to the private key stored in the given slot",
             "type": "string"
@@ -890,10 +874,6 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
       "doc": "Sign a 32-byte digest with a private ECC key",
       "result": {
         "properties": {
-          "crc32": {
-            "doc": "CRC32 of the signature",
-            "type": "integer"
-          },
           "signature": {
             "doc": "Base64 encoded signature",
             "type": "string"

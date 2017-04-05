@@ -419,15 +419,6 @@ func atcaGenKey(ctx context.Context, dc *dev.DevConn) error {
 		return errors.Errorf("expected %d bytes, got %d", atca.PublicKeySize, len(keyData))
 	}
 
-	if r.Crc32 == nil {
-		return errors.New("no checksum in response")
-	}
-	cs := crc32.ChecksumIEEE(keyData)
-
-	if cs != uint32(*r.Crc32) {
-		return errors.Errorf("checksum mismatch: expected 0x%08x, got 0x%08x", *r.Crc32, cs)
-	}
-
 	reportf("Generated new ECC key on slot %d, public key:\n\n%s",
 		slot, atca.WriteHex(keyData, 16))
 
@@ -477,15 +468,6 @@ func atcaGetPubKey(ctx context.Context, dc *dev.DevConn) error {
 	}
 	if len(keyData) != atca.PublicKeySize {
 		return errors.Errorf("expected %d bytes, got %d", atca.PublicKeySize, len(keyData))
-	}
-
-	if r.Crc32 == nil {
-		return errors.New("no checksum in response")
-	}
-	cs := crc32.ChecksumIEEE(keyData)
-
-	if cs != uint32(*r.Crc32) {
-		return errors.Errorf("checksum mismatch: expected 0x%08x, got 0x%08x", *r.Crc32, cs)
 	}
 
 	reportf("Slot %d, public key:\n\n%s", slot, atca.WriteHex(keyData, 16))

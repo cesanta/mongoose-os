@@ -45,10 +45,6 @@ func (s *Signer) Public() crypto.PublicKey {
 	}
 
 	keyData, _ := base64.StdEncoding.DecodeString(*r.Pubkey)
-	cs := crc32.ChecksumIEEE(keyData)
-	if cs != uint32(*r.Crc32) {
-		return nil
-	}
 
 	pubk.X.SetBytes(keyData[:PublicKeySize/2])
 	pubk.Y.SetBytes(keyData[PublicKeySize/2 : PublicKeySize])
@@ -85,18 +81,9 @@ func (s *Signer) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts) ([]
 	}
 
 	rawSig, _ := base64.StdEncoding.DecodeString(*r.Signature)
-	if r.Crc32 == nil {
-		return nil, errors.New("failed to decode signature")
-	}
-
 	if len(rawSig) != SignatureSize {
 		return nil, errors.Errorf("invalid signature size: expected %d bytes, got %d",
 			SignatureSize, len(rawSig))
-	}
-
-	cs = int64(crc32.ChecksumIEEE(rawSig))
-	if cs != *r.Crc32 {
-		return nil, errors.Errorf("checksum mismatch: expected 0x%08x, got 0x%08x", *r.Crc32, cs)
 	}
 
 	sig := ecdsaSignature{
