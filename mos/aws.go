@@ -497,18 +497,19 @@ func awsIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 		return errors.Annotatef(err, "failed to upload %s", filepath.Base(caCertFile))
 	}
 
-	settings := map[string]string{
-		"mqtt.ssl_cert":    filepath.Base(certFile),
-		"mqtt.ssl_key":     keyFile,
-		"mqtt.ssl_ca_cert": filepath.Base(caCertFile),
-	}
-
 	// Get the value of mqtt.server from aws
 	de, err := iotSvc.DescribeEndpoint(&iot.DescribeEndpointInput{})
 	if err != nil {
 		return errors.Annotatef(err, "aws iot describe-endpoint failed!")
 	}
-	settings["mqtt.server"] = fmt.Sprintf("%s:8883", *de.EndpointAddress)
+
+	settings := map[string]string{
+		"mqtt.enable":      "true",
+		"mqtt.server":      fmt.Sprintf("%s:8883", *de.EndpointAddress),
+		"mqtt.ssl_cert":    filepath.Base(certFile),
+		"mqtt.ssl_key":     keyFile,
+		"mqtt.ssl_ca_cert": filepath.Base(caCertFile),
+	}
 
 	// MQTT requires device.id to be set.
 	devId, err := devConf.Get("device.id")
