@@ -1,6 +1,10 @@
 #!/usr/bin/env python
 # vim: tabstop=4 expandtab shiftwidth=4 ai cin smarttab
 #
+# Copyright (c) 2014-2016 Cesanta Software Limited
+# All rights reserved
+#
+#
 # This tool parses config schema definitions YAML and produces:
 #  - C header and source file
 #  - JSON file with defaults
