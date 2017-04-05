@@ -9,7 +9,7 @@
         <button class="btn btn-sm btn-warning disabled file-control" id="file-savereboot-button"><i class="fa fa-refresh"></i> Save and reboot device</button>
       </div>
       <div class="form-group upcontrol">
-        <div id="file-textarea"></div>
+        <div id="editor"></div>
       </div>
     </div>
 </div>
@@ -21,6 +21,8 @@
     if ((filename || '').match(/\.ya?ml$/)) return 'yaml';
     return 'text';
   };
+  var editor = ace.edit('editor');
+  editor.setTheme('ace/theme/tomorrow');
 
   $(document).off('click', '.file');
   $(document).on('click', '.file', function() {
@@ -29,9 +31,10 @@
     $.ajax({url: '/get', data: {name: name}}).done(function(json) {
       $('.file').removeClass('selected');
       $t.addClass('selected');
-      $('#file-textarea').text(json.result || '');
-      var flask = new CodeFlask;
-      flask.run('#file-textarea', {language: guesslang(name)});
+
+      editor.setValue(json.result || '', -1);
+      editor.session.setMode('ace/mode/' + guesslang(name));
+
       $('.file-control').toggleClass('disabled', false);
       new PNotify({title: 'Loaded ' + name, type: 'success' });
     });
@@ -47,7 +50,7 @@
 
   var onSave = function() {
     var fileName = $('.file.selected').text();
-    var text = $('#file-textarea textarea').val();
+    var text = editor.getValue();
     return $.ajax({
       url: '/call',
       data: {

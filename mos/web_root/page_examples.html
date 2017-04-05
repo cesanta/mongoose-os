@@ -11,12 +11,15 @@
     </div>
     <div class="form-group upcontrol">
       <!--<textarea class="form-control" id="example-code" style="height: 100%"></textarea>-->
-      <div id="example-code"></div>
+      <div id="editor"></div>
     </div>
   </div>
 </div>
 
 <script>
+  var editor = ace.edit('editor');
+  editor.setTheme('ace/theme/tomorrow');
+
   var prefix = 'https://raw.githubusercontent.com/cesanta/mongoose-os/master/fw/examples/mjs_base/examples/';
 
   $(document).off('click', '.example');
@@ -26,9 +29,8 @@
     $.get(prefix + name).done(function(text) {
       $('.example').removeClass('selected');
       $t.addClass('selected');
-      $('#example-code').text(text || '');
-      var flask = new CodeFlask;
-      flask.run('#example-code', {language: 'javascript'});
+      editor.setValue(text || '', -1);
+      editor.session.setMode('ace/mode/' + guesslang(name));
       new PNotify({title: 'Loaded ' + name, type: 'success' });
     });
   });
@@ -42,7 +44,7 @@
 
   $(document).off('click', '#copy-example-button');
   $(document).on('click', '#copy-example-button', function () {
-    var text = $('#example-code textarea').val();
+    var text = editor.getValue();
     return $.ajax({
       url: '/call',
       data: {
