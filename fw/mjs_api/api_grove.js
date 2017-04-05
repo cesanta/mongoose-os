@@ -8,7 +8,7 @@ load('api_adc.js');
 let Grove = {
   Button: {
     attach: function(pin, handler) {
-      GPIO.set_button_handler(pin, GPIO.PULL_UP, GPIO.INT_EDGE_NEG, 50,
+      GPIO.set_button_handler(pin, GPIO.PULL_UP, GPIO.INT_EDGE_NEG, 200,
                               handler, true);
     },
   },

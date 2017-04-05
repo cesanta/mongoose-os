@@ -10,7 +10,7 @@
 load('api_gpio.js');
 
 let pin = 0;   // GPIO 0 is typically a 'Flash' button
-GPIO.set_button_handler(pin, GPIO.PULL_UP, GPIO.INT_EDGE_NEG, 50, function(x) {
+GPIO.set_button_handler(pin, GPIO.PULL_UP, GPIO.INT_EDGE_NEG, 200, function(x) {
   print('Button press, pin: ', x);
 }, true);
 
