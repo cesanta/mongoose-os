@@ -87,6 +87,7 @@ go get -v github.com/kardianos/govendor
 git clone https://github.com/cesanta/mongoose-os/
 cd mongoose-os
 ln -s $PWD $GOPATH/src/cesanta.com
+cd mos
 go get -d -v
 govendor fetch github.com/jteeuwen/go-bindata/go-bindata
 govendor fetch github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
