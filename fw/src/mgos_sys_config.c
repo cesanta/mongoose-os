@@ -119,7 +119,7 @@ bool save_cfg(const struct sys_config *cfg, char **msg) {
     LOG(LL_INFO, ("Saved to %s", CONF_USER_FILE));
     result = true;
   } else {
-    *msg = "failed to write file";
+    *msg = strdup("failed to write file");
   }
 clean:
   mgos_conf_free(sys_config_schema(), &defaults);
