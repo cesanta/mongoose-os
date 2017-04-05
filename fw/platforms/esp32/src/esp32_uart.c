@@ -223,8 +223,8 @@ bool mgos_uart_hal_init(struct mgos_uart_state *us) {
     LOG(LL_ERROR, ("Error allocating int for UART%d: %d", us->uart_no, r));
     return false;
   }
-  /* Start with TX and RX ints disabled. */
-  WRITE_PERI_REG(UART_INT_ENA_REG(us->uart_no), UART_INFO_INTS);
+  /* Start with ints disabled. */
+  WRITE_PERI_REG(UART_INT_ENA_REG(us->uart_no), 0);
   return true;
 }
 

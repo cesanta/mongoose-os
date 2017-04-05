@@ -188,8 +188,8 @@ void mgos_uart_hal_config_set_defaults(int uart_no,
 }
 
 bool mgos_uart_hal_init(struct mgos_uart_state *us) {
-  /* Start with TX and RX ints disabled. */
-  WRITE_PERI_REG(UART_INT_ENA(us->uart_no), UART_INFO_INTS);
+  /* Start with ints disabled. */
+  WRITE_PERI_REG(UART_INT_ENA(us->uart_no), 0);
 #ifdef RTOS_SDK
   _xt_isr_mask(1 << ETS_UART_INUM);
   _xt_isr_attach(ETS_UART_INUM, (void *) esp_uart_isr, NULL);
