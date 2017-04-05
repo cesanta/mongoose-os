@@ -22,13 +22,16 @@
 
 static int8_t s_stdout_uart = MGOS_DEBUG_UART;
 static int8_t s_stderr_uart = MGOS_DEBUG_UART;
+static int8_t s_uart_suspended = 0;
 
 void mgos_debug_write(int fd, const void *data, size_t len) {
   int uart_no = -1;
-  if (fd == 1) {
-    uart_no = s_stdout_uart;
-  } else if (fd == 2) {
-    uart_no = s_stderr_uart;
+  if (s_uart_suspended <= 0) {
+    if (fd == 1) {
+      uart_no = s_stdout_uart;
+    } else if (fd == 2) {
+      uart_no = s_stderr_uart;
+    }
   }
   if (uart_no >= 0) {
     len = mgos_uart_write(uart_no, data, len);
@@ -94,6 +97,18 @@ int mgos_get_stdout_uart(void) {
 
 int mgos_get_stderr_uart(void) {
   return s_stderr_uart;
+}
+
+void mgos_debug_suspend_uart(void) {
+  s_uart_suspended++;
+}
+
+void mgos_debug_resume_uart(void) {
+  s_uart_suspended--;
+}
+
+bool mgos_debug_uart_is_suspended(void) {
+  return (s_uart_suspended > 0);
 }
 
 enum mgos_init_result mgos_debug_uart_init(void) {

@@ -100,16 +100,21 @@ void mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr) {
   mongoose_schedule_poll(false /* from_isr */);
 }
 
+void sdk_putc(char c) {
+  if (mgos_debug_uart_is_suspended()) return;
+  esp_exc_putc(c);
+}
+
 enum mgos_init_result esp_mgos_init2(rboot_config *bcfg) {
   mongoose_init();
   enum mgos_init_result ir = mgos_debug_uart_init();
   if (ir != MGOS_INIT_OK) return ir;
   uart_initialized = true;
-  setvbuf(stdout, NULL, _IOLBF, 256);
-  setvbuf(stderr, NULL, _IOLBF, 256);
+  setvbuf(stdout, NULL, _IONBF, 0);
+  setvbuf(stderr, NULL, _IONBF, 0);
   cs_log_set_level(MGOS_EARLY_DEBUG_LEVEL);
   /* Note: putc can be invoked from int handlers. */
-  os_install_putc1(esp_exc_putc);
+  os_install_putc1(sdk_putc);
   fputc('\n', stderr);
 
   if (strcmp(MGOS_APP, "mongoose-os") != 0) {

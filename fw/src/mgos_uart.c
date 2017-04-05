@@ -77,7 +77,10 @@ size_t mgos_uart_read_mbuf(int uart_no, struct mbuf *mb, size_t len) {
   mgos_lock();
   size_t nr = MIN(len, mgos_uart_read_avail(uart_no));
   if (nr > 0) {
-    mbuf_resize(mb, mb->size + nr);
+    size_t free_bytes = mb->size - mb->len;
+    if (free_bytes < nr) {
+      mbuf_resize(mb, mb->len + nr);
+    }
     nr = mgos_uart_read(uart_no, mb->buf + mb->len, nr);
     mb->len += nr;
   }

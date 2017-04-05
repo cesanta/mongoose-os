@@ -6,6 +6,7 @@
 #ifndef CS_FW_SRC_MGOS_DEBUG_H_
 #define CS_FW_SRC_MGOS_DEBUG_H_
 
+#include <stdbool.h>
 #include <stdlib.h>
 
 #include "fw/src/mgos_init.h"
@@ -23,6 +24,10 @@ enum mgos_init_result mgos_set_stdout_uart(int uart_no);
 enum mgos_init_result mgos_set_stderr_uart(int uart_no);
 int mgos_get_stdout_uart(void);
 int mgos_get_stderr_uart(void);
+
+void mgos_debug_suspend_uart(void);
+void mgos_debug_resume_uart(void);
+bool mgos_debug_uart_is_suspended(void);
 
 #ifdef __cplusplus
 }
