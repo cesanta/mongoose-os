@@ -99,11 +99,12 @@ int mgos_upd_begin(struct mgos_upd_hal_ctx *ctx, struct json_token *parts) {
     return -1;
   }
   uint32_t fw_addr = 0;
+  uint32_t fs_addr = 0;
   if (json_scanf(parts->ptr, parts->len,
                  "{fw: {src: %T, addr: %u, cs_sha1: %T}, "
-                 "fs: {src: %T, cs_sha1: %T}}",
+                 "fs: {src: %T, addr: %u, cs_sha1: %T}}",
                  &ctx->fw_file_name, &fw_addr, &ctx->fw_cs_sha1,
-                 &ctx->fs_file_name, &ctx->fs_cs_sha1) != 5) {
+                 &ctx->fs_file_name, &fs_addr, &ctx->fs_cs_sha1) != 6) {
     ctx->status_msg = "Incomplete update package";
     return -3;
   }
@@ -117,9 +118,11 @@ int mgos_upd_begin(struct mgos_upd_hal_ctx *ctx, struct json_token *parts) {
   if (!mgos_upd_boot_get_state(&bs)) return -5;
   int inactive_slot = (bs.active_slot == 0 ? 1 : 0);
   get_slot_info(inactive_slot, &ctx->write_slot);
-  /* To facilitate changing firmware location via OTA, we change fw_addr */
+  /* To allow changing flash layout via OTA, take {fw,fs}_addr from manifest. */
   ctx->write_slot.fw_addr =
       (ctx->write_slot.id * FW_SLOT_SIZE) + (fw_addr & (FW_SLOT_SIZE - 1));
+  ctx->write_slot.fs_addr =
+      (ctx->write_slot.id * FW_SLOT_SIZE) + (fs_addr & (FW_SLOT_SIZE - 1));
 
   LOG(LL_INFO,
       ("Slot %d, FW: %.*s -> 0x%x, FS %.*s -> 0x%x", ctx->write_slot.id,
