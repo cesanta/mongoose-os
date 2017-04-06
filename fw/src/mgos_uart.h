@@ -30,20 +30,36 @@ extern "C" {
 #endif /* __cplusplus */
 
 struct mgos_uart_config {
+  /* Baud rate, default: 115200 */
   int baud_rate;
 
+  /* Size of the Rx buffer, default: 256 */
   int rx_buf_size;
+  /* Enable flow control for Rx (RTS pin), default: off */
   bool rx_fc_ena;
+  /*
+   * Lingers for this many microseconds after RX fifo is empty in case more
+   * data arrives. Default: 15.
+   */
   int rx_linger_micros;
 
+  /* Size of the Tx buffer, default: 256 */
   int tx_buf_size;
+  /* Enable flow control for Tx (CTS pin), default: off */
   bool tx_fc_ena;
 
   /* Platform-specific configuration options. */
   struct mgos_uart_dev_config dev;
 };
 
+/*
+ * Apply given UART configuration.
+ */
 bool mgos_uart_configure(int uart_no, const struct mgos_uart_config *cfg);
+
+/*
+ * Fill provided `cfg` structure with the default values.
+ */
 void mgos_uart_config_set_defaults(int uart_no, struct mgos_uart_config *cfg);
 
 /*
