@@ -5,6 +5,7 @@
 override APP_CONF_SCHEMA = $(_APP_CONF_SCHEMA)
 override APP_EXTRA_SRCS = $(_APP_EXTRA_SRCS)
 override APP_FS_FILES = $(_APP_FS_FILES)
+override FS_FILES = $(_FS_FILES)
 override APP_SOURCES = $(_APP_SOURCES)
 override BUILD_DIR = $(_BUILD_DIR)
 override FW_DIR := $(_FW_DIR)
@@ -131,8 +132,8 @@ $(FFI_EXPORTS_O): $(FFI_EXPORTS_C)
 	$(summary) "  CC $@"
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
-$(FFI_EXPORTS_C): $(SYMBOLS_DUMP)
-	$(call gen_ffi_exports,$<,$@,$(FFI_SYMBOLS))
+$(FFI_EXPORTS_C): $(SYMBOLS_DUMP) $(FS_FILES)
+	$(call gen_ffi_exports,$<,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))
 
 ./%.o: %.c $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 	$(summary) "  CC $@"

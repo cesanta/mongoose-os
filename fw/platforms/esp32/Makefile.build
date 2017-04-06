@@ -77,6 +77,7 @@ export APP_BUILD_ID
 export _APP_CONF_SCHEMA = $(APP_CONF_SCHEMA)
 export _APP_EXTRA_SRCS = $(APP_EXTRA_SRCS)
 export _APP_FS_FILES = $(APP_FS_FILES)
+export _FS_FILES = $(FS_FILES)
 export _APP_SOURCES = $(APP_SOURCES)
 export APP_VERSION
 export _BUILD_DIR = $(BUILD_DIR)

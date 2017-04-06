@@ -199,8 +199,21 @@ def cmd_gen_ffi_exports(args):
 
     # Blindly append non-glob patterns
     for p in patterns:
-      if "*" not in p:
-        symbols.append(p)
+        if "*" not in p:
+            symbols.append(p)
+
+    # Scan all provided js files for ffi("..."), and fetch symbol names from
+    # there
+    for js_file in args.js_files:
+        with open(js_file) as f:
+            data = f.read().replace('\n', '')
+            # Note: must match things like:
+            #       char *foo(int bar)
+            #
+            # symbol_type: "char *"
+            # symbol_name: "foo"
+            for m in re.finditer(r"""\bffi\s*\(['"](?P<symbol_type>[^)]+?\W)(?P<symbol_name>\w+)\(""", data):
+                symbols.append(m.group("symbol_name"))
 
     symbols.sort()
 
@@ -414,6 +427,7 @@ if __name__ == '__main__':
     gfe_cmd.add_argument('--input')
     gfe_cmd.add_argument('--c_output')
     gfe_cmd.add_argument('--patterns')
+    gfe_cmd.add_argument('js_files', nargs='*', default=[])
     handlers['gen_ffi_exports'] = cmd_gen_ffi_exports
 
     gtbi_desc = "Extract build info from manifest"

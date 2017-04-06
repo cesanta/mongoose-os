@@ -440,8 +440,8 @@ $(SYMBOLS_DUMP): $(APP_OBJS) $(MGOS_OBJS)
 	$(vecho) "GEN   $@"
 	$(Q) $(NM) --defined-only --print-file-name -g $^ > $@
 
-$(FFI_EXPORTS_C): $(SYMBOLS_DUMP)
-	$(call gen_ffi_exports,$<,$@,$(FFI_SYMBOLS))
+$(FFI_EXPORTS_C): $(SYMBOLS_DUMP) $(FS_FILES)
+	$(call gen_ffi_exports,$<,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))
 
 # In ffi exports file we use fake signatures: void func(void), and it conflicts
 # with the builtin functions like fopen, etc.
