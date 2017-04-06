@@ -4,7 +4,7 @@ version: 1.0
 skeleton_version: 2017-03-17
 sources:
   - src
-  - ${mjs_path}
+  - ${mjs_path}/mjs.c
 filesystem:
   - fs
   - ${mongoose_os_path}/fw/mjs_api/api_*.js
