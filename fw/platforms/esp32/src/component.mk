@@ -15,13 +15,7 @@ override MGOS_PATH = $(_MGOS_PATH)
 # Get list of dirs which contain sources (used for IPATH and VPATH)
 APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
 
-MGOS_ENABLE_CONSOLE ?= 0
-# Use bitbang I2C for now.
-MGOS_ENABLE_I2C_GPIO ?= 1
-
 MGOS_DEBUG_UART ?= 0
-
-MGOS_SRC_PATH = $(MGOS_PATH)/fw/src
 
 BUILD_INFO_C = $(GEN_DIR)/build_info.c
 MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
@@ -30,7 +24,6 @@ SYS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/conf0.json
 SYS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/sys_config_schema.json
 SYS_RO_VARS_C = $(GEN_DIR)/sys_ro_vars.c
 SYS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/sys_ro_vars_schema.json
-SYS_CONF_SCHEMA =
 
 SYMBOLS_DUMP = $(GEN_DIR)/symbols_dump.txt
 FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
@@ -41,17 +34,14 @@ NM = xtensa-esp32-elf-nm
 COMPONENT_EXTRA_INCLUDES = $(MGOS_PATH) $(MGOS_ESP_PATH)/include $(SPIFFS_PATH) \
                            $(GEN_DIR) $(APP_SOURCE_DIRS)
 
-MGOS_SRCS = mgos_config.c mgos_gpio.c mgos_init.c mgos_mongoose.c \
-            mgos_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
-            mgos_timers_mongoose.c mgos_uart.c mgos_utils.c mgos_dlsym.c \
-            esp32_crypto.c esp32_debug.c esp32_fs.c esp32_fs_crypt.c \
-            esp32_gpio.c esp32_hal.c esp32_mdns.c \
-            esp32_main.c esp32_uart.c
-
-IPATH =
+MGOS_SRCS += mgos_config.c mgos_gpio.c mgos_init.c mgos_mongoose.c \
+             mgos_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
+             mgos_timers_mongoose.c mgos_uart.c mgos_utils.c mgos_dlsym.c \
+             esp32_crypto.c esp32_debug.c esp32_fs.c esp32_fs_crypt.c \
+             esp32_gpio.c esp32_hal.c esp32_mdns.c \
+             esp32_main.c esp32_uart.c
 
 include $(MGOS_PATH)/fw/common.mk
-include $(MGOS_PATH)/fw/src/features.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
 
 SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_config.yaml
@@ -132,7 +122,7 @@ $(FFI_EXPORTS_O): $(FFI_EXPORTS_C)
 	$(summary) "  CC $@"
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
-$(FFI_EXPORTS_C): $(SYMBOLS_DUMP) $(FS_FILES)
+$(FFI_EXPORTS_C): $(SYMBOLS_DUMP)
 	$(call gen_ffi_exports,$<,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))
 
 ./%.o: %.c $(SYS_CONFIG_C) $(SYS_RO_VARS_C)

@@ -21,7 +21,7 @@ MGOS_ENABLE_RPC_CHANNEL_HTTP ?= 1
 MGOS_ENABLE_RPC_CHANNEL_MQTT ?= 1
 MGOS_ENABLE_RPC_CHANNEL_UART ?= 1
 MGOS_ENABLE_RPC_CHANNEL_WS ?= 1
-MGOS_ENABLE_SNTP ?= 0
+MGOS_ENABLE_SNTP ?= 1
 MGOS_ENABLE_SYS_SERVICE ?= 1
 MGOS_ENABLE_UPDATER ?= 1
 MGOS_ENABLE_UPDATER_POST ?= 1
@@ -222,8 +222,8 @@ ifeq "$(MGOS_ENABLE_CONSOLE_FILE_BUFFER)" "1"
 endif
 
 # Export all the feature switches.
-# This is required for needed make invocations, such as when building POSIX MGOS
-# for JS freeze operation.
+# This is required for needed make invocations (i.e. ESP32 IDF)
+export MGOS_ENABLE_ARDUINO_API
 export MGOS_ENABLE_ATCA
 export MGOS_ENABLE_ATCA_SERVICE
 export MGOS_ENABLE_AWS_SHADOW
