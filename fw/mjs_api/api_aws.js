@@ -52,7 +52,7 @@ let AWS = {
     // `reported` is previously reported state object (if any), and `desired`
     // is the desired state (if present).
     setStateHandler: function(cb, ud) {
-      AWS.Shadow._seth(AWS.Shadow._scb, {
+      this._seth(this._scb, {
         cb: cb,
         ud: ud,
       });
@@ -67,7 +67,7 @@ let AWS = {
     // current, specify the version. Otherwise set it to 0 to apply to any
     // version. Example: increase `state.counter` on a button press:
     update: function(ver, state) {
-      return AWS.Shadow._upd(ver, JSON.stringify(state)) === 1;
+      return this._upd(ver, JSON.stringify(state)) === 1;
     },
 
     CONNECTED: 0,
