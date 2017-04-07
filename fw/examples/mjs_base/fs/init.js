@@ -8,7 +8,7 @@ let led = ffi('int get_led_gpio_pin()')();
 
 // Blink built-in LED every second
 GPIO.set_mode(led, GPIO.MODE_OUTPUT);
-Timer.set(1000 /* milliseconds */, 1 /* repeat */, function() {
+Timer.set(1000 /* milliseconds */, true /* repeat */, function() {
   let value = GPIO.toggle(led);
   print(value ? 'Tick' : 'Tock', 'uptime:', Sys.uptime(), 'RAM:', Sys.free_ram());
 }, null);

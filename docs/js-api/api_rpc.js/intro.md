@@ -49,7 +49,7 @@ $ curl -d '{"a":1, "b": 2}' 192.168.0.206/rpc/Sum
 
 **`RPC.Call(dst, method, args, callback)`** - call remote RPC service.
 
-Return value: 1 in case of success, 0 otherwise.
+Return value: true in case of success, false otherwise.
 
 If `dst` is empty, connected server is implied. `method` is a string
 like "MyMethod", `callback` is a callback function which takes the following

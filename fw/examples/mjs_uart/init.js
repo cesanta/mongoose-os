@@ -32,7 +32,7 @@ UART.setDispatcher(uartNo, function(uartNo, ud) {
 UART.setRxEnabled(uartNo, true);
 
 // Send UART data every second
-Timer.set(1000 /* milliseconds */, 1 /* repeat */, function() {
+Timer.set(1000 /* milliseconds */, true /* repeat */, function() {
   value = !value;
   UART.write(
     uartNo,

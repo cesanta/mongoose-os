@@ -17,14 +17,14 @@ I2C API. Source C API is defined at:
 
 
 **`I2C.write(handle, addr, buf, size, stop)`** - Send a byte array to I2C.
-If stop is 1, the bus will be released at the end.
+If stop is true, the bus will be released at the end.
 Return value: success, true/false.
 
 
 
-**`I2C.read(handle, ack_type)`** - Read specified number of bytes
-from the specified address.
-If stop is 1, the bus will be released at the end.
+**`I2C.read(handle, addr, data, len, stop)`** - Read specified number of
+bytes from the specified address.
+If stop is true, the bus will be released at the end.
 Return value: success, true/false.
 
 

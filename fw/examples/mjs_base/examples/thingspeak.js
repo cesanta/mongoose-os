@@ -13,7 +13,7 @@ load('api_timer.js');
 let topic = 'channels/221046/publish/fields/field1/T9N0OAI9CH7M1W4W';
 let freq = 5000; // Milliseconds. Report values that often.
 
-Timer.set(freq, 1, function() {
+Timer.set(freq, true, function() {
   let msg = JSON.stringify(Sys.free_ram());
   MQTT.pub(topic, msg, msg.length);
 }, true);

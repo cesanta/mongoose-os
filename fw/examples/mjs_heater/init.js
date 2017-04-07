@@ -56,7 +56,7 @@ RPC.addHandler('Heater.GetState', function(args) {
 });
 
 // Send temperature readings to the cloud
-Timer.set(freq, 1, function() {
+Timer.set(freq, true, function() {
   let message = JSON.stringify(getStatus());
   let ok = MQTT.pub(topic, message, message.length);
   print('MQTT pubish: topic ', topic, 'msg: ', message, 'status: ', ok);

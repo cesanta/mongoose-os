@@ -14,8 +14,8 @@ let RPC = {
   // make mJS not to process it in any way, and just pass pointer as is.
   _strdup: ffi('void *strdup(char *)'),
   _addHandler: ffi('void *mgos_rpc_add_handler(void *, void (*)(void *, char *, char *, userdata), userdata)'),
-  _sendResponse: ffi('int mgos_rpc_send_response(void *, char *)'),
-  _call: ffi('int mg_rpc_call(char *, char *, char *, void (*)(char *, int, char *, userdata), userdata)'),
+  _sendResponse: ffi('bool mgos_rpc_send_response(void *, char *)'),
+  _call: ffi('bool mg_rpc_call(char *, char *, char *, void (*)(char *, int, char *, userdata), userdata)'),
 
   /*
    * Internal shim callback which parses JSON string args and passes to the
@@ -66,7 +66,7 @@ let RPC = {
 
   // **`RPC.Call(dst, method, args, callback)`** - call remote RPC service.
   //
-  // Return value: 1 in case of success, 0 otherwise.
+  // Return value: true in case of success, false otherwise.
   //
   // If `dst` is empty, connected server is implied. `method` is a string
   // like "MyMethod", `callback` is a callback function which takes the following
