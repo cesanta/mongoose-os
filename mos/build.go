@@ -123,6 +123,11 @@ func buildLocal() (err error) {
 		return errors.Trace(err)
 	}
 
+	archEffective, err := detectArch(manifest)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
 	// Create map of given module locations, via --module flag(s)
 	customModuleLocations := map[string]string{}
 	for _, m := range *modules {
@@ -131,6 +136,7 @@ func buildLocal() (err error) {
 	}
 
 	mVars := NewManifestVars()
+	mVars.SetVar("arch", archEffective)
 
 	var mosDirEffective string
 	if *mosRepo != "" {
@@ -197,11 +203,6 @@ func buildLocal() (err error) {
 	ffiSymbols := manifest.FFISymbols
 
 	fmt.Printf("Building...\n")
-
-	archEffective, err := detectArch(manifest)
-	if err != nil {
-		return errors.Trace(err)
-	}
 
 	defer os.RemoveAll(fwDir)
 

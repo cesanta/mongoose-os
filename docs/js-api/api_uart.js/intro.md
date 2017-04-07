@@ -24,6 +24,10 @@ TODO: implement platform-specific settings, such as pins.
 
 
 
+Apply arch-specific config
+
+
+
 **`UART.setDispatcher(uartNo, callback, userdata)`** - set UART dispatcher
 callback which gets invoked when there is a new data in the input buffer
 or when the space becomes available on the output buffer.
@@ -64,4 +68,8 @@ input buffer.
 
 **`UART.flush(uartNo)`** - flush the UART output buffer, wait for the
 data to be sent.
+
+
+
+Load arch-specific API
 

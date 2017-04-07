@@ -42,6 +42,11 @@ let UART = {
       param.txFlowControl || false
     );
 
+    // Apply arch-specific config
+    if (this._arch !== undefined) {
+      this._arch.scfg(uartNo, param);
+    }
+
     let res = this._cfg(uartNo, cfg);
 
     this._free(cfg);
@@ -92,3 +97,5 @@ let UART = {
   flush: ffi('void mgos_uart_flush(int)'),
 };
 
+// Load arch-specific API
+load('api_arch_uart.js');

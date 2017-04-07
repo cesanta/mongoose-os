@@ -8,6 +8,7 @@ sources:
 filesystem:
   - fs
   - ${mongoose_os_path}/fw/mjs_api/api_*.js
+  - ${mongoose_os_path}/fw/platforms/${arch}/mjs_api/api_*.js
 modules:
   - origin: https://github.com/cesanta/mjs
 build_vars:
