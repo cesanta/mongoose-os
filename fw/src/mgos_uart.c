@@ -142,6 +142,31 @@ void mgos_uart_config_set_defaults(int uart_no, struct mgos_uart_config *cfg) {
   mgos_uart_hal_config_set_defaults(uart_no, cfg);
 }
 
+struct mgos_uart_config *mgos_uart_config_get_default(int uart_no) {
+  struct mgos_uart_config *ret = malloc(sizeof(*ret));
+  mgos_uart_config_set_defaults(uart_no, ret);
+  return ret;
+}
+
+void mgos_uart_config_set_baud_rate(struct mgos_uart_config *cfg,
+                                    int baud_rate) {
+  cfg->baud_rate = baud_rate;
+}
+
+void mgos_uart_config_set_rx_params(struct mgos_uart_config *cfg,
+                                    int rx_buf_size, bool rx_fc_ena,
+                                    int rx_linger_micros) {
+  cfg->rx_buf_size = rx_buf_size;
+  cfg->rx_fc_ena = rx_fc_ena;
+  cfg->rx_linger_micros = rx_linger_micros;
+}
+
+void mgos_uart_config_set_tx_params(struct mgos_uart_config *cfg,
+                                    int tx_buf_size, bool tx_fc_ena) {
+  cfg->tx_buf_size = tx_buf_size;
+  cfg->tx_fc_ena = tx_fc_ena;
+}
+
 void mgos_uart_set_dispatcher(int uart_no, mgos_uart_dispatcher_t cb,
                               void *arg) {
   struct mgos_uart_state *us = s_uart_state[uart_no];
@@ -150,7 +175,7 @@ void mgos_uart_set_dispatcher(int uart_no, mgos_uart_dispatcher_t cb,
   us->dispatcher_data = arg;
 }
 
-bool mgos_uart_rx_enabled(int uart_no) {
+bool mgos_uart_is_rx_enabled(int uart_no) {
   struct mgos_uart_state *us = s_uart_state[uart_no];
   if (us == NULL) return false;
   return us->rx_enabled;

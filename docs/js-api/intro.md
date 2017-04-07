@@ -9,6 +9,7 @@ items:
   - { name: api_timer.js }
   - { name: api_bitbang.js }
   - { name: api_grove.js }
+  - { name: api_uart.js }
   - { name: api_net.js }
   - { name: api_http.js }
   - { name: api_config.js }

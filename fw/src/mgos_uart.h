@@ -93,7 +93,7 @@ size_t mgos_uart_read_avail(int uart_no);
 
 /* Controls whether UART receiver is enabled. */
 void mgos_uart_set_rx_enabled(int uart_no, bool enabled);
-bool mgos_uart_rx_enabled(int uart_no);
+bool mgos_uart_is_rx_enabled(int uart_no);
 
 /* Flush the UART output buffer - waits for data to be sent. */
 void mgos_uart_flush(int uart_no);
@@ -116,6 +116,38 @@ struct mgos_uart_stats {
 };
 
 const struct mgos_uart_stats *mgos_uart_get_stats(int uart_no);
+
+/* FFI-targeted API {{{ */
+
+/*
+ * Allocate and return new config structure filled with the default values.
+ * Primarily useful for ffi.
+ */
+struct mgos_uart_config *mgos_uart_config_get_default(int uart_no);
+
+/*
+ * Set baud rate in the provided config structure.
+ */
+void mgos_uart_config_set_baud_rate(struct mgos_uart_config *cfg,
+                                    int baud_rate);
+
+/*
+ * Set Rx params in the provided config structure: buffer size `rx_buf_size`,
+ * whether Rx flow control is enabled (`rx_fc_ena`), and the number of
+ * microseconds to linger after Rx fifo is empty (default: 15).
+ */
+void mgos_uart_config_set_rx_params(struct mgos_uart_config *cfg,
+                                    int rx_buf_size, bool rx_fc_ena,
+                                    int rx_linger_micros);
+
+/*
+ * Set Tx params in the provided config structure: buffer size `tx_buf_size`
+ * and whether Tx flow control is enabled (`tx_fc_ena`).
+ */
+void mgos_uart_config_set_tx_params(struct mgos_uart_config *cfg,
+                                    int tx_buf_size, bool tx_fc_ena);
+
+/* }}} */
 
 #ifdef __cplusplus
 }
