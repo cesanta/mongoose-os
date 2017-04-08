@@ -99,7 +99,7 @@ MGOS_FEATURES =
 SYS_CONF_SCHEMA =
 FS_FILES =
 
-include $(MGOS_PATH)/fw/src/features.mk
+include $(MGOS_PATH)/fw/src/mgos_features.mk
 
 export MGOS_SRCS
 export MGOS_FEATURES

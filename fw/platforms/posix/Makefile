@@ -56,7 +56,7 @@ MGOS_SRCS = $(notdir $(wildcard *.c)) mgos_init.c  \
             json_utils.c cs_rbuf.c mgos_uart.c \
             mgos_utils.c cs_file.c cs_crc32.c
 
-include $(MGOS_PATH)/fw/src/features.mk
+include $(MGOS_PATH)/fw/src/mgos_features.mk
 
 # inline causes crashes in the compacting GC
 # TODO(mkm) figure out which functions are inline sensitive and annotate them

@@ -13,7 +13,7 @@ MGOS_ENABLE_UPDATER_RPC ?= 0
 CREATE_SPIFFS_FS ?= 1
 USE_LWIP ?= 1
 
-include $(MGOS_PATH)/fw/src/features.mk
+include $(MGOS_PATH)/fw/src/mgos_features.mk
 
 TARGET ?=
 
