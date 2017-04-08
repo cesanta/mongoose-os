@@ -3,10 +3,11 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_SRC_MGOS_MQTT_GLOBAL_H_
-#define CS_FW_SRC_MGOS_MQTT_GLOBAL_H_
+#ifndef CS_FW_SRC_MGOS_MQTT_H_
+#define CS_FW_SRC_MGOS_MQTT_H_
 
 #include <stdbool.h>
+
 #include "fw/src/mgos_features.h"
 #include "fw/src/mgos_init.h"
 #include "fw/src/mgos_mongoose.h"
@@ -18,7 +19,7 @@ extern "C" {
 #if MGOS_ENABLE_MQTT
 
 /* Initialises global MQTT connection */
-enum mgos_init_result mgos_mqtt_global_init(void);
+enum mgos_init_result mgos_mqtt_init(void);
 
 /*
  * Subscribe to a specific topic.
@@ -31,6 +32,14 @@ void mgos_mqtt_global_subscribe(const struct mg_str topic,
 
 /* Registers a mongoose handler to be invoked on the global MQTT connection */
 void mgos_mqtt_add_global_handler(mg_event_handler_t handler, void *ud);
+
+/*
+ * Set authentication callback. It is invoked when CONNECT message is about to
+ * be sent, values from *user and *pass, if non-NULL, will be sent along.
+ * Note: *user and *pass must be heap-allocated and will be free()d.
+ */
+typedef void (*mgos_mqtt_auth_callback_t)(char **user, char **pass, void *arg);
+void mgos_mqtt_set_auth_callback(mgos_mqtt_auth_callback_t cb, void *cb_arg);
 
 /*
  * Returns current MQTT connection if it is established; otherwise returns
@@ -57,4 +66,4 @@ void mgos_mqtt_sub(const char *topic, sub_handler_t, void *ud);
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_SRC_MGOS_MQTT_GLOBAL_H_ */
+#endif /* CS_FW_SRC_MGOS_MQTT_H_ */

@@ -37,6 +37,8 @@ struct global_handler {
 static int s_reconnect_timeout_ms = 0;
 static mgos_timer_id s_reconnect_timer_id = MGOS_INVALID_TIMER_ID;
 static struct mg_connection *s_conn = NULL;
+static mgos_mqtt_auth_callback_t s_auth_cb = NULL;
+static void *s_auth_cb_arg = NULL;
 
 SLIST_HEAD(topic_handlers, topic_handler) s_topic_handlers;
 SLIST_HEAD(global_handlers, global_handler) s_global_handlers;
@@ -75,8 +77,33 @@ static void mgos_mqtt_ev(struct mg_connection *nc, int ev, void *ev_data,
 
   switch (ev) {
     case MG_EV_CONNECT: {
-      int success = (*(int *) ev_data == 0);
+      bool success = (*(int *) ev_data == 0);
       LOG(LL_INFO, ("MQTT Connect (%d)", success));
+      if (!success) break;
+      struct mg_send_mqtt_handshake_opts opts;
+      const struct sys_config *cfg = get_cfg();
+      const struct sys_config_mqtt *mcfg = &cfg->mqtt;
+      memset(&opts, 0, sizeof(opts));
+      char *user = NULL, *pass = NULL;
+      if (s_auth_cb != NULL) {
+        s_auth_cb(&user, &pass, s_auth_cb_arg);
+        opts.user_name = user;
+        opts.password = pass;
+      } else {
+        opts.user_name = mcfg->user;
+        opts.password = mcfg->pass;
+      }
+      if (mcfg->clean_session) {
+        opts.flags |= MG_MQTT_CLEAN_SESSION;
+      }
+      opts.keep_alive = mcfg->keep_alive;
+      opts.will_topic = mcfg->will_topic;
+      opts.will_message = mcfg->will_message;
+      const char *client_id =
+          (mcfg->client_id ? mcfg->client_id : cfg->device.id);
+      mg_send_mqtt_handshake_opt(nc, client_id, opts);
+      free(user);
+      free(pass);
       break;
     }
     case MG_EV_CLOSE: {
@@ -161,6 +188,11 @@ void mgos_mqtt_add_global_handler(mg_event_handler_t handler, void *ud) {
   SLIST_INSERT_HEAD(&s_global_handlers, gh, entries);
 }
 
+void mgos_mqtt_set_auth_callback(mgos_mqtt_auth_callback_t cb, void *cb_arg) {
+  s_auth_cb = cb;
+  s_auth_cb_arg = cb_arg;
+}
+
 #if MGOS_ENABLE_WIFI
 static void mgos_mqtt_wifi_ready(enum mgos_wifi_status event, void *arg) {
   if (event != MGOS_WIFI_IP_ACQUIRED) return;
@@ -170,7 +202,7 @@ static void mgos_mqtt_wifi_ready(enum mgos_wifi_status event, void *arg) {
 }
 #endif
 
-enum mgos_init_result mgos_mqtt_global_init(void) {
+enum mgos_init_result mgos_mqtt_init(void) {
   const struct sys_config_mqtt *mcfg = &get_cfg()->mqtt;
   if (!mcfg->enable) return MGOS_INIT_OK;
   if (mcfg->server == NULL) {
@@ -211,25 +243,11 @@ static bool mqtt_global_connect(void) {
 
   struct mg_connection *nc =
       mg_connect_opt(mgr, scfg->mqtt.server, mgos_mqtt_ev, NULL, opts);
-  if (nc == NULL) {
-    ret = false;
-  } else {
-    struct mg_send_mqtt_handshake_opts opts;
-    memset(&opts, 0, sizeof(opts));
-
-    opts.user_name = scfg->mqtt.user;
-    opts.password = scfg->mqtt.pass;
-    if (scfg->mqtt.clean_session) {
-      opts.flags |= MG_MQTT_CLEAN_SESSION;
-    }
-    opts.keep_alive = scfg->mqtt.keep_alive;
-    opts.will_topic = scfg->mqtt.will_topic;
-    opts.will_message = scfg->mqtt.will_message;
-
+  if (nc != NULL) {
     mg_set_protocol_mqtt(nc);
-    mg_send_mqtt_handshake_opt(nc, scfg->device.id, opts);
+  } else {
+    ret = false;
   }
-
   return ret;
 }
 

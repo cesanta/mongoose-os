@@ -117,7 +117,7 @@ enum mgos_init_result mgos_init(void) {
 #endif
 
 #if MGOS_ENABLE_MQTT
-  r = mgos_mqtt_global_init();
+  r = mgos_mqtt_init();
   if (r != MGOS_INIT_OK) return r;
 #if MGOS_ENABLE_AWS_SHADOW
   r = mgos_aws_shadow_init();
