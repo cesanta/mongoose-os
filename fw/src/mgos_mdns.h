@@ -23,9 +23,12 @@ void mgos_mdns_add_handler(mg_event_handler_t handler, void *ud);
 /* unregisters a mongoose handler */
 void mgos_mdns_remove_handler(mg_event_handler_t handler, void *ud);
 
+struct mg_connection *mgos_mdns_get_listener(void);
+
 /* HAL */
 
 void mgos_mdns_hal_join_group(const char *mcast_ip);
+void mgos_mdns_hal_leave_group(const char *mcast_ip);
 
 #endif /* MGOS_ENABLE_MDNS */
 

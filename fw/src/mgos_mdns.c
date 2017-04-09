@@ -27,7 +27,13 @@ struct mdns_handler {
   void *ud;
 };
 
+static struct mg_connection *s_listening_mdns_conn;
+
 SLIST_HEAD(mdns_handlers, mdns_handler) s_mdns_handlers;
+
+struct mg_connection *mgos_mdns_get_listener(void) {
+  return s_listening_mdns_conn;
+}
 
 void mgos_mdns_add_handler(mg_event_handler_t handler, void *ud) {
   struct mdns_handler *e = calloc(1, sizeof(*e));
@@ -60,28 +66,27 @@ static void handler(struct mg_connection *nc, int ev, void *ev_data,
 enum mgos_init_result mgos_mdns_init(void) {
   char listener_spec[128];
   struct mg_mgr *mgr = mgos_get_mgr();
-  struct mg_connection *lc;
 
   if (!get_cfg()->dns_sd.enable) return MGOS_INIT_OK;
 
   snprintf(listener_spec, sizeof(listener_spec), "udp://:%d", MDNS_PORT);
   LOG(LL_INFO, ("Listening on %s", listener_spec));
 
-  lc = mg_bind(mgr, listener_spec, handler, NULL);
-  if (lc == NULL) {
+  s_listening_mdns_conn = mg_bind(mgr, listener_spec, handler, NULL);
+  if (s_listening_mdns_conn == NULL) {
     LOG(LL_ERROR, ("Failed to create listener"));
     return MGOS_INIT_MDNS_FAILED;
   }
 
-  mg_set_protocol_dns(lc);
+  mg_set_protocol_dns(s_listening_mdns_conn);
 
   /*
    * we had to bind on 0.0.0.0, but now we can store our mdns dest here
    * so we don't need to create a new connection in order to send outbound
    * mcast traffic.
    */
-  lc->sa.sin.sin_port = htons(5353);
-  inet_aton(MDNS_MCAST_GROUP, &lc->sa.sin.sin_addr);
+  s_listening_mdns_conn->sa.sin.sin_port = htons(5353);
+  inet_aton(MDNS_MCAST_GROUP, &s_listening_mdns_conn->sa.sin.sin_addr);
 
   mgos_mdns_hal_join_group(MDNS_MCAST_GROUP);
 
