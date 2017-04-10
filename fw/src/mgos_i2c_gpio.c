@@ -201,7 +201,8 @@ bool mgos_i2c_read(struct mgos_i2c *c, uint16_t addr, void *data, size_t len,
   }
 
   while (len-- > 0) {
-    *p++ = mgos_i2c_read_byte(c, I2C_ACK);
+    enum i2c_ack_type ack = (len > 0 || !stop ? I2C_ACK : I2C_NAK);
+    *p++ = mgos_i2c_read_byte(c, ack);
   }
 
   res = true;
@@ -244,18 +245,14 @@ struct mgos_i2c *mgos_i2c_create(const struct sys_config_i2c *cfg) {
   c->scl_gpio = cfg->scl_gpio;
   c->started = false;
 
-  mgos_i2c_set_sda_scl(c, I2C_INPUT, I2C_INPUT);
-  if (!mgos_gpio_set_mode(
-          c->sda_gpio,
-          MGOS_GPIO_MODE_INPUT ||
-              !mgos_gpio_set_pull(c->sda_gpio, MGOS_GPIO_PULL_UP))) {
+  if (!mgos_gpio_set_mode(c->sda_gpio, MGOS_GPIO_MODE_INPUT) ||
+      !mgos_gpio_set_pull(c->sda_gpio, MGOS_GPIO_PULL_UP)) {
     goto out_err;
   }
   if (!mgos_gpio_set_mode(c->scl_gpio, MGOS_GPIO_MODE_INPUT) ||
       !mgos_gpio_set_pull(c->scl_gpio, MGOS_GPIO_PULL_UP)) {
     goto out_err;
   }
-  mgos_i2c_half_delay(c);
 
   LOG(LL_INFO,
       ("I2C GPIO init ok (SDA: %d, SCL: %d)", c->sda_gpio, c->scl_gpio));
