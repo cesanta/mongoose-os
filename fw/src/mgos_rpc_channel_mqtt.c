@@ -23,6 +23,8 @@
 #define CH_F_SUB2_ACKED 2
 #define CHANNEL_OPEN (CH_F_SUB1_ACKED | CH_F_SUB2_ACKED)
 
+static uint16_t s_packet_id;
+
 static char *mgos_rpc_mqtt_topic_name(const struct mg_str device_id,
                                       bool wildcard) {
   char *topic = NULL;
@@ -99,7 +101,9 @@ static bool mg_rpc_channel_mqtt_send_frame(struct mg_rpc_channel *ch,
       return false;
     }
     topic = mgos_rpc_mqtt_topic_name(mg_mk_str_n(dst.ptr, dst.len), false);
-    mg_mqtt_publish(nc, topic, 0, MG_MQTT_QOS(1), f.p, f.len);
+    s_packet_id++;
+    if (s_packet_id == 0) s_packet_id++;
+    mg_mqtt_publish(nc, topic, s_packet_id, MG_MQTT_QOS(1), f.p, f.len);
     LOG(LL_DEBUG, ("Published [%.*s] to topic [%s]", (int) f.len, f.p, topic));
     free(topic);
     mgos_invoke_cb(frame_sent, ch, false /* from_isr */);
