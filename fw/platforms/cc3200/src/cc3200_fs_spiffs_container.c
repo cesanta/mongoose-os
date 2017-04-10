@@ -192,8 +192,8 @@ void fs_close_container(struct mount_info *m) {
 static s32_t slfs_read(spiffs *fs, u32_t addr, u32_t size, u8_t *dst) {
   struct mount_info *m = (struct mount_info *) fs->user_data;
   _i32 r;
-  DBG(("slfs_read %d @ %d, cidx %u # %llu, fh %d, valid %d, rw %d", (int) size,
-       (int) addr, m->cidx, m->seq, (int) m->fh, m->valid, m->rw));
+  DBG(("slfs_read %d @ %d, cidx %u # %llu, fh %d, rw %d", (int) size,
+       (int) addr, m->cidx, m->seq, (int) m->fh, m->rw));
   do {
     if (m->fh < 0) {
       _u8 fname[MAX_FS_CONTAINER_FNAME_LEN];
@@ -218,8 +218,8 @@ static s32_t slfs_read(spiffs *fs, u32_t addr, u32_t size, u8_t *dst) {
 static s32_t slfs_write(spiffs *fs, u32_t addr, u32_t size, u8_t *src) {
   struct mount_info *m = (struct mount_info *) fs->user_data;
   _i32 r;
-  DBG(("slfs_write %d @ %d, cidx %d # %llu, fh %d, valid %d, rw %d", (int) size,
-       (int) addr, m->cidx, m->seq, (int) m->fh, m->valid, m->rw));
+  DBG(("slfs_write %d @ %d, cidx %d # %llu, fh %d, rw %d", (int) size,
+       (int) addr, m->cidx, m->seq, (int) m->fh, m->rw));
   if (!m->rw) {
     /* Remount rw. */
     if (fs_switch_container(m, 0, 0) != 0) return SPIFFS_ERR_NOT_WRITABLE;
