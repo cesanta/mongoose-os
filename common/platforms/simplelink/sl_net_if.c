@@ -162,7 +162,6 @@ static void mg_write_to_socket(struct mg_connection *nc) {
   }
 
   if (n > 0) {
-    mbuf_remove(io, n);
     mg_if_sent_cb(nc, n);
   } else if (n < 0 && mg_is_error(n)) {
     /* Something went wrong, drop the connection. */

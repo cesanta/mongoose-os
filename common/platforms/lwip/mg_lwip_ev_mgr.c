@@ -76,7 +76,7 @@ void mg_ev_mgr_lwip_process_signals(struct mg_mgr *mgr) {
         break;
       }
       case MG_SIG_SENT_CB: {
-        if (cs->num_sent > 0) mg_if_sent_cb(nc, cs->num_sent);
+        mg_if_sent_cb(nc, cs->num_sent);
         cs->num_sent = 0;
 
         if (nc->send_mbuf.len == 0 && (nc->flags & MG_F_SEND_AND_CLOSE) &&

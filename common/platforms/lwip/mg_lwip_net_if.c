@@ -458,8 +458,6 @@ static void mg_lwip_send_more(struct mg_connection *nc) {
   if (num_written < 0) {
     mg_lwip_post_signal(MG_SIG_CLOSE_CONN, nc);
   }
-  mbuf_remove(&nc->send_mbuf, num_written);
-  mbuf_trim(&nc->send_mbuf);
 }
 
 void mg_lwip_if_tcp_send(struct mg_connection *nc, const void *buf,

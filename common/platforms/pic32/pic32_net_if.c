@@ -156,10 +156,7 @@ static void mg_handle_send(struct mg_connection *nc) {
     }
   }
 
-  if (bytes_written != 0) {
-    mbuf_remove(&nc->send_mbuf, bytes_written);
-    mg_if_sent_cb(nc, bytes_written);
-  }
+  mg_if_sent_cb(nc, bytes_written);
 }
 
 static void mg_handle_recv(struct mg_connection *nc) {
