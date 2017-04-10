@@ -355,6 +355,10 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		defer devConnMtx.Unlock()
 
 		result, err := callDeviceService(ctx2, devConn, method, args)
+		if method == "Config.Save" {
+			// Saving config causes the device to reboot, so we have to wait a bit
+			waitForReboot()
+		}
 		httpReply(w, result, err)
 	})
 
