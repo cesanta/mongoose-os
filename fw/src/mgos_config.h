@@ -31,8 +31,10 @@ bool mgos_conf_check_access(const struct mg_str key, const char *acl);
 enum mgos_conf_type {
   CONF_TYPE_INT = 0,
   CONF_TYPE_BOOL = 1,
-  CONF_TYPE_STRING = 2,
-  CONF_TYPE_OBJECT = 3,
+  CONF_TYPE_FLOAT = 2,
+  CONF_TYPE_DOUBLE = 3,
+  CONF_TYPE_STRING = 4,
+  CONF_TYPE_OBJECT = 5,
 };
 
 struct mgos_conf_entry {
