@@ -2,8 +2,6 @@ CFLAGS_EXTRA ?=
 PYTHON ?= python
 
 MG_FEATURES_TINY = \
-                   -DMG_DISABLE_HTTP_DIGEST_AUTH \
-                   -DCS_DISABLE_MD5 \
                    -DMG_DISABLE_HTTP_KEEP_ALIVE \
                    -DMG_ENABLE_HTTP_SSI=0 \
                    -DMG_ENABLE_TUN=0 \

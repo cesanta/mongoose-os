@@ -118,6 +118,16 @@ void cc3200_hash_final(struct cc3200_hash_ctx *ctx, uint8_t *digest) {
 }
 
 /* Mongoose external hash interface. */
+void mg_hash_md5_v(uint32_t num_msgs, const uint8_t *msgs[],
+                   const uint32_t *msg_lens, uint8_t *digest) {
+  struct cc3200_hash_ctx ctx;
+  cc3200_hash_init(&ctx, CC3200_HASH_ALGO_MD5);
+  for (int i = 0; i < num_msgs; i++) {
+    cc3200_hash_update(&ctx, msgs[i], msg_lens[i]);
+  }
+  cc3200_hash_final(&ctx, digest);
+}
+
 void mg_hash_sha1_v(uint32_t num_msgs, const uint8_t *msgs[],
                     const uint32_t *msg_lens, uint8_t *digest) {
   struct cc3200_hash_ctx ctx;

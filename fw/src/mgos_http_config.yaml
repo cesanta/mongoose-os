@@ -7,4 +7,6 @@
   ["http.ssl_ca_cert", "s", {title: "Verify clients this CA bundle"}],
   ["http.upload_acl", "s", "*", {title: "Upload file ACL"}],
   ["http.hidden_files", "s", {title: "Hidden file pattern"}],
+  ["http.auth_domain", "s", {title: "Enable authentication of all HTTP requests"}],
+  ["http.auth_file", "s", {title: "Password file to use for auth"}],
 ]

@@ -329,19 +329,9 @@ enum mgos_init_result mgos_sys_config_init_http(
   }
 
 #if MG_ENABLE_FILESYSTEM
-  /*
-   * Usually, we start to connect/listen in
-   * EVENT_STAMODE_GOT_IP/EVENT_SOFTAPMODE_STACONNECTED  handlers
-   * The only obvious reason for this is to specify IP address
-   * in `mg_bind` function. But it is not clear, for what we have to
-   * provide IP address in case of ESP
-   */
-  if (cfg->hidden_files) {
-    s_http_server_opts.hidden_file_pattern = strdup(cfg->hidden_files);
-    if (s_http_server_opts.hidden_file_pattern == NULL) {
-      return MGOS_INIT_OUT_OF_MEMORY;
-    }
-  }
+  s_http_server_opts.hidden_file_pattern = cfg->hidden_files;
+  s_http_server_opts.auth_domain = cfg->auth_domain;
+  s_http_server_opts.global_auth_file = cfg->auth_file;
 #endif
 
   struct mg_bind_opts opts;
@@ -575,8 +565,13 @@ void mgos_register_config_validator(mgos_config_validator_fn fn) {
 
 void mgos_register_http_endpoint(const char *uri_path,
                                  mg_event_handler_t handler, void *user_data) {
+  struct mg_http_endpoint_opts opts;
+  memset(&opts, 0, sizeof(opts));
+  opts.user_data = user_data;
+  opts.auth_domain = get_cfg()->http.auth_domain;
+  opts.auth_file = get_cfg()->http.auth_file;
   if (listen_conn != NULL) {
-    mg_register_http_endpoint(listen_conn, uri_path, handler, user_data);
+    mg_register_http_endpoint_opt(listen_conn, uri_path, handler, opts);
   }
 
   if (listen_conn_tun != NULL) {

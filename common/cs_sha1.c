@@ -1,7 +1,7 @@
 /* Copyright(c) By Steve Reid <steve@edmweb.com> */
 /* 100% Public Domain */
 
-#include "common/sha1.h"
+#include "common/cs_sha1.h"
 
 #if !CS_DISABLE_SHA1 && !defined(EXCLUDE_COMMON)
 

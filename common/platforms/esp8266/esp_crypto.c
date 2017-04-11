@@ -19,6 +19,12 @@ extern int sha1_vector(size_t num_msgs, const uint8_t *msgs[],
 extern int md5_vector(size_t num_msgs, const uint8_t *msgs[],
                       const size_t *msg_lens, uint8_t *digest);
 
+/* For digest auth. */
+void mg_hash_md5_v(size_t num_msgs, const uint8_t *msgs[],
+                   const size_t *msg_lens, uint8_t *digest) {
+  (void) md5_vector(num_msgs, msgs, msg_lens, digest);
+}
+
 /* For WebSocket handshake. */
 void mg_hash_sha1_v(size_t num_msgs, const uint8_t *msgs[],
                     const size_t *msg_lens, uint8_t *digest) {
