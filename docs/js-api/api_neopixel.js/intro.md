@@ -46,7 +46,8 @@ This should be ok for now, we don't expect strips to be re-created.
 
 
 
-**`NeoPixel.setPixel(s, i, r, g, b)`** - set i-th's pixel's RGB value.
+## **`NeoPixel.setPixel(s, i, r, g, b)`**
+Set i-th's pixel's RGB value.
 Note that this only affects in-memory value of the pixel.
 
 

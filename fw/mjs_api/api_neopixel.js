@@ -39,7 +39,8 @@ let NeoPixel = {
   GRB: 1,
   BGR: 2,
 
-  // **`NeoPixel.setPixel(s, i, r, g, b)`** - set i-th's pixel's RGB value.
+  // ## **`NeoPixel.setPixel(s, i, r, g, b)`**
+  // Set i-th's pixel's RGB value.
   // Note that this only affects in-memory value of the pixel.
   setPixel: function(s, i, r, g, b) {
     let v0, v1, v2;
@@ -68,7 +69,7 @@ let NeoPixel = {
   show: function(s) {
     GPIO.write(s.pin, 0);
     Sys.usleep(60);
-    BitBang.writeBits(s.pin, BitBang.DELAY_100NSEC, 3, 8, 7, 6, s.data, s.len);
+    BitBang.write(s.pin, BitBang.DELAY_100NSEC, 3, 8, 7, 6, s.data, s.len);
     GPIO.write(s.pin, 0);
     Sys.usleep(60);
     GPIO.write(s.pin, 1);
