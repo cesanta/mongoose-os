@@ -1,35 +1,40 @@
 // MQTT API. Source C API is defined at:
 // [mgos_mqtt.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_mqtt.h)
+//
 // This API provides publish and subscribe functions. The MQTT server should
 // be configured via the `mqtt` configuration section, or dynamically, like
 // `mos config-set mqtt.server=broker.hivemq.com:1883`.
 
 let MQTT = {
-  // **`MQTT.sub(topic, handler)`** - subscribe to a topic, and call given
-  // handler function when message arrives.
-  //
+  _sub: ffi('void mgos_mqtt_sub(char *, void (*)(void *, void *, int, void *, int, userdata), userdata)'),
+  _subf: function(conn, topic, len1, msg, len2, ud) {
+    return ud.cb(conn, fstr(topic, len1), fstr(msg, len2), ud.ud);
+  },
+
+  // ## **`MQTT.sub(topic, handler)`**
+  // Subscribe to a topic, and call given handler function when message arrives.
+  // A handler receives 4 parameters: MQTT connection, topic name,
+  // message, and userdata.
   // Return value: none.
   //
   // Example:
   // ```javascript
-  // MQTT.sub('dfrank_topic', function(conn, topic_ptr, topic_len, msg_ptr, msg_len) {
-  //   print(
-  //     'Got message:',
-  //     fstr(msg_ptr, msg_len),
-  //     'from topic:',
-  //     fstr(topic_ptr, topic_len)
-  //   );
+  // MQTT.sub('my/topic/#', function(conn, topic, msg) {
+  //   print('Topic:', topic, 'message:', msg);
   // }, null);
   // ```
-  sub: ffi('void mgos_mqtt_sub(char *, void (*)(void *, void *, int, void *, int, userdata), userdata)'),
+  sub: function(topic, cb, ud) {
+    return this._sub(topic, this._subf, { cb: cb, ud: ud });
+  },
 
   _pub: ffi('int mgos_mqtt_pub(char *, char *, int)'),
 
-  // **`MQTT.pub(topic, message)`** - pubish message to a topic. Return value:
+  // ## **`MQTT.pub(topic, message)`**
+  // Publish message to a topic. Return value:
   // 0 on failure (e.g. no connection to server), 1 on success. Example:
   // ```javascript
   // let res = MQTT.pub('my/topic', JSON.stringify({ a: 1, b: 2 }));
   // print('Published:', res ? 'yes' : 'no');
   // ```
-  pub: function(t, m) { return MQTT._pub(t, m, m.length); },
+  pub: function(t, m) { return this._pub(t, m, m.length); },
 };
