@@ -179,21 +179,26 @@ void mgos_uart_hal_config_set_defaults(int uart_no,
   dcfg->rx_fifo_full_thresh = 120;
   dcfg->rx_fifo_fc_thresh = 125;
   dcfg->tx_fifo_empty_thresh = 10;
+  /* Note: GPIO6-11 are used by the SPI flash. */
   switch (uart_no) {
     case 0:
       dcfg->rx_gpio = 3;
       dcfg->tx_gpio = 1;
-      dcfg->cts_gpio = 16;
-      dcfg->rts_gpio = 15;
+      dcfg->cts_gpio = 19;
+      dcfg->rts_gpio = 22;
       break;
     case 1:
-      dcfg->rx_gpio = 9;
-      dcfg->tx_gpio = 10;
-      dcfg->cts_gpio = 6;
-      dcfg->rts_gpio = 11;
+      dcfg->rx_gpio = 12;
+      dcfg->tx_gpio = 13;
+      dcfg->cts_gpio = 14;
+      dcfg->rts_gpio = 15;
       break;
     case 2:
-    /* No default pin assignments for UART2 */
+      dcfg->rx_gpio = 16;
+      dcfg->tx_gpio = 17;
+      dcfg->cts_gpio = 26;
+      dcfg->rts_gpio = 27;
+      break;
     default:
       dcfg->rx_gpio = -1;
       dcfg->tx_gpio = -1;
