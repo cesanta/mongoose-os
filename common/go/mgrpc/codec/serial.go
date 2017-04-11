@@ -24,7 +24,7 @@ const (
 	handshakeInterval time.Duration = 200 * time.Millisecond
 
 	// Maximum time to wait for a device to handshake with us
-	handshakeTimeout time.Duration = 7400 * time.Millisecond
+	handshakeTimeout time.Duration = 10 * time.Second
 
 	interCharacterTimeout time.Duration = 200 * time.Millisecond
 )
