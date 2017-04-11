@@ -26,7 +26,10 @@ downloads: generate
 	cp version.json downloads/mos/
 
 deploy:
-	cd ../prod && ansible-playbook website.yml -t mos
+	cd ../prod && \
+    ansible-playbook website.yml -e build=yes -t build_mos,mos && \
+    ansible-playbook toy.yml -e build=yes -t build_cloud-mos,cloud-mos
+
 
 clean:
 	rm -rf mos_* mos.exe mos gobuild-cache downloads/mos/{mac,linux,win} version*
