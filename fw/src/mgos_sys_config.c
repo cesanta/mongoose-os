@@ -553,6 +553,8 @@ enum mgos_init_result mgos_sys_config_init(void) {
   mgos_wdt_set_timeout(s_cfg.sys.wdt_timeout);
   mgos_wdt_set_feed_on_poll(true);
 
+  mgos_get_mgr()->hexdump_file = s_cfg.debug.mg_mgr_hexdump_file;
+
   return MGOS_INIT_OK;
 }
 

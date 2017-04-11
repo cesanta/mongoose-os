@@ -19,6 +19,7 @@
   ["debug.stdout_uart", "i", {title: "STDOUT UART (-1 to disable)"}],
   ["debug.stderr_uart", "i", {title: "STDERR UART (-1 to disable)"}],
   ["debug.factory_reset_gpio", "i", -1, {title: "Factory reset GPIO (low on boot)"}],
+  ["debug.mg_mgr_hexdump_file", "s", {title: "File name to hexdump network traffic to. Use '-' for stdout, '--' for stderr."}],
 
   ["sys", "o", {title: "System settings"}],
   ["sys.wdt_timeout", "i", 30, {title: "Watchdog timeout (seconds)"}],
