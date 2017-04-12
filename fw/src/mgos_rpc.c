@@ -109,17 +109,48 @@ static void mgos_sys_get_info_handler(struct mg_rpc_request_info *ri,
                                       void *cb_arg,
                                       struct mg_rpc_frame_info *fi,
                                       struct mg_str args) {
+  if (!fi->channel_is_trusted) {
+    mg_rpc_send_errorf(ri, 403, "unauthorized");
+    ri = NULL;
+    return;
+  }
+
   const struct sys_ro_vars *v = get_ro_vars();
-  mg_rpc_send_responsef(ri,
-                        "{app: %Q, fw_version: %Q, fw_id: %Q, mac: %Q, "
-                        "arch: %Q, uptime: %lu, "
-                        "ram_size: %u, ram_free: %u, ram_min_free: %u, "
-                        "fs_size: %u, fs_free: %u}",
-                        MGOS_APP, v->fw_version, v->fw_id, v->mac_address,
-                        v->arch, (unsigned long) mg_time(),
-                        mgos_get_heap_size(), mgos_get_free_heap_size(),
-                        mgos_get_min_free_heap_size(), mgos_get_fs_size(),
-                        mgos_get_free_fs_size());
+#if MGOS_ENABLE_WIFI
+  char *status = mgos_wifi_get_status_str();
+  char *ssid = mgos_wifi_get_connected_ssid();
+  char *sta_ip = mgos_wifi_get_sta_ip();
+  char *ap_ip = mgos_wifi_get_ap_ip();
+#endif
+
+  mg_rpc_send_responsef(
+      ri,
+      "{app: %Q, fw_version: %Q, fw_id: %Q, mac: %Q, "
+      "arch: %Q, uptime: %lu, "
+      "ram_size: %u, ram_free: %u, ram_min_free: %u, "
+      "fs_size: %u, fs_free: %u"
+#if MGOS_ENABLE_WIFI
+      ",wifi: {sta_ip: %Q, ap_ip: %Q, status: %Q, ssid: %Q}"
+#endif
+      "}",
+      MGOS_APP, v->fw_version, v->fw_id, v->mac_address, v->arch,
+      (unsigned long) mg_time(), mgos_get_heap_size(),
+      mgos_get_free_heap_size(), mgos_get_min_free_heap_size(),
+      mgos_get_fs_size(), mgos_get_free_fs_size()
+#if MGOS_ENABLE_WIFI
+                              ,
+      sta_ip == NULL ? "" : sta_ip, ap_ip == NULL ? "" : ap_ip,
+      status == NULL ? "" : status, ssid == NULL ? "" : ssid
+#endif
+      );
+
+#if MGOS_ENABLE_WIFI
+  free(sta_ip);
+  free(ap_ip);
+  free(ssid);
+  free(status);
+#endif
+
   (void) cb_arg;
   (void) args;
   (void) fi;

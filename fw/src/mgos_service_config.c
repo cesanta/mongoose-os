@@ -75,41 +75,6 @@ static void set_handler(const char *str, int len, void *user_data) {
   (void) user_data;
 }
 
-/* Handler for Config.GetNetworkStatus */
-static void mgos_config_gns_handler(struct mg_rpc_request_info *ri,
-                                    void *cb_arg, struct mg_rpc_frame_info *fi,
-                                    struct mg_str args) {
-  if (!fi->channel_is_trusted) {
-    mg_rpc_send_errorf(ri, 403, "unauthorized");
-    ri = NULL;
-    return;
-  }
-
-#if MGOS_ENABLE_WIFI
-  char *status = mgos_wifi_get_status_str();
-  char *ssid = mgos_wifi_get_connected_ssid();
-  char *sta_ip = mgos_wifi_get_sta_ip();
-  char *ap_ip = mgos_wifi_get_ap_ip();
-
-  mg_rpc_send_responsef(
-      ri, "{wifi: {sta_ip: %Q, ap_ip: %Q, status: %Q, ssid: %Q}}",
-      sta_ip == NULL ? "" : sta_ip, ap_ip == NULL ? "" : ap_ip,
-      status == NULL ? "" : status, ssid == NULL ? "" : ssid);
-  ri = NULL;
-
-  free(sta_ip);
-  free(ap_ip);
-  free(ssid);
-  free(status);
-#else
-  mg_rpc_send_responsef(ri, "{}");
-  ri = NULL;
-#endif
-
-  (void) args;
-  (void) cb_arg;
-}
-
 /* Handler for Config.Set */
 static void mgos_config_set_handler(struct mg_rpc_request_info *ri,
                                     void *cb_arg, struct mg_rpc_frame_info *fi,
@@ -183,8 +148,6 @@ enum mgos_init_result mgos_service_config_init(void) {
   mg_rpc_add_handler(c, "Config.Get", "{key: %Q}", mgos_config_get_handler,
                      NULL);
   mg_rpc_add_handler(c, "Config.Set", "{config: %M}", mgos_config_set_handler,
-                     NULL);
-  mg_rpc_add_handler(c, "Config.GetNetworkStatus", "", mgos_config_gns_handler,
                      NULL);
   mg_rpc_add_handler(c, "Config.Save", "{reboot: %B}", mgos_config_save_handler,
                      NULL);
