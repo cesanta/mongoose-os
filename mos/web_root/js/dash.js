@@ -93,8 +93,7 @@
   $.ajax({url: '/call', data: {method: 'Sys.GetInfo'}}).then(function(data) {
     var json = data.result;
     var ip = json.wifi.sta_ip || json.wifi.ap_ip;
-    let html = '<b>' + json.fw_id + '/' + json.arch + '</b>, built: ' +
-    '<b>' + json.fw_timestamp + '</b>, IP: ';
+    let html = '<b>' + json.arch + '/' + json.fw_id + '</b>, IP: ';
     if (ip) {
       html += '<a href=' + ip + '>' + ip + '</a>';
     } else {

@@ -220,9 +220,7 @@
   });
 
   var formatDevInfo = function(json) {
-    return '<b>' + json.fw_id + '/' + json.arch + '</b>, built: ' +
-      '<b>' + json.fw_timestamp + '</b>';
-    // return JSON.stringify(json);
+    return '<b>' + json.arch + '/' + json.fw_id + '</b>';
   };
 
   var probeDevice = function() {

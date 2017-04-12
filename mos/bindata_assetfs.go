@@ -329,7 +329,6 @@ body { color: #666;  background-color: #eee; }
 #wizard-button-next.spinner, #wizard-button-prev.spinner { color: transparent; }
 #main-title { margin: 0.5em 0; font-size: 30px; font-weight: 300; }
 .link { cursor: pointer; }
-#version-update { font-weight: bold; color: red; }
 
 /* COMMON STUFF */
 @keyframes spinner {
@@ -505,7 +504,7 @@ func web_rootCssMainCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/css/main.css", size: 5242, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/css/main.css", size: 5191, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3805,7 +3804,8 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
       <div class="panel-footer">
         <small class="text-muted">&copy; <a href="https://mongoose-os.com">Cesanta 2017</a>
           | Version: <span id="version"></span>
-          <span id="version-update" class="hidden">Out of date! <a href="https://mongoose-os.com/software.html">Update here</a></span>
+          <a id="version-update" class="hidden btn btn-xs btn-danger"
+            href="https://mongoose-os.com/software.html">Out of date! Click to update...</a>
           | <a href="/infolog" target="_blank">show device logs</a>
       </small>
 
@@ -3843,7 +3843,7 @@ func web_rootIndexHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/index.html", size: 16001, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/index.html", size: 16029, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4155,8 +4155,7 @@ var _web_rootJsDashJs = []byte(`(function($) {
   $.ajax({url: '/call', data: {method: 'Sys.GetInfo'}}).then(function(data) {
     var json = data.result;
     var ip = json.wifi.sta_ip || json.wifi.ap_ip;
-    let html = '<b>' + json.fw_id + '/' + json.arch + '</b>, built: ' +
-    '<b>' + json.fw_timestamp + '</b>, IP: ';
+    let html = '<b>' + json.arch + '/' + json.fw_id + '</b>, IP: ';
     if (ip) {
       html += '<a href=' + ip + '>' + ip + '</a>';
     } else {
@@ -4187,7 +4186,7 @@ func web_rootJsDashJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/dash.js", size: 3334, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/dash.js", size: 3284, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4690,9 +4689,7 @@ var _web_rootJsWizardJs = []byte(`(function($) {
   });
 
   var formatDevInfo = function(json) {
-    return '<b>' + json.fw_id + '/' + json.arch + '</b>, built: ' +
-      '<b>' + json.fw_timestamp + '</b>';
-    // return JSON.stringify(json);
+    return '<b>' + json.arch + '/' + json.fw_id + '</b>';
   };
 
   var probeDevice = function() {
@@ -4761,7 +4758,7 @@ func web_rootJsWizardJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 10342, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 10254, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

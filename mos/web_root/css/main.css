@@ -47,7 +47,6 @@ body { color: #666;  background-color: #eee; }
 #wizard-button-next.spinner, #wizard-button-prev.spinner { color: transparent; }
 #main-title { margin: 0.5em 0; font-size: 30px; font-weight: 300; }
 .link { cursor: pointer; }
-#version-update { font-weight: bold; color: red; }
 
 /* COMMON STUFF */
 @keyframes spinner {
