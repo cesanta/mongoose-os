@@ -19,6 +19,7 @@ let MQTT = {
   //
   // Example:
   // ```javascript
+  // load('api_mqtt.js');
   // MQTT.sub('my/topic/#', function(conn, topic, msg) {
   //   print('Topic:', topic, 'message:', msg);
   // }, null);
@@ -31,10 +32,17 @@ let MQTT = {
 
   // ## **`MQTT.pub(topic, message)`**
   // Publish message to a topic. Return value:
-  // 0 on failure (e.g. no connection to server), 1 on success. Example:
+  // 0 on failure (e.g. no connection to server), 1 on success.
+  //
+  // Example - send MQTT message on button press:
   // ```javascript
-  // let res = MQTT.pub('my/topic', JSON.stringify({ a: 1, b: 2 }));
-  // print('Published:', res ? 'yes' : 'no');
+  // load('api_mqtt.js');
+  // load('api_gpio.js');
+  // let pin = 0, topic = 'my/topic';
+  // GPIO.set_button_handler(pin, GPIO.PULL_UP, GPIO.INT_EDGE_NEG, 200, function() {
+  //   let res = MQTT.pub('my/topic', JSON.stringify({ a: 1, b: 2 }));
+  //   print('Published:', res ? 'yes' : 'no');
+  // }, null);
   // ```
   pub: function(t, m) { return this._pub(t, m, m.length); },
 };
