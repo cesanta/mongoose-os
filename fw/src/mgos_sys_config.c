@@ -256,8 +256,8 @@ static void upload_handler(struct mg_connection *c, int ev, void *p,
 }
 #endif
 
-static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p,
-                                void *user_data) {
+static void mgos_http_ev(struct mg_connection *c, int ev, void *p,
+                         void *user_data) {
   switch (ev) {
     case MG_EV_ACCEPT: {
       char addr[32];
@@ -278,8 +278,12 @@ static void mongoose_ev_handler(struct mg_connection *c, int ev, void *p,
  * so, we should not set `MG_F_SEND_AND_CLOSE` here
  */
 #else
-      mg_http_send_error(c, 404, NULL);
+      mg_http_send_error(c, 404, "Not Found");
 #endif
+      break;
+    }
+    case MG_EV_HTTP_MULTIPART_REQUEST: {
+      mg_http_send_error(c, 404, "Not Found");
       break;
     }
     case MG_EV_CLOSE: {
@@ -367,8 +371,8 @@ enum mgos_init_result mgos_sys_config_init_http(
         "TLS-RSA-WITH-AES-128-CBC-SHA";
 #endif /* CS_PLATFORM == CS_P_ESP8266 */
 #endif /* MG_ENABLE_SSL */
-  listen_conn = mg_bind_opt(mgos_get_mgr(), cfg->listen_addr,
-                            mongoose_ev_handler, NULL, opts);
+  listen_conn =
+      mg_bind_opt(mgos_get_mgr(), cfg->listen_addr, mgos_http_ev, NULL, opts);
 
   if (!listen_conn) {
     LOG(LL_ERROR, ("Error binding to [%s]", cfg->listen_addr));
@@ -397,8 +401,7 @@ enum mgos_init_result mgos_sys_config_init_http(
                     cfg->tunnel.addr) < 0) {
       return MGOS_INIT_OUT_OF_MEMORY;
     }
-    listen_conn_tun =
-        mg_bind_opt(mgos_get_mgr(), tun_addr, mongoose_ev_handler, opts);
+    listen_conn_tun = mg_bind_opt(mgos_get_mgr(), tun_addr, mgos_http_ev, opts);
 
     if (listen_conn_tun == NULL) {
       LOG(LL_ERROR, ("Error binding to [%s]", tun_addr));
