@@ -182,14 +182,14 @@ static void set_default_pins(int uart_no, struct mgos_uart_config *cfg) {
       dcfg->rts_gpio = 22;
       break;
     case 1:
-      dcfg->rx_gpio = 12;
-      dcfg->tx_gpio = 13;
-      dcfg->cts_gpio = 14;
-      dcfg->rts_gpio = 15;
+      dcfg->rx_gpio = 13;
+      dcfg->tx_gpio = 14;
+      dcfg->cts_gpio = 15;
+      dcfg->rts_gpio = 16;
       break;
     case 2:
-      dcfg->rx_gpio = 16;
-      dcfg->tx_gpio = 17;
+      dcfg->rx_gpio = 17;
+      dcfg->tx_gpio = 25;
       dcfg->cts_gpio = 26;
       dcfg->rts_gpio = 27;
       break;

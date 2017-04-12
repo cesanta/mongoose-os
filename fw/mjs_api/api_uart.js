@@ -34,8 +34,8 @@ let UART = {
   //       * GPIO pin numbers, default values depend on UART.
   //       *
   //       * UART 0: Rx: 3, Tx: 1, CTS: 19, RTS: 22
-  //       * UART 1: Rx: 12, Tx: 13, CTS: 14, RTS: 15
-  //       * UART 2: Rx: 16, Tx: 17, CTS: 26, RTS: 27
+  //       * UART 1: Rx: 13, Tx: 14, CTS: 15, RTS: 16
+  //       * UART 2: Rx: 17, Tx: 25, CTS: 26, RTS: 27
   //       */
   //      gpio: {
   //        rx: number,
