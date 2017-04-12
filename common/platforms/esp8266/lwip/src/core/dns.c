@@ -87,12 +87,6 @@
 static const char mem_debug_file[] ICACHE_RODATA_ATTR = __FILE__;
 #endif
 
-/** DNS server IP address */
-#ifndef DNS_SERVER_ADDRESS
-/* Changed by Espressif */
-#define DNS_SERVER_ADDRESS(ipaddr)        (ip4_addr_set_u32(ipaddr, 0xDEDE43D0)) /* resolver1.opendns.com(208.67.222.222) */
-#endif
-
 /** DNS server port address */
 #ifndef DNS_SERVER_PORT
 #define DNS_SERVER_PORT           53
@@ -238,12 +232,12 @@ static u16_t					  dns_random;
 void
 dns_init()
 {
+#ifdef DNS_SERVER_ADDRESS
   ip_addr_t dnsserver;
-/* Changed by Espressif */
-//  dns_payload = (u8_t *)LWIP_MEM_ALIGN(dns_payload_buffer);
-  
   /* initialize default DNS server address */
   DNS_SERVER_ADDRESS(&dnsserver);
+  dns_setserver(0, &dnsserver);
+#endif
 
   LWIP_DEBUGF(DNS_DEBUG, ("dns_init: initializing\n"));
 
@@ -260,9 +254,6 @@ dns_init()
       /* initialize DNS client */
       udp_bind(dns_pcb, IP_ADDR_ANY, 0);
       udp_recv(dns_pcb, dns_recv, NULL);
-
-      /* initialize default DNS primary server */
-      dns_setserver(0, &dnsserver);
     }
   }
 #if DNS_LOCAL_HOSTLIST
