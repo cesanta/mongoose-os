@@ -28,6 +28,8 @@
 #define MGOS_DNS_SD_HTTP_TYPE_FULL MGOS_DNS_SD_HTTP_TYPE SD_DOMAIN
 #define MGOS_MDNS_QUERY_UNICAST 0x8000
 #define MGOS_MDNS_CACHE_FLUSH 0x8000
+#define RCLASS_IN_NOFLUSH 0x0001
+#define RCLASS_IN_FLUSH 0x8001
 #define SD_TYPE_ENUM_NAME "_services._dns-sd._udp" SD_DOMAIN
 
 static void make_host_name(char *buf, size_t buf_len) {
@@ -43,11 +45,11 @@ static void make_service_name(char *buf, size_t buf_len) {
   mgos_expand_mac_address_placeholders(buf);
 }
 
-static struct mg_dns_resource_record make_dns_rr(int type) {
+static struct mg_dns_resource_record make_dns_rr(int type, uint16_t rclass) {
   struct mg_dns_resource_record rr = {
       .name = mg_mk_str(""),
       .rtype = type,
-      .rclass = 0x8001, /* class IN  */
+      .rclass = rclass,
       .ttl = get_cfg()->dns_sd.ttl,
       .kind = MG_DNS_ANSWER,
   };
@@ -60,7 +62,8 @@ static void add_srv_record(const char *host_name, const char *service_name,
   char rdata_header[] = {0x0, 0x0, 0x0, 0x0};
   struct mg_connection *lc = mgos_get_sys_http_server();
   uint16_t port = lc == NULL ? 80 : lc->sa.sin.sin_port;
-  struct mg_dns_resource_record rr = make_dns_rr(MG_DNS_SRV_RECORD);
+  struct mg_dns_resource_record rr =
+      make_dns_rr(MG_DNS_SRV_RECORD, RCLASS_IN_FLUSH);
   rdata->len = 0;
   mbuf_append(rdata, rdata_header, sizeof(rdata_header));
   mbuf_append(rdata, &port, sizeof(port));
@@ -74,7 +77,8 @@ static void add_a_record(const char *name, struct mg_dns_reply *reply) {
   if (ip == NULL) ip = mgos_wifi_get_ap_ip();
   if (ip != NULL) {
     uint32_t addr = inet_addr(ip);
-    struct mg_dns_resource_record rr = make_dns_rr(MG_DNS_A_RECORD);
+    struct mg_dns_resource_record rr =
+        make_dns_rr(MG_DNS_A_RECORD, RCLASS_IN_FLUSH);
     mg_dns_encode_record(reply->io, &rr, name, strlen(name), &addr,
                          sizeof(addr));
     reply->msg->num_answers++;
@@ -94,7 +98,8 @@ static void add_txt_record(const char *name, struct mg_dns_reply *reply,
                            struct mbuf *rdata) {
   const struct sys_ro_vars *v = get_ro_vars();
   const struct sys_config *c = get_cfg();
-  struct mg_dns_resource_record rr = make_dns_rr(MG_DNS_TXT_RECORD);
+  struct mg_dns_resource_record rr =
+      make_dns_rr(MG_DNS_TXT_RECORD, RCLASS_IN_FLUSH);
   rdata->len = 0;
   append_label(rdata, mg_mk_str("id"), mg_mk_str(c->device.id));
   append_label(rdata, mg_mk_str("fw_id"), mg_mk_str(v->fw_id));
@@ -120,7 +125,8 @@ static void add_txt_record(const char *name, struct mg_dns_reply *reply,
 
 static void add_ptr_record(const char *name, const char *domain,
                            struct mg_dns_reply *reply, struct mbuf *rdata) {
-  struct mg_dns_resource_record rr = make_dns_rr(MG_DNS_PTR_RECORD);
+  struct mg_dns_resource_record rr =
+      make_dns_rr(MG_DNS_PTR_RECORD, RCLASS_IN_NOFLUSH);
   rdata->len = 0;
   mg_dns_encode_name(rdata, domain, strlen(domain));
   mg_dns_encode_record(reply->io, &rr, name, strlen(name), rdata->buf,
