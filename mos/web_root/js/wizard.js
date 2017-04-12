@@ -224,7 +224,11 @@
   };
 
   var probeDevice = function() {
-    $.ajax({url: '/call', data: {method: 'Sys.GetInfo'}}).then(function(data) {
+    $.ajax({
+      url: '/call', 
+      timeout: 1000,
+      data: {method: 'Sys.GetInfo', timeout: 1}
+    }).then(function(data) {
       $('#devinfo').html(formatDevInfo(data.result));
       $('#found-device-info').fadeIn();
     }).fail(function() {
@@ -233,6 +237,7 @@
   };
 
   // Repeatedly pull list of serial ports when we're on the first tab
+  var portList = '';
   setInterval(function() {
     var thisPane = $('.tab-pane.active').attr('id');
     if (thisPane != 'tab1') return;
@@ -246,7 +251,11 @@
           $('#input-serial').val(json.result[0] || '');
         }
         $('#noports-warning').fadeOut();
-        probeDevice();
+        var ports = JSON.stringify(json.result);
+        if (ports != portList) {
+          portList = ports;
+          probeDevice();
+        }
       } else {
         if (!portEdited) $('#input-serial').val('');
         $('#noports-warning').fadeIn();

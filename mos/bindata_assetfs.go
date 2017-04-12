@@ -4693,7 +4693,11 @@ var _web_rootJsWizardJs = []byte(`(function($) {
   };
 
   var probeDevice = function() {
-    $.ajax({url: '/call', data: {method: 'Sys.GetInfo'}}).then(function(data) {
+    $.ajax({
+      url: '/call', 
+      timeout: 1000,
+      data: {method: 'Sys.GetInfo', timeout: 1}
+    }).then(function(data) {
       $('#devinfo').html(formatDevInfo(data.result));
       $('#found-device-info').fadeIn();
     }).fail(function() {
@@ -4702,6 +4706,7 @@ var _web_rootJsWizardJs = []byte(`(function($) {
   };
 
   // Repeatedly pull list of serial ports when we're on the first tab
+  var portList = '';
   setInterval(function() {
     var thisPane = $('.tab-pane.active').attr('id');
     if (thisPane != 'tab1') return;
@@ -4715,7 +4720,11 @@ var _web_rootJsWizardJs = []byte(`(function($) {
           $('#input-serial').val(json.result[0] || '');
         }
         $('#noports-warning').fadeOut();
-        probeDevice();
+        var ports = JSON.stringify(json.result);
+        if (ports != portList) {
+          portList = ports;
+          probeDevice();
+        }
       } else {
         if (!portEdited) $('#input-serial').val('');
         $('#noports-warning').fadeIn();
@@ -4758,7 +4767,7 @@ func web_rootJsWizardJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 10254, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 10449, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

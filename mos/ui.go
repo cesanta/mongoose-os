@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"sort"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -348,7 +349,11 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 		fmt.Println("Calling", method, args)
 
-		ctx2, cancel := context.WithTimeout(ctx, 10*time.Second)
+		timeout, err2 := strconv.ParseInt(r.FormValue("timeout"), 10, 64)
+		if err2 != nil {
+			timeout = 10
+		}
+		ctx2, cancel := context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
 		defer cancel()
 
 		devConnMtx.Lock()
