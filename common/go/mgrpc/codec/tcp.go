@@ -1,6 +1,9 @@
 package codec
 
-import "net"
+import (
+	"context"
+	"net"
+)
 
 type tcpCodec struct {
 	conn net.Conn
@@ -16,7 +19,8 @@ func (c *tcpCodec) Read(b []byte) (n int, err error) {
 	return c.conn.Read(b)
 }
 
-func (c *tcpCodec) Write(b []byte) (n int, err error) {
+func (c *tcpCodec) WriteWithContext(ctx context.Context, b []byte) (n int, err error) {
+	/* TODO(dfrank): use ctx */
 	return c.conn.Write(b)
 }
 

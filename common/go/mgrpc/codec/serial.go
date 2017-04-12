@@ -23,9 +23,6 @@ const (
 	// receive the delimeter in response
 	handshakeInterval time.Duration = 200 * time.Millisecond
 
-	// Maximum time to wait for a device to handshake with us
-	handshakeTimeout time.Duration = 10 * time.Second
-
 	interCharacterTimeout time.Duration = 200 * time.Millisecond
 )
 
@@ -117,8 +114,7 @@ func (c *serialCodec) Read(buf []byte) (read int, err error) {
 	return res, errors.Trace(err)
 }
 
-func (c *serialCodec) Write(b []byte) (written int, err error) {
-	tch := time.After(handshakeTimeout)
+func (c *serialCodec) WriteWithContext(ctx context.Context, b []byte) (written int, err error) {
 	c.writeLock.Lock()
 	defer c.writeLock.Unlock()
 	c.setHandsShaken(false)
@@ -136,8 +132,8 @@ func (c *serialCodec) Write(b []byte) (written int, err error) {
 		time.Sleep(handshakeInterval)
 
 		select {
-		case <-tch:
-			return 0, errors.Errorf("Device handshake timeout")
+		case <-ctx.Done():
+			return 0, ctx.Err()
 		default:
 		}
 	}

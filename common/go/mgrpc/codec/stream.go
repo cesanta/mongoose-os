@@ -26,7 +26,8 @@ var wantRead = errors.New("wantRead")
 
 // Stream connection implementation (see tcp.go and serial.go)
 type streamConn interface {
-	io.ReadWriteCloser
+	io.ReadCloser
+	WriteWithContext(ctx context.Context, p []byte) (n int, err error)
 	// RemoteAddr returns the string representing the other party's address.
 	RemoteAddr() string
 	// PreprocessFrame preprocesses the given frame and returns true if the frame
@@ -280,7 +281,7 @@ func (scc *streamConnectionCodec) Send(ctx context.Context, f *frame.Frame) erro
 		frameData = append(frameData, []byte(crcHex)...)
 	}
 	frameData = append(frameData, []byte(streamFrameDelimiter)...)
-	_, err = scc.conn.Write(frameData)
+	_, err = scc.conn.WriteWithContext(ctx, frameData)
 	if err != nil {
 		scc.Close()
 		return errors.Trace(err)
