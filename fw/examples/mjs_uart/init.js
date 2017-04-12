@@ -13,6 +13,12 @@ let value = false;
 // Configure UART at 115200 baud
 UART.setConfig(uartNo, {
   baudRate: 115200,
+  esp32: {
+    gpio: {
+      rx: 16,
+      tx: 17,
+    },
+  },
 });
 
 // Set dispatcher callback, it will be called whenver new Rx data or space in

@@ -23,7 +23,62 @@ let UART = {
   // - `txFlowControl`: whether Tx flow control (CTS pin) is enabled, boolean,
   //   default: false;
   //
-  // TODO: implement platform-specific settings, such as pins.
+  // Other than that, there are architecture-dependent settings, grouped in
+  // the objects named with the architecture name: "esp32", "esp8266", etc.
+  //
+  // Settings for esp32:
+  //
+  // ```
+  //   esp32: {
+  //      /*
+  //       * GPIO pin numbers, default values depend on UART.
+  //       *
+  //       * UART 0: Rx: 3, Tx: 1, CTS: 19, RTS: 22
+  //       * UART 1: Rx: 12, Tx: 13, CTS: 14, RTS: 15
+  //       * UART 2: Rx: 16, Tx: 17, CTS: 26, RTS: 27
+  //       */
+  //      gpio: {
+  //        rx: number,
+  //        tx: number,
+  //        cts: number,
+  //        rts: number,
+  //      },
+  //
+  //      /* Hardware FIFO tweaks */
+  //      fifo: {
+  //        /*
+  //         * A number of bytes in the hardware Rx fifo, should be between 1 and 127.
+  //         * How full hardware Rx fifo should be before "rx fifo full" interrupt is
+  //         * fired.
+  //         */
+  //        rxFullThresh: number,
+  //
+  //        /*
+  //         * A number of bytes in the hardware Rx fifo, should be more than
+  //         * rx_fifo_full_thresh.
+  //         *
+  //         * How full hardware Rx fifo should be before CTS is deasserted, telling
+  //         * the other side to stop sending data.
+  //         */
+  //        rxFcThresh: number,
+  //
+  //        /*
+  //         * Time in uart bit intervals when "rx fifo full" interrupt fires even if
+  //         * it's not full enough
+  //         */
+  //        rxAlarm: number,
+  //
+  //        /*
+  //         * A number of bytes in the hardware Tx fifo, should be between 1 and 127.
+  //         * When the number of bytes in Tx buffer becomes less than
+  //         * tx_fifo_empty_thresh, "tx fifo empty" interrupt fires.
+  //         */
+  //        txEmptyThresh: number,
+  //      },
+  //    }
+  // ```
+  //
+  // TODO: implement esp8266-specific settings
   setConfig: function(uartNo, param) {
     let cfg = this._cdef(uartNo);
 
@@ -44,7 +99,7 @@ let UART = {
 
     // Apply arch-specific config
     if (this._arch !== undefined) {
-      this._arch.scfg(uartNo, param);
+      this._arch.scfg(uartNo, cfg, param);
     }
 
     let res = this._cfg(uartNo, cfg);

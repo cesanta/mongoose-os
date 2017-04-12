@@ -1,6 +1,6 @@
 UART._arch = {
   // Set arch-dependent UART config
-  scfg: function(uartNo, param) {
+  scfg: function(uartNo, cfg, param) {
     /* TODO */
   },
 };

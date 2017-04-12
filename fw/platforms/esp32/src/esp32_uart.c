@@ -172,14 +172,8 @@ bool esp32_uart_validate_config(const struct mgos_uart_config *c) {
   return true;
 }
 
-void mgos_uart_hal_config_set_defaults(int uart_no,
-                                       struct mgos_uart_config *cfg) {
+static void set_default_pins(int uart_no, struct mgos_uart_config *cfg) {
   struct mgos_uart_dev_config *dcfg = &cfg->dev;
-  dcfg->rx_fifo_alarm = 10;
-  dcfg->rx_fifo_full_thresh = 120;
-  dcfg->rx_fifo_fc_thresh = 125;
-  dcfg->tx_fifo_empty_thresh = 10;
-  /* Note: GPIO6-11 are used by the SPI flash. */
   switch (uart_no) {
     case 0:
       dcfg->rx_gpio = 3;
@@ -206,6 +200,20 @@ void mgos_uart_hal_config_set_defaults(int uart_no,
       dcfg->rts_gpio = -1;
       break;
   }
+}
+
+static void set_default_thresh(int uart_no, struct mgos_uart_config *cfg) {
+  struct mgos_uart_dev_config *dcfg = &cfg->dev;
+  dcfg->rx_fifo_alarm = 10;
+  dcfg->rx_fifo_full_thresh = 120;
+  dcfg->rx_fifo_fc_thresh = 125;
+  dcfg->tx_fifo_empty_thresh = 10;
+}
+
+void mgos_uart_hal_config_set_defaults(int uart_no,
+                                       struct mgos_uart_config *cfg) {
+  set_default_thresh(uart_no, cfg);
+  set_default_pins(uart_no, cfg);
 }
 
 bool mgos_uart_hal_init(struct mgos_uart_state *us) {
@@ -307,4 +315,56 @@ uint32_t esp32_uart_raw_ints(int uart_no) {
 
 uint32_t esp32_uart_int_mask(int uart_no) {
   return READ_PERI_REG(UART_INT_ENA_REG(uart_no));
+}
+
+/*
+ * Accessor function which sets pin numbers. Intended for ffi.
+ */
+void esp32_uart_config_set_pins(int uart_no, struct mgos_uart_config *cfg,
+                                int rx_gpio, int tx_gpio, int cts_gpio,
+                                int rts_gpio) {
+  set_default_pins(uart_no, cfg);
+  struct mgos_uart_dev_config *dcfg = &cfg->dev;
+
+  if (rx_gpio != -1) {
+    dcfg->rx_gpio = rx_gpio;
+  }
+
+  if (tx_gpio != -1) {
+    dcfg->tx_gpio = tx_gpio;
+  }
+
+  if (cts_gpio != -1) {
+    dcfg->cts_gpio = cts_gpio;
+  }
+
+  if (rts_gpio != -1) {
+    dcfg->rts_gpio = rts_gpio;
+  }
+}
+
+/*
+ * Accessor function which sets fifo params. Intended for ffi.
+ */
+void esp32_uart_config_set_fifo(int uart_no, struct mgos_uart_config *cfg,
+                                int rx_fifo_full_thresh, int rx_fifo_fc_thresh,
+                                int rx_fifo_alarm, int tx_fifo_empty_thresh) {
+  set_default_thresh(uart_no, cfg);
+  struct mgos_uart_dev_config *dcfg = &cfg->dev;
+
+  if (rx_fifo_full_thresh != -1) {
+    dcfg->rx_fifo_full_thresh = rx_fifo_full_thresh;
+  }
+
+  if (rx_fifo_fc_thresh != -1) {
+    dcfg->rx_fifo_fc_thresh = rx_fifo_fc_thresh;
+  }
+
+  if (rx_fifo_alarm != -1) {
+    dcfg->rx_fifo_alarm = rx_fifo_alarm;
+  }
+
+  if (tx_fifo_empty_thresh != -1) {
+    dcfg->tx_fifo_empty_thresh = tx_fifo_empty_thresh;
+  }
 }
