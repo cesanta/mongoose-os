@@ -2,7 +2,7 @@
 title: "API"
 items:
   - { name: api_adc.js }
-  - { name: api_file.js }
+  - { name: api_sys.js }
   - { name: api_i2c.js }
   - { name: api_neopixel.js }
   - { name: api_mqtt.js }
@@ -16,5 +16,4 @@ items:
   - { name: api_aws.js }
   - { name: api_rpc.js }
   - { name: api_gpio.js }
-  - { name: api_sys.js }
 ---
