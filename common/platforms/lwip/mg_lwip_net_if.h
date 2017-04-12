@@ -36,10 +36,9 @@ struct mg_lwip_conn_state {
 enum mg_sig_type {
   MG_SIG_CONNECT_RESULT = 1,
   MG_SIG_RECV = 2,
-  MG_SIG_SENT_CB = 3,
-  MG_SIG_CLOSE_CONN = 4,
-  MG_SIG_TOMBSTONE = 5,
-  MG_SIG_ACCEPT = 6,
+  MG_SIG_CLOSE_CONN = 3,
+  MG_SIG_TOMBSTONE = 4,
+  MG_SIG_ACCEPT = 5,
 };
 
 void mg_lwip_post_signal(enum mg_sig_type sig, struct mg_connection *nc);

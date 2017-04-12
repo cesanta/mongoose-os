@@ -75,17 +75,6 @@ void mg_ev_mgr_lwip_process_signals(struct mg_mgr *mgr) {
         }
         break;
       }
-      case MG_SIG_SENT_CB: {
-        mg_if_sent_cb(nc, cs->num_sent);
-        cs->num_sent = 0;
-
-        if (nc->send_mbuf.len == 0 && (nc->flags & MG_F_SEND_AND_CLOSE) &&
-            !(nc->flags & MG_F_WANT_WRITE)) {
-          mg_close_conn(nc);
-        }
-
-        break;
-      }
       case MG_SIG_TOMBSTONE: {
         break;
       }
@@ -169,8 +158,8 @@ time_t mg_lwip_if_poll(struct mg_iface *iface, int timeout_ms) {
     } else
 #endif /* MG_ENABLE_SSL */
     {
-      if (!(nc->flags & (MG_F_CONNECTING | MG_F_UDP))) {
-        if (nc->send_mbuf.len > 0) mg_lwip_send_more(nc);
+      if (nc->send_mbuf.len > 0 && !(nc->flags & MG_F_CONNECTING)) {
+        mg_lwip_send_more(nc);
       }
     }
     if (nc->sock != INVALID_SOCKET &&
