@@ -212,26 +212,26 @@ enum mgos_init_result mgos_atca_init(void) {
 
   status = atcab_init(atca_cfg);
   if (status != ATCA_SUCCESS) {
-    LOG(LL_ERROR, ("ATECC508 init failed"));
+    LOG(LL_ERROR, ("ATCA: Library init failed"));
     goto out;
   }
 
   status = atcab_info((uint8_t *) &revision);
   if (status != ATCA_SUCCESS) {
-    LOG(LL_ERROR, ("Failed to get info"));
+    LOG(LL_ERROR, ("ATCA: Failed to get chip info"));
     goto out;
   }
 
   status = atcab_read_serial_number((uint8_t *) serial);
   if (status != ATCA_SUCCESS) {
-    LOG(LL_ERROR, ("Failed to get serial number"));
+    LOG(LL_ERROR, ("ATCA: Failed to get chip serial number"));
     goto out;
   }
 
   status = atcab_is_locked(LOCK_ZONE_CONFIG, &config_is_locked);
   status = atcab_is_locked(LOCK_ZONE_DATA, &data_is_locked);
   if (status != ATCA_SUCCESS) {
-    LOG(LL_ERROR, ("Failed to get data lock status"));
+    LOG(LL_ERROR, ("ATCA: Failed to get chip zone lock status"));
     goto out;
   }
 
@@ -249,7 +249,11 @@ out:
    * We do not free atca_cfg in case of an error even if it was allocated
    * because it is referenced by ATCA basic object.
    */
-  return (status == ATCA_SUCCESS ? MGOS_INIT_OK : MGOS_INIT_ATCA_FAILED);
+  if (status != ATCA_SUCCESS) {
+    LOG(LL_ERROR, ("ATCA: Chip is not available"));
+    /* In most cases the device can still work, so we continue anyway. */
+  }
+  return MGOS_INIT_OK;
 }
 
 void atca_delay_ms(uint32_t delay) {
