@@ -568,6 +568,17 @@ void mgos_register_config_validator(mgos_config_validator_fn fn) {
   s_validators[s_num_validators++] = fn;
 }
 
+void mgos_register_http_endpoint_opt(const char *uri_path,
+                                     mg_event_handler_t handler,
+                                     struct mg_http_endpoint_opts opts) {
+  if (listen_conn != NULL) {
+    mg_register_http_endpoint_opt(listen_conn, uri_path, handler, opts);
+  }
+  if (listen_conn_tun != NULL) {
+    mg_register_http_endpoint_opt(listen_conn_tun, uri_path, handler, opts);
+  }
+}
+
 void mgos_register_http_endpoint(const char *uri_path,
                                  mg_event_handler_t handler, void *user_data) {
   struct mg_http_endpoint_opts opts;
@@ -575,13 +586,7 @@ void mgos_register_http_endpoint(const char *uri_path,
   opts.user_data = user_data;
   opts.auth_domain = get_cfg()->http.auth_domain;
   opts.auth_file = get_cfg()->http.auth_file;
-  if (listen_conn != NULL) {
-    mg_register_http_endpoint_opt(listen_conn, uri_path, handler, opts);
-  }
-
-  if (listen_conn_tun != NULL) {
-    mg_register_http_endpoint(listen_conn_tun, uri_path, handler, user_data);
-  }
+  mgos_register_http_endpoint_opt(uri_path, handler, opts);
 }
 
 struct mg_connection *mgos_get_sys_http_server(void) {
