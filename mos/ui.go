@@ -190,7 +190,7 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 			for {
 				time.Sleep(time.Millisecond * 500)
 				var res2 string
-				res2, err = callDeviceService(ctx2, devConn, "Config.GetNetworkStatus", "")
+				res2, err = callDeviceService(ctx2, devConn, "Sys.GetInfo", "")
 				if err != nil {
 					httpReply(w, result, err)
 					return

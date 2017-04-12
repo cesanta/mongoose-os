@@ -9,11 +9,6 @@
 
 <script>
   $.ajax({url: '/call', data: {method: 'Sys.GetInfo'}}).then(function(json) {
-    $.each(json.result, function(k, v) {
-      $('<div><label>' + k + '</label><span>' + v + '</span></div>').appendTo('#rovars');
-    });
-    return $.ajax({url: '/call', data: {method: 'Config.GetNetworkStatus'}});
-  }).then(function(json) {
     $('#net').text(JSON.stringify(json.result, null, '  '));
   });
 

@@ -4,6 +4,7 @@ body { color: #666;  background-color: #eee; }
 /* DASHBOARD STYLES */
 #top_nav { line-height: 36px; margin: 0 10px; border-bottom: 1px solid #ccc; position: relative; }
 #breadcrumb { font-size: 24px; text-transform: capitalize !important; }
+#devinfo { padding-right: 5em; }
 #page { margin-left: 80px; margin-right: 1em; }
 #d1 { display: flex; flex-direction: column; }
 #app_view { flex: 0 0 auto; min-height: 200px; position: relative; }

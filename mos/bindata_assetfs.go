@@ -286,6 +286,7 @@ body { color: #666;  background-color: #eee; }
 /* DASHBOARD STYLES */
 #top_nav { line-height: 36px; margin: 0 10px; border-bottom: 1px solid #ccc; position: relative; }
 #breadcrumb { font-size: 24px; text-transform: capitalize !important; }
+#devinfo { padding-right: 5em; }
 #page { margin-left: 80px; margin-right: 1em; }
 #d1 { display: flex; flex-direction: column; }
 #app_view { flex: 0 0 auto; min-height: 200px; position: relative; }
@@ -504,7 +505,7 @@ func web_rootCssMainCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/css/main.css", size: 5209, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/css/main.css", size: 5242, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -570,14 +571,11 @@ var _web_rootDashHtml = []byte(`<!DOCTYPE html>
         <div id="top_nav">
           <span id="breadcrumb"></span>
           <div class="pull-right">
-            <a href="#" id="link-tour"><i class="fa fa-lightbulb-o"></i> start tour</a> &nbsp;|&nbsp;
-            <a href="/"><i class="fa fa-magic"></i> wizard mode</a> &nbsp;|&nbsp;
-            <a target="_blank" href="http://forum.cesanta.com"><i class="fa fa-comments-o"></i> developer forum</a> &nbsp;|&nbsp;
-            <a target="_blank" href="https://mongoose-os.com/docs/#/overview/"><i class="fa fa-map-o"></i> documentation</a> &nbsp;|&nbsp;
+            Device: <span id="devinfo"></span>
 
-            <a target="_blank" href="https://mongoose-os.com">
-              <img src="/images/logo_blue.png" height="24px">
-            </a>
+            <a href="/"><i class="fa fa-magic"></i> wizard</a> &nbsp;|&nbsp;
+            <a target="_blank" href="http://forum.cesanta.com"><i class="fa fa-comments-o"></i> forum</a> &nbsp;|&nbsp;
+            <a target="_blank" href="https://mongoose-os.com/docs/#/overview/"><i class="fa fa-map-o"></i> docs</a>
           </div>
         </div>
 
@@ -605,7 +603,6 @@ var _web_rootDashHtml = []byte(`<!DOCTYPE html>
   <script src="js/jquery.min.js"></script>
   <script src="js/jquery-resizable.js"></script>
   <script src="js/bootstrap.min.js"></script>
-  <script src="js/bootstrap-tour.min.js"></script>
   <script src="js/moment.min.js"></script>
   <script src="js/pnotify.min.js"></script>
   <script src="js/custom.min.js"></script>
@@ -628,7 +625,7 @@ func web_rootDashHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/dash.html", size: 3609, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/dash.html", size: 3323, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3492,10 +3489,9 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
     <div class="container master-container top-content">
 
       <nav class="navbar navbar-fixed-top">
-        <div class="container small">
+        <div class="container">
           <div class="pull-right">
-          <a class="active" href="/">wizard mode</a> |
-          <a href="/dash.html">advanced mode</a>
+          <a href="/dash.html">switch to prototyping mode</a>
           </div>
         </div>
       </nav>
@@ -3567,8 +3563,10 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
                     </div>
 
                     <div class="text-muted small">
+                    <p>
                       Connect your device to your computer, choose
                       serial port and click Next.
+                      </p>
                     </div>
 
                     <div class="alert alert-warning" id="noports-warning"
@@ -3587,6 +3585,19 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
                           </ul>
                         </li>
                       </ol>
+                    </div>
+
+                    <div class="alert alert-info" id="found-device-info"
+                      style="display: none;">
+                      Mongoose OS is already installed on this device!
+                      <p>
+                        Device info: <span id="devinfo"></span>
+                      </p>
+                      <p>
+                      <a class="btn btn-tiny btn-info" href="dash.html">
+                        Switch to prototyping mode
+                      </a>
+                      </p>
                     </div>
 
                   </div>
@@ -3832,7 +3843,7 @@ func web_rootIndexHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/index.html", size: 15459, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/index.html", size: 16001, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4141,6 +4152,19 @@ var _web_rootJsDashJs = []byte(`(function($) {
     },
   });
 
+  $.ajax({url: '/call', data: {method: 'Sys.GetInfo'}}).then(function(data) {
+    var json = data.result;
+    var ip = json.wifi.sta_ip || json.wifi.ap_ip;
+    let html = '<b>' + json.fw_id + '/' + json.arch + '</b>, built: ' +
+    '<b>' + json.fw_timestamp + '</b>, IP: ';
+    if (ip) {
+      html += '<a href=' + ip + '>' + ip + '</a>';
+    } else {
+      html += 'n/a';
+    }
+    $('#devinfo').html(html);
+  });
+
   $('#app_view').resizable({
     handleSelector: ".splitter-horizontal",
     resizeWidth: false
@@ -4149,78 +4173,6 @@ var _web_rootJsDashJs = []byte(`(function($) {
   $('#d1').height($(document.body).height() - 60);
   $('#app_view').height($(d1).height() * 0.75);
   $('#device-logs-panel').height($(d1).height() * 0.25);
-
-  // Instance the tour
-  var tour = new Tour({
-    steps: [
-    {
-      element: '#device-logs',
-      title: 'See device logs',
-      placement: 'top',
-      content: 'This panel shows device logs produced by ' +
-        'JavaScript code in <code>init.js</code>.'
-    },
-    {
-      element: '.splitter-horizontal',
-      placement: 'top',
-      title: 'Resize panels',
-      reflex: true,
-      content: 'You can resize panels by dragging this resize handle.'
-    },
-    {
-      element: '#file-list .is_init',
-      title: 'Edit init.js',
-      reflex: true,
-      content: 'Click on <code>init.js</code> to edit it.'
-    },
-    {
-      element: '#file-textarea',
-      title: 'Modify code',
-      placement: 'left',
-      content: 'Change \'Tock\' to \'Boom\''
-    },
-    {
-      element: '#file-save-button',
-      title: 'Save File',
-      placement: 'bottom',
-      reflex: true,
-      content: 'Click "Save selected file" button to save modified file.'
-    },
-    {
-      element: '#reboot-button',
-      title: 'Reboot device',
-      placement: 'top',
-      reflex: true,
-      content: 'Click on "Reboot device" button for device to read the new code.'
-    },
-    {
-      element: '#device-logs',
-      title: 'See modified message',
-      placement: 'top',
-      reflex: true,
-      content: 'Notice that printed message has changed.'
-    },
-    {
-      element: '[tab=examples]',
-      title: 'See JavaScript examples apps',
-      placement: 'right',
-      reflex: true,
-      content: 'Click on examples tab to see a list of examples we have put ' +
-      'together to demonstrate the power and simplicity of Mongoose OS.'
-    },
-    {
-      element: '.list-group',
-      title: 'Click on button_mqtt.js',
-      reflex: true,
-      content: 'Click on <code>button_mqtt.js</code>. Click on the orange button to use that example.'
-    },
-  ]});
-  tour.init();
-  tour.start();
-
-  $(document).on('click', '#link-tour', function() {
-    tour.restart();
-  });
 
 })(jQuery);
 `)
@@ -4235,7 +4187,7 @@ func web_rootJsDashJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/dash.js", size: 4886, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/dash.js", size: 3334, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4737,6 +4689,21 @@ var _web_rootJsWizardJs = []byte(`(function($) {
     portEdited = !!$('#input-serial').val();
   });
 
+  var formatDevInfo = function(json) {
+    return '<b>' + json.fw_id + '/' + json.arch + '</b>, built: ' +
+      '<b>' + json.fw_timestamp + '</b>';
+    // return JSON.stringify(json);
+  };
+
+  var probeDevice = function() {
+    $.ajax({url: '/call', data: {method: 'Sys.GetInfo'}}).then(function(data) {
+      $('#devinfo').html(formatDevInfo(data.result));
+      $('#found-device-info').fadeIn();
+    }).fail(function() {
+      $('#found-device-info').fadeOut();
+    });
+  };
+
   // Repeatedly pull list of serial ports when we're on the first tab
   setInterval(function() {
     var thisPane = $('.tab-pane.active').attr('id');
@@ -4751,9 +4718,11 @@ var _web_rootJsWizardJs = []byte(`(function($) {
           $('#input-serial').val(json.result[0] || '');
         }
         $('#noports-warning').fadeOut();
+        probeDevice();
       } else {
         if (!portEdited) $('#input-serial').val('');
         $('#noports-warning').fadeIn();
+        $('#found-device-info').fadeOut();
       }
     });
   }, 1000);
@@ -4792,7 +4761,7 @@ func web_rootJsWizardJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 9798, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 10342, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -5111,11 +5080,6 @@ var _web_rootPage_infoHtml = []byte(`<div data-title="Device information" style=
 
 <script>
   $.ajax({url: '/call', data: {method: 'Sys.GetInfo'}}).then(function(json) {
-    $.each(json.result, function(k, v) {
-      $('<div><label>' + k + '</label><span>' + v + '</span></div>').appendTo('#rovars');
-    });
-    return $.ajax({url: '/call', data: {method: 'Config.GetNetworkStatus'}});
-  }).then(function(json) {
     $('#net').text(JSON.stringify(json.result, null, '  '));
   });
 
@@ -5132,7 +5096,7 @@ func web_rootPage_infoHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_info.html", size: 682, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_info.html", size: 438, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

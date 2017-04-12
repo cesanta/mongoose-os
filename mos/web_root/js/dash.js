@@ -90,6 +90,19 @@
     },
   });
 
+  $.ajax({url: '/call', data: {method: 'Sys.GetInfo'}}).then(function(data) {
+    var json = data.result;
+    var ip = json.wifi.sta_ip || json.wifi.ap_ip;
+    let html = '<b>' + json.fw_id + '/' + json.arch + '</b>, built: ' +
+    '<b>' + json.fw_timestamp + '</b>, IP: ';
+    if (ip) {
+      html += '<a href=' + ip + '>' + ip + '</a>';
+    } else {
+      html += 'n/a';
+    }
+    $('#devinfo').html(html);
+  });
+
   $('#app_view').resizable({
     handleSelector: ".splitter-horizontal",
     resizeWidth: false
@@ -98,77 +111,5 @@
   $('#d1').height($(document.body).height() - 60);
   $('#app_view').height($(d1).height() * 0.75);
   $('#device-logs-panel').height($(d1).height() * 0.25);
-
-  // Instance the tour
-  var tour = new Tour({
-    steps: [
-    {
-      element: '#device-logs',
-      title: 'See device logs',
-      placement: 'top',
-      content: 'This panel shows device logs produced by ' +
-        'JavaScript code in <code>init.js</code>.'
-    },
-    {
-      element: '.splitter-horizontal',
-      placement: 'top',
-      title: 'Resize panels',
-      reflex: true,
-      content: 'You can resize panels by dragging this resize handle.'
-    },
-    {
-      element: '#file-list .is_init',
-      title: 'Edit init.js',
-      reflex: true,
-      content: 'Click on <code>init.js</code> to edit it.'
-    },
-    {
-      element: '#file-textarea',
-      title: 'Modify code',
-      placement: 'left',
-      content: 'Change \'Tock\' to \'Boom\''
-    },
-    {
-      element: '#file-save-button',
-      title: 'Save File',
-      placement: 'bottom',
-      reflex: true,
-      content: 'Click "Save selected file" button to save modified file.'
-    },
-    {
-      element: '#reboot-button',
-      title: 'Reboot device',
-      placement: 'top',
-      reflex: true,
-      content: 'Click on "Reboot device" button for device to read the new code.'
-    },
-    {
-      element: '#device-logs',
-      title: 'See modified message',
-      placement: 'top',
-      reflex: true,
-      content: 'Notice that printed message has changed.'
-    },
-    {
-      element: '[tab=examples]',
-      title: 'See JavaScript examples apps',
-      placement: 'right',
-      reflex: true,
-      content: 'Click on examples tab to see a list of examples we have put ' +
-      'together to demonstrate the power and simplicity of Mongoose OS.'
-    },
-    {
-      element: '.list-group',
-      title: 'Click on button_mqtt.js',
-      reflex: true,
-      content: 'Click on <code>button_mqtt.js</code>. Click on the orange button to use that example.'
-    },
-  ]});
-  tour.init();
-  tour.start();
-
-  $(document).on('click', '#link-tour', function() {
-    tour.restart();
-  });
 
 })(jQuery);

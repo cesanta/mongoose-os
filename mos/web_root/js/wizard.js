@@ -219,6 +219,21 @@
     portEdited = !!$('#input-serial').val();
   });
 
+  var formatDevInfo = function(json) {
+    return '<b>' + json.fw_id + '/' + json.arch + '</b>, built: ' +
+      '<b>' + json.fw_timestamp + '</b>';
+    // return JSON.stringify(json);
+  };
+
+  var probeDevice = function() {
+    $.ajax({url: '/call', data: {method: 'Sys.GetInfo'}}).then(function(data) {
+      $('#devinfo').html(formatDevInfo(data.result));
+      $('#found-device-info').fadeIn();
+    }).fail(function() {
+      $('#found-device-info').fadeOut();
+    });
+  };
+
   // Repeatedly pull list of serial ports when we're on the first tab
   setInterval(function() {
     var thisPane = $('.tab-pane.active').attr('id');
@@ -233,9 +248,11 @@
           $('#input-serial').val(json.result[0] || '');
         }
         $('#noports-warning').fadeOut();
+        probeDevice();
       } else {
         if (!portEdited) $('#input-serial').val('');
         $('#noports-warning').fadeIn();
+        $('#found-device-info').fadeOut();
       }
     });
   }, 1000);
