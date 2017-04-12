@@ -31,5 +31,10 @@ deploy:
     ansible-playbook toy.yml -e build=yes -t build_cloud-mos,cloud-mos
 
 
+# in order to build a valid osx bundle, chromium framework should be installed, as described here:
+# github.com/alexflint/gallium#installation
+osx_bundle:
+	gallium-bundle mos
+
 clean:
-	rm -rf mos_* mos.exe mos gobuild-cache downloads/mos/{mac,linux,win} version*
+	rm -rf mos_* mos.exe mos gobuild-cache downloads/mos/{mac,linux,win} version* mos.app

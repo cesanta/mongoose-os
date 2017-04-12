@@ -12,6 +12,7 @@ import (
 	mRand "math/rand"
 	"os"
 	"path/filepath"
+	"runtime"
 	"time"
 
 	"cesanta.com/common/go/pflagenv"
@@ -176,6 +177,7 @@ func main() {
 	}
 
 	if isUI {
+		runtime.LockOSThread()
 		*reconnect = true
 	}
 
