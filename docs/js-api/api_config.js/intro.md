@@ -7,13 +7,16 @@ System Config functions
 
 
 
-**`Cfg.get(path)`** - get the config value by the path
+## **`Cfg.get(path)`** 
+Get the config value by the configuration variable. Currently, only
+simple types are returned: strings, ints, booleans, doubles. Objects
+are not yet supported.
 
 Examples:
-
-`Cfg.get("device.id")` - returns a string
-`Cfg.get("debug.level")` - returns a number
-`Cfg.get("wifi.sta.enable")` - returns a boolean
-
-Returning objects are not yet supported
+```javascript
+load('api_config.js');
+Cfg.get('device.id');        // returns a string
+Cfg.get('debug.level');      // returns an integer
+Cfg.get('wifi.sta.enable');  // returns a boolean
+```
 

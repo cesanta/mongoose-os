@@ -80,7 +80,6 @@ void mgos_conf_parse_cb(void *data, const char *name, size_t name_len,
   char *vp = (((char *) ctx->cfg) + e->offset);
   switch (e->type) {
     case CONF_TYPE_INT:
-    case CONF_TYPE_FLOAT:
     case CONF_TYPE_DOUBLE: {
       if (tok->type != JSON_TYPE_NUMBER) {
         LOG(LL_ERROR, ("[%s] is not a number", path));
@@ -91,9 +90,6 @@ void mgos_conf_parse_cb(void *data, const char *name, size_t name_len,
       switch (e->type) {
         case CONF_TYPE_INT:
           *((int *) vp) = strtol(tok->ptr, &endptr, 10);
-          break;
-        case CONF_TYPE_FLOAT:
-          *((float *) vp) = strtof(tok->ptr, &endptr);
           break;
         case CONF_TYPE_DOUBLE:
           *((double *) vp) = strtod(tok->ptr, &endptr);
@@ -187,8 +183,6 @@ static bool mgos_conf_value_eq(const void *cfg, const void *base,
     case CONF_TYPE_INT:
     case CONF_TYPE_BOOL:
       return *((int *) vp) == *((int *) bvp);
-    case CONF_TYPE_FLOAT:
-      return *((float *) vp) == *((float *) bvp);
     case CONF_TYPE_DOUBLE:
       return *((double *) vp) == *((double *) bvp);
     case CONF_TYPE_STRING: {
@@ -239,12 +233,6 @@ static void mgos_conf_emit_entry(struct emit_ctx *ctx,
         len = 5;
       }
       mbuf_append(ctx->out, s, len);
-      break;
-    }
-    case CONF_TYPE_FLOAT: {
-      len = snprintf(buf, sizeof(buf), "%f",
-                     *((float *) (((char *) ctx->cfg) + e->offset)));
-      mbuf_append(ctx->out, buf, len);
       break;
     }
     case CONF_TYPE_DOUBLE: {
@@ -379,6 +367,15 @@ int mgos_conf_value_int(const void *cfg, const struct mgos_conf_entry *e) {
   char *vp = (((char *) cfg) + e->offset);
   if (e->type == CONF_TYPE_INT || e->type == CONF_TYPE_BOOL) {
     return *((int *) vp);
+  }
+  return 0;
+}
+
+double mgos_conf_value_double(const void *cfg,
+                              const struct mgos_conf_entry *e) {
+  char *vp = (((char *) cfg) + e->offset);
+  if (e->type == CONF_TYPE_DOUBLE) {
+    return *((double *) vp);
   }
   return 0;
 }

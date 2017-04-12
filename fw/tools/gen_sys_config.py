@@ -70,7 +70,6 @@ parser.add_argument("schema_files", nargs="+", help="YAML schema files")
 class SchemaEntry(object):
     V_INT = "i"
     V_BOOL = "b"
-    V_FLOAT = "f"
     V_DOUBLE = "d"
     V_STRING = "s"
     V_OBJECT = "o"
@@ -87,7 +86,7 @@ class SchemaEntry(object):
                 self.default = False
             elif self.vtype == SchemaEntry.V_INT:
                 self.default = 0
-            elif self.vtype in (SchemaEntry.V_FLOAT, SchemaEntry.V_DOUBLE):
+            elif self.vtype == SchemaEntry.V_DOUBLE:
                 self.default = 0.0
             elif self.vtype == SchemaEntry.V_STRING:
                 self.default = ""
@@ -100,7 +99,7 @@ class SchemaEntry(object):
             raise TypeError("Path is not a string (%s)" % e)
 
         if self.vtype is not None:
-            if self.vtype not in (self.V_OBJECT, self.V_BOOL, self.V_INT, self.V_FLOAT, self.V_DOUBLE, self.V_STRING):
+            if self.vtype not in (self.V_OBJECT, self.V_BOOL, self.V_INT, self.V_DOUBLE, self.V_STRING):
                 raise TypeError("%s: Invalid value type '%s'" % (self.path, self.vtype))
             self.ValidateDefault()
 
@@ -110,7 +109,7 @@ class SchemaEntry(object):
     def ValidateDefault(self):
         if (self.vtype == SchemaEntry.V_BOOL and not isinstance(self.default, bool) or
             self.vtype == SchemaEntry.V_INT and not isinstance(self.default, int) or
-            self.vtype in (SchemaEntry.V_FLOAT, SchemaEntry.V_DOUBLE) and not isinstance(self.default, float) or
+            self.vtype == SchemaEntry.V_DOUBLE and not isinstance(self.default, float) or
             self.vtype == SchemaEntry.V_STRING and not isinstance(self.default, basestring)):
             raise TypeError("%s: Invalid default value type" % self.path)
 
@@ -239,8 +238,6 @@ class HWriter(object):
         key = e.key
         if e.vtype in (SchemaEntry.V_BOOL, SchemaEntry.V_INT):
             self._lines.append(self._Indent() + ("int %s;" % key))
-        elif e.vtype == SchemaEntry.V_FLOAT:
-            self._lines.append(self._Indent() + ("float %s;" % key))
         elif e.vtype == SchemaEntry.V_DOUBLE:
             self._lines.append(self._Indent() + ("double %s;" % key))
         elif e.vtype == SchemaEntry.V_STRING:
@@ -279,7 +276,6 @@ class CWriter(object):
     _CONF_TYPES = {
         SchemaEntry.V_INT: "CONF_TYPE_INT",
         SchemaEntry.V_BOOL: "CONF_TYPE_BOOL",
-        SchemaEntry.V_FLOAT: "CONF_TYPE_FLOAT",
         SchemaEntry.V_DOUBLE: "CONF_TYPE_DOUBLE",
         SchemaEntry.V_STRING: "CONF_TYPE_STRING",
     }

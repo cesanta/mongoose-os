@@ -31,10 +31,9 @@ bool mgos_conf_check_access(const struct mg_str key, const char *acl);
 enum mgos_conf_type {
   CONF_TYPE_INT = 0,
   CONF_TYPE_BOOL = 1,
-  CONF_TYPE_FLOAT = 2,
-  CONF_TYPE_DOUBLE = 3,
-  CONF_TYPE_STRING = 4,
-  CONF_TYPE_OBJECT = 5,
+  CONF_TYPE_DOUBLE = 2,
+  CONF_TYPE_STRING = 3,
+  CONF_TYPE_OBJECT = 4,
 };
 
 struct mgos_conf_entry {
@@ -92,6 +91,11 @@ const char *mgos_conf_value_string(const void *cfg,
  * Returns an int or bool value from the config entry
  */
 int mgos_conf_value_int(const void *cfg, const struct mgos_conf_entry *e);
+
+/*
+ * Returns a double value from the config entry
+ */
+double mgos_conf_value_double(const void *cfg, const struct mgos_conf_entry *e);
 
 #ifdef __cplusplus
 }
