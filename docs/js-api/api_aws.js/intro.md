@@ -18,11 +18,12 @@ let state = { on: false, counter: 0 };  // device state: shadow metadata
 // When cloud sends us a command to update state ("desired"), do it
 AWS.Shadow.setStateHandler(function(data, event, reported, desired) {
   if (event === AWS.Shadow.CONNECTED) {
-    AWS.Shadow.update(0, {state: state});  // Report current state
+    AWS.Shadow.update(0, {reported: state});  // Report device state
   } else if (event === AWS.Shadow.UPDATE_DELTA) {
     for (let key in state) {
-      if (desired.state[key] !== undefined) state[key] = desired[key];
+      if (desired[key] !== undefined) state[key] = desired[key];
     }
+    AWS.Shadow.update(0, {reported: state});  // Report device state
   }
   print(JSON.stringify(reported), JSON.stringify(desired));
 }, null);
