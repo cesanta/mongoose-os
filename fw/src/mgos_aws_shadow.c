@@ -53,6 +53,8 @@ struct aws_shadow_state {
 
 static struct aws_shadow_state *s_shadow_state;
 
+static bool mgos_aws_shadow_init(void);
+
 static char *get_aws_shadow_topic_name(const struct mg_str thing_name,
                                        enum mgos_aws_shadow_topic_id topic_id) {
   const char *s1 = NULL, *s2 = NULL;
@@ -370,7 +372,7 @@ static void mgos_aws_shadow_ev(struct mg_connection *nc, int ev, void *ev_data,
 
 void mgos_aws_shadow_set_state_handler(mgos_aws_shadow_state_handler state_cb,
                                        void *arg) {
-  if (s_shadow_state == NULL) return;
+  if (s_shadow_state == NULL && !mgos_aws_shadow_init()) return;
   mgos_lock();
   s_shadow_state->state_cb = state_cb;
   s_shadow_state->state_cb_arg = arg;
@@ -379,7 +381,7 @@ void mgos_aws_shadow_set_state_handler(mgos_aws_shadow_state_handler state_cb,
 
 void mgos_aws_shadow_set_error_handler(mgos_aws_shadow_error_handler error_cb,
                                        void *arg) {
-  if (s_shadow_state == NULL) return;
+  if (s_shadow_state == NULL && !mgos_aws_shadow_init()) return;
   mgos_lock();
   s_shadow_state->error_cb = error_cb;
   s_shadow_state->error_cb_arg = arg;
@@ -387,7 +389,7 @@ void mgos_aws_shadow_set_error_handler(mgos_aws_shadow_error_handler error_cb,
 }
 
 bool mgos_aws_shadow_get(void) {
-  if (s_shadow_state == NULL) return false;
+  if (s_shadow_state == NULL && !mgos_aws_shadow_init()) return false;
   mgos_lock();
   s_shadow_state->want_get = true;
   mgos_unlock();
@@ -396,7 +398,7 @@ bool mgos_aws_shadow_get(void) {
 }
 
 bool mgos_aws_shadow_updatef(uint64_t version, const char *state_jsonf, ...) {
-  if (s_shadow_state == NULL) return false;
+  if (s_shadow_state == NULL && !mgos_aws_shadow_init()) return false;
   mgos_lock();
   if (s_shadow_state->update.len > 0) {
     mbuf_free(&s_shadow_state->update);
@@ -423,13 +425,12 @@ bool mgos_aws_shadow_update_simple(double version, const char *state_json) {
   return mgos_aws_shadow_updatef(version, "%s", state_json);
 }
 
-enum mgos_init_result mgos_aws_shadow_init(void) {
+static bool mgos_aws_shadow_init(void) {
   struct sys_config *cfg = get_cfg();
   struct sys_config_aws_shadow *scfg = &cfg->aws.shadow;
-  if (!scfg->enable) return MGOS_INIT_OK;
   if (!cfg->mqtt.enable) {
     LOG(LL_ERROR, ("AWS Device Shadow requires MQTT"));
-    return MGOS_INIT_AWS_SHADOW_INIT_FAILED;
+    return false;
   }
   const char *thing_name = NULL;
   if (scfg->thing_name != NULL) {
@@ -438,7 +439,7 @@ enum mgos_init_result mgos_aws_shadow_init(void) {
     thing_name = cfg->device.id;
   } else {
     LOG(LL_ERROR, ("AWS Device Shadow requires thing_name or device.id"));
-    return MGOS_INIT_AWS_SHADOW_INIT_FAILED;
+    return false;
   }
   struct aws_shadow_state *ss =
       (struct aws_shadow_state *) calloc(1, sizeof(*ss));
@@ -449,7 +450,7 @@ enum mgos_init_result mgos_aws_shadow_init(void) {
   calc_token(ss, token);
   LOG(LL_INFO, ("Device shadow name: %.*s (token %s)", (int) ss->thing_name.len,
                 ss->thing_name.p, token));
-  return MGOS_INIT_OK;
+  return true;
 }
 
 /*

@@ -1,6 +1,5 @@
 [
   ["aws", "o", {title: "AWS settings"}],
   ["aws.shadow", "o", {title: "AWS Device Shadow settings"}],
-  ["aws.shadow.enable", "b", false, {title: "Enable AWS Device Shadow"}],
   ["aws.shadow.thing_name", "s", "", {title: "Set thing name. If not specified, device.id is used"}],
 ]

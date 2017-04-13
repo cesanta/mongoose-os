@@ -8,7 +8,6 @@
 #include "fw/src/Arduino/mgos_arduino.h"
 #include "fw/src/mgos_app.h"
 #include "fw/src/mgos_atca.h"
-#include "fw/src/mgos_aws_shadow.h"
 #include "fw/src/mgos_console.h"
 #include "fw/src/mgos_dns_sd.h"
 #include "fw/src/mgos_gpio.h"
@@ -119,10 +118,6 @@ enum mgos_init_result mgos_init(void) {
 #if MGOS_ENABLE_MQTT
   r = mgos_mqtt_init();
   if (r != MGOS_INIT_OK) return r;
-#if MGOS_ENABLE_AWS_SHADOW
-  r = mgos_aws_shadow_init();
-  if (r != MGOS_INIT_OK) return r;
-#endif
 #endif /* MGOS_ENABLE_MQTT */
 
   if (mgos_app_init() != MGOS_APP_INIT_SUCCESS) {
