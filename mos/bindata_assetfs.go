@@ -4791,9 +4791,9 @@ var _web_rootJsWsJs = []byte(`(function($) {
       switch (m.cmd) {
         case 'console':
           $('#device-logs').each(function(i, el) {
-            // console.log(el, m);
+            var mustScroll = (el.scrollTop === (el.scrollHeight - el.clientHeight));
             el.innerHTML += m.data;
-            el.scrollTop = el.scrollHeight;
+            if (mustScroll) el.scrollTop = el.scrollHeight;
           });
           break;
         default:
@@ -4820,7 +4820,7 @@ func web_rootJsWsJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/ws.js", size: 857, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/ws.js", size: 923, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
