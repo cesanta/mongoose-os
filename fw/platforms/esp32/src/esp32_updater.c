@@ -43,7 +43,7 @@
 #define MGOS_UPDATE_OLD_SLOT(v) ((v) &0x0f)
 #define MGOS_UPDATE_NEW_SLOT(v) (((v) >> 4) & 0x0f)
 
-#define WRITE_CHUNK_SIZE 32
+#define WRITE_CHUNK_SIZE 512
 
 #define CS_LEN 20 /* SHA1 */
 #define CS_HEX_LEN (CS_LEN * 2)
