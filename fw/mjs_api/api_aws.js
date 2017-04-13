@@ -31,8 +31,7 @@
 
 let AWS = {
   Shadow: {
-    _seth: ffi(
-        'void mgos_aws_shadow_set_state_handler_simple(int (*)(userdata, int, char *, char *), userdata)'),
+    _seth: ffi('void mgos_aws_shadow_set_state_handler_simple(int (*)(userdata, int, char *, char *), userdata)'),
     _upd: ffi('int mgos_aws_shadow_update_simple(double, char *)'),
     _scb: function(ud, ev, rep, des) {
       rep = rep !== "" ? JSON.parse(rep) : {};
@@ -65,7 +64,7 @@ let AWS = {
     // Response will arrive via `UPDATE_ACCEPTED` or `UPDATE_REJECTED` events.
     // If you want the update to be aplied only if a particular version is
     // current, specify the version. Otherwise set it to 0 to apply to any
-    // version. Example: increase `state.counter` on a button press:
+    // version.
     update: function(ver, state) {
       return this._upd(ver, JSON.stringify(state)) === 1;
     },

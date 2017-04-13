@@ -57,5 +57,5 @@ State should be an object with "reported" and/or "desired" keys.
 Response will arrive via `UPDATE_ACCEPTED` or `UPDATE_REJECTED` events.
 If you want the update to be aplied only if a particular version is
 current, specify the version. Otherwise set it to 0 to apply to any
-version. Example: increase `state.counter` on a button press:
+version.
 
