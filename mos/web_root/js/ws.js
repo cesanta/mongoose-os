@@ -17,9 +17,9 @@
       switch (m.cmd) {
         case 'console':
           $('#device-logs').each(function(i, el) {
-            // console.log(el, m);
+            var mustScroll = (el.scrollTop === (el.scrollHeight - el.clientHeight));
             el.innerHTML += m.data;
-            el.scrollTop = el.scrollHeight;
+            if (mustScroll) el.scrollTop = el.scrollHeight;
           });
           break;
         default:
