@@ -212,7 +212,7 @@ def cmd_gen_ffi_exports(args):
             #
             # symbol_type: "char *"
             # symbol_name: "foo"
-            for m in re.finditer(r"""\bffi\s*\(['"](?P<symbol_type>[^)]+?\W)(?P<symbol_name>\w+)\(""", data):
+            for m in re.finditer(r"""\bffi\s*\(\s*['"](?P<symbol_type>[^)]+?\W)(?P<symbol_name>\w+)\(""", data):
                 symbols.append(m.group("symbol_name"))
 
     symbols.sort()
