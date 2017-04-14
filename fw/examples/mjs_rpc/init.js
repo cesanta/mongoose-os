@@ -8,6 +8,14 @@ RPC.addHandler('Example.Increment', function(args) {
   }
 }, null);
 
+RPC.addHandler('Print', function(args) {
+  if (args !== undefined && args.msg !== undefined) {
+    return args.msg;
+  } else {
+    return {error: 'msg is required'};
+  }
+}, null);
+
 RPC.call(RPC.LOCAL, "Example.Increment", {"num": 100}, function (resp, ud) {
   print("Local callback response:", JSON.stringify(resp));
 }, null);
