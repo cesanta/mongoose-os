@@ -4,6 +4,7 @@
  */
 
 #include "common/mg_rpc/mg_rpc_channel_http.h"
+#include "common/mg_rpc/mg_rpc_channel_loopback.h"
 #include "common/mg_rpc/mg_rpc_channel_ws.h"
 
 #if MGOS_ENABLE_RPC
@@ -216,6 +217,15 @@ enum mgos_init_result mgos_rpc_init(void) {
       LOG(LL_ERROR, ("UART%d init failed", scucfg->uart_no));
       return MGOS_INIT_UART_FAILED;
     }
+  }
+#endif
+
+#if MGOS_ENABLE_RPC_CHANNEL_LOOPBACK
+  {
+    struct mg_rpc_channel *lch = mg_rpc_channel_loopback();
+    mg_rpc_add_channel(c, mg_mk_str("RPC.LOCAL"), lch, true /* is_trusted */,
+                       false /* send_hello */);
+    lch->ch_connect(lch);
   }
 #endif
 

@@ -78,5 +78,18 @@ let RPC = {
       ud: userdata,
     });
   },
+
+  // **`RPC.LOCAL`** - address to be used as a destination for `RPC.call` for
+  // local calls. Example:
+  //
+  // RPC.addHandler('Example.Print', function(args) {
+  //   print("args:", JSON.stringify(args));
+  //   return {"result": "ok"};
+  // }, null);
+  //
+  // RPC.call(RPC.LOCAL, "Example.Print", {"foo": 123}, function (resp, ud) {
+  //   print("Local callback response:", JSON.stringify(resp));
+  // }, null);
+  LOCAL: "RPC.LOCAL",
 };
 
