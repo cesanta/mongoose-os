@@ -19,9 +19,9 @@
       });
 
   $(document).ajaxSend(function(event, xhr, settings) {
-    $('#top_nav').addClass('spinner');
+    $('#top_spinner').addClass('spinner');
   }).ajaxStop(function() {
-    $('#top_nav').removeClass('spinner');
+    $('#top_spinner').removeClass('spinner');
   }).ajaxComplete(function(event, xhr) {
     // $('#top_nav').removeClass('spinner');
     if (xhr.status == 200) return;
@@ -66,28 +66,11 @@
 
   $(document).on('click', 'a[tab]', function() {
     var page = $(this).attr('tab');
-    if (connected) {
-      loadPage(page);
-    } else {
-      deferredLoadPage = page;
-    }
+    loadPage(page);
   });
 
   $(document).ready(function() {
     $('a[tab]').first().click();
-  });
-
-  // Let tool know the port we want to use
-  $.ajax({
-    url: '/connect',
-    success: function() {
-      connected = true;
-      // If there is a deferred page to load, load it
-      if (deferredLoadPage !== undefined) {
-        loadPage(deferredLoadPage);
-        deferredLoadPage = undefined;
-      }
-    },
   });
 
   $.ajax({url: '/call', data: {method: 'Sys.GetInfo'}}).then(function(data) {
@@ -95,7 +78,7 @@
     var ip = json.wifi.sta_ip || json.wifi.ap_ip;
     let html = '<b>' + json.arch + '/' + json.fw_id + '</b>, IP: ';
     if (ip) {
-      html += '<a href=' + ip + '>' + ip + '</a>';
+      html += '<a target="_blank" href=http://' + ip + '>' + ip + '</a>';
     } else {
       html += 'n/a';
     }

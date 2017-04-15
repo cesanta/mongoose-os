@@ -555,7 +555,7 @@ var _web_rootDashHtml = []byte(`<!DOCTYPE html>
             <div class="menu_section">
               <ul class="nav side-menu">
                 <li><a tab="files"><i class="fa fa-file-text-o"></i> Files on device </a></li>
-                <li><a tab="examples"><i class="fa fa-archive"></i> Code examples </a></li>
+                <li><a tab="examples"><i class="fa fa-puzzle-piece"></i> Code examples </a></li>
                 <li><a tab="configuration"><i class="fa fa-gears"></i> Device configuration </a></li>
                 <li><a tab="info"><i class="fa fa-info"></i> Device Info</a></li>
                 <!-- <li><a tab="mqtt"><i class="fa fa-sitemap"></i> MQTT client </a></li> -->
@@ -569,6 +569,7 @@ var _web_rootDashHtml = []byte(`<!DOCTYPE html>
 
         <div id="top_nav">
           <span id="breadcrumb"></span>
+          <span id="top_spinner" style="position: relative; margin-left: 2em;"></span>
           <div class="pull-right">
             Device: <span id="devinfo"></span>
 
@@ -588,7 +589,7 @@ var _web_rootDashHtml = []byte(`<!DOCTYPE html>
             <div class="panel-title">
               <span style="margin-right: 2em;">Serial console logs</span>
               <button class="btn btn-sm btn-primary" id="clear-logs-button"><i class="fa fa-trash"></i> Clear console</button>
-              <button class="btn btn-sm btn-warning" id="reboot-button"><i class="fa fa-refresh"></i> Reboot device</button>
+              <button class="btn btn-sm btn-primary" id="reboot-button"><i class="fa fa-refresh"></i> Reboot device</button>
             </div>
             <pre class="upcontrol" id="device-logs"></pre>
           </div>
@@ -624,7 +625,7 @@ func web_rootDashHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/dash.html", size: 3323, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/dash.html", size: 3415, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4081,9 +4082,9 @@ var _web_rootJsDashJs = []byte(`(function($) {
       });
 
   $(document).ajaxSend(function(event, xhr, settings) {
-    $('#top_nav').addClass('spinner');
+    $('#top_spinner').addClass('spinner');
   }).ajaxStop(function() {
-    $('#top_nav').removeClass('spinner');
+    $('#top_spinner').removeClass('spinner');
   }).ajaxComplete(function(event, xhr) {
     // $('#top_nav').removeClass('spinner');
     if (xhr.status == 200) return;
@@ -4128,28 +4129,11 @@ var _web_rootJsDashJs = []byte(`(function($) {
 
   $(document).on('click', 'a[tab]', function() {
     var page = $(this).attr('tab');
-    if (connected) {
-      loadPage(page);
-    } else {
-      deferredLoadPage = page;
-    }
+    loadPage(page);
   });
 
   $(document).ready(function() {
     $('a[tab]').first().click();
-  });
-
-  // Let tool know the port we want to use
-  $.ajax({
-    url: '/connect',
-    success: function() {
-      connected = true;
-      // If there is a deferred page to load, load it
-      if (deferredLoadPage !== undefined) {
-        loadPage(deferredLoadPage);
-        deferredLoadPage = undefined;
-      }
-    },
   });
 
   $.ajax({url: '/call', data: {method: 'Sys.GetInfo'}}).then(function(data) {
@@ -4157,7 +4141,7 @@ var _web_rootJsDashJs = []byte(`(function($) {
     var ip = json.wifi.sta_ip || json.wifi.ap_ip;
     let html = '<b>' + json.arch + '/' + json.fw_id + '</b>, IP: ';
     if (ip) {
-      html += '<a href=' + ip + '>' + ip + '</a>';
+      html += '<a target="_blank" href=http://' + ip + '>' + ip + '</a>';
     } else {
       html += 'n/a';
     }
@@ -4186,7 +4170,7 @@ func web_rootJsDashJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/dash.js", size: 3284, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/dash.js", size: 2923, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4976,9 +4960,45 @@ var _web_rootPage_filesHtml = []byte(`<div data-title="Device File Manager" styl
       <div class="list-group upcontrol" id="file-list"></div>
     </div>
     <div class="col-xs-9" style="height: 100%;">
-      <div style="margin-top: 2px; ">
-        <button class="btn btn-sm btn-primary disabled file-control" id="file-save-button"><i class="fa fa-save"></i> Save selected file</button>
-        <button class="btn btn-sm btn-warning disabled file-control" id="file-savereboot-button"><i class="fa fa-refresh"></i> Save and reboot device</button>
+      <div style="margin-top: 2px;">
+        <button class="btn btn-sm btn-primary disabled file-control" id="file-save-button"><i class="fa fa-save"></i> Save file</button>
+        <button class="btn btn-sm btn-primary disabled file-control" id="file-savereboot-button"><i class="fa fa-refresh"></i> Save and reboot device</button>
+        &nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+        <div style="position: relative; display: inline-block;">
+          <button class="btn btn-sm btn-success file-control dropdown-toggle" id="share-button"
+            data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+            <i class="fa fa-share"></i>
+            Share this file
+            <span class="caret"></span>          
+          </button>
+
+          <div class="dropdown-menu" style="background: #fcfcfc;">
+            <form class="form" style="padding: 1em;" id="share-form">
+
+              <div class="input-group">
+                <span class="input-group-addon"><i class="fa fa-user"></i></span>
+                <input required id="share-author-input" placeholder="Your Name (required)" class="form-control" type="text">
+              </div>
+
+              <div class="input-group">
+                <span class="input-group-addon"><i class="fa fa-list-alt"></i></span>
+                <input required id="share-title-input" placeholder="Snippet Title (required)" class="form-control" type="text">
+              </div>
+
+              <button id="publish-button" style="position: relative;"
+                class="btn btn-primary btn-block disabled form-control"
+                id="publish-button" type="button">
+                <i class="fa fa-share"></i>
+                Publish code and device info at mongoose-os.com/snippets
+              </button>
+              <p class="hidden" style="margin-top: 1em;">
+                Snippet URL: <a target="_blank" id="share-id"></a>
+              </p>
+            </form>
+
+          </div>
+        </div>
+
       </div>
       <div class="form-group upcontrol">
         <div id="editor"></div>
@@ -4994,7 +5014,15 @@ var _web_rootPage_filesHtml = []byte(`<div data-title="Device File Manager" styl
     return 'text';
   };
   var editor = ace.edit('editor');
+  editor.$blockScrolling = Infinity;
   editor.setTheme('ace/theme/tomorrow');
+  editor.setOptions({
+    highlightActiveLine: false,
+  });
+  editor.session.setOptions({
+    tabSize: 2,
+    useSoftTabs: true,
+  });
 
   $(document).off('click', '.file');
   $(document).on('click', '.file', function() {
@@ -5046,6 +5074,65 @@ var _web_rootPage_filesHtml = []byte(`<div data-title="Device File Manager" styl
     });
   });
 
+  $(document).on('keyup paste', '#share-form', function(ev) {
+    var author = $('#share-author-input').val() || '';
+    var title = $('#share-title-input').val() || '';
+    var enableShare = !author.match(/^\s*$/) && !title.match(/^\s*$/);
+    $('#publish-button').toggleClass('disabled', !enableShare);
+    if (enableShare && ev.target.id == 'share-title-input' && ev.keyCode == 13) {
+      $('#publish-button').trigger('click');
+    }
+  });
+
+  var onPublish = function(ev) {
+    var backendAddr = 'https://mongoose-os.com';
+    // var backendAddr = 'http://127.0.0.1:8000';
+    var t = $('#publish-button').addClass('disabled');
+    var failreq = function(err) {
+      t.removeClass('disabled');
+      new PNotify({title: err || 'Error creating snippet', type: 'error' });
+    };
+    var data = {
+      file_name: $('.file.selected').text(),
+      snippet_text: editor.getValue(),
+      title: $('#share-title-input').val(),
+      author: $('#share-author-input').val(),
+    };
+    if (!data.file_name || !data.snippet_text) {
+      return failreq('Please select a non-empty file'); 
+    }
+    $.ajax({url: '/call', data: {method: 'Sys.GetInfo'}}).then(function(r) {
+      data.fwinfo = r.result;
+      return $.ajax({
+        url: backendAddr + '/snippets/add',
+        crossDomain: true,
+        method: 'POST',
+        dataType: 'json',
+        data: data
+      });
+    }).then(function(res) {
+      t.removeClass('spinner disabled');
+      if (res.error) {
+        return failreq(res.error);
+      } else {
+        var href = backendAddr + '/snippets.html?' + res.id;
+        $('#share-id').html(href).attr({href: href}).parent().removeClass('hidden');
+        $('#share-title-input').val('')
+        $('#share-form').trigger('keyup');
+        new PNotify({title: 'Snippet saved', type: 'success' });
+      }
+    }).fail(function(err) {
+      failreq(err);
+    });
+    return false;
+  };
+
+  $(document).on('submit', '#share-form', onPublish);
+  $(document).on('click', '#publish-button', function() {
+    $('#share-form').submit();
+    return false;
+  });
+
   $.ajax({url: '/call', data: {method: 'FS.List'}}).done(function(json) {
     var $tbody = $('#file-list').empty();
     json.result.sort();
@@ -5070,7 +5157,7 @@ func web_rootPage_filesHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_files.html", size: 3062, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_files.html", size: 6921, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

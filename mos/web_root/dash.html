@@ -24,7 +24,7 @@
             <div class="menu_section">
               <ul class="nav side-menu">
                 <li><a tab="files"><i class="fa fa-file-text-o"></i> Files on device </a></li>
-                <li><a tab="examples"><i class="fa fa-archive"></i> Code examples </a></li>
+                <li><a tab="examples"><i class="fa fa-puzzle-piece"></i> Code examples </a></li>
                 <li><a tab="configuration"><i class="fa fa-gears"></i> Device configuration </a></li>
                 <li><a tab="info"><i class="fa fa-info"></i> Device Info</a></li>
                 <!-- <li><a tab="mqtt"><i class="fa fa-sitemap"></i> MQTT client </a></li> -->
@@ -38,6 +38,7 @@
 
         <div id="top_nav">
           <span id="breadcrumb"></span>
+          <span id="top_spinner" style="position: relative; margin-left: 2em;"></span>
           <div class="pull-right">
             Device: <span id="devinfo"></span>
 
@@ -57,7 +58,7 @@
             <div class="panel-title">
               <span style="margin-right: 2em;">Serial console logs</span>
               <button class="btn btn-sm btn-primary" id="clear-logs-button"><i class="fa fa-trash"></i> Clear console</button>
-              <button class="btn btn-sm btn-warning" id="reboot-button"><i class="fa fa-refresh"></i> Reboot device</button>
+              <button class="btn btn-sm btn-primary" id="reboot-button"><i class="fa fa-refresh"></i> Reboot device</button>
             </div>
             <pre class="upcontrol" id="device-logs"></pre>
           </div>

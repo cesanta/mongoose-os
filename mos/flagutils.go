@@ -90,7 +90,7 @@ func usage() {
 		}
 	}
 
-	fmt.Fprintf(w, "The Mongoose OS command line tool. Usage:\n")
+	fmt.Fprintf(w, "The Mongoose OS command line tool, v. %s. Usage:\n", BuildId)
 	fmt.Fprintf(w, "  %s <command>\n", os.Args[0])
 	fmt.Fprintf(w, "\nCommands:\n")
 

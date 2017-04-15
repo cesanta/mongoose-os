@@ -4,9 +4,45 @@
       <div class="list-group upcontrol" id="file-list"></div>
     </div>
     <div class="col-xs-9" style="height: 100%;">
-      <div style="margin-top: 2px; ">
-        <button class="btn btn-sm btn-primary disabled file-control" id="file-save-button"><i class="fa fa-save"></i> Save selected file</button>
-        <button class="btn btn-sm btn-warning disabled file-control" id="file-savereboot-button"><i class="fa fa-refresh"></i> Save and reboot device</button>
+      <div style="margin-top: 2px;">
+        <button class="btn btn-sm btn-primary disabled file-control" id="file-save-button"><i class="fa fa-save"></i> Save file</button>
+        <button class="btn btn-sm btn-primary disabled file-control" id="file-savereboot-button"><i class="fa fa-refresh"></i> Save and reboot device</button>
+        &nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
+        <div style="position: relative; display: inline-block;">
+          <button class="btn btn-sm btn-success file-control dropdown-toggle" id="share-button"
+            data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
+            <i class="fa fa-share"></i>
+            Share this file
+            <span class="caret"></span>          
+          </button>
+
+          <div class="dropdown-menu" style="background: #fcfcfc;">
+            <form class="form" style="padding: 1em;" id="share-form">
+
+              <div class="input-group">
+                <span class="input-group-addon"><i class="fa fa-user"></i></span>
+                <input required id="share-author-input" placeholder="Your Name (required)" class="form-control" type="text">
+              </div>
+
+              <div class="input-group">
+                <span class="input-group-addon"><i class="fa fa-list-alt"></i></span>
+                <input required id="share-title-input" placeholder="Snippet Title (required)" class="form-control" type="text">
+              </div>
+
+              <button id="publish-button" style="position: relative;"
+                class="btn btn-primary btn-block disabled form-control"
+                id="publish-button" type="button">
+                <i class="fa fa-share"></i>
+                Publish code and device info at mongoose-os.com/snippets
+              </button>
+              <p class="hidden" style="margin-top: 1em;">
+                Snippet URL: <a target="_blank" id="share-id"></a>
+              </p>
+            </form>
+
+          </div>
+        </div>
+
       </div>
       <div class="form-group upcontrol">
         <div id="editor"></div>
@@ -22,7 +58,15 @@
     return 'text';
   };
   var editor = ace.edit('editor');
+  editor.$blockScrolling = Infinity;
   editor.setTheme('ace/theme/tomorrow');
+  editor.setOptions({
+    highlightActiveLine: false,
+  });
+  editor.session.setOptions({
+    tabSize: 2,
+    useSoftTabs: true,
+  });
 
   $(document).off('click', '.file');
   $(document).on('click', '.file', function() {
@@ -72,6 +116,65 @@
     }).then(function() {
       new PNotify({title: 'Device reboot successful', type: 'success' });
     });
+  });
+
+  $(document).on('keyup paste', '#share-form', function(ev) {
+    var author = $('#share-author-input').val() || '';
+    var title = $('#share-title-input').val() || '';
+    var enableShare = !author.match(/^\s*$/) && !title.match(/^\s*$/);
+    $('#publish-button').toggleClass('disabled', !enableShare);
+    if (enableShare && ev.target.id == 'share-title-input' && ev.keyCode == 13) {
+      $('#publish-button').trigger('click');
+    }
+  });
+
+  var onPublish = function(ev) {
+    var backendAddr = 'https://mongoose-os.com';
+    // var backendAddr = 'http://127.0.0.1:8000';
+    var t = $('#publish-button').addClass('disabled');
+    var failreq = function(err) {
+      t.removeClass('disabled');
+      new PNotify({title: err || 'Error creating snippet', type: 'error' });
+    };
+    var data = {
+      file_name: $('.file.selected').text(),
+      snippet_text: editor.getValue(),
+      title: $('#share-title-input').val(),
+      author: $('#share-author-input').val(),
+    };
+    if (!data.file_name || !data.snippet_text) {
+      return failreq('Please select a non-empty file'); 
+    }
+    $.ajax({url: '/call', data: {method: 'Sys.GetInfo'}}).then(function(r) {
+      data.fwinfo = r.result;
+      return $.ajax({
+        url: backendAddr + '/snippets/add',
+        crossDomain: true,
+        method: 'POST',
+        dataType: 'json',
+        data: data
+      });
+    }).then(function(res) {
+      t.removeClass('spinner disabled');
+      if (res.error) {
+        return failreq(res.error);
+      } else {
+        var href = backendAddr + '/snippets.html?' + res.id;
+        $('#share-id').html(href).attr({href: href}).parent().removeClass('hidden');
+        $('#share-title-input').val('')
+        $('#share-form').trigger('keyup');
+        new PNotify({title: 'Snippet saved', type: 'success' });
+      }
+    }).fail(function(err) {
+      failreq(err);
+    });
+    return false;
+  };
+
+  $(document).on('submit', '#share-form', onPublish);
+  $(document).on('click', '#publish-button', function() {
+    $('#share-form').submit();
+    return false;
   });
 
   $.ajax({url: '/call', data: {method: 'FS.List'}}).done(function(json) {
