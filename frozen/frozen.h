@@ -28,6 +28,12 @@ extern "C" {
 #include <stddef.h>
 #include <stdio.h>
 
+#ifdef _WIN32
+typedef int bool;
+#else
+#include <stdbool.h>
+#endif
+
 /* JSON token type */
 enum json_token_type {
   JSON_TYPE_INVALID = 0, /* memsetting to 0 should create INVALID value */
@@ -165,7 +171,8 @@ int json_printf_array(struct json_out *, va_list *ap);
  * 1. Object keys in the format string may be not quoted, e.g. "{key: %d}"
  * 2. Order of keys in an object is irrelevant.
  * 3. Several extra format specifiers are supported:
- *    - %B: consumes `int *`, expects boolean `true` or `false`.
+ *    - %B: consumes `int *` (or 'char *', if sizeof(bool) == sizeof(char)), 
+ *       expects boolean `true` or `false`.
  *    - %Q: consumes `char **`, expects quoted, JSON-encoded string. Scanned
  *       string is malloc-ed, caller must free() the string.
  *    - %V: consumes `char **`, `int *`. Expects base64-encoded string.

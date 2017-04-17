@@ -46,8 +46,25 @@ static const char *test_config(void) {
   return NULL;
 }
 
+static const char *test_json_scanf(void) {
+  int a = 0;
+  bool b = false;
+  int c = 0xFFFFFFFF;
+  const char *str = "{\"b\":true,\"c\":false,\"a\":2}";
+  ASSERT(json_scanf(str, strlen(str), "{a:%d, b:%B, c:%B}", &a, &b, &c) == 3);
+  ASSERT(a == 2);
+  ASSERT(b == true);
+  if (sizeof(bool) == 1)
+    ASSERT((char)c == false);
+  else
+    ASSERT(c == false);
+
+  return NULL;
+}
+
 static const char *run_tests(const char *filter, double *total_elapsed) {
   RUN_TEST(test_config);
+  RUN_TEST(test_json_scanf);
   return NULL;
 }
 
