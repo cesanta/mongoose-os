@@ -4,16 +4,14 @@
     <button class="btn btn-sm btn-primary" id="config-save-button"><i class="fa fa-save"></i> Save configuration</button>
     </div>
     <div class="form-group upcontrol">
-      <!--<textarea class="form-control" id="example-code" style="height: 100%"></textarea>-->
       <div id="editor"></div>
     </div>
   </div>
 </div>
 
 <script>
-  var editor = ace.edit('editor');
-  editor.setTheme('ace/theme/tomorrow');
-
+  // console.log(1,2,3, editor, guesslang);
+  var editor = mkeditor();
   var loadConfig = function() {
     return $.ajax({url: '/call',
       data: {method: 'Config.Get'}}).then(function(json) {

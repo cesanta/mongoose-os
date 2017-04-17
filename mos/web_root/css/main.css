@@ -16,14 +16,9 @@ body { color: #666;  background-color: #eee; }
 /* FILE MANAGER PAGE */
 #file-list { overflow-y: auto; }
 #file-textarea { font-family: Consolas, Menlo, Monaco, monospace; }
-.upcontrol { position: absolute; top: 36px; bottom: 0; left: 10px; right: 10px; }
+.upcontrol { position: absolute; top: 36px; bottom: 0; left: 10px; right: 10px; overflow-y: auto; }
 #device-logs { font-size: 90%; overflow-y: auto; line-height: 1.2em; background: #fff; }
-
-#editor {
-  font-family: Menlo, Consolas, monospace;
-  font-size: 110%;
-  height: 100%; background: #fff; border-radius: 3px;
-}
+#editor { height: 100%; background: #fff; border-radius: 0.3em; }
 
 /* INFO PAGE */
 #app_view label { min-width: 10em; margin-left: 2em; }

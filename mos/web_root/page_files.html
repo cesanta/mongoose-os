@@ -51,23 +51,7 @@
 </div>
 
 <script>
-  var guesslang = function(filename) {
-    if ((filename || '').match(/\.js$/)) return 'javascript';
-    if ((filename || '').match(/\.json$/)) return 'json';
-    if ((filename || '').match(/\.ya?ml$/)) return 'yaml';
-    return 'text';
-  };
-  var editor = ace.edit('editor');
-  editor.$blockScrolling = Infinity;
-  editor.setTheme('ace/theme/tomorrow');
-  editor.setOptions({
-    highlightActiveLine: false,
-  });
-  editor.session.setOptions({
-    tabSize: 2,
-    useSoftTabs: true,
-  });
-
+  var editor = mkeditor();
   $(document).off('click', '.file');
   $(document).on('click', '.file', function() {
     var name = $(this).text();

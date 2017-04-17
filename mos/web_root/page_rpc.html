@@ -1,0 +1,88 @@
+<div data-title="RPC Browser" style="height: 100%;">
+  <div class="col-xs-3" style="height: 100%;">
+    <div class="list-group upcontrol" id="list" style="top:7px;"></div>
+  </div>
+  <div class="col-xs-9" style="height: 100%;">
+    <div style="margin-top: 2px; ">
+      <button class="btn btn-sm btn-primary" id="send-rpc-button">
+      	<i class="fa fa-puzzle-piece"></i> 
+      	Call RPC service <span id="rpc_name"></span>
+      </button>
+    </div>
+
+    <div class="form-group upcontrol" style="background: #fafafa; border-radius: 0.3em; padding: 0.5em 1em; ">
+
+    <!-- <h3>RPC method name: <span id="rpc_name"></span></h3> -->
+    <!-- <p><b>Arguments format:</b> <span id="args_fmt"></span></p> -->
+    <div class="row" style="height: 100%">
+    	<div class="col-sm-6" style="height: 100%">
+    <p><b>Edit request parameters and click Call button above:</b></p>
+    <div id="e1" style="height: 50%"></div>
+
+    	</div>
+    	<div class="col-sm-6" style="height: 100%">
+    <p><b>Response:</b></p>
+    <div id="e2" style="height: 50%"></div>
+
+    	</div>
+    </div>
+
+    </div>
+  </div>
+</div>
+
+<script>
+  var e1 = mkeditor('e1');
+  var e2 = mkeditor('e2');
+  e1.session.setMode('ace/mode/json');
+  e2.session.setMode('ace/mode/json');
+
+  $.ajax({url: '/call', data: {method: 'RPC.List'}}).then(function(json) {
+    var list = $('#list').empty();
+    $.each(json.result, function(i, v) {
+			$('<a href="#" class="list-group-item"/>').text(v).appendTo(list);
+		});
+  });
+
+  $(document).off('click', '.list-group-item');
+  $(document).on('click', '.list-group-item', function() {
+    var name = $(this).text();
+    $('#rpc_name').text(name);
+    $.ajax({url: '/call', data: {
+    	method: 'RPC.Describe',
+    	args: JSON.stringify({name: name})
+    }}).then(function(json) {
+    	var m, o = {}, re = /(([\w_]+?):\s*%(.))/g;
+    	// console.log(json.result);
+    	while ((m = re.exec(json.result.args_fmt || '')) !== null) {
+    		var val = 'string value';
+    		if (m[3].match(/d|u|f/)) {
+    			val = 0;
+  			} else if (m[3] === 'B') {
+  				val = false;
+    		} else if (m[3] === 'H') {
+    			val = 'hex data string, e.g. 0a0a5f12';
+    		}
+    		o[m[2]] = val;
+    	}
+      e1.setValue(JSON.stringify(o, null, '  '), -1);
+      // e1.session.setMode('ace/mode/json');
+    });
+  });
+
+  $(document).off('click', '#send-rpc-button');
+  $(document).on('click', '#send-rpc-button', function() {
+  	e2.setValue('', -1);
+  	var name = $('#rpc_name').text();
+  	var args = e1.getValue();
+		$.ajax({url: '/call', data: {method: name, args: args}}).then(function(d) {
+			var result = 'No result';
+			if (d.result) {
+				result = JSON.stringify(d.result, null, '  ');
+			}
+  		e2.setValue(result, -1);
+  		// console.log(d);
+  	});
+  });
+
+</script>
