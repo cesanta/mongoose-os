@@ -22,3 +22,10 @@ void mgos_system_restart_after(int delay_ms) {
 float mgos_rand_range(float from, float to) {
   return from + (((float) (to - from)) / RAND_MAX * rand());
 }
+
+/*
+ * Intended for ffi
+ */
+void mgos_log(int level, const char *msg) {
+  LOG(level, ("%s", msg));
+};

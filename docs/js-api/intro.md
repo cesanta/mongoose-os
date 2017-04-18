@@ -12,6 +12,7 @@ items:
   - { name: api_uart.js }
   - { name: api_net.js }
   - { name: api_http.js }
+  - { name: api_log.js }
   - { name: api_config.js }
   - { name: api_aws.js }
   - { name: api_rpc.js }
