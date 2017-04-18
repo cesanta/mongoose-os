@@ -56,24 +56,7 @@ var (
 
 var (
 	// put all commands here
-	commands = []command{
-		{"ui", startUI, `Start GUI`, nil, nil, false},
-		{"init", initFW, `Initialise firmware directory structure in the current directory`, nil, []string{"arch", "force"}, false},
-		{"build", doBuild, `Build a firmware from the sources located in the current directory`, nil, []string{"arch", "local", "repo", "clean", "server"}, false},
-		{"flash", flash, `Flash firmware to the device`, nil, []string{"port", "firmware"}, false},
-		{"flash-read", flashRead, `Read a region of flash`, []string{"arch"}, []string{"port"}, false},
-		{"console", console, `Simple serial port console`, nil, []string{"port"}, false}, //TODO: needDevConn
-		{"ls", fsLs, `List files at the local device's filesystem`, nil, []string{"port"}, true},
-		{"get", fsGet, `Read file from the local device's filesystem and print to stdout`, nil, []string{"port"}, true},
-		{"put", fsPut, `Put file from the host machine to the local device's filesystem`, nil, []string{"port"}, true},
-		{"rm", fsRm, `Delete a file from the device's filesystem`, nil, []string{"port"}, true},
-		{"config-get", configGet, `Get config value from the locally attached device`, nil, []string{"port"}, true},
-		{"config-set", configSet, `Set config value at the locally attached device`, nil, []string{"port"}, true},
-		{"call", call, `Perform a device API call. "mos call RPC.List" shows available methods`, nil, []string{"port"}, true},
-		{"aws-iot-setup", awsIoTSetup, `Provision the device for AWS IoT cloud`, nil, []string{"atca-slot", "aws-region", "port", "use-atca"}, true},
-		{"update", update, `Self-update mos tool`, nil, nil, false},
-		{"wifi", wifi, `Setup WiFi - shortcut to config-set wifi...`, nil, nil, true},
-	}
+	commands []command
 	// These commands are only available when invoked with -X
 	extendedCommands = []command{
 		{"atca-get-config", atcaGetConfig, `Get ATCA chip config`, nil, []string{"format", "port"}, true},
@@ -108,6 +91,27 @@ func unimplemented() error {
 	return nil
 }
 
+func init() {
+	commands = []command{
+		{"ui", startUI, `Start GUI`, nil, nil, false},
+		{"init", initFW, `Initialise firmware directory structure in the current directory`, nil, []string{"arch", "force"}, false},
+		{"build", doBuild, `Build a firmware from the sources located in the current directory`, nil, []string{"arch", "local", "repo", "clean", "server"}, false},
+		{"flash", flash, `Flash firmware to the device`, nil, []string{"port", "firmware"}, false},
+		{"flash-read", flashRead, `Read a region of flash`, []string{"arch"}, []string{"port"}, false},
+		{"console", console, `Simple serial port console`, nil, []string{"port"}, false}, //TODO: needDevConn
+		{"ls", fsLs, `List files at the local device's filesystem`, nil, []string{"port"}, true},
+		{"get", fsGet, `Read file from the local device's filesystem and print to stdout`, nil, []string{"port"}, true},
+		{"put", fsPut, `Put file from the host machine to the local device's filesystem`, nil, []string{"port"}, true},
+		{"rm", fsRm, `Delete a file from the device's filesystem`, nil, []string{"port"}, true},
+		{"config-get", configGet, `Get config value from the locally attached device`, nil, []string{"port"}, true},
+		{"config-set", configSet, `Set config value at the locally attached device`, nil, []string{"port"}, true},
+		{"call", call, `Perform a device API call. "mos call RPC.List" shows available methods`, nil, []string{"port"}, true},
+		{"aws-iot-setup", awsIoTSetup, `Provision the device for AWS IoT cloud`, nil, []string{"atca-slot", "aws-region", "port", "use-atca"}, true},
+		{"update", update, `Self-update mos tool`, nil, nil, false},
+		{"wifi", wifi, `Setup WiFi - shortcut to config-set wifi...`, nil, nil, true},
+	}
+}
+
 func run(c *command, ctx context.Context, devConn *dev.DevConn) error {
 	if c != nil {
 		// check required flags
@@ -129,12 +133,9 @@ func run(c *command, ctx context.Context, devConn *dev.DevConn) error {
 
 // getCommand returns a pointer to the command which needs to run, or nil if
 // there's no such command
-func getCommand() *command {
-	if isUI {
-		return &commands[0]
-	}
+func getCommand(str string) *command {
 	for _, c := range commands {
-		if c.name == flag.Arg(0) {
+		if c.name == str {
 			return &c
 		}
 	}
@@ -193,7 +194,10 @@ func main() {
 	ctx := context.Background()
 	var devConn *dev.DevConn
 
-	cmd := getCommand()
+	cmd := &commands[0]
+	if !isUI {
+		cmd = getCommand(flag.Arg(0))
+	}
 	if cmd != nil && cmd.needDevConn {
 		var err error
 		devConn, err = createDevConnWithJunkHandler(ctx, consoleJunkHandler)

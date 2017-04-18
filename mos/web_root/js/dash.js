@@ -52,6 +52,7 @@ var loadPage = function(page) {
   var doit = function(html) {
     $('#app_view').html(html);
     $('#breadcrumb').html($('[data-title]').attr('data-title'));
+    location.hash = page;
   };
   if (pageCache[page]) {
     doit(pageCache[page]);
@@ -69,7 +70,10 @@ $(document).on('click', 'a[tab]', function() {
 });
 
 $(document).ready(function() {
-  $('a[tab]').first().click();
+  var tab = location.hash.substring(1);
+  var link = $('a[tab="' + tab + '"]');
+  if (link.length == 0) link = $('a[tab]').first();
+  link.click();
 });
 
 $.ajax({url: '/call', data: {method: 'Sys.GetInfo'}}).then(function(data) {
@@ -117,3 +121,10 @@ var mkeditor = function(id, lang) {
   if (lang) editor.session.setMode('ace/mode/' + lang);
   return editor;
 };
+
+$(window).resize(function(ev) {
+  if(this.resizeTO) clearTimeout(this.resizeTO);
+  this.resizeTO = setTimeout(function() {
+    location.reload();
+  }, 500);
+});

@@ -44,6 +44,7 @@
 // web_root/page_info.html
 // web_root/page_mqtt.html
 // web_root/page_rpc.html
+// web_root/page_terminal.html
 // DO NOT EDIT!
 
 package main
@@ -293,20 +294,25 @@ body { color: #666;  background-color: #eee; }
 #d1 { display: flex; flex-direction: column; }
 #app_view { flex: 0 0 auto; min-height: 200px; position: relative; }
 #device-logs-panel { flex: 1 1 auto; }
-.splitter-horizontal { height: 18px; background: #ccc; cursor: row-resize; margin: 0 10px; }
+.splitter-horizontal { height: 18px; background: #ccc; cursor: row-resize; margin: 0; }
 .panel-title { margin: 5px 10px; }
 #app_view .panel { padding: 0 1em; }
+.main-left-column { height: 100%; padding: 0; margin: 0; }
+.main-right-column { height: 100%; padding: 0; margin: 0; }
+.stderr { color: #77e; }
 
 /* FILE MANAGER PAGE */
 #file-list { overflow-y: auto; }
 #file-textarea { font-family: Consolas, Menlo, Monaco, monospace; }
-.upcontrol { position: absolute; top: 36px; bottom: 0; left: 10px; right: 10px; overflow-y: auto; }
-#device-logs { font-size: 90%; overflow-y: auto; line-height: 1.2em; background: #fff; }
+.upcontrol { position: absolute; top: 40px; bottom: 0; overflow-y: auto; width: 100%; left: 0; right: 0;}
+#device-logs { font-size: 90%; overflow-y: auto; line-height: 1.2em; background: #fff; width: 100%; top: 32px;}
 #editor { height: 100%; background: #fff; border-radius: 0.3em; }
 
-/* INFO PAGE */
-#app_view label { min-width: 10em; margin-left: 2em; }
-#app_view #net  { white-space: pre; margin: 0 2em; font-family: Menlo, monospace; }
+/* TERMINAL PAGE */
+#terminal-output { background: #fff; border-radius: 0.3em; top: 54px; width: 100%;}
+.terminal-cmd-in, .terminal-cmd-out { margin: 0 1em; color: #44c; white-space: pre; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace }
+.terminal-cmd-in { color: #44c; font-weight: bold; }
+.terminal-cmd-out { color: #777; overflow-y: auto; }
 
 /* CONFIG PAGE */
 #config label { margin-left: 0; margin-right: 1em; width: 20em; }
@@ -501,7 +507,7 @@ func web_rootCssMainCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/css/main.css", size: 5146, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/css/main.css", size: 5541, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -551,10 +557,11 @@ var _web_rootDashHtml = []byte(`<!DOCTYPE html>
           <div id="sidebar-menu" class="main_menu_side hidden-print main_menu">
             <div class="menu_section">
               <ul class="nav side-menu">
-                <li><a tab="files"><i class="fa fa-file-code-o"></i> Files on device </a></li>
-                <li><a tab="examples"><i class="fa fa-pencil"></i> Code examples </a></li>
-                <li><a tab="configuration"><i class="fa fa-gears"></i> Device configuration </a></li>
+                <li><a tab="files"><i class="fa fa-file-code-o"></i> Device Files </a></li>
+                <li><a tab="examples"><i class="fa fa-pencil"></i> Examples </a></li>
+                <li><a tab="configuration"><i class="fa fa-gears"></i> Configuration </a></li>
                 <li><a tab="rpc"><i class="fa fa-puzzle-piece"></i> RPC API</a></li>
+                <li><a tab="terminal"><i class="fa fa-terminal"></i> Terminal</a></li>
               </ul>
             </div>
           </div>
@@ -582,10 +589,10 @@ var _web_rootDashHtml = []byte(`<!DOCTYPE html>
           </div>
 
           <div id="device-logs-panel" style="position: relative;">
-            <div class="panel-title">
-              <span style="margin-right: 2em;">Serial console logs</span>
-              <button class="btn btn-sm btn-primary" id="clear-logs-button"><i class="fa fa-trash"></i> Clear console</button>
-              <button class="btn btn-sm btn-primary" id="reboot-button"><i class="fa fa-refresh"></i> Reboot device</button>
+            <div class="panel-title" style="margin: 5px 0 0 0; padding: 0;">
+              <span style="margin-right: 2em;">Console logs</span>
+              <button class="btn btn-xs btn-primary" id="clear-logs-button"><i class="fa fa-trash"></i> Clear console</button>
+              <button class="btn btn-xs btn-primary" id="reboot-button"><i class="fa fa-refresh"></i> Reboot device</button>
             </div>
             <pre class="upcontrol" id="device-logs"></pre>
           </div>
@@ -621,7 +628,7 @@ func web_rootDashHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/dash.html", size: 3317, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/dash.html", size: 3421, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3817,7 +3824,16 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
       </div>
     </div>
   </div>
-</div>
+
+  <div class="panel panel-default">
+    <div class="panel-heading">
+      Console log
+      <a class="pull-right" data-toggle="collapse" data-target="#device-logs" href="#">
+        <i class="fa fa-chevron-down"></i>
+      </a>
+    </div>
+    <pre class="collapse" id="device-logs" style="max-height: 200px; border-radius: 0; border: none; padding: 0 1em;" class="panel-body"></pre>
+  </div>
 
     <script src="js/jquery.min.js"></script>
     <script src="js/bootstrap.min.js"></script>
@@ -3840,7 +3856,7 @@ func web_rootIndexHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/index.html", size: 16029, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/index.html", size: 16415, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4128,6 +4144,7 @@ var loadPage = function(page) {
   var doit = function(html) {
     $('#app_view').html(html);
     $('#breadcrumb').html($('[data-title]').attr('data-title'));
+    location.hash = page;
   };
   if (pageCache[page]) {
     doit(pageCache[page]);
@@ -4145,7 +4162,10 @@ $(document).on('click', 'a[tab]', function() {
 });
 
 $(document).ready(function() {
-  $('a[tab]').first().click();
+  var tab = location.hash.substring(1);
+  var link = $('a[tab="' + tab + '"]');
+  if (link.length == 0) link = $('a[tab]').first();
+  link.click();
 });
 
 $.ajax({url: '/call', data: {method: 'Sys.GetInfo'}}).then(function(data) {
@@ -4193,6 +4213,13 @@ var mkeditor = function(id, lang) {
   if (lang) editor.session.setMode('ace/mode/' + lang);
   return editor;
 };
+
+$(window).resize(function(ev) {
+  if(this.resizeTO) clearTimeout(this.resizeTO);
+  this.resizeTO = setTimeout(function() {
+    location.reload();
+  }, 500);
+});
 `)
 
 func web_rootJsDashJsBytes() ([]byte, error) {
@@ -4205,7 +4232,7 @@ func web_rootJsDashJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/dash.js", size: 3467, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/dash.js", size: 3772, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4808,10 +4835,13 @@ var _web_rootJsWsJs = []byte(`(function($) {
     ws.onmessage = function(ev) {
       var m = JSON.parse(ev.data || '');
       switch (m.cmd) {
-        case 'console':
+        case 'uart':
+        case 'stderr':
           $('#device-logs').each(function(i, el) {
             var mustScroll = (el.scrollTop === (el.scrollHeight - el.clientHeight));
-            el.innerHTML += m.data;
+            var data = (m.data || '').replace('<', '&lt;').replace('>', '&gt;');
+            if (m.cmd === 'stderr') data = '<span class="stderr">' + data + '</span>';
+            el.innerHTML += data;
             if (mustScroll) el.scrollTop = el.scrollHeight;
           });
           break;
@@ -4839,13 +4869,13 @@ func web_rootJsWsJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/ws.js", size: 923, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/ws.js", size: 1109, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
 
 var _web_rootPage_configurationHtml = []byte(`<div data-title="Device configuration" style="height: 100%;">
-  <div class="col-xs-12" style="height: 100%;">
+  <div class="col-xs-12 main-left-column">
     <div style="margin-top: 2px; ">
     <button class="btn btn-sm btn-primary" id="config-save-button"><i class="fa fa-save"></i> Save configuration</button>
     </div>
@@ -4903,17 +4933,16 @@ func web_rootPage_configurationHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_configuration.html", size: 1533, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_configuration.html", size: 1528, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
 
 var _web_rootPage_examplesHtml = []byte(`<div data-title="Code Examples" style="height: 100%;">
-  <div class="col-xs-3" style="height: 100%;">
-    <h2>Examples - click to view</h2>
-    <div class="list-group upcontrol" id="example-list"></div>
+  <div class="col-xs-3 main-left-column">
+    <div class="list-group upcontrol" id="example-list" style="padding: 0; margin: 0; top: 5px;"></div>
   </div>
-  <div class="col-xs-9" style="height: 100%;">
+  <div class="col-xs-9 main-right-column">
     <div style="margin-top: 2px; ">
       <button class="btn btn-sm btn-warning" id="copy-example-button"><i class="fa fa-clipboard"></i> 
       Click to replace device's init.js with this example
@@ -4927,9 +4956,7 @@ var _web_rootPage_examplesHtml = []byte(`<div data-title="Code Examples" style="
 </div>
 
 <script>
-  var editor = ace.edit('editor');
-  editor.setTheme('ace/theme/tomorrow');
-
+  var editor = mkeditor();
   var prefix = 'https://raw.githubusercontent.com/cesanta/mongoose-os/master/fw/examples/mjs_base/examples/';
 
   $(document).off('click', '.example');
@@ -4982,18 +5009,17 @@ func web_rootPage_examplesHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_examples.html", size: 2173, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_examples.html", size: 2117, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
 
 var _web_rootPage_filesHtml = []byte(`<div data-title="Device File Manager" style="height: 100%;">
-    <div class="col-xs-3" style="height: 100%;">
-      <h2>Files on device - click to edit</h2>
-      <div class="list-group upcontrol" id="file-list"></div>
+    <div class="col-xs-3 main-left-column">
+      <div class="list-group upcontrol" id="file-list" style="padding: 0; margin: 0; top: 5px;"></div>
     </div>
-    <div class="col-xs-9" style="height: 100%;">
-      <div style="margin-top: 2px;">
+    <div class="col-xs-9 main-right-column">
+      <div style="margin-top: 5px;">
         <button class="btn btn-sm btn-primary disabled file-control" id="file-save-button"><i class="fa fa-save"></i> Save file</button>
         <button class="btn btn-sm btn-primary disabled file-control" id="file-savereboot-button"><i class="fa fa-refresh"></i> Save and reboot device</button>
         &nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
@@ -5174,7 +5200,7 @@ func web_rootPage_filesHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_files.html", size: 6457, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_files.html", size: 6442, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -5325,10 +5351,10 @@ func web_rootPage_mqttHtml() (*asset, error) {
 }
 
 var _web_rootPage_rpcHtml = []byte(`<div data-title="RPC Browser" style="height: 100%;">
-  <div class="col-xs-3" style="height: 100%;">
+  <div class="col-xs-3 main-left-column">
     <div class="list-group upcontrol" id="list" style="top:7px;"></div>
   </div>
-  <div class="col-xs-9" style="height: 100%;">
+  <div class="col-xs-9 main-right-column">
     <div style="margin-top: 2px; ">
       <button class="btn btn-sm btn-primary" id="send-rpc-button">
       	<i class="fa fa-puzzle-piece"></i> 
@@ -5343,12 +5369,12 @@ var _web_rootPage_rpcHtml = []byte(`<div data-title="RPC Browser" style="height:
     <div class="row" style="height: 100%">
     	<div class="col-sm-6" style="height: 100%">
     <p><b>Edit request parameters and click Call button above:</b></p>
-    <div id="e1" style="height: 50%"></div>
+    <div id="e1" style="height: 75%"></div>
 
     	</div>
     	<div class="col-sm-6" style="height: 100%">
     <p><b>Response:</b></p>
-    <div id="e2" style="height: 50%"></div>
+    <div id="e2" style="height: 75%"></div>
 
     	</div>
     </div>
@@ -5424,7 +5450,47 @@ func web_rootPage_rpcHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_rpc.html", size: 2745, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_rpc.html", size: 2736, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _web_rootPage_terminalHtml = []byte(`<div data-title="Command Line" style="height: 100%;">
+  <div class="input-group" style="margin-top: 7px;">
+    <span class="input-group-addon">mos&nbsp;&gt;</i></span>
+    <input required id="terminal-input"
+      placeholder="Type command and press enter ..." class="form-control" type="text">
+  </div>
+</div>
+
+<script>
+  $(document).ready(function() {
+    $('#terminal-input').focus();
+  });
+  $(document).off('keydown', '#terminal-input');
+  $(document).on('keydown', '#terminal-input', function(ev) {
+    if (ev.keyCode == 13) {
+      var text = $('#terminal-input').val() || '';
+      if (!text) return;
+      $.ajax({ url: '/terminal', data: { cmd: text } }).then(function(data) {
+      });
+    }
+  });
+
+</script>
+`)
+
+func web_rootPage_terminalHtmlBytes() ([]byte, error) {
+	return _web_rootPage_terminalHtml, nil
+}
+
+func web_rootPage_terminalHtml() (*asset, error) {
+	bytes, err := web_rootPage_terminalHtmlBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "web_root/page_terminal.html", size: 720, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -5525,6 +5591,7 @@ var _bindata = map[string]func() (*asset, error){
 	"web_root/page_info.html":                  web_rootPage_infoHtml,
 	"web_root/page_mqtt.html":                  web_rootPage_mqttHtml,
 	"web_root/page_rpc.html":                   web_rootPage_rpcHtml,
+	"web_root/page_terminal.html":              web_rootPage_terminalHtml,
 }
 
 // AssetDir returns the file names below a certain
@@ -5625,6 +5692,7 @@ var _bintree = &bintree{nil, map[string]*bintree{
 		"page_info.html":          &bintree{web_rootPage_infoHtml, map[string]*bintree{}},
 		"page_mqtt.html":          &bintree{web_rootPage_mqttHtml, map[string]*bintree{}},
 		"page_rpc.html":           &bintree{web_rootPage_rpcHtml, map[string]*bintree{}},
+		"page_terminal.html":      &bintree{web_rootPage_terminalHtml, map[string]*bintree{}},
 	}},
 }}
 

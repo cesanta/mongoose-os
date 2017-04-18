@@ -15,10 +15,13 @@
     ws.onmessage = function(ev) {
       var m = JSON.parse(ev.data || '');
       switch (m.cmd) {
-        case 'console':
+        case 'uart':
+        case 'stderr':
           $('#device-logs').each(function(i, el) {
             var mustScroll = (el.scrollTop === (el.scrollHeight - el.clientHeight));
-            el.innerHTML += m.data;
+            var data = (m.data || '').replace('<', '&lt;').replace('>', '&gt;');
+            if (m.cmd === 'stderr') data = '<span class="stderr">' + data + '</span>';
+            el.innerHTML += data;
             if (mustScroll) el.scrollTop = el.scrollHeight;
           });
           break;

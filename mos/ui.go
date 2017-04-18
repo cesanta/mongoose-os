@@ -25,6 +25,7 @@ import (
 	"github.com/cesanta/errors"
 	"github.com/elazarl/go-bindata-assetfs"
 	"github.com/golang/glog"
+	shellwords "github.com/mattn/go-shellwords"
 	"github.com/skratchdot/open-golang/open"
 
 	"golang.org/x/net/websocket"
@@ -84,7 +85,7 @@ func wsHandler(ws *websocket.Conn) {
 func reportConsoleLogs() {
 	for {
 		data := <-consoleMsgs
-		wsBroadcast(wsmessage{"console", string(data)})
+		wsBroadcast(wsmessage{"uart", string(data)})
 	}
 }
 
@@ -128,6 +129,20 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 	glog.CopyStandardLogTo("INFO")
 	go reportConsoleLogs()
 	http.Handle("/ws", websocket.Handler(wsHandler))
+
+	r, w, _ := os.Pipe()
+	os.Stdout = w
+	os.Stderr = w
+	go func() {
+		for {
+			data := make([]byte, 512)
+			_, err := r.Read(data)
+			if err != nil {
+				break
+			}
+			wsBroadcast(wsmessage{"stderr", string(data)})
+		}
+	}()
 
 	http.HandleFunc("/flash", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
@@ -365,6 +380,29 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 			waitForReboot()
 		}
 		httpReply(w, result, err)
+	})
+
+	http.HandleFunc("/terminal", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		str := r.FormValue("cmd")
+		args, err := shellwords.Parse(str)
+		if err != nil {
+			httpReply(w, true, err)
+			return
+		}
+		if args[0] == "mos" {
+			os.Args = args
+		} else {
+			// Prepend program name to the args list if it's not there yet
+			os.Args = append([]string{"mos"}, args...)
+		}
+
+		flag.Parse()
+		cmd := getCommand(flag.Arg(0))
+		ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
+		defer cancel()
+		err = run(cmd, ctx2, devConn)
+		httpReply(w, true, err)
 	})
 
 	if wwwRoot != "" {

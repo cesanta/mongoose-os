@@ -23,10 +23,11 @@
           <div id="sidebar-menu" class="main_menu_side hidden-print main_menu">
             <div class="menu_section">
               <ul class="nav side-menu">
-                <li><a tab="files"><i class="fa fa-file-code-o"></i> Files on device </a></li>
-                <li><a tab="examples"><i class="fa fa-pencil"></i> Code examples </a></li>
-                <li><a tab="configuration"><i class="fa fa-gears"></i> Device configuration </a></li>
+                <li><a tab="files"><i class="fa fa-file-code-o"></i> Device Files </a></li>
+                <li><a tab="examples"><i class="fa fa-pencil"></i> Examples </a></li>
+                <li><a tab="configuration"><i class="fa fa-gears"></i> Configuration </a></li>
                 <li><a tab="rpc"><i class="fa fa-puzzle-piece"></i> RPC API</a></li>
+                <li><a tab="terminal"><i class="fa fa-terminal"></i> Terminal</a></li>
               </ul>
             </div>
           </div>
@@ -54,10 +55,10 @@
           </div>
 
           <div id="device-logs-panel" style="position: relative;">
-            <div class="panel-title">
-              <span style="margin-right: 2em;">Serial console logs</span>
-              <button class="btn btn-sm btn-primary" id="clear-logs-button"><i class="fa fa-trash"></i> Clear console</button>
-              <button class="btn btn-sm btn-primary" id="reboot-button"><i class="fa fa-refresh"></i> Reboot device</button>
+            <div class="panel-title" style="margin: 5px 0 0 0; padding: 0;">
+              <span style="margin-right: 2em;">Console logs</span>
+              <button class="btn btn-xs btn-primary" id="clear-logs-button"><i class="fa fa-trash"></i> Clear console</button>
+              <button class="btn btn-xs btn-primary" id="reboot-button"><i class="fa fa-refresh"></i> Reboot device</button>
             </div>
             <pre class="upcontrol" id="device-logs"></pre>
           </div>
