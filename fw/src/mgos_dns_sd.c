@@ -81,7 +81,10 @@ static void add_a_record(const char *name, struct mg_dns_reply *reply) {
         make_dns_rr(MG_DNS_A_RECORD, RCLASS_IN_FLUSH);
     mg_dns_encode_record(reply->io, &rr, name, strlen(name), &addr,
                          sizeof(addr));
-    reply->msg->num_answers++;
+    /* Add empty IPv6 record */
+    rr.rtype = MG_DNS_AAAA_RECORD;
+    mg_dns_encode_record(reply->io, &rr, name, strlen(name), "", 0);
+    reply->msg->num_answers += 2;
   }
   free(ip);
 }
@@ -177,17 +180,17 @@ static void handler(struct mg_connection *nc, int ev, void *ev_data,
         char name[256];
         struct mg_dns_resource_record *rr = &msg->questions[i];
         mg_dns_uncompress_name(msg, &rr->name, name, sizeof(name) - 1);
+        int is_unicast = (rr->rclass & MGOS_MDNS_QUERY_UNICAST);
 
-        LOG(LL_DEBUG,
-            ("  -- Q type %d name %s (%s) from %s, unicast: %d", rr->rtype,
-             name, (rr->rclass & MGOS_MDNS_QUERY_UNICAST ? "QU" : "QM"), peer,
-             (rr->rclass & MGOS_MDNS_QUERY_UNICAST)));
+        LOG(LL_DEBUG, ("  -- Q type %d name %s (%s) from %s, unicast: %d",
+                       rr->rtype, name, (is_unicast ? "QU" : "QM"), peer,
+                       (rr->rclass & MGOS_MDNS_QUERY_UNICAST)));
 
         /*
          * If there is at least one question that requires a multicast answer
          * the whole reply goes to a multicast destination
          */
-        if (!(rr->rclass & MGOS_MDNS_QUERY_UNICAST)) {
+        if (!is_unicast) {
           /* our listener connection has the mcast address in its nc->sa */
           reply_conn = nc->listener;
         }
@@ -200,7 +203,8 @@ static void handler(struct mg_connection *nc, int ev, void *ev_data,
         rr->rclass |= MGOS_MDNS_CACHE_FLUSH;
 
         if (rr->rtype == MG_DNS_PTR_RECORD &&
-            strcmp(name, SD_TYPE_ENUM_NAME) == 0) {
+            (strcmp(name, SD_TYPE_ENUM_NAME) == 0 ||
+             strcmp(name, MGOS_DNS_SD_HTTP_TYPE_FULL) == 0)) {
           advertise_type(&reply, &rdata);
         } else if (rr->rtype == MG_DNS_PTR_RECORD && strcmp(name, srv) == 0) {
           add_ptr_record(MGOS_DNS_SD_HTTP_TYPE_FULL, name, &reply, &rdata);
@@ -209,7 +213,9 @@ static void handler(struct mg_connection *nc, int ev, void *ev_data,
           add_srv_record(host, srv, &reply, &rdata);
         } else if (rr->rtype == MG_DNS_TXT_RECORD && strcmp(name, srv) == 0) {
           add_txt_record(name, &reply, &rdata);
-        } else if (rr->rtype == MG_DNS_A_RECORD && strcmp(host, name) == 0) {
+        } else if ((rr->rtype == MG_DNS_A_RECORD ||
+                    rr->rtype == MG_DNS_AAAA_RECORD) &&
+                   strcmp(host, name) == 0) {
           add_a_record(host, &reply);
         } else {
           LOG(LL_DEBUG, (" --- ignoring: name=%s, type=%d", name, rr->rtype));

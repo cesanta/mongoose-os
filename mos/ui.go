@@ -8,7 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"log"
+	"net"
 	"net/http"
 	"os"
 	"os/exec"
@@ -378,10 +378,15 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 	}
 	addr := fmt.Sprintf("127.0.0.1:%d", httpPort)
 	url := fmt.Sprintf("http://%s", addr)
+
 	fmt.Printf("To get a list of available commands, start with --help\n")
 	fmt.Printf("Starting Web UI. If the browser does not start, navigate to %s\n", url)
+	listener, err := net.Listen("tcp", addr)
+	if err != nil {
+		return errors.Trace(err)
+	}
 	open.Start(url)
-	log.Fatal(http.ListenAndServe(addr, nil))
+	http.Serve(listener, nil)
 
 	// Unreacahble
 	return nil
