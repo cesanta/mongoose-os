@@ -35,6 +35,7 @@ var (
 	pass       = flag.String("pass", "", "Cloud password or token")
 	server     = flag.String("server", "http://mongoose.cloud", "Cloud server")
 	local      = flag.Bool("local", false, "Local build.")
+	longFormat = flag.BoolP("long", "l", false, "Long output format.")
 	mosRepo    = flag.String("repo", "", "Path to the mongoose-os repository; if omitted, the mongoose-os repository will be cloned as ./mongoose-os")
 	deviceID   = flag.String("device-id", "", "Device ID")
 	devicePass = flag.String("device-pass", "", "Device pass/key")

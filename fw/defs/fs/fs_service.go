@@ -37,6 +37,11 @@ type GetResult struct {
 	Left *int64  `json:"left,omitempty"`
 }
 
+type ListExtResult struct {
+	Name *string `json:"name,omitempty"`
+	Size *int64  `json:"size,omitempty"`
+}
+
 type PutArgs struct {
 	Append   *bool   `json:"append,omitempty"`
 	Data     *string `json:"data,omitempty"`
@@ -50,6 +55,7 @@ type RemoveArgs struct {
 type Service interface {
 	Get(ctx context.Context, args *GetArgs) (*GetResult, error)
 	List(ctx context.Context) ([]string, error)
+	ListExt(ctx context.Context) ([]ListExtResult, error)
 	Put(ctx context.Context, args *PutArgs) error
 	Remove(ctx context.Context, args *RemoveArgs) error
 }
@@ -112,6 +118,26 @@ func (c *_Client) List(ctx context.Context) (res []string, err error) {
 	return r, nil
 }
 
+func (c *_Client) ListExt(ctx context.Context) (res []ListExtResult, err error) {
+	cmd := &frame.Command{
+		Cmd: "FS.ListExt",
+	}
+	resp, err := c.i.Call(ctx, c.addr, cmd)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	if resp.Status != 0 {
+		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+	}
+
+	var r []ListExtResult
+	err = resp.Response.UnmarshalInto(&r)
+	if err != nil {
+		return nil, errors.Annotatef(err, "unmarshaling response")
+	}
+	return r, nil
+}
+
 func (c *_Client) Put(ctx context.Context, args *PutArgs) (err error) {
 	cmd := &frame.Command{
 		Cmd: "FS.Put",
@@ -154,6 +180,7 @@ func (c *_Client) Remove(ctx context.Context, args *RemoveArgs) (err error) {
 //s := &_Server{impl}
 //i.RegisterCommandHandler("FS.Get", s.Get)
 //i.RegisterCommandHandler("FS.List", s.List)
+//i.RegisterCommandHandler("FS.ListExt", s.ListExt)
 //i.RegisterCommandHandler("FS.Put", s.Put)
 //i.RegisterCommandHandler("FS.Remove", s.Remove)
 //i.RegisterService(ServiceID, _ServiceDefinition)
@@ -179,6 +206,10 @@ func (s *_Server) Get(ctx context.Context, src string, cmd *frame.Command) (inte
 
 func (s *_Server) List(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
 	return s.impl.List(ctx)
+}
+
+func (s *_Server) ListExt(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
+	return s.impl.ListExt(ctx)
 }
 
 func (s *_Server) Put(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
@@ -243,11 +274,33 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
       }
     },
     "List": {
-      "doc": "List files at the device's filesystem.",
+      "doc": "List names of the files on the device's filesystem.",
       "result": {
         "items": {
           "doc": "Filename",
           "type": "string"
+        },
+        "type": "array"
+      }
+    },
+    "ListExt": {
+      "doc": "List files on the device's filesystem.",
+      "result": {
+        "items": {
+          "properties": {
+            "name": {
+              "doc": "Filename",
+              "type": "string"
+            },
+            "size": {
+              "doc": "Size of the file",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "type": "object"
         },
         "type": "array"
       }

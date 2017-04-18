@@ -7,10 +7,12 @@ import (
 	"io"
 	"os"
 	"path"
+	"sort"
+	"strings"
 	"time"
 
 	"cesanta.com/common/go/lptr"
-	fwfilesystem "cesanta.com/fw/defs/fs"
+	fwfs "cesanta.com/fw/defs/fs"
 	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
@@ -26,13 +28,21 @@ var (
 	fsOpAttempts = 3
 )
 
-func listFiles(ctx context.Context, devConn *dev.DevConn) ([]string, error) {
-	// Get file list from the attached device
-	files, err := devConn.CFilesystem.List(ctx)
-	if err != nil {
-		return nil, errors.Trace(err)
+func listFiles(ctx context.Context, devConn *dev.DevConn) (res []fwfs.ListExtResult, err error) {
+	if *longFormat {
+		res, err = devConn.CFilesystem.ListExt(ctx)
+	} else {
+		// Get file list from the attached device
+		names, err := devConn.CFilesystem.List(ctx)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		for _, name := range names {
+			n := name
+			res = append(res, fwfs.ListExtResult{Name: &n})
+		}
 	}
-	return files, err
+	return res, err
 }
 
 func fsLs(ctx context.Context, devConn *dev.DevConn) error {
@@ -40,8 +50,13 @@ func fsLs(ctx context.Context, devConn *dev.DevConn) error {
 	if err != nil {
 		return errors.Trace(err)
 	}
+	sort.Slice(files, func(i, j int) bool { return strings.Compare(*files[i].Name, *files[j].Name) < 0 })
 	for _, file := range files {
-		fmt.Println(file)
+		fmt.Printf("%s", *file.Name)
+		if file.Size != nil {
+			fmt.Printf(" %d", *file.Size)
+		}
+		fmt.Printf("\r\n")
 	}
 	return nil
 }
@@ -56,7 +71,7 @@ func getFile(ctx context.Context, devConn *dev.DevConn, name string) (string, er
 		// Get the next chunk of data
 		ctx2, _ := context.WithTimeout(ctx, fsOpTimeout)
 		glog.V(1).Infof("Getting %s %d @ %d (attempts %d)", name, chunkSize, offset, attempts)
-		chunk, err := devConn.CFilesystem.Get(ctx2, &fwfilesystem.GetArgs{
+		chunk, err := devConn.CFilesystem.Get(ctx2, &fwfs.GetArgs{
 			Filename: &name,
 			Offset:   lptr.Int64(offset),
 			Len:      lptr.Int64(chunkSize),
@@ -147,7 +162,7 @@ func fsPutData(ctx context.Context, devConn *dev.DevConn, r io.Reader, devFilena
 			for attempts > 0 {
 				ctx2, _ := context.WithTimeout(ctx, fsOpTimeout)
 				glog.V(1).Infof("Sending %s %d (attempts %d)", devFilename, n, attempts)
-				err := devConn.CFilesystem.Put(ctx2, &fwfilesystem.PutArgs{
+				err := devConn.CFilesystem.Put(ctx2, &fwfs.PutArgs{
 					Filename: &devFilename,
 					Data:     lptr.String(base64.StdEncoding.EncodeToString(data[:n])),
 					Append:   lptr.Bool(appendFlag),
@@ -182,7 +197,7 @@ func fsPutData(ctx context.Context, devConn *dev.DevConn, r io.Reader, devFilena
 }
 
 func fsRemoveFile(ctx context.Context, devConn *dev.DevConn, devFilename string) error {
-	return errors.Trace(devConn.CFilesystem.Remove(ctx, &fwfilesystem.RemoveArgs{
+	return errors.Trace(devConn.CFilesystem.Remove(ctx, &fwfs.RemoveArgs{
 		Filename: &devFilename,
 	}))
 }

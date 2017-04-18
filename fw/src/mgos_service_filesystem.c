@@ -24,9 +24,8 @@
 #endif
 
 /* Handler for FS.List */
-static void mgos_fs_list_handler(struct mg_rpc_request_info *ri, void *cb_arg,
-                                 struct mg_rpc_frame_info *fi,
-                                 struct mg_str args) {
+static void mgos_fs_list_common(struct mg_rpc_request_info *ri,
+                                struct mg_rpc_frame_info *fi, bool ext) {
   struct mbuf fb;
   struct json_out out = JSON_OUT_MBUF(&fb);
   DIR *dirp;
@@ -54,8 +53,15 @@ static void mgos_fs_list_handler(struct mg_rpc_request_info *ri, void *cb_arg,
       if (i > 0) {
         json_printf(&out, ",");
       }
-
-      json_printf(&out, "%Q", dp->d_name);
+      if (ext) {
+        cs_stat_t st;
+        if (mg_stat(dp->d_name, &st) == 0) {
+          json_printf(&out, "{name: %Q, size: %llu}", dp->d_name,
+                      (uint64_t) st.st_size);
+        }
+      } else {
+        json_printf(&out, "%Q", dp->d_name);
+      }
     }
     closedir(dirp);
   }
@@ -66,7 +72,20 @@ static void mgos_fs_list_handler(struct mg_rpc_request_info *ri, void *cb_arg,
   ri = NULL;
 
   mbuf_free(&fb);
+}
 
+static void mgos_fs_list_handler(struct mg_rpc_request_info *ri, void *cb_arg,
+                                 struct mg_rpc_frame_info *fi,
+                                 struct mg_str args) {
+  mgos_fs_list_common(ri, fi, false /* ext */);
+  (void) cb_arg;
+  (void) args;
+}
+
+static void mgos_fs_list_ext_handler(struct mg_rpc_request_info *ri,
+                                     void *cb_arg, struct mg_rpc_frame_info *fi,
+                                     struct mg_str args) {
+  mgos_fs_list_common(ri, fi, true /* ext */);
   (void) cb_arg;
   (void) args;
 }
@@ -288,6 +307,7 @@ enum mgos_init_result mgos_service_filesystem_init(void) {
   struct mg_rpc *c = mgos_rpc_get_global();
 #if MG_ENABLE_DIRECTORY_LISTING
   mg_rpc_add_handler(c, "FS.List", "", mgos_fs_list_handler, NULL);
+  mg_rpc_add_handler(c, "FS.ListExt", "", mgos_fs_list_ext_handler, NULL);
 #endif
   mg_rpc_add_handler(c, "FS.Get", "{filename: %Q, offset: %ld, len: %ld}",
                      mgos_fs_get_handler, NULL);

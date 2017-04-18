@@ -42,6 +42,11 @@ type GetResult struct {
 	Left *int64  `json:"left,omitempty"`
 }
 
+type ListExtResult struct {
+	Name *string `json:"name,omitempty"`
+	Size *int64  `json:"size,omitempty"`
+}
+
 type PutArgs struct {
 	Append   *bool   `json:"append,omitempty"`
 	Data     *string `json:"data,omitempty"`
@@ -55,6 +60,7 @@ type RemoveArgs struct {
 type Service interface {
 	Get(ctx context.Context, args *GetArgs) (*GetResult, error)
 	List(ctx context.Context) ([]string, error)
+	ListExt(ctx context.Context) ([]ListExtResult, error)
 	Put(ctx context.Context, args *PutArgs) error
 	Remove(ctx context.Context, args *RemoveArgs) error
 }
@@ -70,6 +76,8 @@ type _validators struct {
 	GetResult *schema.Validator
 	// This comment prevents gofmt from aligning types in the struct.
 	ListResult *schema.Validator
+	// This comment prevents gofmt from aligning types in the struct.
+	ListExtResult *schema.Validator
 	// This comment prevents gofmt from aligning types in the struct.
 	PutArgs *schema.Validator
 	// This comment prevents gofmt from aligning types in the struct.
@@ -137,6 +145,10 @@ func initValidators() {
 		panic(err)
 	}
 	validators.ListResult, err = schema.NewValidator(service.(*ucl.Object).Find("methods").(*ucl.Object).Find("List").(*ucl.Object).Find("result"), loader)
+	if err != nil {
+		panic(err)
+	}
+	validators.ListExtResult, err = schema.NewValidator(service.(*ucl.Object).Find("methods").(*ucl.Object).Find("ListExt").(*ucl.Object).Find("result"), loader)
 	if err != nil {
 		panic(err)
 	}
@@ -261,6 +273,38 @@ func (c *_Client) List(ctx context.Context) (res []string, err error) {
 	return r, nil
 }
 
+func (c *_Client) ListExt(ctx context.Context) (res []ListExtResult, err error) {
+	cmd := &frame.Command{
+		Cmd: "FS.ListExt",
+	}
+	resp, err := c.i.Call(ctx, c.addr, cmd)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	if resp.Status != 0 {
+		return nil, errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+	}
+
+	bb, err := resp.Response.MarshalJSON()
+	if err != nil {
+		glog.Errorf("Failed to marshal result as JSON: %+v", err)
+	} else {
+		rv, err := ucl.Parse(bytes.NewReader(bb))
+		if err == nil {
+			if err := validators.ListExtResult.Validate(rv); err != nil {
+				glog.Warningf("Got invalid result for ListExt: %+v", err)
+				return nil, errors.Annotatef(err, "invalid response for ListExt")
+			}
+		}
+	}
+	var r []ListExtResult
+	err = resp.Response.UnmarshalInto(&r)
+	if err != nil {
+		return nil, errors.Annotatef(err, "unmarshaling response")
+	}
+	return r, nil
+}
+
 func (c *_Client) Put(ctx context.Context, args *PutArgs) (err error) {
 	cmd := &frame.Command{
 		Cmd: "FS.Put",
@@ -332,6 +376,7 @@ func (c *_Client) Remove(ctx context.Context, args *RemoveArgs) (err error) {
 //s := &_Server{impl}
 //i.RegisterCommandHandler("FS.Get", s.Get)
 //i.RegisterCommandHandler("FS.List", s.List)
+//i.RegisterCommandHandler("FS.ListExt", s.ListExt)
 //i.RegisterCommandHandler("FS.Put", s.Put)
 //i.RegisterCommandHandler("FS.Remove", s.Remove)
 //i.RegisterService(ServiceID, _ServiceDefinition)
@@ -398,6 +443,26 @@ func (s *_Server) List(ctx context.Context, src string, cmd *frame.Command) (int
 			if err := validators.ListResult.Validate(v); err != nil {
 				glog.Warningf("Returned invalid response for List: %+v", err)
 				return nil, errors.Annotatef(err, "server generated invalid responce for List")
+			}
+		}
+	}
+	return r, nil
+}
+
+func (s *_Server) ListExt(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
+	r, err := s.impl.ListExt(ctx)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+	bb, err := json.Marshal(r)
+	if err == nil {
+		v, err := ucl.Parse(bytes.NewBuffer(bb))
+		if err != nil {
+			glog.Errorf("Failed to parse just serialized JSON value %q: %+v", string(bb), err)
+		} else {
+			if err := validators.ListExtResult.Validate(v); err != nil {
+				glog.Warningf("Returned invalid response for ListExt: %+v", err)
+				return nil, errors.Annotatef(err, "server generated invalid responce for ListExt")
 			}
 		}
 	}
@@ -492,11 +557,33 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
       }
     },
     "List": {
-      "doc": "List files at the device's filesystem.",
+      "doc": "List names of the files on the device's filesystem.",
       "result": {
         "items": {
           "doc": "Filename",
           "type": "string"
+        },
+        "type": "array"
+      }
+    },
+    "ListExt": {
+      "doc": "List files on the device's filesystem.",
+      "result": {
+        "items": {
+          "properties": {
+            "name": {
+              "doc": "Filename",
+              "type": "string"
+            },
+            "size": {
+              "doc": "Size of the file",
+              "type": "integer"
+            }
+          },
+          "required": [
+            "name"
+          ],
+          "type": "object"
         },
         "type": "array"
       }

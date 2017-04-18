@@ -2,12 +2,26 @@ namespace: http://mongoose-iot.com/fw
 name: FS
 methods:
   List:
-    doc: List files at the device's filesystem.
+    doc: List names of the files on the device's filesystem.
     result:
       type: array
       items:
         type: string
         doc: Filename
+  ListExt:
+    doc: List files on the device's filesystem.
+    result:
+      type: array
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+            doc: Filename
+          size:
+            type: integer
+            doc: Size of the file
+        required: [name]
   Get:
     doc: Read a file or a part of file from the device's filesystem.
     args:
