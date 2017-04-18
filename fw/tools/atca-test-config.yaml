@@ -113,11 +113,7 @@ slotinfo:
     x509id: 0
 - num: 4
   slotconfig:
-    privatekeyslotconfig:
-      extsignenable: false
-      intsignenable: false
-      ecdhenable: false
-      ecdhtonextslot: false
+    readkey: 0
     nomac: false
     limiteduse: false
     encryptread: false
@@ -136,11 +132,7 @@ slotinfo:
     x509id: 0
 - num: 5
   slotconfig:
-    privatekeyslotconfig:
-      extsignenable: true
-      intsignenable: true
-      ecdhenable: true
-      ecdhtonextslot: true
+    readkey: 15
     nomac: false
     limiteduse: false
     encryptread: false
@@ -159,11 +151,7 @@ slotinfo:
     x509id: 0
 - num: 6
   slotconfig:
-    privatekeyslotconfig:
-      extsignenable: true
-      intsignenable: true
-      ecdhenable: true
-      ecdhtonextslot: true
+    readkey: 15
     nomac: true
     limiteduse: false
     encryptread: false

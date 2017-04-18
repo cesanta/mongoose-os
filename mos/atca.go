@@ -127,9 +127,13 @@ func atcaSetConfig(ctx context.Context, dc *dev.DevConn) error {
 		return errors.Errorf("%s: expected %d bytes, got %d", fn, atca.ConfigSize, len(confData))
 	}
 
-	cl, _, _, err := atca.Connect(ctx, dc)
+	cl, _, currentCfg, err := atca.Connect(ctx, dc)
 	if err != nil {
 		return errors.Annotatef(err, "Connect")
+	}
+
+	if currentCfg.LockConfig == atca.LockModeLocked {
+		return errors.Errorf("config zone is already locked")
 	}
 
 	b64c := base64.StdEncoding.EncodeToString(confData)
