@@ -136,7 +136,6 @@ static void mgos_mqtt_ev(struct mg_connection *nc, int ev, void *ev_data,
       int code = ((struct mg_mqtt_message *) ev_data)->connack_ret_code;
       LOG((code == 0 ? LL_INFO : LL_ERROR), ("MQTT CONNACK %d", code));
       if (code == 0) {
-        s_conn = nc;
         s_reconnect_timeout_ms = 0;
         call_global_handlers(nc, ev, ev_data, user_data);
         SLIST_FOREACH(th, &s_topic_handlers, entries) {
@@ -241,10 +240,9 @@ static bool mqtt_global_connect(void) {
   opts.ssl_psk_key = scfg->mqtt.ssl_psk_key;
 #endif
 
-  struct mg_connection *nc =
-      mg_connect_opt(mgr, scfg->mqtt.server, mgos_mqtt_ev, NULL, opts);
-  if (nc != NULL) {
-    mg_set_protocol_mqtt(nc);
+  s_conn = mg_connect_opt(mgr, scfg->mqtt.server, mgos_mqtt_ev, NULL, opts);
+  if (s_conn != NULL) {
+    mg_set_protocol_mqtt(s_conn);
   } else {
     ret = false;
   }
