@@ -72,6 +72,19 @@ static void add_srv_record(const char *host_name, const char *service_name,
                       get_cfg()->dns_sd.ttl, rdata->buf, rdata->len);
 }
 
+// This record contains negative answer for the IPv6 AAAA question
+static void add_nsec_record(const char *name, struct mg_dns_reply *reply,
+                            struct mbuf *rdata) {
+  struct mg_dns_resource_record rr =
+      make_dns_rr(MG_DNS_NSEC_RECORD, RCLASS_IN_FLUSH);
+  rdata->len = 0;
+  mg_dns_encode_name(rdata, name, strlen(name));
+  mbuf_append(rdata, "\x00\x01\x40", 3); /* Only A record is present */
+  mg_dns_encode_record(reply->io, &rr, name, strlen(name), rdata->buf,
+                       rdata->len);
+  reply->msg->num_answers++;
+}
+
 static void add_a_record(const char *name, struct mg_dns_reply *reply) {
   char *ip = mgos_wifi_get_sta_ip();
   if (ip == NULL) ip = mgos_wifi_get_ap_ip();
@@ -81,10 +94,7 @@ static void add_a_record(const char *name, struct mg_dns_reply *reply) {
         make_dns_rr(MG_DNS_A_RECORD, RCLASS_IN_FLUSH);
     mg_dns_encode_record(reply->io, &rr, name, strlen(name), &addr,
                          sizeof(addr));
-    /* Add empty IPv6 record */
-    rr.rtype = MG_DNS_AAAA_RECORD;
-    mg_dns_encode_record(reply->io, &rr, name, strlen(name), "", 0);
-    reply->msg->num_answers += 2;
+    reply->msg->num_answers++;
   }
   free(ip);
 }
@@ -146,6 +156,7 @@ static void advertise_type(struct mg_dns_reply *reply, struct mbuf *rdata) {
   add_srv_record(host_name, service_name, reply, rdata);
   add_txt_record(service_name, reply, rdata);
   add_a_record(host_name, reply);
+  add_nsec_record(host_name, reply, rdata);
 }
 
 static void handler(struct mg_connection *nc, int ev, void *ev_data,
@@ -209,6 +220,7 @@ static void handler(struct mg_connection *nc, int ev, void *ev_data,
         } else if (rr->rtype == MG_DNS_PTR_RECORD && strcmp(name, srv) == 0) {
           add_ptr_record(MGOS_DNS_SD_HTTP_TYPE_FULL, name, &reply, &rdata);
           add_a_record(host, &reply);
+          add_nsec_record(host, &reply, &rdata);
         } else if (rr->rtype == MG_DNS_SRV_RECORD && strcmp(name, srv) == 0) {
           add_srv_record(host, srv, &reply, &rdata);
         } else if (rr->rtype == MG_DNS_TXT_RECORD && strcmp(name, srv) == 0) {
@@ -217,6 +229,7 @@ static void handler(struct mg_connection *nc, int ev, void *ev_data,
                     rr->rtype == MG_DNS_AAAA_RECORD) &&
                    strcmp(host, name) == 0) {
           add_a_record(host, &reply);
+          add_nsec_record(host, &reply, &rdata);
         } else {
           LOG(LL_DEBUG, (" --- ignoring: name=%s, type=%d", name, rr->rtype));
         }
