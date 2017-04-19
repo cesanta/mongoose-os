@@ -186,6 +186,7 @@ static void handler(struct mg_connection *nc, int ev, void *ev_data,
       msg->num_questions = 0;
       reply = mg_dns_create_reply(&reply_mbuf, msg);
       msg->num_questions = tmp;
+      int question_a_answered = 0; /* MG_DNS_A_RECORD answer is sent */
 
       for (i = 0; i < msg->num_questions; i++) {
         char name[256];
@@ -219,17 +220,21 @@ static void handler(struct mg_connection *nc, int ev, void *ev_data,
           advertise_type(&reply, &rdata);
         } else if (rr->rtype == MG_DNS_PTR_RECORD && strcmp(name, srv) == 0) {
           add_ptr_record(MGOS_DNS_SD_HTTP_TYPE_FULL, name, &reply, &rdata);
-          add_a_record(host, &reply);
-          add_nsec_record(host, &reply, &rdata);
+          if (!question_a_answered) {
+            add_a_record(host, &reply);
+            add_nsec_record(host, &reply, &rdata);
+            question_a_answered++;
+          }
         } else if (rr->rtype == MG_DNS_SRV_RECORD && strcmp(name, srv) == 0) {
           add_srv_record(host, srv, &reply, &rdata);
         } else if (rr->rtype == MG_DNS_TXT_RECORD && strcmp(name, srv) == 0) {
           add_txt_record(name, &reply, &rdata);
-        } else if ((rr->rtype == MG_DNS_A_RECORD ||
-                    rr->rtype == MG_DNS_AAAA_RECORD) &&
+        } else if (!question_a_answered && (rr->rtype == MG_DNS_A_RECORD ||
+                                            rr->rtype == MG_DNS_AAAA_RECORD) &&
                    strcmp(host, name) == 0) {
           add_a_record(host, &reply);
           add_nsec_record(host, &reply, &rdata);
+          question_a_answered++;
         } else {
           LOG(LL_DEBUG, (" --- ignoring: name=%s, type=%d", name, rr->rtype));
         }
