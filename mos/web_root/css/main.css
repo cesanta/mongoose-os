@@ -22,6 +22,11 @@ body { color: #666;  background-color: #eee; }
 .upcontrol { position: absolute; top: 40px; bottom: 0; overflow-y: auto; width: 100%; left: 0; right: 0;}
 #device-logs { font-size: 90%; overflow-y: auto; line-height: 1.2em; background: #fff; width: 100%; top: 32px;}
 #editor { height: 100%; background: #fff; border-radius: 0.3em; }
+.file .file-size { color: silver; }
+.file.is_js { color: #3cb371; }
+.file.is_json { color: #ffa500; }
+.file.is_api .file-name { color: silver; }
+.file.selected { background: #f0f0f0; }
 
 /* TERMINAL PAGE */
 #terminal-output { background: #fff; border-radius: 0.3em; top: 54px; width: 100%;}

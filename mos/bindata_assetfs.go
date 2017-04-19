@@ -307,6 +307,11 @@ body { color: #666;  background-color: #eee; }
 .upcontrol { position: absolute; top: 40px; bottom: 0; overflow-y: auto; width: 100%; left: 0; right: 0;}
 #device-logs { font-size: 90%; overflow-y: auto; line-height: 1.2em; background: #fff; width: 100%; top: 32px;}
 #editor { height: 100%; background: #fff; border-radius: 0.3em; }
+.file .file-size { color: silver; }
+.file.is_js { color: #3cb371; }
+.file.is_json { color: #ffa500; }
+.file.is_api .file-name { color: silver; }
+.file.selected { background: #f0f0f0; }
 
 /* TERMINAL PAGE */
 #terminal-output { background: #fff; border-radius: 0.3em; top: 54px; width: 100%;}
@@ -507,7 +512,7 @@ func web_rootCssMainCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/css/main.css", size: 5541, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/css/main.css", size: 5726, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -571,6 +576,7 @@ var _web_rootDashHtml = []byte(`<!DOCTYPE html>
       <div id="page" style="position: relative; height: 100%;">
 
         <div id="top_nav">
+          <img src="/images/logo_blue.png" height="36" style="margin-bottom: 2px; margin-right: 10px; filter: gray; filter: grayscale(1); -webkit-filter: grayscale(1); opacity: 0.33;">
           <span id="breadcrumb"></span>
           <span id="top_spinner" style="position: relative; margin-left: 2em;"></span>
           <div class="pull-right">
@@ -628,7 +634,7 @@ func web_rootDashHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/dash.html", size: 3421, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/dash.html", size: 3606, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -5068,9 +5074,9 @@ var _web_rootPage_filesHtml = []byte(`<div data-title="Device File Manager" styl
 <script>
   var editor = mkeditor();
   $(document).off('click', '.file');
-  $(document).on('click', '.file', function() {
-    var name = $(this).text();
-    var $t = $(this);
+  $(document).on('click', '.file', function(ev) {
+    var $t = $(ev.target);
+    var name = $t.attr('rel');
     $.ajax({url: '/get', data: {name: name}}).done(function(json) {
       $('.file').removeClass('selected');
       $t.addClass('selected');
@@ -5081,6 +5087,7 @@ var _web_rootPage_filesHtml = []byte(`<div data-title="Device File Manager" styl
       $('.file-control').toggleClass('disabled', false);
       new PNotify({title: 'Loaded ' + name, type: 'success' });
     });
+    return false;
   });
 
   // https://developer.mozilla.org/en/docs/Web/API/WindowBase64/Base64_encoding_and_decoding
@@ -5176,15 +5183,30 @@ var _web_rootPage_filesHtml = []byte(`<div data-title="Device File Manager" styl
     return false;
   });
 
-  $.ajax({url: '/call', data: {method: 'FS.List'}}).done(function(json) {
+  $.ajax({url: '/call', data: {method: 'FS.ListExt'}}).done(function(json) {
     var $tbody = $('#file-list').empty();
-    json.result.sort();
+    json.result.sort(function(a, b) {
+      if (a.name.match(/^api_/) && b.name.match(/^api_/)) return a.name > b.name ? 1 : -1;
+      if (a.name.match(/^api_/)) return 1;
+      if (b.name.match(/^api_/)) return -1;
+      return a.name > b.name ? 1 : -1;
+    });
     $.each(json.result, function(i, v) {
+      var sizeSpan = $('<span class="pull-right file-size"/>').text(v.size);
+      var nameSpan = $('<span class="file-name"/>').text(v.name);
       var link = $('<a href="#" class="list-group-item file"/>')
-          .text(v)
-          .addClass(v == 'init.js' ? 'is_init' : '')
+          .attr({rel: v.name})
+          .append(sizeSpan)
+          .append(nameSpan)
+          .addClass(v.name === 'init.js' ? 'is_init' : '')
+          .addClass(v.name.match(/\.js$/) ? 'is_js' : '')
+          .addClass(v.name.match(/\.json$/) ? 'is_json' : '')
+          .addClass(v.name.match(/^api_/) ? 'is_api' : '')
           .appendTo($tbody);
     });
+
+    // Open init.js automatically
+    $('.file.is_init').click();
   });
 
 </script>
@@ -5200,7 +5222,7 @@ func web_rootPage_filesHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_files.html", size: 6442, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_files.html", size: 7172, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

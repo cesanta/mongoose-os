@@ -52,9 +52,9 @@
 <script>
   var editor = mkeditor();
   $(document).off('click', '.file');
-  $(document).on('click', '.file', function() {
-    var name = $(this).text();
-    var $t = $(this);
+  $(document).on('click', '.file', function(ev) {
+    var $t = $(ev.target);
+    var name = $t.attr('rel');
     $.ajax({url: '/get', data: {name: name}}).done(function(json) {
       $('.file').removeClass('selected');
       $t.addClass('selected');
@@ -65,6 +65,7 @@
       $('.file-control').toggleClass('disabled', false);
       new PNotify({title: 'Loaded ' + name, type: 'success' });
     });
+    return false;
   });
 
   // https://developer.mozilla.org/en/docs/Web/API/WindowBase64/Base64_encoding_and_decoding
@@ -160,15 +161,30 @@
     return false;
   });
 
-  $.ajax({url: '/call', data: {method: 'FS.List'}}).done(function(json) {
+  $.ajax({url: '/call', data: {method: 'FS.ListExt'}}).done(function(json) {
     var $tbody = $('#file-list').empty();
-    json.result.sort();
+    json.result.sort(function(a, b) {
+      if (a.name.match(/^api_/) && b.name.match(/^api_/)) return a.name > b.name ? 1 : -1;
+      if (a.name.match(/^api_/)) return 1;
+      if (b.name.match(/^api_/)) return -1;
+      return a.name > b.name ? 1 : -1;
+    });
     $.each(json.result, function(i, v) {
+      var sizeSpan = $('<span class="pull-right file-size"/>').text(v.size);
+      var nameSpan = $('<span class="file-name"/>').text(v.name);
       var link = $('<a href="#" class="list-group-item file"/>')
-          .text(v)
-          .addClass(v == 'init.js' ? 'is_init' : '')
+          .attr({rel: v.name})
+          .append(sizeSpan)
+          .append(nameSpan)
+          .addClass(v.name === 'init.js' ? 'is_init' : '')
+          .addClass(v.name.match(/\.js$/) ? 'is_js' : '')
+          .addClass(v.name.match(/\.json$/) ? 'is_json' : '')
+          .addClass(v.name.match(/^api_/) ? 'is_api' : '')
           .appendTo($tbody);
     });
+
+    // Open init.js automatically
+    $('.file.is_init').click();
   });
 
 </script>
