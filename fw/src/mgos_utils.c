@@ -9,6 +9,9 @@
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_timers.h"
 
+extern enum cs_log_level cs_log_level;
+extern FILE *cs_log_file;
+
 static void reboot_timer_cb(void *param) {
   mgos_system_restart(0);
   (void) param;
@@ -26,6 +29,10 @@ float mgos_rand_range(float from, float to) {
 /*
  * Intended for ffi
  */
-void mgos_log(int level, const char *msg) {
-  LOG(level, ("%s", msg));
+void mgos_log(const char *filename, int line_no, int level, const char *msg) {
+  if (cs_log_level >= level) {
+    fprintf(cs_log_file, "%17s:%-3d ", filename, line_no);
+    cs_log_printf("%s", msg);
+  }
+  // LOG(level, ("%s", msg));
 };

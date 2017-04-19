@@ -12,6 +12,26 @@ level is >= `Cfg.get('debug.level')`
 
 
 
+Frame number: we're starting from the third frame, ignoring the first
+two:
+- this._off() or this._fn()
+- Log.print()
+
+
+
+bcode offset of interest, and the corresponding function:lineno
+
+
+
+We'll go up by call trace until we find the frame not from the current
+file
+
+
+
+Found the first frame from other file, we're done.
+
+
+
 **`Log.error(msg)`** - Shortcut for `Log.print(Log.ERROR, msg)`
 
 

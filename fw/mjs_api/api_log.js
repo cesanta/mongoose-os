@@ -3,7 +3,31 @@
 let Log = {
   // **`Log.print(level, msg)`** - Print message to stderr if provided
   // level is >= `Cfg.get('debug.level')`
-  print: ffi('void mgos_log(int, char *)'),
+  print: function(level, msg) {
+    let mjs = getMJS();
+    // Frame number: we're starting from the third frame, ignoring the first
+    // two:
+    // - this._off() or this._fn()
+    // - Log.print()
+    let cfn = 2;
+
+    // bcode offset of interest, and the corresponding function:lineno
+    let offs, fn, ln;
+
+    // We'll go up by call trace until we find the frame not from the current
+    // file
+    while (true) {
+      offs = this._off(mjs, cfn) - 1;
+      fn = this._fn(mjs, offs);
+      if (fn !== "api_log.js") {
+        // Found the first frame from other file, we're done.
+        break;
+      }
+      cfn++;
+    }
+    ln = this._ln(mjs, offs);
+    this._pr(fn, ln, level, msg);
+  },
 
   // **`Log.error(msg)`** - Shortcut for `Log.print(Log.ERROR, msg)`
   error: function(msg) {
@@ -35,4 +59,9 @@ let Log = {
   INFO: 2,
   DEBUG: 3,
   VERBOSE_DEBUG: 4,
+
+  _pr: ffi('void mgos_log(char *, int, int, char *)'),
+  _fn: ffi('char *mjs_get_bcode_filename_by_offset(void *, int)'),
+  _ln: ffi('int mjs_get_lineno_by_offset(void *, int)'),
+  _off: ffi('int mjs_get_offset_by_call_frame_num(void *, int)'),
 };
