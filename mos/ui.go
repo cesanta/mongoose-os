@@ -1,11 +1,8 @@
 package main
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
-	"flag"
 	"fmt"
 	"io"
 	"net"
@@ -27,6 +24,7 @@ import (
 	"github.com/golang/glog"
 	shellwords "github.com/mattn/go-shellwords"
 	"github.com/skratchdot/open-golang/open"
+	flag "github.com/spf13/pflag"
 
 	"golang.org/x/net/websocket"
 )
@@ -144,12 +142,9 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		}
 	}()
 
-	http.HandleFunc("/flash", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		r.ParseForm()
+	flashfunc := func(args []string) error {
 		devConnMtx.Lock()
 		defer devConnMtx.Unlock()
-		*firmware = r.FormValue("firmware")
 		if devConn != nil {
 			devConn.Disconnect(ctx)
 			devConn = nil
@@ -164,21 +159,23 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 			time.Sleep(700 * time.Millisecond)
 			devConn, _ = reconnectToDevice(ctx)
 		}()
+		fmt.Println("Flashing: calling ", os.Args[0], strings.Join(args, " "))
+		cmd := exec.Command(os.Args[0], args...)
+		// var buf bytes.Buffer
+		cmd.Stderr = w
+		cmd.Stdout = w
+		err := cmd.Run()
+		return err
+	}
 
-		flashArgs := []string{
+	http.HandleFunc("/flash", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		r.ParseForm()
+		*firmware = r.FormValue("firmware")
+		err := flashfunc([]string{
 			"flash", "--port", *portFlag, "--firmware", *firmware,
 			"--v", "4", "--logtostderr",
-		}
-		fmt.Println("Flashing: calling ", os.Args[0], strings.Join(flashArgs, " "))
-		cmd := exec.Command(os.Args[0], flashArgs...)
-		var buf bytes.Buffer
-		cmd.Stderr = &buf
-		cmd.Stdout = &buf
-		err := cmd.Run()
-		fscanner := bufio.NewScanner(&buf)
-		for fscanner.Scan() {
-			glog.Infof("%s", fscanner.Text())
-		}
+		})
 		httpReply(w, true, err)
 	})
 
@@ -390,14 +387,22 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 			httpReply(w, true, err)
 			return
 		}
-		if args[0] == "mos" {
-			os.Args = args
-		} else {
-			// Prepend program name to the args list if it's not there yet
-			os.Args = append([]string{"mos"}, args...)
+		if len(args) > 0 && args[0] != "mos" {
+			args = append([]string{"mos"}, args...)
 		}
-
+		os.Args = args
+		if len(os.Args) > 1 && os.Args[1] == "-X" {
+			os.Args = append(os.Args[:1], os.Args[2:]...)
+			extendedMode = true
+			commands = append(commands, extendedCommands...)
+		}
+		flag.CommandLine.Init("mos", flag.ContinueOnError)
 		flag.Parse()
+		if flag.Arg(0) == "flash" {
+			err = flashfunc(os.Args[1:])
+			httpReply(w, true, err)
+			return
+		}
 		cmd := getCommand(flag.Arg(0))
 		ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
 		defer cancel()

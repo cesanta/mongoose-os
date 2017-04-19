@@ -107,7 +107,4 @@ func usage() {
 	}
 
 	w.Flush()
-	if !isUI {
-		os.Exit(1)
-	}
 }
