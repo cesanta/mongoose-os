@@ -4882,7 +4882,7 @@ func web_rootJsWsJs() (*asset, error) {
 
 var _web_rootPage_configurationHtml = []byte(`<div data-title="Device configuration" style="height: 100%;">
   <div class="col-xs-12 main-left-column">
-    <div style="margin-top: 2px; ">
+    <div style="margin-top: 5px; ">
     <button class="btn btn-sm btn-primary" id="config-save-button"><i class="fa fa-save"></i> Save configuration</button>
     </div>
     <div class="form-group upcontrol">
@@ -4949,13 +4949,13 @@ var _web_rootPage_examplesHtml = []byte(`<div data-title="Code Examples" style="
     <div class="list-group upcontrol" id="example-list" style="padding: 0; margin: 0; top: 5px;"></div>
   </div>
   <div class="col-xs-9 main-right-column">
-    <div style="margin-top: 2px; ">
+    <div style="margin-top: 5px; ">
+      &nbsp;
       <button class="btn btn-sm btn-warning" id="copy-example-button"><i class="fa fa-clipboard"></i> 
       Click to replace device's init.js with this example
       and reboot the device</button>
     </div>
     <div class="form-group upcontrol">
-      <!--<textarea class="form-control" id="example-code" style="height: 100%"></textarea>-->
       <div id="editor"></div>
     </div>
   </div>
@@ -5015,7 +5015,7 @@ func web_rootPage_examplesHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_examples.html", size: 2117, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_examples.html", size: 2035, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -5026,14 +5026,15 @@ var _web_rootPage_filesHtml = []byte(`<div data-title="Device File Manager" styl
     </div>
     <div class="col-xs-9 main-right-column">
       <div style="margin-top: 5px;">
-        <button class="btn btn-sm btn-primary disabled file-control" id="file-save-button"><i class="fa fa-save"></i> Save file</button>
-        <button class="btn btn-sm btn-primary disabled file-control" id="file-savereboot-button"><i class="fa fa-refresh"></i> Save and reboot device</button>
+        &nbsp;
+        <button class="btn btn-sm btn-primary disabled file-control" id="file-save-button"><i class="fa fa-save"></i> Save File</button>
+        <button class="btn btn-sm btn-primary disabled file-control" id="file-savereboot-button"><i class="fa fa-refresh"></i> Save &amp; Reboot</button>
         &nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
         <div style="position: relative; display: inline-block;">
           <button class="btn btn-sm btn-success file-control dropdown-toggle" id="share-button"
             data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
             <i class="fa fa-share"></i>
-            Share this file
+            Share File
             <span class="caret"></span>          
           </button>
 
@@ -5054,11 +5055,14 @@ var _web_rootPage_filesHtml = []byte(`<div data-title="Device File Manager" styl
                 class="btn btn-primary btn-block disabled form-control"
                 id="publish-button" type="button">
                 <i class="fa fa-share"></i>
-                Publish code and device info at mongoose-os.com/snippets
+                Publish code and device info to mongoose-os.com/snippets.html
               </button>
               <p class="hidden" style="margin-top: 1em;">
                 Snippet URL: <a target="_blank" id="share-id"></a>
               </p>
+              <p style="margin-top: 1em;">See all published snippets at
+              <a href="https://mongoose-os.com/snippets.html"
+                target="_blank">mongoose-os.com/snippets.html</a></p>
             </form>
 
           </div>
@@ -5177,6 +5181,8 @@ var _web_rootPage_filesHtml = []byte(`<div data-title="Device File Manager" styl
     return false;
   };
 
+  $(document).off('submit', '#share-form');
+  $(document).off('click', '#publish-button');
   $(document).on('submit', '#share-form', onPublish);
   $(document).on('click', '#publish-button', function() {
     $('#share-form').submit();
@@ -5222,7 +5228,7 @@ func web_rootPage_filesHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_files.html", size: 7172, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_files.html", size: 7477, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -5374,10 +5380,11 @@ func web_rootPage_mqttHtml() (*asset, error) {
 
 var _web_rootPage_rpcHtml = []byte(`<div data-title="RPC Browser" style="height: 100%;">
   <div class="col-xs-3 main-left-column">
-    <div class="list-group upcontrol" id="list" style="top:7px;"></div>
+    <div class="list-group upcontrol" id="list" style="top:5px;"></div>
   </div>
   <div class="col-xs-9 main-right-column">
-    <div style="margin-top: 2px; ">
+    <div style="margin-top: 5px; ">
+      &nbsp;
       <button class="btn btn-sm btn-primary" id="send-rpc-button">
       	<i class="fa fa-puzzle-piece"></i> 
       	Call RPC service <span id="rpc_name"></span>
@@ -5472,13 +5479,13 @@ func web_rootPage_rpcHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_rpc.html", size: 2736, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_rpc.html", size: 2749, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
 
 var _web_rootPage_terminalHtml = []byte(`<div data-title="Command Line" style="height: 100%;">
-  <div class="input-group" style="margin-top: 7px;">
+  <div class="input-group" style="margin-top: 5px;">
     <span class="input-group-addon">mos&nbsp;&gt;</i></span>
     <input required id="terminal-input"
       placeholder="Type command and press enter ..." class="form-control" type="text">

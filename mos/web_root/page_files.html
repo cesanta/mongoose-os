@@ -4,14 +4,15 @@
     </div>
     <div class="col-xs-9 main-right-column">
       <div style="margin-top: 5px;">
-        <button class="btn btn-sm btn-primary disabled file-control" id="file-save-button"><i class="fa fa-save"></i> Save file</button>
-        <button class="btn btn-sm btn-primary disabled file-control" id="file-savereboot-button"><i class="fa fa-refresh"></i> Save and reboot device</button>
+        &nbsp;
+        <button class="btn btn-sm btn-primary disabled file-control" id="file-save-button"><i class="fa fa-save"></i> Save File</button>
+        <button class="btn btn-sm btn-primary disabled file-control" id="file-savereboot-button"><i class="fa fa-refresh"></i> Save &amp; Reboot</button>
         &nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
         <div style="position: relative; display: inline-block;">
           <button class="btn btn-sm btn-success file-control dropdown-toggle" id="share-button"
             data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
             <i class="fa fa-share"></i>
-            Share this file
+            Share File
             <span class="caret"></span>          
           </button>
 
@@ -32,11 +33,14 @@
                 class="btn btn-primary btn-block disabled form-control"
                 id="publish-button" type="button">
                 <i class="fa fa-share"></i>
-                Publish code and device info at mongoose-os.com/snippets
+                Publish code and device info to mongoose-os.com/snippets.html
               </button>
               <p class="hidden" style="margin-top: 1em;">
                 Snippet URL: <a target="_blank" id="share-id"></a>
               </p>
+              <p style="margin-top: 1em;">See all published snippets at
+              <a href="https://mongoose-os.com/snippets.html"
+                target="_blank">mongoose-os.com/snippets.html</a></p>
             </form>
 
           </div>
@@ -155,6 +159,8 @@
     return false;
   };
 
+  $(document).off('submit', '#share-form');
+  $(document).off('click', '#publish-button');
   $(document).on('submit', '#share-form', onPublish);
   $(document).on('click', '#publish-button', function() {
     $('#share-form').submit();
