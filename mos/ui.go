@@ -8,11 +8,9 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/exec"
 	"path/filepath"
 	"sort"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -142,7 +140,13 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		}
 	}()
 
-	flashfunc := func(args []string) error {
+	http.HandleFunc("/flash", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		r.ParseForm()
+		*firmware = r.FormValue("firmware")
+
+		// TODO(lsm): the following snippet is similar to the one in "/terminal"
+		// handler, refactor to reduce copypasta.
 		devConnMtx.Lock()
 		defer devConnMtx.Unlock()
 		if devConn != nil {
@@ -150,32 +154,18 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 			devConn = nil
 		}
 		defer func() {
-			// On Windows, closing a port and immediately opening it back is not
-			// going to work, so here we just use a random 700ms timeout which seems
-			// to solve the problem (just like we do in devConn.Disconnect()).
-			//
-			// Just in case though, we sleep not only on Windows, but on all
-			// platforms.
-			time.Sleep(700 * time.Millisecond)
+			time.Sleep(time.Second)
 			devConn, _ = reconnectToDevice(ctx)
 		}()
-		fmt.Println("Flashing: calling ", os.Args[0], strings.Join(args, " "))
-		cmd := exec.Command(os.Args[0], args...)
-		// var buf bytes.Buffer
-		cmd.Stderr = w
-		cmd.Stdout = w
-		err := cmd.Run()
-		return err
-	}
+		time.Sleep(time.Second) // Close really really
+		ctx2, cancel := context.WithTimeout(ctx, 20*time.Second)
+		defer cancel()
 
-	http.HandleFunc("/flash", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-		r.ParseForm()
-		*firmware = r.FormValue("firmware")
-		err := flashfunc([]string{
+		os.Args = []string{
 			"flash", "--port", *portFlag, "--firmware", *firmware,
 			"--v", "4", "--logtostderr",
-		})
+		}
+		err := flash(ctx2, nil)
 		httpReply(w, true, err)
 	})
 
@@ -381,6 +371,8 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 	http.HandleFunc("/terminal", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+
+		// Get the command line value, modify os.Args and re-parse flags
 		str := r.FormValue("cmd")
 		args, err := shellwords.Parse(str)
 		if err != nil {
@@ -398,12 +390,30 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		}
 		flag.CommandLine.Init("mos", flag.ContinueOnError)
 		flag.Parse()
-		if flag.Arg(0) == "flash" {
-			err = flashfunc(os.Args[1:])
-			httpReply(w, true, err)
-			return
-		}
+
+		// Some commands want special access to the serial port,
+		// therefore close device connection here and schedule the reconnection
+		// after this function exits.
 		cmd := getCommand(flag.Arg(0))
+
+		if cmd != nil && !cmd.needDevConn {
+			devConnMtx.Lock()
+			defer devConnMtx.Unlock()
+
+			// On MacOS and Windows, sleep for 1 second after we close serial
+			// port. Otherwise, open call fails for some reason we have
+			// no idea about. Thus those time.Sleep() calls below.
+			if devConn != nil {
+				devConn.Disconnect(ctx)
+				devConn = nil
+			}
+			defer func() {
+				time.Sleep(time.Second)
+				devConn, _ = reconnectToDevice(ctx)
+			}()
+			time.Sleep(time.Second)
+		}
+
 		ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
 		defer cancel()
 		err = run(cmd, ctx2, devConn)
