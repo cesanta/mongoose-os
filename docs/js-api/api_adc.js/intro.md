@@ -8,5 +8,6 @@ ADC API.  Source C API is defined at:
 
 
 
-**`ADC.read(pin)`** - read pin analog value
+## **`ADC.read(pin)`**
+Read `pin` analog value, return an integer.
 

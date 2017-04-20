@@ -1,7 +1,8 @@
 // Raw TCP/UDP API.
 
 let Net = {
-  // **`Net.bind(addressStr, handler)`** - bind to an address. Return value:
+  // ## **`Net.bind(addressStr, handler)`**
+  // Bind to an address. Return value:
   // an opaque connection pointer which should be given as a first argument to
   // some `Net` functions. A handler function is a Mongoose event
   // handler, that receives connection, event, and event data. Events are:
@@ -14,7 +15,8 @@ let Net = {
   // ```
   bind: ffi('void *mgos_bind(char *, void (*)(void *, int, void *, userdata), userdata)'),
 
-  // **`Net.connect(addr, handler, userdata)`** - Connect to a remote host.
+  // ## **`Net.connect(addr, handler, userdata)`**
+  // Connect to a remote host.
   // Return value: an opaque connection pointer which should be given as a first argument to
   // some `Net` functions.
   //
@@ -42,7 +44,7 @@ let Net = {
   // userdata is the value given as a third argument to `Net.connect()`.
   connect: ffi('void *mgos_connect(char *, void (*)(void *, int, void *, userdata), userdata)'),
 
-  // **`Net.connect_ssl(addr, handler, userdata, cert, ca_cert)`** -
+  // ## **`Net.connect_ssl(addr, handler, userdata, cert, ca_cert)`**
   // The same as `Net.connect`, but establishes SSL connection
   // Additional parameters are:
   // - `cert` is a client certificate file name or "" if not required
@@ -50,15 +52,16 @@ let Net = {
   // The certificate files must be in PEM format.
   connect_ssl: ffi('void *mgos_connect_ssl(void *, char *, void (*)(void *, int, void *, userdata), char *, char *)'),
 
-  // **`Net.close(conn)`** - send all pending data to the remote peer,
+  // ## **`Net.close(conn)`**
+  // Send all pending data to the remote peer,
   // and disconnect when all data is sent.
   // Return value: none.
   close: ffi('void mgos_disconnect(void *)'),
 
   _send: ffi('void mg_send(void *, char *, int)'),
 
-  // **`Net.send(conn, data)`** - send data to the remote peer.
-  // `data` is an mJS string.
+  // ## **`Net.send(conn, data)`**
+  // Send data to the remote peer. `data` is an mJS string.
   // Return value: none.
   send: function(c, msg) { return Net._send(c, msg, msg.length); },
 

@@ -10,7 +10,8 @@ let UART = {
   _wr: ffi('int mgos_uart_write(int, char *, int)'),
   _rd: ffi('int mgos_uart_read(int, void *, int)'),
 
-  // **`UART.setConfig(uartNo, param)`** - set UART config. `param` is an
+  // ## **`UART.setConfig(uartNo, param)`**
+  // Set UART config. `param` is an
   // object with the following optional fields:
   //
   // - `baudRate`: baud rate, integer, default: 115200;
@@ -110,26 +111,28 @@ let UART = {
     return res;
   },
 
-  // **`UART.setDispatcher(uartNo, callback, userdata)`** - set UART dispatcher
+  // ## **`UART.setDispatcher(uartNo, callback, userdata)`**
+  // Set UART dispatcher
   // callback which gets invoked when there is a new data in the input buffer
   // or when the space becomes available on the output buffer.
   //
   // Callback receives the following arguments: `(uartNo, userdata)`.
   setDispatcher: ffi('void mgos_uart_set_dispatcher(int, void(*)(int, userdata), userdata)'),
 
-  // **`UART.write(uartNo, data)`** - write data to the buffer. Returns number
-  // of bytes written.
+  // ## **`UART.write(uartNo, data)`**
+  // Write data to the buffer. Returns number of bytes written.
   //
   // Example usage: `UART.write(1, "foobar")`, in this case, 6 bytes will be written.
   write: function(uartNo, data) {
     this._wr(uartNo, data, data.length);
   },
 
-  // **`UART.writeAvail(uartNo)`** - returns amount of space available in the
-  // output buffer.
+  // ## **`UART.writeAvail(uartNo)`**
+  // Return amount of space available in the output buffer.
   writeAvail: ffi('int mgos_uart_write_avail(int)'),
 
-  // **`UART.read(uartNo)`**. It never blocks, and returns a string containing
+  // ## **`UART.read(uartNo)`**
+  // It never blocks, and returns a string containing
   // read data (which will be empty if there's no data available).
   read: function(uartNo) {
     let n = 0; let res = ''; let buf = 'xxxxxxxxxx'; // Should be > 5
@@ -138,17 +141,19 @@ let UART = {
     }
     return res;
   },
-  // **`UART.readAvail(uartNo)`** - returns amount of data available in the
-  // input buffer.
+  // ## **`UART.readAvail(uartNo)`**
+  // Return amount of data available in the input buffer.
   readAvail: ffi('int mgos_uart_read_avail(int)'),
 
-  // **`UART.setRxEnabled(uartNo)`** - sets whether Rx is enabled.
+  // ## **`UART.setRxEnabled(uartNo)`**
+  // Set whether Rx is enabled.
   setRxEnabled: ffi('void mgos_uart_set_rx_enabled(int, int)'),
-  // **`UART.isRxEnabled(uartNo)`** - returns whether Rx is enabled.
+  // ## **`UART.isRxEnabled(uartNo)`**
+  // Returns whether Rx is enabled.
   isRxEnabled: ffi('int mgos_uart_is_rx_enabled(int)'),
 
-  // **`UART.flush(uartNo)`** - flush the UART output buffer, wait for the
-  // data to be sent.
+  // ## **`UART.flush(uartNo)`**
+  // Flush the UART output buffer, wait for the data to be sent.
   flush: ffi('void mgos_uart_flush(int)'),
 };
 

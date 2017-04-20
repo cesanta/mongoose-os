@@ -7,7 +7,8 @@ Raw TCP/UDP API.
 
 
 
-**`Net.bind(addressStr, handler)`** - bind to an address. Return value:
+## **`Net.bind(addressStr, handler)`**
+Bind to an address. Return value:
 an opaque connection pointer which should be given as a first argument to
 some `Net` functions. A handler function is a Mongoose event
 handler, that receives connection, event, and event data. Events are:
@@ -21,7 +22,8 @@ Net.bind(':1234', function(conn, ev, ev_data) {
 
 
 
-**`Net.connect(addr, handler, userdata)`** - Connect to a remote host.
+## **`Net.connect(addr, handler, userdata)`**
+Connect to a remote host.
 Return value: an opaque connection pointer which should be given as a first argument to
 some `Net` functions.
 
@@ -50,7 +52,7 @@ userdata is the value given as a third argument to `Net.connect()`.
 
 
 
-**`Net.connect_ssl(addr, handler, userdata, cert, ca_cert)`** -
+## **`Net.connect_ssl(addr, handler, userdata, cert, ca_cert)`**
 The same as `Net.connect`, but establishes SSL connection
 Additional parameters are:
 - `cert` is a client certificate file name or "" if not required
@@ -59,13 +61,14 @@ The certificate files must be in PEM format.
 
 
 
-**`Net.close(conn)`** - send all pending data to the remote peer,
+## **`Net.close(conn)`**
+Send all pending data to the remote peer,
 and disconnect when all data is sent.
 Return value: none.
 
 
 
-**`Net.send(conn, data)`** - send data to the remote peer.
-`data` is an mJS string.
+## **`Net.send(conn, data)`**
+Send data to the remote peer. `data` is an mJS string.
 Return value: none.
 

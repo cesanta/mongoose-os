@@ -14,7 +14,6 @@
 // NeoPixel.show(s);
 // ```
 
-
 load("api_bitbang.js");
 load("api_gpio.js");
 load("api_sys.js");
@@ -58,14 +57,16 @@ let NeoPixel = {
     s.data[i * 3 + 2] = v2;
   },
 
-  // **`NeoPixel.clear(s)`** - clear in-memory values of the pixels.
+  // ## **`NeoPixel.clear(s)`**
+  // Clear in-memory values of the pixels.
   clear: function(s) {
     for (let i = 0; i < s.len; i++) {
       s.data[i] = 0;
     }
   },
 
-  // **`NeoPixel.show(s)`** - output values of the pixels.
+  // ## **`NeoPixel.show(s)`**
+  // Output values of the pixels.
   show: function(s) {
     GPIO.write(s.pin, 0);
     Sys.usleep(60);

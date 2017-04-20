@@ -3,8 +3,6 @@ title: "Cfg"
 items:
 ---
 
-System Config functions
-
 
 
 ## **`Cfg.get(path)`** 

@@ -1,5 +1,3 @@
-// System Config functions
-//
 let Cfg = {
   _get: ffi('void *get_cfg()'),
   _desc: ffi('void *sys_config_schema()'),

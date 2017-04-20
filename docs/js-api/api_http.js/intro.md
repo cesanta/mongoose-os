@@ -10,17 +10,19 @@ serial, etc.
 
 
 
-**`HTTP.get_system_server()`** - return an opaque pointer variable,
-a handler of the built-in HTTP server.
+## **`HTTP.get_system_server()`**
+Return an opaque pointer variable, a handler of the built-in HTTP server.
 
 
 
-**`HTTP.bind(portStr)`** - start HTTP listener. Return an opaque pointer.
+## **`HTTP.bind(portStr)`**
+Start HTTP listener. Return an opaque pointer.
 Avoid using this, use `HTTP.get_system_server()` instead.
 
 
 
-**`HTTP.add_endpoint(listener, uri, handler, userdata)`** - register URI
+## **`HTTP.add_endpoint(listener, uri, handler, userdata)`**
+Register URI
 handler. Avoid using this, use `RPC.addHandler()` instead.
 Handler function is Mongoose event handler, which receives an opaque
 connection, event number, and event data pointer.
@@ -39,7 +41,8 @@ HTTP.add_endpoint(server, '/my/api', function(conn, ev, ev_data) {
 
 
 
-**`HTTP.connect(addr, handler, userdata)`** - The same as `Net.connect`,
+## **`HTTP.connect(addr, handler, userdata)`**
+The same as `Net.connect`,
 but with HTTP-specific handler attached, so that the callback can receive
 additional events:
 - `HTTP.EV_REQUEST`
@@ -54,7 +57,8 @@ first argument to some `Net` functions.
 
 
 
-**`HTTP.connect_ssl(addr, handler, userdata)`** - The same as `HTTP.connect`,
+## **`HTTP.connect_ssl(addr, handler, userdata)`**
+The same as `HTTP.connect`,
 but establishes SSL enabled connection
 Additional parameters are:
 - `cert` is a client certificate file name or "" if not required
@@ -63,7 +67,8 @@ The certificate files must be in PEM format.
 
 
 
-**`HTTP.param(event_data, param)`** - Get various params values of the
+## **`HTTP.param(event_data, param)`**
+Get various params values of the
 HTTP-specific events. When the callback given to `HTTP.connect()` is
 called with the event `HTTP.EV_REQUEST` or `HTTP.EV_RESPONSE`,
 `HTTP.param()` can be used to retrieve event details from the

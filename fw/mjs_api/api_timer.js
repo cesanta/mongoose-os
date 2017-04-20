@@ -2,8 +2,8 @@
 // [mgos_timers.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_timers.h).
 
 let Timer = {
-  // **`Timer.set(milliseconds, repeat, handler)`**  -
-  // setup timer with `milliseconds` timeout and `handler` as a callback.
+  // ## **`Timer.set(milliseconds, repeat, handler)`**
+  // Setup timer with `milliseconds` timeout and `handler` as a callback.
   // If `repeat` is set to true, the call will be repeated indefinitely,
   // otherwise it's a one-off.
   //

@@ -19,7 +19,6 @@ NeoPixel.setPixel(s, 1 /* pixel */, 12, 34, 56);
 NeoPixel.show(s);
 ```
 
-
 load("api_bitbang.js");
 load("api_gpio.js");
 load("api_sys.js");
@@ -52,9 +51,11 @@ Note that this only affects in-memory value of the pixel.
 
 
 
-**`NeoPixel.clear(s)`** - clear in-memory values of the pixels.
+## **`NeoPixel.clear(s)`**
+Clear in-memory values of the pixels.
 
 
 
-**`NeoPixel.show(s)`** - output values of the pixels.
+## **`NeoPixel.show(s)`**
+Output values of the pixels.
 

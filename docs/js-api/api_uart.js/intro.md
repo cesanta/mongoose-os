@@ -7,7 +7,8 @@ UART API. Source C API is defined at:
 [mgos_uart.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_uart.h)
 
 
-**`UART.setConfig(uartNo, param)`** - set UART config. `param` is an
+## **`UART.setConfig(uartNo, param)`**
+Set UART config. `param` is an
 object with the following optional fields:
 
 - `baudRate`: baud rate, integer, default: 115200;
@@ -83,7 +84,8 @@ Apply arch-specific config
 
 
 
-**`UART.setDispatcher(uartNo, callback, userdata)`** - set UART dispatcher
+## **`UART.setDispatcher(uartNo, callback, userdata)`**
+Set UART dispatcher
 callback which gets invoked when there is a new data in the input buffer
 or when the space becomes available on the output buffer.
 
@@ -91,38 +93,41 @@ Callback receives the following arguments: `(uartNo, userdata)`.
 
 
 
-**`UART.write(uartNo, data)`** - write data to the buffer. Returns number
-of bytes written.
+## **`UART.write(uartNo, data)`**
+Write data to the buffer. Returns number of bytes written.
 
 Example usage: `UART.write(1, "foobar")`, in this case, 6 bytes will be written.
 
 
 
-**`UART.writeAvail(uartNo)`** - returns amount of space available in the
-output buffer.
+## **`UART.writeAvail(uartNo)`**
+Return amount of space available in the output buffer.
 
 
 
-**`UART.read(uartNo)`**. It never blocks, and returns a string containing
+## **`UART.read(uartNo)`**
+It never blocks, and returns a string containing
 read data (which will be empty if there's no data available).
 
 
 
-**`UART.readAvail(uartNo)`** - returns amount of data available in the
-input buffer.
+## **`UART.readAvail(uartNo)`**
+Return amount of data available in the input buffer.
 
 
 
-**`UART.setRxEnabled(uartNo)`** - sets whether Rx is enabled.
+## **`UART.setRxEnabled(uartNo)`**
+Set whether Rx is enabled.
 
 
 
-**`UART.isRxEnabled(uartNo)`** - returns whether Rx is enabled.
+## **`UART.isRxEnabled(uartNo)`**
+Returns whether Rx is enabled.
 
 
 
-**`UART.flush(uartNo)`** - flush the UART output buffer, wait for the
-data to be sent.
+## **`UART.flush(uartNo)`**
+Flush the UART output buffer, wait for the data to be sent.
 
 
 

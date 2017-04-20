@@ -21,8 +21,8 @@ make mJS not to process it in any way, and just pass pointer as is.
 
 
 
-**`RPC.addHandler(name, handler)`** -
-add RPC handler. `name` is a string like `'MyMethod'`, `handler`
+## **`RPC.addHandler(name, handler)`**
+Add RPC handler. `name` is a string like `'MyMethod'`, `handler`
 is a callback function which takes `args` arguments object.
 
 Return value: none.
@@ -47,8 +47,8 @@ $ curl -d '{"a":1, "b": 2}' 192.168.0.206/rpc/Sum
 
 
 
-**`RPC.Call(dst, method, args, callback)`** - call remote RPC service.
-
+## **`RPC.call(dst, method, args, callback)`**
+Call remote RPC service.
 Return value: true in case of success, false otherwise.
 
 If `dst` is empty, connected server is implied. `method` is a string
@@ -58,9 +58,11 @@ otherwise), err_msg (error messasge for non-0 error code), userdata.
 
 
 
-**`RPC.LOCAL`** - address to be used as a destination for `RPC.call` for
+## **`RPC.LOCAL`**
+Address to be used as a destination for `RPC.call` for
 local calls. Example:
 
+```javascript
 RPC.addHandler('Example.Print', function(args) {
   print("args:", JSON.stringify(args));
   return {"result": "ok"};
@@ -69,4 +71,5 @@ RPC.addHandler('Example.Print', function(args) {
 RPC.call(RPC.LOCAL, "Example.Print", {"foo": 123}, function (resp, ud) {
   print("Local callback response:", JSON.stringify(resp));
 }, null);
+```
 

@@ -8,8 +8,8 @@ Timer API. Source C API is defined at:
 
 
 
-**`Timer.set(milliseconds, repeat, handler)`**  -
-setup timer with `milliseconds` timeout and `handler` as a callback.
+## **`Timer.set(milliseconds, repeat, handler)`**
+Setup timer with `milliseconds` timeout and `handler` as a callback.
 If `repeat` is set to true, the call will be repeated indefinitely,
 otherwise it's a one-off.
 
