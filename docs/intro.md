@@ -6,10 +6,10 @@ items:
   - { name: quickstart }
   - { name: filesystem.md }
   - { name: configuration }
+  - { name: security }
   - { name: boot.md }
   - { name: rpc }
   - { name: ota }
-  - { name: atecc508a }
   - { name: timer }
   - { name: gpio }
   - { name: i2c }

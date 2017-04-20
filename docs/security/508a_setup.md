@@ -1,5 +1,5 @@
 ---
-title: Setup procedure
+title: ATECC508A crypto chip setup
 ---
 
 Mongoose OS has native support for

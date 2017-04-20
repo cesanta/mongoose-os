@@ -1,5 +1,5 @@
 ---
-title: Overview
+title: ATECC508A crypto chip overview
 ---
 
 Often, IoT boards provide no built-in flash protection mechanism.
