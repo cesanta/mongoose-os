@@ -5421,12 +5421,12 @@ var _web_rootPage_rpcHtml = []byte(`<div data-title="RPC Browser" style="height:
   $.ajax({url: '/call', data: {method: 'RPC.List'}}).then(function(json) {
     var list = $('#list').empty();
     $.each(json.result, function(i, v) {
-			$('<a href="#" class="list-group-item"/>').text(v).appendTo(list);
+			$('<a href="#" class="list-group-item rpc"/>').text(v).appendTo(list);
 		});
   });
 
-  $(document).off('click', '.list-group-item');
-  $(document).on('click', '.list-group-item', function() {
+  $(document).off('click', '.list-group-item.rpc');
+  $(document).on('click', '.list-group-item.rpc', function() {
     var name = $(this).text();
     $('#rpc_name').text(name);
     $.ajax({url: '/call', data: {
@@ -5479,7 +5479,7 @@ func web_rootPage_rpcHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_rpc.html", size: 2749, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_rpc.html", size: 2761, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

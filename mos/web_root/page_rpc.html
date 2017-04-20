@@ -41,12 +41,12 @@
   $.ajax({url: '/call', data: {method: 'RPC.List'}}).then(function(json) {
     var list = $('#list').empty();
     $.each(json.result, function(i, v) {
-			$('<a href="#" class="list-group-item"/>').text(v).appendTo(list);
+			$('<a href="#" class="list-group-item rpc"/>').text(v).appendTo(list);
 		});
   });
 
-  $(document).off('click', '.list-group-item');
-  $(document).on('click', '.list-group-item', function() {
+  $(document).off('click', '.list-group-item.rpc');
+  $(document).on('click', '.list-group-item.rpc', function() {
     var name = $(this).text();
     $('#rpc_name').text(name);
     $.ajax({url: '/call', data: {
