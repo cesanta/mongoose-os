@@ -26,12 +26,20 @@ enables flash encryption for the next flashing:
 mos -X esp32-gen-key flash_encryption_key fe.key --esp32-enable-flash-encryption --dry-run=false
 mos flash esp32 --esp32-encryption-key-file fe.key
 ```
+That is irreversible - once flash encryption is enabled, you cannot go back.
+
+Note the extra flag `--esp32-encryption-key-file fe.key`
+for the `flash` command. From now on, a key file is required to re-flash the device.
+If the key file is lost, the module can't be reflashed.
+After flash encryption is enabled, the very first boot performs
+an encryption, which takes a while - up to a minute.
 
 Note the extra flag `--esp32-encryption-key-file fe.key`. Once the encryption
 is enabled, the key file is required to re-flash the device. Make sure
 to keep the key file, cause if it's lost, the module can't be reflashed.
 After flash encryption is enabled, the very first boot actually performs
-an encryption, which takes a while - up to a minute.
+an encryption, which takes a while - up to a minute. Subsequent boots will
+be normal, not doing any encryption.
 
 Once the flash is encrypted, one can verify it using `flash-read` command
 to ensure there no plain-text parts are present:
