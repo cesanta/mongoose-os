@@ -24,16 +24,14 @@ enables flash encryption for the next flashing:
 
 ```bash
 mos -X esp32-gen-key flash_encryption_key fe.key --esp32-enable-flash-encryption --dry-run=false
-mos flash esp32
-```
-
-NOTE: the `esp32-gen-key` command is irreversible! The encryption key is stored
-in the file `fe.key`, so make sure to store it if you'd like to re-flash
-that module later:
-
-```bash
 mos flash esp32 --esp32-encryption-key-file fe.key
 ```
+
+Note the extra flag `--esp32-encryption-key-file fe.key`. Once the encryption
+is enabled, the key file is required to re-flash the device. Make sure
+to keep the key file, cause if it's lost, the module can't be reflashed.
+After flash encryption is enabled, the very first boot actually performs
+an encryption, which takes a while - up to a minute.
 
 Once the flash is encrypted, one can verify it using `flash-read` command
 to ensure there no plain-text parts are present:
