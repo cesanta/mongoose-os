@@ -34,13 +34,14 @@
 
 import argparse
 import datetime
+import fnmatch
 import hashlib
 import json
 import os
 import re
+import string
 import sys
 import zipfile
-import fnmatch
 
 # Debian/Ubuntu: apt-get install python-git
 # PIP: pip install GitPython
@@ -48,6 +49,24 @@ import git
 
 FW_MANIFEST_FILE_NAME = 'manifest.json'
 
+class FFISymbol:
+    def __init__(self, name, return_type, args):
+        self.name = name
+        self.return_type = return_type
+        self.args = string.replace(args, "userdata", "void *")
+        if self.return_type == "":
+            self.return_type = "void"
+        if self.args == "":
+            self.args = "(void)"
+
+    def __lt__(self, other):
+        return self.name < other.name
+
+    def symbol_name(self):
+        return self.name
+
+    def signature(self):
+        return self.return_type + " " + self.name + self.args
 
 def get_git_repo(path):
     # This is a temporary workaround until we get a version of python-git
@@ -194,13 +213,13 @@ def cmd_gen_ffi_exports(args):
                         # generated file, so we have to never include it in
                         # the output, in order to avoid conflicts.
                         if symbol_name != "mgos_dlsym":
-                            symbols.append(symbol_name)
+                            symbols.append(FFISymbol(symbol_name, "", ""))
                             break
 
     # Blindly append non-glob patterns
     for p in patterns:
         if "*" not in p:
-            symbols.append(p)
+            symbols.append(FFISymbol(p, "", ""))
 
     # Scan all provided js files for ffi("..."), and fetch symbol names from
     # there
@@ -212,8 +231,8 @@ def cmd_gen_ffi_exports(args):
             #
             # symbol_type: "char *"
             # symbol_name: "foo"
-            for m in re.finditer(r"""\bffi\s*\(\s*['"](?P<symbol_type>[^)]+?\W)(?P<symbol_name>\w+)\(""", data):
-                symbols.append(m.group("symbol_name"))
+            for m in re.finditer(r"""\bffi\s*\(\s*(?P<quote>['"])(?P<symbol_type>[^)]+?\W)(?P<symbol_name>\w+)(?P<args>.+?)(?P=quote)""", data):
+                symbols.append(FFISymbol(m.group("symbol_name"), m.group("symbol_type"), m.group("args")))
 
     symbols.sort()
 
@@ -224,12 +243,13 @@ def cmd_gen_ffi_exports(args):
     for p in patterns:
         print >>out, " *  ", p
     print >>out, " */\n"
+    print >>out, "#include <stdbool.h>\n"
     print >>out, "#include \"fw/src/mgos_dlsym.h\"\n"
 
     # Emit forward declarations of all symbols to be exported
     print >>out, "/* NOTE: signatures are fake */"
     for symbol in symbols:
-        print >>out, "void %s(void);" % symbol
+        print >>out, "%s;" % symbol.signature()
         #print >>out, "extern const void * const %s;" % symbol
 
     print >>out, """\
@@ -238,7 +258,7 @@ const struct mgos_ffi_export ffi_exports[] = {"""
 
     # Emit all symbols
     for symbol in symbols:
-        print >>out, "  {\"%s\", %s}," % (symbol, symbol)
+        print >>out, "  {\"%s\", %s}," % (symbol.symbol_name(), symbol.symbol_name())
 
     print >>out, "};"
     print >>out, "const int ffi_exports_cnt = %d;" % len(symbols)
