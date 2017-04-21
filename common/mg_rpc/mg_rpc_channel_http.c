@@ -83,8 +83,9 @@ static bool mg_rpc_channel_http_send_frame(struct mg_rpc_channel *ch,
           "Content-Type: application/json\r\nConnection: close\r\n");
       mg_printf(chd->nc, "%.*s\r\n", (int) result_tok.len, result_tok.ptr);
     } else if (error_code != 0) {
+      if (error_code != 404) error_code = 500;
       /* Got some error */
-      mg_http_send_error(chd->nc, 500, error_msg);
+      mg_http_send_error(chd->nc, error_code, error_msg);
     } else {
       /* Empty result - that is legal. */
       mg_send_response_line(
@@ -148,15 +149,9 @@ void mg_rpc_channel_http_recd_parsed_frame(struct mg_connection *nc,
   chd->nc = nc;
   chd->is_rest = true;
 
-  /* Use "IP_ADDRESS:PORT" as the source address */
-  char addr[32];
-  mg_sock_addr_to_str(&nc->sa, addr, sizeof(addr),
-                      MG_SOCK_STRINGIFY_IP | MG_SOCK_STRINGIFY_PORT);
-
   /* Prepare "parsed" frame */
   struct mg_rpc_frame frame;
   memset(&frame, 0, sizeof(frame));
-  frame.src = mg_mk_str(addr);
   frame.method = method;
   frame.args = args;
 

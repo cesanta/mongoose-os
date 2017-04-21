@@ -49,7 +49,7 @@ static void mgos_rpc_http_handler(struct mg_connection *nc, int ev,
     struct http_message *hm = (struct http_message *) ev_data;
     size_t prefix_len = sizeof(HTTP_URI_PREFIX) - 1;
     mg_rpc_add_channel(mgos_rpc_get_global(), mg_mk_str(""), ch,
-                       true /* is_trusted */, false /* send_hello */);
+                       true /* is_trusted */);
 
     /*
      * Handle the request. If there is method name after /rpc,
@@ -75,7 +75,7 @@ static void mgos_rpc_http_handler(struct mg_connection *nc, int ev,
   } else if (ev == MG_EV_WEBSOCKET_HANDSHAKE_DONE) {
     struct mg_rpc_channel *ch = mg_rpc_channel_ws_in(nc);
     mg_rpc_add_channel(mgos_rpc_get_global(), mg_mk_str(""), ch,
-                       true /* is_trusted */, false /* send_hello */);
+                       true /* is_trusted */);
     ch->ev_handler(ch, MG_RPC_CHANNEL_OPEN, NULL);
 #endif
   }
@@ -173,7 +173,7 @@ enum mgos_init_result mgos_rpc_init(void) {
       return MGOS_INIT_MG_RPC_FAILED;
     }
     mg_rpc_add_channel(c, mg_mk_str(MG_RPC_DST_DEFAULT), ch,
-                       false /* is_trusted */, true /* send_hello */);
+                       false /* is_trusted */);
 #if MGOS_ENABLE_WIFI
     if (get_cfg()->wifi.sta.enable) {
       mgos_wifi_add_on_change_cb(mg_rpc_wifi_ready, ch);
@@ -195,7 +195,7 @@ enum mgos_init_result mgos_rpc_init(void) {
         mg_rpc_channel_mqtt(mg_mk_str(get_cfg()->device.id));
     if (mch == NULL) return MGOS_INIT_MG_RPC_FAILED;
     mg_rpc_add_channel(c, mg_mk_str(MG_RPC_DST_DEFAULT), mch,
-                       sccfg->mqtt.is_trusted, false /* send_hello */);
+                       sccfg->mqtt.is_trusted);
   }
 #endif
 
@@ -210,8 +210,7 @@ enum mgos_init_result mgos_rpc_init(void) {
     if (mgos_uart_configure(scucfg->uart_no, &ucfg)) {
       struct mg_rpc_channel *uch =
           mg_rpc_channel_uart(scucfg->uart_no, scucfg->wait_for_start_frame);
-      mg_rpc_add_channel(c, mg_mk_str(""), uch, true /* is_trusted */,
-                         false /* send_hello */);
+      mg_rpc_add_channel(c, mg_mk_str(""), uch, true /* is_trusted */);
       uch->ch_connect(uch);
     } else {
       LOG(LL_ERROR, ("UART%d init failed", scucfg->uart_no));
@@ -223,8 +222,7 @@ enum mgos_init_result mgos_rpc_init(void) {
 #if MGOS_ENABLE_RPC_CHANNEL_LOOPBACK
   {
     struct mg_rpc_channel *lch = mg_rpc_channel_loopback();
-    mg_rpc_add_channel(c, mg_mk_str("RPC.LOCAL"), lch, true /* is_trusted */,
-                       false /* send_hello */);
+    mg_rpc_add_channel(c, mg_mk_str("RPC.LOCAL"), lch, true /* is_trusted */);
     lch->ch_connect(lch);
   }
 #endif

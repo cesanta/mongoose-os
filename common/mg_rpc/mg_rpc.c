@@ -40,7 +40,6 @@ struct mg_rpc_channel_info {
   struct mg_str dst;
   struct mg_rpc_channel *ch;
   unsigned int is_trusted : 1;
-  unsigned int send_hello : 1;
   unsigned int is_open : 1;
   unsigned int is_busy : 1;
   SLIST_ENTRY(mg_rpc_channel_info) channels;
@@ -78,8 +77,18 @@ static void mg_rpc_call_observers(struct mg_rpc *c, enum mg_rpc_event ev,
   }
 }
 
-struct mg_rpc_channel_info *mg_rpc_get_channel(struct mg_rpc *c,
-                                               const struct mg_str dst) {
+static struct mg_rpc_channel_info *mg_rpc_get_channel_info(
+    struct mg_rpc *c, const struct mg_rpc_channel *ch) {
+  struct mg_rpc_channel_info *ci;
+  if (c == NULL) return NULL;
+  SLIST_FOREACH(ci, &c->channels, channels) {
+    if (ci->ch == ch) return ci;
+  }
+  return NULL;
+}
+
+static struct mg_rpc_channel_info *mg_rpc_get_channel_info_by_dst(
+    struct mg_rpc *c, const struct mg_str dst) {
   struct mg_rpc_channel_info *ci;
   struct mg_rpc_channel_info *default_ch = NULL;
   if (c == NULL) return NULL;
@@ -100,6 +109,7 @@ static bool mg_rpc_handle_request(struct mg_rpc *c,
   ri->id = frame->id;
   ri->src = mg_strdup(frame->src);
   ri->tag = mg_strdup(frame->tag);
+  ri->ch = ci->ch;
 
   struct mg_rpc_handler_info *hi;
   SLIST_FOREACH(hi, &c->handlers, handlers) {
@@ -197,16 +207,10 @@ static bool mg_rpc_handle_frame(struct mg_rpc *c,
                                 struct mg_rpc_channel_info *ci,
                                 const struct mg_rpc_frame *frame) {
   if (!ci->is_open) {
-    LOG(LL_ERROR, ("%p Ignored frame from close channel (%s)", ci->ch,
+    LOG(LL_ERROR, ("%p Ignored frame from closed channel (%s)", ci->ch,
                    ci->ch->get_type(ci->ch)));
     return false;
   }
-
-  if (frame->src.len == 0) {
-    LOG(LL_ERROR, ("src is required"));
-    return false;
-  }
-
   if (frame->dst.len != 0) {
     if (mg_strcmp(frame->dst, mg_mk_str(c->cfg->id)) != 0) {
       LOG(LL_ERROR, ("Wrong dst: '%.*s'", (int) frame->dst.len, frame->dst.p));
@@ -245,7 +249,7 @@ static bool mg_rpc_dispatch_frame(struct mg_rpc *c, const struct mg_str dst,
 static void mg_rpc_process_queue(struct mg_rpc *c) {
   struct mg_rpc_queue_entry *qe, *tqe;
   STAILQ_FOREACH_SAFE(qe, &c->queue, queue, tqe) {
-    struct mg_rpc_channel_info *ci = mg_rpc_get_channel(c, qe->dst);
+    struct mg_rpc_channel_info *ci = mg_rpc_get_channel_info_by_dst(c, qe->dst);
     if (mg_rpc_send_frame(ci, qe->frame)) {
       STAILQ_REMOVE(&c->queue, qe, mg_rpc_queue_entry, queue);
       free((void *) qe->dst.p);
@@ -254,66 +258,6 @@ static void mg_rpc_process_queue(struct mg_rpc *c) {
       c->queue_len--;
     }
   }
-}
-
-static void mg_rpc_hello_handler(struct mg_rpc_request_info *ri, void *cb_arg,
-                                 struct mg_rpc_frame_info *fi,
-                                 struct mg_str args) {
-  mg_rpc_send_responsef(ri, "{time:%ld}", (long) mg_time());
-  ri = NULL;
-  (void) cb_arg;
-  (void) fi;
-  (void) args;
-}
-
-static void mg_rpc_hello_cb(struct mg_rpc *c, void *cb_arg,
-                            struct mg_rpc_frame_info *fi, struct mg_str result,
-                            int error_code, struct mg_str error_msg) {
-  struct mg_rpc_channel_info *ci = (struct mg_rpc_channel_info *) cb_arg;
-  if (error_code != 0) {
-    LOG(LL_ERROR, ("%p Hello error: %d %.*s", ci->ch, error_code,
-                   (int) error_msg.len, error_msg.p));
-    ci->ch->ch_close(ci->ch);
-  } else {
-    long timestamp = 0;
-    json_scanf(result.p, result.len, "{time:%ld", &timestamp);
-    ci->is_open = true;
-    ci->is_busy = false;
-    LOG(LL_DEBUG, ("time %ld", timestamp));
-    LOG(LL_DEBUG, ("%p CHAN OPEN", ci->ch));
-    mg_rpc_process_queue(c);
-    if (ci->dst.len > 0) {
-      mg_rpc_call_observers(c, MG_RPC_EV_CHANNEL_OPEN, &ci->dst);
-    }
-  }
-  (void) c;
-  (void) fi;
-}
-
-static bool mg_rpc_send_hello(struct mg_rpc *c,
-                              struct mg_rpc_channel_info *ci) {
-  struct mbuf fb;
-  struct json_out fout = JSON_OUT_MBUF(&fb);
-  int64_t id = mg_rpc_get_id(c);
-  struct mg_rpc_sent_request_info *ri =
-      (struct mg_rpc_sent_request_info *) calloc(1, sizeof(*ri));
-  ri->id = id;
-  ri->cb = mg_rpc_hello_cb;
-  ri->cb_arg = ci;
-  mbuf_init(&fb, 25);
-  json_printf(&fout, "method:%Q", MG_RPC_HELLO_CMD);
-  va_list dummy;
-  memset(&dummy, 0, sizeof(dummy));
-  bool result = mg_rpc_dispatch_frame(c, mg_mk_str(""), id, mg_mk_str(""), ci,
-                                      false /* enqueue */,
-                                      mg_mk_str_n(fb.buf, fb.len), NULL, dummy);
-  if (result) {
-    SLIST_INSERT_HEAD(&c->requests, ri, requests);
-  } else {
-    /* Could not send or queue, drop on the floor. */
-    free(ri);
-  }
-  return result;
 }
 
 static void mg_rpc_ev_handler(struct mg_rpc_channel *ch,
@@ -327,21 +271,12 @@ static void mg_rpc_ev_handler(struct mg_rpc_channel *ch,
   if (ci == NULL) return;
   switch (ev) {
     case MG_RPC_CHANNEL_OPEN: {
-      if (ci->send_hello) {
-        ci->is_open = true; /* Pretend, to allow sending... */
-        if (!mg_rpc_send_hello(c, ci)) {
-          /* Something went wrong, drop the channel. */
-          ci->ch->ch_close(ci->ch);
-        }
-        ci->is_open = false; /* ...but no, not yet. */
-      } else {
-        ci->is_open = true;
-        ci->is_busy = false;
-        LOG(LL_DEBUG, ("%p CHAN OPEN (%s)", ch, ch->get_type(ch)));
-        mg_rpc_process_queue(c);
-        if (ci->dst.len > 0) {
-          mg_rpc_call_observers(c, MG_RPC_EV_CHANNEL_OPEN, &ci->dst);
-        }
+      ci->is_open = true;
+      ci->is_busy = false;
+      LOG(LL_DEBUG, ("%p CHAN OPEN (%s)", ch, ch->get_type(ch)));
+      mg_rpc_process_queue(c);
+      if (ci->dst.len > 0) {
+        mg_rpc_call_observers(c, MG_RPC_EV_CHANNEL_OPEN, &ci->dst);
       }
       break;
     }
@@ -397,14 +332,12 @@ static void mg_rpc_ev_handler(struct mg_rpc_channel *ch,
 }
 
 void mg_rpc_add_channel(struct mg_rpc *c, const struct mg_str dst,
-                        struct mg_rpc_channel *ch, bool is_trusted,
-                        bool send_hello) {
+                        struct mg_rpc_channel *ch, bool is_trusted) {
   struct mg_rpc_channel_info *ci =
       (struct mg_rpc_channel_info *) calloc(1, sizeof(*ci));
   if (dst.len != 0) ci->dst = mg_strdup(dst);
   ci->ch = ch;
   ci->is_trusted = is_trusted;
-  ci->send_hello = send_hello;
   ch->mg_rpc_data = c;
   ch->ev_handler = mg_rpc_ev_handler;
   SLIST_INSERT_HEAD(&c->channels, ci, channels);
@@ -435,8 +368,6 @@ struct mg_rpc *mg_rpc_create(struct mg_rpc_cfg *cfg) {
   SLIST_INIT(&c->requests);
   SLIST_INIT(&c->observers);
   STAILQ_INIT(&c->queue);
-
-  mg_rpc_add_handler(c, MG_RPC_HELLO_CMD, "", mg_rpc_hello_handler, NULL);
 
   return c;
 }
@@ -471,7 +402,7 @@ static bool mg_rpc_dispatch_frame(struct mg_rpc *c, const struct mg_str dst,
                                   const char *payload_jsonf, va_list ap) {
   struct mbuf fb;
   struct json_out fout = JSON_OUT_MBUF(&fb);
-  if (ci == NULL) ci = mg_rpc_get_channel(c, dst);
+  if (ci == NULL) ci = mg_rpc_get_channel_info_by_dst(c, dst);
   bool result = false;
   mbuf_init(&fb, 100);
   json_printf(&fout, "{");
@@ -555,8 +486,9 @@ bool mg_rpc_send_responsef(struct mg_rpc_request_info *ri,
   }
   va_list ap;
   va_start(ap, result_json_fmt);
+  struct mg_rpc_channel_info *ci = mg_rpc_get_channel_info(ri->rpc, ri->ch);
   bool result = mg_rpc_dispatch_frame(
-      ri->rpc, ri->src, ri->id, ri->tag, NULL /* ci */, true /* enqueue */,
+      ri->rpc, ri->src, ri->id, ri->tag, ci, true /* enqueue */,
       mg_mk_str_n(prefb.buf, prefb.len), result_json_fmt, ap);
   va_end(ap);
   mg_rpc_free_request_info(ri);
@@ -584,8 +516,9 @@ bool mg_rpc_send_errorf(struct mg_rpc_request_info *ri, int error_code,
   }
   va_list dummy;
   memset(&dummy, 0, sizeof(dummy));
+  struct mg_rpc_channel_info *ci = mg_rpc_get_channel_info(ri->rpc, ri->ch);
   bool result = mg_rpc_dispatch_frame(
-      ri->rpc, ri->src, ri->id, ri->tag, NULL /* ci */, true /* enqueue */,
+      ri->rpc, ri->src, ri->id, ri->tag, ci, true /* enqueue */,
       mg_mk_str_n(prefb.buf, prefb.len), NULL, dummy);
   mg_rpc_free_request_info(ri);
   return result;
@@ -606,13 +539,13 @@ void mg_rpc_add_handler(struct mg_rpc *c, const char *method,
 
 bool mg_rpc_is_connected(struct mg_rpc *c) {
   struct mg_rpc_channel_info *ci =
-      mg_rpc_get_channel(c, mg_mk_str(MG_RPC_DST_DEFAULT));
+      mg_rpc_get_channel_info_by_dst(c, mg_mk_str(MG_RPC_DST_DEFAULT));
   return (ci != NULL && ci->is_open);
 }
 
 bool mg_rpc_can_send(struct mg_rpc *c) {
   struct mg_rpc_channel_info *ci =
-      mg_rpc_get_channel(c, mg_mk_str(MG_RPC_DST_DEFAULT));
+      mg_rpc_get_channel_info_by_dst(c, mg_mk_str(MG_RPC_DST_DEFAULT));
   return (ci != NULL && ci->is_open && !ci->is_busy);
 }
 

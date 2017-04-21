@@ -41,12 +41,9 @@ struct mg_rpc *mg_rpc_create(struct mg_rpc_cfg *cfg);
  * end. A "default" channel, if present, will be used for frames that don't have
  * a better match.
  * If is_trusted is true, certain privileged commands will be allowed.
- * If send_hello is true, then a "hello" is sent to the channel and a successful
- * reply is required before it can be used.
  */
 void mg_rpc_add_channel(struct mg_rpc *c, const struct mg_str dst,
-                        struct mg_rpc_channel *ch, bool is_trusted,
-                        bool send_hello);
+                        struct mg_rpc_channel *ch, bool is_trusted);
 #define MG_RPC_DST_DEFAULT "*"
 
 /* Invokes connect method on all channels of this instance. */
@@ -88,10 +85,16 @@ bool mg_rpc_callf(struct mg_rpc *c, const struct mg_str method,
 struct mg_rpc_request_info {
   struct mg_rpc *rpc;
   int64_t id;           /* Request id. */
-  struct mg_str src;    /* Source of the request. */
+  struct mg_str src;    /* Id of the request sender, if provided. */
   struct mg_str tag;    /* Request tag. Opaque, should be passed back as is. */
   const char *args_fmt; /* Arguments format string */
   void *user_data;      /* Place to store user pointer. Not used by mg_rpc. */
+
+  /*
+   * Channel this request was received on. Will be used to route the response
+   * if present and valid, otherwise src is used to find a suitable channel.
+   */
+  struct mg_rpc_channel *ch;
 };
 
 /*

@@ -92,24 +92,21 @@ static void frame_sent(void *arg) {
 static bool mg_rpc_channel_mqtt_send_frame(struct mg_rpc_channel *ch,
                                            const struct mg_str f) {
   struct mg_connection *nc = mgos_mqtt_get_global_conn();
-  if (nc != NULL) {
-    struct json_token dst;
-    char *topic = NULL;
-    if (json_scanf(f.p, f.len, "{dst:%T}", &dst) != 1) {
-      LOG(LL_ERROR,
-          ("Cannot reply to RPC over MQTT, no dst: [%.*s]", (int) f.len, f.p));
-      return false;
-    }
-    topic = mgos_rpc_mqtt_topic_name(mg_mk_str_n(dst.ptr, dst.len), false);
-    s_packet_id++;
-    if (s_packet_id == 0) s_packet_id++;
-    mg_mqtt_publish(nc, topic, s_packet_id, MG_MQTT_QOS(1), f.p, f.len);
-    LOG(LL_DEBUG, ("Published [%.*s] to topic [%s]", (int) f.len, f.p, topic));
-    free(topic);
-    mgos_invoke_cb(frame_sent, ch, false /* from_isr */);
-    return true;
+  if (nc == NULL) return false;
+  struct json_token dst;
+  if (json_scanf(f.p, f.len, "{dst:%T}", &dst) != 1) {
+    LOG(LL_ERROR,
+        ("Cannot reply to RPC over MQTT, no dst: [%.*s]", (int) f.len, f.p));
+    return false;
   }
-  return false;
+  char *topic = mgos_rpc_mqtt_topic_name(mg_mk_str_n(dst.ptr, dst.len), false);
+  s_packet_id++;
+  if (s_packet_id == 0) s_packet_id++;
+  mg_mqtt_publish(nc, topic, s_packet_id, MG_MQTT_QOS(1), f.p, f.len);
+  LOG(LL_DEBUG, ("Published [%.*s] to topic [%s]", (int) f.len, f.p, topic));
+  free(topic);
+  mgos_invoke_cb(frame_sent, ch, false /* from_isr */);
+  return true;
 }
 
 static void mg_rpc_channel_mqtt_ch_close(struct mg_rpc_channel *ch) {
