@@ -57,7 +57,7 @@
   var editor = mkeditor();
   $(document).off('click', '.file');
   $(document).on('click', '.file', function(ev) {
-    var $t = $(ev.target);
+    var $t = $(ev.target).closest('.file');
     var name = $t.attr('rel');
     $.ajax({url: '/get', data: {name: name}}).done(function(json) {
       $('.file').removeClass('selected');

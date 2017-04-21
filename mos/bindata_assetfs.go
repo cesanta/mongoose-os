@@ -5079,7 +5079,7 @@ var _web_rootPage_filesHtml = []byte(`<div data-title="Device File Manager" styl
   var editor = mkeditor();
   $(document).off('click', '.file');
   $(document).on('click', '.file', function(ev) {
-    var $t = $(ev.target);
+    var $t = $(ev.target).closest('.file');
     var name = $t.attr('rel');
     $.ajax({url: '/get', data: {name: name}}).done(function(json) {
       $('.file').removeClass('selected');
@@ -5228,7 +5228,7 @@ func web_rootPage_filesHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_files.html", size: 7487, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_files.html", size: 7504, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
