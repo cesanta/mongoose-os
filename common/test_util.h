@@ -48,17 +48,25 @@ void _strfail(const char *a, const char *e, int len);
     if (!(expr)) FAIL(#expr, __LINE__); \
   } while (0)
 
-#define RUN_TEST(test)                         \
-  do {                                         \
-    const char *msg = NULL;                    \
-    if (strstr(#test, filter)) {               \
-      double elapsed = cs_time();              \
-      msg = test();                            \
-      elapsed = cs_time() - elapsed;           \
-      printf("  [%.3f] %s\n", elapsed, #test); \
-      *total_elapsed += elapsed;               \
-    }                                          \
-    if (msg) return msg;                       \
+/*
+ * Run test function, use its name as the test name to print
+ */
+#define RUN_TEST(test) RUN_TEST_WNAME(test, #test)
+
+/*
+ * Run test function, use the provided name as the test name to print
+ */
+#define RUN_TEST_WNAME(test, test_name)            \
+  do {                                             \
+    const char *msg = NULL;                        \
+    if (strstr(test_name, filter)) {               \
+      double elapsed = cs_time();                  \
+      msg = test();                                \
+      elapsed = cs_time() - elapsed;               \
+      printf("  [%.3f] %s\n", elapsed, test_name); \
+      *total_elapsed += elapsed;                   \
+    }                                              \
+    if (msg) return msg;                           \
   } while (0)
 
 /* VC6 doesn't know how to cast an unsigned 64-bit int to double */
