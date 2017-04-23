@@ -134,6 +134,10 @@ func (dc *DevConn) Disconnect(ctx context.Context) error {
 	return err
 }
 
+func (dc *DevConn) IsConnected() bool {
+	return dc.RPC != nil
+}
+
 func (dc *DevConn) Connect(ctx context.Context, reconnect bool) error {
 	if dc.JunkHandler == nil {
 		dc.JunkHandler = func(junk []byte) {}
