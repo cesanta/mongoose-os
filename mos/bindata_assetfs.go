@@ -3537,7 +3537,7 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
       </nav>
 
       <center>
-        <div id="main-title"><img src="/images/logo_blue.png" height="50px"> installer</div>
+        <div id="main-title"><img src="/images/logo_blue.png" height="50px"> Mongoose OS installer</div>
       </center>
 
  <div class="row wizard">
@@ -3892,7 +3892,7 @@ func web_rootIndexHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/index.html", size: 16393, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/index.html", size: 16405, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
