@@ -24,6 +24,7 @@
   };
   loadConfig();
 
+  $(document).off('click', '#config-save-button');
   $(document).on('click', '#config-save-button', function() {
     var text = editor.getValue();
     try {

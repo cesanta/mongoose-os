@@ -4995,6 +4995,7 @@ var _web_rootPage_configurationHtml = []byte(`<div data-title="Device configurat
   };
   loadConfig();
 
+  $(document).off('click', '#config-save-button');
   $(document).on('click', '#config-save-button', function() {
     var text = editor.getValue();
     try {
@@ -5028,7 +5029,7 @@ func web_rootPage_configurationHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_configuration.html", size: 1528, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_configuration.html", size: 1579, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
