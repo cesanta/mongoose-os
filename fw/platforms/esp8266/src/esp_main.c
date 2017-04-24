@@ -236,7 +236,7 @@ void sdk_init_done_cb(void) {
 #endif
 
 void user_init(void) {
-  uart_div_modify(0, UART_CLK_FREQ / 115200);
+  uart_div_modify(0, UART_CLK_FREQ / MGOS_DEBUG_UART_BAUD_RATE);
   esp_adc_init();
   srand(system_get_time() ^ system_get_rtc_time() ^ esp_adc_value_at_boot());
   os_timer_disarm(&s_mg_poll_tmr);
@@ -261,7 +261,7 @@ void user_init(void) {
 void user_rf_pre_init() {
   /* Early init app hook. */
   system_update_cpu_freq(SYS_CPU_160MHZ);
-  uart_div_modify(0, UART_CLK_FREQ / 115200);
+  uart_div_modify(0, UART_CLK_FREQ / MGOS_DEBUG_UART_BAUD_RATE);
   mgos_app_preinit();
 }
 

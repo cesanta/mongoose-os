@@ -15,6 +15,10 @@
 extern "C" {
 #endif /* __cplusplus */
 
+#ifndef MGOS_DEBUG_UART_BAUD_RATE
+#define MGOS_DEBUG_UART_BAUD_RATE 115200
+#endif
+
 enum mgos_init_result mgos_debug_uart_init(void);
 void mgos_debug_write(int fd, const void *buf, size_t len);
 void mgos_debug_flush(void);

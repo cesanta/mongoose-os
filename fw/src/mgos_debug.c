@@ -16,10 +16,6 @@
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_uart.h"
 
-#ifndef MGOS_DEBUG_UART_BAUD_RATE
-#define MGOS_DEBUG_UART_BAUD_RATE 115200
-#endif
-
 static int8_t s_stdout_uart = MGOS_DEBUG_UART;
 static int8_t s_stderr_uart = MGOS_DEBUG_UART;
 static int8_t s_uart_suspended = 0;
