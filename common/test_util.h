@@ -118,6 +118,26 @@ void _strfail(const char *a, const char *e, int len);
     }                                                             \
   } while (0)
 
+/* Assert that actual == expected, where both are pointers */
+#define ASSERT_PTREQ(actual, expected)                            \
+  do {                                                            \
+    num_tests++;                                                  \
+    if (actual != expected) {                                     \
+      printf("%p != %p\n", actual, expected);                     \
+      FAIL("ASSERT_PTREQ(" #actual ", " #expected ")", __LINE__); \
+    }                                                             \
+  } while (0)
+
+/* Assert that actual != expected, where both are pointers */
+#define ASSERT_PTRNEQ(actual, expected)                            \
+  do {                                                             \
+    num_tests++;                                                   \
+    if (actual == expected) {                                      \
+      printf("%p == %p\n", actual, expected);                      \
+      FAIL("ASSERT_PTRNEQ(" #actual ", " #expected ")", __LINE__); \
+    }                                                              \
+  } while (0)
+
 /* Same as STREQ, but only expected is NUL-terminated. */
 #define ASSERT_STREQ_NZ(actual, expected)                            \
   do {                                                               \
