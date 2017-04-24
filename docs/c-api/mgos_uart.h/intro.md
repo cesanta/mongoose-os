@@ -10,6 +10,7 @@ items:
   - { name: mgos_uart_config_set_tx_params.md }
   - { name: mgos_uart_configure.md }
   - { name: mgos_uart_flush.md }
+  - { name: mgos_uart_printf.md }
   - { name: mgos_uart_read.md }
   - { name: mgos_uart_read_avail.md }
   - { name: mgos_uart_set_rx_enabled.md }

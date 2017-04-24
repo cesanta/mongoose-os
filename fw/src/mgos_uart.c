@@ -5,6 +5,8 @@
 
 #include "fw/src/mgos_uart.h"
 
+#include <stdlib.h>
+
 #include "common/cs_dbg.h"
 
 #include "fw/src/mgos_hal.h"
@@ -58,6 +60,22 @@ size_t mgos_uart_write(int uart_no, const void *buf, size_t len) {
   mgos_unlock();
   mgos_uart_schedule_dispatcher(uart_no, false /* from_isr */);
   return written;
+}
+
+int mgos_uart_printf(int uart_no, const char *fmt, ...) {
+  int len;
+  va_list ap;
+  char buf[100], *data = buf;
+  struct mgos_uart_state *us = s_uart_state[uart_no];
+  if (us == NULL) return 0;
+  va_start(ap, fmt);
+  len = mg_avprintf(&data, sizeof(buf), fmt, ap);
+  va_end(ap);
+  if (len > 0) {
+    len = mgos_uart_write(uart_no, data, len);
+  }
+  if (data != buf) free(data);
+  return len;
 }
 
 size_t mgos_uart_read(int uart_no, void *buf, size_t len) {

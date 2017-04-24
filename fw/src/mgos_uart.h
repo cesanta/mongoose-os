@@ -81,6 +81,14 @@ size_t mgos_uart_write(int uart_no, const void *buf, size_t len);
 size_t mgos_uart_write_avail(int uart_no);
 
 /*
+ * Write data to UART, printf style.
+ * Note: currently this requires that data is fully rendered in memory before
+ * sending. There is no fixed limit as heap allocation is used, but be careful
+ * when printing longer strings.
+ */
+int mgos_uart_printf(int uart_no, const char *fmt, ...);
+
+/*
  * Read data from UART input buffer.
  * The _mbuf variant is a convenice function that reads into an mbuf.
  * Note: unlike write, read will not block if there are not enough bytes in the
