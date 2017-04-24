@@ -135,7 +135,7 @@ func (dc *DevConn) Disconnect(ctx context.Context) error {
 }
 
 func (dc *DevConn) IsConnected() bool {
-	return dc.RPC != nil
+	return dc.RPC != nil && dc.RPC.IsConnected()
 }
 
 func (dc *DevConn) Connect(ctx context.Context, reconnect bool) error {

@@ -2,9 +2,11 @@ html, body { height: 100%; }
 body { color: #666;  background-color: #eee; }
 
 /* DASHBOARD STYLES */
-#top_nav { line-height: 36px; margin: 0 10px; border-bottom: 1px solid #ccc; position: relative; }
-#breadcrumb { font-size: 24px; text-transform: capitalize !important; }
-#devinfo { padding-right: 5em; }
+.left_col.menu_fixed { top: 48px; overflow-y: auto; }
+.side-menu { margin-top: 0 !important;}
+#top_nav { line-height: 36px; margin: 0 10px 0 -80px; border-bottom: 1px solid #ccc; position: relative; }
+#breadcrumb { font-size: 20px; text-transform: capitalize !important; }
+#devinfo { min-width: 15em; display: inline-block; }
 #page { margin-left: 80px; margin-right: 1em; }
 #d1 { display: flex; flex-direction: column; }
 #app_view { flex: 0 0 auto; min-height: 200px; position: relative; }
@@ -15,6 +17,9 @@ body { color: #666;  background-color: #eee; }
 .main-left-column { height: 100%; padding: 0; margin: 0; }
 .main-right-column { height: 100%; padding: 0; margin: 0; }
 .stderr { color: #77e; }
+.ui-pnotify { right: 22px; top: 82px; }
+.devonline { color: green; }
+.devoffline { color: red; }
 
 /* FILE MANAGER PAGE */
 #file-list { overflow-y: auto; }
@@ -23,8 +28,8 @@ body { color: #666;  background-color: #eee; }
 #device-logs { font-size: 90%; overflow-y: auto; line-height: 1.2em; background: #fff; width: 100%; top: 32px;}
 #editor { height: 100%; background: #fff; border-radius: 0.3em; }
 .file .file-size { color: silver; }
-.file.is_js { color: #3cb371; }
-.file.is_json { color: #ffa500; }
+.file.is_js { color: #ffa500; }
+.file.is_json { color: #3cb371; }
 .file.is_api .file-name { color: silver; }
 .file.selected { background: #f0f0f0; }
 

@@ -326,7 +326,24 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 	http.HandleFunc("/getports", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		httpReply(w, enumerateSerialPorts(), nil)
+		type GetPortsResult struct {
+			IsConnected bool
+			CurrentPort string
+			Ports       []string
+		}
+		reply := GetPortsResult{false, "", enumerateSerialPorts()}
+		if devConn != nil {
+			reply.CurrentPort = devConn.ConnectAddr
+			reply.IsConnected = devConn.IsConnected()
+		}
+
+		httpReply(w, reply, nil)
+	})
+
+	http.HandleFunc("/list_aws_things", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		reply, err := getAWSIoTThings()
+		httpReply(w, reply, err)
 	})
 
 	http.HandleFunc("/infolog", func(w http.ResponseWriter, r *http.Request) {

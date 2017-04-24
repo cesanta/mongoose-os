@@ -170,6 +170,24 @@ func getAWSRegions() []string {
 	return regions
 }
 
+func getAWSIoTThings() (string, error) {
+	iotSvc, err := getSvc()
+	if err != nil {
+		return "", errors.Trace(err)
+	}
+	things, err := iotSvc.ListThings(&iot.ListThingsInput{})
+	if err != nil {
+		return "", errors.Trace(err)
+	}
+	return things.String(), nil
+	// var policies []string
+	// for _, p := range lpr.Policies {
+	// 	policies = append(policies, *p.PolicyName)
+	// }
+	// sort.Strings(policies)
+	// return []string{}, nil
+}
+
 func getAWSIoTPolicyNames() ([]string, error) {
 	iotSvc, err := getSvc()
 	if err != nil {

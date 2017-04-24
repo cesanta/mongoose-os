@@ -1,0 +1,32 @@
+<div data-title="AWS IoT Dashboard" style="height: 100%;">
+  <div class="upcontrol col-sm-6" style="top: 5px; background: #fff; ">
+  <table class="table table-responsive">
+  <thead class="thead-info">
+    <tr>
+      <th>Name</th>
+      <th>Version</th>
+      <th>Attributes</th>
+    </tr>
+  </thead>
+  <tbody id="thing_list">
+  </tbody>
+  </table>
+  </div>
+</div>
+
+<script>
+  var loadThings = function() {
+    $.ajax({url: '/list_aws_things'}).then(function(data) {
+      var list = eval(data.result);
+      $.each(list, function (i, v) {
+        var tr = $('<tr class="pointer"/>');
+        $('<td/>').text(v.ThingName).appendTo(tr);
+        $('<td/>').text(v.Version).appendTo(tr);
+        $('<td/>').text(JSON.stringify(v.Attributes)).appendTo(tr);
+        tr.prependTo('#thing_list');
+      });
+    });
+  };
+  loadThings();
+
+</script>

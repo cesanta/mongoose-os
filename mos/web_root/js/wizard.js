@@ -214,56 +214,6 @@
   $('#input-policy').val(getCookie('policy'));
   $('#input-mqtt').val(getCookie('mqtt') || defaultMqttServer);
 
-  var portEdited = false;
-  $(document).on('keyup paste', '#input-serial', function() {
-    portEdited = !!$('#input-serial').val();
-  });
-
-  var formatDevInfo = function(json) {
-    return '<b>' + json.arch + '/' + json.fw_id + '</b>';
-  };
-
-  var probeDevice = function() {
-    $.ajax({
-      url: '/call', 
-      timeout: 1000,
-      data: {method: 'Sys.GetInfo', timeout: 1}
-    }).then(function(data) {
-      $('#devinfo').html(formatDevInfo(data.result));
-      $('#found-device-info').fadeIn();
-    }).fail(function() {
-      $('#found-device-info').fadeOut();
-    });
-  };
-
-  // Repeatedly pull list of serial ports when we're on the first tab
-  var portList = '';
-  setInterval(function() {
-    var thisPane = $('.tab-pane.active').attr('id');
-    if (thisPane != 'tab1') return;
-    $.ajax({url: '/getports'}).then(function(json) {
-      $('#dropdown-ports').empty();
-      if (json.result && json.result.length > 0) {
-        $.each(json.result, function(i, v) {
-          $('<li><a href="#">' + v + '</a></li>').appendTo('#dropdown-ports');
-        });
-        if (!$('#input-serial').val()) {
-          $('#input-serial').val(json.result[0] || '');
-        }
-        $('#noports-warning').fadeOut();
-        var ports = JSON.stringify(json.result);
-        if (ports != portList) {
-          portList = ports;
-          probeDevice();
-        }
-      } else {
-        if (!portEdited) $('#input-serial').val('');
-        $('#noports-warning').fadeIn();
-        $('#found-device-info').fadeOut();
-      }
-    });
-  }, 1000);
-
   // Let the tool know the port we want to use
   $.ajax({url: '/connect'});
 

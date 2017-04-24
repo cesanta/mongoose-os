@@ -76,18 +76,6 @@ $(document).ready(function() {
   link.click();
 });
 
-$.ajax({url: '/call', data: {method: 'Sys.GetInfo'}}).then(function(data) {
-  var json = data.result;
-  var ip = json.wifi.sta_ip || json.wifi.ap_ip;
-  let html = json.arch + '/' + json.fw_id + ', IP: ';
-  if (ip) {
-    html += '<a target="_blank" href=http://' + ip + '>' + ip + '</a>';
-  } else {
-    html += 'n/a';
-  }
-  $('#devinfo').html(html);
-});
-
 $('#app_view').resizable({
   handleSelector: ".splitter-horizontal",
   resizeWidth: false

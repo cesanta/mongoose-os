@@ -30,6 +30,7 @@ type Codec interface {
 
 // ConnectionInfo provides information about the connection.
 type ConnectionInfo struct {
+	IsConnected bool
 	// TLS indicates if the connection uses TLS or not.
 	TLS bool
 	// RemoteAddr is the address of the remote peer.

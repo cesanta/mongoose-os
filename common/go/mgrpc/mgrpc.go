@@ -21,6 +21,7 @@ type MgRPC interface {
 		ctx context.Context, dst string, cmd *frame.Command,
 	) (*frame.Response, error)
 	Disconnect(ctx context.Context) error
+	IsConnected() bool
 }
 
 type mgRPCImpl struct {
@@ -304,4 +305,9 @@ func (r *mgRPCImpl) SendHello(dst string) {
 	glog.V(2).Infof("Sending hello to %q", dst)
 	resp, err := r.Call(context.Background(), dst, hello)
 	glog.V(2).Infof("Hello response: %+v, %s", resp, err)
+}
+
+func (r *mgRPCImpl) IsConnected() bool {
+	info := r.codec.Info()
+	return info.IsConnected
 }

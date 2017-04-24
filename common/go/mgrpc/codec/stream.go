@@ -311,5 +311,5 @@ func (scc *streamConnectionCodec) MaxNumFrames() int {
 }
 
 func (scc *streamConnectionCodec) Info() ConnectionInfo {
-	return ConnectionInfo{RemoteAddr: scc.conn.RemoteAddr()}
+	return ConnectionInfo{RemoteAddr: scc.conn.RemoteAddr(), IsConnected: true}
 }

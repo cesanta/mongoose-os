@@ -28,6 +28,8 @@
                 <li><a tab="configuration"><i class="fa fa-gears"></i> Configuration </a></li>
                 <li><a tab="rpc"><i class="fa fa-puzzle-piece"></i> RPC API</a></li>
                 <li><a tab="terminal"><i class="fa fa-terminal"></i> Terminal</a></li>
+                <!-- <li class="separator"></li> -->
+                <li><a tab="aws"><i class="fa fa-amazon"></i> AWS IoT</a></li>
               </ul>
             </div>
           </div>
@@ -37,12 +39,35 @@
       <div id="page" style="position: relative; height: 100%;">
 
         <div id="top_nav">
-          <img src="/images/logo_blue.png" height="36" style="margin-bottom: 2px; margin-right: 10px; filter: gray; filter: grayscale(1); -webkit-filter: grayscale(1); opacity: 0.33;">
+          <div style="display: inline-block; padding: 0; height: 40px; width: 70px; margin-right: 18px; vertical-align: top;">
+            <img src="/images/logo_blue.png" style="height: 24px; display: block; margin: 2px auto;">
+            <div style="font-size: 10px; margin: 0 0 0 3px; padding: 0; line-height: 10px; height: 12px; color: #337ab7; vertical-align: top; ">Mongoose OS</div>
+          </div>
           <span id="breadcrumb"></span>
           <span id="top_spinner" style="position: relative; margin-left: 2em;"></span>
           <div class="pull-right">
-            Device: <span id="devinfo"></span>
 
+            <span id="devinfo"></span>
+            &nbsp;
+            <span class="form form-inline form-sm">
+              <div class="form-group form-group-inline">
+                <div class="input-group" style="margin-top: 6px;">
+                  <span class="input-group-addon" id="devconn-indicator" style="font-size: 12px; padding: 0 0.6em;"><i class="fa fa-circle"></i></span>
+                  <input type="text" class="form-control form-control-sm" style="height: 26px; font-size: 12px; width: 17em; box-shadow: none;" id="input-serial" placeholder="type device address">
+                  <div class="input-group-btn" style="line-height: 8px;">
+                    <div class="btn-group dropdown">
+                      <button type="button" class="btn btn-default dropdown-toggle" style="line-height: 12px;" data-toggle="dropdown">
+                        <span class="caret" xstyle="margin: 0; padding: 0;"></span>
+                      </button>
+                      <ul class="dropdown-menu" id="dropdown-ports"></ul>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </span>
+            &nbsp;
+            |
+            &nbsp;
             <a href="/"><i class="fa fa-magic"></i> wizard</a> &nbsp;|&nbsp;
             <a target="_blank" href="http://forum.cesanta.com"><i class="fa fa-comments-o"></i> forum</a> &nbsp;|&nbsp;
             <a target="_blank" href="https://mongoose-os.com/docs/#/overview/"><i class="fa fa-map-o"></i> docs</a>
