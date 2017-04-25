@@ -43,9 +43,13 @@
 
   var formatDevInfo = function(json) {
     var ip = json.wifi.sta_ip || json.wifi.ap_ip;
-    var id = '', m = json.fw_id.match(/(.+?)-/);
-    if (m) id = m[1];
-    let html = 'arch:' + json.arch + ', built:' + id + ', ip:';
+    var id = '', m = json.fw_id.match(/(....)(..)(..)-/);
+    if (m) {
+      id = moment(m[1] + '-' + m[2] + '-' + m[3]).format('MMMDD');
+    }
+    let html = '<i class="fa fa-microchip"></i> ' + json.arch +
+                ' | <i class="fa fa-wrench"></i> ' + id +
+                ' | <i class="fa fa-wifi"></i> ';
     if (ip) {
       html += '<a target="_blank" href=http://' + ip + '>' + ip + '</a>';
     } else {

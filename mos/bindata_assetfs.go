@@ -598,7 +598,7 @@ var _web_rootDashHtml = []byte(`<!DOCTYPE html>
               <div class="form-group form-group-inline">
                 <div class="input-group" style="margin-top: 6px;">
                   <span class="input-group-addon" id="devconn-indicator" style="font-size: 12px; padding: 0 0.6em;"><i class="fa fa-circle"></i></span>
-                  <input type="text" class="form-control form-control-sm" style="height: 26px; font-size: 12px; width: 17em; box-shadow: none;" id="input-serial" placeholder="type device address">
+                  <input type="text" class="form-control form-control-sm" style="height: 26px; font-size: 12px; width: 15em; box-shadow: none;" id="input-serial" placeholder="type device address">
                   <div class="input-group-btn" style="line-height: 8px;">
                     <div class="btn-group dropdown">
                       <button type="button" class="btn btn-default dropdown-toggle" style="line-height: 12px;" data-toggle="dropdown">
@@ -4837,9 +4837,13 @@ var _web_rootJsWsJs = []byte(`(function($) {
 
   var formatDevInfo = function(json) {
     var ip = json.wifi.sta_ip || json.wifi.ap_ip;
-    var id = '', m = json.fw_id.match(/(.+?)-/);
-    if (m) id = m[1];
-    let html = 'arch:' + json.arch + ', built:' + id + ', ip:';
+    var id = '', m = json.fw_id.match(/(....)(..)(..)-/);
+    if (m) {
+      id = moment(m[1] + '-' + m[2] + '-' + m[3]).format('MMMDD');
+    }
+    let html = '<i class="fa fa-microchip"></i> ' + json.arch +
+                ' | <i class="fa fa-wrench"></i> ' + id +
+                ' | <i class="fa fa-wifi"></i> ';
     if (ip) {
       html += '<a target="_blank" href=http://' + ip + '>' + ip + '</a>';
     } else {
@@ -4915,7 +4919,7 @@ func web_rootJsWsJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/ws.js", size: 3398, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/ws.js", size: 3579, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
