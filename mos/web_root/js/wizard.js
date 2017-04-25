@@ -90,7 +90,7 @@
   tabHandlers.tab1 = function() {
     var port = $('#input-serial').val();
     var data = {reconnect: true};
-    if (portEdited) data.port = port;
+    if ($('#input-serial').data('editedManually')) data.port = port;
     return $.ajax({url: '/connect', data: data}).done(function(json) {
       new PNotify({ title: 'Success', text: 'Successfully connected to ' + port, type: 'success' });
     }).fail(function(err) {

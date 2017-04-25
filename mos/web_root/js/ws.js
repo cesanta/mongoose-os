@@ -36,9 +36,8 @@
   };
   reconnect();
 
-  var portEdited = false;
   $(document).on('keyup paste', '#input-serial', function() {
-    portEdited = !!$('#input-serial').val();
+    $('#input-serial').data('editedManually', !!$('#input-serial').val());
   });
 
   var formatSize = function(free, max) {
@@ -113,7 +112,7 @@
           probeDevice();
         }
       } else {
-        if (!portEdited) $('#input-serial').val('');
+        if (!$('#input-serial').data('editedManually')) $('#input-serial').val('');
         $('#noports-warning').fadeIn();
         $('#found-device-info').fadeOut();
       }

@@ -4629,7 +4629,7 @@ var _web_rootJsWizardJs = []byte(`(function($) {
   tabHandlers.tab1 = function() {
     var port = $('#input-serial').val();
     var data = {reconnect: true};
-    if (portEdited) data.port = port;
+    if ($('#input-serial').data('editedManually')) data.port = port;
     return $.ajax({url: '/connect', data: data}).done(function(json) {
       new PNotify({ title: 'Success', text: 'Successfully connected to ' + port, type: 'success' });
     }).fail(function(err) {
@@ -4787,7 +4787,7 @@ func web_rootJsWizardJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 8911, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 8942, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4830,9 +4830,8 @@ var _web_rootJsWsJs = []byte(`(function($) {
   };
   reconnect();
 
-  var portEdited = false;
   $(document).on('keyup paste', '#input-serial', function() {
-    portEdited = !!$('#input-serial').val();
+    $('#input-serial').data('editedManually', !!$('#input-serial').val());
   });
 
   var formatSize = function(free, max) {
@@ -4907,7 +4906,7 @@ var _web_rootJsWsJs = []byte(`(function($) {
           probeDevice();
         }
       } else {
-        if (!portEdited) $('#input-serial').val('');
+        if (!$('#input-serial').data('editedManually')) $('#input-serial').val('');
         $('#noports-warning').fadeIn();
         $('#found-device-info').fadeOut();
       }
@@ -4927,7 +4926,7 @@ func web_rootJsWsJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/ws.js", size: 4171, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/ws.js", size: 4206, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
