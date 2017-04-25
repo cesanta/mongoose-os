@@ -13,6 +13,7 @@ type FlashOpts struct {
 	ControlPort            string
 	DataPort               string
 	BaudRate               uint
+	InvertedControlLines   bool
 	FlashParams            string
 	EraseChip              bool
 	MinimizeWrites         bool

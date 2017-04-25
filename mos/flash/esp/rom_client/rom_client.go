@@ -91,7 +91,7 @@ func ConnectToROM(ct esp.ChipType, opts *esp.FlashOpts) (*ROMClient, error) {
 			return nil, errors.Annotate(err, "failed to open data port")
 		}
 	}
-	rc, err := NewROMClient(ct, sc, sd)
+	rc, err := NewROMClient(ct, sc, sd, opts.InvertedControlLines)
 	if err != nil {
 		sc.Close()
 		sd.Close()
@@ -100,8 +100,14 @@ func ConnectToROM(ct esp.ChipType, opts *esp.FlashOpts) (*ROMClient, error) {
 	return rc, nil
 }
 
-func NewROMClient(chipType esp.ChipType, sc, sd serial.Serial) (*ROMClient, error) {
-	rc := &ROMClient{ct: chipType, sc: sc, sd: sd, srw: common.NewSLIPReaderWriter(sd)}
+func NewROMClient(chipType esp.ChipType, sc, sd serial.Serial, inverted bool) (*ROMClient, error) {
+	rc := &ROMClient{
+		ct:       chipType,
+		sc:       sc,
+		sd:       sd,
+		srw:      common.NewSLIPReaderWriter(sd),
+		inverted: inverted,
+	}
 	if err := rc.connect(); err != nil {
 		return nil, errors.Annotatef(err, "failed to connect to ROM")
 	}
@@ -114,7 +120,7 @@ func (rc *ROMClient) DataPort() serial.Serial {
 
 func (rc *ROMClient) connect() error {
 	rc.connected = false
-	rc.inverted = false
+	rc.sd.SetReadTimeout(200 * time.Millisecond)
 	for i := 1; i <= numConnectAttempts; i++ {
 		is := ""
 		if rc.inverted {
@@ -124,12 +130,17 @@ func (rc *ROMClient) connect() error {
 		mFalse := rc.inverted
 		mTrue := !rc.inverted
 		rc.sc.SetRTSDTR(mTrue, mFalse)
-		time.Sleep(50 * time.Millisecond)
+		// If you are wondering why ESP32 delays are like this, read this and weep:
+		// https://github.com/espressif/esptool/blob/96698a3da9acc6e357741663830f97524b688ade/esptool.py#L286
+		if rc.ct == esp.ChipESP8266 {
+			time.Sleep(50 * time.Millisecond)
+		} else {
+			time.Sleep(1200 * time.Millisecond)
+		}
 		rc.sc.SetRTSDTR(mFalse, mTrue)
 		if rc.ct == esp.ChipESP8266 {
 			time.Sleep(100 * time.Millisecond)
 		} else {
-			// Workaround for https://github.com/espressif/esptool/issues/136
 			time.Sleep(400 * time.Millisecond)
 		}
 		rc.sc.SetRTSDTR(mFalse, mFalse)
@@ -141,7 +152,6 @@ func (rc *ROMClient) connect() error {
 		} else {
 			glog.V(1).Infof("Sync #%d failed: %s", i, err)
 		}
-		rc.inverted = !rc.inverted
 	}
 	return errors.Errorf("failed to connect to %s ROM", rc.ct)
 }
@@ -239,7 +249,6 @@ func (rc *ROMClient) trySync() error {
 		argBuf.Write([]byte{0x55})
 	}
 	rc.sd.Flush()
-	rc.sd.SetReadTimeout(200 * time.Millisecond)
 	if err := rc.sendCommand(cmdSync, argBuf.Bytes(), 0); err != nil {
 		return errors.Trace(err)
 	}

@@ -37,6 +37,8 @@ func init() {
 	flag.StringVar(&espFlashOpts.DataPort, "esp-data-port", "",
 		"If specified, this port will be used to send data during flashing. "+
 			"If not set, --port is used.")
+	flag.BoolVar(&espFlashOpts.InvertedControlLines, "esp-inverted-control-lines", false,
+		"DTR and RTS control lines use inverted polarity")
 	flag.StringVar(&espFlashOpts.FlashParams, "esp-flash-params", "dio,,40m",
 		"Flash chip params. Either a comma-separated string of mode,size,freq or a number. "+
 			"Mode must be one of: qio, qout, dio, dout. "+
