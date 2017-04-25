@@ -22,7 +22,7 @@ let Sys = {
 
   // # **`Sys.uptime()`**
   // Return number of seconds since last reboot.
-  uptime: ffi('double mg_time()'),
+  uptime: ffi('double mgos_uptime()'),
 
   // ## **`Sys.usleep(microseconds)`**
   // Sleep given number of microseconds.

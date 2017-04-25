@@ -31,6 +31,8 @@
 enum mgos_init_result mgos_init(void) {
   enum mgos_init_result r;
 
+  mgos_uptime_init();
+
   r = mgos_timers_init();
   if (r != MGOS_INIT_OK) return r;
 

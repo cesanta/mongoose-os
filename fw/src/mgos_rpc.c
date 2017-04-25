@@ -20,6 +20,7 @@
 #include "fw/src/mgos_uart.h"
 #include "fw/src/mgos_utils.h"
 #include "fw/src/mgos_wifi.h"
+#include "fw/src/mgos_timers.h"
 
 #define HTTP_URI_PREFIX "/rpc"
 
@@ -136,7 +137,7 @@ static void mgos_sys_get_info_handler(struct mg_rpc_request_info *ri,
 #endif
       "}",
       MGOS_APP, v->fw_version, v->fw_id, v->mac_address, v->arch,
-      (unsigned long) mg_time(), mgos_get_heap_size(),
+      (unsigned long) mgos_uptime(), mgos_get_heap_size(),
       mgos_get_free_heap_size(), mgos_get_min_free_heap_size(),
       mgos_get_fs_size(), mgos_get_free_fs_size()
 #if MGOS_ENABLE_WIFI

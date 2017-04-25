@@ -27,6 +27,7 @@ struct timer_data {
 };
 
 static struct timer_data *s_timer_data = NULL;
+static double start_time = 0;
 
 static void schedule_next_timer(struct timer_data *td) {
   struct timer_info *ti;
@@ -111,6 +112,7 @@ static void mgos_time_change_cb(void *arg, double delta) {
   LIST_FOREACH(ti, &td->timers, entries) {
     ti->next_invocation += delta;
   }
+  start_time += delta;
   mgos_unlock();
 }
 #endif
@@ -129,4 +131,12 @@ enum mgos_init_result mgos_timers_init(void) {
   mgos_sntp_add_time_change_cb(mgos_time_change_cb, td);
 #endif
   return MGOS_INIT_OK;
+}
+
+double mgos_uptime(void) {
+  return mg_time() - start_time;
+}
+
+void mgos_uptime_init(void) {
+  start_time = mg_time();
 }

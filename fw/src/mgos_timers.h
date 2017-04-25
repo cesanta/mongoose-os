@@ -40,6 +40,10 @@ void mgos_clear_timer(mgos_timer_id id);
 
 enum mgos_init_result mgos_timers_init(void);
 
+/* Get number of seconds since last reboot */
+double mgos_uptime(void);
+void mgos_uptime_init(void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
