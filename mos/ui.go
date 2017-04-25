@@ -132,11 +132,11 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 	go func() {
 		for {
 			data := make([]byte, 512)
-			_, err := r.Read(data)
+			n, err := r.Read(data)
 			if err != nil {
 				break
 			}
-			wsBroadcast(wsmessage{"stderr", string(data)})
+			wsBroadcast(wsmessage{"stderr", string(data[:n])})
 		}
 	}()
 
