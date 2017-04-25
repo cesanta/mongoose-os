@@ -326,6 +326,10 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 	http.HandleFunc("/getports", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
+
+		devConnMtx.Lock()
+		defer devConnMtx.Unlock()
+
 		type GetPortsResult struct {
 			IsConnected bool
 			CurrentPort string
