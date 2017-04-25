@@ -1,14 +1,25 @@
-// Load Mongoose OS API
-load('api_timer.js');
 load('api_gpio.js');
+load('api_mqtt.js');
 load('api_sys.js');
+load('api_timer.js');
 
 // Helper C function get_led_gpio_pin() in src/main.c returns built-in LED GPIO
 let led = ffi('int get_led_gpio_pin()')();  
 
 // Blink built-in LED every second
 GPIO.set_mode(led, GPIO.MODE_OUTPUT);
-Timer.set(1000 /* milliseconds */, true /* repeat */, function() {
+Timer.set(1000 /* 1 sec */, true /* repeat */, function() {
   let value = GPIO.toggle(led);
   print(value ? 'Tick' : 'Tock', 'uptime:', Sys.uptime(), 'RAM:', Sys.free_ram());
+}, null);
+
+// Publish to MQTT topic on a button press. Button is wired to GPIO pin 0
+GPIO.set_button_handler(0, GPIO.PULL_UP, GPIO.INT_EDGE_NEG, 200, function() {
+  let topic = 'mOS/topic1';
+  let message = JSON.stringify({
+    total_ram: Sys.total_ram(),
+    free_ram: Sys.free_ram()
+  });
+  let ok = MQTT.pub(topic, message, message.length);
+  print('Published:', ok ? 'yes' : 'no', 'topic:', topic, 'message:', message);
 }, null);
