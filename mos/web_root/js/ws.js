@@ -41,20 +41,28 @@
     portEdited = !!$('#input-serial').val();
   });
 
+  var formatSize = function(free, max) {
+    max |= Infinity;
+    var i = Math.floor(Math.log(max) / Math.log(1024));
+    var tostr = function(v, i) {
+      return (v / Math.pow(1024, i)).toFixed(0) * 1 + ['B', 'k', 'M', 'G', 'T'][i];
+    };
+    return tostr(free, i) + '/' + tostr(max, i);
+  };
+
   var formatDevInfo = function(json) {
     var ip = json.wifi.sta_ip || json.wifi.ap_ip;
     var id = '', m = json.fw_id.match(/(....)(..)(..)-/);
     if (m) {
       id = moment(m[1] + '-' + m[2] + '-' + m[3]).format('MMMDD');
     }
-    let html = '<i class="fa fa-microchip"></i> ' + json.arch +
-                ' | <i class="fa fa-wrench"></i> ' + id +
-                ' | <i class="fa fa-wifi"></i> ';
-    if (ip) {
-      html += '<a target="_blank" href=http://' + ip + '>' + ip + '</a>';
-    } else {
-      html += 'n/a';
-    }
+    var link = 'n/a';
+    if (ip) link = '<a target="_blank" href=http://' + ip + '>' + ip + '</a>';
+    let html = '<i class="fa fa-microchip" title="Hardware architecture"></i> ' + json.arch +
+                ' | <i class="fa fa-wrench" title="Build date"></i> ' + id +
+                ' | <i class="fa fa-wifi" title="IP address"></i> ' + link +
+                ' | <i class="fa fa-hdd-o" title="FLASH size"></i> ' + formatSize(json.fs_free || 0, json.fs_size || 0) +
+                ' | <i class="fa fa-square-o" title="RAM size"></i> ' + formatSize(json.ram_free || 0, json.ram_size || 0);
     return html;
   };
 
