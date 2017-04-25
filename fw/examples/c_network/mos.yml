@@ -6,4 +6,5 @@ sources:
   - src
 filesystem:
 build_vars:
+  MGOS_ENABLE_DNS_SD: 0
   MGOS_ENABLE_UPDATER_POST: 1
