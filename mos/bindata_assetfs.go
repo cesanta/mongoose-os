@@ -38,7 +38,7 @@
 // web_root/js/pnotify.min.js
 // web_root/js/wizard.js
 // web_root/js/ws.js
-// web_root/page_aws.html
+// web_root/page_cloud.html
 // web_root/page_configuration.html
 // web_root/page_examples.html
 // web_root/page_files.html
@@ -574,7 +574,7 @@ var _web_rootDashHtml = []byte(`<!DOCTYPE html>
                 <li><a tab="rpc"><i class="fa fa-puzzle-piece"></i> RPC API</a></li>
                 <li><a tab="terminal"><i class="fa fa-terminal"></i> Terminal</a></li>
                 <!-- <li class="separator"></li> -->
-                <li><a tab="aws"><i class="fa fa-amazon"></i> AWS IoT</a></li>
+                <li><a tab="cloud"><i class="fa fa-cloud"></i> Cloud Dash</a></li>
               </ul>
             </div>
           </div>
@@ -665,7 +665,7 @@ func web_rootDashHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/dash.html", size: 5155, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/dash.html", size: 5159, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4932,7 +4932,7 @@ func web_rootJsWsJs() (*asset, error) {
 	return a, nil
 }
 
-var _web_rootPage_awsHtml = []byte(`<div data-title="AWS IoT Dashboard" style="height: 100%;">
+var _web_rootPage_cloudHtml = []byte(`<div data-title="AWS IoT Dashboard" style="height: 100%;">
   <div class="upcontrol col-sm-6" style="top: 5px; background: #fff; ">
   <table class="table table-responsive">
   <thead class="thead-info">
@@ -4966,17 +4966,17 @@ var _web_rootPage_awsHtml = []byte(`<div data-title="AWS IoT Dashboard" style="h
 </script>
 `)
 
-func web_rootPage_awsHtmlBytes() ([]byte, error) {
-	return _web_rootPage_awsHtml, nil
+func web_rootPage_cloudHtmlBytes() ([]byte, error) {
+	return _web_rootPage_cloudHtml, nil
 }
 
-func web_rootPage_awsHtml() (*asset, error) {
-	bytes, err := web_rootPage_awsHtmlBytes()
+func web_rootPage_cloudHtml() (*asset, error) {
+	bytes, err := web_rootPage_cloudHtmlBytes()
 	if err != nil {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_aws.html", size: 839, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_cloud.html", size: 839, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -5716,7 +5716,7 @@ var _bindata = map[string]func() (*asset, error){
 	"web_root/js/pnotify.min.js":               web_rootJsPnotifyMinJs,
 	"web_root/js/wizard.js":                    web_rootJsWizardJs,
 	"web_root/js/ws.js":                        web_rootJsWsJs,
-	"web_root/page_aws.html":                   web_rootPage_awsHtml,
+	"web_root/page_cloud.html":                 web_rootPage_cloudHtml,
 	"web_root/page_configuration.html":         web_rootPage_configurationHtml,
 	"web_root/page_examples.html":              web_rootPage_examplesHtml,
 	"web_root/page_files.html":                 web_rootPage_filesHtml,
@@ -5818,7 +5818,7 @@ var _bintree = &bintree{nil, map[string]*bintree{
 			"wizard.js":             &bintree{web_rootJsWizardJs, map[string]*bintree{}},
 			"ws.js":                 &bintree{web_rootJsWsJs, map[string]*bintree{}},
 		}},
-		"page_aws.html":           &bintree{web_rootPage_awsHtml, map[string]*bintree{}},
+		"page_cloud.html":         &bintree{web_rootPage_cloudHtml, map[string]*bintree{}},
 		"page_configuration.html": &bintree{web_rootPage_configurationHtml, map[string]*bintree{}},
 		"page_examples.html":      &bintree{web_rootPage_examplesHtml, map[string]*bintree{}},
 		"page_files.html":         &bintree{web_rootPage_filesHtml, map[string]*bintree{}},
