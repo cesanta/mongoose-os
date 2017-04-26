@@ -36,6 +36,8 @@ enum mgos_init_result esp32_fs_crypt_init(void);
 enum mgos_init_result esp32_fs_init(void);
 
 #define SUBTYPE_TO_SLOT(st) ((st) -ESP_PARTITION_SUBTYPE_OTA(0))
+#define NUM_OTA_SLOTS \
+  (ESP_PARTITION_SUBTYPE_APP_OTA_MAX - ESP_PARTITION_SUBTYPE_APP_OTA_MIN)
 int esp32_get_boot_slot();
 
 void esp32_fs_deinit(void);
