@@ -141,6 +141,7 @@ func (rwc *reconnectWrapperCodec) Recv(ctx context.Context) (*frame.Frame, error
 			return frame, nil
 		case IsEOF(err):
 			rwc.closeConn()
+			return nil, errors.Trace(err)
 		default:
 			return nil, errors.Trace(err)
 		}
