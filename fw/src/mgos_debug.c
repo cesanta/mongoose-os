@@ -16,6 +16,10 @@
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_uart.h"
 
+#ifndef IRAM
+#define IRAM
+#endif
+
 static int8_t s_stdout_uart = MGOS_DEBUG_UART;
 static int8_t s_stderr_uart = MGOS_DEBUG_UART;
 static int8_t s_uart_suspended = 0;
@@ -103,7 +107,7 @@ void mgos_debug_resume_uart(void) {
   s_uart_suspended--;
 }
 
-bool mgos_debug_uart_is_suspended(void) {
+IRAM bool mgos_debug_uart_is_suspended(void) {
   return (s_uart_suspended > 0);
 }
 

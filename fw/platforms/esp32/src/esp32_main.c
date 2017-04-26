@@ -9,14 +9,15 @@
 
 #include "freertos/FreeRTOS.h"
 #include "esp_attr.h"
-#include "esp_vfs.h"
 #include "esp_event.h"
 #include "esp_event_loop.h"
 #include "esp_ota_ops.h"
 #include "esp_spi_flash.h"
 #include "esp_system.h"
 #include "esp_task_wdt.h"
+#include "esp_vfs.h"
 #include "nvs_flash.h"
+#include "rom/ets_sys.h"
 
 #include "common/cs_dbg.h"
 #include "fw/src/mgos_app.h"
@@ -176,9 +177,20 @@ bool IRAM_ATTR mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
   }
 }
 
+/*
+ * Note that this function may be invoked from a very low level.
+ * This is where ESP_EARLY_LOG prints (via ets_printf).
+ */
+IRAM void sdk_putc(char c) {
+  if (mgos_debug_uart_is_suspended()) return;
+  ets_write_char_uart(c);
+}
+
 void app_main(void) {
   nvs_flash_init();
   tcpip_adapter_init();
+  ets_install_putc1(sdk_putc);
+  ets_install_putc2(NULL);
   ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
   s_mgos_mux = xSemaphoreCreateRecursiveMutex();
   xTaskCreate(mgos_task, "mgos", MGOS_TASK_STACK_SIZE, NULL, MGOS_TASK_PRIORITY,

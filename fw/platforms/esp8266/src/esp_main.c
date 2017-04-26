@@ -100,7 +100,7 @@ void mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr) {
   mongoose_schedule_poll(false /* from_isr */);
 }
 
-void sdk_putc(char c) {
+IRAM void sdk_putc(char c) {
   if (mgos_debug_uart_is_suspended()) return;
   esp_exc_putc(c);
 }
