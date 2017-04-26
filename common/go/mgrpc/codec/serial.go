@@ -35,10 +35,12 @@ type serialCodec struct {
 	writeLock       sync.Mutex
 
 	// Underlying serial port implementation allows concurrent Read/Write, but
-	// calling Close concurrently results in a race. A read-write lock fits
-	// perfectly for this case: for either Read or Write we lock it for reading
-	// (RLock/RUnlock), but for Close we lock it for writing (Lock/Unlock).
+	// calling Close while Read/Write is in progress results in a race. A
+	// read-write lock fits perfectly for this case: for either Read or Write we
+	// lock it for reading (RLock/RUnlock), but for Close we lock it for writing
+	// (Lock/Unlock).
 	closeLock sync.RWMutex
+	isClosed  bool
 }
 
 func Serial(ctx context.Context, portName string, junkHandler func(junk []byte)) (Codec, error) {
@@ -72,10 +74,14 @@ func Serial(ctx context.Context, portName string, junkHandler func(junk []byte))
 }
 
 func (c *serialCodec) connRead(buf []byte) (read int, err error) {
-	// Lock closeLock for reading
+	// Keep holding closeLock while Reading (see comment for closeLock)
 	c.closeLock.RLock()
 	defer c.closeLock.RUnlock()
-	return c.conn.Read(buf)
+	if !c.isClosed {
+		return c.conn.Read(buf)
+	} else {
+		return 0, io.EOF
+	}
 }
 
 func (c *serialCodec) connWrite(buf []byte) (written int, err error) {
@@ -93,6 +99,7 @@ func (c *serialCodec) connClose() error {
 	// for writing.
 	c.closeLock.Lock()
 	defer c.closeLock.Unlock()
+	c.isClosed = true
 	return c.conn.Close()
 }
 
