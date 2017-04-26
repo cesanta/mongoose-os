@@ -105,16 +105,17 @@
         $.each(ports, function(i, v) {
           $('<li><a href="#">' + v + '</a></li>').appendTo('#dropdown-ports');
         });
-        $('#noports-warning').fadeOut();
+        $('#noports-warning').hide();
         var ports = JSON.stringify(ports);
         if (ports != portList) {
           portList = ports;
           probeDevice();
         }
       } else {
+        portList = '';
         if (!$('#input-serial').data('editedManually')) $('#input-serial').val('');
         $('#noports-warning').fadeIn();
-        $('#found-device-info').fadeOut();
+        $('#found-device-info').hide();
       }
     });
   }, 1000);

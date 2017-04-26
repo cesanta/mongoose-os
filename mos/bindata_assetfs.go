@@ -4899,16 +4899,17 @@ var _web_rootJsWsJs = []byte(`(function($) {
         $.each(ports, function(i, v) {
           $('<li><a href="#">' + v + '</a></li>').appendTo('#dropdown-ports');
         });
-        $('#noports-warning').fadeOut();
+        $('#noports-warning').hide();
         var ports = JSON.stringify(ports);
         if (ports != portList) {
           portList = ports;
           probeDevice();
         }
       } else {
+        portList = '';
         if (!$('#input-serial').data('editedManually')) $('#input-serial').val('');
         $('#noports-warning').fadeIn();
-        $('#found-device-info').fadeOut();
+        $('#found-device-info').hide();
       }
     });
   }, 1000);
@@ -4926,7 +4927,7 @@ func web_rootJsWsJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/ws.js", size: 4206, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/ws.js", size: 4223, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
