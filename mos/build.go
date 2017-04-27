@@ -337,7 +337,7 @@ func detectArch(manifest *build.FWAppManifest) (string, error) {
 	if a == "" {
 		return "", errors.Errorf("--arch must be specified or mos.yml should contain an arch key")
 	}
-	return a, nil
+	return strings.ToLower(a), nil
 }
 
 func getCodeDir() (string, error) {
