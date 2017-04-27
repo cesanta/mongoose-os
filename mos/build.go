@@ -623,6 +623,7 @@ func setManifestArch(
 	if arch != "" {
 		manifest.Arch = arch
 	}
+	manifest.Arch = strings.ToLower(manifest.Arch)
 
 	if buildVars != nil {
 		if manifest.BuildVars == nil {
