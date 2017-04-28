@@ -50,7 +50,7 @@ let Net = {
   // - `cert` is a client certificate file name or "" if not required
   // - `ca_cert` is a CA certificate or "" if peer verification is not required.
   // The certificate files must be in PEM format.
-  connect_ssl: ffi('void *mgos_connect_ssl(void *, char *, void (*)(void *, int, void *, userdata), char *, char *)'),
+  connect_ssl: ffi('void *mgos_connect_ssl(char *, void (*)(void *, int, void *, userdata), userdata, char *, char *)'),
 
   // ## **`Net.close(conn)`**
   // Send all pending data to the remote peer,
