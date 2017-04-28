@@ -22,7 +22,7 @@ let RPC = {
    * real callback
    */
   _addCB: function(ri, args, src, ud) {
-    let resp = ud.cb(JSON.parse(args), src, ud.ud);
+    let resp = ud.cb(JSON.parse(args || 'null'), src, ud.ud);
     RPC._sendResponse(ri, JSON.stringify(resp));
   },
 

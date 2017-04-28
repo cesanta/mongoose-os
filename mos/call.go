@@ -19,12 +19,8 @@ func isJSONString(s string) bool {
 }
 
 func isJSON(s string) bool {
-	var obj map[string]interface{}
-	var arr []interface{}
-	var str string
-	return json.Unmarshal([]byte(s), &obj) == nil ||
-		json.Unmarshal([]byte(s), &arr) == nil ||
-		json.Unmarshal([]byte(s), &str) == nil
+	var js json.RawMessage
+	return json.Unmarshal([]byte(s), &js) == nil
 }
 
 func callDeviceService(
