@@ -4813,7 +4813,7 @@ var _web_rootJsWsJs = []byte(`(function($) {
         case 'stderr':
           $('#device-logs').each(function(i, el) {
             var mustScroll = (el.scrollTop === (el.scrollHeight - el.clientHeight));
-            var data = (m.data || '').replace('<', '&lt;').replace('>', '&gt;');
+            var data = (m.data || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             if (m.cmd === 'stderr') data = '<span class="stderr">' + data + '</span>';
             el.innerHTML += data;
             if (mustScroll) el.scrollTop = el.scrollHeight;
@@ -4927,7 +4927,7 @@ func web_rootJsWsJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/ws.js", size: 4223, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/ws.js", size: 4225, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

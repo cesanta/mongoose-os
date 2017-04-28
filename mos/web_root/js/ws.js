@@ -19,7 +19,7 @@
         case 'stderr':
           $('#device-logs').each(function(i, el) {
             var mustScroll = (el.scrollTop === (el.scrollHeight - el.clientHeight));
-            var data = (m.data || '').replace('<', '&lt;').replace('>', '&gt;');
+            var data = (m.data || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
             if (m.cmd === 'stderr') data = '<span class="stderr">' + data + '</span>';
             el.innerHTML += data;
             if (mustScroll) el.scrollTop = el.scrollHeight;
