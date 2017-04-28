@@ -13,10 +13,14 @@
 
 #include <stdbool.h>
 #include <stdint.h>
-#include <stdio.h>
 #include <stdlib.h>
 
 #include "umm_malloc_cfg.h"
+
+#include "fw/src/mgos_debug.h"
+#include "fw/src/mgos_uart.h"
+
+#include "fw/platforms/esp8266/src/esp_exc.h"
 
 /*
  * global flag that is needed for heap trace: we shouldn't send anything to
@@ -43,7 +47,7 @@ void print_call_trace();
  * initialized. At the moment of writing this, there are 44 calls. Let it be
  * 50. (if actual amount exceeds, we'll abort)
  */
-#define LOG_ITEMS_CNT 120
+#define LOG_ITEMS_CNT 200
 
 /*
  * Special value to be saved into `struct log_item::ptr`, meaning NULL pointer
@@ -108,50 +112,50 @@ static struct log *plog = NULL;
 
 NOINSTR
 static void echo_log_malloc_req(size_t size, int shim) {
-  fprintf(stderr, "hl{m,%u,%d,", (unsigned int) size, shim);
+  esp_exc_printf("hl{m,%u,%d,", (unsigned int) size, shim);
 }
 
 NOINSTR
 static void echo_log_zalloc_req(size_t size, int shim) {
-  fprintf(stderr, "hl{z,%u,%d,", (unsigned int) size, shim);
+  esp_exc_printf("hl{z,%u,%d,", (unsigned int) size, shim);
 }
 
 NOINSTR
 static void echo_log_calloc_req(size_t size, int shim) {
-  fprintf(stderr, "hl{c,%u,%d,", (unsigned int) size, shim);
+  esp_exc_printf("hl{c,%u,%d,", (unsigned int) size, shim);
 }
 
 NOINSTR
 static void echo_log_realloc_req(size_t size, int shim, void *old_ptr) {
-  fprintf(stderr, "hl{r,%u,%d,%x,", (unsigned int) size, shim,
-          (unsigned int) old_ptr);
+  esp_exc_printf("hl{r,%u,%d,%x,", (unsigned int) size, shim,
+                 (unsigned int) old_ptr);
 }
 
 NOINSTR
 static void echo_log_alloc_res(void *ptr) {
 #if MGOS_ENABLE_CALL_TRACE
-  fprintf(stderr, "%x} ", (unsigned int) ptr);
+  esp_exc_printf("%x} ", (unsigned int) ptr);
   if (plog == NULL) {
     print_call_trace();
   } else {
-    fprintf(stderr, "\n");
+    esp_exc_printf("\n");
   }
 #else
-  fprintf(stderr, "%x}\n", (unsigned int) ptr);
+  esp_exc_printf("%x}\n", (unsigned int) ptr);
 #endif
 }
 
 NOINSTR
 static void echo_log_free(void *ptr, int shim) {
 #if MGOS_ENABLE_CALL_TRACE
-  fprintf(stderr, "hl{f,%x,%d} ", (unsigned int) ptr, shim);
+  esp_exc_printf("hl{f,%x,%d} ", (unsigned int) ptr, shim);
   if (plog == NULL) {
     print_call_trace();
   } else {
-    fprintf(stderr, "\n");
+    esp_exc_printf("\n");
   }
 #else
-  fprintf(stderr, "hl{f,%x,%d}\n", (unsigned int) ptr, shim);
+  esp_exc_printf("hl{f,%x,%d}\n", (unsigned int) ptr, shim);
 #endif
 }
 
@@ -235,20 +239,20 @@ static void flush_log_items(void) {
     add_log_item(ITEM_TYPE_FREE, plog, 0, 1);
 
     if (plog->item_size_small) {
-      fprintf(stderr, "struct log_item::size width is too small\n");
+      esp_exc_printf("struct log_item::size width is too small\n");
       abort();
     } else if (plog->log_items_cnt_overflow > 0) {
-      fprintf(stderr, "LOG_ITEMS_CNT is too low (need at least %u)\n",
-              LOG_ITEMS_CNT + plog->log_items_cnt_overflow);
+      esp_exc_printf("LOG_ITEMS_CNT is too low (need at least %u)\n",
+                     LOG_ITEMS_CNT + plog->log_items_cnt_overflow);
       abort();
     } else if (plog->ptr_doesnt_fit) {
-      fprintf(stderr, "ptr is not suitable for PTR_INFLATE\n");
+      esp_exc_printf("ptr is not suitable for PTR_INFLATE\n");
       abort();
     }
 
-    fprintf(stderr, "\nhlog_param:{\"heap_start\":%u, \"heap_end\":%u}\n",
-            (unsigned int) UMM_MALLOC_CFG__HEAP_ADDR,
-            (unsigned int) UMM_MALLOC_CFG__HEAP_END);
+    esp_exc_printf("\nhlog_param:{\"heap_start\":%u, \"heap_end\":%u}\n",
+                   (unsigned int) UMM_MALLOC_CFG__HEAP_ADDR,
+                   (unsigned int) UMM_MALLOC_CFG__HEAP_END);
 
     /* fprintf above may have use malloc and already flushed the log.
      * Ideally, we should not be touching heap while flushing the log,
@@ -262,7 +266,7 @@ static void flush_log_items(void) {
 
     __real_umm_free(plog);
     plog = NULL;
-    fprintf(stderr, "--- uart initialized ---\n");
+    esp_exc_printf("--- uart initialized ---\n");
     mgos_wdt_feed();
   }
 }

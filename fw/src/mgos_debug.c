@@ -35,6 +35,9 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
   }
   if (uart_no >= 0) {
     len = mgos_uart_write(uart_no, data, len);
+#if defined(MGOS_ENABLE_HEAP_LOG) && MGOS_ENABLE_HEAP_LOG
+    mgos_uart_flush(uart_no);
+#endif
   }
 #if MGOS_ENABLE_DEBUG_UDP
   /* Only send STDERR to UDP. */
