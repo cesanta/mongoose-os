@@ -10,5 +10,5 @@ difftest:
 	rm $$TMP
 
 REPO_ROOT = ..
-FORMAT_FILES = 'src/*.[ch]' 'platforms/cc3200/*.[ch]' 'platforms/esp32/*.[ch]' 'platforms/esp8266/*.[ch]'
+FORMAT_FILES = 'Arduino/*.[ch]' 'Arduino/*.cpp' 'src/*.[ch]' 'platforms/cc3200/*.[ch]' 'platforms/esp32/*.[ch]' 'platforms/esp8266/*.[ch]'
 include $(REPO_ROOT)/common.mk

@@ -21,6 +21,7 @@
  * Cesanta note: This file is copied from esp8266/Arduino
  */
 
+/* clang-format off */
 #ifndef Arduino_h
 #define Arduino_h
 
