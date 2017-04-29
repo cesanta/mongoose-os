@@ -14,11 +14,6 @@ import (
 const (
 	eofChar byte = 0x04
 
-	// Due to lack of flow control, we send data in chunks and wait 5 ms after
-	// each chunk.
-	chunkSize  int           = 16
-	chunkDelay time.Duration = 5 * time.Millisecond
-
 	// Period for sending initial delimeter when opening a channel, until we
 	// receive the delimeter in response
 	handshakeInterval time.Duration = 200 * time.Millisecond
@@ -145,15 +140,14 @@ func (c *serialCodec) WriteWithContext(ctx context.Context, b []byte) (written i
 		}
 	}
 	// Device is ready, send data.
-	for i := 0; i < len(b); i += chunkSize {
-		n, err := c.connWrite(b[i:min(i+chunkSize, len(b))])
+	for written < len(b) {
+		n, err := c.connWrite(b[written:])
+		glog.V(4).Infof("sent %d [%s]", n, string(b[written:written+n]))
 		written += n
 		if err != nil {
 			c.Close()
 			return written, errors.Trace(err)
 		}
-		glog.V(4).Infof("sent %d [%s]", n, string(b[i:i+n]))
-		time.Sleep(chunkDelay)
 	}
 	return written, nil
 }
