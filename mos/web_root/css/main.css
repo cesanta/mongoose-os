@@ -1,6 +1,12 @@
 html, body { height: 100%; }
 body { color: #666;  background-color: #eee; }
 
+code { color: green; white-space: pre !important;}
+.ace_doc-tooltip {
+  white-space: normal !important;
+  border: 1px solid #ccc !important; padding: 0 1em !important; background: #fff !important;
+}
+
 /* DASHBOARD STYLES */
 .left_col.menu_fixed { top: 48px; overflow-y: auto; }
 .side-menu { margin-top: 0 !important;}

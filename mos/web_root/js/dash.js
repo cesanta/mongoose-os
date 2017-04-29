@@ -93,9 +93,12 @@ var guesslang = function(filename) {
 };
 var mkeditor = function(id, lang) {
   var editor = ace.edit(id || 'editor');
+
   editor.$blockScrolling = Infinity;
   editor.setTheme('ace/theme/tomorrow');
   editor.setOptions({
+    enableLiveAutocompletion: true,
+    enableBasicAutocompletion: true,
     highlightActiveLine: false,
   });
   editor.renderer.setOptions({
@@ -107,6 +110,53 @@ var mkeditor = function(id, lang) {
     useSoftTabs: true,
   });
   if (lang) editor.session.setMode('ace/mode/' + lang);
+
+  editor.scanTextForSnippets = function() {
+    var text = this.getValue() || '';
+    var m, re = /['"](api_\w+.js)['"]/g, snippets = [], qname = 'snippets';
+    if (!this.loadedSnippets) this.loadedSnippets = {};
+    var ls = this.loadedSnippets;
+    var scanSnippets = function(text) {
+      var snippets = [], m, re = /((?:\s*\/\/.*\n)+)/g;
+      while ((m = re.exec(text)) !== null) {
+        var t = m[1].replace(/(\n)\s*\/\/ ?/g, '$1').replace(/^\s+|\s+$/, '');
+        var m2 = t.match(/^[^\n]+`((.+?)\(.+?)`.*?\n/);
+        if (!m2) continue;
+        snippets.push({
+          caption: m2[2],
+          snippet: m2[1] + ';',
+          docHTML: marked(t),
+          type: 'snippet',
+        });
+      }
+      return snippets;
+    };
+    while ((m = re.exec(text)) !== null) {
+      var file = m[1];
+      if (ls[file]) {
+        Array.prototype.push.apply(snippets, ls[file]);
+      } else {
+        ls[file] = [];
+        // Using immediate function for passing a file loop arg to the deferred
+        (function(file) {
+          $.ajax({url: '/get', data: { name: file }}).done(function(json) {
+            ls[file] = scanSnippets(json.result || '');
+          });
+        })(file);
+      }
+    }
+    Array.prototype.push.apply(snippets, scanSnippets(text));
+    return snippets;
+  };
+  editor.completers = [{
+    getCompletions: function(editor, session, pos, prefix, callback) {
+     callback(null, editor.scanTextForSnippets());
+    },
+  }];
+  // NOTE(lsm): enable this for local autocompletions
+  // var lt = ace.require('ace/ext/language_tools');
+  // if (lt) editor.completers.push(lt.textCompleter);
+
   return editor;
 };
 

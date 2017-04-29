@@ -88,7 +88,8 @@
 
   // Repeatedly pull list of serial ports when we're on the first tab
   var portList = '';
-  setInterval(function() {
+  var checkPorts = function() {
+    if ($.active) return; // Do not run if there are AJAX requests in flight
     var thisPane = $('.tab-pane.active').attr('id');
     var mustRun = (thisPane == 'tab1') || $('#top_nav')[0];
     if (!mustRun) return;
@@ -118,6 +119,8 @@
         $('#found-device-info').hide();
       }
     });
-  }, 1000);
+  };
+  checkPorts();
+  setInterval(checkPorts, 1000);
 
 })(jQuery);

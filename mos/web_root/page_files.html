@@ -65,6 +65,7 @@
 
       editor.setValue(json.result || '', -1);
       editor.session.setMode('ace/mode/' + guesslang(name));
+      editor.scanTextForSnippets();
 
       $('.file-control').toggleClass('disabled', false);
       new PNotify({title: 'Loaded ' + name, type: 'success' });
