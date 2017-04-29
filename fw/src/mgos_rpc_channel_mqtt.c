@@ -110,7 +110,12 @@ static bool mg_rpc_channel_mqtt_send_frame(struct mg_rpc_channel *ch,
 }
 
 static void mg_rpc_channel_mqtt_ch_close(struct mg_rpc_channel *ch) {
+  /* TODO(rojer): Unsubscribe from topics */
   (void) ch;
+}
+
+static void mg_rpc_channel_mqtt_ch_destroy(struct mg_rpc_channel *ch) {
+  free(ch);
 }
 
 static const char *mg_rpc_channel_mqtt_get_type(struct mg_rpc_channel *ch) {
@@ -129,6 +134,7 @@ struct mg_rpc_channel *mg_rpc_channel_mqtt(const struct mg_str device_id) {
   ch->ch_connect = mg_rpc_channel_mqtt_ch_connect;
   ch->send_frame = mg_rpc_channel_mqtt_send_frame;
   ch->ch_close = mg_rpc_channel_mqtt_ch_close;
+  ch->ch_destroy = mg_rpc_channel_mqtt_ch_destroy;
   ch->get_type = mg_rpc_channel_mqtt_get_type;
   ch->is_persistent = mg_rpc_channel_mqtt_is_persistent;
 

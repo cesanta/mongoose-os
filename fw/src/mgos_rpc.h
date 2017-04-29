@@ -11,6 +11,7 @@
 #if MGOS_ENABLE_RPC
 
 #include "common/mg_rpc/mg_rpc.h"
+#include "common/mg_rpc/mg_rpc_channel_ws.h"
 #include "fw/src/mgos_init.h"
 #include "fw/src/mgos_sys_config.h"
 
@@ -21,8 +22,8 @@ extern "C" {
 enum mgos_init_result mgos_rpc_init(void);
 struct mg_rpc *mgos_rpc_get_global(void);
 struct mg_rpc_cfg *mgos_rpc_cfg_from_sys(const struct sys_config *scfg);
-struct mg_rpc_channel_ws_out_cfg *mgos_rpc_channel_ws_out_cfg_from_sys(
-    const struct sys_config *scfg);
+void mgos_rpc_channel_ws_out_cfg_from_sys(
+    const struct sys_config *scfg, struct mg_rpc_channel_ws_out_cfg *chcfg);
 
 /* FFI-able signature of the function that receives RPC request */
 typedef void (*mgos_rpc_eh_t)(struct mg_rpc_request_info *ri, const char *args,

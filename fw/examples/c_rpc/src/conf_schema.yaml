@@ -1,0 +1,4 @@
+[
+  ["c_rpc", "o", {"title": "c_rpc app settings"}],
+  ["c_rpc.peer", "s", "", {"title": "Peer address"}]
+]

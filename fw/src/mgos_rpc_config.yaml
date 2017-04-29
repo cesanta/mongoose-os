@@ -2,5 +2,6 @@
   ["rpc", "o", {title: "RPC settings"}],
   ["rpc.enable", "b", true, {title: "Enable RPC"}],
   ["rpc.max_frame_size", "i", 4096, {title: "Max Frame Size"}],
-  ["rpc.max_queue_size", "i", 25, {title: "Max Quueue Size"}],
+  ["rpc.max_queue_length", "i", 25, {title: "Max Queue Length"}],
+  ["rpc.default_out_channel_idle_close_timeout", "i", 10, {title: "Default idle close timeout for outbound channels"}],
 ]

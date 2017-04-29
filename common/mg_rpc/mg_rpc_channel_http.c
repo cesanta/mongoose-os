@@ -57,6 +57,9 @@ static void mg_rpc_channel_http_frame_sent(void *param) {
   struct mg_rpc_channel *ch = (struct mg_rpc_channel *) param;
   ch->ev_handler(ch, MG_RPC_CHANNEL_FRAME_SENT, (void *) 1);
   ch->ev_handler(ch, MG_RPC_CHANNEL_CLOSED, NULL);
+}
+
+static void mg_rpc_channel_http_ch_destroy(struct mg_rpc_channel *ch) {
   free(ch->channel_data);
   free(ch);
 }
@@ -120,6 +123,7 @@ struct mg_rpc_channel *mg_rpc_channel_http(struct mg_connection *nc) {
   ch->ch_connect = mg_rpc_channel_http_ch_connect;
   ch->send_frame = mg_rpc_channel_http_send_frame;
   ch->ch_close = mg_rpc_channel_http_ch_close;
+  ch->ch_destroy = mg_rpc_channel_http_ch_destroy;
   ch->get_type = mg_rpc_channel_http_get_type;
   ch->is_persistent = mg_rpc_channel_http_is_persistent;
 

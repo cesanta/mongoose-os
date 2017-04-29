@@ -13,9 +13,12 @@
 #include "common/mbuf.h"
 #include "common/mg_rpc/mg_rpc.h"
 #include "common/mg_rpc/mg_rpc_channel.h"
+#include "common/mg_rpc/mg_rpc_channel_ws.h"
+
 #include "mongoose/mongoose.h"
 
-#define MG_RPC_HELLO_CMD "RPC.Hello"
+#include "fw/src/mgos_mongoose.h"
+#include "fw/src/mgos_sys_config.h"
 
 struct mg_rpc {
   struct mg_rpc_cfg *cfg;
@@ -55,6 +58,11 @@ struct mg_rpc_sent_request_info {
 struct mg_rpc_queue_entry {
   struct mg_str dst;
   struct mg_str frame;
+  /*
+   * If this item has been assigned to a particular channel, use it.
+   * Otherwise perform lookup by dst.
+   */
+  struct mg_rpc_channel_info *ci;
   STAILQ_ENTRY(mg_rpc_queue_entry) queue;
 };
 
@@ -87,17 +95,142 @@ static struct mg_rpc_channel_info *mg_rpc_get_channel_info(
   return NULL;
 }
 
+static struct mg_rpc_channel_info *mg_rpc_add_channel_internal(
+    struct mg_rpc *c, const struct mg_str dst, struct mg_rpc_channel *ch,
+    bool is_trusted);
+
+static bool canonicalize_dst_uri(const struct mg_str sch,
+                                 const struct mg_str user_info,
+                                 const struct mg_str host, unsigned int port,
+                                 const struct mg_str path,
+                                 const struct mg_str qs, struct mg_str *uri) {
+  return (mg_assemble_uri(&sch, &user_info, &host, port, &path, &qs,
+                          NULL /* fragment */, 1 /* normalize_path */,
+                          uri) == 0);
+}
+
+static bool dst_is_equal(const struct mg_str d1, const struct mg_str d2) {
+  unsigned int port1, port2;
+  struct mg_str sch1, ui1, host1, path1, qs1, f1;
+  struct mg_str sch2, ui2, host2, path2, qs2, f2;
+  bool iu1, iu2, result = false;
+  iu1 = (mg_parse_uri(d1, &sch1, &ui1, &host1, &port1, &path1, &qs1, &f1) == 0);
+  iu2 = (mg_parse_uri(d2, &sch2, &ui2, &host2, &port2, &path2, &qs2, &f2) == 0);
+  if (!iu1 && !iu2) {
+    result = (mg_strcmp(d1, d2) == 0);
+  } else if (iu1 && iu2) {
+    struct mg_str u1, u2;
+    if (canonicalize_dst_uri(sch1, ui1, host1, port1, path1, qs1, &u1) &&
+        canonicalize_dst_uri(sch2, ui2, host2, port2, path2, qs2, &u2)) {
+      result = (mg_strcmp(u1, u2) == 0);
+    }
+    free((void *) u1.p);
+    free((void *) u2.p);
+  } else {
+    /* URI vs simple ID comparisons remain undefined for now. */
+    result = false;
+  }
+  return result;
+}
+
 static struct mg_rpc_channel_info *mg_rpc_get_channel_info_by_dst(
-    struct mg_rpc *c, const struct mg_str dst) {
+    struct mg_rpc *c, struct mg_str *dst) {
   struct mg_rpc_channel_info *ci;
   struct mg_rpc_channel_info *default_ch = NULL;
   if (c == NULL) return NULL;
-  /* For implied destinations we use default route. */
+  struct mg_str scheme, user_info, host, path, query, fragment;
+  unsigned int port = 0;
+  int is_uri = (mg_parse_uri(*dst, &scheme, &user_info, &host, &port, &path,
+                             &query, &fragment) == 0);
   SLIST_FOREACH(ci, &c->channels, channels) {
-    if (dst.len != 0 && mg_strcmp(ci->dst, dst) == 0) return ci;
+    /* For implied destinations we use default route. */
+    if (dst->len != 0 && dst_is_equal(*dst, ci->dst)) {
+      LOG(LL_DEBUG, ("'%.*s' -> %p", (int) dst->len, dst->p, ci->ch));
+      goto out;
+    }
     if (mg_vcmp(&ci->dst, MG_RPC_DST_DEFAULT) == 0) default_ch = ci;
   }
-  return default_ch;
+  /* If destination is a URI, maybe it tells us to open an outgoing channel. */
+  if (is_uri) {
+    /* At the moment we treat HTTP channels like WS */
+    if (mg_vcmp(&scheme, "ws") == 0 || mg_vcmp(&scheme, "wss") == 0 ||
+        mg_vcmp(&scheme, "https") == 0 || mg_vcmp(&scheme, "https") == 0) {
+      char val_buf[MG_MAX_PATH];
+      struct mg_rpc_channel_ws_out_cfg chcfg;
+      memset(&chcfg, 0, sizeof(chcfg));
+      struct mg_str canon_dst = MG_NULL_STR;
+      canonicalize_dst_uri(scheme, user_info, host, port, path, query,
+                           &canon_dst);
+      chcfg.server_address = canon_dst;
+#if MG_ENABLE_SSL
+      if (mg_get_http_var(&fragment, "ssl_ca_file", val_buf, sizeof(val_buf)) >
+          0) {
+        chcfg.ssl_ca_file = mg_strdup(mg_mk_str(val_buf));
+      }
+      if (mg_get_http_var(&fragment, "ssl_client_cert_file", val_buf,
+                          sizeof(val_buf)) > 0) {
+        chcfg.ssl_client_cert_file = mg_strdup(mg_mk_str(val_buf));
+      }
+      if (mg_get_http_var(&fragment, "ssl_server_name", val_buf,
+                          sizeof(val_buf)) > 0) {
+        chcfg.ssl_server_name = mg_strdup(mg_mk_str(val_buf));
+      }
+#endif
+      if (mg_get_http_var(&fragment, "reconnect_interval_min", val_buf,
+                          sizeof(val_buf)) > 0) {
+        chcfg.reconnect_interval_min = atoi(val_buf);
+      } else {
+        chcfg.reconnect_interval_min = get_cfg()->rpc.ws.reconnect_interval_min;
+      }
+      if (mg_get_http_var(&fragment, "reconnect_interval_max", val_buf,
+                          sizeof(val_buf)) > 0) {
+        chcfg.reconnect_interval_max = atoi(val_buf);
+      } else {
+        chcfg.reconnect_interval_max = get_cfg()->rpc.ws.reconnect_interval_max;
+      }
+      if (mg_get_http_var(&fragment, "idle_close_timeout", val_buf,
+                          sizeof(val_buf)) > 0) {
+        chcfg.idle_close_timeout = atoi(val_buf);
+      } else {
+        chcfg.idle_close_timeout =
+            c->cfg->default_out_channel_idle_close_timeout;
+      }
+
+      struct mg_rpc_channel *ch = mg_rpc_channel_ws_out(mgos_get_mgr(), &chcfg);
+      if (ch != NULL) {
+        ci = mg_rpc_add_channel_internal(c, canon_dst, ch,
+                                         false /* is_trusted */);
+        if (ci != NULL) {
+          ch->ch_connect(ch);
+        }
+      } else {
+        LOG(LL_ERROR,
+            ("Failed to create RPC channel from %.*s", (int) dst->len, dst->p));
+        ci = NULL;
+      }
+      free((void *) canon_dst.p);
+#if MG_ENABLE_SSL
+      free((void *) chcfg.ssl_ca_file.p);
+      free((void *) chcfg.ssl_client_cert_file.p);
+      free((void *) chcfg.ssl_server_name.p);
+#endif
+    } else {
+      LOG(LL_ERROR,
+          ("Unsupported connection scheme in %.*s", (int) dst->len, dst->p));
+      ci = NULL;
+    }
+  } else {
+    ci = default_ch;
+  }
+out:
+  if (is_uri) {
+    /*
+     * For now, URI-based destinations are only implied, i.e. connections
+     * are point to point.
+     */
+    dst->len = 0;
+  }
+  return ci;
 }
 
 static bool mg_rpc_handle_request(struct mg_rpc *c,
@@ -246,16 +379,24 @@ static bool mg_rpc_dispatch_frame(struct mg_rpc *c, const struct mg_str dst,
                                   struct mg_str payload_prefix_json,
                                   const char *payload_jsonf, va_list ap);
 
+static void mg_rpc_remove_queue_entry(struct mg_rpc *c,
+                                      struct mg_rpc_queue_entry *qe) {
+  STAILQ_REMOVE(&c->queue, qe, mg_rpc_queue_entry, queue);
+  free((void *) qe->dst.p);
+  free((void *) qe->frame.p);
+  memset(qe, 0, sizeof(*qe));
+  free(qe);
+  c->queue_len--;
+}
+
 static void mg_rpc_process_queue(struct mg_rpc *c) {
   struct mg_rpc_queue_entry *qe, *tqe;
   STAILQ_FOREACH_SAFE(qe, &c->queue, queue, tqe) {
-    struct mg_rpc_channel_info *ci = mg_rpc_get_channel_info_by_dst(c, qe->dst);
+    struct mg_rpc_channel_info *ci = qe->ci;
+    struct mg_str dst = qe->dst;
+    if (ci == NULL) ci = mg_rpc_get_channel_info_by_dst(c, &dst);
     if (mg_rpc_send_frame(ci, qe->frame)) {
-      STAILQ_REMOVE(&c->queue, qe, mg_rpc_queue_entry, queue);
-      free((void *) qe->dst.p);
-      free((void *) qe->frame.p);
-      free(qe);
-      c->queue_len--;
+      mg_rpc_remove_queue_entry(c, qe);
     }
   }
 }
@@ -321,7 +462,12 @@ static void mg_rpc_ev_handler(struct mg_rpc_channel *ch,
         mg_rpc_call_observers(c, MG_RPC_EV_CHANNEL_CLOSED, &ci->dst);
       }
       if (remove) {
+        struct mg_rpc_queue_entry *qe, *tqe;
+        STAILQ_FOREACH_SAFE(qe, &c->queue, queue, tqe) {
+          if (qe->ci == ci) mg_rpc_remove_queue_entry(c, qe);
+        }
         SLIST_REMOVE(&c->channels, ci, mg_rpc_channel_info, channels);
+        ch->ch_destroy(ch);
         if (ci->dst.p != NULL) free((void *) ci->dst.p);
         memset(ci, 0, sizeof(*ci));
         free(ci);
@@ -331,8 +477,9 @@ static void mg_rpc_ev_handler(struct mg_rpc_channel *ch,
   }
 }
 
-void mg_rpc_add_channel(struct mg_rpc *c, const struct mg_str dst,
-                        struct mg_rpc_channel *ch, bool is_trusted) {
+static struct mg_rpc_channel_info *mg_rpc_add_channel_internal(
+    struct mg_rpc *c, const struct mg_str dst, struct mg_rpc_channel *ch,
+    bool is_trusted) {
   struct mg_rpc_channel_info *ci =
       (struct mg_rpc_channel_info *) calloc(1, sizeof(*ci));
   if (dst.len != 0) ci->dst = mg_strdup(dst);
@@ -343,6 +490,12 @@ void mg_rpc_add_channel(struct mg_rpc *c, const struct mg_str dst,
   SLIST_INSERT_HEAD(&c->channels, ci, channels);
   LOG(LL_DEBUG, ("%p '%.*s' %s%s", ch, (int) dst.len, dst.p, ch->get_type(ch),
                  (is_trusted ? ", trusted" : "")));
+  return ci;
+}
+
+void mg_rpc_add_channel(struct mg_rpc *c, const struct mg_str dst,
+                        struct mg_rpc_channel *ch, bool is_trusted) {
+  mg_rpc_add_channel_internal(c, dst, ch, is_trusted);
 }
 
 void mg_rpc_connect(struct mg_rpc *c) {
@@ -384,7 +537,7 @@ static bool mg_rpc_send_frame(struct mg_rpc_channel_info *ci,
 
 static bool mg_rpc_enqueue_frame(struct mg_rpc *c, struct mg_str dst,
                                  struct mg_str f) {
-  if (c->queue_len >= c->cfg->max_queue_size) return false;
+  if (c->queue_len >= c->cfg->max_queue_length) return false;
   struct mg_rpc_queue_entry *qe =
       (struct mg_rpc_queue_entry *) calloc(1, sizeof(*qe));
   qe->dst = mg_strdup(dst);
@@ -402,7 +555,8 @@ static bool mg_rpc_dispatch_frame(struct mg_rpc *c, const struct mg_str dst,
                                   const char *payload_jsonf, va_list ap) {
   struct mbuf fb;
   struct json_out fout = JSON_OUT_MBUF(&fb);
-  if (ci == NULL) ci = mg_rpc_get_channel_info_by_dst(c, dst);
+  struct mg_str final_dst = dst;
+  if (ci == NULL) ci = mg_rpc_get_channel_info_by_dst(c, &final_dst);
   bool result = false;
   mbuf_init(&fb, 100);
   json_printf(&fout, "{");
@@ -410,8 +564,8 @@ static bool mg_rpc_dispatch_frame(struct mg_rpc *c, const struct mg_str dst,
     json_printf(&fout, "id:%lld,", id);
   }
   json_printf(&fout, "src:%Q", c->cfg->id);
-  if (dst.len > 0) {
-    json_printf(&fout, ",dst:%.*Q", (int) dst.len, dst.p);
+  if (final_dst.len > 0) {
+    json_printf(&fout, ",dst:%.*Q", (int) final_dst.len, final_dst.p);
   }
   if (tag.len > 0) {
     json_printf(&fout, ",tag:%.*Q", (int) tag.len, tag.p);
@@ -538,14 +692,14 @@ void mg_rpc_add_handler(struct mg_rpc *c, const char *method,
 }
 
 bool mg_rpc_is_connected(struct mg_rpc *c) {
-  struct mg_rpc_channel_info *ci =
-      mg_rpc_get_channel_info_by_dst(c, mg_mk_str(MG_RPC_DST_DEFAULT));
+  struct mg_str dd = mg_mk_str(MG_RPC_DST_DEFAULT);
+  struct mg_rpc_channel_info *ci = mg_rpc_get_channel_info_by_dst(c, &dd);
   return (ci != NULL && ci->is_open);
 }
 
 bool mg_rpc_can_send(struct mg_rpc *c) {
-  struct mg_rpc_channel_info *ci =
-      mg_rpc_get_channel_info_by_dst(c, mg_mk_str(MG_RPC_DST_DEFAULT));
+  struct mg_str dd = mg_mk_str(MG_RPC_DST_DEFAULT);
+  struct mg_rpc_channel_info *ci = mg_rpc_get_channel_info_by_dst(c, &dd);
   return (ci != NULL && ci->is_open && !ci->is_busy);
 }
 

@@ -38,7 +38,9 @@ struct mg_rpc_cfg *mgos_rpc_cfg_from_sys(const struct sys_config *scfg) {
   struct mg_rpc_cfg *ccfg = (struct mg_rpc_cfg *) calloc(1, sizeof(*ccfg));
   mgos_conf_set_str(&ccfg->id, scfg->device.id);
   mgos_conf_set_str(&ccfg->psk, scfg->device.password);
-  ccfg->max_queue_size = scfg->rpc.max_queue_size;
+  ccfg->max_queue_length = scfg->rpc.max_queue_length;
+  ccfg->default_out_channel_idle_close_timeout =
+      scfg->rpc.default_out_channel_idle_close_timeout;
   return ccfg;
 }
 
@@ -168,9 +170,9 @@ enum mgos_init_result mgos_rpc_init(void) {
 
 #if MGOS_ENABLE_RPC_CHANNEL_WS
   if (sccfg->ws.server_address != NULL && sccfg->ws.enable) {
-    struct mg_rpc_channel_ws_out_cfg *chcfg =
-        mgos_rpc_channel_ws_out_cfg_from_sys(get_cfg());
-    struct mg_rpc_channel *ch = mg_rpc_channel_ws_out(mgos_get_mgr(), chcfg);
+    struct mg_rpc_channel_ws_out_cfg chcfg;
+    mgos_rpc_channel_ws_out_cfg_from_sys(get_cfg(), &chcfg);
+    struct mg_rpc_channel *ch = mg_rpc_channel_ws_out(mgos_get_mgr(), &chcfg);
     if (ch == NULL) {
       return MGOS_INIT_MG_RPC_FAILED;
     }
@@ -248,20 +250,17 @@ enum mgos_init_result mgos_rpc_init(void) {
 }
 
 #if MGOS_ENABLE_RPC_CHANNEL_WS
-struct mg_rpc_channel_ws_out_cfg *mgos_rpc_channel_ws_out_cfg_from_sys(
-    const struct sys_config *cfg) {
-  struct mg_rpc_channel_ws_out_cfg *chcfg =
-      (struct mg_rpc_channel_ws_out_cfg *) calloc(1, sizeof(*chcfg));
+void mgos_rpc_channel_ws_out_cfg_from_sys(
+    const struct sys_config *cfg, struct mg_rpc_channel_ws_out_cfg *chcfg) {
   const struct sys_config_rpc_ws *wscfg = &cfg->rpc.ws;
-  mgos_conf_set_str(&chcfg->server_address, wscfg->server_address);
+  chcfg->server_address = mg_mk_str(wscfg->server_address);
 #if MG_ENABLE_SSL
-  mgos_conf_set_str(&chcfg->ssl_ca_file, wscfg->ssl_ca_file);
-  mgos_conf_set_str(&chcfg->ssl_client_cert_file, wscfg->ssl_client_cert_file);
-  mgos_conf_set_str(&chcfg->ssl_server_name, wscfg->ssl_server_name);
+  chcfg->ssl_ca_file = mg_mk_str(wscfg->ssl_ca_file);
+  chcfg->ssl_client_cert_file = mg_mk_str(wscfg->ssl_client_cert_file);
+  chcfg->ssl_server_name = mg_mk_str(wscfg->ssl_server_name);
 #endif
-  chcfg->reconnect_interval_min = wscfg->reconnect_timeout_min;
-  chcfg->reconnect_interval_max = wscfg->reconnect_timeout_max;
-  return chcfg;
+  chcfg->reconnect_interval_min = wscfg->reconnect_interval_min;
+  chcfg->reconnect_interval_max = wscfg->reconnect_interval_max;
 }
 #endif /* MGOS_ENABLE_RPC_CHANNEL_WS */
 

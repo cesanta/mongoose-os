@@ -24,10 +24,29 @@ enum mg_rpc_channel_event {
 struct mg_rpc_channel {
   void (*ev_handler)(struct mg_rpc_channel *ch, enum mg_rpc_channel_event ev,
                      void *ev_data);
+
   void (*ch_connect)(struct mg_rpc_channel *ch);
+
   bool (*send_frame)(struct mg_rpc_channel *ch, const struct mg_str f);
+
+  /*
+   * Close tells the channel to wind down.
+   * This applies to persistent channels as well: if a channel is told to close,
+   * it means the system wants it gone, for real.
+   * MG_RPC_CHANNEL_CLOSED should be emitted when channel closes.
+   */
   void (*ch_close)(struct mg_rpc_channel *ch);
+
+  /*
+   * Destroy is invoked in response to the MG_RPC_CHANNEL_CLOSED after all
+   * cleanup is finished. The channel should dispose of the channel struct
+   * as well as the channel struct itself.
+   * ch_destroy is guaranteed to be the last thing to happen to a channel.
+   */
+  void (*ch_destroy)(struct mg_rpc_channel *ch);
+
   const char *(*get_type)(struct mg_rpc_channel *ch);
+
   bool (*is_persistent)(struct mg_rpc_channel *ch);
 
   void *channel_data;

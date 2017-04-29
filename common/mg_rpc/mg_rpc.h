@@ -20,7 +20,8 @@ struct mg_rpc;
 struct mg_rpc_cfg {
   char *id;
   char *psk;
-  int max_queue_size;
+  int max_queue_length;
+  int default_out_channel_idle_close_timeout;
 };
 
 struct mg_rpc_frame {
