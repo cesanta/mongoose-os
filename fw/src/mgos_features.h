@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2016 Cesanta Software Limited
+ * Copyright (c) 2014-2017 Cesanta Software Limited
  * All rights reserved
  */
 
@@ -72,6 +72,10 @@
 
 #ifndef MGOS_ENABLE_MQTT
 #define MGOS_ENABLE_MQTT 0
+#endif
+
+#ifndef MGOS_ENABLE_ONEWIRE
+#define MGOS_ENABLE_ONEWIRE 0
 #endif
 
 #ifndef MGOS_ENABLE_RPC

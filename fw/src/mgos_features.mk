@@ -16,6 +16,7 @@ MGOS_ENABLE_I2C ?= 1
 MGOS_ENABLE_I2C_GPIO ?= 0
 MGOS_ENABLE_I2C_SERVICE ?= 1
 MGOS_ENABLE_MQTT ?= 1
+MGOS_ENABLE_ONEWIRE ?= 0
 MGOS_ENABLE_RPC ?= 1
 MGOS_ENABLE_RPC_CHANNEL_HTTP ?= 1
 MGOS_ENABLE_RPC_CHANNEL_LOOPBACK ?= 1
@@ -52,9 +53,12 @@ endif
 
 ifeq "$(MGOS_ENABLE_ARDUINO_API)" "1"
   MGOS_FEATURES += -DARDUINO=150 -DMGOS_ENABLE_ARDUINO_API=1
-  MGOS_SRCS += $(notdir $(wildcard $(MGOS_SRC_PATH)/Arduino/*.c*))
+  MGOS_SRCS += mgos_arduino.cpp
   IPATH += $(MGOS_SRC_PATH)/Arduino
   VPATH += $(MGOS_SRC_PATH)/Arduino
+  ifeq "$(MGOS_ENABLE_ONEWIRE)" "1"
+    MGOS_SRCS += mgos_arduino_onewire.cpp
+  endif
 endif
 
 ifeq "$(MGOS_ENABLE_ATCA)" "1"
@@ -228,6 +232,11 @@ ifeq "$(MGOS_ENABLE_CONSOLE_FILE_BUFFER)" "1"
   MGOS_FEATURES += -DMGOS_ENABLE_CONSOLE_FILE_BUFFER=1
 endif
 
+ifeq "$(MGOS_ENABLE_ONEWIRE)" "1"
+  MGOS_SRCS += mgos_onewire.c
+  MGOS_FEATURES += -DMGOS_ENABLE_ONEWIRE=1
+endif
+
 # Export all the feature switches.
 # This is required for needed make invocations (i.e. ESP32 IDF)
 export MGOS_ENABLE_ARDUINO_API
@@ -244,6 +253,7 @@ export MGOS_ENABLE_GPIO_SERVICE
 export MGOS_ENABLE_I2C
 export MGOS_ENABLE_I2C_GPIO
 export MGOS_ENABLE_MQTT
+export MGOS_ENABLE_ONEWIRE
 export MGOS_ENABLE_RPC
 export MGOS_ENABLE_RPC_CHANNEL_HTTP
 export MGOS_ENABLE_RPC_CHANNEL_LOOPBACK

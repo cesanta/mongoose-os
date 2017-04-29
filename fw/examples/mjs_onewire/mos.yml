@@ -1,4 +1,4 @@
-name: mjs_hello
+name: mjs_onewire
 # arch: PLATFORM
 version: 1.0
 skeleton_version: 2017-03-17
@@ -13,7 +13,4 @@ filesystem:
 modules:
   - origin: https://github.com/cesanta/mjs
 build_vars:
-  MGOS_ENABLE_MQTT: 1
-  SSL: mbedTLS
-  APP_CONF_SCHEMA: src/conf_schema.yaml
   MGOS_ENABLE_ONEWIRE: 1

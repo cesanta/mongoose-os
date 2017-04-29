@@ -17,3 +17,4 @@ build_vars:
   MGOS_ENABLE_AWS_SHADOW: 1
   SSL: mbedTLS
   APP_CONF_SCHEMA: src/conf_schema.yaml
+  MGOS_ENABLE_ONEWIRE: 1
