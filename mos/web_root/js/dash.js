@@ -133,6 +133,10 @@ var mkeditor = function(id, lang) {
     };
     while ((m = re.exec(text)) !== null) {
       var file = m[1];
+
+      // Ignore files that are not present on the device
+      if ($('.file[rel="' + file + '"]').length === 0) continue;
+
       if (ls[file]) {
         Array.prototype.push.apply(snippets, ls[file]);
       } else {

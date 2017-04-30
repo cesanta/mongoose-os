@@ -4292,6 +4292,10 @@ var mkeditor = function(id, lang) {
     };
     while ((m = re.exec(text)) !== null) {
       var file = m[1];
+
+      // Ignore files that are not present on the device
+      if ($('.file[rel="' + file + '"]').length === 0) continue;
+
       if (ls[file]) {
         Array.prototype.push.apply(snippets, ls[file]);
       } else {
@@ -4337,7 +4341,7 @@ func web_rootJsDashJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/dash.js", size: 5109, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/dash.js", size: 5233, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
