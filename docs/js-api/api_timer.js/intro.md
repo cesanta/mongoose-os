@@ -24,3 +24,8 @@ Timer.set(1000, true, function() {
 }, null);
 ```
 
+
+
+## **`Timer.now()`**
+Return current time as double value, UNIX epoch (seconds since 1970).
+

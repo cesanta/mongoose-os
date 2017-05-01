@@ -17,5 +17,9 @@ let Timer = {
   //   print(value ? 'Tick' : 'Tock');
   // }, null);
   // ```
-  set: ffi('int mgos_set_timer(int,bool,void(*)(userdata),userdata)')
+  set: ffi('int mgos_set_timer(int,bool,void(*)(userdata),userdata)'),
+
+  // ## **`Timer.now()`**
+  // Return current time as double value, UNIX epoch (seconds since 1970).
+  now: ffi('double mg_time(void)'),
 };
