@@ -105,11 +105,14 @@ void mgos_uart_hal_dispatch_rx_top(struct mgos_uart_state *us) {
     uint32_t st = system_get_time();
 #endif
     while (mgos_uart_rxb_free(us) > 0 && linger_counter <= max_linger) {
-      int rx_len = esp_uart_rx_fifo_len(uart_no);
+      size_t rx_len = esp_uart_rx_fifo_len(uart_no);
       if (rx_len > 0) {
-        while (rx_len-- > 0 && mgos_uart_rxb_free(us) > 0) {
+        rx_len = MIN(rx_len, mgos_uart_rxb_free(us));
+        if (rxb->size < rxb->len + rx_len) mbuf_resize(rxb, rxb->len + rx_len);
+        while (rx_len > 0) {
           uint8_t b = rx_byte(uart_no);
           mbuf_append(rxb, &b, 1);
+          rx_len--;
           rxn++;
         }
         if (linger_counter > 0) {
@@ -125,10 +128,7 @@ void mgos_uart_hal_dispatch_rx_top(struct mgos_uart_state *us) {
 #endif
     us->stats.rx_bytes += rxn;
   }
-  int rfl = esp_uart_rx_fifo_len(uart_no);
-  if (rfl < us->cfg.dev.rx_fifo_full_thresh) {
-    CLEAR_PERI_REG_MASK(UART_INT_CLR(uart_no), UART_RX_INTS);
-  }
+  CLEAR_PERI_REG_MASK(UART_INT_CLR(uart_no), UART_RX_INTS);
 }
 
 void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us) {
@@ -138,7 +138,7 @@ void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us) {
   /* TX */
   if (txb->len > 0) {
     while (txb->len > 0) {
-      size_t tx_av = 127 - esp_uart_tx_fifo_len(uart_no);
+      size_t tx_av = 128 - esp_uart_tx_fifo_len(uart_no);
       size_t len = MIN(txb->len, tx_av);
       if (len == 0) break;
       for (size_t i = 0; i < len; i++) {

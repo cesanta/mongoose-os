@@ -28,8 +28,10 @@ IRAM bool esp32_uart_cts(int uart_no) {
   return (READ_PERI_REG(UART_STATUS_REG(uart_no)) & UART_CTSN) ? 1 : 0;
 }
 
+/* Note: ESP32 supports FIFO lengths > 128. For now, we ignore that. */
 IRAM int esp32_uart_rx_fifo_len(int uart_no) {
-  return READ_PERI_REG(UART_STATUS_REG(uart_no)) & 0xff;
+  return (READ_PERI_REG(UART_STATUS_REG(uart_no)) >> UART_RXFIFO_CNT_S) &
+         UART_RXFIFO_CNT_V;
 }
 
 IRAM static int rx_byte(int uart_no) {
@@ -58,7 +60,19 @@ IRAM NOINSTR static void esp_handle_uart_int(struct mgos_uart_state *us) {
                               READ_PERI_REG(UART_INT_ENA_REG(uart_no));
   if (int_st == 0) return;
   us->stats.ints++;
-  if (int_st & UART_RXFIFO_OVF_INT_ST) us->stats.rx_overflows++;
+  if (int_st & UART_RXFIFO_OVF_INT_ST) {
+    us->stats.rx_overflows++;
+    /*
+     * On ESP32, FIFO behaves weirdly on overflow: after it's been completely
+     * read out and emptied, it later produces data overflowed, giving an
+     * impression that it is actually longer. And no, it is not configured to be
+     * longer than 128 bytes (UART_RX_SIZE is 0x1).
+     * For now we just flush the RX FIFO on overflow, which gets rid of this
+     * behavior. This looks like a hardware bug to me.
+     */
+    SET_PERI_REG_MASK(UART_CONF0_REG(uart_no), UART_RXFIFO_RST);
+    CLEAR_PERI_REG_MASK(UART_CONF0_REG(uart_no), UART_RXFIFO_RST);
+  }
   if (int_st & UART_CTS_CHG_INT_ST) {
     if (esp32_uart_cts(uart_no) != 0 && esp32_uart_tx_fifo_len(uart_no) > 0) {
       us->stats.tx_throttles++;
@@ -97,11 +111,14 @@ IRAM void mgos_uart_hal_dispatch_rx_top(struct mgos_uart_state *us) {
     uint32_t st = system_get_time();
 #endif
     while (mgos_uart_rxb_free(us) > 0 && linger_counter <= max_linger) {
-      int rx_len = esp32_uart_rx_fifo_len(uart_no);
+      size_t rx_len = esp32_uart_rx_fifo_len(uart_no);
       if (rx_len > 0) {
-        while (rx_len-- > 0 && mgos_uart_rxb_free(us) > 0) {
+        rx_len = MIN(rx_len, mgos_uart_rxb_free(us));
+        if (rxb->size < rxb->len + rx_len) mbuf_resize(rxb, rxb->len + rx_len);
+        while (rx_len > 0) {
           uint8_t b = rx_byte(uart_no);
           mbuf_append(rxb, &b, 1);
+          rx_len--;
           rxn++;
         }
         if (linger_counter > 0) {
@@ -115,12 +132,8 @@ IRAM void mgos_uart_hal_dispatch_rx_top(struct mgos_uart_state *us) {
 #ifdef MEASURE_LINGER_TIME
     fprintf(stderr, "Time spent reading: %u us\n", system_get_time() - st);
 #endif
-    us->stats.rx_bytes += rxn;
   }
-  int rfl = esp32_uart_rx_fifo_len(uart_no);
-  if (rfl < us->cfg.dev.rx_fifo_full_thresh) {
-    CLEAR_PERI_REG_MASK(UART_INT_CLR_REG(uart_no), UART_RX_INTS);
-  }
+  CLEAR_PERI_REG_MASK(UART_INT_CLR_REG(uart_no), UART_RX_INTS);
 }
 
 IRAM void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us) {
@@ -130,7 +143,7 @@ IRAM void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us) {
   /* TX */
   if (txb->len > 0) {
     while (txb->len > 0) {
-      size_t tx_av = 127 - esp32_uart_tx_fifo_len(uart_no);
+      size_t tx_av = 128 - esp32_uart_tx_fifo_len(uart_no);
       size_t len = MIN(txb->len, tx_av);
       if (len == 0) break;
       for (size_t i = 0; i < len; i++) {
@@ -146,7 +159,7 @@ IRAM void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us) {
 IRAM void mgos_uart_hal_dispatch_bottom(struct mgos_uart_state *us) {
   uint32_t int_ena = UART_INFO_INTS;
   /* Determine which interrupts we want. */
-  if (us->rx_enabled && mgos_uart_rxb_free(us)) {
+  if (us->rx_enabled && mgos_uart_rxb_free(us) > 0) {
     int_ena |= UART_RX_INTS;
   }
   if (us->tx_buf.len > 0) int_ena |= UART_TX_INTS;
@@ -205,7 +218,7 @@ static void set_default_pins(int uart_no, struct mgos_uart_config *cfg) {
 static void set_default_thresh(int uart_no, struct mgos_uart_config *cfg) {
   struct mgos_uart_dev_config *dcfg = &cfg->dev;
   dcfg->rx_fifo_alarm = 10;
-  dcfg->rx_fifo_full_thresh = 120;
+  dcfg->rx_fifo_full_thresh = 40;
   dcfg->rx_fifo_fc_thresh = 125;
   dcfg->tx_fifo_empty_thresh = 10;
 }
@@ -272,7 +285,7 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
   if (cfg->tx_fc_ena) {
     conf0 |= UART_TX_FLOW_EN;
   }
-  WRITE_PERI_REG(UART_CONF0_REG(us->uart_no), conf0);
+  WRITE_PERI_REG(UART_CONF0_REG(uart_no), conf0);
 
   uint32_t conf1 = ((cfg->dev.tx_fifo_empty_thresh & UART_TXFIFO_EMPTY_THRHD_V)
                     << UART_TXFIFO_EMPTY_THRHD_S) |
@@ -289,7 +302,9 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
         UART_RX_FLOW_EN | ((cfg->dev.rx_fifo_fc_thresh & UART_RX_FLOW_THRHD_V)
                            << UART_RX_FLOW_THRHD_S);
   }
-  WRITE_PERI_REG(UART_CONF1_REG(us->uart_no), conf1);
+  WRITE_PERI_REG(UART_CONF1_REG(uart_no), conf1);
+  /* Configure FIFOs for 128 bytes. */
+  WRITE_PERI_REG(UART_MEM_CONF_REG(uart_no), 0x88);
   return true;
 }
 

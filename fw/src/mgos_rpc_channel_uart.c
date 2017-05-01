@@ -61,9 +61,9 @@ void mg_rpc_channel_uart_dispatcher(int uart_no, void *arg) {
   if (rx_av > 0) {
     size_t flen = 0;
     const char *end;
-
-    mgos_uart_read_mbuf(uart_no, &chd->recv_mbuf, rx_av);
     struct mbuf *urxb = &chd->recv_mbuf;
+
+    mgos_uart_read_mbuf(uart_no, urxb, rx_av);
     while ((end = c_strnstr(urxb->buf, FRAME_DELIMETER, urxb->len)) != NULL) {
       flen = (end - urxb->buf);
       if (flen != 0) {
@@ -138,6 +138,7 @@ void mg_rpc_channel_uart_dispatcher(int uart_no, void *arg) {
       chd->sending = false;
       if (chd->resume_uart) {
         chd->resume_uart = false;
+        mgos_uart_flush(uart_no);
         mgos_debug_resume_uart();
       }
       if (chd->sending_user_frame) {

@@ -113,21 +113,31 @@ IRAM_ATTR void mgos_ints_enable(void) {
  * Hence this elaborate dance we perform with poll counter. */
 static volatile uint32_t s_mg_last_poll = 0;
 static volatile bool s_mg_poll_scheduled = false;
+static portMUX_TYPE s_poll_spinlock = portMUX_INITIALIZER_UNLOCKED;
 
 static void IRAM_ATTR mongoose_poll_cb(void *arg) {
+  portENTER_CRITICAL(&s_poll_spinlock);
   s_mg_poll_scheduled = false;
   s_mg_last_poll++;
+  portEXIT_CRITICAL(&s_poll_spinlock);
   (void) arg;
 }
 
 void IRAM_ATTR mongoose_schedule_poll(bool from_isr) {
   /* Prevent piling up of poll callbacks. */
+  portENTER_CRITICAL(&s_poll_spinlock);
   if (!s_mg_poll_scheduled) {
     uint32_t last_poll = s_mg_last_poll;
-    if (mgos_invoke_cb(mongoose_poll_cb, NULL, from_isr) &&
-        s_mg_last_poll == last_poll) {
-      s_mg_poll_scheduled = true;
+    portEXIT_CRITICAL(&s_poll_spinlock);
+    if (mgos_invoke_cb(mongoose_poll_cb, NULL, from_isr)) {
+      portENTER_CRITICAL(&s_poll_spinlock);
+      if (s_mg_last_poll == last_poll) {
+        s_mg_poll_scheduled = true;
+      }
+      portEXIT_CRITICAL(&s_poll_spinlock);
     }
+  } else {
+    portEXIT_CRITICAL(&s_poll_spinlock);
   }
 }
 
