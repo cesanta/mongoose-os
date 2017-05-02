@@ -1,3 +1,4 @@
+load('api_config.js');
 load('api_gpio.js');
 load('api_mqtt.js');
 load('api_sys.js');
@@ -15,7 +16,7 @@ Timer.set(1000 /* 1 sec */, true /* repeat */, function() {
 
 // Publish to MQTT topic on a button press. Button is wired to GPIO pin 0
 GPIO.set_button_handler(0, GPIO.PULL_UP, GPIO.INT_EDGE_NEG, 200, function() {
-  let topic = 'mOS/topic1';
+  let topic = 'devices/' + Cfg.get('device.id');
   let message = JSON.stringify({
     total_ram: Sys.total_ram(),
     free_ram: Sys.free_ram()
