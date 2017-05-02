@@ -5,7 +5,7 @@ let Sys = {
   // ## **`Sys.calloc(nmemb, size)`**
   // Allocate a memory region.
   // Note: currently memory allocated this way must be explicitly released with `free()`.
-  malloc: ffi('void *malloc(int, int)'),
+  malloc: ffi('void *malloc(int)'),
   free: ffi('void free(void *)'),
 
   // ## **`Sys.total_ram()`**
