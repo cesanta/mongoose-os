@@ -79,6 +79,10 @@ int main(void) {
   MAP_IntEnable(FAULT_SYSTICK);
   MAP_IntMasterEnable();
   PRCMCC3200MCUInit();
+  if (!MAP_PRCMRTCInUseGet()) {
+    MAP_PRCMRTCInUseSet();
+    MAP_PRCMRTCSet(0, 0);
+  }
   MAP_PRCMPeripheralClkEnable(PRCM_WDT, PRCM_RUN_MODE_CLK);
 
   mgos_wdt_set_timeout(5 /* seconds */);
