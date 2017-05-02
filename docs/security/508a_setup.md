@@ -75,7 +75,8 @@ refer to Microchip documentation.
    key from device's slot 0:
 
   ```
-  $ mos config-set http.listen_addr=:443 http.ssl_cert=ecc.crt.pem http.ssl_key=ATCA:0
+  $ mos config-set http.listen_addr=:443 \
+    http.ssl_cert=ecc.crt.pem http.ssl_key=ATCA:0
   Getting configuration...
   Setting new configuration...
   Saving and rebooting...

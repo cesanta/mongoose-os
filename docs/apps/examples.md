@@ -8,6 +8,7 @@ Clone https://github.com/cesanta/mongoose-os.git repo, go to
 `fw/examples` directory, choose the one you like, go into it, and
 
 ```
-mos build --arch XXX
-mos flash && mos console
+git clone https://github.com/cesanta/mongoose-os.git
+cd mongoose-os/fw/examples/EXAMPLE_YOU_LIKE_TO_USE
+mos build --arch XXX && mos flash && mos console
 ```

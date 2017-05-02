@@ -23,7 +23,8 @@ In order to enable flash encryption, use `esp32-gen-key` command. It
 enables flash encryption for the next flashing:
 
 ```bash
-mos -X esp32-gen-key flash_encryption_key fe.key --esp32-enable-flash-encryption --dry-run=false
+mos -X esp32-gen-key flash_encryption_key fe.key \
+	--esp32-enable-flash-encryption --dry-run=false
 mos flash esp32 --esp32-encryption-key-file fe.key
 ```
 That is irreversible - once flash encryption is enabled, you cannot go back.

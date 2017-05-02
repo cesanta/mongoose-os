@@ -1,5 +1,5 @@
 ---
-title: Build firmware
+title: Building an App in C
 ---
 
 Create an empty directory, go into it, and run:

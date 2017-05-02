@@ -1,6 +1,5 @@
 ---
-title: JavaScript API
+title: JavaScript API Reference
 items:
-  - { name: overview.md }
   - { name: ../js-api, type: flat }
 ---
