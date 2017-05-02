@@ -26,6 +26,7 @@ static int8_t s_uart_suspended = 0;
 
 void mgos_debug_write(int fd, const void *data, size_t len) {
   int uart_no = -1;
+  mgos_lock();
   if (s_uart_suspended <= 0) {
     if (fd == 1) {
       uart_no = s_stdout_uart;
@@ -41,7 +42,6 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
   /* Only send STDERR to UDP. */
   if (fd == 2) {
     const struct sys_config *cfg = get_cfg();
-    mgos_lock();
     if (cfg != NULL && cfg->debug.udp_log_addr != NULL) {
       char prefix[64];
       static uint32_t s_seq = 0;
@@ -53,9 +53,9 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
       }
       s_seq++;
     }
-    mgos_unlock();
   }
 #endif /* MGOS_ENABLE_DEBUG_UDP */
+  mgos_unlock();
 }
 
 void mgos_debug_flush(void) {
