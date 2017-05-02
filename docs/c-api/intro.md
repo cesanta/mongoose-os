@@ -4,7 +4,6 @@ items:
   - { name: mgos_bitbang.h }
   - { name: mgos_config.h }
   - { name: mgos_gpio.h }
-  - { name: mgos_hal.h }
   - { name: mgos_i2c.h }
   - { name: mgos_mongoose.h }
   - { name: mg_rpc.h }
