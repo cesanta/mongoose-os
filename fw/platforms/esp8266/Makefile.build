@@ -134,6 +134,7 @@ MGOS_SRCS += esp_adc.c \
              esp_libc.c \
              esp_main.c \
              esp_mdns.c \
+             esp_mmap.c \
              esp_periph.c \
              esp_pwm.c \
              esp_uart.c \
@@ -250,7 +251,8 @@ ifeq "$(MGOS_ESP8266_RTOS)" "1"
 else
   SDK_PATH = /opt/Espressif/ESP8266_NONOS_SDK
   MGOS_SRCS += esp_exc_non_os.c
-  MGOS_CFLAGS += -DLWIP_OPEN_SRC
+  MGOS_CFLAGS += -DLWIP_OPEN_SRC \
+           -DCS_MMAP -DSPIFFS_ON_PAGE_MOVE_HOOK=esp_spiffs_on_page_move_hook
   LWIP_LIB = $(LWIP_BUILD_DIR)/liblwip_cs.a
   LWIP_PATH = $(COMMON_ESP_PATH)/lwip
   SDK_LIBS += m

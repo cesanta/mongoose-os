@@ -13,6 +13,7 @@
 
 #include "fw/platforms/esp8266/src/esp_exc.h"
 #include "fw/platforms/esp8266/src/esp_hw.h"
+#include "fw/platforms/esp8266/src/esp_mmap.h"
 
 struct exc_frame {
   uint32_t exit; /* exit pointer for dispatch, points to _xt_user_exit */
@@ -25,21 +26,54 @@ struct exc_frame {
 void _xt_user_exit(void);
 
 IRAM NOINSTR void __wrap_user_fatal_exception_handler(uint32_t cause) {
-  /*
-   * Note that we don't get here with SYSTEM_CALL or LOAD_STORE_ERROR.
-   * SDK has partially filled an exc_frame struct for us that has been placed
-   * on the stack of the calling function. a14 and a15 have not bee saved, save
-   * them now.
-   */
+/*
+ * Note that we don't get here with SYSTEM_CALL or LOAD_STORE_ERROR.
+ * SDK has partially filled an exc_frame struct for us that has been placed
+ * on the stack of the calling function. a14 and a15 have not bee saved, save
+ * them now.
+ */
+#ifdef CS_MMAP
+  uint32_t vaddr = RSR(EXCVADDR);
+#endif
+
   uint32_t a14, a15;
   __asm volatile(
       "mov.n %0, a14\n"
       "mov.n %1, a15"
       : "=a"(a14), "=a"(a15));
+
   /* We identify the frame by searching for the exit pointer (_xt_user_exit). */
   uint32_t *sp = &cause;
   while (*sp != (uint32_t) _xt_user_exit) sp++;
   struct exc_frame *f = (struct exc_frame *) sp;
+
+#ifdef CS_MMAP
+  if (cause == EXCCAUSE_LOAD_PROHIBITED && (void *) vaddr >= MMAP_BASE) {
+    int pc_inc =
+        esp_mmap_exception_handler(vaddr, (uint8_t *) f->pc, (long *) &f->a[2]);
+    if (pc_inc > 0) {
+      f->pc += pc_inc;
+
+/*
+ * TODO(dfrank): at the moment it doesn't work on RTOS, and the failure is very
+ * weird: without the commented snippet below, WDT gets triggered. But if we
+ * spend some time here (e.g. busyloop as below), then it works.
+ *
+ * Need to figure what's going on, and fix.
+ */
+#if 0
+      {
+        volatile int i = 0;
+        for (i = 0; i < 100000; i++) {
+        }
+        mgos_wdt_feed();
+      }
+#endif
+      return;
+    }
+  }
+#endif
+
   /* Now convert it to GDB frame. */
   struct regfile regs;
   memcpy(regs.a, f->a, sizeof(regs.a));

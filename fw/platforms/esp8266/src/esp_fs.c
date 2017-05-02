@@ -4,6 +4,7 @@
  */
 
 #include "fw/platforms/esp8266/src/esp_fs.h"
+#include "fw/platforms/esp8266/src/esp_mmap.h"
 
 #include <dirent.h>
 #include <errno.h>
@@ -23,14 +24,6 @@
 
 #include "fw/src/mgos_debug.h"
 #include "fw/platforms/esp8266/src/esp_exc.h"
-
-/*
- * number of file descriptors reserved for system.
- * SPIFFS currently returns file descriptors that
- * clash with "system" fds like stdout and stderr.
- * Here we remap all spiffs fds by adding/subtracting NUM_SYS_FD
- */
-#define NUM_SYS_FD 3
 
 static spiffs fs;
 
@@ -90,6 +83,12 @@ static s32_t esp_spiffs_readwrite(u32_t addr, u32_t size, u8 *p, int write) {
 }
 
 static s32_t esp_spiffs_read(spiffs *fs, u32_t addr, u32_t size, u8_t *dst) {
+#ifdef CS_MMAP
+  if (esp_spiffs_dummy_read(fs, addr, size, dst)) {
+    return SPIFFS_OK;
+  }
+#endif
+
   return esp_spiffs_readwrite(addr, size, dst, 0);
   (void) fs;
 }

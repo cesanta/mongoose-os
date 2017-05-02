@@ -5,6 +5,7 @@
 #ifndef RTOS_SDK
 
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include <user_interface.h>
@@ -13,7 +14,9 @@
 
 #include "common/platforms/esp8266/esp_missing_includes.h"
 #include "fw/platforms/esp8266/src/esp_exc.h"
+#include "fw/platforms/esp8266/src/esp_fs.h"
 #include "fw/platforms/esp8266/src/esp_hw.h"
+#include "fw/platforms/esp8266/src/esp_mmap.h"
 
 /*
  * xtos low level exception handler (in rom)
@@ -65,6 +68,20 @@ IRAM NOINSTR void esp_exception_handler(UserFrame *frame) {
   /* Not stored in the frame's fields for some reason. */
   uint32_t cause = RSR(EXCCAUSE);
   struct regfile regs;
+
+#ifdef CS_MMAP
+  uint32_t vaddr = RSR(EXCVADDR);
+  int pc_inc = 0;
+
+  if ((void *) vaddr >= MMAP_BASE) {
+    if ((pc_inc = esp_mmap_exception_handler(vaddr, (uint8_t *) frame->pc,
+                                             &frame->a2)) > 0) {
+      frame->pc += pc_inc;
+      return;
+    }
+  }
+#endif
+
   regs_from_xtos_frame(frame, &regs);
   esp_exc_common(cause, &regs);
 }

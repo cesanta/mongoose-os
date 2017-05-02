@@ -6,6 +6,8 @@
 #ifndef CS_FW_PLATFORMS_ESP8266_INCLUDE_SYS_MMAN_H_
 #define CS_FW_PLATFORMS_ESP8266_INCLUDE_SYS_MMAN_H_
 
+#include <sys/types.h>
+
 #define MAP_PRIVATE 1
 #define PROT_READ 1
 #define MAP_FAILED ((void *) (-1))
