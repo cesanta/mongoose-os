@@ -65,6 +65,8 @@ static void inc_handler(struct mg_rpc_request_info *ri, void *cb_arg,
 
   mgos_gpio_toggle(LED_GPIO);
 
+  printf("%d + 1 = %d\n", num, num + 1);
+
   mg_rpc_send_responsef(ri, "%.*s", fb.len, fb.buf);
   ri = NULL;
 

@@ -29,7 +29,7 @@ int mgos_console_is_waiting_for_resp(void);
 #endif /* __cplusplus */
 
 #define CONSOLE_LOG(l, x)          \
-  if (cs_log_level >= l) {         \
+  if (cs_log_threshold >= l) {     \
     cs_log_print_prefix(__func__); \
     cs_log_printf x;               \
     mgos_console_printf x;         \

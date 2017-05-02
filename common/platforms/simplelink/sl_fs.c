@@ -30,7 +30,7 @@
 #define SPIFFS_FD_BASE 10
 #define SLFS_FD_BASE 100
 
-#ifndef MG_UART_CHAR_PUT
+#if !defined(MG_UART_CHAR_PUT) && !defined(MG_UART_WRITE)
 #if CS_PLATFORM == CS_P_CC3200
 #include <inc/hw_types.h>
 #include <inc/hw_memmap.h>
@@ -39,7 +39,7 @@
 #include <driverlib/uart.h>
 #define MG_UART_CHAR_PUT(fd, c) MAP_UARTCharPut(UARTA0_BASE, c);
 #else
-#define MG_UART_CHAR_PUT(fd, c)
+#define MG_UART_WRITE(fd, buf, len)
 #endif /* CS_PLATFORM == CS_P_CC3200 */
 #endif /* !MG_UART_CHAR_PUT */
 
@@ -268,7 +268,6 @@ int write(int fd, const char *buf, unsigned count) {
 ssize_t _write(int fd, const void *buf, size_t count) {
 #endif
   int r = -1;
-  size_t i = 0;
   switch (fd_type(fd)) {
     case FD_INVALID:
       r = set_errno(EBADF);
@@ -278,11 +277,18 @@ ssize_t _write(int fd, const void *buf, size_t count) {
         r = set_errno(EACCES);
         break;
       }
-      for (i = 0; i < count; i++) {
-        const char c = ((const char *) buf)[i];
-        if (c == '\n') MG_UART_CHAR_PUT(fd, '\r');
-        MG_UART_CHAR_PUT(fd, c);
+#ifdef MG_UART_WRITE
+      MG_UART_WRITE(fd, buf, count);
+#elif defined(MG_UART_CHAR_PUT)
+      {
+        size_t i;
+        for (i = 0; i < count; i++) {
+          const char c = ((const char *) buf)[i];
+          if (c == '\n') MG_UART_CHAR_PUT(fd, '\r');
+          MG_UART_CHAR_PUT(fd, c);
+        }
       }
+#endif
       r = count;
       break;
     }

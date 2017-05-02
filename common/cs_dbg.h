@@ -41,26 +41,26 @@ void cs_log_set_level(enum cs_log_level level);
 #if CS_ENABLE_STDIO
 
 void cs_log_set_file(FILE *file);
-extern enum cs_log_level cs_log_level;
-void cs_log_print_prefix(const char *func);
+extern enum cs_log_level cs_log_threshold;
+void cs_log_print_prefix(enum cs_log_level level, const char *func);
 void cs_log_printf(const char *fmt, ...);
 
-#define LOG(l, x)                    \
-  do {                               \
-    if (cs_log_level >= l) {         \
-      cs_log_print_prefix(__func__); \
-      cs_log_printf x;               \
-    }                                \
+#define LOG(l, x)                       \
+  do {                                  \
+    if (cs_log_threshold >= l) {        \
+      cs_log_print_prefix(l, __func__); \
+      cs_log_printf x;                  \
+    }                                   \
   } while (0)
 
 #ifndef CS_NDEBUG
 
-#define DBG(x)                              \
-  do {                                      \
-    if (cs_log_level >= LL_VERBOSE_DEBUG) { \
-      cs_log_print_prefix(__func__);        \
-      cs_log_printf x;                      \
-    }                                       \
+#define DBG(x)                                         \
+  do {                                                 \
+    if (cs_log_threshold >= LL_VERBOSE_DEBUG) {        \
+      cs_log_print_prefix(LL_VERBOSE_DEBUG, __func__); \
+      cs_log_printf x;                                 \
+    }                                                  \
   } while (0)
 
 #else /* NDEBUG */

@@ -17,4 +17,6 @@
   ["mqtt.keep_alive", "i", 60, {title: "Keep alive interval"}],
   ["mqtt.will_topic", "s", "", {title: "Will topic"}],
   ["mqtt.will_message", "s", "", {title: "Will message"}],
+  ["debug.stdout_topic", "s", "", {title: "MQTT topic to publish STDOUT to"}],
+  ["debug.stderr_topic", "s", "", {title: "MQTT topic to publish STDERR to"}],
 ]

@@ -92,8 +92,8 @@ int main(void) {
   memset(&_heap_start, 0, (char *) &_heap_end - (char *) &_heap_start);
 #endif
 
-  setvbuf(stdout, NULL, _IOLBF, 0);
-  setvbuf(stderr, NULL, _IOLBF, 0);
+  setvbuf(stdout, NULL, _IOLBF, 256);
+  setvbuf(stderr, NULL, _IOLBF, 256);
   cs_log_set_level(MGOS_EARLY_DEBUG_LEVEL);
 
   VStartSimpleLinkSpawnTask(8);

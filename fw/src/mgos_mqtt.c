@@ -37,6 +37,7 @@ struct global_handler {
 static int s_reconnect_timeout_ms = 0;
 static mgos_timer_id s_reconnect_timer_id = MGOS_INVALID_TIMER_ID;
 static struct mg_connection *s_conn = NULL;
+static bool s_connected = false;
 static mgos_mqtt_auth_callback_t s_auth_cb = NULL;
 static void *s_auth_cb_arg = NULL;
 
@@ -109,6 +110,7 @@ static void mgos_mqtt_ev(struct mg_connection *nc, int ev, void *ev_data,
     case MG_EV_CLOSE: {
       LOG(LL_INFO, ("MQTT Disconnect"));
       s_conn = NULL;
+      s_connected = false;
       call_global_handlers(nc, ev, NULL, user_data);
       mqtt_global_reconnect();
       break;
@@ -136,6 +138,7 @@ static void mgos_mqtt_ev(struct mg_connection *nc, int ev, void *ev_data,
       int code = ((struct mg_mqtt_message *) ev_data)->connack_ret_code;
       LOG((code == 0 ? LL_INFO : LL_ERROR), ("MQTT CONNACK %d", code));
       if (code == 0) {
+        s_connected = true;
         s_reconnect_timeout_ms = 0;
         call_global_handlers(nc, ev, ev_data, user_data);
         SLIST_FOREACH(th, &s_topic_handlers, entries) {
@@ -240,6 +243,7 @@ static bool mqtt_global_connect(void) {
   opts.ssl_psk_key = scfg->mqtt.ssl_psk_key;
 #endif
 
+  s_connected = false;
   s_conn = mg_connect_opt(mgr, scfg->mqtt.server, mgos_mqtt_ev, NULL, opts);
   if (s_conn != NULL) {
     mg_set_protocol_mqtt(s_conn);
@@ -285,7 +289,7 @@ struct mg_connection *mgos_mqtt_get_global_conn(void) {
 bool mgos_mqtt_pub(const char *topic, const void *message, size_t len) {
   static uint16_t message_id;
   struct mg_connection *c = mgos_mqtt_get_global_conn();
-  if (c == NULL) return false;
+  if (c == NULL || !s_connected) return false;
   LOG(LL_DEBUG, ("Publishing: %d bytes [%.*s]", (int) len, (int) len, message));
   mg_mqtt_publish(c, topic, message_id++, MG_MQTT_QOS(0), message, len);
   return true;
@@ -310,7 +314,11 @@ void mgos_mqtt_sub(const char *topic, sub_handler_t handler, void *user_data) {
   sd->handler = handler;
   sd->user_data = user_data;
   mgos_mqtt_global_subscribe(mg_mk_str(topic), mqttsubtrampoline, sd);
-  if (s_conn != NULL) s_conn->flags |= MG_F_CLOSE_IMMEDIATELY;  // Reconnect
+  if (s_connected) s_conn->flags |= MG_F_CLOSE_IMMEDIATELY;  // Reconnect
+}
+
+size_t mgos_mqtt_num_unsent_bytes(void) {
+  return (s_conn != NULL ? s_conn->send_mbuf.len : 0);
 }
 
 #endif /* MGOS_ENABLE_MQTT */

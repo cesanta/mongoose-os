@@ -11,6 +11,7 @@
 #include "esp_attr.h"
 #include "esp_event.h"
 #include "esp_event_loop.h"
+#include "esp_log.h"
 #include "esp_ota_ops.h"
 #include "esp_spi_flash.h"
 #include "esp_system.h"
@@ -181,9 +182,18 @@ bool IRAM_ATTR mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
  * Note that this function may be invoked from a very low level.
  * This is where ESP_EARLY_LOG prints (via ets_printf).
  */
-IRAM void sdk_putc(char c) {
+static IRAM void sdk_putc(char c) {
   if (mgos_debug_uart_is_suspended()) return;
   ets_write_char_uart(c);
+}
+
+extern enum cs_log_level cs_log_cur_msg_level;
+static int sdk_debug_vprintf(const char *fmt, va_list ap) {
+  /* Do not log SDK messages anywhere except UART. */
+  cs_log_cur_msg_level = LL_VERBOSE_DEBUG;
+  int res = vprintf(fmt, ap);
+  cs_log_cur_msg_level = LL_NONE;
+  return res;
 }
 
 void app_main(void) {
@@ -191,8 +201,11 @@ void app_main(void) {
   tcpip_adapter_init();
   ets_install_putc1(sdk_putc);
   ets_install_putc2(NULL);
+  esp_log_set_vprintf(sdk_debug_vprintf);
   ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
   s_mgos_mux = xSemaphoreCreateRecursiveMutex();
+  setvbuf(stdout, NULL, _IOLBF, 256);
+  setvbuf(stderr, NULL, _IOLBF, 256);
   xTaskCreate(mgos_task, "mgos", MGOS_TASK_STACK_SIZE, NULL, MGOS_TASK_PRIORITY,
               NULL);
 }

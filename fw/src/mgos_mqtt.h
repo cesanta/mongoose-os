@@ -60,6 +60,8 @@ typedef void (*sub_handler_t)(struct mg_connection *nc, const char *topic,
  */
 void mgos_mqtt_sub(const char *topic, sub_handler_t, void *ud);
 
+size_t mgos_mqtt_num_unsent_bytes(void);
+
 #endif /* MGOS_ENABLE_MQTT */
 
 #ifdef __cplusplus

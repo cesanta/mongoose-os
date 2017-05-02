@@ -9,10 +9,13 @@
 #include "fw/src/mgos_debug.h"
 #include "fw/src/mgos_debug_hal.h"
 
+#include "common/cs_dbg.h"
+
 #include "mongoose/mongoose.h"
 
 #include "fw/src/mgos_features.h"
 #include "fw/src/mgos_hal.h"
+#include "fw/src/mgos_mqtt.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_uart.h"
 
@@ -20,11 +23,20 @@
 #define IRAM
 #endif
 
+#ifndef MGOS_MQTT_LOG_PUSHBACK_THRESHOLD
+#define MGOS_MQTT_LOG_PUSHBACK_THRESHOLD 2048
+#endif
+
 static int8_t s_stdout_uart = MGOS_DEBUG_UART;
 static int8_t s_stderr_uart = MGOS_DEBUG_UART;
 static int8_t s_uart_suspended = 0;
+static int8_t s_in_debug = 0;
+
+/* From cs_dbg.c */
+extern enum cs_log_level cs_log_cur_msg_level;
 
 void mgos_debug_write(int fd, const void *data, size_t len) {
+  char buf[256];
   int uart_no = -1;
   mgos_lock();
   if (s_uart_suspended <= 0) {
@@ -38,23 +50,45 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
     len = mgos_uart_write(uart_no, data, len);
     mgos_uart_flush(uart_no);
   }
+  const struct sys_config *cfg = get_cfg();
+  /* Only send LL_DEBUG messages and below, to avoid loops. */
+  if (s_in_debug || cfg == NULL || cs_log_cur_msg_level > LL_DEBUG) {
+    mgos_unlock();
+    return;
+  }
+  s_in_debug = true;
 #if MGOS_ENABLE_DEBUG_UDP
   /* Only send STDERR to UDP. */
-  if (fd == 2) {
-    const struct sys_config *cfg = get_cfg();
-    if (cfg != NULL && cfg->debug.udp_log_addr != NULL) {
-      char prefix[64];
-      static uint32_t s_seq = 0;
-      int n = snprintf(prefix, sizeof(prefix), "%s %u %.3lf %d|",
+  if (fd == 2 && cfg->debug.udp_log_addr != NULL) {
+    static uint32_t s_seq = 0;
+    if (mgos_mqtt_num_unsent_bytes() < MGOS_MQTT_LOG_PUSHBACK_THRESHOLD) {
+      int n = snprintf(buf, sizeof(buf), "%s %u %.3lf %d|",
                        (cfg->device.id ? cfg->device.id : "-"), s_seq,
                        mg_time(), fd);
       if (n > 0) {
-        mgos_debug_udp_send(mg_mk_str_n(prefix, n), mg_mk_str_n(data, len));
+        mgos_debug_udp_send(mg_mk_str_n(buf, n), mg_mk_str_n(data, len));
       }
-      s_seq++;
     }
+    s_seq++;
   }
 #endif /* MGOS_ENABLE_DEBUG_UDP */
+#if MGOS_ENABLE_MQTT
+  const char *topic = (fd == 1 ? cfg->debug.stdout_topic
+                               : fd == 2 ? cfg->debug.stderr_topic : NULL);
+  if (topic != NULL) {
+    static uint32_t s_seq = 0;
+    char *msg = buf;
+    int msg_len = mg_asprintf(&msg, sizeof(buf), "%s %u %.3lf %d|%.*s",
+                              (cfg->device.id ? cfg->device.id : "-"), s_seq,
+                              mg_time(), fd, (int) len, data);
+    if (len > 0) {
+      mgos_mqtt_pub(topic, msg, msg_len);
+      s_seq++;
+    }
+    if (msg != buf) free(msg);
+  }
+#endif /* MGOS_ENABLE_MQTT */
+  s_in_debug = false;
   mgos_unlock();
 }
 

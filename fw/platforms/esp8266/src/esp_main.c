@@ -110,8 +110,8 @@ enum mgos_init_result esp_mgos_init2(rboot_config *bcfg) {
   enum mgos_init_result ir = mgos_debug_uart_init();
   if (ir != MGOS_INIT_OK) return ir;
   uart_initialized = true;
-  setvbuf(stdout, NULL, _IONBF, 0);
-  setvbuf(stderr, NULL, _IONBF, 0);
+  setvbuf(stdout, NULL, _IOLBF, 256);
+  setvbuf(stderr, NULL, _IOLBF, 256);
   cs_log_set_level(MGOS_EARLY_DEBUG_LEVEL);
   /* Note: putc can be invoked from int handlers. */
   os_install_putc1(sdk_putc);

@@ -11,7 +11,7 @@
 
 #include "common/cs_time.h"
 
-enum cs_log_level cs_log_level WEAK =
+enum cs_log_level cs_log_threshold WEAK =
 #if CS_ENABLE_DEBUG
     LL_VERBOSE_DEBUG;
 #else
@@ -26,12 +26,15 @@ FILE *cs_log_file WEAK = NULL;
 double cs_log_ts WEAK;
 #endif
 
-void cs_log_print_prefix(const char *func) WEAK;
-void cs_log_print_prefix(const char *func) {
+enum cs_log_level cs_log_cur_msg_level WEAK = LL_NONE;
+
+void cs_log_print_prefix(enum cs_log_level level, const char *func) WEAK;
+void cs_log_print_prefix(enum cs_log_level level, const char *func) {
   char prefix[21];
   strncpy(prefix, func, 20);
   prefix[20] = '\0';
   if (cs_log_file == NULL) cs_log_file = stderr;
+  cs_log_cur_msg_level = level;
   fprintf(cs_log_file, "%-20s ", prefix);
 #if CS_LOG_ENABLE_TS_DIFF
   {
@@ -50,6 +53,7 @@ void cs_log_printf(const char *fmt, ...) {
   va_end(ap);
   fputc('\n', cs_log_file);
   fflush(cs_log_file);
+  cs_log_cur_msg_level = LL_NONE;
 }
 
 void cs_log_set_file(FILE *file) WEAK;
@@ -61,7 +65,7 @@ void cs_log_set_file(FILE *file) {
 
 void cs_log_set_level(enum cs_log_level level) WEAK;
 void cs_log_set_level(enum cs_log_level level) {
-  cs_log_level = level;
+  cs_log_threshold = level;
 #if CS_LOG_ENABLE_TS_DIFF && CS_ENABLE_STDIO
   cs_log_ts = cs_time();
 #endif

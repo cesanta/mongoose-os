@@ -13,8 +13,6 @@
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_wifi.h"
 
-#include "fw/platforms/cc3200/src/cc3200_console.h"
-
 void device_get_mac_address(uint8_t mac[6]) {
   uint8_t mac_len = 6;
   sl_NetCfgGet(SL_MAC_ADDRESS_GET, NULL, &mac_len, mac);
