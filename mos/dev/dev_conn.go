@@ -20,7 +20,7 @@ const (
 	// and handle it
 	debugDevId = ""
 
-	confOpTimeout  = 5 * time.Second
+	confOpTimeout  = 10 * time.Second
 	confOpAttempts = 3
 )
 
