@@ -4283,7 +4283,7 @@ var mkeditor = function(id, lang) {
         if (!m2) continue;
         snippets.push({
           caption: m2[2],
-          snippet: m2[1] + ';',
+          snippet: m2[1],
           docHTML: marked(t),
           type: 'snippet',
         });
@@ -4341,7 +4341,7 @@ func web_rootJsDashJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/dash.js", size: 5233, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/dash.js", size: 5227, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

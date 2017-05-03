@@ -124,7 +124,7 @@ var mkeditor = function(id, lang) {
         if (!m2) continue;
         snippets.push({
           caption: m2[2],
-          snippet: m2[1] + ';',
+          snippet: m2[1],
           docHTML: marked(t),
           type: 'snippet',
         });
