@@ -12,11 +12,11 @@
 
 #include <xtensa/corebits.h>
 
+#include "common/platforms/esp/src/esp_mmap.h"
 #include "common/platforms/esp8266/esp_missing_includes.h"
 #include "fw/platforms/esp8266/src/esp_exc.h"
 #include "fw/platforms/esp8266/src/esp_fs.h"
 #include "fw/platforms/esp8266/src/esp_hw.h"
-#include "fw/platforms/esp8266/src/esp_mmap.h"
 
 /*
  * xtos low level exception handler (in rom)

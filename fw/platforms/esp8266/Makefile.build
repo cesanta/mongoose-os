@@ -46,14 +46,15 @@ COMMON_PATH ?= $(MGOS_PATH)/common
 MONGOOSE_PATH ?= $(MGOS_PATH)/mongoose
 FROZEN_PATH ?= $(MGOS_PATH)/frozen
 
-COMMON_ESP_PATH ?= $(COMMON_PATH)/platforms/esp8266
-MGOS_ESP_PATH ?= $(MGOS_PATH)/fw/platforms/esp8266
+COMMON_ESP_PATH ?= $(COMMON_PATH)/platforms/esp/src
+COMMON_ESP8266_PATH ?= $(COMMON_PATH)/platforms/esp8266
+MGOS_ESP8266_PATH ?= $(MGOS_PATH)/fw/platforms/esp8266
 MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
 MBEDTLS_PATH ?= /opt/mbedtls
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 UMM_MALLOC_PATH ?= $(COMMON_PATH)/umm_malloc
 COMMON_FS_PATH ?= $(MGOS_PATH)/fw/skeleton/fs
-BOOTLOADER_PATH ?= $(COMMON_ESP_PATH)/rboot
+BOOTLOADER_PATH ?= $(COMMON_ESP8266_PATH)/rboot
 ESPTOOL2 = $(BUILD_DIR)/esptool2
 # Enable heap allocation logging - every malloc/free is logged.
 MGOS_ENABLE_HEAP_LOG ?= 0
@@ -96,12 +97,12 @@ FW_USER_ARGS = -quiet -bin -boot2
 # SSL can be None or mbedTLS
 SSL ?= mbedTLS
 
-include $(COMMON_ESP_PATH)/common.mk
+include $(COMMON_ESP8266_PATH)/common.mk
 
 # For FW_VERSION, MG_FEATURES_TINY
 include $(MGOS_PATH)/fw/common.mk
 
-MGOS_ESP_SRC_PATH = $(MGOS_ESP_PATH)/src
+MGOS_ESP_SRC_PATH = $(MGOS_ESP8266_PATH)/src
 
 MGOS_SRCS = cs_file.c cs_rbuf.c \
             mgos_config.c \
@@ -120,7 +121,8 @@ MGOS_SRCS = cs_file.c cs_rbuf.c \
             umm_malloc.c \
             mongoose.c frozen.c
 
-MGOS_SRCS += esp_adc.c \
+MGOS_SRCS += esp8266_mmap.c \
+             esp_adc.c \
              esp_config.c \
              esp_coredump.c \
              esp_debug.c \
@@ -141,7 +143,7 @@ MGOS_SRCS += esp_adc.c \
              esp_updater.c \
              esp_wifi.c
 
-MGOS_SRCS += $(notdir $(foreach m,$(SPIFFS_PATH) $(COMMON_ESP_PATH),$(wildcard $(m)/*.c)))
+MGOS_SRCS += $(notdir $(foreach m,$(SPIFFS_PATH) $(COMMON_ESP8266_PATH),$(wildcard $(m)/*.c)))
 APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 
 MGOS_FEATURES ?=
@@ -151,11 +153,12 @@ MGOS_ENABLE_I2C_GPIO = 1
 VPATH = $(APP_SOURCE_DIRS) $(MGOS_SRC_PATH) $(MONGOOSE_PATH) \
         $(FROZEN_PATH) $(UMM_MALLOC_PATH) \
         $(BOOTLOADER_PATH)/rboot/appcode $(COMMON_PATH) $(COMMON_PATH)/mg_rpc \
-        $(MGOS_ESP_SRC_PATH) $(SPIFFS_PATH) $(COMMON_ESP_PATH)
-IPATH = $(APP_SOURCE_DIRS) $(MGOS_PATH) $(MGOS_ESP_PATH)/include $(SPIFFS_PATH) \
+        $(MGOS_ESP_SRC_PATH) $(SPIFFS_PATH) $(COMMON_ESP8266_PATH) \
+        $(COMMON_ESP_PATH)
+IPATH = $(APP_SOURCE_DIRS) $(MGOS_PATH) $(MGOS_ESP8266_PATH)/include $(SPIFFS_PATH) \
         $(BOOTLOADER_PATH)/rboot $(SDK_PATH)/include/lwip \
         $(SDK_PATH) $(SDK_PATH)/include \
-        $(COMMON_ESP_PATH) \
+        $(COMMON_ESP8266_PATH) $(COMMON_ESP_PATH) \
         $(MGOS_ESP_SRC_PATH) $(COMMON_PATH)/mg_rpc .
 LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip $(MGOS_ESP_SRC_PATH)
 
@@ -245,7 +248,7 @@ ifeq "$(MGOS_ESP8266_RTOS)" "1"
            $(SDK_PATH)/extra_include \
            $(SDK_PATH)/include/lwip/ipv4 \
            $(SDK_PATH)/include/lwip/ipv6
-  LD_SCRIPT_TEMPL = $(MGOS_ESP_PATH)/ld/rtos.ld
+  LD_SCRIPT_TEMPL = $(MGOS_ESP8266_PATH)/ld/rtos.ld
   LDFLAGS += -Wl,--wrap=user_fatal_exception_handler \
              -Wl,--wrap=ShowCritical
 else
@@ -254,12 +257,12 @@ else
   MGOS_CFLAGS += -DLWIP_OPEN_SRC \
            -DCS_MMAP -DSPIFFS_ON_PAGE_MOVE_HOOK=esp_spiffs_on_page_move_hook
   LWIP_LIB = $(LWIP_BUILD_DIR)/liblwip_cs.a
-  LWIP_PATH = $(COMMON_ESP_PATH)/lwip
+  LWIP_PATH = $(COMMON_ESP8266_PATH)/lwip
   SDK_LIBS += m
   IPATH += $(LWIP_PATH)/src/include \
            $(LWIP_PATH)/src/include/ipv4 \
            $(LWIP_PATH)/espressif/include
-  LD_SCRIPT_TEMPL = $(MGOS_ESP_PATH)/ld/non_os.ld
+  LD_SCRIPT_TEMPL = $(MGOS_ESP8266_PATH)/ld/non_os.ld
 
 $(LWIP_LIB): $(LWIP_PATH)
 	$(Q) $(MAKE) -C $(LWIP_PATH) -j3 all \
@@ -393,7 +396,7 @@ ifeq "$(MGOS_ESP8266_RTOS)" "1"
 endif
 	$(call link,$(BIN_PARTS) $(LIBS) $(LD_WRAPPERS))
 
-$(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(MGOS_ESP_PATH)/Makefile.build
+$(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(MGOS_ESP8266_PATH)/Makefile.build
 	$(vecho) "GEN   $@"
 	$(Q) echo "void user_init(void){}; " \
             "void system_restart_local(){};" \

@@ -11,9 +11,9 @@
 
 #include <xtensa/corebits.h>
 
+#include "common/platforms/esp/src/esp_mmap.h"
 #include "fw/platforms/esp8266/src/esp_exc.h"
 #include "fw/platforms/esp8266/src/esp_hw.h"
-#include "fw/platforms/esp8266/src/esp_mmap.h"
 
 struct exc_frame {
   uint32_t exit; /* exit pointer for dispatch, points to _xt_user_exit */

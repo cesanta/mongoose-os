@@ -37,9 +37,10 @@ COMPONENT_EXTRA_INCLUDES = $(MGOS_PATH) $(MGOS_ESP_PATH)/include $(SPIFFS_PATH) 
 MGOS_SRCS += mgos_config.c mgos_gpio.c mgos_init.c mgos_mongoose.c \
              mgos_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
              mgos_timers_mongoose.c mgos_uart.c mgos_utils.c mgos_dlsym.c \
-             esp32_crypto.c esp32_debug.c esp32_fs.c esp32_fs_crypt.c \
-             esp32_gpio.c esp32_hal.c esp32_mdns.c \
-             esp32_main.c esp32_uart.c
+             esp_mmap.c \
+             esp32_crypto.c esp32_debug.c esp32_exc.c esp32_fs.c esp32_fs_crypt.c \
+             esp32_gpio.c esp32_hal.c \
+             esp32_main.c esp32_mdns.c esp32_mmap.c esp32_uart.c
 
 include $(MGOS_PATH)/fw/common.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
@@ -66,7 +67,9 @@ include $(MGOS_PATH)/fw/src/sys_config.mk
 
 SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_sys_config.yaml
 
-VPATH += $(MGOS_ESP_SRC_PATH) $(MGOS_PATH)/common
+VPATH += $(MGOS_ESP_SRC_PATH) $(MGOS_PATH)/common \
+         $(MGOS_PATH)/common/platforms/esp/src
+
 MGOS_SRCS += cs_crc32.c cs_dbg.c cs_file.c cs_rbuf.c json_utils.c
 ifeq "$(MGOS_ENABLE_RPC)" "1"
   VPATH += $(MGOS_PATH)/common/mg_rpc
@@ -98,7 +101,9 @@ C_CXX_CFLAGS += $(MG_FEATURES_TINY) $(MGOS_FEATURES) -DMGOS_MAX_NUM_UARTS=3 \
                -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS \
                -DMG_ENABLE_DIRECTORY_LISTING \
                -DCS_DISABLE_MD5 -DMG_EXT_MD5 \
-               -DCS_DISABLE_SHA1 -DMG_EXT_SHA1
+               -DCS_DISABLE_SHA1 -DMG_EXT_SHA1 \
+               -DCS_MMAP -DSPIFFS_ON_PAGE_MOVE_HOOK=esp_spiffs_on_page_move_hook
+
 
 CFLAGS += $(C_CXX_CFLAGS)
 CXXFLAGS += -std=c++11 -fno-exceptions $(C_CXX_CFLAGS)

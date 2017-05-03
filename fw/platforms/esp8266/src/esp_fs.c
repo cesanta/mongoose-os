@@ -4,7 +4,6 @@
  */
 
 #include "fw/platforms/esp8266/src/esp_fs.h"
-#include "fw/platforms/esp8266/src/esp_mmap.h"
 
 #include <dirent.h>
 #include <errno.h>
@@ -16,7 +15,7 @@
 #include "spi_flash.h"
 
 #include "common/cs_dbg.h"
-
+#include "common/platforms/esp/src/esp_mmap.h"
 #include "common/spiffs/spiffs.h"
 #include "common/spiffs/spiffs_nucleus.h"
 #include "common/spiffs/spiffs_vfs.h"

@@ -18,6 +18,10 @@
 #define MGOS_SPIFFS_ERASE_SIZE SPI_FLASH_SEC_SIZE
 #define MGOS_SPIFFS_PAGE_SIZE (SPI_FLASH_SEC_SIZE / 16)
 
+#define LOG_PAGE_SIZE 256
+#define SPIFFS_PAGE_HEADER_SIZE 5
+#define SPIFFS_PAGE_DATA_SIZE ((LOG_PAGE_SIZE) - (SPIFFS_PAGE_HEADER_SIZE))
+
 struct mount_info {
   spiffs fs;
   u8_t work[2 * MGOS_SPIFFS_PAGE_SIZE];
@@ -41,5 +45,7 @@ enum mgos_init_result esp32_fs_init(void);
 int esp32_get_boot_slot();
 
 void esp32_fs_deinit(void);
+
+spiffs *cs_spiffs_get_fs(void);
 
 #endif /* CS_FW_PLATFORMS_ESP32_SRC_ESP32_FS_H_ */

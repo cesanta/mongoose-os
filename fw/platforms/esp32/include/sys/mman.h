@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_PLATFORMS_ESP32_INCLUDE_SYS_MMAN_H_
-#define CS_FW_PLATFORMS_ESP32_INCLUDE_SYS_MMAN_H_
+#ifndef CS_FW_PLATFORMS_ESP8266_INCLUDE_SYS_MMAN_H_
+#define CS_FW_PLATFORMS_ESP8266_INCLUDE_SYS_MMAN_H_
 
 #include <sys/types.h>
 
@@ -14,4 +14,4 @@
 
 void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset);
 
-#endif /* CS_FW_PLATFORMS_ESP32_INCLUDE_SYS_MMAN_H_ */
+#endif /* CS_FW_PLATFORMS_ESP8266_INCLUDE_SYS_MMAN_H_ */

@@ -30,6 +30,7 @@
 #include "fw/src/mgos_updater_common.h"
 
 #include "fw/platforms/esp32/src/esp32_debug.h"
+#include "fw/platforms/esp32/src/esp32_exc.h"
 #include "fw/platforms/esp32/src/esp32_fs.h"
 #include "fw/platforms/esp32/src/esp32_updater.h"
 
@@ -123,6 +124,8 @@ static enum mgos_init_result esp32_mgos_init() {
     return MGOS_INIT_APPLY_UPDATE_FAILED;
   }
 #endif
+
+  esp32_exception_handler_init();
 
   if ((r = mgos_init()) != MGOS_INIT_OK) return r;
 

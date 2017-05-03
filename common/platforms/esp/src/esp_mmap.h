@@ -3,23 +3,25 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_PLATFORMS_ESP8266_USER_ESP_MMAP_H_
-#define CS_FW_PLATFORMS_ESP8266_USER_ESP_MMAP_H_
+#ifndef CS_COMMON_PLATFORMS_ESP_SRC_ESP_MMAP_H_
+#define CS_COMMON_PLATFORMS_ESP_SRC_ESP_MMAP_H_
 
 #include <stdint.h>
 
 #include "common/spiffs/spiffs.h"
+#include "common/platform.h"
 
-#ifdef CS_MMAP
-
-#ifndef MGOS_MMAP_SLOTS
-#define MGOS_MMAP_SLOTS 16
+#if CS_PLATFORM == CS_P_ESP32
+#include "fw/platforms/esp32/src/esp32_fs.h"
+#include "fw/platforms/esp32/src/esp32_mmap.h"
+#elif CS_PLATFORM == CS_P_ESP8266
+#include "fw/platforms/esp8266/src/esp8266_mmap.h"
+#include "fw/platforms/esp8266/src/esp_fs.h"
+#else
+#error unsupported CS_PLATFORM: only esp32 and esp8266 are supported
 #endif
 
-#define MMAP_BASE ((void *) 0x10000000)
-#define MMAP_END ((void *) 0x20000000)
-#define MMAP_DESC_BITS 24
-#define FLASH_BASE 0x40200000
+#ifdef CS_MMAP
 
 #define MMAP_DESC_FROM_ADDR(addr) \
   (&mmap_descs[(((uintptr_t) addr) >> MMAP_DESC_BITS) & 0xF])
@@ -37,5 +39,12 @@ extern struct mmap_desc mmap_descs[MGOS_MMAP_SLOTS];
 IRAM NOINSTR int esp_mmap_exception_handler(uint32_t vaddr, uint8_t *pc,
                                             long *pa2);
 int esp_spiffs_dummy_read(spiffs *fs, u32_t addr, u32_t size, u8_t *dst);
+
+/*
+ * Arch-dependent: translates vfs file descriptor from vfs to a spiffs file
+ * descriptor; also returns an instance of spiffs through the pointer.
+ */
+int esp_translate_fd(int fd, spiffs **pfs);
+
 #endif /* CS_MMAP */
-#endif /* CS_FW_PLATFORMS_ESP8266_USER_ESP_MMAP_H_ */
+#endif /* CS_COMMON_PLATFORMS_ESP_SRC_ESP_MMAP_H_ */

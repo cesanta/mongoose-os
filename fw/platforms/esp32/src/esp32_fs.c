@@ -18,6 +18,7 @@
 
 #include "common/cs_dbg.h"
 #include "common/cs_file.h"
+#include "common/platforms/esp/src/esp_mmap.h"
 #include "common/spiffs/spiffs_vfs.h"
 
 #include "fw/src/mgos_hal.h"
@@ -26,6 +27,12 @@
 static struct mount_info *s_mount = NULL;
 
 static s32_t esp32_spiffs_read(spiffs *fs, u32_t addr, u32_t size, u8_t *dst) {
+#ifdef CS_MMAP
+  if (esp_spiffs_dummy_read(fs, addr, size, dst)) {
+    return SPIFFS_OK;
+  }
+#endif
+
   struct mount_info *m = (struct mount_info *) fs->user_data;
   if (size > m->part->size || addr + size > m->part->address + m->part->size) {
     LOG(LL_ERROR, ("Invalid read args: %u @ %u", size, addr));
