@@ -180,7 +180,7 @@ static bool esp_uart_validate_config(const struct mgos_uart_config *c) {
 void mgos_uart_hal_config_set_defaults(int uart_no,
                                        struct mgos_uart_config *cfg) {
   cfg->dev.rx_fifo_alarm = 10;
-  cfg->dev.rx_fifo_full_thresh = 120;
+  cfg->dev.rx_fifo_full_thresh = 40;
   cfg->dev.rx_fifo_fc_thresh = 125;
   cfg->dev.tx_fifo_empty_thresh = 10;
   cfg->dev.swap_rxcts_txrts = false;
