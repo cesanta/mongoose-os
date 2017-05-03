@@ -59,7 +59,10 @@ static void mgos_timer_ev(struct mg_connection *nc, int ev, void *ev_data,
       cb = ti->cb;
       cb_arg = ti->cb_arg;
       if (ti->interval_ms > 0) {
+        const double now = mg_time();
         ti->next_invocation = nc->ev_timer_time + ti->interval_ms / 1000.0;
+        /* Polling loop was delayed, bring the invocation time forward to now */
+        if (ti->next_invocation < now) ti->next_invocation = now;
         ti = NULL;
       } else {
         LIST_REMOVE(ti, entries);
