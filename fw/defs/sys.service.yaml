@@ -45,3 +45,16 @@ methods:
         fs_free:
           type: integer
           doc: Filesystem free bytes
+        wifi:
+          type: object
+          doc: WiFi status
+          properties:
+            status:
+              type: string
+              doc: Status of the WiFi station connection
+            ssid:
+              type: string
+              doc: SSID of the AP connected to
+            sta_ip:
+              type: string
+              doc: IP of the station

@@ -100,3 +100,7 @@ func (c *wsCodec) Info() ConnectionInfo {
 	}
 	return r
 }
+
+func (c *wsCodec) SetOptions(opts *Options) error {
+	return errors.NotImplementedf("SetOptions")
+}

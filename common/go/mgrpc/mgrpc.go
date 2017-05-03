@@ -22,6 +22,7 @@ type MgRPC interface {
 	) (*frame.Response, error)
 	Disconnect(ctx context.Context) error
 	IsConnected() bool
+	SetCodecOptions(opts *codec.Options) error
 }
 
 type mgRPCImpl struct {
@@ -148,7 +149,7 @@ func (r *mgRPCImpl) tcpConnect(tcpAddress string, opts *connectOptions) (codec.C
 func (r *mgRPCImpl) serialConnect(
 	ctx context.Context, portName string, opts *connectOptions,
 ) (codec.Codec, error) {
-	sc, err := codec.Serial(ctx, portName, opts.junkHandler)
+	sc, err := codec.Serial(ctx, portName, &opts.codecOptions.Serial)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -310,4 +311,8 @@ func (r *mgRPCImpl) SendHello(dst string) {
 func (r *mgRPCImpl) IsConnected() bool {
 	info := r.codec.Info()
 	return info.IsConnected
+}
+
+func (r *mgRPCImpl) SetCodecOptions(opts *codec.Options) error {
+	return r.codec.SetOptions(opts)
 }

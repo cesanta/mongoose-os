@@ -21,9 +21,16 @@ const (
 	interCharacterTimeout time.Duration = 200 * time.Millisecond
 )
 
+type SerialCodecOptions struct {
+	SendChunkSize  int
+	SendChunkDelay time.Duration
+	JunkHandler    func(junk []byte)
+}
+
 type serialCodec struct {
 	portName        string
 	conn            serial.Serial
+	opts            *SerialCodecOptions
 	lastEOFTime     time.Time
 	handsShaken     bool
 	handsShakenLock sync.Mutex
@@ -38,7 +45,7 @@ type serialCodec struct {
 	isClosed  bool
 }
 
-func Serial(ctx context.Context, portName string, junkHandler func(junk []byte)) (Codec, error) {
+func Serial(ctx context.Context, portName string, opts *SerialCodecOptions) (Codec, error) {
 	glog.Infof("Opening %s...", portName)
 	s, err := serial.Open(serial.OpenOptions{
 		PortName:              portName,
@@ -63,9 +70,10 @@ func Serial(ctx context.Context, portName string, junkHandler func(junk []byte))
 
 	return newStreamConn(&serialCodec{
 		portName:    portName,
+		opts:        opts,
 		conn:        s,
 		handsShaken: false,
-	}, true /* addChecksum */, junkHandler), nil
+	}, true /* addChecksum */, opts.JunkHandler), nil
 }
 
 func (c *serialCodec) connRead(buf []byte) (read int, err error) {
@@ -140,13 +148,27 @@ func (c *serialCodec) WriteWithContext(ctx context.Context, b []byte) (written i
 		}
 	}
 	// Device is ready, send data.
-	for written < len(b) {
-		n, err := c.connWrite(b[written:])
-		glog.V(4).Infof("sent %d [%s]", n, string(b[written:written+n]))
-		written += n
-		if err != nil {
-			c.Close()
-			return written, errors.Trace(err)
+	chunkSize := c.opts.SendChunkSize
+	if chunkSize > 0 {
+		for i := 0; i < len(b); i += chunkSize {
+			n, err := c.connWrite(b[i:min(i+chunkSize, len(b))])
+			written += n
+			if err != nil {
+				c.Close()
+				return written, errors.Trace(err)
+			}
+			glog.V(4).Infof("sent %d [%s]", n, string(b[i:i+n]))
+			time.Sleep(c.opts.SendChunkDelay)
+		}
+	} else {
+		for written < len(b) {
+			n, err := c.connWrite(b[written:])
+			glog.V(4).Infof("sent %d [%s]", n, string(b[written:written+n]))
+			written += n
+			if err != nil {
+				c.Close()
+				return written, errors.Trace(err)
+			}
 		}
 	}
 	return written, nil
@@ -187,6 +209,11 @@ func (c *serialCodec) setHandsShaken(shaken bool) {
 		glog.Infof("handshake complete")
 	}
 	c.handsShaken = shaken
+}
+
+func (c *serialCodec) SetOptions(opts *Options) error {
+	c.opts = &opts.Serial
+	return nil
 }
 
 func min(a, b int) int {

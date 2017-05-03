@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"net/url"
 
+	"cesanta.com/common/go/mgrpc/codec"
 	"github.com/cesanta/errors"
 )
 
@@ -23,7 +24,7 @@ type connectOptions struct {
 	psk             string
 	enableTracing   bool
 	enableReconnect bool
-	junkHandler     func(junk []byte)
+	codecOptions    codec.Options
 }
 
 // ConnectOption is an optional argument to Instance.Connect which affects the
@@ -182,9 +183,9 @@ func Tracing(enable bool) ConnectOption {
 	}
 }
 
-func JunkHandler(junkHandler func(junk []byte)) ConnectOption {
+func CodecOptions(co codec.Options) ConnectOption {
 	return func(c *connectOptions) error {
-		c.junkHandler = junkHandler
+		c.codecOptions = co
 		return nil
 	}
 }

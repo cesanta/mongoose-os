@@ -190,3 +190,12 @@ func (rwc *reconnectWrapperCodec) Info() ConnectionInfo {
 	}
 	return c.Info()
 }
+
+func (rwc *reconnectWrapperCodec) SetOptions(opts *Options) error {
+	rwc.lock.Lock()
+	defer rwc.lock.Unlock()
+	if rwc.conn != nil {
+		return rwc.conn.SetOptions(opts)
+	}
+	return errors.Errorf("not connected")
+}

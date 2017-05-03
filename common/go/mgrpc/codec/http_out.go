@@ -125,3 +125,7 @@ func (c *outboundHttpCodec) MaxNumFrames() int {
 func (c *outboundHttpCodec) Info() ConnectionInfo {
 	return ConnectionInfo{RemoteAddr: c.url}
 }
+
+func (c *outboundHttpCodec) SetOptions(opts *Options) error {
+	return errors.NotImplementedf("SetOptions")
+}

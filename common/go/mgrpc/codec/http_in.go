@@ -200,3 +200,7 @@ func (c *inboundHttpCodec) Info() ConnectionInfo {
 	}
 	return ci
 }
+
+func (c *inboundHttpCodec) SetOptions(opts *Options) error {
+	return errors.NotImplementedf("SetOptions")
+}

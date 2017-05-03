@@ -35,6 +35,8 @@ type streamConn interface {
 	// just ignore it. If PreprocessFrame returned false, Stream connection codec
 	// proceeds with the frame as usual.
 	PreprocessFrame(frameData []byte) (bool, error)
+
+	SetOptions(opts *Options) error
 }
 
 type streamConnectionCodec struct {
@@ -312,4 +314,8 @@ func (scc *streamConnectionCodec) MaxNumFrames() int {
 
 func (scc *streamConnectionCodec) Info() ConnectionInfo {
 	return ConnectionInfo{RemoteAddr: scc.conn.RemoteAddr(), IsConnected: true}
+}
+
+func (scc *streamConnectionCodec) SetOptions(opts *Options) error {
+	return scc.conn.SetOptions(opts)
 }

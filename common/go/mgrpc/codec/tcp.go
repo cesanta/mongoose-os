@@ -3,6 +3,8 @@ package codec
 import (
 	"context"
 	"net"
+
+	"github.com/cesanta/errors"
 )
 
 type tcpCodec struct {
@@ -34,4 +36,8 @@ func (c *tcpCodec) RemoteAddr() string {
 
 func (c *tcpCodec) PreprocessFrame(frameData []byte) (bool, error) {
 	return false, nil
+}
+
+func (c *tcpCodec) SetOptions(opts *Options) error {
+	return errors.NotImplementedf("SetOptions")
 }

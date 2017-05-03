@@ -26,6 +26,12 @@ type Codec interface {
 	MaxNumFrames() int
 	// Info() returns information about underlying connection.
 	Info() ConnectionInfo
+	// SetOptions() adjusts codec options.
+	SetOptions(opts *Options) error
+}
+
+type Options struct {
+	Serial SerialCodecOptions
 }
 
 // ConnectionInfo provides information about the connection.

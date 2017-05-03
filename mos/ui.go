@@ -14,8 +14,6 @@ import (
 	"sync"
 	"time"
 
-	yaml "gopkg.in/yaml.v2"
-
 	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"
 	"github.com/elazarl/go-bindata-assetfs"
@@ -192,31 +190,20 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		if err == nil {
 			for {
 				time.Sleep(time.Millisecond * 500)
-				var res2 string
-				res2, err = callDeviceService(ctx2, devConn, "Sys.GetInfo", "")
+				res2, err := devConn.GetInfo(ctx2)
 				if err != nil {
 					httpReply(w, result, err)
 					return
 				}
-				if res2 != "" {
-					type Netcfg struct {
-						Wifi struct {
-							Ssid   string `json:"ssid"`
-							Sta_ip string `json:"sta_ip"`
-							Status string `json:"status"`
-						} `json:"wifi"`
-					}
-					var c Netcfg
-					yaml.Unmarshal([]byte(res2), &c)
-					if c.Wifi.Status == "got ip" {
-						result = fmt.Sprintf("\"%s\"", c.Wifi.Sta_ip)
-						break
-					} else if c.Wifi.Status == "connecting" || c.Wifi.Status == "connected" || c.Wifi.Status == "" || c.Wifi.Status == "associated" {
-						// Still connecting, wait
-					} else {
-						err = errors.Errorf("%s", c.Wifi.Status)
-						break
-					}
+				wifiStatus := *res2.Wifi.Status
+				if wifiStatus == "got ip" {
+					result = fmt.Sprintf(`"%s"`, *res2.Wifi.Sta_ip)
+					break
+				} else if wifiStatus == "connecting" || wifiStatus == "connected" || wifiStatus == "" || wifiStatus == "associated" {
+					// Still connecting, wait
+				} else {
+					err = errors.Errorf("%s", wifiStatus)
+					break
 				}
 			}
 		}

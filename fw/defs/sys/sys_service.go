@@ -26,18 +26,25 @@ var _ = trace.New
 
 const ServiceID = "http://mongoose-iot.com/fwSys"
 
+type GetInfoResultWifi struct {
+	Ssid   *string `json:"ssid,omitempty"`
+	Sta_ip *string `json:"sta_ip,omitempty"`
+	Status *string `json:"status,omitempty"`
+}
+
 type GetInfoResult struct {
-	App          *string `json:"app,omitempty"`
-	Arch         *string `json:"arch,omitempty"`
-	Fs_free      *int64  `json:"fs_free,omitempty"`
-	Fs_size      *int64  `json:"fs_size,omitempty"`
-	Fw_id        *string `json:"fw_id,omitempty"`
-	Fw_version   *string `json:"fw_version,omitempty"`
-	Mac          *string `json:"mac,omitempty"`
-	Ram_free     *int64  `json:"ram_free,omitempty"`
-	Ram_min_free *int64  `json:"ram_min_free,omitempty"`
-	Ram_size     *int64  `json:"ram_size,omitempty"`
-	Uptime       *int64  `json:"uptime,omitempty"`
+	App          *string            `json:"app,omitempty"`
+	Arch         *string            `json:"arch,omitempty"`
+	Fs_free      *int64             `json:"fs_free,omitempty"`
+	Fs_size      *int64             `json:"fs_size,omitempty"`
+	Fw_id        *string            `json:"fw_id,omitempty"`
+	Fw_version   *string            `json:"fw_version,omitempty"`
+	Mac          *string            `json:"mac,omitempty"`
+	Ram_free     *int64             `json:"ram_free,omitempty"`
+	Ram_min_free *int64             `json:"ram_min_free,omitempty"`
+	Ram_size     *int64             `json:"ram_size,omitempty"`
+	Uptime       *int64             `json:"uptime,omitempty"`
+	Wifi         *GetInfoResultWifi `json:"wifi,omitempty"`
 }
 
 type RebootArgs struct {
@@ -173,6 +180,24 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
           "uptime": {
             "doc": "Time since boot, in seconds",
             "type": "integer"
+          },
+          "wifi": {
+            "doc": "WiFi status",
+            "properties": {
+              "ssid": {
+                "doc": "SSID of the AP connected to",
+                "type": "string"
+              },
+              "sta_ip": {
+                "doc": "IP of the station",
+                "type": "string"
+              },
+              "status": {
+                "doc": "Status of the WiFi station connection",
+                "type": "string"
+              }
+            },
+            "type": "object"
           }
         },
         "type": "object"

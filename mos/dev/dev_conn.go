@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"cesanta.com/common/go/mgrpc"
+	"cesanta.com/common/go/mgrpc/codec"
 	"cesanta.com/common/go/ourjson"
 	fwconfig "cesanta.com/fw/defs/config"
 	fwfilesystem "cesanta.com/fw/defs/fs"
@@ -115,7 +116,20 @@ func (dc *DevConn) SetConfig(ctx context.Context, devConf *DevConf) error {
 }
 
 func (dc *DevConn) GetInfo(ctx context.Context) (*fwsys.GetInfoResult, error) {
-	return dc.CSys.GetInfo(ctx)
+	r, err := dc.CSys.GetInfo(ctx)
+	if err == nil && r.Arch != nil && *r.Arch == "esp32" || *r.Arch == "esp8266" {
+		glog.Infof("MOAR FASTA")
+		dc.RPC.SetCodecOptions(
+			&codec.Options{
+				Serial: codec.SerialCodecOptions{
+					JunkHandler: dc.JunkHandler,
+					// ESP8266 and ESP32 have long enough FIFOs so chunking is not necessary.
+					SendChunkSize:  0,
+					SendChunkDelay: 0,
+				},
+			})
+	}
+	return r, err
 }
 
 func (dc *DevConn) Disconnect(ctx context.Context) error {
@@ -157,9 +171,17 @@ func (dc *DevConn) ConnectWithJunkHandler(ctx context.Context, junkHandler func(
 
 	opts := []mgrpc.ConnectOption{
 		mgrpc.LocalID("mos"),
-		mgrpc.JunkHandler(junkHandler),
 		mgrpc.Reconnect(reconnect),
 		mgrpc.TlsConfig(tlsConfig),
+		mgrpc.CodecOptions(
+			codec.Options{
+				Serial: codec.SerialCodecOptions{
+					JunkHandler: junkHandler,
+					// Due to lack of flow control, we send data in chunks and wait after each.
+					SendChunkSize:  16,
+					SendChunkDelay: 5 * time.Millisecond,
+				},
+			}),
 	}
 
 	dc.RPC, err = mgrpc.New(ctx, dc.ConnectAddr, opts...)

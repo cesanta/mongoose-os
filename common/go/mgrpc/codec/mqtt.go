@@ -142,3 +142,7 @@ func (c *mqttCodec) Send(ctx context.Context, f *frame.Frame) error {
 	}
 	return nil
 }
+
+func (c *mqttCodec) SetOptions(opts *Options) error {
+	return errors.NotImplementedf("SetOptions")
+}
