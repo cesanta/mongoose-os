@@ -30,7 +30,7 @@
 #define UART_TX_INTS (UART_INT_TX)
 #define UART_INFO_INTS (UART_INT_OE)
 
-#define CC3200_UART_ISR_RX_BUF_SIZE 64
+#define CC3200_UART_ISR_RX_BUF_SIZE 256
 
 struct cc3200_uart_state {
   uint32_t base;

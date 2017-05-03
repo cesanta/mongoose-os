@@ -24,7 +24,7 @@ const (
 )
 
 var (
-	fsOpTimeout  = 3 * time.Second
+	fsOpTimeout  = 7 * time.Second
 	fsOpAttempts = 3
 )
 
