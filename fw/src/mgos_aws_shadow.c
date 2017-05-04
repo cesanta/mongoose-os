@@ -256,8 +256,9 @@ static void mgos_aws_shadow_ev(struct mg_connection *nc, int ev, void *ev_data,
         ss->online = true;
         ss->sent_get = false;
         if (ss->state_cb != NULL) {
-          ss->state_cb(ss->state_cb_arg, MGOS_AWS_SHADOW_CONNECTED, 0,
-                       mg_mk_str_n("", 0), mg_mk_str_n("", 0));
+          const struct mg_str empty = mg_mk_str_n("", 0);
+          ss->state_cb(ss->state_cb_arg, MGOS_AWS_SHADOW_CONNECTED, 0, empty,
+                       empty, empty, empty);
         }
       }
       break;
@@ -323,19 +324,25 @@ static void mgos_aws_shadow_ev(struct mg_connection *nc, int ev, void *ev_data,
           }
           struct json_token reported = JSON_INVALID_TOKEN;
           struct json_token desired = JSON_INVALID_TOKEN;
-          reported.ptr = desired.ptr = ""; /* Avoid NULL strings. */
+          struct json_token reported_md = JSON_INVALID_TOKEN;
+          struct json_token desired_md = JSON_INVALID_TOKEN;
+          /* Avoid NULL strings. */
+          reported.ptr = desired.ptr = reported_md.ptr = desired_md.ptr = "";
           if (topic_id == MGOS_AWS_SHADOW_TOPIC_UPDATE_DELTA) {
-            json_scanf(msg->payload.p, msg->payload.len, "{state:%T}",
-                       &desired);
+            json_scanf(msg->payload.p, msg->payload.len,
+                       "{state:%T,metadata:%T}", &desired, &desired_md);
           } else {
             json_scanf(msg->payload.p, msg->payload.len,
-                       "{state:{reported:%T, desired:%T}}", &reported,
-                       &desired);
+                       "{state:{reported:%T, desired:%T},"
+                       "metadata:{reported:%T, desired:%T}}",
+                       &reported, &desired, &reported_md, &desired_md);
           }
           mgos_unlock();
           ss->state_cb(ss->state_cb_arg, topic_id_to_aws_ev(topic_id), version,
                        mg_mk_str_n(reported.ptr, reported.len),
-                       mg_mk_str_n(desired.ptr, desired.len));
+                       mg_mk_str_n(desired.ptr, desired.len),
+                       mg_mk_str_n(reported_md.ptr, reported_md.len),
+                       mg_mk_str_n(desired_md.ptr, desired_md.len));
           mg_mqtt_puback(nc, msg->message_id);
           mgos_lock();
           ss->current_version = version;
@@ -425,6 +432,24 @@ bool mgos_aws_shadow_update_simple(double version, const char *state_json) {
   return mgos_aws_shadow_updatef(version, "%s", state_json);
 }
 
+const char *mgos_aws_shadow_event_name(enum mgos_aws_shadow_event ev) {
+  switch (ev) {
+    case MGOS_AWS_SHADOW_CONNECTED:
+      return "CONNECTED";
+    case MGOS_AWS_SHADOW_GET_ACCEPTED:
+      return "GET_ACCEPTED";
+    case MGOS_AWS_SHADOW_GET_REJECTED:
+      return "GET_REJECTED";
+    case MGOS_AWS_SHADOW_UPDATE_ACCEPTED:
+      return "UPDATE_ACCEPTED";
+    case MGOS_AWS_SHADOW_UPDATE_REJECTED:
+      return "UPDATE_REJECTED";
+    case MGOS_AWS_SHADOW_UPDATE_DELTA:
+      return "UPDATE_DELTA";
+  }
+  return "";
+}
+
 static bool mgos_aws_shadow_init(void) {
   struct sys_config *cfg = get_cfg();
   struct sys_config_aws_shadow *scfg = &cfg->aws.shadow;
@@ -464,27 +489,31 @@ struct mgos_aws_shadow_cb_simple_data {
 
 static void state_cb_oplya(void *arg, enum mgos_aws_shadow_event ev,
                            uint64_t version, const struct mg_str reported,
-                           const struct mg_str desired) {
+                           const struct mg_str desired,
+                           const struct mg_str reported_md,
+                           const struct mg_str desired_md) {
   struct mgos_aws_shadow_cb_simple_data *oplya_arg =
       (struct mgos_aws_shadow_cb_simple_data *) arg;
 
   /*
-   * FFI expects strings to be null-terminated, so we have to reallocate
+   * FFI expects strings to be NUL-terminated, so we have to reallocate
    * `mg_str`s.
    *
    * TODO(dfrank): implement a way to ffi strings via pointer + length
    */
 
-  char *reported2 = calloc(1, reported.len + 1 /* null-terminate */);
-  char *desired2 = calloc(1, desired.len + 1 /* null-terminate */);
+  struct mg_str reported2 = mg_strdup_nul(reported);
+  struct mg_str desired2 = mg_strdup_nul(desired);
+  struct mg_str reported_md2 = mg_strdup_nul(reported_md);
+  struct mg_str desired_md2 = mg_strdup_nul(desired_md);
 
-  memcpy(reported2, reported.p, reported.len);
-  memcpy(desired2, desired.p, desired.len);
+  oplya_arg->cb_simple(oplya_arg->cb_arg, ev, reported2.p, desired2.p,
+                       reported_md2.p, desired_md2.p);
 
-  oplya_arg->cb_simple(oplya_arg->cb_arg, ev, reported2, desired2);
-
-  free(reported2);
-  free(desired2);
+  free((void *) reported2.p);
+  free((void *) desired2.p);
+  free((void *) reported_md2.p);
+  free((void *) desired_md2.p);
 
   (void) version;
 }

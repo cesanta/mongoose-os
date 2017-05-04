@@ -78,14 +78,15 @@ function reportState() {
 }
 
 AWS.Shadow.setStateHandler(function(ud, ev, reported, desired) {
-  print('Event:', ev);
-  print('Reported state:', JSON.stringify(reported));
-  print('Desired state:', JSON.stringify(desired));
+  print('Event:', ev, '('+AWS.Shadow.eventName(ev)+')');
 
   if (ev === AWS.Shadow.CONNECTED) {
     reportState();
     return;
   }
+
+  print('Reported state:', JSON.stringify(reported));
+  print('Desired state:', JSON.stringify(desired));
 
   // mOS will request state on reconnect and deltas will arrive on changes.
   if (ev !== AWS.Shadow.GET_ACCEPTED && ev !== AWS.Shadow.UPDATE_DELTA) {

@@ -11,6 +11,12 @@ let BUTTON_GPIO = 0;
 let BUTTON_PULL = GPIO.PULL_UP;
 let BUTTON_EDGE = GPIO.INT_EDGE_POS;
 
+let state = {
+  foo: 0,
+  bar: 0,
+  ledOn: false,
+};
+
 function updateLed() {
   GPIO.write(LED_GPIO, state.ledOn ? LED_ON : LED_OFF);
 }
@@ -27,11 +33,12 @@ function updateState(newSt) {
   }
 }
 
-let state = {
-  foo: 0,
-  bar: 0,
-  ledOn: false,
-};
+function reportState() {
+  print('Reporting state:', JSON.stringify(state));
+  AWS.Shadow.update(0, {
+    reported: state,
+  });
+}
 
 GPIO.set_mode(LED_GPIO, GPIO.MODE_OUTPUT);
 updateLed();
@@ -49,15 +56,20 @@ GPIO.set_button_handler(
   }, null
 );
 
-AWS.Shadow.setStateHandler(function(ud, ev, reported, desired) {
-  /* mOS will request state on reconnect and deltas will arrive on changes. */
-  if (ev !== AWS.Shadow.GET_ACCEPTED && ev !== AWS.Shadow.UPDATE_DELTA) {
-    return true;
+AWS.Shadow.setStateHandler(function(ud, ev, reported, desired, reported_md, desired_md) {
+  print('Event:', ev, '('+AWS.Shadow.eventName(ev)+')');
+
+  if (ev === AWS.Shadow.CONNECTED) {
+    reportState();
+    return;
   }
 
-  print('Event:', ev);
+  if (ev !== AWS.Shadow.GET_ACCEPTED && ev !== AWS.Shadow.UPDATE_DELTA) {
+    return;
+  }
+
   print('Reported state:', JSON.stringify(reported));
-  print('Desired state:', JSON.stringify(desired));
+  print('Desired state :', JSON.stringify(desired));
 
   /*
    * Here we extract values from previosuly reported state (if any)
@@ -65,17 +77,11 @@ AWS.Shadow.setStateHandler(function(ud, ev, reported, desired) {
    */
   updateState(reported);
   updateState(desired);
+  updateLed();
 
   print('New state:', JSON.stringify(state));
 
-  updateLed();
-
   if (ev === AWS.Shadow.UPDATE_DELTA) {
-    /* Report current state */
-    AWS.Shadow.update(0, {
-      reported: state,
-    });
+    reportState();
   }
-
-  return true;
 }, null);

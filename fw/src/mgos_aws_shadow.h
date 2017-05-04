@@ -38,11 +38,10 @@ enum mgos_aws_shadow_event {
  *
  * For DELTA events, state is passed as "desired", reported is not set.
  */
-typedef void (*mgos_aws_shadow_state_handler)(void *arg,
-                                              enum mgos_aws_shadow_event ev,
-                                              uint64_t version,
-                                              const struct mg_str reported,
-                                              const struct mg_str desired);
+typedef void (*mgos_aws_shadow_state_handler)(
+    void *arg, enum mgos_aws_shadow_event ev, uint64_t version,
+    const struct mg_str reported, const struct mg_str desired,
+    const struct mg_str reported_md, const struct mg_str desired_md);
 typedef void (*mgos_aws_shadow_error_handler)(void *arg,
                                               enum mgos_aws_shadow_event ev,
                                               int code, const char *message);
@@ -52,9 +51,12 @@ void mgos_aws_shadow_set_state_handler(mgos_aws_shadow_state_handler state_cb,
 void mgos_aws_shadow_set_error_handler(mgos_aws_shadow_error_handler error_cb,
                                        void *arg);
 
+/* Returns ascii name of the event: "CONNECTED", "GET_REJECTED", ... */
+const char *mgos_aws_shadow_event_name(enum mgos_aws_shadow_event ev);
+
 typedef bool (*mgos_aws_shadow_state_handler_simple)(
     void *arg, enum mgos_aws_shadow_event ev, const char *reported,
-    const char *desired);
+    const char *desired, const char *reported_md, const char *desired_md);
 
 /*
  * "Simple" version of mgos_aws_shadow_set_state_handler, primarily for FFI.

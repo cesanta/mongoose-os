@@ -75,6 +75,10 @@ static int s_led = false;
 #define STATE_FMT "{foo: %d, bar: %d, led: %B}"
 
 static void report_state(void) {
+  char buf[100];
+  struct json_out out = JSON_OUT_BUF(buf, sizeof(buf));
+  json_printf(&out, STATE_FMT, s_foo, s_bar, s_led);
+  LOG(LL_INFO, ("== Reporting state: %s", buf));
   mgos_aws_shadow_updatef(0, "{reported:" STATE_FMT "}", s_foo, s_bar, s_led);
 }
 
@@ -85,8 +89,10 @@ void update_led(void) {
 static void aws_shadow_state_handler(void *arg, enum mgos_aws_shadow_event ev,
                                      uint64_t version,
                                      const struct mg_str reported,
-                                     const struct mg_str desired) {
-  LOG(LL_INFO, ("Event: %d, version: %llu", ev, version));
+                                     const struct mg_str desired,
+                                     const struct mg_str reported_md,
+                                     const struct mg_str desired_md) {
+  LOG(LL_INFO, ("== Event: %d (%s), version: %llu", ev, mgos_aws_shadow_event_name(ev), version));
   if (ev == MGOS_AWS_SHADOW_CONNECTED) {
     report_state();
     return;
@@ -97,6 +103,8 @@ static void aws_shadow_state_handler(void *arg, enum mgos_aws_shadow_event ev,
   }
   LOG(LL_INFO, ("Reported state: %.*s", (int) reported.len, reported.p));
   LOG(LL_INFO, ("Desired state : %.*s", (int) desired.len, desired.p));
+  LOG(LL_INFO, ("Reported metadata: %.*s", (int) reported_md.len, reported_md.p));
+  LOG(LL_INFO, ("Desired metadata : %.*s", (int) desired_md.len, desired_md.p));
   /*
    * Here we extract values from previosuly reported state (if any)
    * and then override it with desired state (if present).
@@ -117,7 +125,7 @@ static void button_cb(int pin, void *arg) {
    * generate a delta event which will be processed as any other. */
   bool upd_res = mgos_aws_shadow_updatef(0, "{desired:{foo: %d, led: %B}}",
                                          new_foo, new_led);
-  LOG(LL_INFO, ("Click! %d, Updated: %d", new_foo, upd_res));
+  LOG(LL_INFO, ("== Click! %d, Updated: %d", new_foo, upd_res));
   (void) pin;
   (void) arg;
 }

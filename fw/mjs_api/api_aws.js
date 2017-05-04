@@ -32,12 +32,12 @@
 
 let AWS = {
   Shadow: {
-    _seth: ffi('void mgos_aws_shadow_set_state_handler_simple(int (*)(userdata, int, char *, char *), userdata)'),
+    _seth: ffi('void mgos_aws_shadow_set_state_handler_simple(int (*)(userdata, int, char *, char *, char *, char *), userdata)'),
     _upd: ffi('int mgos_aws_shadow_update_simple(double, char *)'),
     _scb: function(ud, ev, rep, des) {
       rep = rep !== "" ? JSON.parse(rep) : {};
       des = des !== "" ? JSON.parse(des) : {};
-      return ud.cb(ud.ud, ev, rep, des);
+      ud.cb(ud.ud, ev, rep, des);
     },
 
     // ## **`AWS.Shadow.setStateHandler(callback, userdata)`**
@@ -69,6 +69,8 @@ let AWS = {
     update: function(ver, state) {
       return this._upd(ver, JSON.stringify(state)) === 1;
     },
+
+    eventName: ffi('char *mgos_aws_shadow_event_name(int)'),
 
     CONNECTED: 0,
     GET_ACCEPTED: 1,
