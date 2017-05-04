@@ -55,6 +55,10 @@ func MQTT(dst string, tlsConfig *tls.Config) (Codec, error) {
 	opts.SetClientID(clientID)
 	if u.User != nil {
 		opts.SetUsername(u.User.Username())
+		passwd, isset := u.User.Password()
+		if isset {
+			opts.SetPassword(passwd)
+		}
 	}
 	if tlsConfig != nil {
 		opts.SetTLSConfig(tlsConfig)
