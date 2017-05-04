@@ -203,8 +203,7 @@ static void mgos_aws_shadow_ev(struct mg_connection *nc, int ev, void *ev_data,
         char token[TOKEN_BUF_SIZE];
         calc_token(ss, token);
         json_printf(&out, "{clientToken:\"%s\"}", token);
-        mg_mqtt_publish(nc, topic, 0 /* message_id */, MG_MQTT_QOS(1), buf.buf,
-                        buf.len);
+        mgos_mqtt_pub(topic, buf.buf, buf.len, 1 /* qos */);
         ss->sent_get = true;
         mbuf_free(&buf);
         free(topic);

@@ -28,9 +28,9 @@ MQTT.sub('my/topic/#', function(conn, topic, msg) {
 
 
 
-## **`MQTT.pub(topic, message)`**
-Publish message to a topic. Return value:
-0 on failure (e.g. no connection to server), 1 on success.
+## **`MQTT.pub(topic, message, qos)`**
+Publish message to a topic. QoS defaults to 0.
+Return value: 0 on failure (e.g. no connection to server), 1 on success.
 
 Example - send MQTT message on button press:
 ```javascript

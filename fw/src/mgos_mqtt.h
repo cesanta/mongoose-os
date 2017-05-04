@@ -48,9 +48,13 @@ void mgos_mqtt_set_auth_callback(mgos_mqtt_auth_callback_t cb, void *cb_arg);
 struct mg_connection *mgos_mqtt_get_global_conn(void);
 
 /*
- * Publish message on configured MQTT server, on a given MQTT topic.
+ * Publish message to the configured MQTT server, to the given MQTT topic.
+ * Return value will be true if there is a connection to the server and the
+ * message has been queued for sending. In case of QoS 1 return value does
+ * not indicate that PUBACK has been received; there is currently no way to
+ * check for that.
  */
-bool mgos_mqtt_pub(const char *topic, const void *message, size_t len);
+bool mgos_mqtt_pub(const char *topic, const void *message, size_t len, int qos);
 
 typedef void (*sub_handler_t)(struct mg_connection *nc, const char *topic,
                               int topic_len, const char *msg, int msg_len,

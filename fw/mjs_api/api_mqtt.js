@@ -28,11 +28,11 @@ let MQTT = {
     return this._sub(topic, this._subf, { cb: cb, ud: ud });
   },
 
-  _pub: ffi('int mgos_mqtt_pub(char *, char *, int)'),
+  _pub: ffi('int mgos_mqtt_pub(char *, char *, int, int)'),
 
-  // ## **`MQTT.pub(topic, message)`**
-  // Publish message to a topic. Return value:
-  // 0 on failure (e.g. no connection to server), 1 on success.
+  // ## **`MQTT.pub(topic, message, qos)`**
+  // Publish message to a topic. QoS defaults to 0.
+  // Return value: 0 on failure (e.g. no connection to server), 1 on success.
   //
   // Example - send MQTT message on button press:
   // ```javascript
@@ -44,5 +44,8 @@ let MQTT = {
   //   print('Published:', res ? 'yes' : 'no');
   // }, null);
   // ```
-  pub: function(t, m) { return this._pub(t, m, m.length); },
+  pub: function(t, m, qos) {
+    qos = qos || 0;
+    return this._pub(t, m, m.length, qos);
+  },
 };

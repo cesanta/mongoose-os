@@ -46,6 +46,13 @@ SLIST_HEAD(global_handlers, global_handler) s_global_handlers;
 
 static void mqtt_global_reconnect(void);
 
+uint16_t mgos_mqtt_get_packet_id(void) {
+  static uint16_t s_packet_id = 0;
+  s_packet_id++;
+  if (s_packet_id == 0) s_packet_id++;
+  return s_packet_id;
+}
+
 static bool call_topic_handler(struct mg_connection *nc, int ev, void *ev_data,
                                void *user_data) {
   struct mg_mqtt_message *msg = (struct mg_mqtt_message *) ev_data;
@@ -286,12 +293,14 @@ struct mg_connection *mgos_mqtt_get_global_conn(void) {
   return s_conn;
 }
 
-bool mgos_mqtt_pub(const char *topic, const void *message, size_t len) {
-  static uint16_t message_id;
+bool mgos_mqtt_pub(const char *topic, const void *message, size_t len,
+                   int qos) {
   struct mg_connection *c = mgos_mqtt_get_global_conn();
   if (c == NULL || !s_connected) return false;
-  LOG(LL_DEBUG, ("Publishing: %d bytes [%.*s]", (int) len, (int) len, message));
-  mg_mqtt_publish(c, topic, message_id++, MG_MQTT_QOS(0), message, len);
+  LOG(LL_DEBUG, ("Publishing to %s @ %d (%d): [%.*s]", topic, qos, (int) len,
+                 (int) len, message));
+  mg_mqtt_publish(c, topic, mgos_mqtt_get_packet_id(), MG_MQTT_QOS(qos),
+                  message, len);
   return true;
 }
 

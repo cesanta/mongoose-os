@@ -82,7 +82,7 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
                               (cfg->device.id ? cfg->device.id : "-"), s_seq,
                               mg_time(), fd, (int) len, data);
     if (len > 0) {
-      mgos_mqtt_pub(topic, msg, msg_len);
+      mgos_mqtt_pub(topic, msg, msg_len, 0 /* qos */);
       s_seq++;
     }
     if (msg != buf) free(msg);
