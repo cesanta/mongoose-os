@@ -3,9 +3,10 @@ body { color: #666;  background-color: #eee; }
 
 code { color: green; white-space: pre !important;}
 .ace_doc-tooltip {
-  white-space: normal !important;
+  white-space: normal !important; box-shadow: none !important;
   border: 1px solid #ccc !important; padding: 0 1em !important; background: #fff !important;
 }
+.ace_doc-tooltip pre { cursor: pointer !important; }
 
 /* DASHBOARD STYLES */
 .left_col.menu_fixed { top: 48px; overflow-y: auto; }

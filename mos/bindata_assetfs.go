@@ -291,9 +291,10 @@ body { color: #666;  background-color: #eee; }
 
 code { color: green; white-space: pre !important;}
 .ace_doc-tooltip {
-  white-space: normal !important;
+  white-space: normal !important; box-shadow: none !important;
   border: 1px solid #ccc !important; padding: 0 1em !important; background: #fff !important;
 }
+.ace_doc-tooltip pre { cursor: pointer !important; }
 
 /* DASHBOARD STYLES */
 .left_col.menu_fixed { top: 48px; overflow-y: auto; }
@@ -526,7 +527,7 @@ func web_rootCssMainCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/css/main.css", size: 6145, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/css/main.css", size: 6227, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4320,6 +4321,15 @@ var mkeditor = function(id, lang) {
   // var lt = ace.require('ace/ext/language_tools');
   // if (lt) editor.completers.push(lt.textCompleter);
 
+  $(document).off('click', '.ace_doc-tooltip pre');
+  $(document).on('click', '.ace_doc-tooltip pre', function() {
+    var text = $(this).find('code').text();
+    var c = editor.getCursorPosition();
+    editor.session.remove({start: {row: c.row, column: 0}, end: {row: c.row, column: 999}});
+    editor.session.insert({row: c.row, column: 0}, text);
+    editor.completer.detach();
+  });
+
   return editor;
 };
 
@@ -4341,7 +4351,7 @@ func web_rootJsDashJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/dash.js", size: 5227, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/dash.js", size: 5615, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

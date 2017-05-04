@@ -12,7 +12,6 @@ let NeoPixel = {
 
   // ## **`NeoPixel.create(pin, numPixels, order)`**
   // Create a NeoPixel strip object. Example:
-  // ```
   // ```javascript
   // let pin = 5, numPixels = 16, colorOrder = NeoPixel.GRB;
   // let strip = NeoPixel.create(pin, numPixels, colorOrder);

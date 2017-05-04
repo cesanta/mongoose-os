@@ -161,6 +161,15 @@ var mkeditor = function(id, lang) {
   // var lt = ace.require('ace/ext/language_tools');
   // if (lt) editor.completers.push(lt.textCompleter);
 
+  $(document).off('click', '.ace_doc-tooltip pre');
+  $(document).on('click', '.ace_doc-tooltip pre', function() {
+    var text = $(this).find('code').text();
+    var c = editor.getCursorPosition();
+    editor.session.remove({start: {row: c.row, column: 0}, end: {row: c.row, column: 999}});
+    editor.session.insert({row: c.row, column: 0}, text);
+    editor.completer.detach();
+  });
+
   return editor;
 };
 
