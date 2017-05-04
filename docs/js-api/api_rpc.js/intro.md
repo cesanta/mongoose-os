@@ -48,28 +48,17 @@ $ curl -d '{"a":1, "b": 2}' 192.168.0.206/rpc/Sum
 
 
 ## **`RPC.call(dst, method, args, callback)`**
-Call remote RPC service.
+Call remote or local RPC service.
 Return value: true in case of success, false otherwise.
 
 If `dst` is empty, connected server is implied. `method` is a string
 like "MyMethod", `callback` is a callback function which takes the following
 arguments: res (results object), err_code (0 means success, or error code
-otherwise), err_msg (error messasge for non-0 error code), userdata.
-
-
-
-## **`RPC.LOCAL`**
-Address to be used as a destination for `RPC.call` for
-local calls. Example:
+otherwise), err_msg (error messasge for non-0 error code), userdata. Example:
 
 ```javascript
-RPC.addHandler('Example.Print', function(args) {
-  print("args:", JSON.stringify(args));
-  return {"result": "ok"};
+RPC.call(RPC.LOCAL, 'Config.Save', {reboot: true}, function (resp, ud) {
+  print('Response:', JSON.stringify(resp));
 }, null);
 
-RPC.call(RPC.LOCAL, "Example.Print", {"foo": 123}, function (resp, ud) {
-  print("Local callback response:", JSON.stringify(resp));
-}, null);
-```
 

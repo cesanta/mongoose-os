@@ -17,22 +17,7 @@ let RPC = {
   _sendResponse: ffi('bool mgos_rpc_send_response(void *, char *)'),
   _call: ffi('bool mg_rpc_call(char *, char *, char *, void (*)(char *, int, char *, userdata), userdata)'),
 
-  /*
-   * Internal shim callback which parses JSON string args and passes to the
-   * real callback
-   */
-  _addCB: function(ri, args, src, ud) {
-    let resp = ud.cb(JSON.parse(args || 'null'), src, ud.ud);
-    RPC._sendResponse(ri, JSON.stringify(resp));
-  },
-
-  /*
-   * Internal shim callback which parses JSON string args and passes to the
-   * real callback
-   */
-  _callCB: function(res, err_code, err_msg, ud) {
-    ud.cb(JSON.parse(res), err_code, err_msg, ud.ud);
-  },
+  LOCAL: "RPC.LOCAL",
 
   // ## **`RPC.addHandler(name, handler)`**
   // Add RPC handler. `name` is a string like `'MyMethod'`, `handler`
@@ -57,42 +42,35 @@ let RPC = {
   // $ curl -d '{"a":1, "b": 2}' 192.168.0.206/rpc/Sum
   // 3
   // ```
-  addHandler: function(method, cb, userdata) {
-    RPC._addHandler(RPC._strdup(method), RPC._addCB, {
-      cb: cb,
-      ud: userdata,
-    });
+  addHandler: function(name, cb, ud) {
+    let data = {cb: cb, ud: ud};
+    let f = function(ri, args, src, ud) {
+      let resp = ud.cb(JSON.parse(args || 'null'), src, ud.ud);
+      RPC._sendResponse(ri, JSON.stringify(resp));
+    };
+    this._addHandler(this._strdup(name), f, data);
   },
 
   // ## **`RPC.call(dst, method, args, callback)`**
-  // Call remote RPC service.
+  // Call remote or local RPC service.
   // Return value: true in case of success, false otherwise.
   //
   // If `dst` is empty, connected server is implied. `method` is a string
   // like "MyMethod", `callback` is a callback function which takes the following
   // arguments: res (results object), err_code (0 means success, or error code
-  // otherwise), err_msg (error messasge for non-0 error code), userdata.
-  call: function(dst, method, args, cb, userdata) {
-    return RPC._call(dst, method, JSON.stringify(args), RPC._callCB, {
-      cb: cb,
-      ud: userdata,
-    });
-  },
-
-  // ## **`RPC.LOCAL`**
-  // Address to be used as a destination for `RPC.call` for
-  // local calls. Example:
+  // otherwise), err_msg (error messasge for non-0 error code), userdata. Example:
   //
   // ```javascript
-  // RPC.addHandler('Example.Print', function(args) {
-  //   print("args:", JSON.stringify(args));
-  //   return {"result": "ok"};
+  // RPC.call(RPC.LOCAL, 'Config.Save', {reboot: true}, function (resp, ud) {
+  //   print('Response:', JSON.stringify(resp));
   // }, null);
   //
-  // RPC.call(RPC.LOCAL, "Example.Print", {"foo": 123}, function (resp, ud) {
-  //   print("Local callback response:", JSON.stringify(resp));
-  // }, null);
-  // ```
-  LOCAL: "RPC.LOCAL",
+  call: function(dst, name, args, cb, ud) {
+    let data = {cb: cb, ud: ud};
+    let f = function(res, code, msg, ud) {
+      ud.cb(res ? JSON.parse(res) : null, code, msg, ud.ud);
+    };
+    return this._call(dst, name, JSON.stringify(args), f, data);
+  },
 };
 
