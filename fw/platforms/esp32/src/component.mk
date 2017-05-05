@@ -47,11 +47,17 @@ include $(MGOS_PATH)/common/scripts/ffi_exports.mk
 
 SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_config.yaml
 
+ifeq "$(MGOS_ENABLE_ARDUINO_API)" "1"
+  MGOS_FEATURES += -DESP32 -DF_CPU=160000000
+endif
 ifeq "$(MGOS_ENABLE_DNS_SD)" "1"
   SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_dns_sd_config.yaml
 endif
 ifeq "$(MGOS_ENABLE_I2C)" "1"
   SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_i2c_config.yaml
+endif
+ifeq "$(MGOS_ENABLE_SPI)" "1"
+  SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_spi_config.yaml
 endif
 ifeq "$(MGOS_ENABLE_UPDATER)" "1"
   MGOS_SRCS += esp32_updater.c

@@ -24,6 +24,8 @@ MGOS_ENABLE_RPC_CHANNEL_MQTT ?= 1
 MGOS_ENABLE_RPC_CHANNEL_UART ?= 1
 MGOS_ENABLE_RPC_CHANNEL_WS ?= 1
 MGOS_ENABLE_SNTP ?= 1
+MGOS_ENABLE_SPI ?= 1
+MGOS_ENABLE_SPI_GPIO ?= 1
 MGOS_ENABLE_SYS_SERVICE ?= 1
 MGOS_ENABLE_UPDATER ?= 1
 MGOS_ENABLE_UPDATER_POST ?= 1
@@ -58,6 +60,9 @@ ifeq "$(MGOS_ENABLE_ARDUINO_API)" "1"
   VPATH += $(MGOS_SRC_PATH)/Arduino
   ifeq "$(MGOS_ENABLE_ONEWIRE)" "1"
     MGOS_SRCS += mgos_arduino_onewire.cpp
+  endif
+  ifeq "$(MGOS_ENABLE_SPI)" "1"
+    MGOS_SRCS += mgos_arduino_spi.cpp
   endif
 endif
 
@@ -192,6 +197,17 @@ ifeq "$(MGOS_ENABLE_SNTP)" "1"
   SYS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_sntp_config.yaml
 endif
 
+ifeq "$(MGOS_ENABLE_SPI)" "1"
+  MGOS_SRCS += mgos_spi.c
+  MGOS_FEATURES += -DMGOS_ENABLE_SPI
+  SYS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_spi_config.yaml
+  ifeq "$(MGOS_ENABLE_SPI_GPIO)" "1"
+    MGOS_SRCS += mgos_spi_gpio.c
+    MGOS_FEATURES += -DMGOS_ENABLE_SPI_GPIO
+    SYS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_spi_gpio_config.yaml
+  endif
+endif
+
 ifeq "$(MGOS_ENABLE_UPDATER)" "1"
   SYS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_updater_config.yaml
   MGOS_SRCS += mgos_updater_common.c mgos_updater_http.c
@@ -260,6 +276,7 @@ export MGOS_ENABLE_RPC_CHANNEL_LOOPBACK
 export MGOS_ENABLE_RPC_CHANNEL_MQTT
 export MGOS_ENABLE_RPC_CHANNEL_UART
 export MGOS_ENABLE_SNTP
+export MGOS_ENABLE_SPI
 export MGOS_ENABLE_SYS_SERVICE
 export MGOS_ENABLE_UPDATER
 export MGOS_ENABLE_UPDATER_POST

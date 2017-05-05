@@ -1,0 +1,5 @@
+[
+  ["spi.miso_gpio", "i", 0, {title: "GPIO to use for MISO"}],
+  ["spi.mosi_gpio", "i", 0, {title: "GPIO to use for MOSI"}],
+  ["spi.sclk_gpio", "i", 0, {title: "GPIO to use for SCLK"}],
+]

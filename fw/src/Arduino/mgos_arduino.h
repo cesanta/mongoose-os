@@ -14,7 +14,9 @@ extern "C" {
 #endif /* __cplusplus */
 
 #if MGOS_ENABLE_ARDUINO_API
+
 enum mgos_init_result mgos_arduino_init(void);
+
 #endif
 
 #ifdef __cplusplus

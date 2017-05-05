@@ -22,6 +22,7 @@
 #include "fw/src/mgos_service_config.h"
 #include "fw/src/mgos_service_filesystem.h"
 #include "fw/src/mgos_sntp.h"
+#include "fw/src/mgos_spi.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_timers.h"
 #include "fw/src/mgos_updater_rpc.h"
@@ -72,6 +73,11 @@ enum mgos_init_result mgos_init(void) {
 
 #if MGOS_ENABLE_ATCA
   r = mgos_atca_init(); /* Requires I2C */
+  if (r != MGOS_INIT_OK) return r;
+#endif
+
+#if MGOS_ENABLE_SPI
+  r = mgos_spi_init();
   if (r != MGOS_INIT_OK) return r;
 #endif
 

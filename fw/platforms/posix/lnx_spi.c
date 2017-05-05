@@ -23,6 +23,8 @@ struct lnx_spi_connection {
   int fd;
 };
 
+#if 0
+
 /*
  * Default values
  * TODO(alashkin): make it changeable
@@ -119,8 +121,15 @@ uint32_t spi_txn(spi_connection c, uint8_t cmd_bits, uint16_t cmd_data,
   return ret;
 }
 
-void mgos_spi_close(spi_connection c) {
+struct mgos_spi *mgos_spi_create(const struct sys_config_spi *cfg) {
+  (void) cfg;
+  return NULL;
+}
+
+void mgos_spi_close(struct mgos_spi *c) {
   struct lnx_spi_connection *conn = (struct lnx_spi_connection *) c;
   close(conn->fd);
   free(c);
 }
+
+#endif

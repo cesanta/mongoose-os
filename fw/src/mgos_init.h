@@ -38,6 +38,7 @@ enum mgos_init_result {
   MGOS_INIT_AWS_SHADOW_INIT_FAILED = -26,
   MGOS_INIT_SNTP_INIT_FAILED = -27,
   MGOS_INIT_TIMERS_INIT_FAILED = -28,
+  MGOS_INIT_SPI_FAILED = -29,
 };
 
 enum mgos_init_result mgos_init(void);

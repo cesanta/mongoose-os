@@ -1,50 +1,60 @@
 /*
- * Copyright (c) 2014-2016 Cesanta Software Limited
+ * Copyright (c) 2014-2017 Cesanta Software Limited
  * All rights reserved
  */
 
 #ifndef CS_FW_SRC_MGOS_SPI_H_
 #define CS_FW_SRC_MGOS_SPI_H_
 
+#include "fw/src/mgos_features.h"
+
+#if MGOS_ENABLE_SPI
+
 #include <stdint.h>
+
+#include "fw/src/mgos_init.h"
+#include "fw/src/mgos_sys_config.h"
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* __cplusplus */
+#endif
 
-typedef void *spi_connection;
+struct mgos_spi;
 
-/* Initialize SPI */
-int spi_init(spi_connection conn);
+/* Initialize SPI master */
+struct mgos_spi *mgos_spi_create(const struct sys_config_spi *cfg);
+
+/* (Re)configure exisint SPI interface. */
+bool mgos_spi_configure(struct mgos_spi *spi, const struct sys_config_spi *cfg);
+bool mgos_spi_set_freq(struct mgos_spi *spi, int freq);
+bool mgos_spi_set_mode(struct mgos_spi *spi, int freq);
+bool mgos_spi_set_msb_first(struct mgos_spi *spi, bool msb_first);
 
 /*
- * Perform SPI transaction
- * Parameters:
- * conn - SPI connection
- * cmd_bits - actual number of bits to transmit
- * cmd_data - command data
- * addr_bits - actual number of bits to transmit
- * addr_data - address data
- * dout_bits - actual number of bits to transmit
- * dout_data - output data
- * din_bits - actual number of bits to receive
+ * SPI transaction proceeds in two phases: transmit and receive.
+ * First, tx_len bytes from *tx_data are transmitted, then rx_len bytes are
+ *received into *rx_data.
+ * Either tx_len or rx_len can be 0, in which case corresponding pointer can be
+ *NULL too.
  *
- * Returns: read data - uint32_t containing read in data
- * only if RX was set
- * 0 - something went wrong (or actual read data was 0)
- * 1 - data sent ok (or actual read data is 1)
- * Note: all data is assumed to be stored in the lower
- * its of the data variables (for anything <32 bits).
+ * Note that slave selection is out of scope of this function, so appropriate
+ *slave
+ * should already be selected (CS driven low, usually via GPIO) prior to
+ *invoking mgos_spi_txn.
  */
-uint32_t spi_txn(spi_connection conn, uint8_t cmd_bits, uint16_t cmd_data,
-                 uint8_t addr_bits, uint32_t addr_data, uint8_t dout_bits,
-                 uint32_t dout_data, uint8_t din_bits, uint8_t dummy_bits);
+bool mgos_spi_txn(struct mgos_spi *spi, const void *tx_data, size_t tx_len,
+                  void *rx_data, size_t rx_len);
 
-/* Close SPI connection and free resources */
-void mgos_spi_close(spi_connection conn);
+void mgos_spi_close(struct mgos_spi *spi);
+
+enum mgos_init_result mgos_spi_init(void);
+
+struct mgos_spi *mgos_spi_get_global(void);
 
 #ifdef __cplusplus
 }
-#endif /* __cplusplus */
+#endif
+
+#endif /* MGOS_ENABLE_SPI */
 
 #endif /* CS_FW_SRC_MGOS_SPI_H_ */
