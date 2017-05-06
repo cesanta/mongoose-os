@@ -3,18 +3,15 @@ title: "mgos_spi_txn()"
 decl_name: "mgos_spi_txn"
 symbol_kind: "func"
 signature: |
-  bool mgos_spi_txn(struct mgos_spi *spi, const void *tx_data, size_t tx_len,
-                    void *rx_data, size_t rx_len);
+  bool mgos_spi_txn(struct mgos_spi *spi, const void *tx_data, void *rx_data,
+                    size_t len);
 ---
 
-SPI transaction proceeds in two phases: transmit and receive.
-First, tx_len bytes from *tx_data are transmitted, then rx_len bytes are
-*received into *rx_data.
-Either tx_len or rx_len can be 0, in which case corresponding pointer can be
-*NULL too.
+In a full-duplex SPI transaction data is sent and received at the same time:
+for every byte sent from *tx_data a byte is stored into *rx_data.
+Passing the same pointer for tx_data nd rx_data is ok.
+rx_data may also be NULL if received data does not need to be stored.
 
 Note that slave selection is out of scope of this function, so appropriate
-*slave
-should already be selected (CS driven low, usually via GPIO) prior to
-*invoking mgos_spi_txn. 
+slave should already be selected (CS set to active, usually via GPIO). 
 

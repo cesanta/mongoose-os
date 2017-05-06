@@ -6,6 +6,7 @@ items:
   - { name: mgos_spi_configure.md }
   - { name: mgos_spi_create.md }
   - { name: mgos_spi_txn.md }
+  - { name: mgos_spi_txn_hd.md }
 ---
 
 

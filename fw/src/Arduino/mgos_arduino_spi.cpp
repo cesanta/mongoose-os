@@ -53,32 +53,34 @@ void SPIImpl::beginTransaction(SPISettings settings) {
 
 uint8_t SPIImpl::transfer(uint8_t data) {
   if (spi_ == nullptr) return 0;
-  if (!mgos_spi_txn(spi_, &data, 1, &data, 1)) data = 0;
+  if (!mgos_spi_txn(spi_, &data, &data, 1)) data = 0;
   return data;
 }
 
 uint16_t SPIImpl::transfer16(uint16_t data) {
   if (spi_ == nullptr) return 0;
   data = htons(data);
-  if (!mgos_spi_txn(spi_, &data, 2, &data, 2)) data = 0;
+  if (!mgos_spi_txn(spi_, &data, &data, 2)) data = 0;
+  data = ntohs(data);
   return data;
 }
 
 uint32_t SPIImpl::transfer32(uint32_t data) {
   if (spi_ == nullptr) return 0;
   data = htonl(data);
-  if (!mgos_spi_txn(spi_, &data, 4, &data, 4)) data = 0;
+  if (!mgos_spi_txn(spi_, &data, &data, 4)) data = 0;
+  data = ntohl(data);
   return data;
 }
 
 void SPIImpl::transfer(void *data, size_t count) {
   if (spi_ == nullptr) return;
-  mgos_spi_txn(spi_, data, count, data, count);
+  mgos_spi_txn(spi_, data, data, count);
 }
 
 void SPIImpl::transferBytes(const uint8_t *data, uint8_t *out, uint32_t size) {
   if (spi_ == nullptr) return;
-  mgos_spi_txn(spi_, data, size, out, size);
+  mgos_spi_txn(spi_, data, out, size);
 }
 
 /*
@@ -91,13 +93,13 @@ void SPIImpl::write(uint8_t data) {
 void SPIImpl::write16(uint16_t data) {
   if (spi_ == nullptr) return;
   data = htons(data);
-  mgos_spi_txn(spi_, &data, 2, NULL, 0);
+  mgos_spi_txn_hd(spi_, &data, 2, NULL, 0);
 }
 
 void SPIImpl::write32(uint32_t data) {
   if (spi_ == nullptr) return;
   data = htonl(data);
-  mgos_spi_txn(spi_, &data, 4, NULL, 0);
+  mgos_spi_txn_hd(spi_, &data, 4, NULL, 0);
 }
 
 
