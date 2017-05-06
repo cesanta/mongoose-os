@@ -311,7 +311,7 @@ code { color: green; white-space: pre !important;}
 #app_view .panel { padding: 0 1em; }
 .main-left-column { height: 100%; padding: 0; margin: 0; }
 .main-right-column { height: 100%; padding: 0; margin: 0; }
-.stderr { color: #77e; }
+.stderr { color: #77e; font-weight: bold; }
 .ui-pnotify { right: 22px; top: 82px; }
 .devonline { color: green; }
 .devoffline { color: red; }
@@ -325,7 +325,8 @@ code { color: green; white-space: pre !important;}
 .file .file-size { color: silver; }
 .file.is_js { color: #ffa500; }
 .file.is_json { color: #3cb371; }
-.file.is_api .file-name { color: silver; }
+.file.is_api { color: silver; }
+.file.is_jsc { color: #f99; }
 .file.selected { background: #f0f0f0; }
 
 /* TERMINAL PAGE */
@@ -527,7 +528,7 @@ func web_rootCssMainCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/css/main.css", size: 6227, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/css/main.css", size: 6265, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -5415,6 +5416,9 @@ var _web_rootPage_filesHtml = []byte(`<div data-title="Device File Manager" styl
   $.ajax({url: '/call', data: {method: 'FS.ListExt'}}).done(function(json) {
     var $tbody = $('#file-list').empty();
     json.result.sort(function(a, b) {
+      if (a.name.match(/jsc$/) && b.name.match(/jsc$/)) return a.name > b.name ? 1 : -1;
+      if (a.name.match(/jsc$/)) return 1;
+      if (b.name.match(/jsc$/)) return -1;
       if (a.name.match(/^api_/) && b.name.match(/^api_/)) return a.name > b.name ? 1 : -1;
       if (a.name.match(/^api_/)) return 1;
       if (b.name.match(/^api_/)) return -1;
@@ -5429,6 +5433,7 @@ var _web_rootPage_filesHtml = []byte(`<div data-title="Device File Manager" styl
           .append(nameSpan)
           .addClass(v.name === 'init.js' ? 'is_init' : '')
           .addClass(v.name.match(/\.js$/) ? 'is_js' : '')
+          .addClass(v.name.match(/\.jsc$/) ? 'is_jsc' : '')
           .addClass(v.name.match(/\.json$/) ? 'is_json' : '')
           .addClass(v.name.match(/^api_/) ? 'is_api' : '')
           .appendTo($tbody);
@@ -5451,7 +5456,7 @@ func web_rootPage_filesHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_files.html", size: 7540, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_files.html", size: 7774, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

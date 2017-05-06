@@ -171,6 +171,9 @@
   $.ajax({url: '/call', data: {method: 'FS.ListExt'}}).done(function(json) {
     var $tbody = $('#file-list').empty();
     json.result.sort(function(a, b) {
+      if (a.name.match(/jsc$/) && b.name.match(/jsc$/)) return a.name > b.name ? 1 : -1;
+      if (a.name.match(/jsc$/)) return 1;
+      if (b.name.match(/jsc$/)) return -1;
       if (a.name.match(/^api_/) && b.name.match(/^api_/)) return a.name > b.name ? 1 : -1;
       if (a.name.match(/^api_/)) return 1;
       if (b.name.match(/^api_/)) return -1;
@@ -185,6 +188,7 @@
           .append(nameSpan)
           .addClass(v.name === 'init.js' ? 'is_init' : '')
           .addClass(v.name.match(/\.js$/) ? 'is_js' : '')
+          .addClass(v.name.match(/\.jsc$/) ? 'is_jsc' : '')
           .addClass(v.name.match(/\.json$/) ? 'is_json' : '')
           .addClass(v.name.match(/^api_/) ? 'is_api' : '')
           .appendTo($tbody);

@@ -23,7 +23,7 @@ code { color: green; white-space: pre !important;}
 #app_view .panel { padding: 0 1em; }
 .main-left-column { height: 100%; padding: 0; margin: 0; }
 .main-right-column { height: 100%; padding: 0; margin: 0; }
-.stderr { color: #77e; }
+.stderr { color: #77e; font-weight: bold; }
 .ui-pnotify { right: 22px; top: 82px; }
 .devonline { color: green; }
 .devoffline { color: red; }
@@ -37,7 +37,8 @@ code { color: green; white-space: pre !important;}
 .file .file-size { color: silver; }
 .file.is_js { color: #ffa500; }
 .file.is_json { color: #3cb371; }
-.file.is_api .file-name { color: silver; }
+.file.is_api { color: silver; }
+.file.is_jsc { color: #f99; }
 .file.selected { background: #f0f0f0; }
 
 /* TERMINAL PAGE */
