@@ -7,8 +7,6 @@
 
 #if MGOS_ENABLE_RPC && MGOS_ENABLE_ATCA && MGOS_ENABLE_ATCA_SERVICE
 
-#include "common/cs_crc32.h"
-
 #include "fw/src/mgos_rpc.h"
 
 #include "cryptoauthlib.h"
@@ -36,9 +34,7 @@ static void mgos_atca_get_config(struct mg_rpc_request_info *ri, void *cb_arg,
     }
   }
 
-  uint32_t crc32 = cs_crc32(0, config, sizeof(config));
-  mg_rpc_send_responsef(ri, "{config: %V, crc32: %u}", config, sizeof(config),
-                        crc32);
+  mg_rpc_send_responsef(ri, "{config: %V}", config, sizeof(config));
   ri = NULL;
 
 clean:
@@ -214,9 +210,7 @@ static void mgos_atca_get_or_gen_key(struct mg_rpc_request_info *ri,
     }
   }
 
-  uint32_t crc32 = cs_crc32(0, pubkey, sizeof(pubkey));
-  mg_rpc_send_responsef(ri, "{pubkey: %V, crc32: %u}", pubkey, sizeof(pubkey),
-                        crc32);
+  mg_rpc_send_responsef(ri, "{pubkey: %V}", pubkey, sizeof(pubkey));
   ri = NULL;
 
 clean:
@@ -257,9 +251,7 @@ static void mgos_atca_sign(struct mg_rpc_request_info *ri, void *cb_arg,
     goto clean;
   }
 
-  uint32_t crc32 = cs_crc32(0, signature, sizeof(signature));
-  mg_rpc_send_responsef(ri, "{signature: %V, crc32: %u}", signature,
-                        sizeof(signature), crc32);
+  mg_rpc_send_responsef(ri, "{signature: %V}", signature, sizeof(signature));
   ri = NULL;
 
 clean:

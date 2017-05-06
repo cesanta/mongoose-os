@@ -167,17 +167,9 @@ static bool mg_rpc_channel_uart_send_frame(struct mg_rpc_channel *ch,
   if (!chd->connected || chd->sending) return false;
   mbuf_append(&chd->send_mbuf, FRAME_DELIMETER, FRAME_DELIMETER_LEN);
   mbuf_append(&chd->send_mbuf, f.p, f.len);
-/*
- * TODO(rojer): Enable once updated mos has been out for a while
- * (today is 2017/03/28).
- */
-#if 0
-  {
-    char crc_hex[9];
-    sprintf(crc_hex, "%08x", cs_crc32(0, f.p, f.len));
-    mbuf_append(&chd->send_mbuf, crc_hex, 8);
-  }
-#endif
+  char crc_hex[9];
+  sprintf(crc_hex, "%08x", (unsigned int) cs_crc32(0, f.p, f.len));
+  mbuf_append(&chd->send_mbuf, crc_hex, 8);
   mbuf_append(&chd->send_mbuf, FRAME_DELIMETER, FRAME_DELIMETER_LEN);
   chd->sending = chd->sending_user_frame = true;
 

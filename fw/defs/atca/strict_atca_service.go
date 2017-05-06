@@ -57,11 +57,9 @@ type LockZoneArgs struct {
 
 type SetConfigArgs struct {
 	Config *string `json:"config,omitempty"`
-	Crc32  *int64  `json:"crc32,omitempty"`
 }
 
 type SetKeyArgs struct {
-	Crc32  *int64  `json:"crc32,omitempty"`
 	Ecc    *bool   `json:"ecc,omitempty"`
 	Key    *string `json:"key,omitempty"`
 	Slot   *int64  `json:"slot,omitempty"`
@@ -70,7 +68,6 @@ type SetKeyArgs struct {
 }
 
 type SignArgs struct {
-	Crc32  *int64  `json:"crc32,omitempty"`
 	Digest *string `json:"digest,omitempty"`
 	Slot   *int64  `json:"slot,omitempty"`
 }
@@ -819,20 +816,12 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
         "config": {
           "doc": "Base64 encoded contents of the config zone",
           "type": "string"
-        },
-        "crc32": {
-          "doc": "CRC32 of the config data",
-          "type": "integer"
         }
       },
       "doc": "Set device config"
     },
     "SetKey": {
       "args": {
-        "crc32": {
-          "doc": "CRC32 of the key",
-          "type": "integer"
-        },
         "ecc": {
           "doc": "Whether key is a ECC private key or not",
           "type": "boolean"
@@ -858,10 +847,6 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
     },
     "Sign": {
       "args": {
-        "crc32": {
-          "doc": "CRC32 of the digest",
-          "type": "integer"
-        },
         "digest": {
           "doc": "Base64 encoded digest to sign. Must be 32 bytes.",
           "type": "string"

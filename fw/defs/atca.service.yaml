@@ -16,9 +16,6 @@ methods:
       config:
         type: string
         doc: Base64 encoded contents of the config zone
-      crc32:
-        type: integer
-        doc: CRC32 of the config data
 
   LockZone:
     doc: Lock the specified zone
@@ -39,9 +36,6 @@ methods:
       key:
         type: string
         doc: Base64 encoded key
-      crc32:
-        type: integer
-        doc: CRC32 of the key
       wkslot:
         type: integer
         doc: CRC32 of the key
@@ -84,9 +78,6 @@ methods:
       digest:
         type: string
         doc: Base64 encoded digest to sign. Must be 32 bytes.
-      crc32:
-        type: integer
-        doc: CRC32 of the digest
     result:
       type: object
       properties:

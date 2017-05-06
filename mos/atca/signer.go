@@ -8,7 +8,6 @@ import (
 	"encoding/asn1"
 	"encoding/base64"
 	"fmt"
-	"hash/crc32"
 	"io"
 	"math/big"
 	"os"
@@ -62,11 +61,9 @@ func (s *Signer) Sign(rand io.Reader, digest []byte, opts crypto.SignerOpts) ([]
 	}
 
 	b64d := base64.StdEncoding.EncodeToString(digest)
-	cs := int64(crc32.ChecksumIEEE(digest))
 	req := &atcaService.SignArgs{
 		Slot:   lptr.Int64(int64(s.slot)),
 		Digest: &b64d,
-		Crc32:  &cs,
 	}
 
 	fmt.Fprintf(os.Stderr, "Signing with slot %d...\n", s.slot)

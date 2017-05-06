@@ -6,7 +6,6 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
-	"hash/crc32"
 	"io/ioutil"
 	"os"
 	"strconv"
@@ -137,10 +136,8 @@ func atcaSetConfig(ctx context.Context, dc *dev.DevConn) error {
 	}
 
 	b64c := base64.StdEncoding.EncodeToString(confData)
-	cs := int64(crc32.ChecksumIEEE(confData))
 	req := &atcaService.SetConfigArgs{
 		Config: &b64c,
-		Crc32:  &cs,
 	}
 
 	if *dryRun {
@@ -316,9 +313,7 @@ func atcaSetKey(ctx context.Context, dc *dev.DevConn) error {
 	}
 
 	keyData, _ := base64.StdEncoding.DecodeString(*req.Key)
-	cs := int64(crc32.ChecksumIEEE(keyData))
 	req.Slot = &slot
-	req.Crc32 = &cs
 
 	if *dryRun {
 		reportf("This is a dry run, would have set the following key on slot %d:\n\n%s\n"+
