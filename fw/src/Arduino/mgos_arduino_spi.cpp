@@ -7,6 +7,8 @@
 
 #include <SPI.h>
 
+#include "mongoose/mongoose.h"
+
 #include "fw/src/mgos_spi.h"
 
 SPIImpl SPI;
@@ -57,12 +59,14 @@ uint8_t SPIImpl::transfer(uint8_t data) {
 
 uint16_t SPIImpl::transfer16(uint16_t data) {
   if (spi_ == nullptr) return 0;
+  data = htons(data);
   if (!mgos_spi_txn(spi_, &data, 2, &data, 2)) data = 0;
   return data;
 }
 
 uint32_t SPIImpl::transfer32(uint32_t data) {
   if (spi_ == nullptr) return 0;
+  data = htonl(data);
   if (!mgos_spi_txn(spi_, &data, 4, &data, 4)) data = 0;
   return data;
 }
@@ -86,11 +90,13 @@ void SPIImpl::write(uint8_t data) {
 
 void SPIImpl::write16(uint16_t data) {
   if (spi_ == nullptr) return;
+  data = htons(data);
   mgos_spi_txn(spi_, &data, 2, NULL, 0);
 }
 
 void SPIImpl::write32(uint32_t data) {
   if (spi_ == nullptr) return;
+  data = htonl(data);
   mgos_spi_txn(spi_, &data, 4, NULL, 0);
 }
 
