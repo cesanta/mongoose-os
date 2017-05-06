@@ -137,7 +137,7 @@ $(FFI_EXPORTS_O): $(FFI_EXPORTS_C)
 	$(summary) "  CC $@"
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
-$(FFI_EXPORTS_C): $(SYMBOLS_DUMP)
+$(FFI_EXPORTS_C): $(SYMBOLS_DUMP) $(FS_FILES)
 	$(call gen_ffi_exports,$<,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))
 
 ./%.o: %.c $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
