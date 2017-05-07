@@ -3,89 +3,95 @@
 // like ability to call your API via other transports like Websocket, MQTT,
 // serial, etc.
 
+load('api_net.js');
+
+let URL = {
+  // ## **`URL.parse(url)`**
+  // Parse URL string, return and object with `ssl`, `addr`, `uri` keys.
+  parse: function(url) {
+    let ssl = false, addr, port = '80', uri = '/', app = true;
+    if (url.slice(0, 8) === 'https://') {
+      port = '443';
+      ssl = true;
+      url = url.slice(8);
+    }
+    if (url.slice(0, 7) === 'http://') {
+      url = url.slice(7);
+    }
+    addr = url;
+    for (let i = 0; i < url.length; i++) {
+      let ch = url[i];
+      if (ch === ':') app = false;
+      if (ch === '/') {
+        addr = url.slice(0, i);
+        uri = url.slice(i);
+        break;
+      }
+    }
+    if (app) addr += ':' + port;
+    return {ssl: ssl, addr: addr, uri: uri};
+  },
+};
+
 let HTTP = {
-  // ## **`HTTP.get_system_server()`**
-  // Return an opaque pointer variable, a handler of the built-in HTTP server.
-  get_system_server: ffi('void *mgos_get_sys_http_server()'),
+  _c: ffi('void *mgos_connect_http(char *, void (*)(void *, int, void *, userdata), userdata)'),
+  _cs: ffi('void *mgos_connect_http_ssl(char *, void (*)(void *, int, void *, userdata), userdata, char *, char *)'),
+  _pk: ffi('void *mjs_mem_get_ptr(void *, int)'),
+  _p: ffi('void *mjs_mem_to_ptr(int)'),
+  _getu: ffi('double mjs_mem_get_uint(void *, int, int)'),
+  _gets: ffi('double mjs_mem_get_int(void *, int, int)'),
 
-  // ## **`HTTP.bind(portStr)`**
-  // Start HTTP listener. Return an opaque pointer.
-  // Avoid using this, use `HTTP.get_system_server()` instead.
-  bind: ffi('void *mgos_bind_http(char *)'),
+  // Get `struct http_message *` foreign ptr and offset, return JS string.
+  _hmf: function(ptr, off) {
+    let p = this._p(this._getu(this._pk(ptr, off), 4, 0));
+    let len = this._getu(this._pk(ptr, off + 4), 4, 0);
+    return len ? fstr(p, len) : '';
+  },
 
-  // ## **`HTTP.add_endpoint(listener, uri, handler, userdata)`**
-  // Register URI
-  // handler. Avoid using this, use `RPC.addHandler()` instead.
-  // Handler function is Mongoose event handler, which receives an opaque
-  // connection, event number, and event data pointer.
-  // Events are `HTTP.EV_REQUEST`, `HTTP.EV_RESPONSE`.
-  // Return value: 1 in case of success, 0 otherwise.
+  // ## **`HTTP.query(options)`**
+  // Send HTTP request. Options object accepts the following fields:
+  // `url` - mandatory URL to fetch, `success` - optional callback function 
+  // that receives reply body, `error` - optional error callback that receives
+  // error string, `data` - optional object with request parameters.
+  // By default, `GET` method is used, unless `data` is specified.
   // Example:
   // ```javascript
-  // let server = HTTP.get_system_server();
-  // HTTP.add_endpoint(server, '/my/api', function(conn, ev, ev_data) {
-  //   if (ev === HTTP.EV_REQUEST) {
-  //     Net.send(conn, 'HTTP/1.0 200 OK\n\n  hello! \n');
-  //     Net.close(conn);
-  //   }
-  // }, null);
+  // HTTP.query({
+  //   url: 'http://httpbin.org/post',
+  //   data: {foo: 1, bar: 'baz'},  // Optional. If set, POST is used
+  //   success: function(body, full_http_msg) { print(body); },
+  //   error: function(err) { print(err); },  // Optional
+  // });
   // ```
-  add_endpoint: ffi('int mg_register_http_endpoint(void *, char *, void (*)(void *, int, void *, userdata), userdata)'),
-
-  // ## **`HTTP.connect(addr, handler, userdata)`**
-  // The same as `Net.connect`,
-  // but with HTTP-specific handler attached, so that the callback can receive
-  // additional events:
-  // - `HTTP.EV_REQUEST`
-  // - `HTTP.EV_RESPONSE`
-  // - `HTTP.EV_CHUNK`
-  // - `HTTP.EV_WS_HANDSHAKE`
-  // - `HTTP.EV_WS_HANDSHAKE_DONE`
-  // - `HTTP.EV_WS_FRAME`
-  // - `HTTP.EV_WS_CONTROL_FRAME`
-  // Return value: an opaque connection pointer which should be given as a
-  // first argument to some `Net` functions.
-  connect: ffi('void *mgos_connect_http(char *, void (*)(void *, int, void *, userdata), userdata)'),
-
-  // ## **`HTTP.connect_ssl(addr, handler, userdata)`**
-  // The same as `HTTP.connect`,
-  // but establishes SSL enabled connection
-  // Additional parameters are:
-  // - `cert` is a client certificate file name or "" if not required
-  // - `ca_cert` is a CA certificate or NULL if peer verification is not required.
-  // The certificate files must be in PEM format.
-  connect_ssl: ffi('void *mgos_connect_http_ssl(char *, void (*)(void *, int, void *, userdata), userdata, char *, char *)'),
-
-  EV_REQUEST: 100,
-  EV_RESPONSE: 101,
-  EV_CHUNK: 102,
-
-  EV_WS_HANDSHAKE: 111,
-  EV_WS_HANDSHAKE_DONE: 112,
-  EV_WS_FRAME: 113,
-  EV_WS_CONTROL_FRAME: 114,
-
-  // ## **`HTTP.param(event_data, param)`**
-  // Get various params values of the
-  // HTTP-specific events. When the callback given to `HTTP.connect()` is
-  // called with the event `HTTP.EV_REQUEST` or `HTTP.EV_RESPONSE`,
-  // `HTTP.param()` can be used to retrieve event details from the
-  // `event_data`.
-  //
-  // Possible values of the `param` argument:
-  // - `HTTP.METHOD`
-  // - `HTTP.URI`
-  // - `HTTP.PROTOCOL`
-  // - `HTTP.BODY`
-  // - `HTTP.MESSAGE`
-  // - `HTTP.QUERY_STRING`
-  //
-  // Return value: a string with the param value.
-  param: ffi('char *mgos_get_http_message_param(void *, int)'),
-  METHOD: 0,
-  URI: 1,
-  PROTOCOL: 2,
-  BODY: 3,
-  MESSAGE: 4,
-  QUERY_STRING: 5,
+  query: function(obj) {
+    obj.u = URL.parse(obj.url || '');
+    let f = function(conn, ev, evd, ud) {
+      if (ev === Net.EV_POLL) return;
+      if (ev === Net.EV_CONNECT) {
+        let body = ud.data ? JSON.stringify(ud.data) : '';
+        let meth = body ? 'POST' : 'GET';
+        let host = 'Host: ' + ud.u.addr + '\r\n';
+        let cl = 'Content-Length: ' + JSON.stringify(body.length) + '\r\n';
+        let req = meth + ' ' + ud.u.uri + ' HTTP/1.0\r\n' + host + cl + '\r\n';
+        Net.send(conn, req);
+        Net.send(conn, body);
+      }
+      if (ev === 101) {
+        if (typeof(ud.success) === 'function') {
+          ud.success(HTTP._hmf(evd, 8), HTTP._hmf(evd, 0));
+        }
+        ud.ok = true;
+      }
+      if (ev === Net.EV_CLOSE) {
+        if (!ud.ok && ud.error) ud.error('', 'Request failed');
+        ffi_cb_free(ud.f, ud);
+      }
+    };
+    obj.f = f;
+    if (obj.u.ssl) {
+      this._cs(obj.u.addr, f, obj, '', '');
+    } else {
+      this._c(obj.u.addr, f, obj);
+    }
+  },
 };

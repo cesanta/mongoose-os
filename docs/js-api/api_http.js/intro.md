@@ -1,5 +1,5 @@
 ---
-title: "HTTP"
+title: "URL"
 items:
 ---
 
@@ -8,79 +8,60 @@ With RPC, you'll get a RESTful endpoint for free, plus many other extras
 like ability to call your API via other transports like Websocket, MQTT,
 serial, etc.
 
+load('api_net.js');
+
+let URL = {
+## **`URL.parse(url)`**
+Parse URL string, return and object with `ssl`, `addr`, `uri` keys.
+  parse: function(url) {
+    let ssl = false, addr, port = '80', uri = '/', app = true;
+    if (url.slice(0, 8) === 'https://') {
+      port = '443';
+      ssl = true;
+      url = url.slice(8);
+    }
+    if (url.slice(0, 7) === 'http://') {
+      url = url.slice(7);
+    }
+    addr = url;
+    for (let i = 0; i < url.length; i++) {
+      let ch = url[i];
+      if (ch === ':') app = false;
+      if (ch === '/') {
+        addr = url.slice(0, i);
+        uri = url.slice(i);
+        break;
+      }
+    }
+    if (app) addr += ':' + port;
+    return {ssl: ssl, addr: addr, uri: uri};
+  },
+};
 
 
-## **`HTTP.get_system_server()`**
-Return an opaque pointer variable, a handler of the built-in HTTP server.
+
+## **`URL.parse(url)`**
+Parse URL string, return and object with `ssl`, `addr`, `uri` keys.
 
 
 
-## **`HTTP.bind(portStr)`**
-Start HTTP listener. Return an opaque pointer.
-Avoid using this, use `HTTP.get_system_server()` instead.
+Get `struct http_message *` foreign ptr and offset, return JS string.
 
 
 
-## **`HTTP.add_endpoint(listener, uri, handler, userdata)`**
-Register URI
-handler. Avoid using this, use `RPC.addHandler()` instead.
-Handler function is Mongoose event handler, which receives an opaque
-connection, event number, and event data pointer.
-Events are `HTTP.EV_REQUEST`, `HTTP.EV_RESPONSE`.
-Return value: 1 in case of success, 0 otherwise.
+## **`HTTP.query(options)`**
+Send HTTP request. Options object accepts the following fields:
+`url` - mandatory URL to fetch, `success` - optional callback function 
+that receives reply body, `error` - optional error callback that receives
+error string, `data` - optional object with request parameters.
+By default, `GET` method is used, unless `data` is specified.
 Example:
 ```javascript
-let server = HTTP.get_system_server();
-HTTP.add_endpoint(server, '/my/api', function(conn, ev, ev_data) {
-  if (ev === HTTP.EV_REQUEST) {
-    Net.send(conn, 'HTTP/1.0 200 OK\n\n  hello! \n');
-    Net.close(conn);
-  }
-}, null);
+HTTP.query({
+  url: 'http://httpbin.org/post',
+  data: {foo: 1, bar: 'baz'},  // Optional. If set, POST is used
+  success: function(body, full_http_msg) { print(body); },
+  error: function(err) { print(err); },  // Optional
+});
 ```
-
-
-
-## **`HTTP.connect(addr, handler, userdata)`**
-The same as `Net.connect`,
-but with HTTP-specific handler attached, so that the callback can receive
-additional events:
-- `HTTP.EV_REQUEST`
-- `HTTP.EV_RESPONSE`
-- `HTTP.EV_CHUNK`
-- `HTTP.EV_WS_HANDSHAKE`
-- `HTTP.EV_WS_HANDSHAKE_DONE`
-- `HTTP.EV_WS_FRAME`
-- `HTTP.EV_WS_CONTROL_FRAME`
-Return value: an opaque connection pointer which should be given as a
-first argument to some `Net` functions.
-
-
-
-## **`HTTP.connect_ssl(addr, handler, userdata)`**
-The same as `HTTP.connect`,
-but establishes SSL enabled connection
-Additional parameters are:
-- `cert` is a client certificate file name or "" if not required
-- `ca_cert` is a CA certificate or NULL if peer verification is not required.
-The certificate files must be in PEM format.
-
-
-
-## **`HTTP.param(event_data, param)`**
-Get various params values of the
-HTTP-specific events. When the callback given to `HTTP.connect()` is
-called with the event `HTTP.EV_REQUEST` or `HTTP.EV_RESPONSE`,
-`HTTP.param()` can be used to retrieve event details from the
-`event_data`.
-
-Possible values of the `param` argument:
-- `HTTP.METHOD`
-- `HTTP.URI`
-- `HTTP.PROTOCOL`
-- `HTTP.BODY`
-- `HTTP.MESSAGE`
-- `HTTP.QUERY_STRING`
-
-Return value: a string with the param value.
 
