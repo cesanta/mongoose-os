@@ -6,7 +6,7 @@ sources:
   - src
   - ${arduino_drivers_path}/dallas_temp/*.cpp
 modules:
-  - origin: https://github.com/cesanta/arduino_drivers
+  - origin: https://github.com/cesanta/arduino-drivers
 build_vars:
   MGOS_ENABLE_ARDUINO_API: 1
   MGOS_ENABLE_ONEWIRE: 1
