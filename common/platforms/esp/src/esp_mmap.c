@@ -25,12 +25,18 @@
 #include "common/platforms/esp/src/esp_mmap.h"
 
 #include "common/cs_dbg.h"
+#include "common/mbuf.h"
 #include "common/spiffs/spiffs.h"
 #include "common/spiffs/spiffs_nucleus.h"
 
 #ifdef CS_MMAP
 
-struct mmap_desc mmap_descs[MGOS_MMAP_SLOTS];
+#define MMAP_DESCS_ADD_SIZE 4
+
+#define MMAP_ADDR_MASK ((1 << MMAP_ADDR_BITS) - 1)
+
+struct mbuf mmap_descs_mbuf;
+struct mmap_desc *mmap_descs = NULL;
 static struct mmap_desc *cur_mmap_desc;
 
 /*
@@ -45,8 +51,8 @@ IRAM NOINSTR static uint8_t read_unaligned_byte(uint8_t *addr) {
 
   if (addr >= (uint8_t *) MMAP_BASE && addr < (uint8_t *) MMAP_END) {
     struct mmap_desc *desc = MMAP_DESC_FROM_ADDR(addr);
-    int block = ((uintptr_t) addr & 0xFFFFFF) / SPIFFS_PAGE_DATA_SIZE;
-    int off = ((uintptr_t) addr & 0xFFFFFF) % SPIFFS_PAGE_DATA_SIZE;
+    int block = ((uintptr_t) addr & MMAP_ADDR_MASK) / SPIFFS_PAGE_DATA_SIZE;
+    int off = ((uintptr_t) addr & MMAP_ADDR_MASK) % SPIFFS_PAGE_DATA_SIZE;
     uint8_t *ea = (uint8_t *) desc->blocks[block] + off;
 
     /*
@@ -123,12 +129,21 @@ IRAM NOINSTR int esp_mmap_exception_handler(uint32_t vaddr, uint8_t *pc,
 
 static struct mmap_desc *alloc_mmap_desc(void) {
   size_t i;
-  for (i = 0; i < sizeof(mmap_descs) / sizeof(mmap_descs[0]); i++) {
+  size_t descs_cnt = mmap_descs_mbuf.len / sizeof(struct mmap_desc);
+  for (i = 0; i < descs_cnt; i++) {
     if (mmap_descs[i].blocks == NULL) {
       return &mmap_descs[i];
     }
   }
-  return NULL;
+
+  /* Failed to find an empty descriptor, need to grow mbuf */
+  int old_len = mmap_descs_mbuf.len;
+  mbuf_append(&mmap_descs_mbuf, NULL, MMAP_DESCS_ADD_SIZE * sizeof(struct mmap_desc));
+  mmap_descs = (struct mmap_desc *)mmap_descs_mbuf.buf;
+  memset(mmap_descs_mbuf.buf + old_len, 0, mmap_descs_mbuf.len - old_len);
+
+  /* Call this function again; this time it should succeed */
+  return alloc_mmap_desc();
 }
 
 void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset) {
@@ -195,7 +210,8 @@ void esp_spiffs_on_page_move_hook(spiffs *fs, spiffs_file fh,
   size_t i, j;
   (void) fh;
   uint32_t fbase = FLASH_BASE(fs);
-  for (i = 0; i < ARRAY_SIZE(mmap_descs); i++) {
+  size_t descs_cnt = mmap_descs_mbuf.len / sizeof(struct mmap_desc);
+  for (i = 0; i < descs_cnt; i++) {
     if (mmap_descs[i].blocks) {
       for (j = 0; j < mmap_descs[i].pages; j++) {
         uint32_t addr = mmap_descs[i].blocks[j];
@@ -215,7 +231,7 @@ int esp_spiffs_dummy_read(spiffs *fs, u32_t addr, u32_t size, u8_t *dst) {
 
   if (dst >= DUMMY_MMAP_BUFFER_START && dst < DUMMY_MMAP_BUFFER_END) {
     if ((addr - SPIFFS_PAGE_HEADER_SIZE) % LOG_PAGE_SIZE == 0) {
-      addr &= 0xFFFFF;
+      addr &= MMAP_ADDR_MASK;
       cur_mmap_desc->blocks[cur_mmap_desc->pages++] = FLASH_BASE(fs) + addr;
     }
     return 1;
@@ -223,4 +239,9 @@ int esp_spiffs_dummy_read(spiffs *fs, u32_t addr, u32_t size, u8_t *dst) {
 
   return 0;
 }
+
+void esp_mmap_init(void) {
+  mbuf_init(&mmap_descs_mbuf, 0);
+}
+
 #endif /* CS_MMAP */

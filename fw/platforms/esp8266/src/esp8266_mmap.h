@@ -10,13 +10,15 @@
 
 #ifdef CS_MMAP
 
-#ifndef MGOS_MMAP_SLOTS
-#define MGOS_MMAP_SLOTS 16
-#endif
+/*
+ * See common/platforms/esp/src/esp_mmap.h for details of these values
+ */
 
 #define MMAP_BASE ((void *) 0x10000000)
 #define MMAP_END ((void *) 0x20000000)
-#define MMAP_DESC_BITS 24
+
+#define MMAP_ADDR_BITS 20
+#define MMAP_NUM_BITS 8
 
 #define DUMMY_MMAP_BUFFER_START ((u8_t *) 0x70000000)
 #define DUMMY_MMAP_BUFFER_END ((u8_t *) 0x70100000)
