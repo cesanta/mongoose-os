@@ -29,7 +29,7 @@ Reboot the system. Return value: none.
 
 
 
-# **`Sys.uptime()`**
+## **`Sys.uptime()`**
 Return number of seconds since last reboot.
 
 
