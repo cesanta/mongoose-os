@@ -5,7 +5,7 @@ MJS_PATH = $(REPO_ROOT)/mjs
 
 EXAMPLES_cc3200 = c_aws_shadow c_hello c_http c_network c_mqtt c_uart
 EXAMPLES_esp32 = c_aws_shadow c_hello c_hello_arduino c_http c_mqtt c_rpc c_uart c_websocket
-EXAMPLES_esp8266 = c_aws_shadow c_heater c_hello c_hello_arduino c_http c_mcast c_mqtt c_network c_uart c_websocket c_arduino_onewire mjs_onewire
+EXAMPLES_esp8266 = c_aws_shadow c_heater c_hello c_hello_arduino c_http c_mcast c_mqtt c_network c_uart c_websocket c_arduino_onewire c_arduino_dht mjs_onewire
 EXAMPLES_pic32 =
 EXAMPLES_stm32 = c_aws_shadow c_hello c_http c_i2c c_mqtt c_mcast c_network c_rpc c_websocket mjs_base mjs_hello
 
@@ -21,7 +21,7 @@ all: $(EXAMPLES)
 
 $(EXAMPLES): $(MJS_PATH)/mjs.c $(MJS_PATH)/mjs.h
 	@echo "=== Building $@ / $(PLATFORM)"
-	@cd $@ && $(MOS) build --local --clean --arch $(PLATFORM) --repo $(REPO_ROOT) --module mjs:$(MJS_PATH)
+	@cd $@ && $(MOS) build --local --clean --arch $(PLATFORM) --repo $(REPO_ROOT) --module mjs:$(MJS_PATH) --module arduino-drivers:$(REPO_ROOT)/arduino_drivers
 
 $(MJS_PATH)/mjs.c $(MJS_PATH)/mjs.h:
 	@echo "=== Creating $@"
