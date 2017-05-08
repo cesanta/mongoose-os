@@ -1,5 +1,5 @@
 let Blynk = {
-	_send: ffi('void blynk_send(void *, int, int, char *, int)'),
+	_send: ffi('void blynk_send(void *, int, int, void *, int)'),
 
 	// ## `Blynk.send(conn, type, msg)`
 	send: function(conn, type, msg) {

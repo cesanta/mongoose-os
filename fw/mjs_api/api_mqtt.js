@@ -28,7 +28,7 @@ let MQTT = {
     return this._sub(topic, this._subf, { cb: cb, ud: ud });
   },
 
-  _pub: ffi('int mgos_mqtt_pub(char *, char *, int, int)'),
+  _pub: ffi('int mgos_mqtt_pub(char *, void *, int, int)'),
 
   // ## **`MQTT.pub(topic, message, qos)`**
   // Publish message to a topic. QoS defaults to 0.

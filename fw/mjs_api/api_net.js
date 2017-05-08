@@ -58,7 +58,7 @@ let Net = {
   // Return value: none.
   close: ffi('void mgos_disconnect(void *)'),
 
-  _send: ffi('void mg_send(void *, char *, int)'),
+  _send: ffi('void mg_send(void *, void *, int)'),
 
   // ## **`Net.send(conn, data)`**
   // Send data to the remote peer. `data` is an mJS string.
