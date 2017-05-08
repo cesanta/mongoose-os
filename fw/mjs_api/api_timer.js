@@ -22,4 +22,8 @@ let Timer = {
   // ## **`Timer.now()`**
   // Return current time as double value, UNIX epoch (seconds since 1970).
   now: ffi('double mg_time(void)'),
+
+  // ## **`Timer.del(id)`**
+  // Cancel previously installed timer.
+  del: ffi('void mgos_clear_timer(int)'),
 };

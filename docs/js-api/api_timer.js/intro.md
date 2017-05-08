@@ -29,3 +29,8 @@ Timer.set(1000, true, function() {
 ## **`Timer.now()`**
 Return current time as double value, UNIX epoch (seconds since 1970).
 
+
+
+## **`Timer.del(id)`**
+Cancel previously installed timer.
+
