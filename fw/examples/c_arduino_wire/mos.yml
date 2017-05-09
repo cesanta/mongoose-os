@@ -1,0 +1,10 @@
+name: c_arduino_wire
+# arch: PLATFORM
+version: 1.0
+skeleton_version: 2017-03-17
+sources:
+  - src
+build_vars:
+  APP_CONF_SCHEMA: src/conf_schema.yaml
+  MGOS_ENABLE_ARDUINO_API: 1
+  MGOS_ENABLE_WIRE: 1

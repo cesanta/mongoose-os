@@ -3,8 +3,6 @@
 
 #include "fw/src/mgos_features.h"
 
-#if MGOS_ENABLE_ARDUINO_API && MGOS_ENABLE_WIRE
-
 #include <stdint.h>
 #include "Arduino.h"
 #include "fw/src/mgos_i2c.h"
@@ -68,7 +66,5 @@ class TwoWire {
     return write((uint8_t) n);
   }
 };
-
-#endif /* MGOS_ENABLE_ARDUINO_API && MGOS_ENABLE_WIRE */
 
 #endif /* CS_FW_SRC_ARDUINO_WIRE_H_ */
