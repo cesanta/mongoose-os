@@ -100,16 +100,16 @@ APP_OBJS = $(addsuffix .o,$(basename $(APP_SRCS)))
 BUILD_INFO_OBJS = $(addsuffix .o,$(basename $(notdir $(BUILD_INFO_C)) $(notdir $(MG_BUILD_INFO_C))))
 COMPONENT_OBJS = $(MGOS_OBJS) $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_OBJS)
 
-C_CXX_CFLAGS += $(MG_FEATURES_TINY) $(MGOS_FEATURES) -DMGOS_MAX_NUM_UARTS=3 \
-               -DMGOS_DEBUG_UART=$(MGOS_DEBUG_UART) \
-               -DMGOS_NUM_GPIO=40 \
-               -DMG_ENABLE_FILESYSTEM \
-               -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS \
-               -DMG_ENABLE_DIRECTORY_LISTING \
-               -DCS_DISABLE_MD5 -DMG_EXT_MD5 \
-               -DCS_DISABLE_SHA1 -DMG_EXT_SHA1 \
-               -DCS_MMAP -DSPIFFS_ON_PAGE_MOVE_HOOK=esp_spiffs_on_page_move_hook
-
+C_CXX_CFLAGS += $(MG_FEATURES_TINY) -DMG_NET_IF=MG_NET_IF_LWIP_LOW_LEVEL \
+                $(MGOS_FEATURES) -DMGOS_MAX_NUM_UARTS=3 \
+                -DMGOS_DEBUG_UART=$(MGOS_DEBUG_UART) \
+                -DMGOS_NUM_GPIO=40 \
+                -DMG_ENABLE_FILESYSTEM \
+                -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS \
+                -DMG_ENABLE_DIRECTORY_LISTING \
+                -DCS_DISABLE_MD5 -DMG_EXT_MD5 \
+                -DCS_DISABLE_SHA1 -DMG_EXT_SHA1 \
+                -DCS_MMAP -DSPIFFS_ON_PAGE_MOVE_HOOK=esp_spiffs_on_page_move_hook
 
 CFLAGS += $(C_CXX_CFLAGS)
 CXXFLAGS += -std=c++11 -fno-exceptions $(C_CXX_CFLAGS)

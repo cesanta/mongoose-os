@@ -165,7 +165,7 @@ time_t mg_lwip_if_poll(struct mg_iface *iface, int timeout_ms) {
     if (nc->sock != INVALID_SOCKET &&
         !(nc->flags & (MG_F_UDP | MG_F_LISTENING)) && cs->pcb.tcp != NULL &&
         cs->pcb.tcp->unsent != NULL) {
-      tcp_output(cs->pcb.tcp);
+      tcpip_callback(tcp_output_tcpip, cs->pcb.tcp);
     }
     if (nc->ev_timer_time > 0) {
       if (num_timers == 0 || nc->ev_timer_time < min_timer) {

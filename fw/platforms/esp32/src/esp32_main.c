@@ -8,6 +8,8 @@
 #include <unistd.h>
 
 #include "freertos/FreeRTOS.h"
+#include "freertos/timers.h"
+
 #include "esp_attr.h"
 #include "esp_event.h"
 #include "esp_event_loop.h"
@@ -137,6 +139,59 @@ static enum mgos_init_result esp32_mgos_init() {
 
 extern SemaphoreHandle_t s_mgos_mux;
 static QueueHandle_t s_main_queue;
+/* Note: we cannot use mutex here because there is no recursive mutex
+ * that can be used from ISR as well as from task. mgos_invoke_cb pust an item
+ * on the queue and may cause a context switch and re-enter schedule_poll.
+ * Hence this elaborate dance we perform with poll counter. */
+static volatile uint32_t s_mg_last_poll = 0;
+static volatile bool s_mg_poll_scheduled = false;
+static portMUX_TYPE s_poll_spinlock = portMUX_INITIALIZER_UNLOCKED;
+static TimerHandle_t s_mg_poll_timer;
+
+static void IRAM_ATTR mgos_mg_poll_cb(void *arg) {
+  portENTER_CRITICAL(&s_poll_spinlock);
+  s_mg_poll_scheduled = false;
+  s_mg_last_poll++;
+  portEXIT_CRITICAL(&s_poll_spinlock);
+  uint32_t timeout_ms, timeout_ticks;
+  do {
+    mongoose_poll(0);
+    timeout_ms = mg_lwip_get_poll_delay_ms(mgos_get_mgr());
+    if (timeout_ms > 1000) timeout_ms = 1000;
+    timeout_ticks = timeout_ms / portTICK_PERIOD_MS;
+  } while (timeout_ticks == 0);
+  xTimerChangePeriod(s_mg_poll_timer, timeout_ticks, 10);
+  xTimerReset(s_mg_poll_timer, 10);
+  (void) arg;
+}
+
+void IRAM_ATTR mongoose_schedule_poll(bool from_isr) {
+  /* Prevent piling up of poll callbacks. */
+  portENTER_CRITICAL(&s_poll_spinlock);
+  if (!s_mg_poll_scheduled) {
+    uint32_t last_poll = s_mg_last_poll;
+    portEXIT_CRITICAL(&s_poll_spinlock);
+    if (mgos_invoke_cb(mgos_mg_poll_cb, NULL, from_isr)) {
+      portENTER_CRITICAL(&s_poll_spinlock);
+      if (s_mg_last_poll == last_poll) {
+        s_mg_poll_scheduled = true;
+      }
+      portEXIT_CRITICAL(&s_poll_spinlock);
+    }
+  } else {
+    portEXIT_CRITICAL(&s_poll_spinlock);
+  }
+}
+
+void mgos_mg_poll_timer_cb(TimerHandle_t t) {
+  mongoose_schedule_poll(false /* from_isr */);
+  (void) t;
+}
+
+void mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr) {
+  (void) mgr;
+  mongoose_schedule_poll(false /* from_isr */);
+}
 
 void mgos_task(void *arg) {
   struct mgos_event e;
@@ -159,8 +214,7 @@ void mgos_task(void *arg) {
   }
 
   while (true) {
-    mongoose_poll(0);
-    while (xQueueReceive(s_main_queue, &e, 1 /* tick */)) {
+    while (xQueueReceive(s_main_queue, &e, 10 /* tick */)) {
       e.cb(e.arg);
     }
   }
@@ -208,6 +262,8 @@ void app_main(void) {
   ets_install_putc1(sdk_putc);
   ets_install_putc2(NULL);
   esp_log_set_vprintf(sdk_debug_vprintf);
+  s_mg_poll_timer = xTimerCreate("mg_poll", 10, pdFALSE /* reload */, 0,
+                                 mgos_mg_poll_timer_cb);
   ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
   s_mgos_mux = xSemaphoreCreateRecursiveMutex();
   setvbuf(stdout, NULL, _IOLBF, 256);
