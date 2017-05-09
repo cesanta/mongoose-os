@@ -23,14 +23,14 @@ Trusted and Recommended By:
 # Docs, Support
 - [Video tutorials](https://mongoose-os.com/#videos)
 - [Mongoose OS Documentation](https://mongoose-os.com/docs/#/overview/)
-- [Support Forum - ask your technical questions here] (http://forum.cesanta.com/index.php?p=/categories/mongoose-iot)
+- [Support Forum - ask your technical questions here](http://forum.cesanta.com/)
 - [Commercial licensing and support available](https://mongoose-os.com/contact.html)
 
 # Licensing
 
 Mongoose OS is released under Commercial and [GNU GPL v.2](http://www.gnu.org/licenses/old-licenses/gpl-2.0.html) open source licenses.
 
-Commercial Projects: [Contact us for the commercial license.] (https://www.cesanta.com/contact)
+Commercial Projects: [Contact us for the commercial license.](https://www.cesanta.com/contact)
 
 # Contributions
 
