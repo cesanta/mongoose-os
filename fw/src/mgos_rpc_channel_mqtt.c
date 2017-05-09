@@ -23,8 +23,6 @@
 #define CH_F_SUB2_ACKED 2
 #define CHANNEL_OPEN (CH_F_SUB1_ACKED | CH_F_SUB2_ACKED)
 
-uint16_t mgos_mqtt_get_packet_id(void);
-
 static char *mgos_rpc_mqtt_topic_name(const struct mg_str device_id,
                                       bool wildcard) {
   char *topic = NULL;

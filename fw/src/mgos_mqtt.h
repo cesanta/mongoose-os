@@ -66,6 +66,8 @@ void mgos_mqtt_sub(const char *topic, sub_handler_t, void *ud);
 
 size_t mgos_mqtt_num_unsent_bytes(void);
 
+uint16_t mgos_mqtt_get_packet_id(void);
+
 #endif /* MGOS_ENABLE_MQTT */
 
 #ifdef __cplusplus

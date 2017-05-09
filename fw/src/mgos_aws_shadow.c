@@ -213,7 +213,7 @@ static void mgos_aws_shadow_ev(struct mg_connection *nc, int ev, void *ev_data,
                                                 MGOS_AWS_SHADOW_TOPIC_UPDATE);
         LOG(LL_INFO,
             ("Update: %.*s", (int) MIN(200, ss->update.len), ss->update.buf));
-        mg_mqtt_publish(nc, topic, 0 /* message_id */, MG_MQTT_QOS(1),
+        mg_mqtt_publish(nc, topic, mgos_mqtt_get_packet_id(), MG_MQTT_QOS(1),
                         ss->update.buf, ss->update.len);
         mbuf_remove(&ss->update, ss->update.len);
         mbuf_trim(&ss->update);
