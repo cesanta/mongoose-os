@@ -105,7 +105,8 @@ static void call_specific_peer(const char *peer) {
 static void call_peer(void) {
   const char *peer = get_cfg()->c_rpc.peer;
   if (peer == NULL) {
-    LOG(LL_INFO, ("Peer address not configured, set c_rpc.peer (e.g. ws://192.168.1.234/rpc)"));
+    LOG(LL_INFO, ("Peer address not configured, set c_rpc.peer (e.g. "
+                  "ws://192.168.1.234/rpc)"));
     return;
   }
   call_specific_peer(peer);
@@ -125,7 +126,8 @@ static void button_cb(int pin, void *arg) {
 }
 
 static void call_peer_handler(struct mg_rpc_request_info *ri, void *cb_arg,
-                        struct mg_rpc_frame_info *fi, struct mg_str args) {
+                              struct mg_rpc_frame_info *fi,
+                              struct mg_str args) {
   char *peer = NULL;
   if (json_scanf(args.p, args.len, ri->args_fmt, &peer) == 1) {
     call_specific_peer(peer);
@@ -142,7 +144,8 @@ static void call_peer_handler(struct mg_rpc_request_info *ri, void *cb_arg,
 enum mgos_app_init_result mgos_app_init(void) {
   struct mg_rpc *c = mgos_rpc_get_global();
   mg_rpc_add_handler(c, "Example.Increment", "{num: %d}", inc_handler, NULL);
-  mg_rpc_add_handler(c, "Example.CallPeer", "{peer: %Q}", call_peer_handler, NULL);
+  mg_rpc_add_handler(c, "Example.CallPeer", "{peer: %Q}", call_peer_handler,
+                     NULL);
   mgos_wifi_add_on_change_cb(wifi_changed, NULL);
   mgos_gpio_set_mode(LED_GPIO, MGOS_GPIO_MODE_OUTPUT);
   mgos_gpio_set_button_handler(BUTTON_GPIO, BUTTON_PULL, BUTTON_EDGE,

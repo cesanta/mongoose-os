@@ -37,7 +37,7 @@ static uint16_t getuint16(const uint8_t *buf) {
 }
 
 void blynk_send(struct mg_connection *c, uint8_t type, uint16_t id,
-                       const void *data, uint16_t len) {
+                const void *data, uint16_t len) {
   static uint16_t cnt;
   uint8_t header[BLYNK_HEADER_SIZE];
 
@@ -84,7 +84,7 @@ static void default_blynk_handler(struct mg_connection *c, const char *cmd,
 static void handle_blynk_frame(struct mg_connection *c, void *user_data,
                                const uint8_t *data, uint16_t len) {
   LOG(LL_DEBUG, ("BLYNK STATUS: type %hhu, len %hu rlen %hhu", data[0], len,
-                getuint16(data + 3)));
+                 getuint16(data + 3)));
   switch (data[0]) {
     case BLYNK_RESPONSE:
       if (getuint16(data + 3) == 200) {
@@ -167,7 +167,6 @@ enum mgos_app_init_result mgos_app_init(void) {
   blynk_set_handler(default_blynk_handler, NULL);
   mgos_set_timer(s_reconnect_interval_ms, true, reconnect_timer_cb, NULL);
 
-
   /* Initialize JavaScript engine */
   int mem1, mem2, mem3;
   mem1 = mgos_get_free_heap_size();
@@ -180,8 +179,8 @@ enum mgos_app_init_result mgos_app_init(void) {
   }
   mem3 = mgos_get_free_heap_size();
   LOG(LL_DEBUG, ("mJS memory stat: before init: %d "
-                "after init: %d after init.js: %d",
-                mem1, mem2, mem3));
+                 "after init: %d after init.js: %d",
+                 mem1, mem2, mem3));
 
   return MGOS_APP_INIT_SUCCESS;
 }

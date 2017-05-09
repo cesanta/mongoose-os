@@ -1,16 +1,19 @@
 /*
  * Arduino Wire library API wrapper for compatibility
- * 
+ *
  * Copyright (c) 2014-2017 Cesanta Software Limited
  * All rights reserved
  */
 
 #include "Wire.h"
 
-TwoWire::TwoWire() 
-  : i2c(NULL), addr(0),
-    n_bytes_avail(0), n_bytes_to_send(0),
-    pbyte_to_recv(NULL), pbyte_to_send(NULL) {
+TwoWire::TwoWire()
+    : i2c(NULL),
+      addr(0),
+      n_bytes_avail(0),
+      n_bytes_to_send(0),
+      pbyte_to_recv(NULL),
+      pbyte_to_send(NULL) {
   recv_buf = new uint8_t[BUF_SIZE];
   send_buf = new uint8_t[BUF_SIZE];
   on_receive_cb = NULL;
@@ -18,13 +21,13 @@ TwoWire::TwoWire()
 }
 
 TwoWire::~TwoWire() {
-  delete [] recv_buf;
-  delete [] send_buf;
+  delete[] recv_buf;
+  delete[] send_buf;
 }
 
 void TwoWire::begin(void) {
   if (i2c == NULL) i2c = mgos_i2c_get_global();
-  
+
   mgos_i2c_stop(i2c);
 
   pinMode(i2c->sda_gpio, INPUT_PULLUP);
@@ -41,7 +44,7 @@ void TwoWire::begin(uint8_t address) {
 }
 
 void TwoWire::begin(int address) {
-  begin((uint8_t)address);
+  begin((uint8_t) address);
 }
 
 void TwoWire::end(void) {
@@ -55,10 +58,8 @@ void TwoWire::setClock(uint32_t clock) {
   (void) clock;
 }
 
-uint8_t TwoWire::requestFrom(uint8_t address,
-                             uint8_t quantity,
-                             uint32_t iaddress,
-                             uint8_t isize,
+uint8_t TwoWire::requestFrom(uint8_t address, uint8_t quantity,
+                             uint32_t iaddress, uint8_t isize,
                              uint8_t sendStop) {
   (void) iaddress;
   (void) isize;
@@ -73,24 +74,22 @@ uint8_t TwoWire::requestFrom(uint8_t address,
   return n_bytes_avail;
 }
 
-uint8_t TwoWire::requestFrom(uint8_t address, uint8_t quantity, uint8_t sendStop) {
-	return requestFrom((uint8_t)address,
-                     (uint8_t)quantity,
-                     (uint32_t)0,
-                     (uint8_t)0,
-                     (uint8_t)sendStop);
+uint8_t TwoWire::requestFrom(uint8_t address, uint8_t quantity,
+                             uint8_t sendStop) {
+  return requestFrom((uint8_t) address, (uint8_t) quantity, (uint32_t) 0,
+                     (uint8_t) 0, (uint8_t) sendStop);
 }
 
 uint8_t TwoWire::requestFrom(uint8_t address, uint8_t quantity) {
-  return requestFrom((uint8_t)address, (uint8_t)quantity, (uint8_t)true);
+  return requestFrom((uint8_t) address, (uint8_t) quantity, (uint8_t) true);
 }
 
 uint8_t TwoWire::requestFrom(int address, int quantity) {
-  return requestFrom((uint8_t)address, (uint8_t)quantity, (uint8_t)true);
+  return requestFrom((uint8_t) address, (uint8_t) quantity, (uint8_t) true);
 }
 
 uint8_t TwoWire::requestFrom(int address, int quantity, int sendStop) {
-  return requestFrom((uint8_t)address, (uint8_t)quantity, (uint8_t)sendStop);
+  return requestFrom((uint8_t) address, (uint8_t) quantity, (uint8_t) sendStop);
 }
 
 void TwoWire::beginTransmission(uint8_t address) {
@@ -100,7 +99,7 @@ void TwoWire::beginTransmission(uint8_t address) {
 }
 
 void TwoWire::beginTransmission(int address) {
-  beginTransmission((uint8_t)address);
+  beginTransmission((uint8_t) address);
 }
 
 uint8_t TwoWire::endTransmission(uint8_t sendStop) {
@@ -126,8 +125,7 @@ size_t TwoWire::write(uint8_t data) {
 }
 
 size_t TwoWire::write(const uint8_t *data, size_t quantity) {
-  for (size_t i = 0; i < quantity; i++)
-    write(data[i]);
+  for (size_t i = 0; i < quantity; i++) write(data[i]);
   return quantity;
 }
 
@@ -146,13 +144,12 @@ int TwoWire::peek(void) {
 void TwoWire::flush(void) {
 }
 
-void TwoWire::onReceiveService(uint8_t* inBytes, int numBytes) {
+void TwoWire::onReceiveService(uint8_t *inBytes, int numBytes) {
   if (on_receive_cb == NULL) return;
   if (pbyte_to_recv < recv_buf + n_bytes_avail) return;
-  
-  for (int i = 0; i < numBytes; i++)
-    recv_buf[i] = inBytes[i];
-  
+
+  for (int i = 0; i < numBytes; i++) recv_buf[i] = inBytes[i];
+
   pbyte_to_recv = recv_buf;
   n_bytes_avail = numBytes;
 
@@ -168,11 +165,10 @@ void TwoWire::onRequestService(void) {
   on_request_cb();
 }
 
-void TwoWire::onReceive( void (*function)(int) ) {
+void TwoWire::onReceive(void (*function)(int)) {
   on_receive_cb = function;
 }
 
-void TwoWire::onRequest( void (*function)(void) )
-{
+void TwoWire::onRequest(void (*function)(void)) {
   on_request_cb = function;
 }

@@ -92,7 +92,8 @@ static void aws_shadow_state_handler(void *arg, enum mgos_aws_shadow_event ev,
                                      const struct mg_str desired,
                                      const struct mg_str reported_md,
                                      const struct mg_str desired_md) {
-  LOG(LL_INFO, ("== Event: %d (%s), version: %llu", ev, mgos_aws_shadow_event_name(ev), version));
+  LOG(LL_INFO, ("== Event: %d (%s), version: %llu", ev,
+                mgos_aws_shadow_event_name(ev), version));
   if (ev == MGOS_AWS_SHADOW_CONNECTED) {
     report_state();
     return;
@@ -103,7 +104,8 @@ static void aws_shadow_state_handler(void *arg, enum mgos_aws_shadow_event ev,
   }
   LOG(LL_INFO, ("Reported state: %.*s", (int) reported.len, reported.p));
   LOG(LL_INFO, ("Desired state : %.*s", (int) desired.len, desired.p));
-  LOG(LL_INFO, ("Reported metadata: %.*s", (int) reported_md.len, reported_md.p));
+  LOG(LL_INFO,
+      ("Reported metadata: %.*s", (int) reported_md.len, reported_md.p));
   LOG(LL_INFO, ("Desired metadata : %.*s", (int) desired_md.len, desired_md.p));
   /*
    * Here we extract values from previosuly reported state (if any)

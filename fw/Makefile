@@ -10,5 +10,10 @@ difftest:
 	rm $$TMP
 
 REPO_ROOT = ..
-FORMAT_FILES = 'Arduino/*.[ch]' 'Arduino/*.cpp' 'src/*.[ch]' 'platforms/cc3200/*.[ch]' 'platforms/esp32/*.[ch]' 'platforms/esp8266/*.[ch]'
+FORMAT_FILES = 'examples/*/*/*.[ch]' 'examples/*/*/*.cpp' \
+               'platforms/cc3200/src/*.[ch]' \
+               'platforms/esp32/src/*.[ch]' \
+               'platforms/esp8266/*.[ch]' \
+               'src/*.[ch]' \
+               'src/Arduino/*.[ch]' 'src/Arduino/*.cpp'
 include $(REPO_ROOT)/common.mk

@@ -49,7 +49,7 @@ enum mgos_app_init_result mgos_app_init(void) {
   mgos_uart_config_set_defaults(UART_NO, &ucfg);
   /*
    * At this point it is possible to adjust baud rate, pins and other settings.
-   * 115200 8-N-1 is the default mode, but we set it anyway 
+   * 115200 8-N-1 is the default mode, but we set it anyway
    */
   ucfg.baud_rate = 115200;
   if (!mgos_uart_configure(UART_NO, &ucfg)) {

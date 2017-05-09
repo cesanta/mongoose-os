@@ -25,7 +25,7 @@ void loop(void) {
   byte cfg;
 
   ow->reset_search();
-  if(!ow->search(rom)) {
+  if (!ow->search(rom)) {
     ow->reset_search();
     error("No device found");
     return;
@@ -43,21 +43,24 @@ void loop(void) {
   delay(750);
 
   ow->reset();
-  ow->select(rom);    
+  ow->select(rom);
   ow->write(0xBE);
 
-  for (int i=0; i<9; i++) {
+  for (int i = 0; i < 9; i++) {
     data[i] = ow->read();
   }
 
   raw = (data[1] << 8) | data[0];
   cfg = (data[4] & 0x60);
-  
-  if (cfg == 0x00) raw = raw & ~7;
-  else if (cfg == 0x20) raw = raw & ~3;
-  else if (cfg == 0x40) raw = raw & ~1;
 
-  printf("T:%f\n", (float)raw / 16.0);
+  if (cfg == 0x00)
+    raw = raw & ~7;
+  else if (cfg == 0x20)
+    raw = raw & ~3;
+  else if (cfg == 0x40)
+    raw = raw & ~1;
+
+  printf("T:%f\n", (float) raw / 16.0);
 
   delay(350);
 }
