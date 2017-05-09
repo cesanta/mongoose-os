@@ -2,11 +2,12 @@ name: c_arduino_temp
 # arch: PLATFORM
 version: 1.0
 skeleton_version: 2017-03-17
-sources:
-  - src
-  - ${arduino_drivers_path}/ds18b20/*.cpp
 modules:
   - origin: https://github.com/cesanta/arduino-drivers
+sources:
+  - src
+  - ${arduino_drivers_path}/Arduino
+  - ${arduino_drivers_path}/ds18b20
 build_vars:
   MGOS_ENABLE_ARDUINO_API: 1
   MGOS_ENABLE_ONEWIRE: 1

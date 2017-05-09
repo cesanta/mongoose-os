@@ -14,6 +14,5 @@ FORMAT_FILES = 'examples/*/*/*.[ch]' 'examples/*/*/*.cpp' \
                'platforms/cc3200/src/*.[ch]' \
                'platforms/esp32/src/*.[ch]' \
                'platforms/esp8266/*.[ch]' \
-               'src/*.[ch]' \
-               'src/Arduino/*.[ch]' 'src/Arduino/*.cpp'
+               'src/*.[ch]' 'src/*.cpp'
 include $(REPO_ROOT)/common.mk

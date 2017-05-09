@@ -10,11 +10,12 @@
 #include "common/cs_dbg.h"
 #include "mongoose/mongoose.h"
 
-#include "fw/src/Arduino/mgos_arduino.h"
-#include "fw/src/Arduino/mgos_arduino_spi.h"
+#include "fw/src/mgos_arduino.h"
 #include "fw/src/mgos_gpio.h"
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_init.h"
+
+#include "mgos_arduino_spi.h"
 
 void pinMode(uint8_t pin, uint8_t mode) {
   switch (mode) {

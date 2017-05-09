@@ -5,8 +5,8 @@
 
 #include "fw/src/mgos_init.h"
 
-#include "fw/src/Arduino/mgos_arduino.h"
 #include "fw/src/mgos_app.h"
+#include "fw/src/mgos_arduino.h"
 #include "fw/src/mgos_atca.h"
 #include "fw/src/mgos_console.h"
 #include "fw/src/mgos_dns_sd.h"
