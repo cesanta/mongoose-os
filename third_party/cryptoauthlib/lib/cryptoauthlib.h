@@ -56,11 +56,11 @@
 #ifdef ATCAPRINTF
 	#include <stdio.h>
 	//#define BREAK(status, message) {printf(__FUNCTION__": "message" -- Status: %02X\r\n", status); break;}
-	#define BREAK(status, message) {printf(": "message" -- Status: %02X\r\n", status); break;}
-	#define RETURN(status, message) {printf(": "message" -- Status: %02X\r\n", status); return status;}
-	#define PRINTSTAT(status, message) {printf(": "message" -- Status: %02X\r\n", status);}
-	#define PRINT(message) {printf(": "message"\r\n"); break;}
-	#define DBGOUT(message) {printf(": "message"\r\n"); break;}
+	#define BREAK(status, message) {printf(": " message " -- Status: %02X\r\n", status); break;}
+	#define RETURN(status, message) {printf(": " message " -- Status: %02X\r\n", status); return status;}
+	#define PRINTSTAT(status, message) {printf(": " message " -- Status: %02X\r\n", status);}
+	#define PRINT(message) {printf(": " message "\r\n"); break;}
+	#define DBGOUT(message) {printf(": " message "\r\n"); break;}
 #else
 	#define BREAK(status, message) {break;}
 	#define RETURN(status, message) {return status;}

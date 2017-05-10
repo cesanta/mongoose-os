@@ -84,7 +84,7 @@ typedef struct {
 			uint32_t baud;          // typically 400000
 		} atcai2c;
 
-		struct ATCASWI {
+		struct {  // ATCASWI
 			uint8_t bus;        // logical SWI bus - HAL will map this to a pin	or uart port
 		} atcaswi;
 
