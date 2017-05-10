@@ -14,6 +14,7 @@
 #include "fw/src/mgos_gpio.h"
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_init.h"
+#include "fw/src/mgos_timers.h"
 
 #include "mgos_arduino_spi.h"
 
@@ -58,11 +59,22 @@ unsigned long micros(void) {
 }
 
 extern "C" {
+static mgos_timer_id s_loop_timer;
+}
 
+void setup(void) __attribute__((weak));
+void setup(void) {
+}
+
+void loop(void) __attribute__((weak));
+void loop(void) {
+  // It's a dummy loop, no need to invoke it.
+  mgos_clear_timer(s_loop_timer);
+}
+
+extern "C" {
 void loop_cb(void *arg) {
   loop();
-  mgos_invoke_cb(loop_cb, NULL, false /* from_isr */);
-  mgos_wdt_feed();
   (void) arg;
 }
 
@@ -71,7 +83,7 @@ enum mgos_init_result mgos_arduino_init(void) {
   mgos_arduino_spi_init();
 #endif
   setup();
-  mgos_invoke_cb(loop_cb, NULL, false /* from_isr */);
+  s_loop_timer = mgos_set_timer(0, true /* repeat */, loop_cb, NULL);
   return MGOS_INIT_OK;
 }
 

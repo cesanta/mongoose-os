@@ -58,7 +58,7 @@ static void mgos_timer_ev(struct mg_connection *nc, int ev, void *ev_data,
     if (ti != NULL) {
       cb = ti->cb;
       cb_arg = ti->cb_arg;
-      if (ti->interval_ms > 0) {
+      if (ti->interval_ms >= 0) {
         const double now = mg_time();
         ti->next_invocation = nc->ev_timer_time + ti->interval_ms / 1000.0;
         /* Polling loop was delayed, bring the invocation time forward to now */
@@ -81,7 +81,11 @@ mgos_timer_id mgos_set_timer(int msecs, int repeat, timer_callback cb,
   struct timer_info *ti = (struct timer_info *) calloc(1, sizeof(*ti));
   if (ti == NULL) return MGOS_INVALID_TIMER_ID;
   ti->next_invocation = mg_time() + msecs / 1000.0;
-  if (repeat) ti->interval_ms = msecs;
+  if (repeat) {
+    ti->interval_ms = msecs;
+  } else {
+    ti->interval_ms = -1;
+  }
   ti->cb = cb;
   ti->cb_arg = arg;
   {

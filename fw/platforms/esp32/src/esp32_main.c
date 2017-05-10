@@ -145,29 +145,39 @@ static QueueHandle_t s_main_queue;
  * Hence this elaborate dance we perform with poll counter. */
 static volatile uint32_t s_mg_last_poll = 0;
 static volatile bool s_mg_poll_scheduled = false;
+static volatile bool s_mg_want_poll = false;
 static portMUX_TYPE s_poll_spinlock = portMUX_INITIALIZER_UNLOCKED;
 static TimerHandle_t s_mg_poll_timer;
 
 static void IRAM_ATTR mgos_mg_poll_cb(void *arg) {
+  uint32_t timeout_ms, timeout_ticks, n = 0;
   portENTER_CRITICAL(&s_poll_spinlock);
+  do {
+    portEXIT_CRITICAL(&s_poll_spinlock);
+    s_mg_want_poll = false;
+    mongoose_poll(0);
+    timeout_ms = mg_lwip_get_poll_delay_ms(mgos_get_mgr());
+    portENTER_CRITICAL(&s_poll_spinlock);
+    if (timeout_ms > 1000) timeout_ms = 1000;
+    timeout_ticks = timeout_ms / portTICK_PERIOD_MS;
+    n++;
+  } while (n < 10 && (s_mg_want_poll || timeout_ticks == 0));
   s_mg_poll_scheduled = false;
   s_mg_last_poll++;
   portEXIT_CRITICAL(&s_poll_spinlock);
-  uint32_t timeout_ms, timeout_ticks;
-  do {
-    mongoose_poll(0);
-    timeout_ms = mg_lwip_get_poll_delay_ms(mgos_get_mgr());
-    if (timeout_ms > 1000) timeout_ms = 1000;
-    timeout_ticks = timeout_ms / portTICK_PERIOD_MS;
-  } while (timeout_ticks == 0);
-  xTimerChangePeriod(s_mg_poll_timer, timeout_ticks, 10);
-  xTimerReset(s_mg_poll_timer, 10);
+  if (!s_mg_want_poll && timeout_ticks > 0) {
+    xTimerChangePeriod(s_mg_poll_timer, timeout_ticks, 10);
+    xTimerReset(s_mg_poll_timer, 10);
+  } else {
+    mongoose_schedule_poll(false /* from_isr */);
+  }
   (void) arg;
 }
 
 void IRAM_ATTR mongoose_schedule_poll(bool from_isr) {
   /* Prevent piling up of poll callbacks. */
   portENTER_CRITICAL(&s_poll_spinlock);
+  s_mg_want_poll = true;
   if (!s_mg_poll_scheduled) {
     uint32_t last_poll = s_mg_last_poll;
     portEXIT_CRITICAL(&s_poll_spinlock);
