@@ -201,6 +201,27 @@ void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset) {
   return desc->base;
 }
 
+int munmap(void *addr, size_t len) {
+  size_t i;
+  size_t descs_cnt = mmap_descs_mbuf.len / sizeof(struct mmap_desc);
+
+  (void) len;
+
+  if (addr != NULL) {
+    for (i = 0; i < descs_cnt; i++) {
+      if (mmap_descs[i].base == addr) {
+        free(mmap_descs[i].blocks);
+        memset(&mmap_descs[i], 0, sizeof(mmap_descs[i]));
+        return 0;
+      }
+    }
+  }
+
+  /* didn't find the mapping with the given addr */
+  LOG(LL_ERROR, ("Didn't find the mapping for the addr %p", addr));
+  return -1;
+}
+
 /*
  * Relocate mmapped pages.
  */

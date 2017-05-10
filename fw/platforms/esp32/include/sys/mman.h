@@ -13,5 +13,6 @@
 #define MAP_FAILED ((void *) (-1))
 
 void *mmap(void *addr, size_t len, int prot, int flags, int fd, off_t offset);
+int munmap(void *addr, size_t len);
 
 #endif /* CS_FW_PLATFORMS_ESP8266_INCLUDE_SYS_MMAN_H_ */
