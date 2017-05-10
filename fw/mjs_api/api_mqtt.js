@@ -40,7 +40,7 @@ let MQTT = {
   // load('api_gpio.js');
   // let pin = 0, topic = 'my/topic';
   // GPIO.set_button_handler(pin, GPIO.PULL_UP, GPIO.INT_EDGE_NEG, 200, function() {
-  //   let res = MQTT.pub('my/topic', JSON.stringify({ a: 1, b: 2 }));
+  //   let res = MQTT.pub('my/topic', JSON.stringify({ a: 1, b: 2 }), 1);
   //   print('Published:', res ? 'yes' : 'no');
   // }, null);
   // ```

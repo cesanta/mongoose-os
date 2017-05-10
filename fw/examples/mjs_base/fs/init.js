@@ -22,6 +22,6 @@ Timer.set(1000 /* 1 sec */, true /* repeat */, function() {
 GPIO.set_button_handler(0, GPIO.PULL_UP, GPIO.INT_EDGE_NEG, 200, function() {
   let topic = 'devices/' + Cfg.get('device.id');
   let message = getInfo();
-  let ok = MQTT.pub(topic, message, message.length);
+  let ok = MQTT.pub(topic, message, 1);
   print('Published:', ok ? 'yes' : 'no', 'topic:', topic, 'message:', message);
 }, null);

@@ -15,5 +15,5 @@ let freq = 5000; // Milliseconds. Report values that often.
 
 Timer.set(freq, true, function() {
   let msg = JSON.stringify(Sys.free_ram());
-  MQTT.pub(topic, msg, msg.length);
+  MQTT.pub(topic, msg, 1);
 }, true);

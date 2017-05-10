@@ -18,7 +18,7 @@ GPIO.set_button_handler(pin, GPIO.PULL_UP, GPIO.INT_EDGE_NEG, 200, function(x) {
     total_ram: Sys.total_ram(),
     free_ram: Sys.free_ram()
   });
-  let ok = MQTT.pub(topic, message, message.length);
+  let ok = MQTT.pub(topic, message, 1);
   print('Published:', ok ? 'yes' : 'no', 'topic:', topic, 'message:', message);
 }, true);
 
