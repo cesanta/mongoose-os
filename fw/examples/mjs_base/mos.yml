@@ -18,4 +18,3 @@ build_vars:
   SSL: mbedTLS
   APP_CONF_SCHEMA: src/conf_schema.yaml
   MGOS_ENABLE_ONEWIRE: 1
-  MGOS_ENABLE_WIRE: 1

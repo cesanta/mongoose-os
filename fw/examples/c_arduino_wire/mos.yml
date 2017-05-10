@@ -9,4 +9,3 @@ sources:
   - ${arduino_drivers_path}/Arduino
 build_vars:
   MGOS_ENABLE_ARDUINO_API: 1
-  MGOS_ENABLE_WIRE: 1

@@ -130,8 +130,4 @@
 #define MGOS_ENABLE_TUNNEL 0
 #endif
 
-#ifndef MGOS_ENABLE_WIRE
-#define MGOS_ENABLE_WIRE 0
-#endif
-
 #endif /* CS_FW_SRC_MGOS_FEATURES_H_ */
