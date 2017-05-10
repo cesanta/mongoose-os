@@ -60,7 +60,7 @@ C_CXX_FLAGS  = -W -Wall -Werror -Wundef -Wno-comment -Wno-variadic-macros -Wpoin
                -Os $(NO_Os_FLAGS) -g3 \
                -Wl,-EL -fno-inline-functions \
                -D_XOPEN_SOURCE=500 \
-               -nostdlib -mlongcalls -D__ets__ -DSTATIC=static \
+               -nostdlib -mlongcalls -mtext-section-literals -D__ets__ -DSTATIC=static \
                -Wno-parentheses \
                -DIRAM='__attribute__((section(".fast.text")))' \
                -DICACHE_RAM_ATTR=IRAM \
@@ -69,7 +69,7 @@ C_CXX_FLAGS  = -W -Wall -Werror -Wundef -Wno-comment -Wno-variadic-macros -Wpoin
                -ffunction-sections -fdata-sections
 
 CFLAGS = -std=c99 $(C_CXX_FLAGS)
-CXXFLAGS = -std=c++11 -fno-exceptions $(C_CXX_FLAGS)
+CXXFLAGS = -std=gnu++11 -fno-exceptions $(C_CXX_FLAGS)
 
 # linker flags used to generate the main object file
 LDFLAGS = -nostdlib -Wl,--no-check-sections -u call_user_start \

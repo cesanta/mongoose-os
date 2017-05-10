@@ -125,12 +125,13 @@ SECTIONS
 
     . = ALIGN(4096);
     */libc.a:(SORT_BY_NAME(.literal.*) .irom.text .text SORT_BY_NAME(.text.*))
+    */libstd*.a:(.literal SORT_BY_NAME(.literal.*) .irom.text .text SORT_BY_NAME(.text.*))
     */ESP8266_*_SDK/lib*.a:(.irom.text .text SORT_BY_NAME(.text.*))
     */liblwip*.a:(SORT_BY_NAME(.literal.*) .irom.text .text SORT_BY_NAME(.text.*))
     */libmbed*.a:(SORT_BY_NAME(.literal.*) .irom.text .text SORT_BY_NAME(.text.*))
     */lib*.a:(SORT_BY_NAME(.literal.*) .irom.text .text SORT_BY_NAME(.text.*))
     */mongoose-os.a:(SORT_BY_NAME(.literal.*) .irom.text .text SORT_BY_NAME(.text.*))
-    *(SORT_BY_NAME(.literal.*) .irom.text .text SORT_BY_NAME(.text.*))
+    *(.literal SORT_BY_NAME(.literal.*) .irom.text .text SORT_BY_NAME(.text.*))
     _irom0_text_end = ABSOLUTE(.);
   } >irom0_0_seg :irom0_0_phdr
 }

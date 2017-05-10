@@ -152,6 +152,7 @@ SECTIONS
 
     . = ALIGN(4096);
     */libc.a:(SORT_BY_NAME(.literal.*) .irom.text .irom0.text SORT_BY_NAME(.text.*))
+    */libstd*.a:(.literal SORT_BY_NAME(.literal.*) .irom.text .irom0.text SORT_BY_NAME(.text.*))
     */ESP8266_*_SDK/lib*.a:(.irom.text .irom0.text SORT_BY_NAME(.text.*))
     */liblwip*.a:(SORT_BY_NAME(.literal.*) SORT_BY_NAME(.text.*))
     */libmbed*.a:(SORT_BY_NAME(.literal.*) SORT_BY_NAME(.text.*))

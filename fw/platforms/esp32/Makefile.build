@@ -109,7 +109,7 @@ export VPATH
 
 CFLAGS += -Wall -Werror -DMGOS_APP=\"$(APP)\" -DCS_SPIFFS_ENABLE_VFS -I$(MGOS_PATH) \
           -DFW_ARCHITECTURE=$(APP_PLATFORM) \
-          -DIRAM='__attribute__((section(".iram1")))' \
+          -DIRAM='__attribute__((section(".iram1")))' -mtext-section-literals \
           $(APP_CFLAGS)
 
 # Settings for the ESP-IDF build system
