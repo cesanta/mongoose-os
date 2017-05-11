@@ -12,14 +12,18 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	userpkg "os/user"
 	"path"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"unicode"
 
+	"cesanta.com/common/go/docker"
 	"cesanta.com/common/go/multierror"
 	"cesanta.com/mos/build"
 	"cesanta.com/mos/build/archive"
+	"cesanta.com/mos/build/gitutils"
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/flash/common"
 	"github.com/cesanta/errors"
@@ -56,7 +60,7 @@ func init() {
 func doBuild(ctx context.Context, devConn *dev.DevConn) error {
 	var err error
 	if *local {
-		err = buildLocal()
+		err = buildLocal(ctx)
 	} else {
 		err = buildRemote()
 	}
@@ -76,7 +80,7 @@ func doBuild(ctx context.Context, devConn *dev.DevConn) error {
 	return err
 }
 
-func buildLocal() (err error) {
+func buildLocal(ctx context.Context) (err error) {
 	defer func() {
 		if !*verbose && err != nil {
 			log, err := os.Open(path.Join(buildDir, buildLog))
@@ -88,11 +92,17 @@ func buildLocal() (err error) {
 		}
 	}()
 
+	dockerAppPath := "/app"
+	dockerMgosPath := "/mongoose-os"
+
 	fwDir := filepath.Join(buildDir, "fw")
+	fwDirDocker := path.Join(buildDir, "fw")
+
 	objsDir := filepath.Join(buildDir, "objs")
-	genDir := filepath.Join(buildDir, "gen")
-	fsDir := filepath.Join(buildDir, "fs")
+	objsDirDocker := path.Join(buildDir, "objs")
+
 	fwFilename := filepath.Join(buildDir, build.FirmwareFileName)
+
 	elfFilename := filepath.Join(objsDir, "fw.elf")
 
 	if *cleanBuild {
@@ -161,6 +171,11 @@ func buildLocal() (err error) {
 	}
 	setModuleVars(mVars, "mongoose-os", mosDirEffective)
 
+	mosDirEffectiveAbs, err := filepath.Abs(mosDirEffective)
+	if err != nil {
+		return errors.Annotatef(err, "getting absolute path of %q", mosDirEffective)
+	}
+
 	for _, m := range manifest.Modules {
 		name, err := m.GetName()
 		if err != nil {
@@ -211,14 +226,80 @@ func buildLocal() (err error) {
 		return errors.Trace(err)
 	}
 
+	dockerArgs := []string{"run", "--rm", "-i"}
+
+	appPath, err := getCodeDir()
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	gitToplevelDir, _ := gitutils.GitGetToplevelDir(appPath)
+
+	appMountPath := ""
+	appSubdir := ""
+	if gitToplevelDir == "" {
+		// We're outside of any git repository: will just mount the application
+		// path
+		appMountPath = appPath
+		appSubdir = ""
+	} else {
+		// We're inside some git repo: will mount the root of this repo, and
+		// remember the app's subdir inside it.
+		appMountPath = gitToplevelDir
+		appSubdir = appPath[len(gitToplevelDir):]
+	}
+
+	// Note about mounts: we mount repo to a stable path (/app) as well as the
+	// original path outside the container, whatever it may be, so that absolute
+	// path references continue to work (e.g. Git submodules are known to use
+	// abs. paths).
+	dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", appMountPath, dockerAppPath))
+	dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", mosDirEffectiveAbs, dockerMgosPath))
+	dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", mosDirEffectiveAbs, mosDirEffectiveAbs))
+
+	// On Windows and Mac, run container as root since volume sharing on those
+	// OSes doesn't play nice with unprivileged user.
+	//
+	// On other OSes, run it as the current user.
+	if runtime.GOOS != "windows" && runtime.GOOS != "darwin" {
+		curUser, err := userpkg.Current()
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		dockerArgs = append(
+			dockerArgs, "--user", fmt.Sprintf("%s:%s", curUser.Uid, curUser.Gid),
+		)
+	}
+
+	// Get build image name and tag
+	sdkVersionBytes, err := ioutil.ReadFile(filepath.Join(mosDirEffective, "fw/platforms", archEffective, "sdk.version"))
+	if err != nil {
+		return errors.Annotatef(err, "failed to read sdk version file")
+	}
+	// Drop trailing newline
+	sdkVersion := string(sdkVersionBytes[:len(sdkVersionBytes)-1])
+
+	dockerArgs = append(dockerArgs, sdkVersion)
+
+	// Construct make arguments
+	makeArgs := []string{
+		"-j",
+		"-C", fmt.Sprintf("%s%s", dockerAppPath, appSubdir),
+
+		// NOTE that we use path instead of filepath, because it'll run in a docker
+		// container, and thus will use Linux path separator
+		"-f", path.Join(dockerMgosPath, "fw/platforms", archEffective, "Makefile.build"),
+	}
+
 	var errs error
 	for k, v := range map[string]string{
-		"MGOS_PATH":      mosDirEffective,
+		"MGOS_PATH":      dockerMgosPath,
 		"PLATFORM":       archEffective,
-		"BUILD_DIR":      objsDir,
-		"FW_DIR":         fwDir,
-		"GEN_DIR":        genDir,
-		"FS_STAGING_DIR": fsDir,
+		"BUILD_DIR":      objsDirDocker,
+		"FW_DIR":         fwDirDocker,
+		"GEN_DIR":        path.Join(buildDir, "gen"),
+		"FS_STAGING_DIR": path.Join(buildDir, "fs"),
 		"APP":            appName,
 		"APP_VERSION":    manifest.Version,
 		"APP_SOURCES":    strings.Join(appSources, " "),
@@ -240,19 +321,19 @@ func buildLocal() (err error) {
 		manifest.BuildVars[parts[0]] = parts[1]
 	}
 
-	makeArgs := []string{
-		"-j",
-		"-f", filepath.Join(mosDirEffective, "fw/platforms", archEffective, "Makefile"),
-	}
 	for k, v := range manifest.BuildVars {
 		makeArgs = append(makeArgs, fmt.Sprintf("%s=%s", k, v))
 	}
 
+	dockerArgs = append(dockerArgs,
+		"/bin/bash", "-c", "nice make '"+strings.Join(makeArgs, "' '")+"'",
+	)
+
 	if *verbose {
-		fmt.Printf("Make arguments: %s\n", strings.Join(makeArgs, " "))
+		fmt.Printf("Docker arguments: %s\n", strings.Join(dockerArgs, " "))
 	}
 
-	cmd := exec.Command("make", makeArgs...)
+	cmd := exec.Command("docker", dockerArgs...)
 	err = runCmd(cmd, logFile)
 	if err != nil {
 		return errors.Trace(err)
@@ -269,8 +350,7 @@ func buildLocal() (err error) {
 
 	// Move elf as fw.elf
 	err = os.Rename(
-		filepath.Join(objsDir, fmt.Sprintf("%s.elf", appName)),
-		elfFilename,
+		filepath.Join(objsDir, fmt.Sprintf("%s.elf", appName)), elfFilename,
 	)
 	if err != nil {
 		return errors.Trace(err)
@@ -311,6 +391,16 @@ func addBuildVar(manifest *build.FWAppManifest, name, value string) error {
 	return nil
 }
 
+// getCmdWriter returns a writer which includes at least the given logFile,
+// and if --verbose flag is set, then also stdout.
+func getCmdWriter(logFile io.Writer) io.Writer {
+	writers := []io.Writer{logFile}
+	if *verbose {
+		writers = append(writers, os.Stdout)
+	}
+	return io.MultiWriter(writers...)
+}
+
 // runCmd runs given command and redirects its output to the given log file.
 // if --verbose flag is set, then the output also goes to the stdout.
 func runCmd(cmd *exec.Cmd, logFile io.Writer) error {
@@ -318,7 +408,7 @@ func runCmd(cmd *exec.Cmd, logFile io.Writer) error {
 	if *verbose {
 		writers = append(writers, os.Stdout)
 	}
-	out := io.MultiWriter(writers...)
+	out := getCmdWriter(logFile)
 	cmd.Stdout = out
 	cmd.Stderr = out
 	err := cmd.Run()

@@ -47,6 +47,14 @@ func GitGetCurrentAbbrev(repo string) (string, error) {
 	return resp, nil
 }
 
+func GitGetToplevelDir(repo string) (string, error) {
+	resp, err := git(repo, "rev-parse", "--show-toplevel")
+	if err != nil {
+		return "", errors.Annotatef(err, "failed to get git toplevel dir")
+	}
+	return resp, nil
+}
+
 func GitCheckout(repo string, id string) error {
 	_, err := git(repo, "checkout", id)
 	if err != nil {
