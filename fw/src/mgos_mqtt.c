@@ -24,6 +24,7 @@ struct topic_handler {
   struct mg_str topic;
   mg_event_handler_t handler;
   void *user_data;
+  uint8_t qos;
   uint16_t sub_id;
   SLIST_ENTRY(topic_handler) entries;
 };
@@ -60,6 +61,9 @@ static bool call_topic_handler(struct mg_connection *nc, int ev, void *ev_data,
   SLIST_FOREACH(th, &s_topic_handlers, entries) {
     if ((ev == MG_EV_MQTT_SUBACK && th->sub_id == msg->message_id) ||
         mg_mqtt_match_topic_expression(th->topic, msg->topic)) {
+      if (ev == MG_EV_MQTT_PUBLISH && th->qos > 0) {
+        mg_mqtt_puback(nc, msg->message_id);
+      }
       th->handler(nc, ev, ev_data, th->user_data);
       return true;
     }
@@ -148,7 +152,8 @@ static void mgos_mqtt_ev(struct mg_connection *nc, int ev, void *ev_data,
         s_reconnect_timeout_ms = 0;
         call_global_handlers(nc, ev, ev_data, user_data);
         SLIST_FOREACH(th, &s_topic_handlers, entries) {
-          struct mg_mqtt_topic_expression te = {.topic = th->topic.p, .qos = 0};
+          struct mg_mqtt_topic_expression te = {.topic = th->topic.p,
+                                                .qos = th->qos};
           th->sub_id = mgos_mqtt_get_packet_id();
           mg_mqtt_subscribe(nc, &te, 1 /* len */, th->sub_id);
           LOG(LL_INFO, ("Subscribing to '%s'", te.topic));
@@ -186,6 +191,7 @@ void mgos_mqtt_global_subscribe(const struct mg_str topic,
   th->topic.len = topic.len;
   th->handler = handler;
   th->user_data = ud;
+  th->qos = 1;
   SLIST_INSERT_HEAD(&s_topic_handlers, th, entries);
 }
 

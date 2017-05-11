@@ -16,7 +16,7 @@ enum {
 
 static void sub(struct mg_connection *c, const char *fmt, ...) {
   char buf[100];
-  struct mg_mqtt_topic_expression te = {.topic = buf, .qos = 0};
+  struct mg_mqtt_topic_expression te = {.topic = buf, .qos = 1};
   uint16_t sub_id = mgos_mqtt_get_packet_id();
   va_list ap;
   va_start(ap, fmt);
@@ -35,7 +35,7 @@ static void pub(struct mg_connection *c, const char *fmt, ...) {
   n = json_vprintf(&jmo, fmt, ap);
   va_end(ap);
   mg_mqtt_publish(c, get_cfg()->mqtt.pub, mgos_mqtt_get_packet_id(),
-                  MG_MQTT_QOS(0), msg, n);
+                  MG_MQTT_QOS(1), msg, n);
   LOG(LL_INFO, ("%s -> %s", get_cfg()->mqtt.pub, msg));
 }
 
@@ -80,6 +80,8 @@ static void ev_handler(struct mg_connection *c, int ev, void *p,
     int i, pin, state, addr, len;
 
     LOG(LL_INFO, ("got command: [%.*s]", (int) s->len, s->p));
+    /* Our subscription is at QoS 1, we must acknowledge messages sent ot us. */
+    mg_mqtt_puback(c, msg->message_id);
     if (json_scanf(s->p, s->len, "{gpio: {pin: %d, state: %d}}", &pin,
                    &state) == 2) {
       /* Set GPIO pin to a given state */
