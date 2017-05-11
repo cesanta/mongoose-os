@@ -19,7 +19,6 @@ import (
 	"strings"
 	"unicode"
 
-	"cesanta.com/common/go/docker"
 	"cesanta.com/common/go/multierror"
 	"cesanta.com/mos/build"
 	"cesanta.com/mos/build/archive"
@@ -38,8 +37,13 @@ var (
 		"esp8266=docker.cesanta.com/mg-iot-cloud-project-esp8266:release,"+
 			"cc3200=docker.cesanta.com/mg-iot-cloud-project-cc3200:release",
 		"build images, arch1=image1,arch2=image2")
-	cleanBuild     = flag.Bool("clean", false, "perform a clean build, wipe the previous build state")
-	modules        = flag.StringSlice("module", []string{}, "location of the module from mos.yaml, in the format: \"module_name:/path/to/location\". Can be used multiple times.")
+	cleanBuild = flag.Bool("clean", false, "perform a clean build, wipe the previous build state")
+	modules    = flag.StringSlice("module", []string{}, "location of the module from mos.yaml, in the format: \"module_name:/path/to/location\". Can be used multiple times.")
+
+	buildDockerExtra = flag.StringSlice("build-docker-extra", []string{}, "extra docker flags, added before image name. Can be used multiple times: e.g. --build-docker-extra -v --build-docker-extra /foo:/bar.")
+	buildCmdExtra    = flag.StringSlice("build-cmd-extra", []string{}, "extra make flags, added at the end of the make command. Can be used multiple times.")
+
+	// TODO(dfrank): rename to build-var
 	buildVarsSlice = flag.StringSlice("build_var", []string{}, "build variable in the format \"NAME:VALUE\" Can be used multiple times.")
 )
 
@@ -272,6 +276,11 @@ func buildLocal(ctx context.Context) (err error) {
 		)
 	}
 
+	// Add extra docker args
+	if buildDockerExtra != nil {
+		dockerArgs = append(dockerArgs, (*buildDockerExtra)...)
+	}
+
 	// Get build image name and tag
 	sdkVersionBytes, err := ioutil.ReadFile(filepath.Join(mosDirEffective, "fw/platforms", archEffective, "sdk.version"))
 	if err != nil {
@@ -323,6 +332,11 @@ func buildLocal(ctx context.Context) (err error) {
 
 	for k, v := range manifest.BuildVars {
 		makeArgs = append(makeArgs, fmt.Sprintf("%s=%s", k, v))
+	}
+
+	// Add extra make args
+	if buildCmdExtra != nil {
+		makeArgs = append(makeArgs, (*buildCmdExtra)...)
 	}
 
 	dockerArgs = append(dockerArgs,
