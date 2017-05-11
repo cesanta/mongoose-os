@@ -43,8 +43,7 @@ var (
 	buildDockerExtra = flag.StringSlice("build-docker-extra", []string{}, "extra docker flags, added before image name. Can be used multiple times: e.g. --build-docker-extra -v --build-docker-extra /foo:/bar.")
 	buildCmdExtra    = flag.StringSlice("build-cmd-extra", []string{}, "extra make flags, added at the end of the make command. Can be used multiple times.")
 
-	// TODO(dfrank): rename to build-var
-	buildVarsSlice = flag.StringSlice("build_var", []string{}, "build variable in the format \"NAME:VALUE\" Can be used multiple times.")
+	buildVarsSlice []string
 )
 
 const (
@@ -59,6 +58,11 @@ const (
 
 func init() {
 	hiddenFlags = append(hiddenFlags, "docker_images")
+
+	flag.StringSliceVar(&buildVarsSlice, "build-var", []string{}, "build variable in the format \"NAME:VALUE\" Can be used multiple times.")
+
+	// deprecated since 2017/05/11
+	flag.StringSliceVar(&buildVarsSlice, "build_var", []string{}, "deprecated, use --build-var")
 }
 
 func doBuild(ctx context.Context, devConn *dev.DevConn) error {
@@ -315,7 +319,7 @@ func buildLocal(ctx context.Context) (err error) {
 	}
 
 	// Add build vars from CLI flags
-	for _, v := range *buildVarsSlice {
+	for _, v := range buildVarsSlice {
 		parts := strings.SplitN(v, ":", 2)
 		manifest.BuildVars[parts[0]] = parts[1]
 	}
@@ -557,9 +561,9 @@ func buildRemote() error {
 	// We need to preprocess mos.yml (see setManifestArch())
 	transformers[build.ManifestFileName] = func(r io.ReadCloser) (io.ReadCloser, error) {
 		var buildVars map[string]string
-		if len(*buildVarsSlice) > 0 {
+		if len(buildVarsSlice) > 0 {
 			buildVars = make(map[string]string)
-			for _, v := range *buildVarsSlice {
+			for _, v := range buildVarsSlice {
 				parts := strings.SplitN(v, ":", 2)
 				buildVars[parts[0]] = parts[1]
 			}
