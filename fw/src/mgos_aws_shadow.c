@@ -19,7 +19,6 @@
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_utils.h"
 
-#define AWS_SHADOW_SUB_ID 0x1234
 #define AWS_SHADOW_TOPIC_PREFIX "$aws/things/"
 #define AWS_SHADOW_TOPIC_PREFIX_LEN (sizeof(AWS_SHADOW_TOPIC_PREFIX) - 1)
 #define AWS_SHADOW_TOPIC_SHADOW "/shadow/"
@@ -41,6 +40,7 @@ enum mgos_aws_shadow_topic_id {
 struct aws_shadow_state {
   struct mg_str thing_name;
   uint64_t current_version;
+  unsigned int sub_id : 16;
   unsigned int online : 1;
   unsigned int want_get : 1;
   unsigned int sent_get : 1;
@@ -241,8 +241,8 @@ static void mgos_aws_shadow_ev(struct mg_connection *nc, int ev, void *ev_data,
         topic_exprs[i].qos = 1;
         LOG(LL_DEBUG, ("  %s", topic_exprs[i].topic));
       }
-      mg_mqtt_subscribe(nc, topic_exprs, 5 /* len */,
-                        AWS_SHADOW_SUB_ID /* sub_id */);
+      ss->sub_id = mgos_mqtt_get_packet_id();
+      mg_mqtt_subscribe(nc, topic_exprs, 5 /* len */, ss->sub_id);
       for (int i = 0; i < 5; i++) {
         free((char *) topic_exprs[i].topic);
       }
@@ -250,7 +250,7 @@ static void mgos_aws_shadow_ev(struct mg_connection *nc, int ev, void *ev_data,
     }
     case MG_EV_MQTT_SUBACK: {
       struct mg_mqtt_message *msg = (struct mg_mqtt_message *) ev_data;
-      if (msg->message_id == AWS_SHADOW_SUB_ID) {
+      if (msg->message_id == ss->sub_id) {
         LOG(LL_INFO, ("Subscribed"));
         ss->online = true;
         ss->sent_get = false;
