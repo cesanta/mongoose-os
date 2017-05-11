@@ -291,16 +291,6 @@ func buildLocal(ctx context.Context) (err error) {
 
 	dockerArgs = append(dockerArgs, sdkVersion)
 
-	// Construct make arguments
-	makeArgs := []string{
-		"-j",
-		"-C", fmt.Sprintf("%s%s", dockerAppPath, appSubdir),
-
-		// NOTE that we use path instead of filepath, because it'll run in a docker
-		// container, and thus will use Linux path separator
-		"-f", path.Join(dockerMgosPath, "fw/platforms", archEffective, "Makefile.build"),
-	}
-
 	var errs error
 	for k, v := range map[string]string{
 		"MGOS_PATH":      dockerMgosPath,
@@ -330,27 +320,42 @@ func buildLocal(ctx context.Context) (err error) {
 		manifest.BuildVars[parts[0]] = parts[1]
 	}
 
-	for k, v := range manifest.BuildVars {
-		makeArgs = append(makeArgs, fmt.Sprintf("%s=%s", k, v))
-	}
+	if os.Getenv("MIOT_SDK_REVISION") == "" {
+		// We're outside of the docker container, so invoke docker
 
-	// Add extra make args
-	if buildCmdExtra != nil {
-		makeArgs = append(makeArgs, (*buildCmdExtra)...)
-	}
+		makeArgs := getMakeArgs(
+			fmt.Sprintf("%s%s", dockerAppPath, appSubdir),
+			manifest,
+		)
+		dockerArgs = append(dockerArgs,
+			"/bin/bash", "-c", "nice make '"+strings.Join(makeArgs, "' '")+"'",
+		)
 
-	dockerArgs = append(dockerArgs,
-		"/bin/bash", "-c", "nice make '"+strings.Join(makeArgs, "' '")+"'",
-	)
+		if *verbose {
+			fmt.Printf("Docker arguments: %s\n", strings.Join(dockerArgs, " "))
+		}
 
-	if *verbose {
-		fmt.Printf("Docker arguments: %s\n", strings.Join(dockerArgs, " "))
-	}
+		cmd := exec.Command("docker", dockerArgs...)
+		err = runCmd(cmd, logFile)
+		if err != nil {
+			return errors.Trace(err)
+		}
+	} else {
+		// We're already inside of the docker container, so invoke make directly
 
-	cmd := exec.Command("docker", dockerArgs...)
-	err = runCmd(cmd, logFile)
-	if err != nil {
-		return errors.Trace(err)
+		manifest.BuildVars["MGOS_PATH"] = mosDirEffectiveAbs
+
+		makeArgs := getMakeArgs(appPath, manifest)
+
+		if *verbose {
+			fmt.Printf("Make arguments: %s\n", strings.Join(makeArgs, " "))
+		}
+
+		cmd := exec.Command("make", makeArgs...)
+		err = runCmd(cmd, logFile)
+		if err != nil {
+			return errors.Trace(err)
+		}
 	}
 
 	// Move firmware as build/fw.zip
@@ -371,6 +376,32 @@ func buildLocal(ctx context.Context) (err error) {
 	}
 
 	return nil
+}
+
+func getMakeArgs(dir string, manifest *build.FWAppManifest) []string {
+	makeArgs := []string{
+		"-j",
+		"-C", dir,
+		// NOTE that we use path instead of filepath, because it'll run in a docker
+		// container, and thus will use Linux path separator
+		"-f", path.Join(
+			manifest.BuildVars["MGOS_PATH"],
+			"fw/platforms",
+			manifest.BuildVars["PLATFORM"],
+			"Makefile.build",
+		),
+	}
+
+	for k, v := range manifest.BuildVars {
+		makeArgs = append(makeArgs, fmt.Sprintf("%s=%s", k, v))
+	}
+
+	// Add extra make args
+	if buildCmdExtra != nil {
+		makeArgs = append(makeArgs, (*buildCmdExtra)...)
+	}
+
+	return makeArgs
 }
 
 // globify takes a list of paths, and for each of them which resolves to a

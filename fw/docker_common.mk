@@ -1,3 +1,8 @@
+# NOTE: this file is going to be deleted soon, this logic has been
+# replicated in `mos build`.
+#
+# --------------------------------------------------------------------
+#
 # Common rules for "outer" Makefiles, i.e. the ones that invoke Docker.
 #
 # App must define its name (APP) and path to MGOS repo (MGOS_PATH).
