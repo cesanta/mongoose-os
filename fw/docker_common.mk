@@ -1,5 +1,5 @@
-# NOTE: this file is going to be deleted soon, this logic has been
-# replicated in `mos build`.
+# NOTE: this file is deprecated since 2017/05/11, and is going to be deleted
+# soon. This logic has been replicated in `mos build`.
 #
 # --------------------------------------------------------------------
 #
