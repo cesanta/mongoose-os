@@ -38,7 +38,6 @@ static void mgos_rpc_mqtt_sub_handler(struct mg_connection *nc, int ev,
     if (!(CH_FLAGS(ch) & CH_F_SUB1_ACKED)) {
       CH_FLAGS_SET(ch, CH_FLAGS(ch) | CH_F_SUB1_ACKED);
     } else if (!(CH_FLAGS(ch) & CH_F_SUB2_ACKED)) {
-      /* Ideally we should wait for both subscriptions, but - meh. */
       CH_FLAGS_SET(ch, CH_FLAGS(ch) | CH_F_SUB2_ACKED);
       ch->ev_handler(ch, MG_RPC_CHANNEL_OPEN, NULL);
     }

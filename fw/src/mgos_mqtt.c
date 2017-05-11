@@ -141,7 +141,6 @@ static void mgos_mqtt_ev(struct mg_connection *nc, int ev, void *ev_data,
     }
     case MG_EV_MQTT_CONNACK: {
       struct topic_handler *th;
-      uint16_t sub_id = 1;
       int code = ((struct mg_mqtt_message *) ev_data)->connack_ret_code;
       LOG((code == 0 ? LL_INFO : LL_ERROR), ("MQTT CONNACK %d", code));
       if (code == 0) {
@@ -150,7 +149,7 @@ static void mgos_mqtt_ev(struct mg_connection *nc, int ev, void *ev_data,
         call_global_handlers(nc, ev, ev_data, user_data);
         SLIST_FOREACH(th, &s_topic_handlers, entries) {
           struct mg_mqtt_topic_expression te = {.topic = th->topic.p, .qos = 0};
-          th->sub_id = sub_id++;
+          th->sub_id = mgos_mqtt_get_packet_id();
           mg_mqtt_subscribe(nc, &te, 1 /* len */, th->sub_id);
           LOG(LL_INFO, ("Subscribing to '%s'", te.topic));
         }

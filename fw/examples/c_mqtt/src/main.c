@@ -16,13 +16,14 @@ enum {
 
 static void sub(struct mg_connection *c, const char *fmt, ...) {
   char buf[100];
-  struct mg_mqtt_topic_expression topic = {buf, 0};
+  struct mg_mqtt_topic_expression te = {.topic = buf, .qos = 0};
+  uint16_t sub_id = mgos_mqtt_get_packet_id();
   va_list ap;
   va_start(ap, fmt);
   vsnprintf(buf, sizeof(buf), fmt, ap);
   va_end(ap);
-  mg_mqtt_subscribe(c, &topic, 1, 42);
-  LOG(LL_INFO, ("Subscribed to %s", buf));
+  mg_mqtt_subscribe(c, &te, 1, sub_id);
+  LOG(LL_INFO, ("Subscribing to %s (id %u)", buf, sub_id));
 }
 
 static void pub(struct mg_connection *c, const char *fmt, ...) {
@@ -33,7 +34,8 @@ static void pub(struct mg_connection *c, const char *fmt, ...) {
   va_start(ap, fmt);
   n = json_vprintf(&jmo, fmt, ap);
   va_end(ap);
-  mg_mqtt_publish(c, get_cfg()->mqtt.pub, 123, MG_MQTT_QOS(0), msg, n);
+  mg_mqtt_publish(c, get_cfg()->mqtt.pub, mgos_mqtt_get_packet_id(),
+                  MG_MQTT_QOS(0), msg, n);
   LOG(LL_INFO, ("%s -> %s", get_cfg()->mqtt.pub, msg));
 }
 
@@ -69,6 +71,8 @@ static void ev_handler(struct mg_connection *c, int ev, void *p,
     } else {
       sub(c, "%s", get_cfg()->mqtt.sub);
     }
+  } else if (ev == MG_EV_MQTT_SUBACK) {
+    LOG(LL_INFO, ("Subscription %u acknowledged", msg->message_id));
   } else if (ev == MG_EV_MQTT_PUBLISH) {
     struct mg_str *s = &msg->payload;
     struct json_token t = JSON_INVALID_TOKEN;
