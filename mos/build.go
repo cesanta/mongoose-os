@@ -234,67 +234,6 @@ func buildLocal(ctx context.Context) (err error) {
 		return errors.Trace(err)
 	}
 
-	dockerArgs := []string{"run", "--rm", "-i"}
-
-	appPath, err := getCodeDir()
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	gitToplevelDir, _ := gitutils.GitGetToplevelDir(appPath)
-
-	appMountPath := ""
-	appSubdir := ""
-	if gitToplevelDir == "" {
-		// We're outside of any git repository: will just mount the application
-		// path
-		appMountPath = appPath
-		appSubdir = ""
-	} else {
-		// We're inside some git repo: will mount the root of this repo, and
-		// remember the app's subdir inside it.
-		appMountPath = gitToplevelDir
-		appSubdir = appPath[len(gitToplevelDir):]
-	}
-
-	// Note about mounts: we mount repo to a stable path (/app) as well as the
-	// original path outside the container, whatever it may be, so that absolute
-	// path references continue to work (e.g. Git submodules are known to use
-	// abs. paths).
-	dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", appMountPath, dockerAppPath))
-	dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", mosDirEffectiveAbs, dockerMgosPath))
-	dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", mosDirEffectiveAbs, mosDirEffectiveAbs))
-
-	// On Windows and Mac, run container as root since volume sharing on those
-	// OSes doesn't play nice with unprivileged user.
-	//
-	// On other OSes, run it as the current user.
-	if runtime.GOOS != "windows" && runtime.GOOS != "darwin" {
-		curUser, err := userpkg.Current()
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		dockerArgs = append(
-			dockerArgs, "--user", fmt.Sprintf("%s:%s", curUser.Uid, curUser.Gid),
-		)
-	}
-
-	// Add extra docker args
-	if buildDockerExtra != nil {
-		dockerArgs = append(dockerArgs, (*buildDockerExtra)...)
-	}
-
-	// Get build image name and tag
-	sdkVersionBytes, err := ioutil.ReadFile(filepath.Join(mosDirEffective, "fw/platforms", archEffective, "sdk.version"))
-	if err != nil {
-		return errors.Annotatef(err, "failed to read sdk version file")
-	}
-	// Drop trailing newline
-	sdkVersion := string(sdkVersionBytes[:len(sdkVersionBytes)-1])
-
-	dockerArgs = append(dockerArgs, sdkVersion)
-
 	var errs error
 	for k, v := range map[string]string{
 		"MGOS_PATH":      dockerMgosPath,
@@ -324,8 +263,69 @@ func buildLocal(ctx context.Context) (err error) {
 		manifest.BuildVars[parts[0]] = parts[1]
 	}
 
+	appPath, err := getCodeDir()
+	if err != nil {
+		return errors.Trace(err)
+	}
+
 	if os.Getenv("MIOT_SDK_REVISION") == "" {
 		// We're outside of the docker container, so invoke docker
+
+		dockerArgs := []string{"run", "--rm", "-i"}
+
+		gitToplevelDir, _ := gitutils.GitGetToplevelDir(appPath)
+
+		appMountPath := ""
+		appSubdir := ""
+		if gitToplevelDir == "" {
+			// We're outside of any git repository: will just mount the application
+			// path
+			appMountPath = appPath
+			appSubdir = ""
+		} else {
+			// We're inside some git repo: will mount the root of this repo, and
+			// remember the app's subdir inside it.
+			appMountPath = gitToplevelDir
+			appSubdir = appPath[len(gitToplevelDir):]
+		}
+
+		// Note about mounts: we mount repo to a stable path (/app) as well as the
+		// original path outside the container, whatever it may be, so that absolute
+		// path references continue to work (e.g. Git submodules are known to use
+		// abs. paths).
+		dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", appMountPath, dockerAppPath))
+		dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", mosDirEffectiveAbs, dockerMgosPath))
+		dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", mosDirEffectiveAbs, mosDirEffectiveAbs))
+
+		// On Windows and Mac, run container as root since volume sharing on those
+		// OSes doesn't play nice with unprivileged user.
+		//
+		// On other OSes, run it as the current user.
+		if runtime.GOOS != "windows" && runtime.GOOS != "darwin" {
+			curUser, err := userpkg.Current()
+			if err != nil {
+				return errors.Trace(err)
+			}
+
+			dockerArgs = append(
+				dockerArgs, "--user", fmt.Sprintf("%s:%s", curUser.Uid, curUser.Gid),
+			)
+		}
+
+		// Add extra docker args
+		if buildDockerExtra != nil {
+			dockerArgs = append(dockerArgs, (*buildDockerExtra)...)
+		}
+
+		// Get build image name and tag
+		sdkVersionBytes, err := ioutil.ReadFile(filepath.Join(mosDirEffective, "fw/platforms", archEffective, "sdk.version"))
+		if err != nil {
+			return errors.Annotatef(err, "failed to read sdk version file")
+		}
+		// Drop trailing newline
+		sdkVersion := string(sdkVersionBytes[:len(sdkVersionBytes)-1])
+
+		dockerArgs = append(dockerArgs, sdkVersion)
 
 		makeArgs := getMakeArgs(
 			fmt.Sprintf("%s%s", dockerAppPath, appSubdir),
