@@ -1,6 +1,11 @@
 The Mongoose OS command line tool
 =================================
 
+## Changes
+
+- May 12: manual serial port selection
+
+
 ## Building
 
 In order to build `mos` tool, the following tools are needed:
