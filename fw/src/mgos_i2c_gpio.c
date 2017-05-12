@@ -14,14 +14,14 @@
 #include "fw/src/mgos_gpio.h"
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_i2c.h"
-#include "fw/src/mgos_sys_config.h"
 
 #include "common/cs_dbg.h"
 
 struct mgos_i2c {
   int sda_gpio;
   int scl_gpio;
-  bool started;
+  unsigned int started : 1;
+  unsigned int debug : 1;
 };
 
 enum i2c_gpio_val {
@@ -34,7 +34,6 @@ enum i2c_ack_type {
   I2C_ACK = 0,
   I2C_NAK = 1,
   I2C_ERR = 2,
-  I2C_NONE = 3,
 };
 
 enum i2c_rw {
@@ -74,10 +73,9 @@ static enum i2c_ack_type mgos_i2c_start(struct mgos_i2c *c, uint16_t addr,
                                         enum i2c_rw mode) {
   enum i2c_ack_type result;
   uint8_t address_byte = (uint8_t)(addr << 1) | mode;
-  if (get_cfg()->i2c.debug) {
-    LOG(LL_DEBUG,
-        ("%d %d, addr 0x%02x, mode %c => ab 0x%02x", c->sda_gpio, c->scl_gpio,
-         addr, (mode == I2C_READ ? 'R' : 'W'), address_byte));
+  if (c->debug) {
+    LOG(LL_DEBUG, (" addr 0x%02x, mode %c => ab 0x%02x", addr,
+                   (mode == I2C_READ ? 'R' : 'W'), address_byte));
   }
   if (addr > 0x7F || (mode != I2C_READ && mode != I2C_WRITE)) {
     return I2C_ERR;
@@ -104,8 +102,8 @@ void mgos_i2c_stop(struct mgos_i2c *c) {
   mgos_i2c_set_sda_scl(c, I2C_INPUT, I2C_INPUT);
   mgos_i2c_half_delay(c);
   c->started = false;
-  if (get_cfg()->i2c.debug) {
-    LOG(LL_DEBUG, ("stopped"));
+  if (c->debug) {
+    LOG(LL_DEBUG, (" stop"));
   }
 }
 
@@ -132,9 +130,9 @@ static enum i2c_ack_type mgos_i2c_send_byte(struct mgos_i2c *c, uint8_t data) {
   mgos_i2c_half_delay(c);
   ret_val = mgos_gpio_read(c->sda_gpio);
   mgos_ints_enable();
-  if (get_cfg()->i2c.debug) {
+  if (c->debug) {
     LOG(LL_DEBUG,
-        ("sent 0x%02x, got %s", data, (ret_val == I2C_ACK ? "ACK" : "NAK")));
+        (" sent 0x%02x, recd %s", data, (ret_val == I2C_ACK ? "ACK" : "NAK")));
   }
   mgos_i2c_half_delay(c);
   mgos_i2c_set_sda_scl(c, I2C_INPUT, I2C_LOW);
@@ -153,9 +151,6 @@ static void mgos_i2c_send_ack(struct mgos_i2c *c, enum i2c_ack_type ack_type) {
   mgos_i2c_set_sda_scl(c, ack_type, I2C_LOW);
   mgos_i2c_half_delay(c);
   mgos_ints_enable();
-  if (get_cfg()->i2c.debug) {
-    LOG(LL_DEBUG, ("sent %s", (ack_type == I2C_ACK ? "ACK" : "NAK")));
-  }
 }
 
 static uint8_t mgos_i2c_read_byte(struct mgos_i2c *c,
@@ -176,27 +171,27 @@ static uint8_t mgos_i2c_read_byte(struct mgos_i2c *c,
     mgos_i2c_set_sda_scl(c, I2C_INPUT, I2C_LOW);
     mgos_i2c_half_delay(c);
   }
+  mgos_i2c_send_ack(c, ack_type);
   mgos_ints_enable();
-  if (get_cfg()->i2c.debug) {
-    LOG(LL_DEBUG, ("read 0x%02x", ret_val));
+  if (c->debug) {
+    LOG(LL_DEBUG, (" recd 0x%02x, sent %s", ret_val,
+                   (ack_type == I2C_ACK ? "ACK" : "NAK")));
   }
-
-  if (ack_type != I2C_NONE) {
-    mgos_i2c_send_ack(c, ack_type);
-  } else if (get_cfg()->i2c.debug) {
-    LOG(LL_DEBUG, ("not sending any ack"));
-  }
-
   return ret_val;
 }
 
 bool mgos_i2c_read(struct mgos_i2c *c, uint16_t addr, void *data, size_t len,
                    bool stop) {
   bool res = false;
+  bool start = (addr != MGOS_I2C_ADDR_CONTINUE);
   uint8_t *p = (uint8_t *) data;
 
-  if (addr != MGOS_I2C_ADDR_CONTINUE &&
-      mgos_i2c_start(c, addr, I2C_READ) != I2C_ACK) {
+  if (c->debug) {
+    LOG(LL_DEBUG,
+        ("read %d from %d, start? %d, stop? %d", len, addr, start, stop));
+  }
+
+  if (start && mgos_i2c_start(c, addr, I2C_READ) != I2C_ACK) {
     goto out;
   }
 
@@ -216,10 +211,14 @@ out:
 bool mgos_i2c_write(struct mgos_i2c *c, uint16_t addr, const void *data,
                     size_t len, bool stop) {
   bool res = false;
+  bool start = (addr != MGOS_I2C_ADDR_CONTINUE);
   const uint8_t *p = (const uint8_t *) data;
 
-  if (addr != MGOS_I2C_ADDR_CONTINUE &&
-      mgos_i2c_start(c, addr, I2C_WRITE) != I2C_ACK) {
+  if (c->debug) {
+    LOG(LL_DEBUG, ("write %d to %d, stop? %d", len, addr, stop));
+  }
+
+  if (start && mgos_i2c_start(c, addr, I2C_WRITE) != I2C_ACK) {
     goto out;
   }
 
@@ -244,6 +243,7 @@ struct mgos_i2c *mgos_i2c_create(const struct sys_config_i2c *cfg) {
   c->sda_gpio = cfg->sda_gpio;
   c->scl_gpio = cfg->scl_gpio;
   c->started = false;
+  c->debug = cfg->debug;
 
   if (!mgos_gpio_set_mode(c->sda_gpio, MGOS_GPIO_MODE_INPUT) ||
       !mgos_gpio_set_pull(c->sda_gpio, MGOS_GPIO_PULL_UP)) {
