@@ -313,8 +313,8 @@ code { color: green; white-space: pre !important;}
 .main-right-column { height: 100%; padding: 0; margin: 0; }
 .stderr { color: #77e; font-weight: bold; }
 .ui-pnotify { right: 22px; top: 82px; }
-.devonline { color: green; }
-.devoffline { color: red; }
+.devonline { color: #7f7; }
+.devoffline { color: #f77; }
 
 /* FILE MANAGER PAGE */
 #file-list { overflow-y: auto; }
@@ -355,6 +355,15 @@ code { color: green; white-space: pre !important;}
 .link { cursor: pointer; }
 
 /* COMMON STUFF */
+
+.input-xs {
+  height: 22px;
+  padding: 2px 5px;
+  font-size: 12px;
+  line-height: 1.5; /* If Placeholder of the input is moved up, rem/modify this. */
+  border-radius: 3px;
+}
+
 @keyframes spinner {
   to {transform: rotate(360deg);}
 }
@@ -528,7 +537,7 @@ func web_rootCssMainCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/css/main.css", size: 6265, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/css/main.css", size: 6442, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -604,22 +613,31 @@ var _web_rootDashHtml = []byte(`<!DOCTYPE html>
 
             <span id="devinfo"></span>
             &nbsp;
-            <span class="form form-inline form-sm">
-              <div class="form-group form-group-inline">
-                <div class="input-group" style="margin-top: 6px;">
-                  <span class="input-group-addon" id="devconn-indicator" style="font-size: 12px; padding: 0 0.6em;"><i class="fa fa-circle"></i></span>
-                  <input type="text" class="form-control form-control-sm" style="height: 26px; font-size: 12px; width: 15em; box-shadow: none;" id="input-serial" placeholder="type device address">
-                  <div class="input-group-btn" style="line-height: 8px;">
-                    <div class="btn-group dropdown">
-                      <button type="button" class="btn btn-default dropdown-toggle" style="line-height: 12px; padding-left: 7px; padding-right: 7px" data-toggle="dropdown">
-                        <span class="caret" xstyle="margin: 0; padding: 0;"></span>
-                      </button>
-                      <ul class="dropdown-menu" id="dropdown-ports"></ul>
-                    </div>
+
+            <span class="form form-inline form-xs">
+              <div class="form-group">
+              <div class="input-group">
+                <span class="input-group-btn">
+                  <div class="btn-group dropdown">
+                    <button type="button" class="btn btn-default dropdown-toggle btn-xs"
+                      data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                      <span class="caret"></span>
+                      <span class="sr-only">Toggle Dropdown</span>
+                    </button>
+                    <ul class="dropdown-menu" id="dropdown-ports"></ul>
                   </div>
-                </div>
+                </span>
+                <input type="text" class="form-control input-xs"
+                  style="margin-top: 7px;"
+                  id="connect-input" placeholder="e.g. COM1, or /dev/ttyUSB0">
+                <span class="input-group-btn">
+                  <button class="btn btn-primary btn-xs" style="margin-top: 5px;"
+                    type="button" id="connect-button">Connect&nbsp;&nbsp;<i class="fa fa-circle"></i></button>
+                </span>
+              </div>
               </div>
             </span>
+
             &nbsp;
             |
             &nbsp;
@@ -677,7 +695,7 @@ func web_rootDashHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/dash.html", size: 5257, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/dash.html", size: 5316, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3610,7 +3628,10 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
                           </div>
                         </span>
                         <input type="text" class="form-control" required autofocus
-                          id="input-serial" placeholder="e.g. COM1, or /dev/ttyUSB0">
+                          id="connect-input" placeholder="e.g. COM1, or /dev/ttyUSB0">
+                        <span class="input-group-btn">
+                          <button class="btn btn-primary" type="button" id="connect-button">Connect&nbsp;&nbsp;<i class="fa fa-circle"></i></button>
+                        </span>
                       </div>
                     </div>
 
@@ -3862,9 +3883,9 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
       </small>
 
         <div class="pull-right">
-          <button class="btn btn-primary btn-sm hidden" id="wizard-button-prev">
+          <button class="btn btn-primary hidden" id="wizard-button-prev">
             <i class="fa fa-angle-double-left"></i>&nbsp;&nbsp;Back</button>
-          <button class="btn btn-sm btn-primary" data-style="zoom-out"
+          <button class="btn btn-xx btn-primary disabled" data-style="zoom-out"
             id="wizard-button-next">Next&nbsp;&nbsp;<i class="fa fa-angle-double-right"></i></button>
         </div>
         <div class="clearfix"></div>
@@ -3904,7 +3925,7 @@ func web_rootIndexHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/index.html", size: 16405, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/index.html", size: 16644, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4745,9 +4766,9 @@ var _web_rootJsWizardJs = []byte(`(function($) {
   }).on('change', '#input-cloud', initTab4);
 
   tabHandlers.tab1 = function() {
-    var port = $('#input-serial').val();
+    var port = $('#connect-input').val();
     var data = {reconnect: true};
-    if ($('#input-serial').data('editedManually')) data.port = port;
+    if ($('#connect-input').data('editedManually')) data.port = port;
     return $.ajax({url: '/connect', data: data}).done(function(json) {
       new PNotify({ title: 'Success', text: 'Successfully connected to ' + port, type: 'success' });
     }).fail(function(err) {
@@ -4796,7 +4817,7 @@ var _web_rootJsWizardJs = []byte(`(function($) {
       }).then(function(json) {
         return $.ajax({url: '/call', data: {method: 'Config.Get'}});
       }).then(function(json) {
-        new PNotify({title: 'Success', text: 'Cloud configured, MQTT settings: ' + JSON.stringify(json.result.mqtt, null, '  '), type: 'success'});
+        new PNotify({title: 'Success', text: 'Cloud configured', type: 'success'});
         document.cookie = 'mqtt=' + mqtt;
         return this;
       }).then(function(json) {
@@ -4822,8 +4843,6 @@ var _web_rootJsWizardJs = []byte(`(function($) {
           return this;
         });
       }
-      // console.log($('#input-awskey').is(':visible'), $('#input-region').is(':visible'));
-      // return null;
     }
   };
 
@@ -4834,6 +4853,7 @@ var _web_rootJsWizardJs = []byte(`(function($) {
     $('#wizard-button-prev').toggleClass('hidden', !hasPrev);
     $('#wizard-button-next').toggleClass('hidden', !hasNext);
   }).on('click', '#wizard-button-next, #wizard-button-prev', function(ev) {
+    if ($(this).hasClass('disabled')) return false;
     var id = ev.target.id;
     var attr = id == 'wizard-button-next' ? 'data-next' : 'data-prev';
     var nextPane = $('.tab-pane.active').attr(attr);
@@ -4871,9 +4891,6 @@ var _web_rootJsWizardJs = []byte(`(function($) {
   $('#input-policy').val(getCookie('policy'));
   $('#input-mqtt').val(getCookie('mqtt') || defaultMqttServer);
 
-  // Let the tool know the port we want to use
-  $.ajax({url: '/connect'});
-
   $.get('https://mongoose-os.com/downloads/builds.json', function(data) {
     if (!data || !data.builds || !data.builds.length) return;
     $('#dropdown-firmware').empty();
@@ -4905,7 +4922,7 @@ func web_rootJsWizardJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 8942, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 8741, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4948,10 +4965,6 @@ var _web_rootJsWsJs = []byte(`(function($) {
   };
   reconnect();
 
-  $(document).on('keyup paste', '#input-serial', function() {
-    $('#input-serial').data('editedManually', !!$('#input-serial').val());
-  });
-
   var formatSize = function(free, max) {
     max |= Infinity;
     var i = Math.floor(Math.log(max) / Math.log(1024));
@@ -4979,9 +4992,9 @@ var _web_rootJsWsJs = []byte(`(function($) {
 
   var setDeviceOnlineStatus = function(isOnline) {
     if (isOnline) {
-      $('#devconn-indicator').removeClass('devoffline').addClass('devonline');
+      $('#connect-button .fa').removeClass('devoffline').addClass('devonline');
     } else {
-      $('#devconn-indicator').removeClass('devonline').addClass('devoffline');
+      $('#connect-button .fa').removeClass('devonline').addClass('devoffline');
     }
   };
 
@@ -4998,21 +5011,34 @@ var _web_rootJsWsJs = []byte(`(function($) {
     });
   };
 
+  $(document).on('click', '#connect-button', function() {
+    var port = $('#connect-input').val();
+    if (!port || port.match(/^\s*$/)) return;
+    $.ajax({url: '/connect', data: {port: port, reconnect: true}}).always(function() {
+      probeDevice();
+    });
+  });
+
   // Repeatedly pull list of serial ports when we're on the first tab
+  var initialized = false;
   var portList = '';
   var checkPorts = function() {
     if ($.active) return; // Do not run if there are AJAX requests in flight
     var thisPane = $('.tab-pane.active').attr('id');
     var mustRun = (thisPane == 'tab1') || $('#top_nav')[0];
     if (!mustRun) return;
+
     $.ajax({url: '/getports', global: false}).then(function(json) {
       $('#dropdown-ports').empty();
       var result = json.result || {};
       var ports = result.Ports || [];
       var port = (result.CurrentPort || '').replace(/^serial:\/\//, '');
       setDeviceOnlineStatus(result.IsConnected);
-      if (!$('#input-serial').val()) {
-        $('#input-serial').val(port || ports[0] || '');
+      $('#wizard-button-next').toggleClass('disabled', !result.IsConnected);
+      if (!initialized) {
+        $('#connect-input').val(port);
+        if (port) probeDevice();
+        initialized = true;
       }
       if (ports.length > 0) {
         $.each(ports, function(i, v) {
@@ -5022,11 +5048,10 @@ var _web_rootJsWsJs = []byte(`(function($) {
         var ports = JSON.stringify(ports);
         if (ports != portList) {
           portList = ports;
-          probeDevice();
         }
       } else {
         portList = '';
-        if (!$('#input-serial').data('editedManually')) $('#input-serial').val('');
+        if (!$('#connect-input').data('editedManually')) $('#connect-input').val('');
         $('#noports-warning').fadeIn();
         $('#found-device-info').hide();
       }
@@ -5048,7 +5073,7 @@ func web_rootJsWsJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/ws.js", size: 4349, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/ws.js", size: 4589, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

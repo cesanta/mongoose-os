@@ -85,7 +85,10 @@
                           </div>
                         </span>
                         <input type="text" class="form-control" required autofocus
-                          id="input-serial" placeholder="e.g. COM1, or /dev/ttyUSB0">
+                          id="connect-input" placeholder="e.g. COM1, or /dev/ttyUSB0">
+                        <span class="input-group-btn">
+                          <button class="btn btn-primary" type="button" id="connect-button">Connect&nbsp;&nbsp;<i class="fa fa-circle"></i></button>
+                        </span>
                       </div>
                     </div>
 
@@ -337,9 +340,9 @@
       </small>
 
         <div class="pull-right">
-          <button class="btn btn-primary btn-sm hidden" id="wizard-button-prev">
+          <button class="btn btn-primary hidden" id="wizard-button-prev">
             <i class="fa fa-angle-double-left"></i>&nbsp;&nbsp;Back</button>
-          <button class="btn btn-sm btn-primary" data-style="zoom-out"
+          <button class="btn btn-xx btn-primary disabled" data-style="zoom-out"
             id="wizard-button-next">Next&nbsp;&nbsp;<i class="fa fa-angle-double-right"></i></button>
         </div>
         <div class="clearfix"></div>

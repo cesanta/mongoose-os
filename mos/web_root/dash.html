@@ -49,22 +49,31 @@
 
             <span id="devinfo"></span>
             &nbsp;
-            <span class="form form-inline form-sm">
-              <div class="form-group form-group-inline">
-                <div class="input-group" style="margin-top: 6px;">
-                  <span class="input-group-addon" id="devconn-indicator" style="font-size: 12px; padding: 0 0.6em;"><i class="fa fa-circle"></i></span>
-                  <input type="text" class="form-control form-control-sm" style="height: 26px; font-size: 12px; width: 15em; box-shadow: none;" id="input-serial" placeholder="type device address">
-                  <div class="input-group-btn" style="line-height: 8px;">
-                    <div class="btn-group dropdown">
-                      <button type="button" class="btn btn-default dropdown-toggle" style="line-height: 12px; padding-left: 7px; padding-right: 7px" data-toggle="dropdown">
-                        <span class="caret" xstyle="margin: 0; padding: 0;"></span>
-                      </button>
-                      <ul class="dropdown-menu" id="dropdown-ports"></ul>
-                    </div>
+
+            <span class="form form-inline form-xs">
+              <div class="form-group">
+              <div class="input-group">
+                <span class="input-group-btn">
+                  <div class="btn-group dropdown">
+                    <button type="button" class="btn btn-default dropdown-toggle btn-xs"
+                      data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                      <span class="caret"></span>
+                      <span class="sr-only">Toggle Dropdown</span>
+                    </button>
+                    <ul class="dropdown-menu" id="dropdown-ports"></ul>
                   </div>
-                </div>
+                </span>
+                <input type="text" class="form-control input-xs"
+                  style="margin-top: 7px;"
+                  id="connect-input" placeholder="e.g. COM1, or /dev/ttyUSB0">
+                <span class="input-group-btn">
+                  <button class="btn btn-primary btn-xs" style="margin-top: 5px;"
+                    type="button" id="connect-button">Connect&nbsp;&nbsp;<i class="fa fa-circle"></i></button>
+                </span>
+              </div>
               </div>
             </span>
+
             &nbsp;
             |
             &nbsp;

@@ -36,10 +36,6 @@
   };
   reconnect();
 
-  $(document).on('keyup paste', '#input-serial', function() {
-    $('#input-serial').data('editedManually', !!$('#input-serial').val());
-  });
-
   var formatSize = function(free, max) {
     max |= Infinity;
     var i = Math.floor(Math.log(max) / Math.log(1024));
@@ -67,9 +63,9 @@
 
   var setDeviceOnlineStatus = function(isOnline) {
     if (isOnline) {
-      $('#devconn-indicator').removeClass('devoffline').addClass('devonline');
+      $('#connect-button .fa').removeClass('devoffline').addClass('devonline');
     } else {
-      $('#devconn-indicator').removeClass('devonline').addClass('devoffline');
+      $('#connect-button .fa').removeClass('devonline').addClass('devoffline');
     }
   };
 
@@ -86,21 +82,34 @@
     });
   };
 
+  $(document).on('click', '#connect-button', function() {
+    var port = $('#connect-input').val();
+    if (!port || port.match(/^\s*$/)) return;
+    $.ajax({url: '/connect', data: {port: port, reconnect: true}}).always(function() {
+      probeDevice();
+    });
+  });
+
   // Repeatedly pull list of serial ports when we're on the first tab
+  var initialized = false;
   var portList = '';
   var checkPorts = function() {
     if ($.active) return; // Do not run if there are AJAX requests in flight
     var thisPane = $('.tab-pane.active').attr('id');
     var mustRun = (thisPane == 'tab1') || $('#top_nav')[0];
     if (!mustRun) return;
+
     $.ajax({url: '/getports', global: false}).then(function(json) {
       $('#dropdown-ports').empty();
       var result = json.result || {};
       var ports = result.Ports || [];
       var port = (result.CurrentPort || '').replace(/^serial:\/\//, '');
       setDeviceOnlineStatus(result.IsConnected);
-      if (!$('#input-serial').val()) {
-        $('#input-serial').val(port || ports[0] || '');
+      $('#wizard-button-next').toggleClass('disabled', !result.IsConnected);
+      if (!initialized) {
+        $('#connect-input').val(port);
+        if (port) probeDevice();
+        initialized = true;
       }
       if (ports.length > 0) {
         $.each(ports, function(i, v) {
@@ -110,11 +119,10 @@
         var ports = JSON.stringify(ports);
         if (ports != portList) {
           portList = ports;
-          probeDevice();
         }
       } else {
         portList = '';
-        if (!$('#input-serial').data('editedManually')) $('#input-serial').val('');
+        if (!$('#connect-input').data('editedManually')) $('#connect-input').val('');
         $('#noports-warning').fadeIn();
         $('#found-device-info').hide();
       }

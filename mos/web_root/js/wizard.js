@@ -88,9 +88,9 @@
   }).on('change', '#input-cloud', initTab4);
 
   tabHandlers.tab1 = function() {
-    var port = $('#input-serial').val();
+    var port = $('#connect-input').val();
     var data = {reconnect: true};
-    if ($('#input-serial').data('editedManually')) data.port = port;
+    if ($('#connect-input').data('editedManually')) data.port = port;
     return $.ajax({url: '/connect', data: data}).done(function(json) {
       new PNotify({ title: 'Success', text: 'Successfully connected to ' + port, type: 'success' });
     }).fail(function(err) {
@@ -139,7 +139,7 @@
       }).then(function(json) {
         return $.ajax({url: '/call', data: {method: 'Config.Get'}});
       }).then(function(json) {
-        new PNotify({title: 'Success', text: 'Cloud configured, MQTT settings: ' + JSON.stringify(json.result.mqtt, null, '  '), type: 'success'});
+        new PNotify({title: 'Success', text: 'Cloud configured', type: 'success'});
         document.cookie = 'mqtt=' + mqtt;
         return this;
       }).then(function(json) {
@@ -165,8 +165,6 @@
           return this;
         });
       }
-      // console.log($('#input-awskey').is(':visible'), $('#input-region').is(':visible'));
-      // return null;
     }
   };
 
@@ -177,6 +175,7 @@
     $('#wizard-button-prev').toggleClass('hidden', !hasPrev);
     $('#wizard-button-next').toggleClass('hidden', !hasNext);
   }).on('click', '#wizard-button-next, #wizard-button-prev', function(ev) {
+    if ($(this).hasClass('disabled')) return false;
     var id = ev.target.id;
     var attr = id == 'wizard-button-next' ? 'data-next' : 'data-prev';
     var nextPane = $('.tab-pane.active').attr(attr);
@@ -213,9 +212,6 @@
   $('#input-region').val(getCookie('region'));
   $('#input-policy').val(getCookie('policy'));
   $('#input-mqtt').val(getCookie('mqtt') || defaultMqttServer);
-
-  // Let the tool know the port we want to use
-  $.ajax({url: '/connect'});
 
   $.get('https://mongoose-os.com/downloads/builds.json', function(data) {
     if (!data || !data.builds || !data.builds.length) return;

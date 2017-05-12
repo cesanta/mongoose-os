@@ -25,8 +25,8 @@ code { color: green; white-space: pre !important;}
 .main-right-column { height: 100%; padding: 0; margin: 0; }
 .stderr { color: #77e; font-weight: bold; }
 .ui-pnotify { right: 22px; top: 82px; }
-.devonline { color: green; }
-.devoffline { color: red; }
+.devonline { color: #7f7; }
+.devoffline { color: #f77; }
 
 /* FILE MANAGER PAGE */
 #file-list { overflow-y: auto; }
@@ -67,6 +67,15 @@ code { color: green; white-space: pre !important;}
 .link { cursor: pointer; }
 
 /* COMMON STUFF */
+
+.input-xs {
+  height: 22px;
+  padding: 2px 5px;
+  font-size: 12px;
+  line-height: 1.5; /* If Placeholder of the input is moved up, rem/modify this. */
+  border-radius: 3px;
+}
+
 @keyframes spinner {
   to {transform: rotate(360deg);}
 }
