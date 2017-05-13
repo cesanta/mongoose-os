@@ -15,7 +15,6 @@ items:
   - { name: api_log.js }
   - { name: api_config.js }
   - { name: api_aws.js }
-  - { name: api_onewire.js }
   - { name: api_rpc.js }
   - { name: api_gpio.js }
 ---
