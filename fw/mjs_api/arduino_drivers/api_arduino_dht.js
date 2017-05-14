@@ -1,5 +1,5 @@
 // Arduino Adafruit DHT library API. Source C API is defined at:
-// [mgos_dht.h](https://github.com/cesanta/mongoose-os/blob/master/arduino_drivers/dht/mgos_dht.h)
+// [mgos_arduino_dht.h](https://github.com/cesanta/mongoose-os/blob/master/arduino_drivers/dht/mgos_arduino_dht.h)
 
 load("api_math.js");
 

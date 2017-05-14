@@ -10,7 +10,7 @@
 
 // Load Mongoose OS API
 load('api_timer.js');
-load('api_dht.js');
+load('api_arduino_dht.js');
 
 // GPIO pin which has a DHT sensor data wire connected
 let pin = 13;
