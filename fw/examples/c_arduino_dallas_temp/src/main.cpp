@@ -7,31 +7,37 @@
 #include <DallasTemperature.h>
 
 #define ONEWIRE_PIN 13  // 1-Wire bus is plugged into GPIO13
-#define NUM_SENS 2      // Number of sensors on the 1-Wire bus
 
-OneWire *ow = NULL;
-DallasTemperature *dt = NULL;
-DeviceAddress sens[NUM_SENS];
+static OneWire *s_ow = nullptr;
+static DallasTemperature *s_dt = nullptr;
+static int s_n = 0;       // Number of sensors found on the 1-Wire bus
+static uint8_t **s_sens;  // Sensors addresses
 
 void setup(void) {
-  printf("Arduino Dallas Temperature library very simple example\n");
+  printf("Arduino DallasTemperature library simple example\n");
 
   // Initialize a OneWire handle
-  ow = new OneWire(ONEWIRE_PIN);
+  s_ow = new OneWire(ONEWIRE_PIN);
   // Pass a OneWire handle to Dallas Temperature
-  dt = new DallasTemperature(ow);
+  s_dt = new DallasTemperature(s_ow);
   // Start up the library
-  dt->begin();
+  s_dt->begin();
 
-  // Search for devices on the 1-Wire bus
-  ow->reset_search();
-  for (int i = 0; i < NUM_SENS; i++) {
-    if (!ow->search(sens[i])) {
-      printf("Can't find sensor #%d\n", i + 1);
-    } else {
+  if ((s_n = s_dt->getDeviceCount()) == 0) {
+    printf("No sensors found\n");
+    while (true) delay(1000);
+  } else {
+    printf("Num of sensors found: %d\n", s_n);
+  }
+
+  s_sens = new uint8_t *[s_n];
+
+  for (int i = 0; i < s_n; i++) {
+    s_sens[i] = new uint8_t[8];
+    if (s_dt->getAddress(s_sens[i], i)) {
       printf("Sens#%d address: ", i + 1);
       for (int j = 0; j < 8; j++) {
-        printf("%x", sens[i][j]);
+        printf("%x", s_sens[i][j]);
       }
       printf("\n");
     }
@@ -39,9 +45,9 @@ void setup(void) {
 }
 
 void loop(void) {
-  dt->requestTemperatures();
-  delay(1000);
-  for (int i = 0; i < NUM_SENS; i++) {
-    printf("Sens#%d Temperature: %f *C\n", i + 1, dt->getTempC(sens[i]));
+  s_dt->requestTemperatures();
+  for (int i = 0; i < s_n; i++) {
+    printf("Sens#%d temperature: %f *C\n", i + 1, s_dt->getTempC(s_sens[i]));
   }
+  delay(1000);
 }
