@@ -308,7 +308,7 @@ func buildLocal(ctx context.Context) (err error) {
 			}
 
 			dockerArgs = append(
-				dockerArgs, "--user", fmt.Sprintf("%s:%s", curUser.Uid, curUser.Gid),
+				dockerArgs, "--user", fmt.Sprintf("%s:%s", curUser.Uid, curUser.Uid),
 			)
 		}
 
