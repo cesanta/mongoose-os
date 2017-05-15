@@ -54,6 +54,7 @@ ifeq "$(MGOS_ENABLE_DNS_SD)" "1"
   SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_dns_sd_config.yaml
 endif
 ifeq "$(MGOS_ENABLE_I2C)" "1"
+  MGOS_SRCS += esp32_i2c_master.c
   SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_i2c_config.yaml
 endif
 ifeq "$(MGOS_ENABLE_SPI)" "1"

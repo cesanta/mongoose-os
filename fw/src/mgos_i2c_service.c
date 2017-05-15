@@ -7,6 +7,7 @@
 
 #include "common/json_utils.h"
 #include "common/mg_str.h"
+#include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_i2c.h"
 #include "fw/src/mgos_rpc.h"
 
@@ -22,10 +23,11 @@ static void i2c_scan_handler(struct mg_rpc_request_info *ri, void *cb_arg,
   }
   mbuf_init(&rb, 0);
   json_printf(&out, "[");
-  for (int addr = 8; addr < 0x78; addr++) {
+  for (int addr = 0; addr < 0x78; addr++) {
     if (mgos_i2c_write(i2c, addr, NULL, 0, true /* stop */)) {
       json_printf(&out, "%s%d", (rb.len > 1 ? ", " : ""), addr);
     }
+    mgos_usleep(100);
   }
   json_printf(&out, "]");
   mg_rpc_send_responsef(ri, "%.*s", rb.len, rb.buf);

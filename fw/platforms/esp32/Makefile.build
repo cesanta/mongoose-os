@@ -30,8 +30,6 @@ endif
 APP_FS_DIRS = $(sort $(dir $(APP_FS_FILES)))
 
 MGOS_ENABLE_CONSOLE ?= 0
-# Use bitbang I2C for now.
-MGOS_ENABLE_I2C_GPIO ?= 1
 
 MGOS_PATH ?= ../../..
 COMMON_PATH ?= $(MGOS_PATH)/common
