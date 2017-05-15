@@ -61,6 +61,11 @@ static void handler(struct mg_connection *nc, int ev, void *ev_data,
   SLIST_FOREACH(e, &s_mdns_handlers, entries) {
     e->handler(nc, ev, ev_data, e->ud);
   }
+  /* On close, invalidate listener - reconnect */
+  if (ev == MG_EV_CLOSE) {
+    s_listening_mdns_conn = NULL;
+    mgos_mdns_init();
+  }
 }
 
 enum mgos_init_result mgos_mdns_init(void) {
