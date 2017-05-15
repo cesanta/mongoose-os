@@ -13,6 +13,8 @@
 #include "fw/src/mgos_mongoose.h"
 #include "fw/src/mgos_uart_hal.h"
 #include "fw/src/mgos_utils.h"
+#include "fw/src/mgos_gpio.h"
+#include "fw/src/mgos_hal.h"
 
 #ifndef IRAM
 #define IRAM
@@ -31,6 +33,7 @@ IRAM void mgos_uart_schedule_dispatcher(int uart_no, bool from_isr) {
 }
 
 void mgos_uart_dispatcher(void *arg) {
+  uint32_t final_char_delay_us;
   int uart_no = (intptr_t) arg;
   struct mgos_uart_state *us = s_uart_state[uart_no];
   if (us == NULL) return;
@@ -43,6 +46,27 @@ void mgos_uart_dispatcher(void *arg) {
   mgos_uart_hal_dispatch_bottom(us);
   if (us->rx_buf.len == 0) mbuf_trim(&us->rx_buf);
   if (us->tx_buf.len == 0) mbuf_trim(&us->tx_buf);
+  
+  if (us->cfg.rs485_ena) {
+    if (mgos_uart_is_tx_fifo_empty(us)) {      
+      /* If the uart_tx_fifo is empty, all the data has been sent so
+       * it is time to de-assert the TxEn line and start listening again
+       * but the final character may not have been transmitted so
+       * wait 1.5 character periods to ensure that the UART has sent it.
+       * 
+       * Assume worst case of 8bit, 1bit parity, 2 stop bits = 12 bits
+       * therefore wait 18 bit periods */			 
+      final_char_delay_us = 18000000;
+      final_char_delay_us /= us->cfg.baud_rate;
+      mgos_usleep(final_char_delay_us);
+      mgos_gpio_write(us->cfg.dev.tx_en_gpio, 0);
+    } else {
+      /* Be sure to come back here regularly until all data has been sent
+       * and the TxEn line has been de-asserted to start listening again */
+      mgos_uart_schedule_dispatcher(uart_no, true /* from_isr */);
+    }
+  }
+  
   mgos_unlock();
 }
 
@@ -180,9 +204,10 @@ void mgos_uart_config_set_rx_params(struct mgos_uart_config *cfg,
 }
 
 void mgos_uart_config_set_tx_params(struct mgos_uart_config *cfg,
-                                    int tx_buf_size, bool tx_fc_ena) {
+                                    int tx_buf_size, bool tx_fc_ena, bool rs485_ena) {
   cfg->tx_buf_size = tx_buf_size;
   cfg->tx_fc_ena = tx_fc_ena;
+  cfg->rs485_ena = rs485_ena;
 }
 
 void mgos_uart_set_dispatcher(int uart_no, mgos_uart_dispatcher_t cb,

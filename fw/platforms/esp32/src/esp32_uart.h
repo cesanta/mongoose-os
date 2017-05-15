@@ -40,16 +40,18 @@ struct mgos_uart_dev_config {
 
   /*
    * GPIO pin numbers, default values depend on UART number.
+   * TxEn (for RS485 mode) is unused by default.
    *
-   * UART 0: Rx: 3, Tx: 1, CTS: 19, RTS: 22
-   * UART 1: Rx: 13, Tx: 14, CTS: 15, RTS: 16
-   * UART 2: Rx: 17, Tx: 25, CTS: 26, RTS: 27
+   * UART 0: Rx: 3, Tx: 1, CTS: 19, RTS: 22, TxEn: -1
+   * UART 1: Rx: 13, Tx: 14, CTS: 15, RTS: 16, TxEn: -1
+   * UART 2: Rx: 17, Tx: 25, CTS: 26, RTS: 27, TxEn: -1
    */
 
   int8_t rx_gpio;
   int8_t tx_gpio;
   int8_t cts_gpio;
   int8_t rts_gpio;
+  int8_t tx_en_gpio;
 };
 
 int esp32_uart_rx_fifo_len(int uart_no);
