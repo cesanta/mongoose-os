@@ -9,7 +9,7 @@ sources:
   - src
   - ${mjs_path}/mjs.c
   - ${arduino_drivers_path}/Arduino
-  - ${arduino_drivers_path}/dht
+  - ${arduino_drivers_path}/Adafruit_DHT
 filesystem:
   - fs
   - ${mjs_path}/mjs/lib/api_*.js

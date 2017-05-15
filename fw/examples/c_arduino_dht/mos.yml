@@ -7,7 +7,7 @@ modules:
 sources:
   - src
   - ${arduino_drivers_path}/Arduino
-  - ${arduino_drivers_path}/dht
+  - ${arduino_drivers_path}/Adafruit_DHT
 build_vars:
   MGOS_ENABLE_ARDUINO_API: 1
   MGOS_ENABLE_ONEWIRE: 1

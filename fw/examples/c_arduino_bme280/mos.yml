@@ -1,4 +1,4 @@
-name: c_arduino_dallas_temp
+name: c_arduino_bme280
 # arch: PLATFORM
 version: 1.0
 skeleton_version: 2017-03-17
@@ -7,7 +7,7 @@ modules:
 sources:
   - src
   - ${arduino_drivers_path}/Arduino
-  - ${arduino_drivers_path}/DallasTemperature
+  - ${arduino_drivers_path}/Adafruit_BME280
 build_vars:
   MGOS_ENABLE_ARDUINO_API: 1
-  MGOS_ENABLE_ONEWIRE: 1
+  APP_CONF_SCHEMA: src/conf_schema.yaml

@@ -1,4 +1,4 @@
-name: mjs_arduino_dallas_temp
+name: mjs_arduino_bme280
 # arch: PLATFORM
 version: 1.0
 skeleton_version: 2017-03-17
@@ -9,14 +9,13 @@ sources:
   - src
   - ${mjs_path}/mjs.c
   - ${arduino_drivers_path}/Arduino
-  - ${arduino_drivers_path}/DallasTemperature
+  - ${arduino_drivers_path}/Adafruit_BME280
 filesystem:
   - fs
   - ${mjs_path}/mjs/lib/api_*.js
   - ${mongoose_os_path}/fw/mjs_api/api_*.js
-  - ${mongoose_os_path}/fw/mjs_api/arduino_drivers/api_arduino_dallas_temp.js
-  - ${mongoose_os_path}/fw/mjs_api/arduino_drivers/api_arduino_onewire.js
+  - ${mongoose_os_path}/fw/mjs_api/arduino_drivers/api_arduino_bme280.js
   - ${mongoose_os_path}/fw/platforms/${arch}/mjs_api/api_*.js
 build_vars:
   MGOS_ENABLE_ARDUINO_API: 1
-  MGOS_ENABLE_ONEWIRE: 1
+  APP_CONF_SCHEMA: src/conf_schema.yaml
