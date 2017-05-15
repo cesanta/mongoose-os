@@ -384,7 +384,7 @@ func buildLocal(ctx context.Context) (err error) {
 
 func getMakeArgs(dir string, manifest *build.FWAppManifest) []string {
 	makeArgs := []string{
-		"-j",
+		"-j", fmt.Sprintf("%d", runtime.NumCPU()),
 		"-C", dir,
 		// NOTE that we use path instead of filepath, because it'll run in a docker
 		// container, and thus will use Linux path separator
