@@ -95,6 +95,7 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
 #endif /* MGOS_ENABLE_MQTT */
   s_in_debug = false;
   mgos_unlock();
+  (void) buf;
 }
 
 void mgos_debug_flush(void) {
