@@ -44,6 +44,9 @@ var (
 	buildCmdExtra    = flag.StringSlice("build-cmd-extra", []string{}, "extra make flags, added at the end of the make command. Can be used multiple times.")
 
 	buildVarsSlice []string
+
+	libsDir    = ""
+	modulesDir = ""
 )
 
 const (
@@ -63,6 +66,15 @@ func init() {
 
 	// deprecated since 2017/05/11
 	flag.StringSliceVar(&buildVarsSlice, "build_var", []string{}, "deprecated, use --build-var")
+
+	// TODO(dfrank): configurable
+	usr, err := userpkg.Current()
+	if err != nil {
+		panic(err)
+	}
+
+	libsDir = filepath.Join(usr.HomeDir, ".mos", "libs")
+	modulesDir = filepath.Join(usr.HomeDir, ".mos", "modules")
 }
 
 func doBuild(ctx context.Context, devConn *dev.DevConn) error {
@@ -80,10 +92,10 @@ func doBuild(ctx context.Context, devConn *dev.DevConn) error {
 
 	fw, err := common.NewZipFirmwareBundle(fwFilename)
 	if err == nil {
-		fmt.Printf("Success, built %s/%s version %s (%s).\n", fw.Name, fw.Platform, fw.Version, fw.BuildID)
+		reportf("Success, built %s/%s version %s (%s).", fw.Name, fw.Platform, fw.Version, fw.BuildID)
 	}
 
-	fmt.Printf("Firmware saved to %s\n", fwFilename)
+	reportf("Firmware saved to %s", fwFilename)
 
 	return err
 }
@@ -113,6 +125,7 @@ func buildLocal(ctx context.Context) (err error) {
 
 	elfFilename := filepath.Join(objsDir, "fw.elf")
 
+	// Perform cleanup before the build {{{
 	if *cleanBuild {
 		err = os.RemoveAll(buildDir)
 		if err != nil {
@@ -123,7 +136,9 @@ func buildLocal(ctx context.Context) (err error) {
 		// (ignoring any possible errors)
 		os.Remove(fwFilename)
 	}
+	// }}}
 
+	// Prepare build dir and log file {{{
 	err = os.MkdirAll(buildDir, 0777)
 	if err != nil {
 		return errors.Trace(err)
@@ -135,16 +150,7 @@ func buildLocal(ctx context.Context) (err error) {
 		return errors.Trace(err)
 	}
 	defer logFile.Close()
-
-	manifest, err := readManifest()
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	archEffective, err := detectArch(manifest)
-	if err != nil {
-		return errors.Trace(err)
-	}
+	// }}}
 
 	// Create map of given module locations, via --module flag(s)
 	customModuleLocations := map[string]string{}
@@ -154,36 +160,18 @@ func buildLocal(ctx context.Context) (err error) {
 	}
 
 	mVars := NewManifestVars()
-	mVars.SetVar("arch", archEffective)
 
-	var mosDirEffective string
-	if *mosRepo != "" {
-		fmt.Printf("Using mongoose-os located at %q\n", *mosRepo)
-		mosDirEffective = *mosRepo
-	} else {
-		fmt.Printf("The flag --repo is not given, going to use mongoose-os repository\n")
-		mosDirEffective = "mongoose-os"
-
-		m := build.SWModule{
-			Type: "git",
-			// TODO(dfrank) get upstream repo URL from a flag
-			// (and this flag needs to be forwarded to fwbuild as well, which should
-			// forward it to the mos invocation)
-			Origin:  "https://github.com/cesanta/mongoose-os",
-			Version: manifest.MongooseOsVersion,
-		}
-
-		if err := m.PrepareLocalCopy(mosDirEffective, logFile, true); err != nil {
-			return errors.Trace(err)
-		}
-	}
-	setModuleVars(mVars, "mongoose-os", mosDirEffective)
-
-	mosDirEffectiveAbs, err := filepath.Abs(mosDirEffective)
+	appDir, err := getCodeDir()
 	if err != nil {
-		return errors.Annotatef(err, "getting absolute path of %q", mosDirEffective)
+		return errors.Trace(err)
 	}
 
+	manifest, err := readManifestWithLibs(appDir, nil, customModuleLocations, logFile, mVars, libsDir)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	// Prepare local copies of all sw modules {{{
 	for _, m := range manifest.Modules {
 		name, err := m.GetName()
 		if err != nil {
@@ -194,20 +182,59 @@ func buildLocal(ctx context.Context) (err error) {
 		if !ok {
 			// Custom module location wasn't provided in command line, so, we'll
 			// use the module name and will clone/pull it if necessary
-			fmt.Printf("The flag --module is not given for the module %q, going to use the repository\n", name)
-			targetDir = name
+			reportf("The flag --module is not given for the module %q, going to use the repository", name)
 
-			if err := m.PrepareLocalCopy(targetDir, logFile, true); err != nil {
+			var err error
+			targetDir, err = m.PrepareLocalDir(modulesDir, logFile, true)
+			if err != nil {
 				return errors.Trace(err)
 			}
 		} else {
-			fmt.Printf("Using module %q located at %q\n", name, targetDir)
+			reportf("Using module %q located at %q", name, targetDir)
 		}
 
 		setModuleVars(mVars, name, targetDir)
 	}
+	// }}}
 
-	// Get sources and filesystem files from the manifest, expanding placeholders
+	archEffective, err := detectArch(manifest)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	mVars.SetVar("arch", archEffective)
+
+	// Determine mongoose-os dir (mosDirEffective) {{{
+	var mosDirEffective string
+	if *mosRepo != "" {
+		reportf("Using mongoose-os located at %q", *mosRepo)
+		mosDirEffective = *mosRepo
+	} else {
+		reportf("The flag --repo is not given, going to use mongoose-os repository")
+
+		m := build.SWModule{
+			Type: "git",
+			// TODO(dfrank) get upstream repo URL from a flag
+			// (and this flag needs to be forwarded to fwbuild as well, which should
+			// forward it to the mos invocation)
+			Origin:  "https://github.com/cesanta/mongoose-os",
+			Version: manifest.MongooseOsVersion,
+		}
+
+		var err error
+		mosDirEffective, err = m.PrepareLocalDir(modulesDir, logFile, true)
+		if err != nil {
+			return errors.Trace(err)
+		}
+	}
+	setModuleVars(mVars, "mongoose-os", mosDirEffective)
+
+	mosDirEffectiveAbs, err := filepath.Abs(mosDirEffective)
+	if err != nil {
+		return errors.Annotatef(err, "getting absolute path of %q", mosDirEffective)
+	}
+	// }}}
+
+	// Get sources and filesystem files from the manifest, expanding placeholders {{{
 	appSources := []string{}
 	for _, s := range manifest.Sources {
 		appSources = append(appSources, mVars.ExpandVars(s))
@@ -217,15 +244,28 @@ func buildLocal(ctx context.Context) (err error) {
 	for _, s := range manifest.Filesystem {
 		appFSFiles = append(appFSFiles, mVars.ExpandVars(s))
 	}
+	// }}}
+
+	appSourceDirs := []string{}
+	appFSDirs := []string{}
 
 	// Makefile expects globs, not dir names, so we convert source and filesystem
 	// dirs to the appropriate globs. Non-dir items will stay intact.
-	appSources = globify(appSources, []string{"*.c", "*.cpp"})
-	appFSFiles = globify(appFSFiles, []string{"*"})
+	appSources, appSourceDirs, err = globify(appSources, []string{"*.c", "*.cpp"})
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	appFSFiles, appFSDirs, err = globify(appFSFiles, []string{"*"})
+	if err != nil {
+		return errors.Trace(err)
+	}
 
 	ffiSymbols := manifest.FFISymbols
 
-	fmt.Printf("Building...\n")
+	reportf("Sources: %v", appSources)
+
+	reportf("Building...")
 
 	defer os.RemoveAll(fwDir)
 
@@ -268,6 +308,7 @@ func buildLocal(ctx context.Context) (err error) {
 		return errors.Trace(err)
 	}
 
+	// Invoke actual build (docker or make) {{{
 	if os.Getenv("MIOT_SDK_REVISION") == "" {
 		// We're outside of the docker container, so invoke docker
 
@@ -296,6 +337,14 @@ func buildLocal(ctx context.Context) (err error) {
 		dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", appMountPath, dockerAppPath))
 		dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", mosDirEffectiveAbs, dockerMgosPath))
 		dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", mosDirEffectiveAbs, mosDirEffectiveAbs))
+
+		for _, d := range appSourceDirs {
+			dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", d, d))
+		}
+
+		for _, d := range appFSDirs {
+			dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", d, d))
+		}
 
 		// On Windows and Mac, run container as root since volume sharing on those
 		// OSes doesn't play nice with unprivileged user.
@@ -336,7 +385,7 @@ func buildLocal(ctx context.Context) (err error) {
 		)
 
 		if *verbose {
-			fmt.Printf("Docker arguments: %s\n", strings.Join(dockerArgs, " "))
+			reportf("Docker arguments: %s", strings.Join(dockerArgs, " "))
 		}
 
 		cmd := exec.Command("docker", dockerArgs...)
@@ -352,7 +401,7 @@ func buildLocal(ctx context.Context) (err error) {
 		makeArgs := getMakeArgs(appPath, manifest)
 
 		if *verbose {
-			fmt.Printf("Make arguments: %s\n", strings.Join(makeArgs, " "))
+			reportf("Make arguments: %s", strings.Join(makeArgs, " "))
 		}
 
 		cmd := exec.Command("make", makeArgs...)
@@ -361,6 +410,7 @@ func buildLocal(ctx context.Context) (err error) {
 			return errors.Trace(err)
 		}
 	}
+	// }}}
 
 	// Move firmware as build/fw.zip
 	err = os.Rename(
@@ -411,19 +461,26 @@ func getMakeArgs(dir string, manifest *build.FWAppManifest) []string {
 // globify takes a list of paths, and for each of them which resolves to a
 // directory adds each glob from provided globs. Other paths are added as they
 // are.
-func globify(srcPaths []string, globs []string) []string {
-	ret := []string{}
+func globify(srcPaths []string, globs []string) (sources []string, dirs []string, err error) {
 	for _, p := range srcPaths {
 		finfo, err := os.Stat(p)
+		var curDir string
 		if err == nil && finfo.IsDir() {
 			for _, glob := range globs {
-				ret = append(ret, filepath.Join(p, glob))
+				sources = append(sources, filepath.Join(p, glob))
 			}
+			curDir = p
 		} else {
-			ret = append(ret, p)
+			sources = append(sources, p)
+			curDir = filepath.Dir(p)
 		}
+		d, err := filepath.Abs(curDir)
+		if err != nil {
+			return nil, nil, errors.Trace(err)
+		}
+		dirs = append(dirs, d)
 	}
-	return ret
+	return sources, dirs, nil
 }
 
 // addBuildVar adds a given build variable to manifest.BuildVars,
@@ -494,13 +551,8 @@ func getCodeDir() (string, error) {
 	return absCodeDir, nil
 }
 
-func readManifest() (*build.FWAppManifest, error) {
-	wd, err := getCodeDir()
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	manifestSrc, err := ioutil.ReadFile(filepath.Join(wd, build.ManifestFileName))
+func readManifest(appDir string) (*build.FWAppManifest, error) {
+	manifestSrc, err := ioutil.ReadFile(filepath.Join(appDir, build.ManifestFileName))
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -537,7 +589,12 @@ func readManifest() (*build.FWAppManifest, error) {
 }
 
 func buildRemote() error {
-	manifest, err := readManifest()
+	appDir, err := getCodeDir()
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	manifest, err := readManifest(appDir)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -602,12 +659,12 @@ func buildRemote() error {
 
 	buildUser := "test"
 	buildPass := "test"
-	fmt.Printf("Connecting to %s, user %s\n", server, buildUser)
+	reportf("Connecting to %s, user %s", server, buildUser)
 
 	// invoke the fwbuild API
 	uri := fmt.Sprintf("%s/api/%s/firmware/build", server, buildUser)
 
-	fmt.Printf("Uploading sources (%d bytes)\n", len(body.Bytes()))
+	reportf("Uploading sources (%d bytes)", len(body.Bytes()))
 	req, err := http.NewRequest("POST", uri, body)
 	req.Header.Set("Content-Type", mpw.FormDataContentType())
 	req.SetBasicAuth(buildUser, buildPass)
@@ -829,4 +886,103 @@ func cleanupModuleName(name string) string {
 		ret += string(c)
 	}
 	return ret
+}
+
+func readManifestWithLibs(
+	dir string, visitedDirs []string, customModuleLocations map[string]string, logFile io.Writer,
+	mVars *manifestVars, userLibsDir string,
+) (*build.FWAppManifest, error) {
+	for _, v := range visitedDirs {
+		if dir == v {
+			return nil, errors.Errorf("cyclic dependency of the lib %q", dir)
+		}
+	}
+
+	manifest, err := readManifest(dir)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	curDir, err := getCodeDir()
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	// Prepare all libs {{{
+	for _, m := range manifest.Libs {
+		name, err := m.GetName()
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+
+		reportf("Handling lib %q...", name)
+
+		// Note: we always call PrepareLocalDir for libsDir, but then,
+		// if userLibsDir is different, will need to copy it to the new location
+		localDir, err := m.PrepareLocalDir(libsDir, os.Stdout, true)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+
+		if userLibsDir != libsDir {
+			// TODO(dfrank): copy everything from libsDir to userLibsDir
+		}
+
+		os.Chdir(localDir)
+
+		reportf("Prepared local dir: %q", localDir)
+
+		libManifest, err := readManifestWithLibs(
+			localDir, append(visitedDirs, dir), customModuleLocations, logFile, mVars, userLibsDir,
+		)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+
+		// Extend manifest with libManifest {{{
+		for _, s := range libManifest.Sources {
+			// If the path is not absolute, and does not start with the variable,
+			// prepend it with the library's path
+			if s[0] != '$' && !filepath.IsAbs(s) {
+				s = filepath.Join(localDir, s)
+			}
+			manifest.Sources = append(manifest.Sources, s)
+		}
+
+		for _, s := range libManifest.Filesystem {
+			// If the path is not absolute, and does not start with the variable,
+			// prepend it with the library's path
+			if s[0] != '$' && !filepath.IsAbs(s) {
+				s = filepath.Join(localDir, s)
+			}
+			manifest.Filesystem = append(manifest.Filesystem, s)
+		}
+
+		for _, m := range libManifest.Modules {
+			manifest.Modules = append(manifest.Modules, m)
+		}
+
+		for k, v := range libManifest.BuildVars {
+			switch k {
+			case "APP_CONF_SCHEMA":
+				bv, err := filepath.Abs(v)
+				if err != nil {
+					return nil, errors.Trace(nil)
+				}
+				manifest.BuildVars[k] += " " + bv
+			default:
+				if _, ok := manifest.BuildVars[k]; !ok {
+					manifest.BuildVars[k] = v
+				}
+			}
+		}
+		// }}}
+
+		os.Chdir(curDir)
+	}
+	// }}}
+
+	manifest.Libs = nil
+
+	return manifest, nil
 }

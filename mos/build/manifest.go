@@ -20,5 +20,6 @@ type FWAppManifest struct {
 	SkeletonVersion   string            `yaml:"skeleton_version"`
 	FFISymbols        []string          `yaml:"ffi_symbols"`
 	Modules           []SWModule        `yaml:"modules,omitempty"`
+	Libs              []SWModule        `yaml:"libs,omitempty"`
 	BuildVars         map[string]string `yaml:"build_vars"`
 }

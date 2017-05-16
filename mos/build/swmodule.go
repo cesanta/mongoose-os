@@ -10,10 +10,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"cesanta.com/mos/build/gitutils"
+
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
-
-	"cesanta.com/mos/build/gitutils"
 )
 
 type SWModule struct {
@@ -21,17 +21,56 @@ type SWModule struct {
 	Origin  string `yaml:"origin,omitempty"`
 	Version string `yaml:"version,omitempty"`
 	Name    string `yaml:"name,omitempty"`
+
+	localPath string
 }
 
 type SWModuleType int
 
 const (
-	SWModuleTypeNone SWModuleType = iota
+	SWModuleTypeLocal SWModuleType = iota
 	SWModuleTypeGit
 )
 
+// PrepareLocalDir prepares local directory, if that preparation is needed
+// in the first place, and returns the path to it
+func (m *SWModule) PrepareLocalDir(
+	libsDir string, logFile io.Writer, deleteIfFailed bool,
+) (string, error) {
+	if m.localPath == "" {
+		switch m.GetType() {
+		case SWModuleTypeGit:
+			name, err := m.GetName()
+			if err != nil {
+				return "", errors.Trace(err)
+			}
+
+			lp := filepath.Join(libsDir, getGitDirName(name, m.Version))
+
+			if err := prepareLocalCopyGit(m.Origin, m.Version, lp, logFile, deleteIfFailed); err != nil {
+				return "", errors.Trace(err)
+			}
+
+			// Everything went fine, so remember local path (and return it later)
+			m.localPath = lp
+
+		case SWModuleTypeLocal:
+			m.localPath = m.Origin
+		}
+	}
+
+	return m.localPath, nil
+}
+
+// FetchableFromInternet returns whether the library could be fetched
+// from the web
+func (m *SWModule) FetchableFromWeb() (bool, error) {
+	return false, nil
+}
+
 func (m *SWModule) GetName() (string, error) {
 	if m.Name != "" {
+		// TODO(dfrank): check that m.Name does not contain slashes and other junk
 		return m.Name, nil
 	}
 
@@ -50,7 +89,7 @@ func (m *SWModule) GetName() (string, error) {
 
 		return parts[len(parts)-1], nil
 	default:
-		return "", errors.Errorf("name is not specified, and swmodule type is unknown")
+		return "", errors.Errorf("name is not specified, and the lib type is unknown")
 	}
 }
 
@@ -60,7 +99,7 @@ func (m *SWModule) GetType() SWModuleType {
 	if stype == "" {
 		u, err := url.Parse(m.Origin)
 		if err != nil {
-			return SWModuleTypeNone
+			return SWModuleTypeLocal
 		}
 
 		switch u.Host {
@@ -73,27 +112,16 @@ func (m *SWModule) GetType() SWModuleType {
 	case "git":
 		return SWModuleTypeGit
 	default:
-		return SWModuleTypeNone
+		return SWModuleTypeLocal
 	}
 
-	return SWModuleTypeNone
+	return SWModuleTypeLocal
 }
 
-func (m *SWModule) PrepareLocalCopy(
-	targetDir string, logFile io.Writer, deleteIfFailed bool,
+func prepareLocalCopyGit(
+	origin, version, targetDir string,
+	logFile io.Writer, deleteIfFailed bool,
 ) error {
-	switch m.GetType() {
-	case SWModuleTypeGit:
-		return m.prepareLocalCopyGit(targetDir, logFile, deleteIfFailed)
-	default:
-		return errors.Errorf("unknown swmodule type")
-	}
-}
-
-func (m *SWModule) prepareLocalCopyGit(
-	targetDir string, logFile io.Writer, deleteIfFailed bool,
-) error {
-	version := m.Version
 	if version == "" {
 		version = "master"
 	}
@@ -106,12 +134,12 @@ func (m *SWModule) prepareLocalCopyGit(
 	// - it exists, and is a git repo: it will be pulled
 	//
 	// All other cases are considered as an error.
-	mgosRepoExists := false
+	repoExists := false
 	if _, err := os.Stat(targetDir); err == nil {
 		// targetDir exists; let's see if it's a git repo
 		if _, err := os.Stat(filepath.Join(targetDir, ".git")); err == nil {
 			// Yes it is a git repo
-			mgosRepoExists = true
+			repoExists = true
 		} else {
 			// No it's not a git repo; let's see if it's empty; if not, it's an error.
 			files, err := ioutil.ReadDir(targetDir)
@@ -129,11 +157,23 @@ func (m *SWModule) prepareLocalCopyGit(
 		return errors.Trace(err)
 	}
 
-	if !mgosRepoExists {
+	if !repoExists {
 		fmt.Printf("Repository %q does not exist, cloning...\n", targetDir)
-		err := gitutils.GitClone(m.Origin, targetDir, "")
+		err := gitutils.GitClone(origin, targetDir, "")
 		if err != nil {
 			return errors.Trace(err)
+		}
+	} else {
+		// Repo exists, let's check if the working dir is clean. If not, we'll
+		// not do anything.
+		isClean, err := gitutils.IsClean(targetDir)
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		if !isClean {
+			fmt.Printf("Repository %q is dirty, leaving it intact\n", targetDir)
+			return nil
 		}
 	}
 
@@ -169,7 +209,7 @@ func (m *SWModule) prepareLocalCopyGit(
 			}
 
 			glog.V(2).Infof("calling prepareLocalCopyGit() again")
-			return m.prepareLocalCopyGit(targetDir, logFile, false)
+			return prepareLocalCopyGit(origin, version, targetDir, logFile, false)
 		} else {
 			return errors.Trace(err)
 		}
@@ -247,4 +287,13 @@ func (m *SWModule) prepareLocalCopyGit(
 	}
 
 	return nil
+}
+
+// getGitDirName returns given name if repoVersion is "master" or an empty
+// string, or "<name>-<repoVersion>" otherwise.
+func getGitDirName(name, repoVersion string) string {
+	if repoVersion == "master" || repoVersion == "" {
+		return name
+	}
+	return fmt.Sprintf("%s-%s", name, repoVersion)
 }
