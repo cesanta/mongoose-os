@@ -234,6 +234,16 @@ out:
   return res;
 }
 
+int mgos_i2c_get_freq(struct mgos_i2c *c) {
+  (void) c;
+  return MGOS_I2C_FREQ_100KHZ;
+}
+
+bool mgos_i2c_set_freq(struct mgos_i2c *c, int freq) {
+  (void) c;
+  return (freq == MGOS_I2C_FREQ_100KHZ);
+}
+
 struct mgos_i2c *mgos_i2c_create(const struct sys_config_i2c *cfg) {
   struct mgos_i2c *c = NULL;
 
@@ -244,6 +254,11 @@ struct mgos_i2c *mgos_i2c_create(const struct sys_config_i2c *cfg) {
   c->scl_gpio = cfg->scl_gpio;
   c->started = false;
   c->debug = cfg->debug;
+
+  /* We can barely do 100 KHz, sort of. */
+  if (cfg->freq != MGOS_I2C_FREQ_100KHZ) {
+    goto out_err;
+  }
 
   if (!mgos_gpio_set_mode(c->sda_gpio, MGOS_GPIO_MODE_INPUT) ||
       !mgos_gpio_set_pull(c->sda_gpio, MGOS_GPIO_PULL_UP)) {

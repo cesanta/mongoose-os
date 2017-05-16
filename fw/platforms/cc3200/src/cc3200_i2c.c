@@ -36,6 +36,7 @@
 
 struct mgos_i2c {
   unsigned long base;
+  int freq;
 };
 
 static void reset_pin_mode_if_i2c(int pin, int i2c_mode) {
@@ -43,6 +44,20 @@ static void reset_pin_mode_if_i2c(int pin, int i2c_mode) {
     /* GPIO is always mode 0 */
     MAP_PinModeSet(pin, PIN_MODE_0);
   }
+}
+
+int mgos_i2c_get_freq(struct mgos_i2c *c) {
+  return c->freq;
+}
+
+bool mgos_i2c_set_freq(struct mgos_i2c *c, int freq) {
+  (void) c;
+  if (freq != MGOS_I2C_FREQ_100KHZ && freq != MGOS_I2C_FREQ_400KHZ) {
+    return false;
+  }
+  c->freq = freq;
+  MAP_I2CMasterInitExpClk(c->base, SYS_CLK, (c->freq == MGOS_I2C_FREQ_400KHZ));
+  return true;
 }
 
 struct mgos_i2c *mgos_i2c_create(const struct sys_config_i2c *cfg) {
@@ -96,10 +111,13 @@ struct mgos_i2c *mgos_i2c_create(const struct sys_config_i2c *cfg) {
 
   MAP_PRCMPeripheralClkEnable(PRCM_I2CA0, PRCM_RUN_MODE_CLK);
   MAP_PRCMPeripheralReset(PRCM_I2CA0);
-  MAP_I2CMasterInitExpClk(c->base, SYS_CLK, cfg->fast);
 
-  LOG(LL_INFO, ("I2C initialized (SDA: %d, SCL: %d, fast? %d)", cfg->sda_pin,
-                cfg->scl_pin, cfg->fast));
+  if (!mgos_i2c_set_freq(c, cfg->freq)) {
+    goto out_err;
+  }
+
+  LOG(LL_INFO, ("I2C initialized (SDA: %d, SCL: %d, freq %d)", cfg->sda_pin,
+                cfg->scl_pin, cfg->freq));
   return c;
 
 out_err:

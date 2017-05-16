@@ -16,7 +16,6 @@
 #include "soc/i2c_reg.h"
 #include "soc/i2c_struct.h"
 
-#include "fw/src/mgos_gpio.h"
 #include "fw/src/mgos_i2c.h"
 #include "fw/src/mgos_sys_config.h"
 
@@ -36,6 +35,7 @@
 
 struct mgos_i2c {
   i2c_dev_t *dev;
+  int freq;
   bool debug;
 };
 
@@ -80,7 +80,6 @@ static bool esp32_i2c_exec(struct mgos_i2c *c, int num_cmds, int exp_tx,
     }
   }
 #endif
-  mgos_gpio_toggle(4);
   dev->int_clr.val = (I2C_DONE_INTS | I2C_ERROR_INTS);
   uint32_t ints_before = dev->int_raw.val;
   dev->ctr.trans_start = true;
@@ -104,7 +103,6 @@ static bool esp32_i2c_exec(struct mgos_i2c *c, int num_cmds, int exp_tx,
       ok = false;
     }
   }
-  mgos_gpio_toggle(4);
   if (c->debug) {
     LOG(LL_DEBUG,
         ("  %d loops, ok? %d, ints 0x%08x -> 0x%08x, tx_fifo %u/%d rx_fifo "
@@ -253,16 +251,39 @@ void mgos_i2c_stop(struct mgos_i2c *c) {
   esp32_i2c_exec(c, 1, -1, -1);
 }
 
+int mgos_i2c_get_freq(struct mgos_i2c *c) {
+  return c->freq;
+}
+
+bool mgos_i2c_set_freq(struct mgos_i2c *c, int freq) {
+  i2c_dev_t *dev = c->dev;
+
+  const uint32_t period = APB_CLK_FREQ / freq / 2;
+  if (freq < 0 || period < 16) {
+    /* Frequency is too high (> 2.5 MHz with APB_CLK_FREQ = 80MHz). */
+    return false;
+  }
+
+  dev->scl_low_period.period = period;
+  dev->scl_high_period.period = period;
+
+  dev->scl_start_hold.time = period / 2;
+  dev->scl_rstart_setup.time = period / 2;
+  dev->scl_stop_hold.time = period / 2;
+  dev->scl_stop_setup.time = period / 2;
+  dev->sda_hold.time = period / 4;
+  dev->sda_sample.time = period / 4;
+
+  c->freq = freq;
+
+  return true;
+}
+
 struct mgos_i2c *mgos_i2c_create(const struct sys_config_i2c *cfg) {
   struct mgos_i2c *c = NULL;
   if (cfg->sda_gpio < 0 || cfg->sda_gpio > 34 || cfg->scl_gpio < 0 ||
       cfg->scl_gpio > 34 || (cfg->unit_no != 0 && cfg->unit_no != 1) ||
       cfg->freq <= 0) {
-    goto out_err;
-  }
-  const uint32_t period = APB_CLK_FREQ / cfg->freq / 2;
-  if (period < 16) {
-    /* Frequency is too high (> 2.5 MHz with APB_CLK_FREQ = 80MHz). */
     goto out_err;
   }
 
@@ -315,23 +336,14 @@ struct mgos_i2c *mgos_i2c_create(const struct sys_config_i2c *cfg) {
   dev->fifo_conf.tx_fifo_empty_thrhd = 0;
   dev->int_ena.val = 0; /* No interrupts */
 
-  dev->scl_low_period.period = period;
-  dev->scl_high_period.period = period;
-
-  dev->scl_start_hold.time = period / 2;
-  dev->scl_rstart_setup.time = period / 2;
-  dev->scl_stop_hold.time = period / 2;
-  dev->scl_stop_setup.time = period / 2;
-  dev->sda_hold.time = period / 4;
-  dev->sda_sample.time = period / 4;
+  if (!mgos_i2c_set_freq(c, cfg->freq)) {
+    goto out_err;
+  }
 
   dev->timeout.tout = 20000;  // I2C_FIFO_LEN * 9 * 2 * period + 5 * period;
 
   LOG(LL_INFO, ("I2C%d initialized (SDA: %d, SCL: %d, freq: %d)", cfg->unit_no,
-                cfg->sda_gpio, cfg->scl_gpio, cfg->freq));
-
-  mgos_gpio_set_mode(4, MGOS_GPIO_MODE_OUTPUT);
-  mgos_gpio_write(4, 0);
+                cfg->sda_gpio, cfg->scl_gpio, c->freq));
 
   return c;
 

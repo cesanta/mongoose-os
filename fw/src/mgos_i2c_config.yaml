@@ -1,5 +1,6 @@
 [
   ["i2c", "o", {title: "I2C settings"}],
   ["i2c.enable", "b", false, {title: "Enable I2C"}],
+  ["i2c.freq", "i", 100000, {title: "Clock frequency"}],
   ["i2c.debug", "b", false, {title: "Debug I2C bus activity"}],
 ]
