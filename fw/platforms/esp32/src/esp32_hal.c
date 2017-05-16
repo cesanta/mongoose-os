@@ -54,10 +54,9 @@ void mgos_msleep(uint32_t msecs) {
 }
 
 void mgos_usleep(uint32_t usecs) {
+  uint64_t threshold = get_time_since_boot() + (uint64_t) usecs;
   int ticks = usecs / (1000000 / configTICK_RATE_HZ);
-  int remainder = usecs % (1000000 / configTICK_RATE_HZ);
   if (ticks > 0) vTaskDelay(ticks);
-  uint64_t threshold = get_time_since_boot() + remainder;
   while (get_time_since_boot() < threshold) {
   }
 }
