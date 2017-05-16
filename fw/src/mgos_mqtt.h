@@ -38,7 +38,8 @@ void mgos_mqtt_add_global_handler(mg_event_handler_t handler, void *ud);
  * be sent, values from *user and *pass, if non-NULL, will be sent along.
  * Note: *user and *pass must be heap-allocated and will be free()d.
  */
-typedef void (*mgos_mqtt_auth_callback_t)(char **user, char **pass, void *arg);
+typedef void (*mgos_mqtt_auth_callback_t)(char **client_id, char **user,
+                                          char **pass, void *arg);
 void mgos_mqtt_set_auth_callback(mgos_mqtt_auth_callback_t cb, void *cb_arg);
 
 /*

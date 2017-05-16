@@ -22,6 +22,10 @@
 #define MGOS_ENABLE_DEBUG_UDP 0
 #endif
 
+#ifndef MGOS_ENABLE_GCP
+#define MGOS_ENABLE_GCP 0
+#endif
+
 #ifndef MGOS_ENABLE_GPIO_SERVICE
 #define MGOS_ENABLE_GPIO_SERVICE 0
 #endif

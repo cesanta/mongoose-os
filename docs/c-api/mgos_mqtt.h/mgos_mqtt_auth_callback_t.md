@@ -3,7 +3,8 @@ title: "mgos_mqtt_auth_callback_t"
 decl_name: "mgos_mqtt_auth_callback_t"
 symbol_kind: "typedef"
 signature: |
-  typedef void (*mgos_mqtt_auth_callback_t)(char **user, char **pass, void *arg);
+  typedef void (*mgos_mqtt_auth_callback_t)(char **client_id, char **user,
+                                            char **pass, void *arg);
   void mgos_mqtt_set_auth_callback(mgos_mqtt_auth_callback_t cb, void *cb_arg);
 ---
 

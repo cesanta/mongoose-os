@@ -96,11 +96,11 @@ static void mgos_mqtt_ev(struct mg_connection *nc, int ev, void *ev_data,
       const struct sys_config *cfg = get_cfg();
       const struct sys_config_mqtt *mcfg = &cfg->mqtt;
       memset(&opts, 0, sizeof(opts));
-      char *user = NULL, *pass = NULL;
+      char *cb_client_id = NULL, *cb_user = NULL, *cb_pass = NULL;
       if (s_auth_cb != NULL) {
-        s_auth_cb(&user, &pass, s_auth_cb_arg);
-        opts.user_name = user;
-        opts.password = pass;
+        s_auth_cb(&cb_client_id, &cb_user, &cb_pass, s_auth_cb_arg);
+        opts.user_name = cb_user;
+        opts.password = cb_pass;
       } else {
         opts.user_name = mcfg->user;
         opts.password = mcfg->pass;
@@ -112,10 +112,13 @@ static void mgos_mqtt_ev(struct mg_connection *nc, int ev, void *ev_data,
       opts.will_topic = mcfg->will_topic;
       opts.will_message = mcfg->will_message;
       const char *client_id =
-          (mcfg->client_id ? mcfg->client_id : cfg->device.id);
+          (cb_client_id != NULL
+               ? cb_client_id
+               : (mcfg->client_id != NULL ? mcfg->client_id : cfg->device.id));
       mg_send_mqtt_handshake_opt(nc, client_id, opts);
-      free(user);
-      free(pass);
+      free(cb_client_id);
+      free(cb_user);
+      free(cb_pass);
       break;
     }
     case MG_EV_CLOSE: {
