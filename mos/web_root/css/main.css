@@ -27,6 +27,7 @@ code { color: green; white-space: pre !important;}
 .ui-pnotify { right: 22px; top: 82px; }
 .devonline { color: #7f7; }
 .devoffline { color: #f77; }
+input.form-control { box-shadow: none !important; }
 
 /* FILE MANAGER PAGE */
 #file-list { overflow-y: auto; }
@@ -46,11 +47,6 @@ code { color: green; white-space: pre !important;}
 .terminal-cmd-in, .terminal-cmd-out { margin: 0 1em; color: #44c; white-space: pre; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace }
 .terminal-cmd-in { color: #44c; font-weight: bold; }
 .terminal-cmd-out { color: #777; overflow-y: auto; }
-
-/* CONFIG PAGE */
-#config label { margin-left: 0; margin-right: 1em; width: 20em; }
-#config .param { padding-top: 0.4em; }
-#config { overflow-y: auto; }
 
 /* WIZARD STYLES */
 .wizard .panel-body, .wizard .panel-footer { padding-left: 3em; padding-right: 3em; }

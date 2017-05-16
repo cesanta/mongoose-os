@@ -315,6 +315,7 @@ code { color: green; white-space: pre !important;}
 .ui-pnotify { right: 22px; top: 82px; }
 .devonline { color: #7f7; }
 .devoffline { color: #f77; }
+input.form-control { box-shadow: none !important; }
 
 /* FILE MANAGER PAGE */
 #file-list { overflow-y: auto; }
@@ -334,11 +335,6 @@ code { color: green; white-space: pre !important;}
 .terminal-cmd-in, .terminal-cmd-out { margin: 0 1em; color: #44c; white-space: pre; font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, Courier, monospace }
 .terminal-cmd-in { color: #44c; font-weight: bold; }
 .terminal-cmd-out { color: #777; overflow-y: auto; }
-
-/* CONFIG PAGE */
-#config label { margin-left: 0; margin-right: 1em; width: 20em; }
-#config .param { padding-top: 0.4em; }
-#config { overflow-y: auto; }
 
 /* WIZARD STYLES */
 .wizard .panel-body, .wizard .panel-footer { padding-left: 3em; padding-right: 3em; }
@@ -537,7 +533,7 @@ func web_rootCssMainCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/css/main.css", size: 6442, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/css/main.css", size: 6340, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -5130,10 +5126,101 @@ func web_rootPage_cloudHtml() (*asset, error) {
 var _web_rootPage_configurationHtml = []byte(`<div data-title="Device configuration" style="height: 100%;">
   <div class="col-xs-12 main-left-column">
     <div style="margin-top: 5px; ">
-    <button class="btn btn-sm btn-primary" id="config-save-button"><i class="fa fa-save"></i> Save configuration</button>
+      <button class="btn btn-sm btn-primary" id="config-save-button"><i class="fa fa-save"></i> Save configuration</button>
+      <div class="btn-group btn-group-sm" data-toggle="buttons" style="margin-bottom: 5px; margin-top: 0;">
+        <label class="btn btn-default active">
+          <i class="fa fa-cog"></i>
+          <input type="radio" name="options" id="view1" checked> Simple View
+        </label>
+        <label class="btn btn-default">
+          <i class="fa fa-cogs"></i>
+          <input type="radio" name="options" id="view2"> Expert View
+        </label>
+      </div>
     </div>
-    <div class="form-group upcontrol">
-      <div id="editor"></div>
+    <div class="upcontrol">
+      <div id="simple" style="height: 100%;" class="row">
+
+        <div class="col-md-4 col-xs-12">
+          <div class="x_panel">
+            <div class="x_title">WiFi Settings</div>
+            <div class="x_content form-horizontal">
+
+              <div class="form-group">
+                <label class="col-xs-5 control-label">Connect to WiFi</label>
+                <div class="col-xs-7"><input type="checkbox" class="form-control" id="wifi.sta.enable"></div>
+              </div>
+
+              <div class="form-group">
+                <label class="col-xs-5 control-label">WiFi network</label>
+                <div class="col-xs-7"><input type="text" class="form-control" id="wifi.sta.ssid"
+                  placeholder="type WiFi name ..."></div>
+              </div>
+
+              <div class="form-group">
+                <label class="col-xs-5 control-label">WiFi password</label>
+                <div class="col-xs-7"><input type="password" class="form-control" id="wifi.sta.pass"
+                  placeholder="type WiFi password ..."></div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4 col-xs-12">
+          <div class="x_panel">
+            <div class="x_title">MQTT Settings</div>
+            <div class="x_content form-horizontal">
+              <div class="form-group">
+                <label class="col-xs-4 control-label">Enable MQTT</label>
+                <div class="col-xs-8"><input type="checkbox" class="form-control" id="mqtt.enable"></div>
+              </div>
+              <div class="form-group">
+                <label class="col-xs-4 control-label">MQTT server</label>
+                <div class="col-xs-8"><input type="text" class="form-control"
+                  id="mqtt.server" placeholder="example.com:1883"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4 col-xs-12">
+          <div class="x_panel">
+            <div class="x_title">SNTP Settings</div>
+            <div class="x_content form-horizontal">
+              <div class="form-group">
+                <label class="col-xs-4 control-label">Enable SNTP</label>
+                <div class="col-xs-8"><input type="checkbox" class="form-control" id="sntp.enable"></div>
+              </div>
+              <div class="form-group">
+                <label class="col-xs-4 control-label">SNTP server</label>
+                <div class="col-xs-8"><input type="text" class="form-control"
+                  id="sntp.server" placeholder="pool.ntp.org"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4 col-xs-12">
+          <div class="x_panel">
+            <div class="x_title">Debug Settings</div>
+            <div class="x_content form-horizontal">
+              <div class="form-group">
+                <label class="col-xs-5 control-label">Hexdump traffic:</label>
+                <div class="col-xs-7"><input type="checkbox" class="form-control" id="debug.hexdump"></div>
+              </div>
+              <div class="form-group">
+                <label class="col-xs-5 control-label">Log level:</label>
+                <div class="col-xs-7"><input type="text" class="form-control"
+                  id="debug.level" placeholder="2"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div id="editor" class="hidden"></div>
     </div>
   </div>
 </div>
@@ -5142,26 +5229,49 @@ var _web_rootPage_configurationHtml = []byte(`<div data-title="Device configurat
   // console.log(1,2,3, editor, guesslang);
   var editor = mkeditor();
   var loadConfig = function() {
-    return $.ajax({url: '/call',
-      data: {method: 'Config.Get'}}).then(function(json) {
-        var text = JSON.stringify(json.result, null, '  ');
-        editor.setValue(text || '', -1);
-        editor.session.setMode('ace/mode/json');
-    }).then(function() {
+    return $.ajax({url: '/call', data: {method: 'Config.Get'}}).then(function(json) {
+      var text = JSON.stringify(json.result, null, '  ');
+      editor.setValue(text || '', -1);
+      editor.session.setMode('ace/mode/json');
       new PNotify({title: 'Configuration loaded', type: 'success' });
+
+      var c = json.result;
+      $('#wifi\\.sta\\.enable').prop('checked', c.wifi.sta.enable);
+      $('#wifi\\.sta\\.ssid').val(c.wifi.sta.ssid || getCookie('ssid'));
+      $('#wifi\\.sta\\.pass').val(c.wifi.sta.pass || getCookie('pass'));
+      $('#mqtt\\.enable').prop('checked', c.mqtt.enable);
+      $('#mqtt\\.server').val(c.mqtt.server || getCookie('mqtt'));
+      $('#sntp\\.enable').prop('checked', c.sntp.enable);
+      $('#sntp\\.server').val(c.sntp.server || getCookie('sntp'));
+      $('#debug\\.hexdump').prop('checked', c.debug.mg_mgr_hexdump_file == '-');
+      $('#debug\\.level').val(c.debug.level || 2);
     });
   };
   loadConfig();
 
   $(document).off('click', '#config-save-button');
   $(document).on('click', '#config-save-button', function() {
-    var text = editor.getValue();
-    try {
-      var config = JSON.parse(text);
-    } catch (e) {
-      new PNotify({title: 'Error in configuration JSON', type: 'error' });
-      return false;
+    var config = {wifi: {sta: {}}, mqtt: {}, sntp: {}, debug: {}};
+    if ($('#view1').is(':checked')) {
+      config.wifi.sta.enable = $('#wifi\\.sta\\.enable').is(':checked');
+      config.wifi.sta.ssid = $('#wifi\\.sta\\.ssid').val();
+      config.wifi.sta.pass = $('#wifi\\.sta\\.pass').val();
+      config.mqtt.enable = $('#mqtt\\.enable').is(':checked');
+      config.mqtt.server = $('#mqtt\\.server').val();
+      config.sntp.enable = $('#sntp\\.enable').is(':checked');
+      config.sntp.server = $('#sntp\\.server').val();
+      config.debug.level = + $('#debug\\.level').val();
+      config.debug.server = $('#sntp\\.mg_mgr_hexdump_file').is(':checked') ? '-' : '';
+    } else {
+      var text = editor.getValue();
+      try {
+        config = JSON.parse(text);
+      } catch (e) {
+        new PNotify({title: 'Error in configuration JSON', type: 'error' });
+        return false;
+      }
     }
+
     $.ajax({url: '/call', data: {
       method: 'Config.Set',
       args: JSON.stringify({config: config})}
@@ -5171,6 +5281,13 @@ var _web_rootPage_configurationHtml = []byte(`<div data-title="Device configurat
       new PNotify({title: 'Configuration saved', type: 'success' });
       return loadConfig();
     });
+  });
+
+  $(document).off('change', '#view1, #view2');
+  $(document).on('change', '#view1, #view2', function() {
+    var v1 = $('#view1').is(':checked');
+    $('#editor').toggleClass('hidden', v1);
+    $('#simple').toggleClass('hidden', !v1);
   });
 
   //# sourceURL=page_configuration.js
@@ -5187,7 +5304,7 @@ func web_rootPage_configurationHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_configuration.html", size: 1579, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_configuration.html", size: 6978, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
