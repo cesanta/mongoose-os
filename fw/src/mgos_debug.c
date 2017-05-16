@@ -39,6 +39,11 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
   char buf[256];
   int uart_no = -1;
   mgos_lock();
+  if (s_in_debug) {
+    mgos_unlock();
+    return;
+  }
+  s_in_debug = true;
   if (s_uart_suspended <= 0) {
     if (fd == 1) {
       uart_no = s_stdout_uart;
@@ -52,11 +57,11 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
   }
   const struct sys_config *cfg = get_cfg();
   /* Only send LL_DEBUG messages and below, to avoid loops. */
-  if (s_in_debug || cfg == NULL || cs_log_cur_msg_level > LL_DEBUG) {
+  if (cfg == NULL || cs_log_cur_msg_level > LL_DEBUG) {
+    s_in_debug = false;
     mgos_unlock();
     return;
   }
-  s_in_debug = true;
 #if MGOS_ENABLE_DEBUG_UDP
   /* Only send STDERR to UDP. */
   if (fd == 2 && cfg->debug.udp_log_addr != NULL) {
