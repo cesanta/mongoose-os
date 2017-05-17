@@ -4,6 +4,7 @@ MAKEFLAGS += --warn-undefined-variables --silent
 APP ?= mongoose-os
 APP_PLATFORM = esp32
 APP_CFLAGS ?=
+APP_CXXFLAGS ?=
 APP_CONF_SCHEMA ?=
 APP_EXTRA_SRCS ?=
 APP_VERSION ?=
@@ -75,14 +76,17 @@ override _MGOS_PATH = $(MGOS_PATH)
 # command line, so we pass them via a separate set of varoables, which
 # submake then uses to override the values it received.
 export APP_BUILD_ID
+export APP_CFLAGS
+export APP_CXXFLAGS
 export _APP_CONF_SCHEMA = $(APP_CONF_SCHEMA)
 export _APP_EXTRA_SRCS = $(APP_EXTRA_SRCS)
 export _APP_FS_FILES = $(APP_FS_FILES)
-export _FS_FILES = $(FS_FILES)
+export APP_PLATFORM
 export _APP_SOURCES = $(APP_SOURCES)
 export APP_VERSION
 export _BUILD_DIR = $(BUILD_DIR)
 export FFI_SYMBOLS
+export _FS_FILES = $(FS_FILES)
 export _FW_DIR := $(FW_DIR)
 export _GEN_DIR := $(GEN_DIR)
 export MGOS_SRC_PATH
@@ -106,10 +110,10 @@ export SYS_CONF_SCHEMA
 export IPATH
 export VPATH
 
-CFLAGS += -Wall -Werror -DMGOS_APP=\"$(APP)\" -DCS_SPIFFS_ENABLE_VFS -I$(MGOS_PATH) \
-          -DFW_ARCHITECTURE=$(APP_PLATFORM) \
-          -DIRAM='__attribute__((section(".iram1")))' -mtext-section-literals \
-          $(APP_CFLAGS)
+# Flags for other component builds, including SPIFFS, go here.
+CFLAGS += -Wall -Werror -mtext-section-literals \
+          -DCS_SPIFFS_ENABLE_VFS -I$(MGOS_PATH) \
+          -DSPIFFS_ON_PAGE_MOVE_HOOK=esp_spiffs_on_page_move_hook
 
 # Settings for the ESP-IDF build system
 # See docs here:

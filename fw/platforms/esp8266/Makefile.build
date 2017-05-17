@@ -15,6 +15,7 @@ MAKEFLAGS += --warn-undefined-variables
 APP ?= mongoose-os
 APP_PLATFORM = esp8266
 APP_CFLAGS ?=
+APP_CXXFLAGS ?=
 APP_EXTRA_SRCS ?=
 FFI_SYMBOLS ?=
 # List of app source files, globs are supported
@@ -346,10 +347,13 @@ INCDIRS = $(addprefix -I,$(IPATH)) -I$(GEN_DIR)
 LIBDIRS = $(addprefix -L,$(LPATH))
 
 C_CXX_FLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) \
-              -DFW_RF_CAL_DATA_ADDR=$(FW_RF_CAL_DATA_ADDR) \
-              -DFW_ARCHITECTURE=$(APP_PLATFORM) \
-              $(MGOS_CFLAGS) $(APP_CFLAGS) $(CFLAGS_EXTRA) \
-              $(HEAP_LOG_FLAGS) $(MINIZ_FLAGS) $(BOOTLOADER_FLAGS)
+               -DFW_RF_CAL_DATA_ADDR=$(FW_RF_CAL_DATA_ADDR) \
+               -DFW_ARCHITECTURE=$(APP_PLATFORM) \
+               $(MGOS_CFLAGS) $(CFLAGS_EXTRA) \
+               $(HEAP_LOG_FLAGS) $(MINIZ_FLAGS) $(BOOTLOADER_FLAGS)
+
+CFLAGS += $(APP_CFLAGS)
+CXXFLAGS += $(APP_CXXFLAGS)
 
 $(BUILD_DIR) $(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
 	$(vecho) "MKDIR $@"
