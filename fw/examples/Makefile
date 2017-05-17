@@ -4,8 +4,8 @@ REPO_ROOT = $(abspath ../..)
 MJS_PATH = $(REPO_ROOT)/mjs
 
 EXAMPLES_cc3200 = c_aws_shadow c_hello c_http c_network c_mqtt c_uart
-EXAMPLES_esp32 = c_arduino_bme280 c_arduino_dallas_temp c_arduino_dht c_arduino_onewire c_arduino_ssd1306 c_aws_shadow c_hello c_hello_arduino c_http c_mqtt c_rpc c_uart c_websocket
-EXAMPLES_esp8266 = c_arduino_bme280 c_arduino_dallas_temp c_arduino_dht c_arduino_onewire c_arduino_ssd1306 c_arduino_wire c_aws_shadow c_heater c_hello c_hello_arduino c_http c_mcast c_mqtt c_network c_uart c_websocket mjs_arduino_bme280 mjs_arduino_dallas_temp mjs_arduino_dht
+EXAMPLES_esp32 = c_arduino_bme280 c_arduino_dallas_temp c_arduino_dht c_arduino_onewire c_arduino_ssd1306 c_aws_shadow c_hello c_hello_arduino c_http c_mqtt c_rpc c_uart c_websocket mjs_arduino_onewire
+EXAMPLES_esp8266 = c_arduino_bme280 c_arduino_dallas_temp c_arduino_dht c_arduino_onewire c_arduino_ssd1306 c_arduino_wire c_aws_shadow c_heater c_hello c_hello_arduino c_http c_mcast c_mqtt c_network c_uart c_websocket mjs_arduino_bme280 mjs_arduino_dallas_temp mjs_arduino_dht mjs_arduino_onewire
 EXAMPLES_pic32 =
 EXAMPLES_stm32 =
 
