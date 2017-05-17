@@ -428,6 +428,20 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		httpReply(w, true, err)
 	})
 
+	http.HandleFunc("/update", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		result := true
+
+		err := update(ctx, devConn)
+		if err != nil {
+			err = errors.Trace(err)
+			result = false
+		}
+
+		httpReply(w, result, err)
+	})
+
 	if wwwRoot != "" {
 		http.Handle("/", http.FileServer(http.Dir(wwwRoot)))
 	} else {

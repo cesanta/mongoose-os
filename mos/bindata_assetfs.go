@@ -3874,7 +3874,7 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
         <small class="text-muted">&copy; <a href="https://mongoose-os.com">Cesanta 2017</a>
           | Version: <span id="version"></span>
           <a id="version-update" class="hidden btn btn-xs btn-danger"
-            href="https://mongoose-os.com/software.html">Out of date! Click to update...</a>
+            href="#">Out of date! Click to update...</a>
           | <a href="/infolog" target="_blank">show device logs</a>
       </small>
 
@@ -3921,7 +3921,7 @@ func web_rootIndexHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/index.html", size: 16644, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/index.html", size: 16608, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4905,6 +4905,25 @@ var _web_rootJsWizardJs = []byte(`(function($) {
       }
     });
   });
+
+  $(document)
+    .on('click', '#version-update', function(ev) {
+      if (confirm("Update mos tool?")) {
+        $(ev.target).addClass('spinner').prop('disabled', true);
+        $.ajax({url: '/update'})
+          .done(function() {
+            $(ev.target).removeClass('spinner')
+            new PNotify({title: 'Update successful. Please restart mos tool.', type: 'success'});
+          })
+          .fail(function(err) {
+            $(ev.target).removeClass('spinner')
+            var text = err.responseJSON ? err.responseJSON.error : err.responseText;
+            if (text) {
+              new PNotify({title: 'Error', text: text, type: 'error'});
+            }
+          });
+      }
+    });
 })(jQuery);
 `)
 
@@ -4918,7 +4937,7 @@ func web_rootJsWizardJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 8741, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/wizard.js", size: 9439, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
