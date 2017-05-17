@@ -20,6 +20,7 @@ import (
 	"unicode"
 
 	"cesanta.com/common/go/multierror"
+	"cesanta.com/common/go/ourio"
 	"cesanta.com/mos/build"
 	"cesanta.com/mos/build/archive"
 	"cesanta.com/mos/build/gitutils"
@@ -57,6 +58,8 @@ const (
 
 	minSkeletonVersion = "2017-03-17"
 	maxSkeletonVersion = "2017-05-16"
+
+	localLibsDir = "local_libs"
 )
 
 func init() {
@@ -67,14 +70,21 @@ func init() {
 	// deprecated since 2017/05/11
 	flag.StringSliceVar(&buildVarsSlice, "build_var", []string{}, "deprecated, use --build-var")
 
-	// TODO(dfrank): configurable
+	flag.StringVar(&libsDir, "libs-dir", "~/.mos/libs", "Directory to store libraries into")
+	flag.StringVar(&modulesDir, "modules-dir", "~/.mos/modules", "Directory to store modules into")
+
 	usr, err := userpkg.Current()
 	if err != nil {
 		panic(err)
 	}
 
-	libsDir = filepath.Join(usr.HomeDir, ".mos", "libs")
-	modulesDir = filepath.Join(usr.HomeDir, ".mos", "modules")
+	// Replace tilda with the actual path to home directory
+	if libsDir[0] == '~' {
+		libsDir = usr.HomeDir + libsDir[1:]
+	}
+	if modulesDir[0] == '~' {
+		modulesDir = usr.HomeDir + modulesDir[1:]
+	}
 }
 
 func doBuild(ctx context.Context, devConn *dev.DevConn) error {
@@ -166,7 +176,7 @@ func buildLocal(ctx context.Context) (err error) {
 		return errors.Trace(err)
 	}
 
-	manifest, err := readManifestWithLibs(appDir, nil, customModuleLocations, logFile, mVars, libsDir)
+	manifest, err := readManifestWithLibs(appDir, nil, logFile, libsDir)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -595,14 +605,79 @@ func buildRemote() error {
 		return errors.Trace(err)
 	}
 
-	manifest, err := readManifest(appDir)
+	// We'll need to amend the sources significantly with all libs, so copy them
+	// to temporary dir first
+	tmpCodeDir, err := ioutil.TempDir("", "tmp_mos_src_")
+	if err != nil {
+		return errors.Trace(err)
+	}
+	defer os.RemoveAll(tmpCodeDir)
+
+	// Since we're going to copy sources to the temp dir, make sure that nobody
+	// else can read them
+	if err := os.Chmod(tmpCodeDir, 0700); err != nil {
+		return errors.Trace(err)
+	}
+
+	if err := ourio.CopyDir(appDir, tmpCodeDir, nil); err != nil {
+		return errors.Trace(err)
+	}
+
+	// Create directory for libs which are going to be uploaded to the remote builder
+	userLibsDir := filepath.Join(tmpCodeDir, localLibsDir)
+	err = os.MkdirAll(userLibsDir, 0777)
 	if err != nil {
 		return errors.Trace(err)
 	}
 
+	// Get manifest which includes stuff from all libs
+	manifest, err := readManifestWithLibs(tmpCodeDir, nil, os.Stdout, userLibsDir)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	// Override arch with the value given in command line
+	if *arch != "" {
+		manifest.Arch = *arch
+	}
+	manifest.Arch = strings.ToLower(manifest.Arch)
+
+	// Amend build vars with the values given in command line
+	if len(buildVarsSlice) > 0 {
+		if manifest.BuildVars == nil {
+			manifest.BuildVars = make(map[string]string)
+		}
+		for _, v := range buildVarsSlice {
+			parts := strings.SplitN(v, ":", 2)
+			manifest.BuildVars[parts[0]] = parts[1]
+		}
+	}
+
+	manifest.Name, err = fixupAppName(manifest.Name)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	// Write manifest yaml
+	manifestData, err := yaml.Marshal(&manifest)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	err = ioutil.WriteFile(
+		filepath.Join(tmpCodeDir, build.ManifestFileName),
+		manifestData,
+		0666,
+	)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	// Craft file whitelist for zipping
 	whitelist := map[string]bool{
 		build.ManifestFileName: true,
-		".": true,
+		localLibsDir:           true,
+		".":                    true,
 	}
 	for _, v := range manifest.Sources {
 		whitelist[v] = true
@@ -616,20 +691,8 @@ func buildRemote() error {
 
 	transformers := make(map[string]fileTransformer)
 
-	// We need to preprocess mos.yml (see setManifestArch())
-	transformers[build.ManifestFileName] = func(r io.ReadCloser) (io.ReadCloser, error) {
-		var buildVars map[string]string
-		if len(buildVarsSlice) > 0 {
-			buildVars = make(map[string]string)
-			for _, v := range buildVarsSlice {
-				parts := strings.SplitN(v, ":", 2)
-				buildVars[parts[0]] = parts[1]
-			}
-		}
-		return setManifestArch(r, *arch, buildVars)
-	}
-
-	// create a zip out of the current dir
+	// create a zip out of the code dir
+	os.Chdir(tmpCodeDir)
 	src, err := zipUp(".", whitelist, transformers)
 	if err != nil {
 		return errors.Trace(err)
@@ -637,6 +700,7 @@ func buildRemote() error {
 	if glog.V(2) {
 		glog.V(2).Infof("zip:", hex.Dump(src))
 	}
+	os.Chdir(appDir)
 
 	// prepare multipart body
 	body := &bytes.Buffer{}
@@ -732,6 +796,7 @@ func zipUp(
 			fileForwardSlash = strings.Replace(file, string(os.PathSeparator), "/", -1)
 		}
 		parts := strings.Split(file, string(os.PathSeparator))
+
 		if _, ok := whitelist[parts[0]]; !ok {
 			glog.Infof("ignoring %q", file)
 			if info.IsDir() {
@@ -801,52 +866,6 @@ func fixupAppName(appName string) (string, error) {
 	return appName, nil
 }
 
-// setManifestArch takes manifest data, replaces architecture with the given
-// value if it's not empty, sets app name to the current directory name if
-// original value is empty, and returns resulting manifest data
-func setManifestArch(
-	r io.ReadCloser, arch string, buildVars map[string]string,
-) (io.ReadCloser, error) {
-	manifestData, err := ioutil.ReadAll(r)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	var manifest build.FWAppManifest
-	if err := yaml.Unmarshal(manifestData, &manifest); err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	if arch != "" {
-		manifest.Arch = arch
-	}
-	manifest.Arch = strings.ToLower(manifest.Arch)
-
-	if buildVars != nil {
-		if manifest.BuildVars == nil {
-			manifest.BuildVars = make(map[string]string)
-		}
-		for k, v := range buildVars {
-			manifest.BuildVars[k] = v
-		}
-	}
-
-	manifest.Name, err = fixupAppName(manifest.Name)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	manifestData, err = yaml.Marshal(&manifest)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	return struct {
-		io.Reader
-		io.Closer
-	}{bytes.NewReader(manifestData), r}, nil
-}
-
 func identityTransformer(r io.ReadCloser) (io.ReadCloser, error) {
 	return r, nil
 }
@@ -890,8 +909,8 @@ func cleanupModuleName(name string) string {
 }
 
 func readManifestWithLibs(
-	dir string, visitedDirs []string, customModuleLocations map[string]string, logFile io.Writer,
-	mVars *manifestVars, userLibsDir string,
+	dir string, visitedDirs []string, logFile io.Writer,
+	userLibsDir string,
 ) (*build.FWAppManifest, error) {
 	for _, v := range visitedDirs {
 		if dir == v {
@@ -920,21 +939,34 @@ func readManifestWithLibs(
 
 		// Note: we always call PrepareLocalDir for libsDir, but then,
 		// if userLibsDir is different, will need to copy it to the new location
-		localDir, err := m.PrepareLocalDir(libsDir, os.Stdout, true)
+		libDirAbs, err := m.PrepareLocalDir(libsDir, os.Stdout, true)
+		libDirForManifest := libDirAbs
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
 
+		// If libs should be placed in some specific dir, copy the current lib
+		// there (it will also affect the libs path used in resulting manifest)
 		if userLibsDir != libsDir {
-			// TODO(dfrank): copy everything from libsDir to userLibsDir
+			userLibsDirRel, err := filepath.Rel(dir, userLibsDir)
+			if err != nil {
+				return nil, errors.Trace(err)
+			}
+
+			userLocalDir := filepath.Join(userLibsDir, filepath.Base(libDirAbs))
+			if err := ourio.CopyDir(libDirAbs, userLocalDir, []string{".git"}); err != nil {
+				return nil, errors.Trace(err)
+			}
+			libDirAbs = filepath.Join(userLibsDir, filepath.Base(libDirAbs))
+			libDirForManifest = filepath.Join(userLibsDirRel, filepath.Base(libDirAbs))
 		}
 
-		os.Chdir(localDir)
+		os.Chdir(libDirAbs)
 
-		reportf("Prepared local dir: %q", localDir)
+		reportf("Prepared local dir: %q", libDirAbs)
 
 		libManifest, err := readManifestWithLibs(
-			localDir, append(visitedDirs, dir), customModuleLocations, logFile, mVars, userLibsDir,
+			libDirAbs, append(visitedDirs, dir), logFile, userLibsDir,
 		)
 		if err != nil {
 			return nil, errors.Trace(err)
@@ -945,7 +977,7 @@ func readManifestWithLibs(
 			// If the path is not absolute, and does not start with the variable,
 			// prepend it with the library's path
 			if s[0] != '$' && !filepath.IsAbs(s) {
-				s = filepath.Join(localDir, s)
+				s = filepath.Join(libDirForManifest, s)
 			}
 			manifest.Sources = append(manifest.Sources, s)
 		}
@@ -954,7 +986,7 @@ func readManifestWithLibs(
 			// If the path is not absolute, and does not start with the variable,
 			// prepend it with the library's path
 			if s[0] != '$' && !filepath.IsAbs(s) {
-				s = filepath.Join(localDir, s)
+				s = filepath.Join(libDirForManifest, s)
 			}
 			manifest.Filesystem = append(manifest.Filesystem, s)
 		}
@@ -963,17 +995,17 @@ func readManifestWithLibs(
 			manifest.Modules = append(manifest.Modules, m)
 		}
 
-		for k, v := range libManifest.BuildVars {
+		for k, s := range libManifest.BuildVars {
 			switch k {
 			case "APP_CONF_SCHEMA":
-				bv, err := filepath.Abs(v)
-				if err != nil {
-					return nil, errors.Trace(nil)
+				if s[0] != '$' && !filepath.IsAbs(s) {
+					s = filepath.Join(libDirForManifest, s)
 				}
-				manifest.BuildVars[k] += " " + bv
+
+				manifest.BuildVars[k] += " " + s
 			default:
 				if _, ok := manifest.BuildVars[k]; !ok {
-					manifest.BuildVars[k] = v
+					manifest.BuildVars[k] = s
 				}
 			}
 		}
