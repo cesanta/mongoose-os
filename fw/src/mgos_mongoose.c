@@ -188,6 +188,7 @@ struct mg_connection *mgos_connect_http_ssl(const char *addr,
                                             mg_event_handler_t f, void *ud,
                                             const char *cert,
                                             const char *ca_cert) {
+  if (ca_cert != NULL && strlen(ca_cert) == 0) ca_cert = NULL;
   struct mg_connection *c = mgos_connect_ssl(addr, f, ud, cert, ca_cert);
   if (c != NULL) mg_set_protocol_http_websocket(c);
   return c;

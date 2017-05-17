@@ -89,7 +89,7 @@ let HTTP = {
     };
     obj.f = f;
     if (obj.u.ssl) {
-      this._cs(obj.u.addr, f, obj, '', '');
+      this._cs(obj.u.addr, f, obj, obj.cert || '', obj.ca_cert || 'ca.pem');
     } else {
       this._c(obj.u.addr, f, obj);
     }
