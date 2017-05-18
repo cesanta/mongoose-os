@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-	userpkg "os/user"
 	"path"
 	"path/filepath"
 	"runtime"
@@ -73,17 +72,21 @@ func init() {
 	flag.StringVar(&libsDir, "libs-dir", "~/.mos/libs", "Directory to store libraries into")
 	flag.StringVar(&modulesDir, "modules-dir", "~/.mos/modules", "Directory to store modules into")
 
-	usr, err := userpkg.Current()
-	if err != nil {
-		panic(err)
+	// Unfortunately user.Current() doesn't play nicely with static build, so
+	// we have to get home directory from the environment
+
+	homeEnvName := "HOME"
+	if runtime.GOOS == "windows" {
+		homeEnvName = "USERPROFILE"
 	}
 
+	homeDir := os.Getenv(homeEnvName)
 	// Replace tilda with the actual path to home directory
 	if libsDir[0] == '~' {
-		libsDir = usr.HomeDir + libsDir[1:]
+		libsDir = homeDir + libsDir[1:]
 	}
 	if modulesDir[0] == '~' {
-		modulesDir = usr.HomeDir + modulesDir[1:]
+		modulesDir = homeDir + modulesDir[1:]
 	}
 }
 
@@ -360,14 +363,21 @@ func buildLocal(ctx context.Context) (err error) {
 		// OSes doesn't play nice with unprivileged user.
 		//
 		// On other OSes, run it as the current user.
-		if runtime.GOOS != "windows" && runtime.GOOS != "darwin" {
-			curUser, err := userpkg.Current()
-			if err != nil {
+		if runtime.GOOS == "linux" {
+			// Unfortunately, user.Current() sometimes panics when the mos binary is
+			// built statically, so we have to do the trick with "id -u". Since this
+			// code runs on Linux only, this workaround does the trick.
+			var data bytes.Buffer
+			cmd := exec.Command("id", "-u")
+			cmd.Stdout = &data
+			if err := cmd.Run(); err != nil {
 				return errors.Trace(err)
 			}
+			sdata := data.String()
+			userID := sdata[:len(sdata)-1]
 
 			dockerArgs = append(
-				dockerArgs, "--user", fmt.Sprintf("%s:%s", curUser.Uid, curUser.Uid),
+				dockerArgs, "--user", fmt.Sprintf("%s:%s", userID, userID),
 			)
 		}
 
