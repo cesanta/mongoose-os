@@ -176,7 +176,7 @@ func buildLocal(ctx context.Context) (err error) {
 		return errors.Trace(err)
 	}
 
-	manifest, err := readManifestWithLibs(appDir, nil, logFile, libsDir)
+	manifest, err := readManifestWithLibs(appDir, nil, logFile, libsDir, false /* skip clean */)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -631,7 +631,7 @@ func buildRemote() error {
 	}
 
 	// Get manifest which includes stuff from all libs
-	manifest, err := readManifestWithLibs(tmpCodeDir, nil, os.Stdout, userLibsDir)
+	manifest, err := readManifestWithLibs(tmpCodeDir, nil, os.Stdout, userLibsDir, true /* skip clean */)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -910,7 +910,7 @@ func cleanupModuleName(name string) string {
 
 func readManifestWithLibs(
 	dir string, visitedDirs []string, logFile io.Writer,
-	userLibsDir string,
+	userLibsDir string, skipClean bool,
 ) (*build.FWAppManifest, error) {
 	for _, v := range visitedDirs {
 		if dir == v {
@@ -929,6 +929,7 @@ func readManifestWithLibs(
 	}
 
 	// Prepare all libs {{{
+	var cleanLibs []build.SWModule
 	for _, m := range manifest.Libs {
 		name, err := m.GetName()
 		if err != nil {
@@ -936,6 +937,19 @@ func readManifestWithLibs(
 		}
 
 		reportf("Handling lib %q...", name)
+
+		if skipClean {
+			isClean, err := m.IsClean(libsDir)
+			if err != nil {
+				return nil, errors.Trace(err)
+			}
+
+			if isClean {
+				reportf("Clean, skipping (will be handled remotely)")
+				cleanLibs = append(cleanLibs, m)
+				continue
+			}
+		}
 
 		// Note: we always call PrepareLocalDir for libsDir, but then,
 		// if userLibsDir is different, will need to copy it to the new location
@@ -966,7 +980,7 @@ func readManifestWithLibs(
 		reportf("Prepared local dir: %q", libDirAbs)
 
 		libManifest, err := readManifestWithLibs(
-			libDirAbs, append(visitedDirs, dir), logFile, userLibsDir,
+			libDirAbs, append(visitedDirs, dir), logFile, userLibsDir, skipClean,
 		)
 		if err != nil {
 			return nil, errors.Trace(err)
@@ -1015,7 +1029,7 @@ func readManifestWithLibs(
 	}
 	// }}}
 
-	manifest.Libs = nil
+	manifest.Libs = cleanLibs
 
 	return manifest, nil
 }

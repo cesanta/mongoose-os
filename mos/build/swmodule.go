@@ -32,6 +32,35 @@ const (
 	SWModuleTypeGit
 )
 
+// IsClean returns whether the local library repo is clean. Non-existing
+// dir is considered clean.
+func (m *SWModule) IsClean(libsDir string) (bool, error) {
+	name, err := m.GetName()
+	if err != nil {
+		return false, errors.Trace(err)
+	}
+
+	lp := filepath.Join(libsDir, getGitDirName(name, m.Version))
+
+	if _, err := os.Stat(lp); err != nil {
+		if os.IsNotExist(err) {
+			// Dir does not exist: it means it's "clean"
+			return true, nil
+		}
+
+		// Some error other than non-existing dir
+		return false, errors.Trace(err)
+	}
+
+	// Dir exists, check if it's clean
+	isClean, err := gitutils.IsClean(lp)
+	if err != nil {
+		return false, errors.Trace(err)
+	}
+
+	return isClean, nil
+}
+
 // PrepareLocalDir prepares local directory, if that preparation is needed
 // in the first place, and returns the path to it
 func (m *SWModule) PrepareLocalDir(
