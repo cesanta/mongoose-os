@@ -8,10 +8,8 @@
 #include <stdlib.h>
 
 #include "esp_attr.h"
-#include "esp_intr_alloc.h"
 #include "driver/gpio.h"
 #include "driver/periph_ctrl.h"
-#include "driver/uart.h"
 #include "soc/gpio_sig_map.h"
 #include "soc/i2c_reg.h"
 #include "soc/i2c_struct.h"
@@ -32,6 +30,10 @@
 
 #define I2C_TX_FIFO_LEN 32
 #define I2C_RX_FIFO_LEN 32
+
+/* We use AHB addr to avoid https://github.com/espressif/esp-idf/issues/595 */
+#define ESP32_I2C0_AHB_BASE 0x60013000
+#define ESP32_I2C1_AHB_BASE 0x60027000
 
 struct mgos_i2c {
   i2c_dev_t *dev;
@@ -293,14 +295,14 @@ struct mgos_i2c *mgos_i2c_create(const struct sys_config_i2c *cfg) {
   i2c_dev_t *dev;
   uint32_t scl_in_sig, scl_out_sig, sda_in_sig, sda_out_sig;
   if (cfg->unit_no == 0) {
-    dev = (i2c_dev_t *) 0x60013000; /* AHB address of &I2C0 */
+    dev = (i2c_dev_t *) ESP32_I2C0_AHB_BASE;
     periph_module_enable(PERIPH_I2C0_MODULE);
     sda_in_sig = I2CEXT0_SDA_IN_IDX;
     sda_out_sig = I2CEXT0_SDA_OUT_IDX;
     scl_in_sig = I2CEXT0_SCL_IN_IDX;
     scl_out_sig = I2CEXT0_SCL_OUT_IDX;
   } else {
-    dev = (i2c_dev_t *) 0x60027000; /* AHB address of &I2C1 */
+    dev = (i2c_dev_t *) ESP32_I2C1_AHB_BASE;
     periph_module_enable(PERIPH_I2C1_MODULE);
     sda_in_sig = I2CEXT1_SDA_IN_IDX;
     sda_out_sig = I2CEXT1_SDA_OUT_IDX;
@@ -342,7 +344,7 @@ struct mgos_i2c *mgos_i2c_create(const struct sys_config_i2c *cfg) {
 
   dev->timeout.tout = 20000;  // I2C_FIFO_LEN * 9 * 2 * period + 5 * period;
 
-  LOG(LL_INFO, ("I2C%d initialized (SDA: %d, SCL: %d, freq: %d)", cfg->unit_no,
+  LOG(LL_INFO, ("I2C%d init ok (SDA: %d, SCL: %d, freq: %d)", cfg->unit_no,
                 cfg->sda_gpio, cfg->scl_gpio, c->freq));
 
   return c;

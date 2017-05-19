@@ -5,8 +5,6 @@
  * SPI implementation using GPIO (bit-banging).
  */
 
-#if MGOS_ENABLE_SPI && MGOS_ENABLE_SPI_GPIO
-
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -235,5 +233,3 @@ bool mgos_spi_txn_hd(struct mgos_spi *c, const void *tx_data, size_t tx_len,
 void mgos_spi_close(struct mgos_spi *spi) {
   free(spi);
 }
-
-#endif /* MGOS_ENABLE_SPI && MGOS_ENABLE_SPI_GPIO */

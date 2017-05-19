@@ -5,8 +5,6 @@
  * I2C implementation using GPIO (bit-banging).
  */
 
-#if MGOS_ENABLE_I2C && MGOS_ENABLE_I2C_GPIO
-
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -284,5 +282,3 @@ void mgos_i2c_close(struct mgos_i2c *c) {
   if (c->started) mgos_i2c_stop(c);
   free(c);
 }
-
-#endif /* MGOS_ENABLE_I2C && MGOS_ENABLE_I2C_GPIO */
