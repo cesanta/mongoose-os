@@ -137,7 +137,7 @@ ifeq "$(MGOS_ENABLE_RPC_CHANNEL_LOOPBACK)" "1"
   MGOS_SRCS += mg_rpc_channel_loopback.c
   MGOS_FEATURES += -DMGOS_ENABLE_RPC_CHANNEL_LOOPBACK
 endif
-ifeq "$(MGOS_ENABLE_RPC_CHANNEL_MQTT)" "1"
+ifeq "$(MGOS_ENABLE_MQTT)$(MGOS_ENABLE_RPC_CHANNEL_MQTT)" "11"
   MGOS_SRCS += mgos_rpc_channel_mqtt.c
   MGOS_FEATURES += -DMGOS_ENABLE_RPC_CHANNEL_MQTT
   SYS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_rpc_channel_mqtt_config.yaml
@@ -165,7 +165,7 @@ ifeq "$(MGOS_ENABLE_DNS_SD)" "1"
   SYS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_dns_sd_config.yaml
 endif
 
-ifeq "$(MGOS_ENABLE_GCP)" "1"
+ifeq "$(MGOS_ENABLE_MQTT)$(MGOS_ENABLE_GCP)" "11"
   MGOS_SRCS += mgos_gcp.c
   MGOS_FEATURES += -DMGOS_ENABLE_GCP
   SYS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_gcp_config.yaml

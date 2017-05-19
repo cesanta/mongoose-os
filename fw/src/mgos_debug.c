@@ -66,13 +66,11 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
   /* Only send STDERR to UDP. */
   if (fd == 2 && cfg->debug.udp_log_addr != NULL) {
     static uint32_t s_seq = 0;
-    if (mgos_mqtt_num_unsent_bytes() < MGOS_MQTT_LOG_PUSHBACK_THRESHOLD) {
-      int n = snprintf(buf, sizeof(buf), "%s %u %.3lf %d|",
-                       (cfg->device.id ? cfg->device.id : "-"), s_seq,
-                       mg_time(), fd);
-      if (n > 0) {
-        mgos_debug_udp_send(mg_mk_str_n(buf, n), mg_mk_str_n(data, len));
-      }
+    int n =
+        snprintf(buf, sizeof(buf), "%s %u %.3lf %d|",
+                 (cfg->device.id ? cfg->device.id : "-"), s_seq, mg_time(), fd);
+    if (n > 0) {
+      mgos_debug_udp_send(mg_mk_str_n(buf, n), mg_mk_str_n(data, len));
     }
     s_seq++;
   }
@@ -80,7 +78,8 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
 #if MGOS_ENABLE_MQTT
   const char *topic = (fd == 1 ? cfg->debug.stdout_topic
                                : fd == 2 ? cfg->debug.stderr_topic : NULL);
-  if (topic != NULL) {
+  if (topic != NULL &&
+      mgos_mqtt_num_unsent_bytes() < MGOS_MQTT_LOG_PUSHBACK_THRESHOLD) {
     static uint32_t s_seq = 0;
     char *msg = buf;
     int msg_len = mg_asprintf(&msg, sizeof(buf), "%s %u %.3lf %d|%.*s",
