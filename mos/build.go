@@ -1033,9 +1033,8 @@ func readManifestWithLibs(
 		return nil, time.Time{}, errors.Trace(err)
 	}
 
-	customLibLocations := getCustomLibLocations()
-
 	// Prepare all libs {{{
+	customLibLocations := getCustomLibLocations()
 	var cleanLibs []build.SWModule
 	for _, m := range manifest.Libs {
 		name, err := m.GetName()

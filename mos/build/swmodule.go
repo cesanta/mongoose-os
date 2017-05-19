@@ -28,7 +28,8 @@ type SWModule struct {
 type SWModuleType int
 
 const (
-	SWModuleTypeLocal SWModuleType = iota
+	SWModuleTypeInvalid SWModuleType = iota
+	SWModuleTypeLocal
 	SWModuleTypeGit
 )
 
@@ -40,25 +41,34 @@ func (m *SWModule) IsClean(libsDir string) (bool, error) {
 		return false, errors.Trace(err)
 	}
 
-	lp := filepath.Join(libsDir, getGitDirName(name, m.Version))
+	switch m.GetType() {
+	case SWModuleTypeGit:
+		lp := filepath.Join(libsDir, getGitDirName(name, m.Version))
 
-	if _, err := os.Stat(lp); err != nil {
-		if os.IsNotExist(err) {
-			// Dir does not exist: it means it's "clean"
-			return true, nil
+		if _, err := os.Stat(lp); err != nil {
+			if os.IsNotExist(err) {
+				// Dir does not exist: it means it's "clean"
+				return true, nil
+			}
+
+			// Some error other than non-existing dir
+			return false, errors.Trace(err)
 		}
 
-		// Some error other than non-existing dir
-		return false, errors.Trace(err)
+		// Dir exists, check if it's clean
+		isClean, err := gitutils.IsClean(lp)
+		if err != nil {
+			return false, errors.Trace(err)
+		}
+		return isClean, nil
+	case SWModuleTypeLocal:
+		// Local libs can't be "clean", because there's no way for remote builder
+		// to get them on its own
+		return false, nil
+	default:
+		return false, errors.Errorf("wrong type: %v", m.GetType())
 	}
 
-	// Dir exists, check if it's clean
-	isClean, err := gitutils.IsClean(lp)
-	if err != nil {
-		return false, errors.Trace(err)
-	}
-
-	return isClean, nil
 }
 
 // PrepareLocalDir prepares local directory, if that preparation is needed
@@ -84,7 +94,13 @@ func (m *SWModule) PrepareLocalDir(
 			m.localPath = lp
 
 		case SWModuleTypeLocal:
-			m.localPath = m.Origin
+			if m.Origin != "" {
+				m.localPath = m.Origin
+			} else if m.Name != "" {
+				m.localPath = filepath.Join(libsDir, m.Name)
+			} else {
+				return "", errors.Errorf("neither name nor origin is specified")
+			}
 		}
 	}
 
@@ -117,6 +133,13 @@ func (m *SWModule) GetName() (string, error) {
 		}
 
 		return parts[len(parts)-1], nil
+	case SWModuleTypeLocal:
+		parts := strings.Split(m.Origin, "/")
+		if len(parts) == 0 {
+			return "", errors.Errorf("path is empty in the origin %q", m.Origin)
+		}
+
+		return parts[len(parts)-1], nil
 	default:
 		return "", errors.Errorf("name is not specified, and the lib type is unknown")
 	}
@@ -125,15 +148,24 @@ func (m *SWModule) GetName() (string, error) {
 func (m *SWModule) GetType() SWModuleType {
 	stype := m.Type
 
-	if stype == "" {
-		u, err := url.Parse(m.Origin)
-		if err != nil {
-			return SWModuleTypeLocal
-		}
+	if m.Origin == "" && m.Name == "" {
+		return SWModuleTypeInvalid
+	}
 
-		switch u.Host {
-		case "github.com":
-			stype = "git"
+	if stype == "" {
+		if m.Origin != "" {
+			u, err := url.Parse(m.Origin)
+			if err != nil {
+				return SWModuleTypeLocal
+			}
+
+			switch u.Host {
+			case "github.com":
+				stype = "git"
+			}
+		} else {
+			// Name is already checked to be not empty
+			return SWModuleTypeLocal
 		}
 	}
 
