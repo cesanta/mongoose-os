@@ -197,7 +197,11 @@ uint32_t mg_lwip_get_poll_delay_ms(struct mg_mgr *mgr) {
       }
       num_timers++;
     }
-    if (nc->send_mbuf.len > 0) {
+    if (nc->send_mbuf.len > 0
+#if MG_ENABLE_SSL
+        || (nc->flags & MG_F_WANT_WRITE)
+#endif
+            ) {
       int can_send = 0;
       /* We have stuff to send, but can we? */
       if (nc->flags & MG_F_UDP) {

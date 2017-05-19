@@ -158,7 +158,7 @@ static void IRAM_ATTR mgos_mg_poll_cb(void *arg) {
     mongoose_poll(0);
     timeout_ms = mg_lwip_get_poll_delay_ms(mgos_get_mgr());
     portENTER_CRITICAL(&s_poll_spinlock);
-    if (timeout_ms > 1000) timeout_ms = 1000;
+    if (timeout_ms > 100) timeout_ms = 100;
     timeout_ticks = timeout_ms / portTICK_PERIOD_MS;
     n++;
   } while (n < 10 && (s_mg_want_poll || timeout_ticks == 0));

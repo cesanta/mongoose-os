@@ -12,7 +12,7 @@
 #include <lwip/tcp.h>
 #include <lwip/tcpip.h>
 #if LWIP_VERSION >= 0x01050000
-#include <lwip/priv/tcpip_priv.h> /* For tcp_seg */
+#include <lwip/priv/tcp_priv.h> /* For tcp_seg */
 #else
 #include <lwip/tcp_impl.h>
 #endif
@@ -215,10 +215,10 @@ static void mg_lwip_handle_recv_tcp(struct mg_connection *nc) {
 static err_t mg_lwip_tcp_sent_cb(void *arg, struct tcp_pcb *tpcb,
                                  u16_t num_sent) {
   struct mg_connection *nc = (struct mg_connection *) arg;
-  DBG(("%p %p %u", nc, tpcb, num_sent));
+  DBG(("%p %p %u %u %u", nc, tpcb, num_sent, tpcb->unsent, tpcb->unacked));
   if (nc == NULL) return ERR_OK;
   if ((nc->flags & MG_F_SEND_AND_CLOSE) && !(nc->flags & MG_F_WANT_WRITE) &&
-      nc->send_mbuf.len == 0 && tpcb->unacked == 0) {
+      nc->send_mbuf.len == 0 && tpcb->unsent == 0 && tpcb->unacked == 0) {
     mg_lwip_post_signal(MG_SIG_CLOSE_CONN, nc);
   }
   return ERR_OK;
@@ -486,7 +486,8 @@ static void mg_lwip_tcp_write_tcpip(void *arg) {
   struct mg_connection *nc = ctx->nc;
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
   struct tcp_pcb *tpcb = cs->pcb.tcp;
-  uint16_t len = MIN(tpcb->mss, MIN(ctx->len, tpcb->snd_buf));
+  size_t len = MIN(tpcb->mss, MIN(ctx->len, tpcb->snd_buf));
+  size_t unsent, unacked;
   if (len == 0) {
     DBG(("%p no buf avail %u %u %u %p %p", tpcb, tpcb->acked, tpcb->snd_buf,
          tpcb->snd_queuelen, tpcb->unsent, tpcb->unacked));
@@ -494,6 +495,8 @@ static void mg_lwip_tcp_write_tcpip(void *arg) {
     ctx->ret = 0;
     return;
   }
+  unsent = (tpcb->unsent != NULL ? tpcb->unsent->len : 0);
+  unacked = (tpcb->unacked != NULL ? tpcb->unacked->len : 0);
 /*
  * On ESP8266 we only allow one TCP segment in flight at any given time.
  * This may increase latency and reduce efficiency of tcp windowing,
@@ -501,16 +504,16 @@ static void mg_lwip_tcp_write_tcpip(void *arg) {
  * reduce footprint.
  */
 #if CS_PLATFORM == CS_P_ESP8266
-  if (tpcb->unacked != NULL) {
+  if (unacked > 0) {
     ctx->ret = 0;
     return;
   }
-  if (tpcb->unsent != NULL) {
-    len = MIN(len, (TCP_MSS - tpcb->unsent->len));
-  }
+  len = MIN(len, (TCP_MSS - unsent));
 #endif
   cs->err = tcp_write(tpcb, ctx->data, len, TCP_WRITE_FLAG_COPY);
-  DBG(("%p tcp_write %u = %d", tpcb, len, cs->err));
+  unsent = (tpcb->unsent != NULL ? tpcb->unsent->len : 0);
+  unacked = (tpcb->unacked != NULL ? tpcb->unacked->len : 0);
+  DBG(("%p tcp_write %u = %d, %u %u", tpcb, len, cs->err, unsent, unacked));
   if (cs->err != ERR_OK) {
     /*
      * We ignore ERR_MEM because memory will be freed up when the data is sent

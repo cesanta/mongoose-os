@@ -81,11 +81,9 @@ void mg_lwip_ssl_send(struct mg_connection *nc) {
     len = MIN(MG_LWIP_SSL_IO_SIZE, nc->send_mbuf.len);
   }
   int ret = mg_ssl_if_write(nc, nc->send_mbuf.buf, len);
-  DBG(("%p SSL_write %u = %d, %d", nc, len, ret));
+  DBG(("%p SSL_write %u = %d", nc, len, ret));
   if (ret > 0) {
     mg_if_sent_cb(nc, ret);
-    mbuf_remove(&nc->send_mbuf, ret);
-    mbuf_trim(&nc->send_mbuf);
     cs->last_ssl_write_size = 0;
   } else if (ret < 0) {
     /* This is tricky. We must remember the exact data we were sending to retry
@@ -170,8 +168,8 @@ int ssl_socket_send(void *ctx, const unsigned char *buf, size_t len) {
   struct mg_connection *nc = (struct mg_connection *) ctx;
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
   int ret = mg_lwip_tcp_write(cs->nc, buf, len);
-  LOG(LL_DEBUG, ("%p %d -> %d", nc, len, ret));
   if (ret == 0) ret = MBEDTLS_ERR_SSL_WANT_WRITE;
+  LOG(LL_DEBUG, ("%p %d -> %d", nc, len, ret));
   return ret;
 }
 
