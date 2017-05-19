@@ -30,6 +30,7 @@ var (
 	wsClients    = make(map[*websocket.Conn]int)
 	wsClientsMtx = sync.Mutex{}
 	wwwRoot      = ""
+	startBrowser = true
 )
 
 type wsmessage struct {
@@ -111,6 +112,9 @@ func httpReply(w http.ResponseWriter, result interface{}, err error) {
 func init() {
 	flag.StringVar(&wwwRoot, "web-root", "", "UI Web root to use instead of built-in")
 	hiddenFlags = append(hiddenFlags, "web-root")
+
+	flag.BoolVar(&startBrowser, "start-browser", true, "Automatically start browser")
+	hiddenFlags = append(hiddenFlags, "start-browser")
 }
 
 func reconnectToDevice(ctx context.Context) (*dev.DevConn, error) {
@@ -184,6 +188,11 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 		devConnMtx.Lock()
 		defer devConnMtx.Unlock()
+
+		if devConn == nil {
+			httpReply(w, nil, errors.Errorf("Device is not connected"))
+			return
+		}
 
 		err := internalConfigSet(ctx2, devConn, args)
 		result := "false"
@@ -271,6 +280,11 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		devConnMtx.Lock()
 		defer devConnMtx.Unlock()
 
+		if devConn == nil {
+			httpReply(w, nil, errors.Errorf("Device is not connected"))
+			return
+		}
+
 		text, err := getFile(ctx2, devConn, r.FormValue("name"))
 		if err == nil {
 			text2, err2 := json.Marshal(text)
@@ -356,8 +370,7 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 			return
 		}
 		args := r.FormValue("args")
-
-		fmt.Println("Calling", method, args)
+		glog.Errorf("Calling: %+v, args: %+v", method, args)
 
 		timeout, err2 := strconv.ParseInt(r.FormValue("timeout"), 10, 64)
 		if err2 != nil {
@@ -369,11 +382,17 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		devConnMtx.Lock()
 		defer devConnMtx.Unlock()
 
+		if devConn == nil {
+			httpReply(w, nil, errors.Errorf("Device is not connected"))
+			return
+		}
+
 		result, err := callDeviceService(ctx2, devConn, method, args)
 		if method == "Config.Save" {
 			// Saving config causes the device to reboot, so we have to wait a bit
 			waitForReboot()
 		}
+		glog.Errorf("Call result: %+v, error: %+v", result, err)
 		httpReply(w, result, err)
 	})
 
@@ -460,7 +479,9 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 	if err != nil {
 		return errors.Trace(err)
 	}
-	open.Start(url)
+	if startBrowser {
+		open.Start(url)
+	}
 	http.Serve(listener, nil)
 
 	// Unreacahble

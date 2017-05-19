@@ -1,0 +1,67 @@
+<div data-title="Develop" style="height: 100%;">
+  <div class="col-xs-4 main-left-column">
+<!--     <div style="margin-top: 5px; ">
+      <button class="btn btn-sm btn-default"><i class="fa fa-plus"></i> New App</button>
+      <button class="btn btn-sm btn-default"><i class="fa fa-plus"></i> New Lib</button>
+    </div>
+    <div class="list-group upcontrol" id="example-list" style="padding: 0; margin: 0; xtop: 5px;">
+ -->
+
+    <div class="tree" style="margin-top: 5px;">
+      <ul>
+        <li>
+          <span><i class="fa fa-folder icon-minus-sign"></i> Apps</span>
+          <a class="btn btn-xs btn-default pull-right">create new</a>
+          <ul>
+            <li><span><i class="fa fa-folder"></i>
+              LED Blink (JS)</span>
+              <a class="btn btn-xs btn-default pull-right">delete</a>
+            </li>
+            <li><span><i class="fa fa-folder"></i> MQTT publish (JS)</span></li>
+            <li><span><i class="fa fa-folder"></i> MQTT subscribe (JS)</span></li>
+          </ul>
+        </li>
+        <li><span><i class="fa fa-folder"></i> Libs</span></li>
+      </ul>
+      
+
+    </div>
+  </div>
+
+  <div class="col-xs-8 main-right-column">
+    <div style="margin-top: 5px; ">
+      <button class="btn btn-sm btn-success"><i class="fa fa-save"></i> Save</button>
+      <button class="btn btn-sm btn-success "><i class="fa fa-save"></i> Save + Rebuild + Flash</button>
+      <button class="btn btn-sm btn-success "><i class="fa fa-save"></i> Save + Copy + Reboot (fast)</button>
+      <button class="btn btn-sm btn-info pull-right"><i class="fa fa-share"></i> Publish to GitHub <span class="caret"></span></button>
+    </div>
+    <div class="form-group upcontrol">
+      <div id="editor"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  var editor = mkeditor();
+  editor.setValue('let x = 1234;', -1);
+  editor.session.setMode('ace/mode/javascript');
+
+
+
+
+$(function () {
+    $('.tree li:has(ul)').addClass('parent_li').find(' > span').attr('title', 'Collapse this branch');
+    $('.tree li.parent_li > span').on('click', function (e) {
+        var children = $(this).parent('li.parent_li').find(' > ul > li');
+        if (children.is(":visible")) {
+            children.hide('fast');
+            $(this).attr('title', 'Expand this branch').find(' > i').addClass('icon-plus-sign').removeClass('icon-minus-sign');
+        } else {
+            children.show('fast');
+            $(this).attr('title', 'Collapse this branch').find(' > i').addClass('icon-minus-sign').removeClass('icon-plus-sign');
+        }
+        e.stopPropagation();
+    });
+});
+
+</script>

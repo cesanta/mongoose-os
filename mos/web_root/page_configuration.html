@@ -1,7 +1,7 @@
 <div data-title="Device configuration" style="height: 100%;">
   <div class="col-xs-12 main-left-column">
     <div style="margin-top: 5px; ">
-      <button class="btn btn-sm btn-primary" id="config-save-button"><i class="fa fa-save"></i> Save configuration</button>
+      <button class="btn btn-sm btn-success" id="config-save-button"><i class="fa fa-save"></i> Save configuration</button>
       <div class="btn-group btn-group-sm" data-toggle="buttons" style="margin-bottom: 5px; margin-top: 0;">
         <label class="btn btn-default active">
           <i class="fa fa-cog"></i>
@@ -15,32 +15,6 @@
     </div>
     <div class="upcontrol">
       <div id="simple" style="height: 100%;" class="row">
-
-        <div class="col-md-4 col-xs-12">
-          <div class="x_panel">
-            <div class="x_title">WiFi Settings</div>
-            <div class="x_content form-horizontal">
-
-              <div class="form-group">
-                <label class="col-xs-5 control-label">Connect to WiFi</label>
-                <div class="col-xs-7"><input type="checkbox" class="form-control" id="wifi.sta.enable"></div>
-              </div>
-
-              <div class="form-group">
-                <label class="col-xs-5 control-label">WiFi network</label>
-                <div class="col-xs-7"><input type="text" class="form-control" id="wifi.sta.ssid"
-                  placeholder="type WiFi name ..."></div>
-              </div>
-
-              <div class="form-group">
-                <label class="col-xs-5 control-label">WiFi password</label>
-                <div class="col-xs-7"><input type="password" class="form-control" id="wifi.sta.pass"
-                  placeholder="type WiFi password ..."></div>
-              </div>
-
-            </div>
-          </div>
-        </div>
 
         <div class="col-md-4 col-xs-12">
           <div class="x_panel">
@@ -93,6 +67,92 @@
           </div>
         </div>
 
+        <div class="col-md-6 col-xs-12">
+          <div class="x_panel">
+            <div class="x_title">
+              Provision device on AWS IoT
+              <div class="pull-right">
+                <a href="http://docs.aws.amazon.com/cli/latest/userguide/cli-chap-getting-set-up.html">AWS setup page</a>
+                |
+                <a href="http://docs.aws.amazon.com/iot/latest/developerguide/create-iot-policy.html">AWS policy guide</a>
+              </div>
+            </div>
+            <div class="x_content form-horizontal">
+
+              <div id="aws-cred" class="hidden">
+                <div class="text-muted form-group">
+                  AWS credentials are missing. Visit AWS setup page, fill in the values
+                  and click Save.
+                </div>
+                <div class="form-group">
+                  <label class="col-xs-4 control-label">Access Key ID:</label>
+                  <div class="col-xs-8"><input type="text" class="form-control" id="input-awskey"
+                    placeholder="type AWS Access Key ID"></div>
+                </div>
+                <div class="form-group">
+                  <label class="col-xs-4 control-label">Secret Access Key:</label>
+                  <div class="col-xs-8"><input type="text" class="form-control" id="input-awssecret"
+                    placeholder="type AWS Secret Access Key"></div>
+                </div>
+                <div class="form-group">
+                  <button id="aws-cred-button" class="btn btn-success pull-right">
+                    <i class="fa fa-save"></i>
+                    Save AWS credentials
+                  </button>
+                </div>
+              </div>
+
+              <div id="aws-setup" class="hidden">
+                <div class="text-muted form-group">
+                  Choose an existing policy, or use mos-default
+                  to create a permissive policy automatically.
+                </div>                  
+                <div class="form-group">
+                  <label class="control-label col-xs-4">AWS region:</label>
+                  <div class="col-xs-8"><div class="input-group">
+                    <span class="input-group-btn">
+                      <div class="btn-group dropdown">
+                        <button type="button" class="btn btn-default dropdown-toggle"
+                          data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                          <span class="caret"></span>
+                          <span class="sr-only">Toggle Dropdown</span>
+                        </button>
+                        <ul class="dropdown-menu" id="dropdown-regions"></ul>
+                      </div>
+                    </span>
+                    <input type="text" class="form-control" id="input-region" placeholder="Choose region ...">
+                  </div>
+                </div></div>
+
+                <div class="form-group">
+                  <label class="control-label col-xs-4">AWS policy:</label>
+                  <div class="col-xs-8"><div class="input-group">
+                    <span class="input-group-btn">
+                      <div class="btn-group dropdown">
+                        <button type="button" class="btn btn-default dropdown-toggle"
+                          data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                          <span class="caret"></span>
+                          <span class="sr-only">Toggle Dropdown</span>
+                        </button>
+                        <ul class="dropdown-menu" id="dropdown-policies">
+                        </ul>
+                      </div>
+                    </span>
+                    <input type="text" class="form-control" id="input-policy" placeholder="Choose policy ...">
+                  </div>
+                </div></div>
+                <div class="form-group">
+                  <button id="aws-setup-button" class="btn btn-success pull-right">
+                    <i class="fa fa-cloud-upload"></i>
+                    Provision with AWS IoT
+                  </button>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
       </div>
 
       <div id="editor" class="hidden"></div>
@@ -108,7 +168,7 @@
       var text = JSON.stringify(json.result, null, '  ');
       editor.setValue(text || '', -1);
       editor.session.setMode('ace/mode/json');
-      new PNotify({title: 'Configuration loaded', type: 'success' });
+      addLog('Configuration loaded\n');
 
       var c = json.result;
       $('#wifi\\.sta\\.enable').prop('checked', c.wifi.sta.enable);
@@ -120,6 +180,29 @@
       $('#sntp\\.server').val(c.sntp.server || getCookie('sntp'));
       $('#debug\\.hexdump').prop('checked', c.debug.mg_mgr_hexdump_file == '-');
       $('#debug\\.level').val(c.debug.level || 2);
+
+      $.ajax({url: '/check-aws-credentials'}).then(function(json) {
+        var hasAwsCredentials = json.result;
+        $('#aws-setup').toggleClass('hidden', !hasAwsCredentials);
+        $('#aws-cred').toggleClass('hidden', hasAwsCredentials);
+        if (hasAwsCredentials) {
+          $.ajax({url: '/regions'}).then(function(json) {
+            if (!json.result) return;
+            $('#dropdown-regions').empty();
+            $.each(json.result, function(i, v) {
+              $('<li><a href="#">' + v + '</a></li>').appendTo('#dropdown-regions');
+            });
+            var region = $('#input-region').val();
+            $.ajax({url: '/policies', data: {region: region }}).then(function(json) {
+              if (!json.result) return;
+              $('#dropdown-policies').empty();
+              $.each(json.result, function(i, v) {
+                $('<li><a href="#">' + v + '</a></li>').appendTo('#dropdown-policies');
+              });
+            });
+          });
+        }
+      });
     });
   };
   loadConfig();
@@ -136,7 +219,7 @@
       config.sntp.enable = $('#sntp\\.enable').is(':checked');
       config.sntp.server = $('#sntp\\.server').val();
       config.debug.level = + $('#debug\\.level').val();
-      config.debug.server = $('#sntp\\.mg_mgr_hexdump_file').is(':checked') ? '-' : '';
+      config.debug.mg_mgr_hexdump_file = $('#debug\\.hexdump').is(':checked') ? '-' : '';
     } else {
       var text = editor.getValue();
       try {
@@ -153,8 +236,40 @@
     }).then(function() {
         return $.ajax({url: '/call', data: {method: 'Config.Save', args: '{"reboot":true}'}});
     }).then(function(json) {
-      new PNotify({title: 'Configuration saved', type: 'success' });
-      return loadConfig();
+      addLog('Configuration saved\n');
+      loadConfig();
+    });
+  });
+
+  $(document).on('click', '#aws-cred-button', function() {
+    var key = $('#input-awskey').val();
+    var secret = $('#input-awssecret').val();
+    if (!key || !secret) {
+      new PNotify({title: 'Invalid AWS IoT credentials', type: 'error'});      
+      return false;
+    }
+    var btn = $(this);
+    startSpinner(btn);
+    $.ajax({url: '/aws-store-creds', global: false, data: {key: key, secret: secret}}).then(function(json) {
+      new PNotify({title: 'Saved AWS IoT credentials', type: 'success'});
+      loadConfig();
+    }).always(function() {
+      btn.button('reset');
+    });
+  });
+
+  $(document).on('click', '#aws-setup-button', function() {
+    var policy = $('#input-policy').val();
+    var region = $('#input-region').val();
+    var btn = $(this);
+    startSpinner(btn);
+    $.ajax({url: '/aws-iot-setup', global: false, data: {region: region, policy: policy}}).then(function(json) {
+      new PNotify({title: 'AWS IoT provisioning success', type: 'success'});
+      loadConfig();
+    }).fail(function(xhr) {
+      new PNotify({title: 'AWS IoT provisioning failed: ' + (xhr.responseText || ''), type: 'error'});
+    }).always(function() {
+      btn.button('reset');
     });
   });
 
@@ -164,6 +279,4 @@
     $('#editor').toggleClass('hidden', v1);
     $('#simple').toggleClass('hidden', !v1);
   });
-
-  //# sourceURL=page_configuration.js
 </script>

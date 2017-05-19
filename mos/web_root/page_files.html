@@ -5,11 +5,11 @@
     <div class="col-xs-9 main-right-column">
       <div style="margin-top: 5px;">
         &nbsp;
-        <button class="btn btn-sm btn-primary disabled file-control" id="file-save-button"><i class="fa fa-save"></i> Save File</button>
-        <button class="btn btn-sm btn-primary disabled file-control" id="file-savereboot-button"><i class="fa fa-refresh"></i> Save &amp; Reboot</button>
+        <button class="btn btn-sm btn-success disabled file-control" id="file-save-button"><i class="fa fa-save"></i> Save File</button>
+        <button class="btn btn-sm btn-success disabled file-control" id="file-savereboot-button"><i class="fa fa-refresh"></i> Save &amp; Reboot</button>
         &nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
         <div style="position: relative; display: inline-block;">
-          <button class="btn btn-sm btn-success file-control dropdown-toggle" id="share-button"
+          <button class="btn btn-sm btn-info file-control dropdown-toggle" id="share-button"
             data-toggle="dropdown" aria-haspopup="true" aria-expanded="true">
             <i class="fa fa-share"></i>
             Share File
@@ -30,7 +30,7 @@
               </div>
 
               <button id="publish-button" style="position: relative;"
-                class="btn btn-primary btn-block disabled form-control"
+                class="btn btn-success btn-block disabled form-control"
                 id="publish-button" type="button">
                 <i class="fa fa-share"></i>
                 Publish code and device info to mongoose-os.com/snippets.html
@@ -68,7 +68,7 @@
       editor.scanTextForSnippets();
 
       $('.file-control').toggleClass('disabled', false);
-      new PNotify({title: 'Loaded ' + name, type: 'success' });
+      addLog('Loaded ' + name + '\n');
     });
     return false;
   });
@@ -91,7 +91,7 @@
         args: JSON.stringify({filename: fileName, data: b64enc(text)})
       }
     }).then(function() {
-      new PNotify({title: 'Saved ' + fileName, type: 'success' });
+      addLog('Saved ' + fileName + '\n');
     });
   };
 
@@ -103,7 +103,7 @@
     onSave().then(function() {
       return $.ajax({url: '/call', data: {method: 'Sys.Reboot'}});
     }).then(function() {
-      new PNotify({title: 'Device reboot successful', type: 'success' });
+      addLog('Device reboot successful\n');
     });
   });
 
@@ -152,7 +152,7 @@
         $('#share-id').html(href).attr({href: href}).parent().removeClass('hidden');
         $('#share-title-input').val('')
         $('#share-form').trigger('keyup');
-        new PNotify({title: 'Snippet saved', type: 'success' });
+        addLog('Snippet saved\n');
       }
     }).fail(function(err) {
       failreq(err);
@@ -168,7 +168,7 @@
     return false;
   });
 
-  $.ajax({url: '/call', data: {method: 'FS.ListExt'}}).done(function(json) {
+  $.ajax({url: '/call', data: {method: 'FS.ListExt', timeout: 2}}).done(function(json) {
     var $tbody = $('#file-list').empty();
     json.result.sort(function(a, b) {
       if (a.name.match(/jsc$/) && b.name.match(/jsc$/)) return a.name > b.name ? 1 : -1;

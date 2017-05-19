@@ -5,42 +5,65 @@ var getCookie = function(name) {
   var m = (document.cookie || '').match(new RegExp(name + '=([^;"\\s]+)'));
   return m ? m[1] : '';
 };
-$.ajaxSetup({type: 'POST'});
+$.ajaxSetup({
+  type: 'POST',
+  // beforeSend: function() { if (!devConnected) return false; },
+});
 
-$(document.body)
-    .on('click', '.dropdown-menu li', function(ev) {
-      var text = $(this).find('a').text();
-      $(this)
-          .closest('.input-group')
-          .find('input')
-          .val(text)
-          .trigger('change');
-    });
+$(document.body).on('click', '.dropdown-menu li', function(ev) {
+  var text = $(this).find('a').text();
+  $(this).closest('.input-group').find('input').val(text).trigger('change');
+});
 
 $(document).ajaxSend(function(event, xhr, settings) {
   $('#top_spinner').addClass('spinner');
 }).ajaxStop(function() {
   $('#top_spinner').removeClass('spinner');
 }).ajaxComplete(function(event, xhr) {
-  // $('#top_nav').removeClass('spinner');
   if (xhr.status == 200) return;
   var errStr = xhr.responseText || 'connection errStror';
   if (errStr.match(/deadline exceeded/)) {
     errStr = 'Lost connection with your board. Please restart mos tool from terminal';
   }
-  new PNotify({ title: 'Server Error', text: 'Reason: ' + errStr, type: 'error' });
+  // new PNotify({ title: 'Server Error', text: 'Reason: ' + errStr, type: 'error' });
+  addLog('Server Error: ' + errStr);
 });
 
-$(document)
-    .on('click', '#reboot-button', function() {
-      $.ajax({url: '/call', data: {method: 'Sys.Reboot'}}).done(function() {
-        new PNotify({title: 'Device rebooted', type: 'success'});
-      });
-    });
+$(document).on('click', '#reboot-button', function() {
+  $.ajax({url: '/call', data: {method: 'Sys.Reboot'}}).done(function() {
+    addLog('Device rebooted\n');
+  });
+});
 
-$(document).on('click', '#clear-logs-button', function() {
-  $('#device-logs').empty();
-  new PNotify({title: 'Console cleared', type: 'success'});
+$(document).on('click', '#version-update', function(ev) {
+  if (!confirm('Click "OK" to start self-update. Restart mos tool when done.')) return;
+  var btn = $(this);
+  startSpinner(btn);
+  $.ajax({url: '/update'}).done(function() {
+    new PNotify({title: 'Update successful. Please restart mos tool.', type: 'success'});
+  }).fail(function(err) {
+    var text = err.responseJSON ? err.responseJSON.error : err.responseText;
+    if (text) {
+      new PNotify({title: 'Error', text: text, type: 'error'});
+    }
+  }).always(function() {
+    btn.button('reset');
+  });
+});
+
+$.ajax({url: '/version'}).done(function(json) {
+  if (!json.result) return;
+  $('#version').text(json.result);
+  $.get('https://mongoose-os.com/downloads/mos/version.json', function(data) {
+    if (!data.build_id) return;
+    if (data.build_id != json.result) {
+      $('#version-update').removeClass('hidden');
+    }
+  });
+});
+
+$(document).on('click', '.clear-logs-button', function() {
+  $(this).parent().parent().find('.logs').empty();
 });
 
 var connected = false;
@@ -81,7 +104,7 @@ $('#app_view').resizable({
   resizeWidth: false
 });
 
-$('#d1').height($(document.body).height() - 60);
+$('#d1').height($(document.body).height() - 94);
 $('#app_view').height($(d1).height() * 0.75);
 $('#device-logs-panel').height($(d1).height() * 0.25);
 
@@ -179,3 +202,176 @@ $(window).resize(function(ev) {
     location.reload();
   }, 500);
 });
+
+
+// Device connect code
+///////////////////////////////////////////////////////////////////////////////
+
+var startSpinner = function(btn) {
+  $(btn).attr('data-loading-text', '<i class="fa fa-refresh fa-spin"></i>' + $(btn).text());
+  $(btn).prop('disabled', true);
+  $(btn).button('loading');
+};
+
+var formatSize = function(free, max) {
+  max |= Infinity;
+  var i = Math.floor(Math.log(max) / Math.log(1024));
+  var tostr = function(v, i) {
+    return (v / Math.pow(1024, i)).toFixed(0) * 1 + ['B', 'k', 'M', 'G', 'T'][i];
+  };
+  return tostr(free, i) + '/' + tostr(max, i);
+};
+
+var formatDevInfo = function(json) {
+  var ip = json.wifi.sta_ip || json.wifi.ap_ip;
+  var id = '', m = json.fw_id.match(/(....)(..)(..)-/);
+  if (m) {
+    id = moment(m[1] + '-' + m[2] + '-' + m[3]).format('MMMDD');
+  }
+  var link = 'n/a';
+  if (ip) link = '<a target="_blank" href=http://' + ip + '>' + ip + '</a>';
+  let html = '<i class="fa fa-microchip" title="Hardware architecture"></i> ' + json.arch +
+              ' | <i class="fa fa-wrench" title="Build date"></i> ' + id +
+              ' | <i class="fa fa-wifi" title="IP address"></i> ' + link +
+              ' | <i class="fa fa-hdd-o" title="FLASH size"></i> ' + formatSize(json.fs_free || 0, json.fs_size || 0) +
+              ' | <i class="fa fa-square-o" title="RAM size"></i> ' + formatSize(json.ram_free || 0, json.ram_size || 0);
+  return html;
+};
+
+var setDeviceConnectionStatus = function(n) {
+  var classes = ['red', 'orange', 'yellow', 'green'];
+  var titles = ['not connected', 'connected, not flashed', 'flashed, offline', 'online'];
+  $('.devconn-icon').removeClass(classes.join(' ')).addClass(classes[n] || classes[0]);
+  $('.devconn-text').text(titles[n] || titles[0]);
+};
+
+var probeDevice = function() {
+  $.ajax({url: '/call', data: {method: 'Sys.GetInfo', timeout: 1}}).then(function(data) {
+    $(document).trigger('devinfo', data.result);
+    $('.devinfo').html(formatDevInfo(data.result));
+    $('#found-device-info').fadeIn();
+  }).fail(function() {
+    $(document).trigger('devinfo', null);
+    $('#found-device-info').fadeOut();
+  });
+};
+
+// Repeatedly pull list of serial ports when we're on the first tab
+var devConnected;
+var portList = '';
+var checkPorts = function() {
+  if ($.active) return; // Do not run if there are AJAX requests in flight
+  var thisPane = $('.tab-pane.active').attr('id');
+  var mustRun = (thisPane == 'tab1') || $('#top_nav')[0];
+  if (!mustRun) return;
+
+  $.ajax({url: '/getports', global: false}).then(function(json) {
+    $('.dropdown-ports').empty();
+    var result = json.result || {};
+    var ports = result.Ports || [];
+    var port = (result.CurrentPort || ports[0] || '').replace(/^serial:\/\//, '');
+    $(document).trigger('devconn', [result.IsConnected]);
+    if (devConnected !== result.IsConnected) {
+      devConnected = result.IsConnected;
+      setDeviceConnectionStatus(devConnected ? 1 : 0);
+      $('.connect-input').val(port);
+      if (port && devConnected) probeDevice();
+      if (!devConnected) {
+        $('#splash').modal();
+      }
+    }
+    if (ports.length > 0) {
+      $.each(ports, function(i, v) {
+        $('<li><a href="#">' + v + '</a></li>').appendTo('.dropdown-ports');
+      });
+      $('#noports-warning').hide();
+      var ports = JSON.stringify(ports);
+      if (ports != portList) {
+        portList = ports;
+      }
+    } else {
+      portList = '';
+      if (!devConnected) $('.connect-input').val('');
+      $('#noports-warning').fadeIn();
+      $('#found-device-info').hide();
+    }
+  });
+};
+checkPorts();
+setInterval(checkPorts, 1000);
+
+
+$(document).on('click', '.connect-button', function() {
+  var btn = $(this);
+  var port = btn.closest('.form').find('.connect-input').val();
+  if (!port || port.match(/^\s*$/)) return;
+  startSpinner(btn);
+  $.ajax({url: '/connect', data: {port: port, reconnect: true}}).always(function() {
+    probeDevice();
+    btn.button('reset');
+  });
+});
+
+$(document).on('click', '#flash-button', function() {
+  var btn = $(this);
+  var arch = btn.closest('.block_content').find('[name="options"]:checked').val();
+  startSpinner(btn);
+  $.ajax({url: '/flash', data: {firmware: arch}}).done(function(json) {
+  }).always(function() {
+    btn.button('reset');
+    setTimeout(probeDevice, 2000);
+  });
+});
+
+$(document).on('click', '#wifi-button', function() {
+  var ssid = $('#wifi\\.sta\\.ssid').val();
+  var pass = $('#wifi\\.sta\\.pass').val();
+  var btn = $(this);
+  startSpinner(btn);
+  $.ajax({url: '/wifi', data: {ssid: ssid, pass: pass}}).done(function() {
+    document.cookie = 'ssid=' + ssid + '; pass=' + pass;
+  }).always(function(json) {
+    btn.button('reset');
+    setTimeout(probeDevice, 2000);
+  });
+});
+
+$(document).on('devinfo', function(ev, info) {
+  var wifi = info && info.wifi && info.wifi.sta_ip;
+  $('#step3 a.tag').toggleClass('greyed', !info);
+  $('#step3 .btn, #step3 input, #prototype-button').prop('disabled', !info);
+  $('#step2 .done, #found-device-info').toggleClass('hidden', !info);
+  $('#step3 .done').toggleClass('hidden', !wifi);
+  setDeviceConnectionStatus(!devConnected ? 0 : !info ? 1 : wifi ? 3 : 2);
+  $('#step2 [value="' + (info ? info.arch : 'esp8266') + '"]').click();
+  // console.log('#step2 [value="' + info.arch + '"]');
+});
+
+$(document).on('devconn', function(ev, devConnected) {
+  if (devConnected) {
+    $('#step2 a.tag').removeClass('greyed');
+    $('#step2 .btn').prop('disabled', false);
+    $('#step1 .done').removeClass('hidden');
+  } else {
+    $('.done').addClass('hidden');
+    $('#step2 a.tag, #step3 a.tag').addClass('greyed');
+    $('#step2 .btn, #step2 input, #step3 .btn, #step3 input').prop('disabled', true);
+  }
+  $('#prototype-button').prop('disabled', !devConnected);
+});
+
+$(document).on('click', '#prototype-button', function() {
+  $('#splash').modal('toggle');
+  var currentTab = $('.side-menu li.active a').attr('tab');
+  loadPage(currentTab);
+});
+
+var addLog = function(msg, type) {
+  var el = type == 'uart' ? $('#device-logs') : $('#mos-logs');
+  el.each(function(i, el) {
+    var mustScroll = (el.scrollTop === (el.scrollHeight - el.clientHeight));
+    var data = (msg || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    el.innerHTML += data;
+    if (mustScroll) el.scrollTop = el.scrollHeight;
+  });
+};
