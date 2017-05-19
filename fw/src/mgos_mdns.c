@@ -62,7 +62,7 @@ static void handler(struct mg_connection *nc, int ev, void *ev_data,
     e->handler(nc, ev, ev_data, e->ud);
   }
   /* On close, invalidate listener - reconnect */
-  if (ev == MG_EV_CLOSE) {
+  if (ev == MG_EV_CLOSE && nc == s_listening_mdns_conn) {
     s_listening_mdns_conn = NULL;
     mgos_mdns_init();
   }
