@@ -5,7 +5,7 @@
 
 #include "fw/src/mgos_features.h"
 
-#if MGOS_ENABLE_I2C
+#if MGOS_ENABLE_I2C && !MGOS_ENABLE_I2C_GPIO
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -222,4 +222,4 @@ void mgos_i2c_stop(struct mgos_i2c *c) {
   }
 }
 
-#endif /* MGOS_ENABLE_I2C */
+#endif /* MGOS_ENABLE_I2C && !MGOS_ENABLE_I2C_GPIO */
