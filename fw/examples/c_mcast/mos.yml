@@ -2,10 +2,13 @@ name: c_mcast
 # this example currently works only with esp8266
 arch: esp8266
 version: 1.0
-skeleton_version: 2017-03-17
+skeleton_version: 2017-05-18
 sources:
   - src
 filesystem:
+config_schema:
+  - ["mcast", "o", {title: "Multicast example parameters"}]
+  - ["mcast.group", "s", "224.0.0.251", {title: "Multicast example group IP"}]
+  - ["mcast.port", "i", 5353, {title: "Multicast example UDP port"}]
 build_vars:
-  APP_CONF_SCHEMA: src/conf_schema.yaml
   MGOS_ENABLE_RPC: 0

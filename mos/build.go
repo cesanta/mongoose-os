@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -16,6 +17,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 	"unicode"
 
 	"cesanta.com/common/go/multierror"
@@ -45,6 +47,7 @@ var (
 
 	buildVarsSlice []string
 
+	tmpDir     = ""
 	libsDir    = ""
 	modulesDir = ""
 )
@@ -56,7 +59,7 @@ const (
 	buildLog = "build.log"
 
 	minSkeletonVersion = "2017-03-17"
-	maxSkeletonVersion = "2017-05-16"
+	maxSkeletonVersion = "2017-05-18"
 
 	localLibsDir = "local_libs"
 )
@@ -69,6 +72,7 @@ func init() {
 	// deprecated since 2017/05/11
 	flag.StringSliceVar(&buildVarsSlice, "build_var", []string{}, "deprecated, use --build-var")
 
+	flag.StringVar(&tmpDir, "temp-dir", "~/.mos/tmp", "Directory to store temporary files")
 	flag.StringVar(&libsDir, "libs-dir", "~/.mos/libs", "Directory to store libraries into")
 	flag.StringVar(&modulesDir, "modules-dir", "~/.mos/modules", "Directory to store modules into")
 
@@ -82,11 +86,18 @@ func init() {
 
 	homeDir := os.Getenv(homeEnvName)
 	// Replace tilda with the actual path to home directory
-	if libsDir[0] == '~' {
+	if len(tmpDir) > 0 && tmpDir[0] == '~' {
+		tmpDir = homeDir + tmpDir[1:]
+	}
+	if len(libsDir) > 0 && libsDir[0] == '~' {
 		libsDir = homeDir + libsDir[1:]
 	}
-	if modulesDir[0] == '~' {
+	if len(modulesDir) > 0 && modulesDir[0] == '~' {
 		modulesDir = homeDir + modulesDir[1:]
+	}
+
+	if err := os.MkdirAll(tmpDir, 0777); err != nil {
+		log.Fatalf("Failed to create temp dir %q\n", tmpDir)
 	}
 }
 
@@ -179,7 +190,7 @@ func buildLocal(ctx context.Context) (err error) {
 		return errors.Trace(err)
 	}
 
-	manifest, err := readManifestWithLibs(appDir, nil, logFile, libsDir, false /* skip clean */)
+	manifest, mtime, err := readManifestWithLibs(appDir, nil, logFile, libsDir, false /* skip clean */)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -275,6 +286,37 @@ func buildLocal(ctx context.Context) (err error) {
 	}
 
 	ffiSymbols := manifest.FFISymbols
+	var confSchemaFile *os.File
+
+	// If config schema is provided in manifest, generate a yaml file suitable
+	// for `APP_CONF_SCHEMA`
+	if manifest.ConfigSchema != nil && len(manifest.ConfigSchema) > 0 {
+		var err error
+		confSchemaFile, err = ioutil.TempFile(tmpDir, "mos_conf_schema_")
+		if err != nil {
+			return errors.Trace(err)
+		}
+		defer func() {
+			name := confSchemaFile.Name()
+			confSchemaFile.Close()
+			os.RemoveAll(name)
+		}()
+
+		confSchemaData, err := yaml.Marshal(manifest.ConfigSchema)
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		if _, err := confSchemaFile.Write(confSchemaData); err != nil {
+			return errors.Trace(err)
+		}
+
+		// The modification time of conf schema file should be set to that of
+		// the manifest itself, so that make handles dependencies correctly.
+		if err := os.Chtimes(confSchemaFile.Name(), mtime, mtime); err != nil {
+			return errors.Trace(err)
+		}
+	}
 
 	reportf("Sources: %v", appSources)
 
@@ -308,6 +350,17 @@ func buildLocal(ctx context.Context) (err error) {
 	}
 	if errs != nil {
 		return errors.Trace(errs)
+	}
+
+	// If config schema file was generated, set APP_CONF_SCHEMA appropriately.
+	// If not, then check if APP_CONF_SCHEMA was set manually, and warn about
+	// that.
+	if confSchemaFile != nil {
+		if err := addBuildVar(manifest, "APP_CONF_SCHEMA", confSchemaFile.Name()); err != nil {
+			return errors.Trace(err)
+		}
+	} else {
+		printConfSchemaWarn(manifest)
 	}
 
 	// Add build vars from CLI flags
@@ -351,11 +404,19 @@ func buildLocal(ctx context.Context) (err error) {
 		dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", mosDirEffectiveAbs, dockerMgosPath))
 		dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", mosDirEffectiveAbs, mosDirEffectiveAbs))
 
+		// Mount all dirs with source files
 		for _, d := range appSourceDirs {
 			dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", d, d))
 		}
 
+		// Mount all dirs with filesystem files
 		for _, d := range appFSDirs {
+			dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", d, d))
+		}
+
+		// If generated config schema file is present, mount its dir as well
+		if confSchemaFile != nil {
+			d := filepath.Dir(confSchemaFile.Name())
 			dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", d, d))
 		}
 
@@ -452,6 +513,19 @@ func buildLocal(ctx context.Context) (err error) {
 	return nil
 }
 
+// printConfSchemaWarn checks if APP_CONF_SCHEMA is set in the manifest
+// manually, and prints a warning if so.
+func printConfSchemaWarn(manifest *build.FWAppManifest) {
+	if _, ok := manifest.BuildVars["APP_CONF_SCHEMA"]; ok {
+		reportf("===")
+		reportf("WARNING: Setting build variable %q in %q "+
+			"is deprecated, use \"config_schema\" property instead.",
+			"APP_CONF_SCHEMA", build.ManifestFileName,
+		)
+		reportf("===")
+	}
+}
+
 func getMakeArgs(dir string, manifest *build.FWAppManifest) []string {
 	makeArgs := []string{
 		"-j", fmt.Sprintf("%d", runtime.NumCPU()),
@@ -503,8 +577,9 @@ func globify(srcPaths []string, globs []string) (sources []string, dirs []string
 	return sources, dirs, nil
 }
 
-// addBuildVar adds a given build variable to manifest.BuildVars,
-// but if the variable already exists, returns an error.
+// addBuildVar adds a given build variable to manifest.BuildVars, but if the
+// variable already exists, returns an error (modulo some exceptions, which
+// result in a warning instead)
 func addBuildVar(manifest *build.FWAppManifest, name, value string) error {
 	if _, ok := manifest.BuildVars[name]; ok {
 		return errors.Errorf(
@@ -571,29 +646,29 @@ func getCodeDir() (string, error) {
 	return absCodeDir, nil
 }
 
-func readManifest(appDir string) (*build.FWAppManifest, error) {
+func readManifest(appDir string) (*build.FWAppManifest, time.Time, error) {
 	manifestFullName := filepath.Join(appDir, build.ManifestFileName)
 	manifestSrc, err := ioutil.ReadFile(manifestFullName)
 	if err != nil {
-		return nil, errors.Trace(err)
+		return nil, time.Time{}, errors.Trace(err)
 	}
 
 	var manifest build.FWAppManifest
 	if err := yaml.Unmarshal(manifestSrc, &manifest); err != nil {
-		return nil, errors.Trace(err)
+		return nil, time.Time{}, errors.Trace(err)
 	}
 
 	// Check if manifest skeleton version is supported by the mos tool
 	if manifest.SkeletonVersion < minSkeletonVersion {
-		return nil, errors.Errorf(
+		return nil, time.Time{}, errors.Errorf(
 			"too old skeleton_version %q in %q (oldest supported is %q)",
 			manifest.SkeletonVersion, manifestFullName, minSkeletonVersion,
 		)
 	}
 
 	if manifest.SkeletonVersion > maxSkeletonVersion {
-		return nil, errors.Errorf(
-			"too new skeleton_version %q in %q (latest supported is %q)",
+		return nil, time.Time{}, errors.Errorf(
+			"too new skeleton_version %q in %q (latest supported is %q). Please run \"mos update\".",
 			manifest.SkeletonVersion, manifestFullName, maxSkeletonVersion,
 		)
 	}
@@ -606,7 +681,12 @@ func readManifest(appDir string) (*build.FWAppManifest, error) {
 		manifest.MongooseOsVersion = "master"
 	}
 
-	return &manifest, nil
+	stat, err := os.Stat(manifestFullName)
+	if err != nil {
+		return nil, time.Time{}, errors.Trace(err)
+	}
+
+	return &manifest, stat.ModTime(), nil
 }
 
 func buildRemote() error {
@@ -617,7 +697,7 @@ func buildRemote() error {
 
 	// We'll need to amend the sources significantly with all libs, so copy them
 	// to temporary dir first
-	tmpCodeDir, err := ioutil.TempDir("", "tmp_mos_src_")
+	tmpCodeDir, err := ioutil.TempDir(tmpDir, "tmp_mos_src_")
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -641,10 +721,13 @@ func buildRemote() error {
 	}
 
 	// Get manifest which includes stuff from all libs
-	manifest, err := readManifestWithLibs(tmpCodeDir, nil, os.Stdout, userLibsDir, true /* skip clean */)
+	manifest, _, err := readManifestWithLibs(tmpCodeDir, nil, os.Stdout, userLibsDir, true /* skip clean */)
 	if err != nil {
 		return errors.Trace(err)
 	}
+
+	// Print a warning if APP_CONF_SCHEMA is set in manifest manually
+	printConfSchemaWarn(manifest)
 
 	// Override arch with the value given in command line
 	if *arch != "" {
@@ -918,24 +1001,35 @@ func cleanupModuleName(name string) string {
 	return ret
 }
 
+// readManifestWithLibs reads manifest from the provided dir, "expands" all
+// libs (so that the returned manifest does not really contain any libs),
+// and also returns the most recent modification time of all encountered
+// manifests.
+//
+// If userLibsDir is different from libsDir, then the libs are initially
+// prepared in libsDir anyway, but then copied to userLibsDir, omitting the
+// ".git" dir.
+//
+// If skipClean is true, then clean or non-existing libs will NOT be expanded,
+// it's useful when crafting a manifest to send to the remote builder.
 func readManifestWithLibs(
 	dir string, visitedDirs []string, logFile io.Writer,
 	userLibsDir string, skipClean bool,
-) (*build.FWAppManifest, error) {
+) (*build.FWAppManifest, time.Time, error) {
 	for _, v := range visitedDirs {
 		if dir == v {
-			return nil, errors.Errorf("cyclic dependency of the lib %q", dir)
+			return nil, time.Time{}, errors.Errorf("cyclic dependency of the lib %q", dir)
 		}
 	}
 
-	manifest, err := readManifest(dir)
+	manifest, mtime, err := readManifest(dir)
 	if err != nil {
-		return nil, errors.Trace(err)
+		return nil, time.Time{}, errors.Trace(err)
 	}
 
 	curDir, err := getCodeDir()
 	if err != nil {
-		return nil, errors.Trace(err)
+		return nil, time.Time{}, errors.Trace(err)
 	}
 
 	// Prepare all libs {{{
@@ -943,7 +1037,7 @@ func readManifestWithLibs(
 	for _, m := range manifest.Libs {
 		name, err := m.GetName()
 		if err != nil {
-			return nil, errors.Trace(err)
+			return nil, time.Time{}, errors.Trace(err)
 		}
 
 		reportf("Handling lib %q...", name)
@@ -951,7 +1045,7 @@ func readManifestWithLibs(
 		if skipClean {
 			isClean, err := m.IsClean(libsDir)
 			if err != nil {
-				return nil, errors.Trace(err)
+				return nil, time.Time{}, errors.Trace(err)
 			}
 
 			if isClean {
@@ -966,7 +1060,7 @@ func readManifestWithLibs(
 		libDirAbs, err := m.PrepareLocalDir(libsDir, os.Stdout, true)
 		libDirForManifest := libDirAbs
 		if err != nil {
-			return nil, errors.Trace(err)
+			return nil, time.Time{}, errors.Trace(err)
 		}
 
 		// If libs should be placed in some specific dir, copy the current lib
@@ -974,12 +1068,12 @@ func readManifestWithLibs(
 		if userLibsDir != libsDir {
 			userLibsDirRel, err := filepath.Rel(dir, userLibsDir)
 			if err != nil {
-				return nil, errors.Trace(err)
+				return nil, time.Time{}, errors.Trace(err)
 			}
 
 			userLocalDir := filepath.Join(userLibsDir, filepath.Base(libDirAbs))
 			if err := ourio.CopyDir(libDirAbs, userLocalDir, []string{".git"}); err != nil {
-				return nil, errors.Trace(err)
+				return nil, time.Time{}, errors.Trace(err)
 			}
 			libDirAbs = filepath.Join(userLibsDir, filepath.Base(libDirAbs))
 			libDirForManifest = filepath.Join(userLibsDirRel, filepath.Base(libDirAbs))
@@ -989,11 +1083,17 @@ func readManifestWithLibs(
 
 		reportf("Prepared local dir: %q", libDirAbs)
 
-		libManifest, err := readManifestWithLibs(
+		libManifest, libMtime, err := readManifestWithLibs(
 			libDirAbs, append(visitedDirs, dir), logFile, userLibsDir, skipClean,
 		)
 		if err != nil {
-			return nil, errors.Trace(err)
+			return nil, time.Time{}, errors.Trace(err)
+		}
+
+		// We should return the earliest modification date of all encountered
+		// manifests, so let's see if we got the earlier mtime here
+		if libMtime.After(mtime) {
+			mtime = libMtime
 		}
 
 		// Extend manifest with libManifest {{{
@@ -1015,19 +1115,18 @@ func readManifestWithLibs(
 			manifest.Filesystem = append(manifest.Filesystem, s)
 		}
 
-		for _, m := range libManifest.Modules {
-			manifest.Modules = append(manifest.Modules, m)
-		}
+		manifest.Modules = append(manifest.Modules, libManifest.Modules...)
+		manifest.ConfigSchema = append(manifest.ConfigSchema, libManifest.ConfigSchema...)
 
 		for k, s := range libManifest.BuildVars {
 			switch k {
 			case "APP_CONF_SCHEMA":
-				if s[0] != '$' && !filepath.IsAbs(s) {
-					s = filepath.Join(libDirForManifest, s)
-				}
-
-				manifest.BuildVars[k] += " " + s
+				return nil, time.Time{}, errors.Errorf(
+					"APP_CONF_SCHEMA build var is illegal in lib manifest, use config_schema instead",
+				)
 			default:
+				// If build var is not yet set in the "outer" manifest, set it from
+				// the lib
 				if _, ok := manifest.BuildVars[k]; !ok {
 					manifest.BuildVars[k] = s
 				}
@@ -1041,5 +1140,5 @@ func readManifestWithLibs(
 
 	manifest.Libs = cleanLibs
 
-	return manifest, nil
+	return manifest, mtime, nil
 }

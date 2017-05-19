@@ -21,5 +21,6 @@ type FWAppManifest struct {
 	FFISymbols        []string          `yaml:"ffi_symbols"`
 	Modules           []SWModule        `yaml:"modules,omitempty"`
 	Libs              []SWModule        `yaml:"libs,omitempty"`
+	ConfigSchema      [][]interface{}   `yaml:"config_schema"`
 	BuildVars         map[string]string `yaml:"build_vars"`
 }

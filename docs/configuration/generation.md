@@ -14,17 +14,17 @@ There are more, you can see them all at
 [fw/src](https://github.com/cesanta/mongoose-os/tree/master/fw/src) directory.
 
 As has been mentioned in the overview, you can define your own sections in
-the config, or override existing default values. This is done by placing
-another YAML file in the `YOUR_FIRMWARE_DIR/src` directory and specifying
-`APP_CONF_SCHEMA` variable in the `mos.yml`.
-Take a look at
-[fw/examples/c_hello](https://github.com/cesanta/mongoose-os/tree/master/fw/examples/c_hello/src) for an example: there is custom `src/conf_schema.yaml` file, and
-`mos.yml` has this snippet:
+the config, or override existing default values. This is done by placing a
+config schema descriptor into `mos.yml`, like this:
 
 ```yaml
-build_vars:
-  APP_CONF_SCHEMA: src/conf_schema.yaml
+config_schema:
+  - ["hello", "o", {"title": "Hello app settings"}]
+  - ["hello.who", "s", "world", {"title": "Who to say hello to"}]
 ```
+
+The snippet above is from [fw/examples/c_hello](https://github.com/cesanta/mongoose-os/tree/master/fw/examples/c_hello/mos.yml)
+example.
 
 When the firmware is built, all these YAML files get merged into one.
 User-specified YAML file goes last, therefore it can override any other.

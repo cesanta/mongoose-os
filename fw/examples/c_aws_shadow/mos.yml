@@ -1,7 +1,7 @@
 name: c_aws_shadow
 # arch: PLATFORM
 version: 1.0
-skeleton_version: 2017-03-17
+skeleton_version: 2017-05-18
 sources:
   - src
 build_vars:

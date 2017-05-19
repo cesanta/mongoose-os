@@ -1,7 +1,7 @@
 name: mjs_arduino_bme280
 # arch: PLATFORM
 version: 1.0
-skeleton_version: 2017-03-17
+skeleton_version: 2017-05-18
 modules:
   - origin: https://github.com/cesanta/mjs
   - origin: https://github.com/cesanta/arduino-drivers
@@ -16,6 +16,7 @@ filesystem:
   - ${mongoose_os_path}/fw/mjs_api/api_*.js
   - ${mongoose_os_path}/fw/mjs_api/arduino_drivers/api_arduino_bme280.js
   - ${mongoose_os_path}/fw/platforms/${arch}/mjs_api/api_*.js
+config_schema:
+  - ["i2c.enable", true]
 build_vars:
   MGOS_ENABLE_ARDUINO_API: 1
-  APP_CONF_SCHEMA: src/conf_schema.yaml

@@ -1,12 +1,13 @@
 name: c_web_config
 # arch: PLATFORM
 version: 1.0
-skeleton_version: 2017-03-17
+skeleton_version: 2017-05-18
 sources:
   - src
 filesystem:
   - fs
+config_schema:
+  #- ["hello", "o", {"title": "Hello app settings"}]
 build_vars:
-  APP_CONF_SCHEMA: src/conf_schema.yaml
   MGOS_ENABLE_WEB_CONFIG: 1
   MGOS_ENABLE_FILE_UPLOAD: 1
