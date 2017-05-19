@@ -25,6 +25,10 @@ import (
 	"golang.org/x/net/websocket"
 )
 
+const (
+	expireTime = 1 * time.Minute
+)
+
 var (
 	httpPort     = 1992
 	wsClients    = make(map[*websocket.Conn]int)
@@ -462,13 +466,13 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 	})
 
 	if wwwRoot != "" {
-		http.Handle("/", http.FileServer(http.Dir(wwwRoot)))
+		http.HandleFunc("/", addExpiresHeader(0, http.FileServer(http.Dir(wwwRoot))))
 	} else {
 		assetInfo := func(path string) (os.FileInfo, error) {
 			return os.Stat(path)
 		}
-		http.Handle("/", http.FileServer(&assetfs.AssetFS{Asset: Asset,
-			AssetDir: AssetDir, AssetInfo: assetInfo, Prefix: "web_root"}))
+		http.Handle("/", addExpiresHeader(expireTime, http.FileServer(&assetfs.AssetFS{Asset: Asset,
+			AssetDir: AssetDir, AssetInfo: assetInfo, Prefix: "web_root"})))
 	}
 	addr := fmt.Sprintf("127.0.0.1:%d", httpPort)
 	url := fmt.Sprintf("http://%s", addr)
@@ -486,4 +490,12 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 	// Unreacahble
 	return nil
+}
+
+func addExpiresHeader(d time.Duration, handler http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		const layout = "Mon, 02 Jan 2006 15:04:05 GMT"
+		w.Header().Set("Expires", time.Now().UTC().Add(d).Format(layout))
+		handler.ServeHTTP(w, r)
+	}
 }
