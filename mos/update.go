@@ -28,11 +28,10 @@ var mosUrls = map[string]string{
 	"darwin":  "https://mongoose-os.com/downloads/mos/mac/mos",
 }
 
-func update(ctx context.Context, devConn *dev.DevConn) error {
-	// Check the available version on the server
+func getServerMosVersion() (*versionJson, error) {
 	resp, err := http.Get("https://mongoose-os.com/downloads/mos/version.json")
 	if err != nil {
-		return errors.Trace(err)
+		return nil, errors.Trace(err)
 	}
 	defer resp.Body.Close()
 
@@ -40,6 +39,16 @@ func update(ctx context.Context, devConn *dev.DevConn) error {
 
 	decoder := json.NewDecoder(resp.Body)
 	decoder.Decode(&serverVersion)
+
+	return &serverVersion, nil
+}
+
+func update(ctx context.Context, devConn *dev.DevConn) error {
+	// Check the available version on the server
+	serverVersion, err := getServerMosVersion()
+	if err != nil {
+		return errors.Trace(err)
+	}
 
 	if serverVersion.BuildId != BuildId {
 		// Versions are different, perform update
