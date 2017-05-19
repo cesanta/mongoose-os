@@ -56,6 +56,7 @@ void mgos_system_restart(int exit_code);
 /* Delay routines */
 void mgos_msleep(uint32_t secs);
 void mgos_usleep(uint32_t usecs);
+extern void (*mgos_nsleep100)(uint32_t n);
 
 void mgos_ints_disable(void);
 void mgos_ints_enable(void);

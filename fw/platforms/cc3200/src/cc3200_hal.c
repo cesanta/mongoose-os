@@ -123,7 +123,8 @@ void mgos_usleep(uint32_t usecs) {
 }
 
 uint32_t mgos_bitbang_n100_cal;
-void mgos_nsleep100(uint32_t n) {
+void (*mgos_nsleep100)(uint32_t n);
+void cc3200_nsleep100(uint32_t n) {
   /* TODO(rojer) */
 }
 

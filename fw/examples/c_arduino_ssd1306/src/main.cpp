@@ -28,8 +28,8 @@ void setup(void) {
   // because their pins overlap.
   // You will need to disable I2C and enable SPI:
   // mos config-set i2c.enable=false spi.enable=true
-  // d2 = new Adafruit_SSD1306(21 /* DC */, 5 /* RST */, 17 /* CS */,
-  //                          Adafruit_SSD1306::RES_128_32);
+  d2 = new Adafruit_SSD1306(21 /* DC */, 5 /* RST */, 17 /* CS */,
+                            Adafruit_SSD1306::RES_128_32);
 
   if (d2 != nullptr) {
     d2->begin(SSD1306_SWITCHCAPVCC, 0 /* unused */, true /* reset */);

@@ -26,7 +26,6 @@ void mgos_bitbang_write_bits(int gpio, enum mgos_delay_unit delay_unit,
 void mgos_bitbang_write_bits_js(int gpio, enum mgos_delay_unit delay_unit,
                                 uint32_t t, const uint8_t *data, size_t len);
 
-extern void (*mgos_nsleep100)(uint32_t n);
 extern uint32_t mgos_bitbang_n100_cal;
 
 #ifdef __cplusplus

@@ -28,12 +28,19 @@ struct mgos_spi {
   unsigned int debug : 1;
 };
 
-inline void mgos_spi_clk_idle(struct mgos_spi *c) {
+static inline void mgos_spi_clk_idle(struct mgos_spi *c) {
   mgos_gpio_write(c->sclk_gpio, c->cpol); /* CPOL = 0 -> idle at 0 */
 }
 
-inline void mgos_spi_clk_active(struct mgos_spi *c) {
+static inline void mgos_spi_clk_active(struct mgos_spi *c) {
   mgos_gpio_write(c->sclk_gpio, !c->cpol);
+}
+
+/* This function delays for half of a clock pulse, i.e. quarter of a period. */
+static inline void mgos_spi_half_delay(struct mgos_spi *c) {
+  (void) c;
+  /* This is ~600 KHz on ESP32. */
+  (mgos_nsleep100)(2);
 }
 
 struct mgos_spi *mgos_spi_create(const struct sys_config_spi *cfg) {
@@ -113,13 +120,6 @@ bool mgos_spi_set_mode(struct mgos_spi *c, int mode) {
 bool mgos_spi_set_msb_first(struct mgos_spi *c, bool msb_first) {
   c->msb_first = !!msb_first;
   return true;
-}
-
-/* This function delays for half of a clock pulse, i.e. quarter of a period. */
-inline void mgos_spi_half_delay(struct mgos_spi *c) {
-  (void) c;
-  /* This is ~70 KHz. TODO(rojer): Make speed configurable. */
-  mgos_usleep(1);
 }
 
 bool mgos_spi_txn(struct mgos_spi *c, const void *tx_data, void *rx_data,
