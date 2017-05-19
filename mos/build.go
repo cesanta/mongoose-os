@@ -41,6 +41,7 @@ var (
 		"build images, arch1=image1,arch2=image2")
 	cleanBuild = flag.Bool("clean", false, "perform a clean build, wipe the previous build state")
 	modules    = flag.StringSlice("module", []string{}, "location of the module from mos.yaml, in the format: \"module_name:/path/to/location\". Can be used multiple times.")
+	libs       = flag.StringSlice("lib", []string{}, "location of the lib from mos.yaml, in the format: \"lib_name:/path/to/location\". Can be used multiple times.")
 
 	buildDockerExtra = flag.StringSlice("build-docker-extra", []string{}, "extra docker flags, added before image name. Can be used multiple times: e.g. --build-docker-extra -v --build-docker-extra /foo:/bar.")
 	buildCmdExtra    = flag.StringSlice("build-cmd-extra", []string{}, "extra make flags, added at the end of the make command. Can be used multiple times.")
@@ -1032,6 +1033,8 @@ func readManifestWithLibs(
 		return nil, time.Time{}, errors.Trace(err)
 	}
 
+	customLibLocations := getCustomLibLocations()
+
 	// Prepare all libs {{{
 	var cleanLibs []build.SWModule
 	for _, m := range manifest.Libs {
@@ -1042,26 +1045,34 @@ func readManifestWithLibs(
 
 		reportf("Handling lib %q...", name)
 
-		if skipClean {
-			isClean, err := m.IsClean(libsDir)
+		libDirAbs, ok := customLibLocations[name]
+
+		if !ok {
+			reportf("The --lib flag was not given for it, checking repository")
+			if skipClean {
+				isClean, err := m.IsClean(libsDir)
+				if err != nil {
+					return nil, time.Time{}, errors.Trace(err)
+				}
+
+				if isClean {
+					reportf("Clean, skipping (will be handled remotely)")
+					cleanLibs = append(cleanLibs, m)
+					continue
+				}
+			}
+
+			// Note: we always call PrepareLocalDir for libsDir, but then,
+			// if userLibsDir is different, will need to copy it to the new location
+			libDirAbs, err = m.PrepareLocalDir(libsDir, os.Stdout, true)
 			if err != nil {
 				return nil, time.Time{}, errors.Trace(err)
 			}
-
-			if isClean {
-				reportf("Clean, skipping (will be handled remotely)")
-				cleanLibs = append(cleanLibs, m)
-				continue
-			}
+		} else {
+			reportf("Using the location %q as is (given as a --lib flag)", libDirAbs)
 		}
 
-		// Note: we always call PrepareLocalDir for libsDir, but then,
-		// if userLibsDir is different, will need to copy it to the new location
-		libDirAbs, err := m.PrepareLocalDir(libsDir, os.Stdout, true)
 		libDirForManifest := libDirAbs
-		if err != nil {
-			return nil, time.Time{}, errors.Trace(err)
-		}
 
 		// If libs should be placed in some specific dir, copy the current lib
 		// there (it will also affect the libs path used in resulting manifest)
@@ -1141,4 +1152,13 @@ func readManifestWithLibs(
 	manifest.Libs = cleanLibs
 
 	return manifest, mtime, nil
+}
+
+func getCustomLibLocations() map[string]string {
+	customLibLocations := map[string]string{}
+	for _, l := range *libs {
+		parts := strings.SplitN(l, ":", 2)
+		customLibLocations[parts[0]] = parts[1]
+	}
+	return customLibLocations
 }
