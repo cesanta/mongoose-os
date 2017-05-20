@@ -4069,7 +4069,7 @@ var formatDevInfo = function(json) {
 
 var updateDeviceStatus = function() {
   var classes = ['red', 'orange', 'yellow', 'green'];
-  var titles = ['mo device address', 'not connected', 'connected, no IP', 'online'];
+  var titles = ['no device address', 'not connected', 'connected, no IP', 'online'];
   var wifi = ui.info && ui.info.wifi && ui.info.wifi.sta_ip;
   var n = !ui.address ? 0 : !ui.connected || !ui.info ? 1 : wifi ? 3 : 2;
   console.log(n, ui.connected, ui.address, ui.info);
