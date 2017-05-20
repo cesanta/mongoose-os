@@ -320,7 +320,7 @@ input.form-control { box-shadow: none !important; }
 .greyed { background-color: #eee !important; }
 .greyed:after { border-left-color: #eee !important; }
 .btn-mos { background-color: #fafafa; }
-.done { color: rgb(26, 187, 156); font-size: 120%;}
+.done { font-size: 120%; color: rgb(26, 187, 156); }
 .green { color: #7f7; }
 .red { color: #f77; }
 .orange { color: #fa5; }
@@ -422,193 +422,7 @@ input[type="color"]:focus,
   box-shadow: none;
   outline: 0 none !important;
 }
-
-
-.bootstrapWizard {
-    display: block;
-    list-style: none;
-    padding: 0;
-    position: relative;
-    width: 100%;
-}
-
-.bootstrapWizard a:hover,.bootstrapWizard a:active,.bootstrapWizard a:focus {
-    text-decoration: none
-}
-
-.bootstrapWizard li {
-    display: block;
-    float: left;
-    width: 20%;
-    text-align: center;
-    padding-left: 0
-}
-
-.bootstrapWizard li:before {
-    border-top: 3px solid #55606E;
-    content: "";
-    display: block;
-    font-size: 0;
-    overflow: hidden;
-    position: relative;
-    top: 11px;
-    right: 1px;
-    width: 100%;
-    z-index: 1
-}
-
-.bootstrapWizard li:first-child:before {
-    left: 50%;
-    max-width: 50%
-}
-
-.bootstrapWizard li:last-child:before {
-    max-width: 50%;
-    width: 50%
-}
-
-.bootstrapWizard li.complete .step {
-    background: #0aa66e;
-    padding: 1px 6px;
-    border: 3px solid #55606E
-}
-
-.bootstrapWizard li .step i {
-    font-size: 10px;
-    font-weight: 400;
-    position: relative;
-    top: -1.5px
-}
-
-.bootstrapWizard li .step {
-    background: #B2B5B9;
-    color: #fff;
-    display: inline;
-    font-size: 15px;
-    font-weight: 700;
-    line-height: 12px;
-    padding: 7px 13px;
-    border: 3px solid transparent;
-    border-radius: 50%;
-    line-height: normal;
-    position: relative;
-    text-align: center;
-    z-index: 2;
-    transition: all .1s linear 0s
-}
-
-.bootstrapWizard li.active .step,.bootstrapWizard li.active.complete .step {
-    background: orange;
-    color: #fff;
-    font-weight: 700;
-    padding: 7px 13px;
-    font-size: 15px;
-    border-radius: 50%;
-    border: 3px solid #55606E;
-}
-
-.bootstrapWizard li.complete .title,.bootstrapWizard li.active .title {
-    color: #2B3D53
-}
-
-.bootstrapWizard li .title {
-    color: #bfbfbf;
-    display: block;
-    font-size: 13px;
-    line-height: 15px;
-    max-width: 100%;
-    position: relative;
-    table-layout: fixed;
-    text-align: center;
-    top: 20px;
-    word-wrap: break-word;
-    z-index: 104
-}
-
-.wizard-actions {
-    display: block;
-    list-style: none;
-    padding: 0;
-    position: relative;
-    width: 100%
-}
-
-.wizard-actions li {
-    display: inline
-}
-
-.tab-content.transparent {
-    background-color: transparent
-}
-
-/*End Wizard*/
-
-.tree > ul { margin-left: -20px; }
-
-.tree {
-  background-color:#fff;
-/*
-    min-height:20px;
-    padding:19px;
-    margin-bottom:20px;
-    background-color:#fbfbfb;
-    border:1px solid #999;
-    -webkit-border-radius:4px;
-    -moz-border-radius:4px;
-    border-radius:4px;
-    -webkit-box-shadow:inset 0 1px 1px rgba(0, 0, 0, 0.05);
-    -moz-box-shadow:inset 0 1px 1px rgba(0, 0, 0, 0.05);
-    box-shadow:inset 0 1px 1px rgba(0, 0, 0, 0.05)
-*/
-}
-.tree li {
-    list-style-type:none;
-    margin: 0;
-    padding: 10px 5px 0 5px;
-    position:relative
-}
-.tree li::before, .tree li::after {
-    content:'';
-    left:-20px;
-    position:absolute;
-    right:auto
-}
-.tree li::before {
-    border-left:1px solid #999;
-    bottom:50px;
-    height:100%;
-    top:0;
-    width:1px
-}
-.tree li::after {
-    border-top:1px solid #999;
-    height:20px;
-    top:25px;
-    width:25px
-}
-.tree li span {
-    -moz-border-radius:5px;
-    -webkit-border-radius:5px;
-    xborder:1px solid #999;
-    border-radius:5px;
-    display:inline-block;
-    padding:3px 8px;
-    text-decoration:none
-}
-.tree li.parent_li>span {
-    cursor:pointer
-}
-.tree>ul>li::before, .tree>ul>li::after {
-    border:0
-}
-.tree li:last-child::before {
-    height:30px
-}
-/*.tree li.parent_li>span:hover, .tree li.parent_li>span:hover+ul li span {
-    background:#eee;
-    border:1px solid #94a0b4;
-    color:#000
-}*/`)
+`)
 
 func web_rootCssMainCssBytes() ([]byte, error) {
 	return _web_rootCssMainCss, nil
@@ -620,7 +434,7 @@ func web_rootCssMainCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/css/main.css", size: 8480, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/css/main.css", size: 4930, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3597,7 +3411,7 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
           <img src="images/logo_blue2.png" class="pull-left" height="32">
           <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
           <h2 class="modal-title text-center">
-            Device setup status:
+            Device status:
             <i class="devconn-text"></i> <i class="fa fa-circle devconn-icon"></i>
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;
           </h2>
@@ -3614,7 +3428,7 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
                   <center class="done hidden"><i class="fa fa-check"></i> done!</center></a>
                 </div>
                 <div class="block_content">
-                  <h2 class="title"><a>Plug in your device, choose serial port, click Connect</a></h2>
+                  <h2 class="title"><a>Plug in your device, choose device address, click Select</a></h2>
 
                   <div class="form form-inline">
                     <div class="input-group">
@@ -3630,7 +3444,7 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
                       </span>
                       <input type="text" class="form-control connect-input" style="min-width: 17em;" placeholder="e.g. COM1, or /dev/ttyUSB0">
                     </div>
-                    <button class="btn btn-default btn-mos connect-button pull-right" type="button"><i class="fa fa-link"></i> Connect</button>
+                    <button class="btn btn-default btn-mos connect-button pull-right" type="button"><i class="fa fa-link"></i> Select</button>
                   </div>
 
                   <div id="noports-warning" style="display: none;" class="fade in">
@@ -3664,7 +3478,7 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
                   <center class="done hidden"><i class="fa fa-check"></i> done!</center></a>
                 </div>
                 <div class="block_content">
-                  <h2 class="title"><a>Select architecture, click Flash</a></h2>
+                  <h2 class="title"><a>Select device architecture, click Flash</a></h2>
                   <div class="byline"></div>
 
                   <div class="btn-group" data-toggle="buttons">
@@ -3750,7 +3564,7 @@ func web_rootIndexHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/index.html", size: 10667, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/index.html", size: 10669, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4005,13 +3819,21 @@ func web_rootJsCustomMinJs() (*asset, error) {
 	return a, nil
 }
 
-var _web_rootJsDashJs = []byte(`var ws, pageCache = {};
+var _web_rootJsDashJs = []byte(`var ui = {
+  connected: null,    // Whether the device is connected
+  address: null,      // Serial port, or RPC address of the device
+  info: null,         // Result of the Sys.GetInfo call
+  pageCache: {}
+};
+
 PNotify.prototype.options.styling = 'fontawesome';
 PNotify.prototype.options.delay = 5000;
+
 var getCookie = function(name) {
   var m = (document.cookie || '').match(new RegExp(name + '=([^;"\\s]+)'));
   return m ? m[1] : '';
 };
+
 $.ajaxSetup({
   type: 'POST',
   // beforeSend: function() { if (!devConnected) return false; },
@@ -4046,7 +3868,7 @@ $(document).on('click', '#version-update', function(ev) {
   if (!confirm('Click "OK" to start self-update. Restart mos tool when done.')) return;
   var btn = $(this);
   startSpinner(btn);
-  $.ajax({url: '/update'}).done(function() {
+  $.ajax({url: '/update', global: false}).done(function() {
     new PNotify({title: 'Update successful. Please restart mos tool.', type: 'success'});
   }).fail(function(err) {
     var text = err.responseJSON ? err.responseJSON.error : err.responseText;
@@ -4084,11 +3906,11 @@ var loadPage = function(page) {
     $('#breadcrumb').html($('[data-title]').attr('data-title'));
     location.hash = page;
   };
-  if (pageCache[page]) {
-    doit(pageCache[page]);
+  if (ui.pageCache[page]) {
+    doit(ui.pageCache[page]);
   } else {
     $.get('page_' + page + '.html').done(function(html) {
-      pageCache[page] = html;
+      ui.pageCache[page] = html;
       doit(html);
     });
   }
@@ -4245,77 +4067,81 @@ var formatDevInfo = function(json) {
   return html;
 };
 
-var setDeviceConnectionStatus = function(n) {
+var updateDeviceStatus = function() {
   var classes = ['red', 'orange', 'yellow', 'green'];
-  var titles = ['not connected', 'connected, not flashed', 'flashed, offline', 'online'];
+  var titles = ['mo device address', 'not connected', 'connected, no IP', 'online'];
+  var wifi = ui.info && ui.info.wifi && ui.info.wifi.sta_ip;
+  var n = !ui.address ? 0 : !ui.connected || !ui.info ? 1 : wifi ? 3 : 2;
+  console.log(n, ui.connected, ui.address, ui.info);
+
   $('.devconn-icon').removeClass(classes.join(' ')).addClass(classes[n] || classes[0]);
   $('.devconn-text').text(titles[n] || titles[0]);
+  $('.connect-input').val(ui.address);
+
+  // Step1
+  $('#step1 .done').toggleClass('hidden', n == 0);
+
+  // Step2
+  $('#step2 a.tag').toggleClass('greyed', n == 0);
+  $('#step2 .btn').prop('disabled', n == 0);
+  $('#step2 .done').toggleClass('hidden', n < 2);
+  if (ui.info) $('.devinfo').html(formatDevInfo(ui.info));
+  $('.devinfo, #found-device-info').toggle(n > 1);
+
+  // Step3
+  $('#step3 a.tag').toggleClass('greyed', n < 2);
+  $('#step3 .btn, #step3 input').prop('disabled', n < 2);
+  $('#step3 .done').toggleClass('hidden', n < 3);
+
+  $('#prototype-button').prop('disabled', n < 2);
 };
 
 var probeDevice = function() {
-  $.ajax({url: '/call', data: {method: 'Sys.GetInfo', timeout: 1}}).then(function(data) {
-    $(document).trigger('devinfo', data.result);
-    $('.devinfo').html(formatDevInfo(data.result));
-    $('#found-device-info').fadeIn();
+  return $.ajax({url: '/call', global: false, data: {method: 'Sys.GetInfo', timeout: 1}}).then(function(data) {
+    ui.info = data.result;
   }).fail(function() {
-    $(document).trigger('devinfo', null);
-    $('#found-device-info').fadeOut();
+    ui.info = null;
+  }).always(function() {
+    updateDeviceStatus();
   });
 };
 
 // Repeatedly pull list of serial ports when we're on the first tab
-var devConnected;
-var portList = '';
 var checkPorts = function() {
-  if ($.active) return; // Do not run if there are AJAX requests in flight
-  var thisPane = $('.tab-pane.active').attr('id');
-  var mustRun = (thisPane == 'tab1') || $('#top_nav')[0];
-  if (!mustRun) return;
-
-  $.ajax({url: '/getports', global: false}).then(function(json) {
+  return $.ajax({url: '/getports', global: false}).then(function(json) {
     $('.dropdown-ports').empty();
     var result = json.result || {};
     var ports = result.Ports || [];
-    var port = (result.CurrentPort || ports[0] || '').replace(/^serial:\/\//, '');
-    $(document).trigger('devconn', [result.IsConnected]);
-    if (devConnected !== result.IsConnected) {
-      devConnected = result.IsConnected;
-      setDeviceConnectionStatus(devConnected ? 1 : 0);
-      $('.connect-input').val(port);
-      if (port && devConnected) probeDevice();
-      if (!devConnected) {
-        $('#splash').modal();
-      }
+    var port = (result.CurrentPort || '').replace(/^serial:\/\//, '');
+    if (ui.connected != result.IsConnected || ui.address != port) {
+      ui.connected = result.IsConnected;
+      ui.address = port;
+      if (ui.connected && ui.address) probeDevice();
+      if (!ui.connected) $('#splash').modal();
+      updateDeviceStatus();
     }
     if (ports.length > 0) {
       $.each(ports, function(i, v) {
         $('<li><a href="#">' + v + '</a></li>').appendTo('.dropdown-ports');
       });
       $('#noports-warning').hide();
-      var ports = JSON.stringify(ports);
-      if (ports != portList) {
-        portList = ports;
-      }
     } else {
-      portList = '';
-      if (!devConnected) $('.connect-input').val('');
       $('#noports-warning').fadeIn();
       $('#found-device-info').hide();
     }
-  });
+  }).always(function() { setTimeout(checkPorts, 1000); });
 };
 checkPorts();
-setInterval(checkPorts, 1000);
-
 
 $(document).on('click', '.connect-button', function() {
   var btn = $(this);
   var port = btn.closest('.form').find('.connect-input').val();
   if (!port || port.match(/^\s*$/)) return;
   startSpinner(btn);
-  $.ajax({url: '/connect', data: {port: port, reconnect: true}}).always(function() {
-    probeDevice();
-    btn.button('reset');
+  $.ajax({url: '/connect', global: false, data: {port: port, reconnect: true}}).always(function() {
+    checkPorts().always(function() {
+      btn.button('reset');
+    });
   });
 });
 
@@ -4323,10 +4149,10 @@ $(document).on('click', '#flash-button', function() {
   var btn = $(this);
   var arch = btn.closest('.block_content').find('[name="options"]:checked').val();
   startSpinner(btn);
-  $.ajax({url: '/flash', data: {firmware: arch}}).done(function(json) {
-  }).always(function() {
-    btn.button('reset');
-    setTimeout(probeDevice, 2000);
+  $.ajax({url: '/flash', global: false, data: {firmware: arch}}).always(function() {
+    setTimeout(function() {
+      probeDevice().always(function() { btn.button('reset'); });
+    }, 2000);
   });
 });
 
@@ -4338,33 +4164,10 @@ $(document).on('click', '#wifi-button', function() {
   $.ajax({url: '/wifi', data: {ssid: ssid, pass: pass}}).done(function() {
     document.cookie = 'ssid=' + ssid + '; pass=' + pass;
   }).always(function(json) {
-    btn.button('reset');
-    setTimeout(probeDevice, 2000);
+    setTimeout(function() {
+      probeDevice().always(function() { btn.button('reset'); });
+    }, 2000);
   });
-});
-
-$(document).on('devinfo', function(ev, info) {
-  var wifi = info && info.wifi && info.wifi.sta_ip;
-  $('#step3 a.tag').toggleClass('greyed', !info);
-  $('#step3 .btn, #step3 input, #prototype-button').prop('disabled', !info);
-  $('#step2 .done, #found-device-info').toggleClass('hidden', !info);
-  $('#step3 .done').toggleClass('hidden', !wifi);
-  setDeviceConnectionStatus(!devConnected ? 0 : !info ? 1 : wifi ? 3 : 2);
-  $('#step2 [value="' + (info ? info.arch : 'esp8266') + '"]').click();
-  // console.log('#step2 [value="' + info.arch + '"]');
-});
-
-$(document).on('devconn', function(ev, devConnected) {
-  if (devConnected) {
-    $('#step2 a.tag').removeClass('greyed');
-    $('#step2 .btn').prop('disabled', false);
-    $('#step1 .done').removeClass('hidden');
-  } else {
-    $('.done').addClass('hidden');
-    $('#step2 a.tag, #step3 a.tag').addClass('greyed');
-    $('#step2 .btn, #step2 input, #step3 .btn, #step3 input').prop('disabled', true);
-  }
-  $('#prototype-button').prop('disabled', !devConnected);
 });
 
 $(document).on('click', '#prototype-button', function() {
@@ -4393,7 +4196,7 @@ func web_rootJsDashJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/dash.js", size: 12690, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/dash.js", size: 12174, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -5314,9 +5117,6 @@ var _web_rootPage_configurationHtml = []byte(`<div data-title="Device configurat
       addLog('Configuration loaded\n');
 
       var c = json.result;
-      $('#wifi\\.sta\\.enable').prop('checked', c.wifi.sta.enable);
-      $('#wifi\\.sta\\.ssid').val(c.wifi.sta.ssid || getCookie('ssid'));
-      $('#wifi\\.sta\\.pass').val(c.wifi.sta.pass || getCookie('pass'));
       $('#mqtt\\.enable').prop('checked', c.mqtt.enable);
       $('#mqtt\\.server').val(c.mqtt.server || getCookie('mqtt'));
       $('#sntp\\.enable').prop('checked', c.sntp.enable);
@@ -5352,11 +5152,8 @@ var _web_rootPage_configurationHtml = []byte(`<div data-title="Device configurat
 
   $(document).off('click', '#config-save-button');
   $(document).on('click', '#config-save-button', function() {
-    var config = {wifi: {sta: {}}, mqtt: {}, sntp: {}, debug: {}};
+    var config = {mqtt: {}, sntp: {}, debug: {}};
     if ($('#view1').is(':checked')) {
-      config.wifi.sta.enable = $('#wifi\\.sta\\.enable').is(':checked');
-      config.wifi.sta.ssid = $('#wifi\\.sta\\.ssid').val();
-      config.wifi.sta.pass = $('#wifi\\.sta\\.pass').val();
       config.mqtt.enable = $('#mqtt\\.enable').is(':checked');
       config.mqtt.server = $('#mqtt\\.server').val();
       config.sntp.enable = $('#sntp\\.enable').is(':checked');
@@ -5435,7 +5232,7 @@ func web_rootPage_configurationHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_configuration.html", size: 12196, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_configuration.html", size: 11772, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }

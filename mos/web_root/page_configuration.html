@@ -171,9 +171,6 @@
       addLog('Configuration loaded\n');
 
       var c = json.result;
-      $('#wifi\\.sta\\.enable').prop('checked', c.wifi.sta.enable);
-      $('#wifi\\.sta\\.ssid').val(c.wifi.sta.ssid || getCookie('ssid'));
-      $('#wifi\\.sta\\.pass').val(c.wifi.sta.pass || getCookie('pass'));
       $('#mqtt\\.enable').prop('checked', c.mqtt.enable);
       $('#mqtt\\.server').val(c.mqtt.server || getCookie('mqtt'));
       $('#sntp\\.enable').prop('checked', c.sntp.enable);
@@ -209,11 +206,8 @@
 
   $(document).off('click', '#config-save-button');
   $(document).on('click', '#config-save-button', function() {
-    var config = {wifi: {sta: {}}, mqtt: {}, sntp: {}, debug: {}};
+    var config = {mqtt: {}, sntp: {}, debug: {}};
     if ($('#view1').is(':checked')) {
-      config.wifi.sta.enable = $('#wifi\\.sta\\.enable').is(':checked');
-      config.wifi.sta.ssid = $('#wifi\\.sta\\.ssid').val();
-      config.wifi.sta.pass = $('#wifi\\.sta\\.pass').val();
       config.mqtt.enable = $('#mqtt\\.enable').is(':checked');
       config.mqtt.server = $('#mqtt\\.server').val();
       config.sntp.enable = $('#sntp\\.enable').is(':checked');

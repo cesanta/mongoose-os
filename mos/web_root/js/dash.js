@@ -1,10 +1,18 @@
-var ws, pageCache = {};
+var ui = {
+  connected: null,    // Whether the device is connected
+  address: null,      // Serial port, or RPC address of the device
+  info: null,         // Result of the Sys.GetInfo call
+  pageCache: {}
+};
+
 PNotify.prototype.options.styling = 'fontawesome';
 PNotify.prototype.options.delay = 5000;
+
 var getCookie = function(name) {
   var m = (document.cookie || '').match(new RegExp(name + '=([^;"\\s]+)'));
   return m ? m[1] : '';
 };
+
 $.ajaxSetup({
   type: 'POST',
   // beforeSend: function() { if (!devConnected) return false; },
@@ -39,7 +47,7 @@ $(document).on('click', '#version-update', function(ev) {
   if (!confirm('Click "OK" to start self-update. Restart mos tool when done.')) return;
   var btn = $(this);
   startSpinner(btn);
-  $.ajax({url: '/update'}).done(function() {
+  $.ajax({url: '/update', global: false}).done(function() {
     new PNotify({title: 'Update successful. Please restart mos tool.', type: 'success'});
   }).fail(function(err) {
     var text = err.responseJSON ? err.responseJSON.error : err.responseText;
@@ -77,11 +85,11 @@ var loadPage = function(page) {
     $('#breadcrumb').html($('[data-title]').attr('data-title'));
     location.hash = page;
   };
-  if (pageCache[page]) {
-    doit(pageCache[page]);
+  if (ui.pageCache[page]) {
+    doit(ui.pageCache[page]);
   } else {
     $.get('page_' + page + '.html').done(function(html) {
-      pageCache[page] = html;
+      ui.pageCache[page] = html;
       doit(html);
     });
   }
@@ -238,77 +246,81 @@ var formatDevInfo = function(json) {
   return html;
 };
 
-var setDeviceConnectionStatus = function(n) {
+var updateDeviceStatus = function() {
   var classes = ['red', 'orange', 'yellow', 'green'];
-  var titles = ['not connected', 'connected, not flashed', 'flashed, offline', 'online'];
+  var titles = ['mo device address', 'not connected', 'connected, no IP', 'online'];
+  var wifi = ui.info && ui.info.wifi && ui.info.wifi.sta_ip;
+  var n = !ui.address ? 0 : !ui.connected || !ui.info ? 1 : wifi ? 3 : 2;
+  console.log(n, ui.connected, ui.address, ui.info);
+
   $('.devconn-icon').removeClass(classes.join(' ')).addClass(classes[n] || classes[0]);
   $('.devconn-text').text(titles[n] || titles[0]);
+  $('.connect-input').val(ui.address);
+
+  // Step1
+  $('#step1 .done').toggleClass('hidden', n == 0);
+
+  // Step2
+  $('#step2 a.tag').toggleClass('greyed', n == 0);
+  $('#step2 .btn').prop('disabled', n == 0);
+  $('#step2 .done').toggleClass('hidden', n < 2);
+  if (ui.info) $('.devinfo').html(formatDevInfo(ui.info));
+  $('.devinfo, #found-device-info').toggle(n > 1);
+
+  // Step3
+  $('#step3 a.tag').toggleClass('greyed', n < 2);
+  $('#step3 .btn, #step3 input').prop('disabled', n < 2);
+  $('#step3 .done').toggleClass('hidden', n < 3);
+
+  $('#prototype-button').prop('disabled', n < 2);
 };
 
 var probeDevice = function() {
-  $.ajax({url: '/call', data: {method: 'Sys.GetInfo', timeout: 1}}).then(function(data) {
-    $(document).trigger('devinfo', data.result);
-    $('.devinfo').html(formatDevInfo(data.result));
-    $('#found-device-info').fadeIn();
+  return $.ajax({url: '/call', global: false, data: {method: 'Sys.GetInfo', timeout: 1}}).then(function(data) {
+    ui.info = data.result;
   }).fail(function() {
-    $(document).trigger('devinfo', null);
-    $('#found-device-info').fadeOut();
+    ui.info = null;
+  }).always(function() {
+    updateDeviceStatus();
   });
 };
 
 // Repeatedly pull list of serial ports when we're on the first tab
-var devConnected;
-var portList = '';
 var checkPorts = function() {
-  if ($.active) return; // Do not run if there are AJAX requests in flight
-  var thisPane = $('.tab-pane.active').attr('id');
-  var mustRun = (thisPane == 'tab1') || $('#top_nav')[0];
-  if (!mustRun) return;
-
-  $.ajax({url: '/getports', global: false}).then(function(json) {
+  return $.ajax({url: '/getports', global: false}).then(function(json) {
     $('.dropdown-ports').empty();
     var result = json.result || {};
     var ports = result.Ports || [];
-    var port = (result.CurrentPort || ports[0] || '').replace(/^serial:\/\//, '');
-    $(document).trigger('devconn', [result.IsConnected]);
-    if (devConnected !== result.IsConnected) {
-      devConnected = result.IsConnected;
-      setDeviceConnectionStatus(devConnected ? 1 : 0);
-      $('.connect-input').val(port);
-      if (port && devConnected) probeDevice();
-      if (!devConnected) {
-        $('#splash').modal();
-      }
+    var port = (result.CurrentPort || '').replace(/^serial:\/\//, '');
+    if (ui.connected != result.IsConnected || ui.address != port) {
+      ui.connected = result.IsConnected;
+      ui.address = port;
+      if (ui.connected && ui.address) probeDevice();
+      if (!ui.connected) $('#splash').modal();
+      updateDeviceStatus();
     }
     if (ports.length > 0) {
       $.each(ports, function(i, v) {
         $('<li><a href="#">' + v + '</a></li>').appendTo('.dropdown-ports');
       });
       $('#noports-warning').hide();
-      var ports = JSON.stringify(ports);
-      if (ports != portList) {
-        portList = ports;
-      }
     } else {
-      portList = '';
-      if (!devConnected) $('.connect-input').val('');
       $('#noports-warning').fadeIn();
       $('#found-device-info').hide();
     }
-  });
+  }).always(function() { setTimeout(checkPorts, 1000); });
 };
 checkPorts();
-setInterval(checkPorts, 1000);
-
 
 $(document).on('click', '.connect-button', function() {
   var btn = $(this);
   var port = btn.closest('.form').find('.connect-input').val();
   if (!port || port.match(/^\s*$/)) return;
   startSpinner(btn);
-  $.ajax({url: '/connect', data: {port: port, reconnect: true}}).always(function() {
-    probeDevice();
-    btn.button('reset');
+  $.ajax({url: '/connect', global: false, data: {port: port, reconnect: true}}).always(function() {
+    checkPorts().always(function() {
+      btn.button('reset');
+    });
   });
 });
 
@@ -316,10 +328,10 @@ $(document).on('click', '#flash-button', function() {
   var btn = $(this);
   var arch = btn.closest('.block_content').find('[name="options"]:checked').val();
   startSpinner(btn);
-  $.ajax({url: '/flash', data: {firmware: arch}}).done(function(json) {
-  }).always(function() {
-    btn.button('reset');
-    setTimeout(probeDevice, 2000);
+  $.ajax({url: '/flash', global: false, data: {firmware: arch}}).always(function() {
+    setTimeout(function() {
+      probeDevice().always(function() { btn.button('reset'); });
+    }, 2000);
   });
 });
 
@@ -331,33 +343,10 @@ $(document).on('click', '#wifi-button', function() {
   $.ajax({url: '/wifi', data: {ssid: ssid, pass: pass}}).done(function() {
     document.cookie = 'ssid=' + ssid + '; pass=' + pass;
   }).always(function(json) {
-    btn.button('reset');
-    setTimeout(probeDevice, 2000);
+    setTimeout(function() {
+      probeDevice().always(function() { btn.button('reset'); });
+    }, 2000);
   });
-});
-
-$(document).on('devinfo', function(ev, info) {
-  var wifi = info && info.wifi && info.wifi.sta_ip;
-  $('#step3 a.tag').toggleClass('greyed', !info);
-  $('#step3 .btn, #step3 input, #prototype-button').prop('disabled', !info);
-  $('#step2 .done, #found-device-info').toggleClass('hidden', !info);
-  $('#step3 .done').toggleClass('hidden', !wifi);
-  setDeviceConnectionStatus(!devConnected ? 0 : !info ? 1 : wifi ? 3 : 2);
-  $('#step2 [value="' + (info ? info.arch : 'esp8266') + '"]').click();
-  // console.log('#step2 [value="' + info.arch + '"]');
-});
-
-$(document).on('devconn', function(ev, devConnected) {
-  if (devConnected) {
-    $('#step2 a.tag').removeClass('greyed');
-    $('#step2 .btn').prop('disabled', false);
-    $('#step1 .done').removeClass('hidden');
-  } else {
-    $('.done').addClass('hidden');
-    $('#step2 a.tag, #step3 a.tag').addClass('greyed');
-    $('#step2 .btn, #step2 input, #step3 .btn, #step3 input').prop('disabled', true);
-  }
-  $('#prototype-button').prop('disabled', !devConnected);
 });
 
 $(document).on('click', '#prototype-button', function() {
