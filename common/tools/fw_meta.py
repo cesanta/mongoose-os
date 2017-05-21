@@ -49,6 +49,20 @@ import git
 
 FW_MANIFEST_FILE_NAME = 'manifest.json'
 
+# From http://stackoverflow.com/questions/241327/python-snippet-to-remove-c-and-c-comments#241506
+def remove_comments(text):
+    def replacer(match):
+        s = match.group(0)
+        if s.startswith('/'):
+            return " " # note: a space and not an empty string
+        else:
+            return s
+    pattern = re.compile(
+        r'//.*?$|/\*.*?\*/|\'(?:\\.|[^\\\'])*\'|"(?:\\.|[^\\"])*"',
+        re.DOTALL | re.MULTILINE
+    )
+    return re.sub(pattern, replacer, text)
+
 class FFISymbol:
     def __init__(self, name, return_type, args):
         self.name = name
@@ -225,7 +239,11 @@ def cmd_gen_ffi_exports(args):
     # there
     for js_file in args.js_files:
         with open(js_file) as f:
-            data = f.read().replace('\n', '')
+            data = f.read()
+            # Remove // and /* */ comments from the data
+            data = remove_comments(data)
+            # Remove newlines
+            data = data.replace('\n', '')
             # Note: must match things like:
             #       char *foo(int bar)
             #
