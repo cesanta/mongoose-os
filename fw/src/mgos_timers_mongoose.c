@@ -147,3 +147,9 @@ double mgos_uptime(void) {
 void mgos_uptime_init(void) {
   start_time = mg_time();
 }
+
+int mgos_strftime(char *s, int size, char *fmt, int time) {
+  time_t t = (time_t) time;
+  struct tm *tmp = localtime(&t);
+  return tmp == NULL ? -1 : (int) strftime(s, size, fmt, tmp);
+}
