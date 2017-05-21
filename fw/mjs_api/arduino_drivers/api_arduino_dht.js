@@ -4,6 +4,9 @@
 load("api_math.js");
 
 let DHT = {
+  _init: ffi('void *mgos_dht_init(int, int)'),
+  _cls: ffi('void mgos_dht_close(void *)'),
+  _bgn: ffi('void mgos_dht_begin(void *)'),
   _rt: ffi('int mgos_dht_read_temperature(void *, int, int)'),
   _cctof: ffi('int mgos_dht_convert_ctof(void *, int)'),
   _cftoc: ffi('int mgos_dht_convert_ftocC(void *, int)'),
@@ -17,47 +20,65 @@ let DHT = {
   DHT22: 22,
   AM2302: 22,
 
-  // Initialize DHT library. Return value: DHT handle opaque pointer.
-  init: ffi('void *mgos_dht_init(int, int)'),
+  // Create a DHT object.
+  create: function(pin, type) {
+    // Initialize DHT library. Return value: DHT handle opaque pointer.
+    let d = DHT._init(pin, type);
+    let s = Object.create({
+      dht: d,
+      close: DHT.close,
+      begin: DHT.begin,
+      readTemperature: DHT.readTemperature,
+      convertCtoF: DHT.convertCtoF,
+      convertFtoC: DHT.convertFtoC,
+      computeHeatIndex: DHT.computeHeatIndex,
+      readHumidity: DHT.readHumidity,
+    });
+    return s;
+  },
 
   // Close DHT handle. Return value: none.
-  close: ffi('void mgos_dht_close(void *)'),
+  close: function() {
+    return DHT._cls(this.dht);
+  },
 
   // Initialize a device.
-  begin: ffi('void mgos_dht_begin(void *)'),
+  begin: function() {
+    return DHT._bgn(this.dht);
+  },
 
   // Returns temperature in DegC or DegF depending on param #2
   // or -127.0 if operation failed
   // Param #2: 0 - Celcius; 1 - Fahrenheit).
   // Param #3: 0 - normal read mode, 1 - forced read.
-  readTemperature: function(dht, s, f) {
+  readTemperature: function(s, f) {
     // C-functions output value of “1234” equals 12.34 Deg.
-    return this._rt(dht, s, f) / 100.0;
+    return DHT._rt(this.dht, s, f) / 100.0;
   },
 
   // Convert DegC to DegF or -127.0 if operation failed.
-  convertCtoF: function(dht, tc) {
+  convertCtoF: function(tc) {
     // C-functions input and output values of “1234” equals 12.34 Deg.
-    return this._cctof(dht, Math.round(tc * 100.0)) / 100.0;
+    return DHT._cctof(this.dht, Math.round(tc * 100.0)) / 100.0;
   },
 
   // Convert DegF to DegC or -127.0 if operation failed.
-  convertFtoC: function(dht, tf) {
+  convertFtoC: function(tf) {
     // C-functions input and output values of “1234” equals 12.34 Deg.
-    return this._cftoc(dht, Math.round(tf * 100.0)) / 100.0;
+    return DHT._cftoc(this.dht, Math.round(tf * 100.0)) / 100.0;
   },
 
   // Compute a heat index or -127.0 if operation failed.
   // Please see Arduino Adafrut DHTxx library for more details.
-  computeHeatIndex: function(dht, t, h, f) {
+  computeHeatIndex: function(t, h, f) {
     // C-functions input and output values of “1234” equals 12.34 Deg.
-    return this._chi(dht, Math.round(t * 100), Math.round(h * 100), f) / 100.0;
+    return DHT._chi(this.dht, Math.round(t * 100), Math.round(h * 100), f) / 100.0;
   },
   
   // Returns temperature in RH% or -127.0 if operation failed.
   // Param #2: 0 - normal read mode, 1 - forced read.
-  readHumidity: function(dht, f) {
+  readHumidity: function(f) {
     // c-functions output value of “4321” equals 43.21 %.
-    return this._rh(dht, f) / 100.0;
+    return DHT._rh(this.dht, f) / 100.0;
   },
 };
