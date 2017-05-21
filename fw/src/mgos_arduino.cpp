@@ -58,6 +58,14 @@ unsigned long micros(void) {
   return mg_time() * 1000000;
 }
 
+void interrupts(void) {
+  mgos_ints_enable();
+}
+
+void noInterrupts(void) {
+  mgos_ints_disable();
+}
+
 extern "C" {
 static mgos_timer_id s_loop_timer;
 }
