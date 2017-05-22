@@ -13,20 +13,20 @@ load('api_arduino_bme280.js');
 // Sensors address
 let sens_addr = 0x76;
 // Initialize Adafruit_BME280 library
-let bme = Adafruit_BME280.init();
+let bme = Adafruit_BME280.create();
 // Initialize the sensor
-if (Adafruit_BME280.begin(bme, sens_addr) === 0) {
+if (bme.begin(sens_addr) === 0) {
   print('Cant find a sensor');
 } else {
   // This function reads data from the BME280 sensor every 2 seconds
   Timer.set(2000 /* milliseconds */, true /* repeat */, function() {
     print('Temperature: ');
-    print(Adafruit_BME280.readTemperature(bme));
+    print(bme.readTemperature());
     print('Humidity: ');
-    print(Adafruit_BME280.readHumidity(bme));
+    print(bme.readHumidity());
     print('Pressure: ');
-    print(Adafruit_BME280.readPressure(bme));
+    print(bme.readPressure());
     print('Altitude: ');
-    print(Adafruit_BME280.readAltitude(bme, 1013.25/*hPa*/));
+    print(bme.readAltitude(1013.25/*hPa*/));
   }, null);
 }
