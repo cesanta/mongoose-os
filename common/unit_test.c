@@ -3,6 +3,7 @@
  * All rights reserved
  */
 
+#include "common/cs_varint.h"
 #include "common/test_util.h"
 #include "common/str_util.h"
 
@@ -38,8 +39,49 @@ static const char *test_c_snprintf(void) {
   return NULL;
 }
 
+static const char *test_cs_varint(void) {
+  uint8_t buf[100];
+
+  int llen_enc;
+  int llen_dec;
+  ASSERT_EQ((llen_enc = cs_varint_encode(127, buf)), 1);
+  ASSERT_EQ(cs_varint_decode(buf, &llen_dec), 127);
+  ASSERT_EQ(llen_dec, llen_enc);
+
+  ASSERT_EQ((llen_enc = cs_varint_encode(128, buf)), 2);
+  ASSERT_EQ(cs_varint_decode(buf, &llen_dec), 128);
+  ASSERT_EQ(llen_dec, llen_enc);
+
+  ASSERT_EQ((llen_enc = cs_varint_encode(0xfffffff, buf)), 4);
+  ASSERT_EQ(cs_varint_decode(buf, &llen_dec), 0xfffffff);
+  ASSERT_EQ(llen_dec, llen_enc);
+
+  ASSERT_EQ((llen_enc = cs_varint_encode(0x7fffffff, buf)), 5);
+  ASSERT_EQ(cs_varint_decode(buf, &llen_dec), 0x7fffffff);
+  ASSERT_EQ(llen_dec, llen_enc);
+
+  ASSERT_EQ((llen_enc = cs_varint_encode(0xffffffff, buf)), 5);
+  ASSERT_EQ(cs_varint_decode(buf, &llen_dec), 0xffffffff);
+  ASSERT_EQ(llen_dec, llen_enc);
+
+  ASSERT_EQ((llen_enc = cs_varint_encode(0xfffffffff, buf)), 6);
+  ASSERT_EQ(cs_varint_decode(buf, &llen_dec), 0xfffffffff);
+  ASSERT_EQ(llen_dec, llen_enc);
+
+  ASSERT_EQ((llen_enc = cs_varint_encode(0xfffffffffffffff, buf)), 9);
+  ASSERT_EQ(cs_varint_decode(buf, &llen_dec), 0xfffffffffffffff);
+  ASSERT_EQ(llen_dec, llen_enc);
+
+  ASSERT_EQ((llen_enc = cs_varint_encode(0xffffffffffffffff, buf)), 10);
+  ASSERT_EQ(cs_varint_decode(buf, &llen_dec), 0xffffffffffffffff);
+  ASSERT_EQ(llen_dec, llen_enc);
+
+  return NULL;
+}
+
 static const char *run_tests(const char *filter, double *total_elapsed) {
   RUN_TEST(test_c_snprintf);
+  RUN_TEST(test_cs_varint);
   return NULL;
 }
 
