@@ -20,94 +20,79 @@ let OneWire = {
   _crc8: ffi('int mgos_arduino_onewire_crc8(void *, char *, int)'),
   _dly: ffi('void mgos_msleep(int)'),
 
+  _proto: {
+    // Close OneWire handle. Return value: none.
+    close: function() {
+      return OneWire._cls(this.ow);
+    },
+
+    reset: function() {
+      return OneWire._rst(this.ow);
+    },
+
+    select: function(addr) {
+      return OneWire._sel(this.ow, addr);
+    },
+
+    skip: function() {
+      return OneWire._sp(this.ow);
+    },
+
+    write: function(v) {
+      return OneWire._w(this.ow, v);
+    },
+
+    write_bytes: function(buf, len) {
+      return OneWire._wbs(this.ow, buf, len);
+    },
+
+    read: function() {
+      return OneWire._r(this.ow);
+    },
+
+    read_bytes: function(buf, len) {
+      return OneWire._rbs(this.ow, buf, len);
+    },
+
+    write_bit: function(v) {
+      return OneWire._wb(this.ow, v);
+    },
+
+    read_bit: function() {
+      return OneWire._rb(this.ow);
+    },
+
+    depower: function() {
+      return OneWire._dp(this.ow);
+    },
+
+    reset_search: function() {
+      return OneWire._rsch(this.ow);
+    },
+
+    target_search: function(fc) {
+      return OneWire._tsch(this.ow, fc);
+    },
+
+    search: function(addr, mde) {
+      return OneWire._sch(this.ow, addr, mde);
+    },
+
+    crc8: function(addr, len) {
+      return OneWire._crc8(this.ow, addr, len);
+    },
+
+    delay: function(t) {
+      return OneWire._dly(t);
+    },
+  },
+
   // Create a OneWire object.
   create: function(pin) {
+    let obj = Object.create(OneWire._proto);
     // Initialize OneWire library.
     // Return value: OneWire handle opaque pointer.
-    let ow = OneWire._init(pin);
-    return Object.create({
-      ow: ow,
-      close: OneWire.close,
-      reset: OneWire.reset,
-      select: OneWire.select,
-      skip: OneWire.skip,
-      write: OneWire.write,
-      write_bytes: OneWire.write_bytes,
-      read: OneWire.read,
-      read_bytes: OneWire.read_bytes,
-      write_bit: OneWire.write_bit,
-      read_bit: OneWire.read_bit,
-      depower: OneWire.depower,
-      reset_search: OneWire.reset_search,
-      target_search: OneWire.target_search,
-      search: OneWire.search,
-      crc8: OneWire.crc8,
-      delay: OneWire.delay,
-    });
-  },
-
-  // Close OneWire handle. Return value: none.
-  close: function() {
-    return OneWire._cls(this.ow);
-  },
-
-  reset: function() {
-    return OneWire._rst(this.ow);
-  },
-
-  select: function(addr) {
-    return OneWire._sel(this.ow, addr);
-  },
-
-  skip: function() {
-    return OneWire._sp(this.ow);
-  },
-
-  write: function(v) {
-    return OneWire._w(this.ow, v);
-  },
-
-  write_bytes: function(buf, len) {
-    return OneWire._wbs(this.ow, buf, len);
-  },
-
-  read: function() {
-    return OneWire._r(this.ow);
-  },
-
-  read_bytes: function(buf, len) {
-    return OneWire._rbs(this.ow, buf, len);
-  },
-
-  write_bit: function(v) {
-    return OneWire._wb(this.ow, v);
-  },
-
-  read_bit: function() {
-    return OneWire._rb(this.ow);
-  },
-
-  depower: function() {
-    return OneWire._dp(this.ow);
-  },
-
-  reset_search: function() {
-    return OneWire._rsch(this.ow);
-  },
-
-  target_search: function(fc) {
-    return OneWire._tsch(this.ow, fc);
-  },
-
-  search: function(addr, mde) {
-    return OneWire._sch(this.ow, addr, mde);
-  },
-
-  crc8: function(addr, len) {
-    return OneWire._crc8(this.ow, addr, len);
-  },
-
-  delay: function(t) {
-    return OneWire._dly(t);
+    obj.ow = OneWire._init(pin);
+    return obj;
   },
 };
