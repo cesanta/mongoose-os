@@ -31,8 +31,7 @@ let searchSens = function() {
       break;
     }
     // Sensor found
-    print('Sensor address:');
-    print(toHexStr(rom[i]));
+    print('Sensor#', i, 'address:', toHexStr(rom[i]));
     rom[++i] = '01234567';
   }
   return i;
@@ -47,7 +46,6 @@ Timer.set(1000 /* milliseconds */, true /* repeat */, function() {
   }
 
   for (let i = 0; i < n; i++) {
-    print('Temperature: ');
-    print(getTemp(rom[i]));
+    print('Sensor#', i, 'Temperature:', getTemp(rom[i]), '*C');
   }
 }, null);
