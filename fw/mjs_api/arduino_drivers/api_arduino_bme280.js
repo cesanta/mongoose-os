@@ -61,9 +61,9 @@ let Adafruit_BME280 = {
     // atmospheric pressure (in hPa), and sea-level pressure (in hPa)
     // or RES_FAIL if an operation failed.
     // http://www.adafruit.com/datasheets/BST-BMP180-DS000-09.pdf, P.16
-    readAltitude: function(seaLevel) {
+    readAltitude: function(lvl) {
       // C-functions input and output values of “1234” equals 12.34.
-      return Adafruit_BME280._ra(this.bme, Math.round(seaLevel * 100.0)) / 100.0;
+      return Adafruit_BME280._ra(this.bme, Math.round(lvl * 100.0)) / 100.0;
     },
 
     // Returns the pressure at sea level in hPa
@@ -71,9 +71,9 @@ let Adafruit_BME280 = {
     // and atmospheric pressure (in hPa)
     // or RES_FAIL if an operation failed.
     // http://www.adafruit.com/datasheets/BST-BMP180-DS000-09.pdf, P.17
-    seaLevelForAltitude: function(altitude, pressure) {
+    seaLevelForAltitude: function(alt, pres) {
       // C-functions input and output values of “1234” equals 12.34.
-      return Adafruit_BME280._alfa(this.bme, Math.round(altitude * 100.0), Math.round(pressure * 100.0)) / 100.0;
+      return Adafruit_BME280._alfa(this.bme, Math.round(alt * 100.0), Math.round(pres * 100.0)) / 100.0;
     },
   },
 

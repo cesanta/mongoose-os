@@ -20,13 +20,8 @@ if (bme.begin(sens_addr) === 0) {
 } else {
   // This function reads data from the BME280 sensor every 2 seconds
   Timer.set(2000 /* milliseconds */, true /* repeat */, function() {
-    print('Temperature: ');
-    print(bme.readTemperature());
-    print('Humidity: ');
-    print(bme.readHumidity());
-    print('Pressure: ');
-    print(bme.readPressure());
-    print('Altitude: ');
-    print(bme.readAltitude(1013.25/*hPa*/));
+    print('Temperature:', bme.readTemperature(), '*C');
+    print('Humidity:', bme.readHumidity(), '%RH');
+    print('Pressure:', bme.readPressure(), 'hPa');
   }, null);
 }
