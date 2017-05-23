@@ -39,7 +39,7 @@ func init() {
 			"If not set, --port is used.")
 	flag.BoolVar(&espFlashOpts.InvertedControlLines, "esp-inverted-control-lines", false,
 		"DTR and RTS control lines use inverted polarity")
-	flag.StringVar(&espFlashOpts.FlashParams, "esp-flash-params", "dio,,40m",
+	flag.StringVar(&espFlashOpts.FlashParams, "esp-flash-params", "",
 		"Flash chip params. Either a comma-separated string of mode,size,freq or a number. "+
 			"Mode must be one of: qio, qout, dio, dout. "+
 			"Valid values for size are: 2m, 4m, 8m, 16m, 32m, 16m-c1, 32m-c1, 32m-c2. "+

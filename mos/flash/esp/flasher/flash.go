@@ -44,11 +44,11 @@ func Flash(ct esp.ChipType, fw *common.FirmwareBundle, opts *esp.FlashOpts) erro
 	}
 	defer cfr.rc.Disconnect()
 
-	common.Reportf("Flash size: %d, params: 0x%04x", cfr.flashSize, cfr.flashParams)
+	common.Reportf("Flash size: %d, params: %s", cfr.flashParams.Size(), cfr.flashParams)
 
 	if ct == esp.ChipESP8266 {
 		// Based on our knowledge of flash size, adjust type=sys_params image.
-		adjustSysParamsLocation(fw, cfr.flashSize)
+		adjustSysParamsLocation(fw, cfr.flashParams.Size())
 	}
 
 	// Sort images by address
@@ -63,8 +63,7 @@ func Flash(ct esp.ChipType, fw *common.FirmwareBundle, opts *esp.FlashOpts) erro
 		}
 		im := &image{addr: p.ESPFlashAddress, data: data, part: p}
 		if im.addr == 0 || im.addr == 0x1000 && len(data) >= 4 && data[0] == 0xe9 {
-			im.data[2] = byte((cfr.flashParams >> 8) & 0xff)
-			im.data[3] = byte(cfr.flashParams & 0xff)
+			im.data[2], im.data[3] = cfr.flashParams.Bytes()
 		}
 		if p.ESP32Encrypt && len(cfr.esp32EncryptionKey) > 0 {
 			encData, err := esp32.ESP32EncryptImageData(
@@ -78,7 +77,7 @@ func Flash(ct esp.ChipType, fw *common.FirmwareBundle, opts *esp.FlashOpts) erro
 	}
 	sort.Sort(imagesByAddr(images))
 
-	err = sanityCheckImages(ct, images, cfr.flashSize, flashSectorSize)
+	err = sanityCheckImages(ct, images, cfr.flashParams.Size(), flashSectorSize)
 	if err != nil {
 		return errors.Trace(err)
 	}
