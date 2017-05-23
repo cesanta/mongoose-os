@@ -27,25 +27,20 @@ let sens = [];
 
 // This function reads data from the DS sensors every 2 seconds
 Timer.set(2000 /* milliseconds */, true /* repeat */, function() {
-
   if (n === 0) {
     n = dt.getDeviceCount();
-
-    print('Sensors found:');
-    print(n);
+    print('Sensors found:', n);
 
     for (let i = 0; i < n; i++) {
       sens[i] = '01234567';
-      if (dt.getAddress(sens[i], i) !== 1) {
-        print('Sensor address:');
-        print(dt.toHexStr(sens[i]));
+      if (dt.getAddress(sens[i], i) === 1) {
+        print('Sensor#', i, 'address:', dt.toHexStr(sens[i]));
       }
     }
   }
 
   dt.requestTemperatures();
   for (let i = 0; i < n; i++) {
-    print('Temperature: ');
-    print(dt.getTempC(sens[i]));
+    print('Sensor#', i, 'Temperature:', dt.getTempC(sens[i]), '*C');
   }
 }, null);
