@@ -5,6 +5,7 @@ repo: https://github.com/cesanta/mongoose-os
 items:
   - { name: quickstart }
   - { name: apps }
+  - { name: cloud }
   - { name: architecture }
   - { name: configuration }
   - { name: security }

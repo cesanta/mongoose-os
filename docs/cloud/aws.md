@@ -1,5 +1,5 @@
 ---
-title: AWS IoT integration
+title: AWS IoT
 ---
 
 Mongoose OS is integrated natively with AWS IoT cloud.

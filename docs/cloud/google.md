@@ -1,5 +1,5 @@
 ---
-title: Google IoT Core integration
+title: Google IoT Core
 ---
 
 - First, upload the private key:
