@@ -50,6 +50,7 @@ var (
 
 	tmpDir     = ""
 	libsDir    = ""
+	appsDir    = ""
 	modulesDir = ""
 )
 
@@ -75,6 +76,7 @@ func init() {
 
 	flag.StringVar(&tmpDir, "temp-dir", "~/.mos/tmp", "Directory to store temporary files")
 	flag.StringVar(&libsDir, "libs-dir", "~/.mos/libs", "Directory to store libraries into")
+	flag.StringVar(&appsDir, "apps-dir", "~/.mos/apps", "Directory to store apps into")
 	flag.StringVar(&modulesDir, "modules-dir", "~/.mos/modules", "Directory to store modules into")
 
 	// Unfortunately user.Current() doesn't play nicely with static build, so
@@ -92,6 +94,9 @@ func init() {
 	}
 	if len(libsDir) > 0 && libsDir[0] == '~' {
 		libsDir = homeDir + libsDir[1:]
+	}
+	if len(appsDir) > 0 && appsDir[0] == '~' {
+		appsDir = homeDir + appsDir[1:]
 	}
 	if len(modulesDir) > 0 && modulesDir[0] == '~' {
 		modulesDir = homeDir + modulesDir[1:]

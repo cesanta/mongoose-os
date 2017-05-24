@@ -2,18 +2,22 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
+	"cesanta.com/mos/build"
 	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"
 	"github.com/elazarl/go-bindata-assetfs"
@@ -29,6 +33,13 @@ const (
 	expireTime = 1 * time.Minute
 )
 
+type projectType string
+
+const (
+	projectTypeApp projectType = "app"
+	projectTypeLib projectType = "lib"
+)
+
 var (
 	httpPort     = 1992
 	wsClients    = make(map[*websocket.Conn]int)
@@ -40,6 +51,19 @@ var (
 type wsmessage struct {
 	Cmd  string `json:"cmd"`
 	Data string `json:"data"`
+}
+
+// Single entry in the list of apps/libs
+type appLibEntry map[string]*build.FWAppManifest
+
+// Params given to /import-app or /import-lib
+type importAppLibParams struct {
+	URL string `yaml:"url"`
+}
+
+type saveAppLibFileParams struct {
+	// base64-encoded data
+	Data string `yaml:"data"`
 }
 
 func wsSend(ws *websocket.Conn, m wsmessage) {
@@ -465,6 +489,122 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		httpReply(w, result, err)
 	})
 
+	http.HandleFunc("/list-libs", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		result, err := getAppsLibs(libsDir)
+		if err != nil {
+			err = errors.Trace(err)
+		}
+
+		httpReply(w, result, err)
+	})
+
+	http.HandleFunc("/list-apps", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		result, err := getAppsLibs(appsDir)
+		if err != nil {
+			err = errors.Trace(err)
+		}
+
+		httpReply(w, result, err)
+	})
+
+	http.HandleFunc("/import-lib", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		result, err := importAppLib(libsDir, r)
+		if err != nil {
+			err = errors.Trace(err)
+		}
+
+		httpReply(w, result, err)
+	})
+
+	http.HandleFunc("/import-app", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		result, err := importAppLib(appsDir, r)
+		if err != nil {
+			err = errors.Trace(err)
+		}
+
+		httpReply(w, result, err)
+	})
+
+	http.HandleFunc("/app/ls", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		result, err := listAppLibFiles(projectTypeApp, r)
+		if err != nil {
+			err = errors.Trace(err)
+		}
+
+		httpReply(w, result, err)
+	})
+
+	http.HandleFunc("/lib/ls", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		result, err := listAppLibFiles(projectTypeLib, r)
+		if err != nil {
+			err = errors.Trace(err)
+		}
+
+		httpReply(w, result, err)
+	})
+
+	http.HandleFunc("/app/get", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		result, err := getAppLibFile(projectTypeApp, r)
+		if err != nil {
+			err = errors.Trace(err)
+		}
+
+		httpReply(w, result, err)
+	})
+
+	http.HandleFunc("/lib/get", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		result, err := getAppLibFile(projectTypeLib, r)
+		if err != nil {
+			err = errors.Trace(err)
+		}
+
+		httpReply(w, result, err)
+	})
+
+	http.HandleFunc("/app/set", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		result := true
+
+		err := saveAppLibFile(projectTypeApp, r)
+		if err != nil {
+			err = errors.Trace(err)
+			result = false
+		}
+
+		httpReply(w, result, err)
+	})
+
+	http.HandleFunc("/lib/set", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		result := true
+
+		err := saveAppLibFile(projectTypeLib, r)
+		if err != nil {
+			err = errors.Trace(err)
+			result = false
+		}
+
+		httpReply(w, result, err)
+	})
+
 	if wwwRoot != "" {
 		http.HandleFunc("/", addExpiresHeader(0, http.FileServer(http.Dir(wwwRoot))))
 	} else {
@@ -490,6 +630,191 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 	// Unreacahble
 	return nil
+}
+
+// getAppsLibs takes a path and returns a slice of directory entries. In
+// the future each entry may contain some apps- or libs-specific things, but
+// for now it's just a name.
+//
+// If given path does not exist, it's not an error: empty slice is returned.
+func getAppsLibs(dirPath string) ([]appLibEntry, error) {
+	ret := []appLibEntry{}
+
+	files, err := ioutil.ReadDir(dirPath)
+	if err != nil {
+		if os.IsNotExist(err) {
+			// On non-existing path, just return an empty slice
+			return ret, nil
+		}
+		// On some other error, return an error
+		return nil, errors.Trace(err)
+	}
+
+	for _, f := range files {
+		name := f.Name()
+		manifest, _, err := readManifest(filepath.Join(dirPath, name))
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		entry := map[string]*build.FWAppManifest{
+			name: manifest,
+		}
+		ret = append(ret, entry)
+	}
+
+	return ret, nil
+}
+
+func importAppLib(dirPath string, r *http.Request) (string, error) {
+
+	par := importAppLibParams{}
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&par); err != nil {
+		return "", errors.Trace(err)
+	}
+
+	if par.URL == "" {
+		return "", errors.Errorf("url is required")
+	}
+
+	swmod := build.SWModule{
+		Origin: par.URL,
+	}
+
+	_, err := swmod.PrepareLocalDir(dirPath, os.Stdout, true)
+	if err != nil {
+		return "", errors.Trace(err)
+	}
+
+	name, err := swmod.GetName()
+	if err != nil {
+		return "", errors.Trace(err)
+	}
+
+	return name, nil
+}
+
+func listAppLibFiles(pt projectType, r *http.Request) ([]string, error) {
+	ret := []string{}
+
+	rootDir, err := getRootByProjectType(pt)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	pname := r.FormValue(string(pt))
+	if pname == "" {
+		return nil, errors.Errorf("%s is required", pt)
+	}
+
+	projectPath := filepath.Join(rootDir, pname)
+
+	if _, err := os.Stat(projectPath); err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	err = filepath.Walk(projectPath, func(path string, fi os.FileInfo, _ error) error {
+
+		// Ignore the root path
+		if path == projectPath {
+			return nil
+		}
+
+		// Strip the path to dir
+		path = path[len(projectPath)+1:]
+
+		// Ignore ".git"
+		if strings.HasPrefix(path, ".git") {
+			return nil
+		}
+
+		ret = append(ret, path)
+
+		return nil
+	})
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	return ret, nil
+}
+
+func getAppLibFile(pt projectType, r *http.Request) (string, error) {
+	rootDir, err := getRootByProjectType(pt)
+	if err != nil {
+		return "", errors.Trace(err)
+	}
+
+	pname := r.FormValue(string(pt))
+	if pname == "" {
+		return "", errors.Errorf("%s is required", pt)
+	}
+
+	filename := r.FormValue("filename")
+	if filename == "" {
+		return "", errors.Errorf("filename is required")
+	}
+
+	data, err := ioutil.ReadFile(filepath.Join(rootDir, pname, filename))
+	if err != nil {
+		return "", errors.Trace(err)
+	}
+
+	return base64.StdEncoding.EncodeToString(data), nil
+}
+
+func saveAppLibFile(pt projectType, r *http.Request) error {
+	rootDir, err := getRootByProjectType(pt)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	// Read body and get file data from it
+	//
+	// NOTE: we have to read data from r.Body before calling r.FormValue, because
+	// r.FormValue reads the body on its own.
+	par := saveAppLibFileParams{}
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&par); err != nil {
+		return errors.Annotatef(err, "decoding JSON")
+	}
+
+	data, err := base64.StdEncoding.DecodeString(par.Data)
+	if err != nil {
+		return errors.Annotatef(err, "decoding base64")
+	}
+
+	// get pname and filename from the query string
+	// (we may have put it into saveAppLibFileParams as well, but just to make
+	// it symmetric with the getAppLibFile, they are in they query string)
+	pname := r.FormValue(string(pt))
+	if pname == "" {
+		return errors.Errorf("%s is required", pt)
+	}
+
+	filename := r.FormValue("filename")
+	if filename == "" {
+		return errors.Errorf("filename is required")
+	}
+
+	err = ioutil.WriteFile(filepath.Join(rootDir, pname, filename), data, 0755)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	return nil
+}
+
+func getRootByProjectType(pt projectType) (string, error) {
+	switch pt {
+	case projectTypeApp:
+		return appsDir, nil
+	case projectTypeLib:
+		return libsDir, nil
+	}
+	return "", errors.Errorf("invalid project type: %q", pt)
 }
 
 func addExpiresHeader(d time.Duration, handler http.Handler) http.HandlerFunc {

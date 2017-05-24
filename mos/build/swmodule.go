@@ -17,10 +17,10 @@ import (
 )
 
 type SWModule struct {
-	Type    string `yaml:"type,omitempty"`
-	Origin  string `yaml:"origin,omitempty"`
-	Version string `yaml:"version,omitempty"`
-	Name    string `yaml:"name,omitempty"`
+	Type    string `yaml:"type,omitempty" json:"type,omitempty"`
+	Origin  string `yaml:"origin,omitempty" json:"origin,omitempty"`
+	Version string `yaml:"version,omitempty" json:"version,omitempty"`
+	Name    string `yaml:"name,omitempty" json:"name,omitempty"`
 
 	localPath string
 }
