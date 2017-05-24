@@ -4975,6 +4975,16 @@ var _web_rootPage_configurationHtml = []byte(`<div data-title="Device configurat
                 <div class="col-xs-8"><input type="text" class="form-control"
                   id="mqtt.server" placeholder="example.com:1883"></div>
               </div>
+              <div class="form-group">
+                <label class="col-xs-4 control-label">User</label>
+                <div class="col-xs-8"><input type="text" class="form-control"
+                  id="mqtt.user" placeholder="type user name ..."></div>
+              </div>
+              <div class="form-group">
+                <label class="col-xs-4 control-label">Password</label>
+                <div class="col-xs-8"><input type="text" class="form-control"
+                  id="mqtt.pass" placeholder="type password ..."></div>
+              </div>
             </div>
           </div>
         </div>
@@ -5119,6 +5129,8 @@ var _web_rootPage_configurationHtml = []byte(`<div data-title="Device configurat
       var c = json.result;
       $('#mqtt\\.enable').prop('checked', c.mqtt.enable);
       $('#mqtt\\.server').val(c.mqtt.server || getCookie('mqtt'));
+      $('#mqtt\\.user').val(c.mqtt.user || '');
+      $('#mqtt\\.pass').val(c.mqtt.pass || '');
       $('#sntp\\.enable').prop('checked', c.sntp.enable);
       $('#sntp\\.server').val(c.sntp.server || getCookie('sntp'));
       $('#debug\\.hexdump').prop('checked', c.debug.mg_mgr_hexdump_file == '-');
@@ -5156,6 +5168,8 @@ var _web_rootPage_configurationHtml = []byte(`<div data-title="Device configurat
     if ($('#view1').is(':checked')) {
       config.mqtt.enable = $('#mqtt\\.enable').is(':checked');
       config.mqtt.server = $('#mqtt\\.server').val();
+      config.mqtt.user = $('#mqtt\\.user').val();
+      config.mqtt.pass = $('#mqtt\\.pass').val();
       config.sntp.enable = $('#sntp\\.enable').is(':checked');
       config.sntp.server = $('#sntp\\.server').val();
       config.debug.level = + $('#debug\\.level').val();
@@ -5232,7 +5246,7 @@ func web_rootPage_configurationHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_configuration.html", size: 11772, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_configuration.html", size: 12527, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
