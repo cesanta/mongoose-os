@@ -34,6 +34,10 @@ typedef unsigned short u_short;
 
 extern int mgos_please_quit;
 
+size_t mgos_get_heap_size(void) {
+  return 0;
+}
+
 size_t mgos_get_free_heap_size(void) {
 #if defined(_WIN32)
   MEMORYSTATUSEX s;

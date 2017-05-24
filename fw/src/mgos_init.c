@@ -143,9 +143,9 @@ enum mgos_init_result mgos_init(void) {
     return MGOS_INIT_APP_INIT_FAILED;
   }
 
-  LOG(LL_INFO,
-      ("Init done, RAM: %d free, %d min free", (int) mgos_get_free_heap_size(),
-       (int) mgos_get_min_free_heap_size()));
+  LOG(LL_INFO, ("Init done, RAM: %d total, %d free, %d min free",
+                (int) mgos_get_heap_size(), (int) mgos_get_free_heap_size(),
+                (int) mgos_get_min_free_heap_size()));
   mgos_set_enable_min_heap_free_reporting(true);
 
   return MGOS_INIT_OK;
