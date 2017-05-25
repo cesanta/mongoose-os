@@ -146,11 +146,20 @@ func init() {
 }
 
 func reconnectToDevice(ctx context.Context) (*dev.DevConn, error) {
-	return createDevConnWithJunkHandler(ctx, consoleJunkHandler)
+	return createDevConnWithJunkHandler(ctx, consoleJunkHandler, MqttLogHandler)
+}
+
+func MqttLogHandler(topic string, data []byte) {
+	wsBroadcast(wsmessage{"uart", string(data)})
 }
 
 func startUI(ctx context.Context, devConn *dev.DevConn) error {
 	var devConnMtx sync.Mutex
+
+	// So far, building is only possible from the current directory,
+	// so before building some app we need to change current dir, and ensure
+	// that other builds won't interfere
+	var buildMtx sync.Mutex
 
 	glog.CopyStandardLogTo("INFO")
 	go reportConsoleLogs()
@@ -603,6 +612,62 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		}
 
 		httpReply(w, result, err)
+	})
+
+	http.HandleFunc("/app/build", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		// So far, building is only possible from the current directory,
+		// so before building some app we need to change current dir, and ensure
+		// that other builds won't interfere
+		buildMtx.Lock()
+		defer buildMtx.Unlock()
+
+		var err error
+
+		pname := r.FormValue("app")
+		if pname == "" {
+			httpReply(w, false, errors.Errorf("app is required"))
+			return
+		}
+
+		bParams := buildParams{
+			Arch: r.FormValue("arch"),
+		}
+
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+
+		// Get current directory, and defer chdir-ing back to it
+		prevDir, err := os.Getwd()
+		if err != nil {
+			err = errors.Trace(err)
+			httpReply(w, false, err)
+			return
+		}
+
+		defer func() {
+			os.Chdir(prevDir)
+		}()
+
+		// Get app directory and chdir there
+		appDir := filepath.Join(appsDir, pname)
+
+		if err := os.Chdir(appDir); err != nil {
+			err = errors.Trace(err)
+			httpReply(w, false, err)
+			return
+		}
+
+		// Build the firmware
+		err = doBuild(ctx, &bParams)
+		if err != nil {
+			err = errors.Trace(err)
+			httpReply(w, false, err)
+			return
+		}
+
+		httpReply(w, true, err)
 	})
 
 	if wwwRoot != "" {

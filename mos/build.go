@@ -107,12 +107,24 @@ func init() {
 	}
 }
 
-func doBuild(ctx context.Context, devConn *dev.DevConn) error {
+type buildParams struct {
+	Arch string
+}
+
+func buildHandler(ctx context.Context, devConn *dev.DevConn) error {
+	bParams := buildParams{
+		Arch: *arch,
+	}
+
+	return errors.Trace(doBuild(ctx, &bParams))
+}
+
+func doBuild(ctx context.Context, bParams *buildParams) error {
 	var err error
 	if *local {
-		err = buildLocal(ctx)
+		err = buildLocal(ctx, bParams)
 	} else {
-		err = buildRemote()
+		err = buildRemote(bParams)
 	}
 	if err != nil {
 		return errors.Trace(err)
@@ -130,7 +142,7 @@ func doBuild(ctx context.Context, devConn *dev.DevConn) error {
 	return err
 }
 
-func buildLocal(ctx context.Context) (err error) {
+func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	defer func() {
 		if !*verbose && err != nil {
 			log, err := os.Open(path.Join(buildDir, buildLog))
@@ -227,7 +239,7 @@ func buildLocal(ctx context.Context) (err error) {
 	}
 	// }}}
 
-	archEffective, err := detectArch(manifest)
+	archEffective, err := detectArch(manifest, bParams)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -625,8 +637,8 @@ func runCmd(cmd *exec.Cmd, logFile io.Writer) error {
 	return nil
 }
 
-func detectArch(manifest *build.FWAppManifest) (string, error) {
-	a := *arch
+func detectArch(manifest *build.FWAppManifest, bParams *buildParams) (string, error) {
+	a := bParams.Arch
 	if a == "" {
 		a = manifest.Arch
 	}
@@ -695,7 +707,7 @@ func readManifest(appDir string) (*build.FWAppManifest, time.Time, error) {
 	return &manifest, stat.ModTime(), nil
 }
 
-func buildRemote() error {
+func buildRemote(bParams *buildParams) error {
 	appDir, err := getCodeDir()
 	if err != nil {
 		return errors.Trace(err)
@@ -736,8 +748,8 @@ func buildRemote() error {
 	printConfSchemaWarn(manifest)
 
 	// Override arch with the value given in command line
-	if *arch != "" {
-		manifest.Arch = *arch
+	if bParams.Arch != "" {
+		manifest.Arch = bParams.Arch
 	}
 	manifest.Arch = strings.ToLower(manifest.Arch)
 

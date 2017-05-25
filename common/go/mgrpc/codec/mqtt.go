@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/url"
+	"sync"
 	"time"
 
 	"cesanta.com/common/go/mgrpc/frame"
@@ -16,6 +17,10 @@ import (
 	"github.com/golang/glog"
 )
 
+type MQTTCodecOptions struct {
+	LogCallback func(topic string, data []byte)
+}
+
 type mqttCodec struct {
 	dst         string
 	closeNotify chan struct{}
@@ -23,9 +28,11 @@ type mqttCodec struct {
 	rchan       chan frame.Frame
 	clientID    string
 	cli         mqtt.Client
+	closeOnce   sync.Once
+	isTLS       bool
 }
 
-func MQTT(dst string, tlsConfig *tls.Config) (Codec, error) {
+func MQTT(dst string, tlsConfig *tls.Config, co *MQTTCodecOptions) (Codec, error) {
 	u, err := url.Parse(dst)
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -44,8 +51,10 @@ func MQTT(dst string, tlsConfig *tls.Config) (Codec, error) {
 	u.Path = ""
 	if u.Scheme == "mqtts" {
 		u.Scheme = "tcps"
+		c.isTLS = true
 	} else {
 		u.Scheme = "tcp"
+		c.isTLS = false
 	}
 	broker := u.String()
 	glog.V(1).Infof("Connecting %s to %s", clientID, broker)
@@ -80,6 +89,19 @@ func MQTT(dst string, tlsConfig *tls.Config) (Codec, error) {
 		return nil, errors.Annotatef(err, "MQTT subscribe error")
 	}
 
+	if co.LogCallback != nil {
+		topic = fmt.Sprintf("%s/log", c.dst)
+		glog.V(1).Infof("Subscribing to [%s]", topic)
+		token = c.cli.Subscribe(topic, 1 /* qos */, func(cli mqtt.Client, msg mqtt.Message) {
+			glog.V(4).Infof("Got MQTT message, topic [%s], message [%s]", msg.Topic(), msg.Payload())
+			co.LogCallback(msg.Topic(), msg.Payload())
+		})
+		token.Wait()
+		if err := token.Error(); err != nil {
+			return nil, errors.Annotatef(err, "MQTT subscribe error")
+		}
+	}
+
 	return c, nil
 }
 
@@ -99,8 +121,11 @@ func (c *mqttCodec) onConnectionLost(cli mqtt.Client, err error) {
 }
 
 func (c *mqttCodec) Close() {
-	c.cli.Disconnect(0)
-	close(c.closeNotify)
+	c.closeOnce.Do(func() {
+		glog.V(1).Infof("Closing %s", c)
+		close(c.closeNotify)
+		c.cli.Disconnect(0)
+	})
 }
 
 func (c *mqttCodec) CloseNotify() <-chan struct{} {
@@ -112,7 +137,11 @@ func (c *mqttCodec) String() string {
 }
 
 func (c *mqttCodec) Info() ConnectionInfo {
-	return ConnectionInfo{}
+	return ConnectionInfo{
+		IsConnected: c.cli.IsConnected(),
+		TLS:         c.isTLS,
+		RemoteAddr:  c.dst,
+	}
 }
 
 func (c *mqttCodec) MaxNumFrames() int {

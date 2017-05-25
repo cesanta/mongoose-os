@@ -23,11 +23,11 @@ func init() {
 }
 
 func createDevConn(ctx context.Context) (*dev.DevConn, error) {
-	return createDevConnWithJunkHandler(ctx, func(junk []byte) {})
+	return createDevConnWithJunkHandler(ctx, func(junk []byte) {}, func(topic string, data []byte) {})
 }
 
 func createDevConnWithJunkHandler(
-	ctx context.Context, junkHandler func(junk []byte),
+	ctx context.Context, junkHandler func(junk []byte), logHandler func(string, []byte),
 ) (*dev.DevConn, error) {
 	port, err := getPort()
 	if err != nil {
@@ -71,6 +71,6 @@ func createDevConnWithJunkHandler(
 		}
 	}
 
-	devConn, err := c.CreateDevConnWithJunkHandler(ctx, addr, junkHandler, *reconnect, tlsConfig)
+	devConn, err := c.CreateDevConnWithJunkHandler(ctx, addr, junkHandler, logHandler, *reconnect, tlsConfig)
 	return devConn, errors.Trace(err)
 }
