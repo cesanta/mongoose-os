@@ -4969,6 +4969,57 @@ var _web_rootPage_configurationHtml = []byte(`<div data-title="Device configurat
 
         <div class="col-md-4 col-xs-12">
           <div class="x_panel">
+            <div class="x_title">SNTP Settings</div>
+            <div class="x_content form-horizontal">
+              <div class="form-group">
+                <label class="col-xs-4 control-label">Enable SNTP</label>
+                <div class="col-xs-8"><input type="checkbox" class="form-control" id="sntp.enable"></div>
+              </div>
+              <div class="form-group">
+                <label class="col-xs-4 control-label">SNTP server</label>
+                <div class="col-xs-8"><input type="text" class="form-control"
+                  id="sntp.server" placeholder="pool.ntp.org"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4 col-xs-12">
+          <div class="x_panel">
+            <div class="x_title">Local Network Discovery</div>
+            <div class="x_content form-horizontal">
+              <div class="form-group">
+                <label class="col-xs-4 control-label">Enable DNS-SD</label>
+                <div class="col-xs-8"><input type="checkbox" class="form-control" id="dns_sd.enable"></div>
+              </div>
+              <div class="form-group">
+                <label class="col-xs-4 control-label">Host name</label>
+                <div class="col-xs-8"><input type="text" class="form-control"
+                  id="dns_sd.host_name" placeholder="my_device"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-4 col-xs-12">
+          <div class="x_panel">
+            <div class="x_title">Debug Settings</div>
+            <div class="x_content form-horizontal">
+              <div class="form-group">
+                <label class="col-xs-5 control-label">Hexdump traffic:</label>
+                <div class="col-xs-7"><input type="checkbox" class="form-control" id="debug.hexdump"></div>
+              </div>
+              <div class="form-group">
+                <label class="col-xs-5 control-label">Log level:</label>
+                <div class="col-xs-7"><input type="text" class="form-control"
+                  id="debug.level" placeholder="2"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6 col-xs-12">
+          <div class="x_panel">
             <div class="x_title">MQTT Settings</div>
             <div class="x_content form-horizontal">
               <div class="form-group">
@@ -4994,45 +5045,13 @@ var _web_rootPage_configurationHtml = []byte(`<div data-title="Device configurat
             <div class="text-muted">
               MQTT device address:
                 <span id="mqtt-device-address" class="text-success"></span>
+            </div>
+            <div class="text-muted">
               <br>If MQTT is enabled, you can copy-paste this address into the
               "device address" field of the connection wizard, and manage
               your device remotely. Note: public MQTT clouds do not protect
               your device from unauthorised access. For security, use
               authenticated MQTT services like AWS IoT, Google IoT core, etc.
-            </div>
-          </div>
-        </div>
-
-        <div class="col-md-4 col-xs-12">
-          <div class="x_panel">
-            <div class="x_title">SNTP Settings</div>
-            <div class="x_content form-horizontal">
-              <div class="form-group">
-                <label class="col-xs-4 control-label">Enable SNTP</label>
-                <div class="col-xs-8"><input type="checkbox" class="form-control" id="sntp.enable"></div>
-              </div>
-              <div class="form-group">
-                <label class="col-xs-4 control-label">SNTP server</label>
-                <div class="col-xs-8"><input type="text" class="form-control"
-                  id="sntp.server" placeholder="pool.ntp.org"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-md-4 col-xs-12">
-          <div class="x_panel">
-            <div class="x_title">Debug Settings</div>
-            <div class="x_content form-horizontal">
-              <div class="form-group">
-                <label class="col-xs-5 control-label">Hexdump traffic:</label>
-                <div class="col-xs-7"><input type="checkbox" class="form-control" id="debug.hexdump"></div>
-              </div>
-              <div class="form-group">
-                <label class="col-xs-5 control-label">Log level:</label>
-                <div class="col-xs-7"><input type="text" class="form-control"
-                  id="debug.level" placeholder="2"></div>
-              </div>
             </div>
           </div>
         </div>
@@ -5147,6 +5166,8 @@ var _web_rootPage_configurationHtml = []byte(`<div data-title="Device configurat
       $('#mqtt\\.pass').val(c.mqtt.pass || '');
       $('#sntp\\.enable').prop('checked', c.sntp.enable);
       $('#sntp\\.server').val(c.sntp.server || getCookie('sntp'));
+      $('#dns_sd\\.enable').prop('checked', c.dns_sd.enable);
+      $('#dns_sd\\.host_name').val(c.dns_sd.host_name || '');
       $('#debug\\.hexdump').prop('checked', c.debug.mg_mgr_hexdump_file == '-');
       $('#debug\\.level').val(c.debug.level || 2);
 
@@ -5183,7 +5204,7 @@ var _web_rootPage_configurationHtml = []byte(`<div data-title="Device configurat
 
   $(document).off('click', '#config-save-button');
   $(document).on('click', '#config-save-button', function() {
-    var config = {mqtt: {}, sntp: {}, debug: {}};
+    var config = {mqtt: {}, sntp: {}, debug: {}, dns_sd: {}};
     if ($('#view1').is(':checked')) {
       config.mqtt.enable = $('#mqtt\\.enable').is(':checked');
       config.mqtt.server = $('#mqtt\\.server').val();
@@ -5191,6 +5212,8 @@ var _web_rootPage_configurationHtml = []byte(`<div data-title="Device configurat
       config.mqtt.pass = $('#mqtt\\.pass').val();
       config.sntp.enable = $('#sntp\\.enable').is(':checked');
       config.sntp.server = $('#sntp\\.server').val();
+      config.dns_sd.enable = $('#dns_sd\\.enable').is(':checked');
+      config.dns_sd.host_name = $('#dns_sd\\.host_name').val();
       config.debug.level = + $('#debug\\.level').val();
       config.debug.mg_mgr_hexdump_file = $('#debug\\.hexdump').is(':checked') ? '-' : '';
     } else {
@@ -5265,7 +5288,7 @@ func web_rootPage_configurationHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_configuration.html", size: 13313, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_configuration.html", size: 14401, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
