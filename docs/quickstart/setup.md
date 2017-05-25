@@ -48,7 +48,7 @@ command, either from a terminal or by double-clicking the executable,
 `mos` starts a simple Web UI, handy for a quick installation and running
 examples:
 
-![](media/mos1.gif)
+![](media/mos1.png)
 
 
 `mos` tool connects to the device specified by `--port` flag, which is

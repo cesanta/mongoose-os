@@ -13,6 +13,7 @@ filesystem:
 modules:
   - origin: https://github.com/cesanta/mjs
 config_schema:
+  - ["mqtt.server", "broker.hivemq.com:1883"]
   - ["i2c.enable", true]
 build_vars:
   MGOS_ENABLE_MQTT: 1

@@ -54,8 +54,13 @@ type wsmessage struct {
 	Data string `json:"data"`
 }
 
-// Return result of the /list-apps and /list-libs endpoints
-type appLibList map[string]*build.FWAppManifest
+// Single entry in the list of apps/libs
+type appLibEntry map[string]*build.FWAppManifest
+
+// Params given to /import-app or /import-lib
+type importAppLibParams struct {
+	URL string `yaml:"url"`
+}
 
 type saveAppLibFileParams struct {
 	// base64-encoded data
@@ -171,12 +176,6 @@ func UDPLogCatcher() {
 			wsBroadcast(wsmessage{"uart", string(buf[:n])})
 		}
 	}
-}
-
-func removeFile(w http.ResponseWriter, r *http.Request, pt projectType) {
-	w.Header().Set("Content-Type", "application/json")
-	err := removeAppLibFile(pt, r)
-	httpReply(w, true, err)
 }
 
 func startUI(ctx context.Context, devConn *dev.DevConn) error {
@@ -669,13 +668,6 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		httpReply(w, result, err)
 	})
 
-	http.HandleFunc("/lib/rm", func(w http.ResponseWriter, r *http.Request) {
-		removeFile(w, r, projectTypeLib)
-	})
-	http.HandleFunc("/app/rm", func(w http.ResponseWriter, r *http.Request) {
-		removeFile(w, r, projectTypeApp)
-	})
-
 	http.HandleFunc("/app/build", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
@@ -764,8 +756,8 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 // for now it's just a name.
 //
 // If given path does not exist, it's not an error: empty slice is returned.
-func getAppsLibs(dirPath string) (appLibList, error) {
-	ret := appLibList{}
+func getAppsLibs(dirPath string) ([]appLibEntry, error) {
+	ret := []appLibEntry{}
 
 	files, err := ioutil.ReadDir(dirPath)
 	if err != nil {
@@ -783,20 +775,30 @@ func getAppsLibs(dirPath string) (appLibList, error) {
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
-		ret[name] = manifest
+		entry := map[string]*build.FWAppManifest{
+			name: manifest,
+		}
+		ret = append(ret, entry)
 	}
 
 	return ret, nil
 }
 
 func importAppLib(dirPath string, r *http.Request) (string, error) {
-	url := r.FormValue("url")
-	if url == "" {
+
+	par := importAppLibParams{}
+
+	decoder := json.NewDecoder(r.Body)
+	if err := decoder.Decode(&par); err != nil {
+		return "", errors.Trace(err)
+	}
+
+	if par.URL == "" {
 		return "", errors.Errorf("url is required")
 	}
 
 	swmod := build.SWModule{
-		Origin: url,
+		Origin: par.URL,
 	}
 
 	_, err := swmod.PrepareLocalDir(dirPath, os.Stdout, true)
@@ -879,33 +881,6 @@ func getAppLibFile(pt projectType, r *http.Request) (string, error) {
 	}
 
 	return base64.StdEncoding.EncodeToString(data), nil
-}
-
-func getFullPath(pt projectType, r *http.Request) (string, error) {
-	rootDir, err := getRootByProjectType(pt)
-	if err != nil {
-		return "", errors.Trace(err)
-	}
-
-	pname := r.FormValue(string(pt))
-	if pname == "" {
-		return "", errors.Errorf("%s is required", pt)
-	}
-
-	filename := r.FormValue("filename")
-	if filename == "" {
-		return "", errors.Errorf("filename is required")
-	}
-
-	return filepath.Join(rootDir, pname, filename), nil
-}
-
-func removeAppLibFile(pt projectType, r *http.Request) error {
-	fullPath, err := getFullPath(pt, r)
-	if err != nil {
-		return errors.Trace(err)
-	}
-	return os.RemoveAll(fullPath)
 }
 
 func saveAppLibFile(pt projectType, r *http.Request) error {
