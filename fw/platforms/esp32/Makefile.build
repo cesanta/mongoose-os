@@ -115,6 +115,7 @@ export VPATH
 # Flags for other component builds, including SPIFFS, go here.
 CFLAGS += -Wall -Werror -mtext-section-literals \
           -DCS_SPIFFS_ENABLE_VFS -I$(MGOS_PATH) \
+          -DMBEDTLS_X509_CA_CHAIN_ON_DISK \
           -DSPIFFS_ON_PAGE_MOVE_HOOK=esp_spiffs_on_page_move_hook
 
 # Settings for the ESP-IDF build system
