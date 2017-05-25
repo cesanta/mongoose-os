@@ -93,12 +93,19 @@ func (c *wsCodec) MaxNumFrames() int {
 func (c *wsCodec) Info() ConnectionInfo {
 	r := ConnectionInfo{
 		IsConnected: true,
-		TLS:         c.conn.Request().TLS != nil,
-		RemoteAddr:  c.conn.Request().RemoteAddr,
+		TLS:         c.conn.Config().TlsConfig != nil,
+		RemoteAddr:  c.conn.RemoteAddr().String(),
 	}
-	if r.TLS {
-		r.PeerCertificates = c.conn.Request().TLS.PeerCertificates
-	}
+
+	// TODO(dfrank): set r.PeerCertificates
+	//
+	// The old code did that as follows:
+	//
+	//     r.PeerCertificates = c.conn.Request().TLS.PeerCertificates
+	//
+	// But c.conn.Request() returns nil for client connections, so it doesn't
+	// work.
+
 	return r
 }
 
