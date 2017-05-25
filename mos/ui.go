@@ -564,6 +564,34 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		httpReply(w, result, err)
 	})
 
+	http.HandleFunc("/app/mv", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		result := true
+
+		err := moveAppLibFile(projectTypeApp, r)
+		if err != nil {
+			err = errors.Trace(err)
+			result = false
+		}
+
+		httpReply(w, result, err)
+	})
+
+	http.HandleFunc("/lib/mv", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		result := true
+
+		err := moveAppLibFile(projectTypeLib, r)
+		if err != nil {
+			err = errors.Trace(err)
+			result = false
+		}
+
+		httpReply(w, result, err)
+	})
+
 	http.HandleFunc("/app/get", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
@@ -865,6 +893,41 @@ func saveAppLibFile(pt projectType, r *http.Request) error {
 	}
 
 	err = ioutil.WriteFile(filepath.Join(rootDir, pname, filename), data, 0755)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	return nil
+}
+
+func moveAppLibFile(pt projectType, r *http.Request) error {
+	rootDir, err := getRootByProjectType(pt)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	// get pname and filename from the query string
+	// (we may have put it into saveAppLibFileParams as well, but just to make
+	// it symmetric with the getAppLibFile, they are in they query string)
+	pname := r.FormValue(string(pt))
+	if pname == "" {
+		return errors.Errorf("%s is required", pt)
+	}
+
+	filename := r.FormValue("filename")
+	if filename == "" {
+		return errors.Errorf("filename is required")
+	}
+
+	newFilename := r.FormValue("to")
+	if newFilename == "" {
+		return errors.Errorf(`"to" is required`)
+	}
+
+	err = os.Rename(
+		filepath.Join(rootDir, pname, filename),
+		filepath.Join(rootDir, pname, newFilename),
+	)
 	if err != nil {
 		return errors.Trace(err)
 	}
