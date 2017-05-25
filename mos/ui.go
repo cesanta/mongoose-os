@@ -42,6 +42,7 @@ const (
 
 var (
 	httpPort     = 1992
+	udpAddr      = ":1993"
 	wsClients    = make(map[*websocket.Conn]int)
 	wsClientsMtx = sync.Mutex{}
 	wwwRoot      = ""
@@ -153,6 +154,30 @@ func MqttLogHandler(topic string, data []byte) {
 	wsBroadcast(wsmessage{"uart", string(data)})
 }
 
+func UDPLogCatcher() {
+	addr, err := net.ResolveUDPAddr("udp", udpAddr)
+	if err != nil {
+		fmt.Println("Error: ", err)
+		return
+	}
+	conn, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		fmt.Println("Error: ", err)
+		return
+	}
+	defer conn.Close()
+	buf := make([]byte, 2048)
+	for {
+		n, _, err := conn.ReadFromUDP(buf)
+		if err != nil {
+			fmt.Println("Error: ", err)
+			wsBroadcast(wsmessage{"uart", fmt.Sprintf("Error: %v", err)})
+		} else {
+			wsBroadcast(wsmessage{"uart", string(buf[:n])})
+		}
+	}
+}
+
 func startUI(ctx context.Context, devConn *dev.DevConn) error {
 	var devConnMtx sync.Mutex
 
@@ -163,6 +188,7 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 	glog.CopyStandardLogTo("INFO")
 	go reportConsoleLogs()
+	go UDPLogCatcher()
 	http.Handle("/ws", websocket.Handler(wsHandler))
 
 	r, w, _ := os.Pipe()
