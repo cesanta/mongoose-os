@@ -121,6 +121,7 @@ C_CXX_CFLAGS += -DMGOS_APP=\"$(APP)\" -DFW_ARCHITECTURE=$(APP_PLATFORM) \
                 -DMGOS_NUM_GPIO=40 \
                 -DMG_ENABLE_FILESYSTEM \
                 -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS \
+                -DMG_SSL_IF_MBEDTLS_FREE_CERTS \
                 -DMG_ENABLE_DIRECTORY_LISTING \
                 -DCS_DISABLE_MD5 -DMG_EXT_MD5 \
                 -DCS_DISABLE_SHA1 -DMG_EXT_SHA1 \
