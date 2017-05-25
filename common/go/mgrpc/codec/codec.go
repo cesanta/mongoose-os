@@ -32,6 +32,7 @@ type Codec interface {
 
 type Options struct {
 	Serial SerialCodecOptions
+	MQTT   MQTTCodecOptions
 }
 
 // ConnectionInfo provides information about the connection.

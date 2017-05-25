@@ -29,6 +29,16 @@
                 <div class="col-xs-8"><input type="text" class="form-control"
                   id="mqtt.server" placeholder="example.com:1883"></div>
               </div>
+              <div class="form-group">
+                <label class="col-xs-4 control-label">User</label>
+                <div class="col-xs-8"><input type="text" class="form-control"
+                  id="mqtt.user" placeholder="type user name ..."></div>
+              </div>
+              <div class="form-group">
+                <label class="col-xs-4 control-label">Password</label>
+                <div class="col-xs-8"><input type="text" class="form-control"
+                  id="mqtt.pass" placeholder="type password ..."></div>
+              </div>
             </div>
           </div>
         </div>
@@ -173,6 +183,8 @@
       var c = json.result;
       $('#mqtt\\.enable').prop('checked', c.mqtt.enable);
       $('#mqtt\\.server').val(c.mqtt.server || getCookie('mqtt'));
+      $('#mqtt\\.user').val(c.mqtt.user || '');
+      $('#mqtt\\.pass').val(c.mqtt.pass || '');
       $('#sntp\\.enable').prop('checked', c.sntp.enable);
       $('#sntp\\.server').val(c.sntp.server || getCookie('sntp'));
       $('#debug\\.hexdump').prop('checked', c.debug.mg_mgr_hexdump_file == '-');
@@ -210,6 +222,8 @@
     if ($('#view1').is(':checked')) {
       config.mqtt.enable = $('#mqtt\\.enable').is(':checked');
       config.mqtt.server = $('#mqtt\\.server').val();
+      config.mqtt.user = $('#mqtt\\.user').val();
+      config.mqtt.pass = $('#mqtt\\.pass').val();
       config.sntp.enable = $('#sntp\\.enable').is(':checked');
       config.sntp.server = $('#sntp\\.server').val();
       config.debug.level = + $('#debug\\.level').val();

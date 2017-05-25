@@ -50,6 +50,7 @@ var (
 
 	tmpDir     = ""
 	libsDir    = ""
+	appsDir    = ""
 	modulesDir = ""
 )
 
@@ -75,6 +76,7 @@ func init() {
 
 	flag.StringVar(&tmpDir, "temp-dir", "~/.mos/tmp", "Directory to store temporary files")
 	flag.StringVar(&libsDir, "libs-dir", "~/.mos/libs", "Directory to store libraries into")
+	flag.StringVar(&appsDir, "apps-dir", "~/.mos/apps", "Directory to store apps into")
 	flag.StringVar(&modulesDir, "modules-dir", "~/.mos/modules", "Directory to store modules into")
 
 	// Unfortunately user.Current() doesn't play nicely with static build, so
@@ -93,6 +95,9 @@ func init() {
 	if len(libsDir) > 0 && libsDir[0] == '~' {
 		libsDir = homeDir + libsDir[1:]
 	}
+	if len(appsDir) > 0 && appsDir[0] == '~' {
+		appsDir = homeDir + appsDir[1:]
+	}
 	if len(modulesDir) > 0 && modulesDir[0] == '~' {
 		modulesDir = homeDir + modulesDir[1:]
 	}
@@ -102,12 +107,24 @@ func init() {
 	}
 }
 
-func doBuild(ctx context.Context, devConn *dev.DevConn) error {
+type buildParams struct {
+	Arch string
+}
+
+func buildHandler(ctx context.Context, devConn *dev.DevConn) error {
+	bParams := buildParams{
+		Arch: *arch,
+	}
+
+	return errors.Trace(doBuild(ctx, &bParams))
+}
+
+func doBuild(ctx context.Context, bParams *buildParams) error {
 	var err error
 	if *local {
-		err = buildLocal(ctx)
+		err = buildLocal(ctx, bParams)
 	} else {
-		err = buildRemote()
+		err = buildRemote(bParams)
 	}
 	if err != nil {
 		return errors.Trace(err)
@@ -125,7 +142,7 @@ func doBuild(ctx context.Context, devConn *dev.DevConn) error {
 	return err
 }
 
-func buildLocal(ctx context.Context) (err error) {
+func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	defer func() {
 		if !*verbose && err != nil {
 			log, err := os.Open(path.Join(buildDir, buildLog))
@@ -222,7 +239,7 @@ func buildLocal(ctx context.Context) (err error) {
 	}
 	// }}}
 
-	archEffective, err := detectArch(manifest)
+	archEffective, err := detectArch(manifest, bParams)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -620,8 +637,8 @@ func runCmd(cmd *exec.Cmd, logFile io.Writer) error {
 	return nil
 }
 
-func detectArch(manifest *build.FWAppManifest) (string, error) {
-	a := *arch
+func detectArch(manifest *build.FWAppManifest, bParams *buildParams) (string, error) {
+	a := bParams.Arch
 	if a == "" {
 		a = manifest.Arch
 	}
@@ -690,7 +707,7 @@ func readManifest(appDir string) (*build.FWAppManifest, time.Time, error) {
 	return &manifest, stat.ModTime(), nil
 }
 
-func buildRemote() error {
+func buildRemote(bParams *buildParams) error {
 	appDir, err := getCodeDir()
 	if err != nil {
 		return errors.Trace(err)
@@ -731,8 +748,8 @@ func buildRemote() error {
 	printConfSchemaWarn(manifest)
 
 	// Override arch with the value given in command line
-	if *arch != "" {
-		manifest.Arch = *arch
+	if bParams.Arch != "" {
+		manifest.Arch = bParams.Arch
 	}
 	manifest.Arch = strings.ToLower(manifest.Arch)
 

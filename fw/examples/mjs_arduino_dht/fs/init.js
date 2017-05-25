@@ -25,10 +25,7 @@ Timer.set(2000 /* milliseconds */, true /* repeat */, function() {
   let t = dht.readTemperature(0, 0);
   let h = dht.readHumidity(0);
 
-  print('Temperature, *C: ');
-  print(t);
-  print('Humidity, %: ');
-  print(h);
-  print('Heat index, *C: ');
-  print(dht.computeHeatIndex(t, h, 0));
+  print('Temperature:', t, '*C');
+  print('Humidity:', h, '%');
+  print('Heat index:', dht.computeHeatIndex(t, h, 0), '*C');
 }, null);

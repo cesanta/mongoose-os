@@ -133,19 +133,19 @@ enum mgos_init_result mgos_init(void) {
 #endif
 #endif /* MGOS_ENABLE_MQTT */
 
-  if (mgos_app_init() != MGOS_APP_INIT_SUCCESS) {
-    return MGOS_INIT_APP_INIT_FAILED;
-  }
-
 #if MGOS_ENABLE_ARDUINO_API
   if (mgos_arduino_init() != MGOS_INIT_OK) {
     return MGOS_INIT_APP_INIT_FAILED;
   }
 #endif
 
-  LOG(LL_INFO,
-      ("Init done, RAM: %d free, %d min free", (int) mgos_get_free_heap_size(),
-       (int) mgos_get_min_free_heap_size()));
+  if (mgos_app_init() != MGOS_APP_INIT_SUCCESS) {
+    return MGOS_INIT_APP_INIT_FAILED;
+  }
+
+  LOG(LL_INFO, ("Init done, RAM: %d total, %d free, %d min free",
+                (int) mgos_get_heap_size(), (int) mgos_get_free_heap_size(),
+                (int) mgos_get_min_free_heap_size()));
   mgos_set_enable_min_heap_free_reporting(true);
 
   return MGOS_INIT_OK;

@@ -2,6 +2,8 @@ var ui = {
   connected: null,    // Whether the device is connected
   address: null,      // Serial port, or RPC address of the device
   info: null,         // Result of the Sys.GetInfo call
+  checkPortsTimer: null,
+  checkPortsFreq: 1000,
   pageCache: {}
 };
 
@@ -276,7 +278,7 @@ var updateDeviceStatus = function() {
 };
 
 var probeDevice = function() {
-  return $.ajax({url: '/call', global: false, data: {method: 'Sys.GetInfo', timeout: 1}}).then(function(data) {
+  return $.ajax({url: '/call', global: false, data: {method: 'Sys.GetInfo', timeout: 5}}).then(function(data) {
     ui.info = data.result;
   }).fail(function() {
     ui.info = null;
@@ -308,7 +310,10 @@ var checkPorts = function() {
       $('#noports-warning').fadeIn();
       $('#found-device-info').hide();
     }
-  }).always(function() { setTimeout(checkPorts, 1000); });
+  }).always(function() {
+    clearTimeout(ui.checkPortsTimer);
+    ui.checkPortsTimer = setTimeout(checkPorts, ui.checkPortsFreq);
+  });
 };
 checkPorts();
 

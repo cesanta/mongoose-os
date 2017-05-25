@@ -96,7 +96,7 @@ func init() {
 	commands = []command{
 		{"ui", startUI, `Start GUI`, nil, nil, false},
 		{"init", initFW, `Initialise firmware directory structure in the current directory`, nil, []string{"arch", "force"}, false},
-		{"build", doBuild, `Build a firmware from the sources located in the current directory`, nil, []string{"arch", "local", "repo", "clean", "server"}, false},
+		{"build", buildHandler, `Build a firmware from the sources located in the current directory`, nil, []string{"arch", "local", "repo", "clean", "server"}, false},
 		{"flash", flash, `Flash firmware to the device`, nil, []string{"port", "firmware"}, false},
 		{"flash-read", flashRead, `Read a region of flash`, []string{"arch"}, []string{"port"}, false},
 		{"console", console, `Simple serial port console`, nil, []string{"port"}, false}, //TODO: needDevConn
@@ -201,7 +201,11 @@ func main() {
 	}
 	if cmd != nil && cmd.needDevConn {
 		var err error
-		devConn, err = createDevConnWithJunkHandler(ctx, consoleJunkHandler)
+		if cmd.name == "ui" {
+			devConn, err = createDevConnWithJunkHandler(ctx, consoleJunkHandler, MqttLogHandler)
+		} else {
+			devConn, err = createDevConn(ctx)
+		}
 		if err != nil {
 			fmt.Println(errors.Trace(err))
 			return

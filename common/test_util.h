@@ -77,7 +77,7 @@ void _strfail(const char *a, const char *e, int len);
 #endif
 
 /*
- * Numeric equality assertion. Compariosn is made in native types but for
+ * Numeric equality assertion. Comparison is made in native types but for
  * printing both are convetrted to double.
  */
 #define ASSERT_EQ(actual, expected)                                 \

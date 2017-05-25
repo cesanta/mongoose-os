@@ -22,10 +22,11 @@ func ReadFlash(ct esp.ChipType, addr uint32, length int, opts *esp.FlashOpts) ([
 	}
 	defer cfr.rc.Disconnect()
 
+	flashSize := cfr.flashParams.Size()
 	if addr == 0 && length == 0 {
-		length = cfr.flashSize
-	} else if int(addr)+length > cfr.flashSize {
-		return nil, errors.Errorf("0x%x + %d exceeds flash size (%d)", addr, length, cfr.flashSize)
+		length = flashSize
+	} else if int(addr)+length > flashSize {
+		return nil, errors.Errorf("0x%x + %d exceeds flash size (%d)", addr, length, flashSize)
 	}
 
 	common.Reportf("Reading %d @ 0x%x...", length, addr)

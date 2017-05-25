@@ -9,9 +9,16 @@
 
 load('api_arduino_onewire.js');
 
+let GPIO = {
+  PIN: 13 // GPIO pin which has sensors data wire connected
+};
+
 let DEVICE_FAMILY = {
   DS18B20: 0x28
 };
+
+// Initialize OneWire library
+let ow = OneWire.create(GPIO.PIN);
 
 // Get device address in hex format
 let toHexStr = function(addr) {
@@ -26,7 +33,7 @@ let toHexStr = function(addr) {
   return res;
 };
 
-// This function reads data from the DS18B20 temperature sensors
+// This function reads data from the DS18B20 temperature sensor
 let getTemp = function(rom) {
   let DATA = {
     TEMP_LSB: 0,
@@ -51,18 +58,18 @@ let getTemp = function(rom) {
   let raw;
   let cfg;
 
-  OneWire.reset(ow);
-  OneWire.select(ow, rom);
-  OneWire.write(ow, CMD.CONVERT_T);
+  ow.reset();
+  ow.select(rom);
+  ow.write(CMD.CONVERT_T);
 
-  OneWire.delay(750);
+  ow.delay(750);
 
-  OneWire.reset(ow);
-  OneWire.select(ow, rom);    
-  OneWire.write(ow, CMD.READ_SCRATCHPAD);
+  ow.reset();
+  ow.select(rom);    
+  ow.write(CMD.READ_SCRATCHPAD);
 
   for (let i = 0; i < DATA.SCRATCHPAD_SIZE; i++) {
-    data[i] = OneWire.read(ow);
+    data[i] = ow.read();
   }
 
   raw = (data[DATA.TEMP_MSB] << 8) | data[DATA.TEMP_LSB];

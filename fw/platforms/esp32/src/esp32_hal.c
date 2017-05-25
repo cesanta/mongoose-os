@@ -19,8 +19,7 @@
 #include "fw/platforms/esp32/src/esp32_fs.h"
 
 size_t mgos_get_heap_size(void) {
-  /* ESP-IDF does not have a function for this. TODO(rojer): Implement. */
-  return 0;
+  return xPortGetHeapSize();
 }
 
 size_t mgos_get_free_heap_size(void) {
@@ -43,7 +42,7 @@ void mgos_system_restart(int exit_code) {
 }
 
 void device_get_mac_address(uint8_t mac[6]) {
-  esp_efuse_read_mac(mac);
+  esp_efuse_mac_get_default(mac);
 }
 
 /* In components/newlib/time.c. Returns a monotonic microsecond counter. */

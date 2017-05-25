@@ -1,4 +1,4 @@
-SOURCES = str_util.c cs_time.c unit_test.c test_util.c
+SOURCES = str_util.c cs_time.c unit_test.c test_util.c cs_varint.c
 CFLAGS = -I.. -g $(CFLAGS_EXTRA)
 UMM_MALLOC_TEST_PATH = umm_malloc/test
 
@@ -9,7 +9,7 @@ all: unit_test
 unit_test:
 	make -C $(UMM_MALLOC_TEST_PATH)
 	make -C segstack
-	cc $(SOURCES) -o $@ $(CFLAGS)
+	cc -Wall -Werror $(SOURCES) -o $@ $(CFLAGS)
 	./$@
 
 clean:

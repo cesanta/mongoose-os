@@ -25,12 +25,13 @@ const (
 )
 
 type DevConn struct {
-	c           *Client
-	ConnectAddr string
-	RPC         mgrpc.MgRPC
-	Dest        string
-	JunkHandler func(junk []byte)
-	Reconnect   bool
+	c              *Client
+	ConnectAddr    string
+	RPC            mgrpc.MgRPC
+	Dest           string
+	JunkHandler    func(junk []byte)
+	MQTTLogHandler func(topic string, data []byte)
+	Reconnect      bool
 
 	CConf       fwconfig.Service
 	CSys        fwsys.Service
@@ -54,11 +55,11 @@ func (c *Client) CreateDevConn(
 	return dc, nil
 }
 
-func (c *Client) CreateDevConnWithJunkHandler(ctx context.Context, connectAddr string, junkHandler func(junk []byte), reconnect bool, tlsConfig *tls.Config) (*DevConn, error) {
+func (c *Client) CreateDevConnWithJunkHandler(ctx context.Context, connectAddr string, junkHandler func(junk []byte), MQTTLogHandler func(string, []byte), reconnect bool, tlsConfig *tls.Config) (*DevConn, error) {
 
-	dc := &DevConn{c: c, ConnectAddr: connectAddr, Dest: debugDevId}
+	dc := &DevConn{c: c, ConnectAddr: connectAddr, Dest: debugDevId, MQTTLogHandler: MQTTLogHandler}
 
-	err := dc.ConnectWithJunkHandler(ctx, junkHandler, reconnect, tlsConfig)
+	err := dc.ConnectWithJunkHandler(ctx, junkHandler, MQTTLogHandler, reconnect, tlsConfig)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -156,10 +157,10 @@ func (dc *DevConn) Connect(ctx context.Context, reconnect bool) error {
 	if dc.JunkHandler == nil {
 		dc.JunkHandler = func(junk []byte) {}
 	}
-	return dc.ConnectWithJunkHandler(ctx, dc.JunkHandler, reconnect, nil)
+	return dc.ConnectWithJunkHandler(ctx, dc.JunkHandler, dc.MQTTLogHandler, reconnect, nil)
 }
 
-func (dc *DevConn) ConnectWithJunkHandler(ctx context.Context, junkHandler func(junk []byte), reconnect bool, tlsConfig *tls.Config) error {
+func (dc *DevConn) ConnectWithJunkHandler(ctx context.Context, junkHandler func(junk []byte), MQTTLogHandler func(string, []byte), reconnect bool, tlsConfig *tls.Config) error {
 	var err error
 
 	if dc.RPC != nil {
@@ -175,6 +176,9 @@ func (dc *DevConn) ConnectWithJunkHandler(ctx context.Context, junkHandler func(
 		mgrpc.TlsConfig(tlsConfig),
 		mgrpc.CodecOptions(
 			codec.Options{
+				MQTT: codec.MQTTCodecOptions{
+					LogCallback: MQTTLogHandler,
+				},
 				Serial: codec.SerialCodecOptions{
 					JunkHandler: junkHandler,
 					// Due to lack of flow control, we send data in chunks and wait after each.

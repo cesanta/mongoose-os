@@ -49,23 +49,28 @@ int mgos_onewire_reset(struct mgos_onewire *ow) {
 
   int res, n = 125;
 
+  mgos_ints_disable();
   mgos_gpio_set_mode(ow->pin, MGOS_GPIO_MODE_INPUT);
   mgos_gpio_set_pull(ow->pin, MGOS_GPIO_PULL_UP);
+  mgos_ints_enable();
 
   do {
     if (--n == 0) return 0;
     mgos_usleep(2);
   } while (!mgos_gpio_read(ow->pin));
 
+  mgos_ints_disable();
   mgos_gpio_write(ow->pin, LOW);
   mgos_gpio_set_mode(ow->pin, MGOS_GPIO_MODE_OUTPUT);
+  mgos_ints_enable();
   mgos_usleep(480);
+  mgos_ints_disable();
   mgos_gpio_set_mode(ow->pin, MGOS_GPIO_MODE_INPUT);
   mgos_gpio_set_pull(ow->pin, MGOS_GPIO_PULL_UP);
   mgos_usleep(70);
   res = !mgos_gpio_read(ow->pin);
+  mgos_ints_enable();
   mgos_usleep(410);
-
   return res;
 }
 
@@ -198,6 +203,7 @@ int mgos_onewire_search(struct mgos_onewire *ow) {
 
 int mgos_onewire_read_bit(struct mgos_onewire *ow) {
   if (ow == NULL) return 0;
+  mgos_ints_disable();
   mgos_gpio_set_mode(ow->pin, MGOS_GPIO_MODE_OUTPUT);
   mgos_gpio_write(ow->pin, LOW);
   mgos_usleep(3);
@@ -205,6 +211,7 @@ int mgos_onewire_read_bit(struct mgos_onewire *ow) {
   mgos_gpio_set_pull(ow->pin, MGOS_GPIO_PULL_UP);
   mgos_usleep(10);
   int res = mgos_gpio_read(ow->pin);
+  mgos_ints_enable();
   mgos_usleep(53);
   return res;
 }
@@ -228,16 +235,20 @@ void mgos_onewire_read_bytes(struct mgos_onewire *ow, unsigned char *buf,
 void mgos_onewire_write_bit(struct mgos_onewire *ow, int bit) {
   if (ow == NULL) return;
   if (bit) {
+    mgos_ints_disable();
     mgos_gpio_write(ow->pin, LOW);
     mgos_gpio_set_mode(ow->pin, MGOS_GPIO_MODE_OUTPUT);
     mgos_usleep(10);
     mgos_gpio_write(ow->pin, HIGH);
+    mgos_ints_enable();
     mgos_usleep(55);
   } else {
+    mgos_ints_disable();
     mgos_gpio_write(ow->pin, LOW);
     mgos_gpio_set_mode(ow->pin, MGOS_GPIO_MODE_OUTPUT);
     mgos_usleep(65);
     mgos_gpio_write(ow->pin, HIGH);
+    mgos_ints_enable();
     mgos_usleep(5);
   }
 }

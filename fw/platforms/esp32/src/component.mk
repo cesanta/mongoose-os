@@ -138,7 +138,7 @@ $(MG_BUILD_INFO_C): $(MGOS_OBJS)
 libsrc.a: $(GEN_DIR)/sys_config.o
 
 $(SYMBOLS_DUMP): $(MGOS_OBJS) $(APP_OBJS)
-	$(vecho) "GEN   $@"
+	$(vecho) "GEN $@"
 	$(NM) --defined-only --print-file-name -g $^ > $@
 
 # In ffi exports file we use fake signatures: void func(void), and it conflicts
@@ -146,21 +146,21 @@ $(SYMBOLS_DUMP): $(MGOS_OBJS) $(APP_OBJS)
 $(FFI_EXPORTS_O): CFLAGS += -fno-builtin
 
 $(FFI_EXPORTS_O): $(FFI_EXPORTS_C)
-	$(summary) "  CC $@"
+	$(summary) "CC $@"
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
 $(FFI_EXPORTS_C): $(SYMBOLS_DUMP) $(FS_FILES)
 	$(call gen_ffi_exports,$<,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))
 
 ./%.o: %.c $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
-	$(summary) "  CC $@"
+	$(summary) "CC $@"
 	$(CC) $(CFLAGS) $(CPPFLAGS) \
 	  $(addprefix -I ,$(COMPONENT_INCLUDES)) \
 	  $(addprefix -I ,$(COMPONENT_EXTRA_INCLUDES)) \
 	  -c $< -o $@
 
 ./%.o: %.cpp $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
-	$(summary) "  CXX $@"
+	$(summary) "CXX $@"
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) \
 	  $(addprefix -I ,$(COMPONENT_INCLUDES)) \
 	  $(addprefix -I ,$(COMPONENT_EXTRA_INCLUDES)) \

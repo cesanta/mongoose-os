@@ -116,7 +116,7 @@ func wsDialConfig(config *websocket.Config) (*websocket.Conn, error) {
 }
 
 func (r *mgRPCImpl) mqttConnect(dst string, opts *connectOptions) (codec.Codec, error) {
-	return codec.MQTT(dst, opts.tlsConfig)
+	return codec.MQTT(dst, opts.tlsConfig, &opts.codecOptions.MQTT)
 }
 
 func (r *mgRPCImpl) wsConnect(url string, opts *connectOptions) (codec.Codec, error) {

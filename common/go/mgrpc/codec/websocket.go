@@ -92,8 +92,9 @@ func (c *wsCodec) MaxNumFrames() int {
 
 func (c *wsCodec) Info() ConnectionInfo {
 	r := ConnectionInfo{
-		TLS:        c.conn.Request().TLS != nil,
-		RemoteAddr: c.conn.Request().RemoteAddr,
+		IsConnected: true,
+		TLS:         c.conn.Request().TLS != nil,
+		RemoteAddr:  c.conn.Request().RemoteAddr,
 	}
 	if r.TLS {
 		r.PeerCertificates = c.conn.Request().TLS.PeerCertificates

@@ -1,8 +1,8 @@
 ---
-title: AWS IoT integration
+title: AWS IoT
 ---
 
-Mongoose Firmware is integrated natively with AWS IoT cloud.
+Mongoose OS is integrated natively with AWS IoT cloud.
 
 AWS IoT uses MQTT for communication, so navigate to the
 [c_mqtt](https://github.com/cesanta/mongoose-os/tree/master/fw/examples/c_mqtt)
