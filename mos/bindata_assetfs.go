@@ -4991,6 +4991,15 @@ var _web_rootPage_configurationHtml = []byte(`<div data-title="Device configurat
                   id="mqtt.pass" placeholder="type password ..."></div>
               </div>
             </div>
+            <div class="text-muted">
+              MQTT device address:
+                <span id="mqtt-device-address" class="text-success"></span>
+              <br>If MQTT is enabled, you can copy-paste this address into the
+              "device address" field of the connection wizard, and manage
+              your device remotely. Note: public MQTT clouds do not protect
+              your device from unauthorised access. For security, use
+              authenticated MQTT services like AWS IoT, Google IoT core, etc.
+            </div>
           </div>
         </div>
 
@@ -5141,6 +5150,11 @@ var _web_rootPage_configurationHtml = []byte(`<div data-title="Device configurat
       $('#debug\\.hexdump').prop('checked', c.debug.mg_mgr_hexdump_file == '-');
       $('#debug\\.level').val(c.debug.level || 2);
 
+      var mqttAddr = c.mqtt.ssl_ca_cert ? 'mqtts://' : 'mqtt://';
+      if (c.mqtt.user) mqttAddr += c.mqtt.user + ':' + c.mqtt.pass + '@';
+      mqttAddr += c.mqtt.server + '/' + c.device.id;
+      $('#mqtt-device-address').text(mqttAddr);
+
       $.ajax({url: '/check-aws-credentials'}).then(function(json) {
         var hasAwsCredentials = json.result;
         $('#aws-setup').toggleClass('hidden', !hasAwsCredentials);
@@ -5251,7 +5265,7 @@ func web_rootPage_configurationHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_configuration.html", size: 12527, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_configuration.html", size: 13313, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
