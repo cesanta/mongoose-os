@@ -243,8 +243,6 @@ int mgos_wifi_connect(void) {
   int ret;
   SlSecParams_t sp;
 
-  if (!ensure_role_sta()) return 0;
-
   if (s_wifi_sta_config.static_ip.ipV4 != 0) {
     ret = sl_NetCfgSet(SL_IPV4_STA_P2P_CL_STATIC_ENABLE,
                        IPCONFIG_MODE_ENABLE_IPV4,
@@ -257,8 +255,7 @@ int mgos_wifi_connect(void) {
   }
   if (ret != 0) return 0;
 
-  /* Turning the device off and on for the role change to take effect. */
-  if (!restart_nwp()) return 0;
+  if (!ensure_role_sta()) return 0;
 
   sp.Key = (_i8 *) s_wifi_sta_config.pass;
   sp.KeyLen = strlen(s_wifi_sta_config.pass);
