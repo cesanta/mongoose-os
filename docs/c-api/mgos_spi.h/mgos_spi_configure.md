@@ -6,5 +6,5 @@ signature: |
   bool mgos_spi_configure(struct mgos_spi *spi, const struct sys_config_spi *cfg);
 ---
 
-(Re)configure existing SPI interface. 
+(Re)configure exisint SPI interface. 
 

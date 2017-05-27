@@ -147,7 +147,6 @@ GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 .PHONY: all clean flash
 
 MGOS_SRCS = mgos_gpio.c \
-            mgos_hooks.c \
             mgos_init.c \
             mgos_mongoose.c \
             mgos_timers_mongoose.c \
