@@ -99,11 +99,6 @@ enum mgos_init_result mgos_init(void) {
   mgos_updater_http_init(); /* After HTTP init */
 #endif
 
-#if MGOS_ENABLE_MQTT
-  r = mgos_mqtt_init();
-  if (r != MGOS_INIT_OK) return r;
-#endif /* MGOS_ENABLE_MQTT */
-
 #if MGOS_ENABLE_ARDUINO_API
   if (mgos_arduino_init() != MGOS_INIT_OK) {
     return MGOS_INIT_APP_INIT_FAILED;

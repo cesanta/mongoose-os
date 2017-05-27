@@ -15,11 +15,6 @@ type AppManifest struct {
 	Summary string `yaml:"summary,omitempty" json:"summary,omitempty"`
 }
 
-type FWAppManifestLibHandled struct {
-	Name string `yaml:"name" json:"name,omitempty"`
-	Path string `yaml:"path" json:"path,omitempty"`
-}
-
 // FWAppManifest is the app manifest for firmware apps
 type FWAppManifest struct {
 	AppManifest       `yaml:",inline"`
@@ -42,14 +37,10 @@ type FWAppManifest struct {
 	CDefs             map[string]string  `yaml:"cdefs" json:"cdefs,omitempty"`
 	Tags              []string           `yaml:"tags" json:"tags,omitempty"`
 
-	// Old form of LibsHandled, deprecated since 03.06.2017
-	// TODO: remove
-	Deps []string `yaml:"deps" json:"deps,omitempty"`
-
-	// are names of the libraries which need to be initialized before the
+	// Deps are names of the libraries which need to be initialized before the
 	// application. The user doesn't have to set this field manually, it's set
 	// automatically during libs "expansion" (see Libs above)
-	LibsHandled []FWAppManifestLibHandled `yaml:"libs_handled" json:"libs_handled,omitempty"`
+	Deps []string `yaml:"deps" json:"deps,omitempty"`
 }
 
 // ConfigSchemaItem represents a single config schema item, like this:

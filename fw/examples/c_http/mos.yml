@@ -7,5 +7,4 @@ sources:
 filesystem:
   - fs
 build_vars:
-  MGOS_ENABLE_MQTT: 0
   MGOS_ENABLE_WEB_CONFIG: 1
