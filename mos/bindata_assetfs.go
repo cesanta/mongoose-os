@@ -186,11 +186,11 @@ var _dataDeps_initCTmpl = []byte(`#include <stdbool.h>
 #include "fw/src/mgos_app.h"
 
 {{range .Deps}}
-extern bool {{.}}_init(void);{{end}}
+extern bool mgos_{{.}}_init(void);{{end}}
 
 bool mgos_deps_init(void) {
 {{range .Deps}}
-  if (!{{.}}_init()) {
+  if (!mgos_{{.}}_init()) {
     printf("%s init failed\n", "{{.}}");
     return false;
   }
@@ -209,7 +209,7 @@ func dataDeps_initCTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/deps_init.c.tmpl", size: 279, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "data/deps_init.c.tmpl", size: 289, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
