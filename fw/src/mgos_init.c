@@ -9,6 +9,7 @@
 #include "fw/src/mgos_arduino.h"
 #include "fw/src/mgos_atca.h"
 #include "fw/src/mgos_console.h"
+#include "fw/src/mgos_deps.h"
 #include "fw/src/mgos_dns_sd.h"
 #include "fw/src/mgos_gcp.h"
 #include "fw/src/mgos_gpio.h"
@@ -139,6 +140,10 @@ enum mgos_init_result mgos_init(void) {
   }
 #endif
 
+  if (!mgos_deps_init()) {
+    return MGOS_INIT_DEPS_FAILED;
+  }
+
   if (mgos_app_init() != MGOS_APP_INIT_SUCCESS) {
     return MGOS_INIT_APP_INIT_FAILED;
   }
@@ -153,6 +158,11 @@ enum mgos_init_result mgos_init(void) {
 
 void mgos_app_preinit(void) __attribute__((weak));
 void mgos_app_preinit(void) {
+}
+
+bool mgos_deps_init(void) __attribute__((weak));
+bool mgos_deps_init(void) {
+  return true;
 }
 
 enum mgos_app_init_result mgos_app_init(void) __attribute__((weak));

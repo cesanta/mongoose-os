@@ -2,6 +2,7 @@
 // sources:
 // data/ca-verisign-ecc-g2.crt.pem
 // data/ca-verisign-g5.crt.pem
+// data/deps_init.c.tmpl
 // web_root/css/bootstrap-tour.min.css
 // web_root/css/bootstrap.min.css
 // web_root/css/custom.min.css
@@ -176,6 +177,39 @@ func dataCaVerisignG5CrtPem() (*asset, error) {
 	}
 
 	info := bindataFileInfo{name: "data/ca-verisign-g5.crt.pem", size: 1732, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _dataDeps_initCTmpl = []byte(`#include <stdbool.h>
+#include <stdio.h>
+#include "fw/src/mgos_app.h"
+
+{{range .Deps}}
+extern bool {{.}}_init(void);{{end}}
+
+bool mgos_deps_init(void) {
+{{range .Deps}}
+  if (!{{.}}_init()) {
+    printf("%s init failed\n", "{{.}}");
+    return false;
+  }
+{{end}}
+  return true;
+}
+`)
+
+func dataDeps_initCTmplBytes() ([]byte, error) {
+	return _dataDeps_initCTmpl, nil
+}
+
+func dataDeps_initCTmpl() (*asset, error) {
+	bytes, err := dataDeps_initCTmplBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "data/deps_init.c.tmpl", size: 279, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -5787,6 +5821,7 @@ func AssetNames() []string {
 var _bindata = map[string]func() (*asset, error){
 	"data/ca-verisign-ecc-g2.crt.pem":          dataCaVerisignEccG2CrtPem,
 	"data/ca-verisign-g5.crt.pem":              dataCaVerisignG5CrtPem,
+	"data/deps_init.c.tmpl":                    dataDeps_initCTmpl,
 	"web_root/css/bootstrap-tour.min.css":      web_rootCssBootstrapTourMinCss,
 	"web_root/css/bootstrap.min.css":           web_rootCssBootstrapMinCss,
 	"web_root/css/custom.min.css":              web_rootCssCustomMinCss,
@@ -5878,6 +5913,7 @@ var _bintree = &bintree{nil, map[string]*bintree{
 	"data": &bintree{nil, map[string]*bintree{
 		"ca-verisign-ecc-g2.crt.pem": &bintree{dataCaVerisignEccG2CrtPem, map[string]*bintree{}},
 		"ca-verisign-g5.crt.pem":     &bintree{dataCaVerisignG5CrtPem, map[string]*bintree{}},
+		"deps_init.c.tmpl":           &bintree{dataDeps_initCTmpl, map[string]*bintree{}},
 	}},
 	"web_root": &bintree{nil, map[string]*bintree{
 		"css": &bintree{nil, map[string]*bintree{
