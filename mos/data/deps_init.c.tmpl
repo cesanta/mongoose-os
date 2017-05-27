@@ -1,0 +1,16 @@
+#include <stdbool.h>
+#include <stdio.h>
+#include "fw/src/mgos_app.h"
+
+{{range .Deps}}
+extern bool {{.}}_init(void);{{end}}
+
+bool mgos_deps_init(void) {
+{{range .Deps}}
+  if (!{{.}}_init()) {
+    printf("%s init failed\n", "{{.}}");
+    return false;
+  }
+{{end}}
+  return true;
+}
