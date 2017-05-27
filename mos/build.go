@@ -1114,6 +1114,13 @@ func readManifestWithLibs(
 				return nil, time.Time{}, errors.Trace(err)
 			}
 		} else {
+			// Absolutize the given lib path
+			var err error
+			libDirAbs, err = filepath.Abs(libDirAbs)
+			if err != nil {
+				return nil, time.Time{}, errors.Trace(err)
+			}
+
 			reportf("Using the location %q as is (given as a --lib flag)", libDirAbs)
 		}
 
