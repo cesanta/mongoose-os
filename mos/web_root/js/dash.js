@@ -17,6 +17,7 @@ var getCookie = function(name) {
 
 $.ajaxSetup({
   type: 'POST',
+  cache: false,
   // beforeSend: function() { if (!devConnected) return false; },
 });
 
@@ -253,7 +254,7 @@ var updateDeviceStatus = function() {
   var titles = ['no device address', 'not connected', 'connected, no IP', 'online'];
   var wifi = ui.info && ui.info.wifi && ui.info.wifi.sta_ip;
   var n = !ui.address ? 0 : !ui.connected || !ui.info ? 1 : wifi ? 3 : 2;
-  console.log(n, ui.connected, ui.address, ui.info);
+  // console.log(n, ui.connected, ui.address, ui.info);
 
   $('.devconn-icon').removeClass(classes.join(' ')).addClass(classes[n] || classes[0]);
   $('.devconn-text').text(titles[n] || titles[0]);
@@ -362,10 +363,12 @@ $(document).on('click', '#prototype-button', function() {
 
 var addLog = function(msg, type) {
   var el = type == 'uart' ? $('#device-logs') : $('#mos-logs');
-  el.each(function(i, el) {
-    var mustScroll = (el.scrollTop === (el.scrollHeight - el.clientHeight));
-    var data = (msg || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    el.innerHTML += data;
-    if (mustScroll) el.scrollTop = el.scrollHeight;
-  });
+  // el.each(function(i, el) {
+  var mustScroll = (el.scrollTop === (el.scrollHeight - el.clientHeight));
+  var data = (msg || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // el.innerHTML += data;
+  $('<span/>').text(data).appendTo(el);
+  // el.append($('<span/>').text(data));
+  if (mustScroll) el.scrollTop = el.scrollHeight;
+  // });
 };
