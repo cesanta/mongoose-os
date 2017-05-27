@@ -1171,8 +1171,13 @@ func readManifestWithLibs(
 			manifest.Filesystem = append(manifest.Filesystem, s)
 		}
 
+		// Add modules from lib
 		manifest.Modules = append(manifest.Modules, libManifest.Modules...)
-		manifest.ConfigSchema = append(manifest.ConfigSchema, libManifest.ConfigSchema...)
+
+		// Add config schema from lib
+		// NOTE: lib config schema should go _before_, because app's config schema
+		// might depend on lib's schema (like, override default value)
+		manifest.ConfigSchema = append(libManifest.ConfigSchema, manifest.ConfigSchema...)
 
 		for k, s := range libManifest.BuildVars {
 			switch k {
