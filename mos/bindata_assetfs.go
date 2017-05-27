@@ -7,6 +7,9 @@
 // web_root/css/bootstrap.min.css
 // web_root/css/custom.min.css
 // web_root/css/font-awesome.min.css
+// web_root/css/green.css
+// web_root/css/green.png
+// web_root/css/green@2x.png
 // web_root/css/main.css
 // web_root/css/pnotify.min.css
 // web_root/fonts/FontAwesome.otf
@@ -34,6 +37,7 @@
 // web_root/js/bootstrap.min.js
 // web_root/js/custom.min.js
 // web_root/js/dash.js
+// web_root/js/icheck.min.js
 // web_root/js/jquery-resizable.js
 // web_root/js/jquery.min.js
 // web_root/js/marked.min.js
@@ -319,6 +323,109 @@ func web_rootCssFontAwesomeMinCss() (*asset, error) {
 	return a, nil
 }
 
+var _web_rootCssGreenCss = []byte(`/* iCheck plugin Flat skin, green
+----------------------------------- */
+.icheckbox_flat-green,
+.iradio_flat-green {
+    display: inline-block;
+    *display: inline;
+    vertical-align: middle;
+    margin: 0;
+    padding: 0;
+    width: 20px;
+    height: 20px;
+    background: url(green.png) no-repeat;
+    border: none;
+    cursor: pointer;
+}
+
+.icheckbox_flat-green {
+    background-position: 0 0;
+}
+    .icheckbox_flat-green.checked {
+        background-position: -22px 0;
+    }
+    .icheckbox_flat-green.disabled {
+        background-position: -44px 0;
+        cursor: default;
+    }
+    .icheckbox_flat-green.checked.disabled {
+        background-position: -66px 0;
+    }
+
+.iradio_flat-green {
+    background-position: -88px 0;
+}
+    .iradio_flat-green.checked {
+        background-position: -110px 0;
+    }
+    .iradio_flat-green.disabled {
+        background-position: -132px 0;
+        cursor: default;
+    }
+    .iradio_flat-green.checked.disabled {
+        background-position: -154px 0;
+    }
+
+/* HiDPI support */
+@media (-o-min-device-pixel-ratio: 5/4), (-webkit-min-device-pixel-ratio: 1.25), (min-resolution: 120dpi) {
+    .icheckbox_flat-green,
+    .iradio_flat-green {
+        background-image: url(green@2x.png);
+        -webkit-background-size: 176px 22px;
+        background-size: 176px 22px;
+    }
+}`)
+
+func web_rootCssGreenCssBytes() ([]byte, error) {
+	return _web_rootCssGreenCss, nil
+}
+
+func web_rootCssGreenCss() (*asset, error) {
+	bytes, err := web_rootCssGreenCssBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "web_root/css/green.css", size: 1317, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _web_rootCssGreenPng = []byte("\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\xb0\x00\x00\x00\x16\b\x06\x00\x00\x00`\xf2\x16\xad\x00\x00\x05kIDATx^\xed\xdbohVe\x18\xc7q;\u04d9\u054c\x06\xa6>KJ\x8a\u052c\xac\x9c\xcd!\x14*\x03#\xa5U\xb3\xf0O\xf6\a\xa47\xd5PH\x89\xf4M\xa8\xa0B\x9a$Q\xfaN\xb25uj\xfe\x19!\xce\x1aE\x9b\x9a\u007fS\xa7Y\xee\u0166\xf6\"\x13\x9d\x84O\x1e\xebK\xfc\xa2q\xb1\u03b9\xdds\x9f\xe3#t\xc1\a\x1e\x0e\xf7\xf9\xa2\x87\x8b\x83\xee\u045b\x8e\x9d\xfc\xb9\x87f\x12fa\x14n\x83\xcbt`\x0f\xde\xc7\xd6\x1e\x9a\xf1\xad\rJ\xfa\xed\xee\xbcg\\\xe7\xee\x10\x8cF\t\n\x1d\xbbY\xb4\xe3;\x9c\x00#\x9e\xbaC\xef\x1d\xfcw\xb7\xe5\xa7SQ\xe7\vQ)\xe5\u0228\u0446\xfd\u0608\xcd\xeaj\u0333\xf5\u06f5\xcf\xd6*\xc0P\x19\x84\"\x84\xb8\x803h\x91\x10vr\xee\xf2L\xff\xb3\xfb\xcf\x02/\xc0\xbb\xc8e\x16b\x9eY`o]\xb3\xc0\xe3\xf0D\x8e\xddF\x98m\xf0\xd3e\x89\x1b\"\x16\xf8Y,\xc1}1\x9d\x93\x98\x8b:\xb3\xc0\u07ba\x8e\v<\f\x15(\x8e\xe9\x9e\xc3\x0e\x1c3\x01/]\x96\xb8\xcbn\x80\x899/\x19\u0518\x04Mb\xdd\xfbs^2\xa81$\x89.\u02eb. \x05X\x8c\xba\xd8%\x83\xcel\xd0=\x05\u0424\xd6\rP\x81\x17\xe3\x96L\x8au\xb6\x02\x81\xef.\u03f4\x02AW\xb1\xd9\xf05\xb3\xa0I\xac[\xee\xb1;:\u026e\xb1\bs\xba\u045a\xa3{5\xa9u\xc7cL7\xbac0>\xadn\x80Rx\x19\xd3J\xaa\x9b\xf1\xd8\xcd$\u0755*\xd8%\xcbb\x05\xcaQ$\u5e96\xb5\u02e6\x06\x93J\xf7\x01\xd8%\v\u044c\xd5X$\xabu-\xb4\u02e6\x86\xf7.oau\x81\x00E\xf02\xa6\x95T\xb7\xb7\xc7n\xef\x14\xba\x85Xf\x02\xed(C5\x9a\xd0!M\xbaV\x86v\xd3\\\xaeV\xd2\xdd\x02L0\xdd\vX\x85z\xb4!+m\xba\xb6Jg\x18\xa1\xa1\x96\xf7.KL\x8bA\x80|\x9bz,\xc0\x8d2?\xa21\"0\x19w\x997\xe4D\x1c\x88h\x1e\xc0\u04f8\u0729S\x82\x17R\xe8\x0eG_\xf3\x86\\\x8b\xb3\x11\u0773:s\x05\x1a\x1a\xb4\x92\xea\xe6\xeb\x02oC%\xe6\xe3#\xe4\xfb\x9c@\r\u007fCn \xb0G\x01\xab\xd2\x04>\xc6\x01\x87\xf6A|b[\x8e\xddB|\x80_qN\x9f\v\x1d\xbbCMwo\u4489\xce|\x0f\x8dZn\xdd\x02<\x85\xb9\xc2g\xae1<\xdb\xc8n\x90g\xcb\xfb\x1c\xb2\x18\xa6\xcf\xf9\xbe\xbc\x9f#\xe4\xcfe\xfd\xf4k\xeejF\x99\xc0Z\xb8\x8e=[\xea\xd8]\x82\xb7P\x8c;\xf4\xf9=\xc7n\xc6t\x0f\xc3u\xec\u064cc\xb7\x02e\xe8#e\x18\x1b\xdfM\u007f\x817\u0647'[\xcd\xf2\xeeB\u007f\\\xefi\xc1\xe1\xa8\xe5E?\xbc\x1c\xf1%\xcd\x00\xd3\xdc\a\xd7\xd9oZ\x03\x1d\xbb/\xc1\xceL\u01ee\xfd}\x9c\x81\xeb\xd87u\x91cw\x04\uc30c\ue9bf\xc0_\xa3\n3\xb0\xa6S`\v\x9e\xcf\xc3\xe5mE-6\xe2`\xa7\xc0q\xd7\xe5\x95,\xba;\xbd\xaeC7\u0321\x1b\xa4\xd7M\u007f\x81\x1f\u01d3\b\xf1*j\xf0\x05\xaa\xf2my\xa5\x04w\xe3*6\xe3\a-om\xdc\xf2\u01bc\xc1\x1e\x83\xeb<h[\x8e\xdd5\xb0\xb3\u06b1\xdb\x11\xf1v\x8es\xa7\xe9^t\xec\x1e\x84\x9d}\xd1\xdd\xf4\x17\xb8\x0f\xb6\xa0\x1c!\xa6\xa02\x1f\x97Wza*\x06i\x89\u05e3\xc6ay\xadC\xa6;\x05\xaec\xcf\xeeu\xec\xce\xc1\n\xfc&+0\u07f1\xfb\x8b\xe9>\x04\u05f1gO;vw\xa0\x19\xbfK3\x1a\\\xba\x01\u049c[P\x8f\xc7\x14\xf83\x0f\x97\xd7.\xf14\f\x84~\xbd\xee\xcb+\x9bL\xf3u\x8c@\xdc<\xac\xb3\xa6\xe5\xd4\u0362\x1a\xc5R\x8d\xacc\xb7\xc5tGb\x00\u29bf\xcej\xd4r\ub1a8\xc7b\xa9G\xa8\u007f\x14\x15\xd9\r\x90\xf6\u070e\x1dx\xd4.o\x9e\xba\x1930\xd0.\xaf\xa3uh3_rl\xc3#\x11\x81\x11\xd8n\xbe\x10iW+\xe9\xee\x11\xf3\xe5AOL\x8dY\xe2\x01\x98\x06\xce2P\xe3h\xd2\xdd\x00\x17\xe1k:\xa0\x89\xec\x16\xe3+|\x83\xfe\xd7\u063d\f_\x93u\xec\xf6\xc1+x\xcdqy\xb3\xe6\xf3l\xd3+A3\x96\xa3\x14\xb7J\xa9\xae\xedF\x89i\xce\xc2\xe5\x14\xba!\xbe4\u077e\x98\x89\t\u0220P2\xba6\x13\x9caD\x8d+It\xf9\u0670\xbal6\xf6b,|\xcc\x1ehb\xbb}\xbb\xd9=\x8d\xc1\xf01\xedp\xed\xf6\xeeNW\xd6a)\xde6_\x05WK\xdc,U\x83I\xa5{\x04\x19\x8c1_\x05\x8f\x96\xb8\xf9V\r\xef]\x96W] \xc02x\x19\xd3J\xaa\xdb\xe4\xb1\u06d4d\xd7x\a\x1fv\xa3\xb5R\xf7jR\xeb\xee\xc4\xeentwcgZ\xdd\x00[\xb0\x10\xb9\x0e\rZ\x9a\x04\xbb\xc7\xd1\xe8\xa1\u06e8\x96\xf7.o\tu\x01\t\xf1&\xaap2.\xa23\x93\xf1\x06BhR\xeb^\xc5v\xd4\xe2\\\\Tgju\xcfU\xdf]\x9e\xe9v\xa8\v\t\x14\x98\x87J\xec\xc2%\xb8\xce%\xdd\xf3\x8c\x1af\x12\xeb6\xa0\x06\xa7\x90\x85\xebdu\xcfgjx\ufcbc\xb6km\xc0pL\xd7\xe7V\xfc!\xad\xba6]g\xd6\xc3L\xea\u0763X\x89:}>\x8fP\xce\xebZ\x9d\xce\x1cM\xa2\xcb\xe2\xaak\x98\xbf\xddm\x16/\x93B\xb7E\xae{\x97\xa5U\xc0Y\x16\x9f\x8a\x87I\xbc\x1b\u2424\xd0u\u007f\xb6=u\xc0\xafV$0Z\x14\xef\xf4\xff\xd7\xfew\x03\xce_\x13H.\xba\x85\xa0\xe1{\x00\x00\x00\x00IEND\xaeB`\x82")
+
+func web_rootCssGreenPngBytes() ([]byte, error) {
+	return _web_rootCssGreenPng, nil
+}
+
+func web_rootCssGreenPng() (*asset, error) {
+	bytes, err := web_rootCssGreenPngBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "web_root/css/green.png", size: 1444, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _web_rootCssGreen2xPng = []byte("\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x01`\x00\x00\x00,\b\x06\x00\x00\x00[\x8cb\xef\x00\x00\v\xf4IDATx^\xed\xddmpU\xd5\u0747\xe1d'$\x1a!\xe9\x14\xda\"!\x14\x06\xc5h\x92\xa2BTZ\u01d9\x04\xf1\x05)J'\x12\x05G\xdbR\x15\xac\xef\xceT\x1c;\xfdR\x87\x96:\xf5y\xb0\xa4\x15A[\xa7\x02\x11%XA|#2\xedP\x8a1\xf8B\x12\b\x8a\x80\x9a\x00*\xa8=$\xc7\u0249'\xa7\xf7\x87\xff'fg\xafuv\xd6>\xecu\u073f\x99k\x86\xd9I\xd6\xfeM0\u007fW6\xeb$\xb9{\xf6\xed\xcfqI\x01\xae\x11\xd30F\xae\x99L\x0f\xba\xf066\xe0\x1fH\xb8\x95)\x9f8!\x87\xe4\x946?\x91CB\u07f7{\xfa\x82\x1c\x92\xd3\xf9\xc1\x81\xc1\n\xe4\xa1\\\x94a\x84\\3\x99\x04b8\x8cN\x91\xf4\xf8\xfc\x86\xae/\xbd\xdc\xfa*\xbajqP\x8d\x1aL\xc5$\x94\xe24\xe9\u048bn\xbc\x87Vl\u015b\x18\x80\xafL?\xf8\xbaU}\x9b\xc7\xd7\x0e\xa5o\xae\xf4\x1b\x8f1\x18\x89b\f\x93\x02\xfd\x88\xe1\x18\x0e\xe1\xa0\xf4O\xc1t\x82\xef+3\xcaO\xdc\x06\xf0\x1c\xfc\x01g \x93\u0647\xfb\u0464\x18\xc0\xe1\xee\xab\x1e\xc0gc\x06\xbe\x8dL\xe6s\xbc\x86=\x8a\x01\x1c\xaa\xbet\xdbcp\x00\x8f\xc5/1\x1feH'\x1fc5\x1a\xd0\xe5c\x00\xdb\xd3\xd7\xff\x00.\xc6\x05\xa8B\t\xd2\xc9\u007f\u0446\x16\xc4`0\xc1\xf7\xf5;\x80\x9d\x13v9K\u0454\xf1a\x06\xb9\xe7z,U\xec\xael\xed\xeb`\x06\xea3>\xcc \xf7\xac\x97\x0e\x8e-}\x19\xb43 }}\x1b\x89\x06|\x80\xc5(C\xba)\xc3bY\xa3A\xd64\x13\xfb\xfb\x16\xe1*\u0705\x8bQ\x82tS\"\x1f{\x97\xacUdS_6\x04EC\x1d\xc0K\xf0+\x9c\xec\u0401.\x8aX\xd8w:~\x84\x93\x1a\xe90\xdd\xfa\xbe\xfa\xe6\xa2\x13\xb7\x19z,U ku\xa2\x1e\x8ad}\xdf\n\u070ejC\x8f\xa5\xf2P-kV\xda\u0517!\\\xe9w\x00\xd7\xc9 \tK\xe8B'\x97X\xda\xf7\x9c\x90\f3A\x17:\xd9\u0517\x1d\x86\xf4\u0556\x8f\xbf\xe0\x19\x8c\x82\xe9\x8cB\xa3\xdc#\x1f\x8ad]_\a\xb3p-\x8a\x02\u06a5\xd6\xc9=\x1c[\xfa2\x84g\xc1I\xa7T\x01\xfe\x0fa\xcb\xff\xbb\xed\x00,\uc6c7+\x10\xaaH\xa7<\x9b\xfa2\x84\xa5\xafR\x116`!\x82\xceBlP\f\xa1l\xeb;\f\xd7a*\x82\xceT\xb9\xd70\x9b\xfa2\x84\xb5\xfa:\xb8\x16c\x11\xb6\x94b.$\u00be\xbe\x15(F\xd8R\x8c\n\x1b\xfb*\xe4c-f!S\x99\x85\xb5Z;K\xfb\xfb:\xa8\xc3$d*\x93P\a\u01e6\xbe:;a\a\xd7 \x94q\xebfa\xdfr\x845\xe56\xf6UX\x8e\xd9\xc8tf\u02fd\x15\xb1\xbe\xefL\x9c\x85L\xe7,\xcc\u0336\xbe\x0e\xaa\x11\xd6L\x85D\xd8\xd7w\f\u009a16\xf6\xf5P\x8f[\xa1\x9b\x8f\xf0{\\\x8e2\x9c\x82\x118\x1bW\xc8\xdb\x0e@7\xb7\xe2z(bm\xdfJLM\xf3\xa8\xd66\xfc\x1d\x8f\xe0!,\xc1r<-o\xfb\"\xcdyPeS_v\xc1\x9e}\xf31\x1aa\xcd\xe9\x90\b\xfb\xfa\x0eGX3\xc2\xfa\xbe\x10#\xb1<\x8dA\xb6\x18\xeb\\^\x9c\u0487N\xf1\n\x1eD\xbd\f\xb7q\x9a;\xda-\xf8\f$k\xfa\x16a\xa6\xee \x935;0\x80\x13sT\xecC3*q)J4w\xb4\xfb\xd1kK_\x86\xf0~\xce\t\xbb\xf6uP\x88\xb0\xa6\x00\x12a_\xdf|\x845y\xd6\xf7\x85xH\xf3\xf4\xc0\v\xa8\xc4Z$\xa1\xca\x00\u05a2\x02k5\xcf/\xff\x16\x92\xac\xe9[\x8b\"\xa8\xb2\x17\u007fF\x9btQ%\x8564\xa0\r\xaa\x9c\x8a\x9al\xe9\xeb J\xc4v\xe3\xb0\x00\xaa,\xc3\x1c\x1cG\xba\xe9\xc1|\xcd\x138?\xc78\x03}\x1f\rI\xdf\x12\x9c\aUv\xa0\x11}H7\t4\xe1?P\xe5<\x94\x18\xe8\xfbF\xa6\xfa\xb2\v.\x89\x06\xb0\u007f\x1f\xe2)\xa4\x10\u017c/\xf1\x0eR\xf0\x93E\x1a\u01d4\x9e\xc1=\x18\x80\u07e4p\x9f\xac\xe5\x95aXd\xa0\xef\xdda\xe8\xab\xf9\xa2\x85v\xbc\x82\xd4\x10\xfb\xbe\x8av\x9d\x17?\x18\xe8\xfbr&\xfbF\x03\u061f\xf7q1~\x8a{\xa2!l\xdc1<\x89\xe7}~\x01;\xb8A\xe3\x19\xea/\f\xfd\u0765d-\xd6\xf4\xcc\rp,\xea;\u007f\x90\xbe\xb9\xf8\x81\xc63\xd4\x17\f\xf6e-\xd6\xf4\x88t\u02b5\xa8o\x15\xbb\xe0\xdc\xf4\ap4|k\xd0%\x17\x96\xe1^\x98K4|\x9fBL~(\xd0\x0e\x19\xc2\xe9\xa4Z\xe3\\\xf8\x03\u8069\xf4\xe0~xe,\xaa\x03\xe8[\x80;\xb0\x1d1\xb1\x1dw\xa2\xc0\xa3/kz\xa6l\x90\xbe\xa5\x1a\xe7\u00b7 \x01SI\xe05\x8ds\xe1\xa5\x01\xf4\xcd\u00c5X\x80\a\xc4\x02\xb9\x96\xe7\u04575=S\x82\xd2h\x00\xeb{\x0f5\xe8\x06\x01\xf0'\x1c\x85\xa9D\xc3W\"Z\x10\x87nj5\x1e\x1f5\xc2t\xd6\xc9\xda^\xa91\u0737\x14o\xe0QL\xc3\b1\r\xcb\xe4m\xa5pK\xa3\u03fe\x134\x1e\x1f\xb5\xc3t:dm\xaf\x8c7\u0737\x187\xe3J\x94\xa1P\x94\u0275\x9b=\x86{\xbbN_\xfd\x01\x1c\r\xdfZ\x97\u16c7'0\n\x86\x13\r_y\xe5\xd0l\x14A7S\xe0\x95F\f\xc0t\x06\xd0\xe8\xe3\\\xf8\xf9>\xfb\x16`\x13\u0385k\xe4m/\xa2\xd0g\xdf)\x8a\xa3\x95n\u0691\x82\xe9\xa44\x06\xfb\x18\x83}\xf30Oq\xccu4\xe6!\xdf\xe5G\xba\xea\xf7U\x0f\xe0h\xe7\xeb1|oB\x14\xff\x8e\xe1o.;_\x19\xbe2`\xf4\x9d\x05\xaflEP\xd9\xea\xa3[\xb9\u03fe\xb7j~n&\xe3\x16\u037e\xean\xea\xcd\xc6A\x98\x8d\xfe\u06a3\f\xf6\x9d\x8a\xd1Pe4\xa6\x98\xea\xeb \x9b\u04cdw\xa1\x9b\xbd\xa8\xc1\xa1h\xf8j\x89\xe1\btsT\x86\xefq\x03\xc3W\u007f\xc7\x13\\\xdaU\xdd\f\xf6\x9d\a\xdd\xcc3\xd8w8\xbc\xf2)\xccF\u007f\xed\xe1\x06\xfbVA7U\xa6\xfa:\xc8\u05bc\x81\u0278\b\xafj\x0e\xdf\xdah\xf8j\xeb\xc2cX\x85\x0f4\x87\xefS&\x87\xaf\x18\xa1\xbcop\xf9L\xd5\xcd`\xdf\xf3\xa1\x9b\xf3\f\xf6-\x84W\xe2\b*\xbd\xf0J\xa1\xc1\xbe\xa7C7\xa3M\xf5\xcdG6\xe6e\u0521W.\xcc\xc1F\xd4\xc2-\x9d\xa8\xc5\xe1h\xf8j\u0647uH\u0205F\xcc\xc3\x04\x83\xc37\xe2_?\xa2\x04g\x00F\xe2 \x1b\xf3G\xf4\"G\xc4\xf1c\xfc+\x1a\xbeFlG\xe2\x84/\xf85\xf8\xf0$\f\xdf\xe3\xda\xcf\xdd\xcc\xfb\x8e\xaa\x9b\xc1\xbeoA7\xed\x06\xfb\xf6\xc1+E\b*\xa7\xc1+}\x06\xfb\x1e\x86n>5\xd5\xd7A6f\xa5\xcbY\xcb8fb\xdb\t\u00f7&\x1a\xbei\x9b\x8db\x97]\xd7j|\x14\xd43_\x9f_8\x15\b*\x95\xaan>\xfa\x9e\x03\xb7\xac\x85\"\xca\xf7\xad\xf0\u0477G\xfb\u007fB\xe6}\x17^\xe91\u0637\r\xbaiS\xac\xad\xe8\x9b\xfd\x03x<\x9a]\xfe\x02{q\x15\xb6c7jp$\x1a\xbei\xfb\x16nr\u0661$\xb0\x1a\x1f\xe33\x19\xbe=\x01?v\u062b}N\u063c\x1aU7\x1f}\xa7\xc3-+\xf0.T\u0645\x15>?\x17{}<C\x9f\x10\xe8\u05f1w\x8e\x1a\xec\xbb\x13G\xa0\xca'\u0629X[\xbb\xaf\x83l\xcd$lq\xf9\x8d\xbe1\\\x82s\xa3\xe1;$#q#Nu\xf96\xeb\xafx,\xe8\xe1+v\xc2+\xf5p`:\x0e\xea}t{\xcbg\xdf>\\\x85w0X\xde\xc5L\xf4\x19\xeb\xab\u07b1W\"\x17\xa6\x93k\xf4;\fu\u07ef\xb1F1\x84\x8f`5x_\"\xe4\f\xbb\xaf\xbe\x0e\xb29U\u060c\x12\x10\x00I\xf4G\xc3w\u023e\x87\xf98\xc5\xe5\xd0\u007f2\xe8\xe1+\xb6j\xec\xa2\xe6\xc2t\xe6j\xec\xd0^\u05fa\xa6\u07f7\x1b\x17\xe2n\xb4\xa2W\xb4\u02b5\v\u042d\xd5W\xffsy@\u3ee1\n\x98N\x85\xac\xed\x95\x03\x86\xfb\u01b0\x12/\xe3\x10\x12\xe2\x90\\[\x89\x98\u027e\x0e\xb2=\x17\xe2\x05\x14\x81\x88h\xf8\x9a2\x16\xd7c\x18\x88\xc8\xdci\x87\x16t\xc1+Kq\x1aLe\xb8\xac\xe9\x95.\xbc\x19@\xdf\x04\x96\xa1\x1a\xc3E\xb5\\K\f\xb1o\xcb C?\x06\xaf\xcc@\x01L\xa5@\xd6\xf4J\f\xdd\x01\xf4Mb\a\x1e\xc7\x12\xf1\xb8\\K\x9a\xee\xeb\xe0\x9b\x90K\xb0\x01\xa7\x0e2|\x9f\x8c\x86\xef\x90|\xdf\xe37\xd7:\xb8:\xc0\xa3f\x03X\r\xaf\x8c\xc3*\xe4\x1a\xfa\xd6x\xa5\xac\u95671\x90\x05}S\xd8\x05\xaf\x94`\xb6\xc1\xbe\xb3Q\xa2\xf1\xac;eS_y\xb9\xb2b\x00g\xaf\xcb\u0404B\x97\xe1{#\xa2\f\xcdD\xd4#\xdfe\xf8NF\x90Y\x8e\x04\xbcr\x1d\x1e\x813\xc4\xe1\xf0\xb0\xac\xe5\x95\x04\x1a\xb2\xa8o\v\x92\x1a\xcfV/G\xee\x10\xfb\xce\xd0x\x96\x9aD\x8b}}\xa3\x9f\a|\x056\xa0 \x1a\xbe\x818\x03\xf5\xc8\xcb\xd4\xf0\x15]X\x05U\xeeF\x13F\xf8|\xec\xf04\xee\x83*O\xa2+\x8b\xfa\xc64\xcf!_\x84z\x14\xfa|\xec\xf0\x13\xfc\x10\xaa\xbc\x8d\x98M}\xd9\xfd\xba\xf6up\x1c\xa1\x8c\xdb.\xc1@\xdf+\xf1Ol\u010d\x19\xe8\u06c7\xb0&\x19@\xdf3\xf13\\\x8f\u0241\xf7\x85\xf8\r\x8eA\x95\xab\u0446z8i\x9cvh\xc7<\xa8r\f\xbf\x86$k\xfanE\x1c\xaa\x94c\x11*\x91\x9b\xc6i\x87\xdbP\x05U\xe2x=[\xfa:8\x8c0F}\xcc\u013f\x8bpe\x86\xfa\xf6 \xac9\x1eP\u07f183\x88\xbe\x8aAr{\x1a\u03ec\x1b\xb1\x1f\xbf\xc3e(\xc50Q\x8a\x19X\x82\xf7\xd1(\x1f\xa3\x93;\x15\x83\xd5\u05beqlN\xe3\x9cx\x1d\xee\u00a5\x98\x88b\xe4\x89b\xb96]\xee_'\x1f\xa3\x93\x97\x10\xb7\xa9/\xbb\xdfA\xfb\xe6c\x17&!\x8ci\x85D\xd8\xd7\xf7\x13\x8cD\x18s\xc8\u01be\x1e\x1aQ\x83[\xd2\x18l\x8b\x85\x89<\x8e5P\xc4\u06be\ud600)i\f\xb6\x8b\x85\x89\xecD\x9bM}\x19\xbe\x9e}\x1d<\x8fP\u01ad\x9b\x85};\x11\xd6t\xda\xd8W\xe1\x0elD\xa6\xb3Q\ueb48\xf5}7c/2\x9d\xbd\u061cm}\x1d<\x8b.\x84-\xdd\xd2M\"\xec\xeb\u06c1\x18\u0096\x18v\xdb\xd8W!\x81\xeb\xf0\x122\x95\x17\xe5\x9e\t(b}\xdf$\x9e\xc3\xfb\xc8T\u0793{&m\xea\xcb\xeeW\xd9\xd7A\x02\xf7\"l\xb9\a}\x90\b\xfb\xfa&\xf1\nB\x15\xe9\xf4\xb5M}y\x96&}\x95\xe2\xb8\x1a+\x10tV`\x0e\xe2\u040b\xfd}\xfb\u0448V\x04\x9dV<\x83~\x9b\xfa2|\xb5\xfa:r\xe1Y<\x8c\xb0\x84.tr\x89\xa5};\xf0o\x84\"\u04a5\u00e6\xbe\f\xdf\x0e\x1fCb!\xe6\xe3(L\u762c\xbdP1\x1c\xb2\xb5o\x12\x9b\xb0\x1eq\x98N\\\xd6\u0784\xa4-}\x19\xbc\x9b\x90\xf4\xf3\xf3\x80\x1f\xc0r\x9c\xec4H\x17E\xac\xeb\u06cc\x16\x9c\ucd20\xd9\xfa\xbe\xfa\xd6\xe0l<\x86\x04\x86\x9a\x84\xacU.k+\x92\xf5}\u06f0\x1c\xad\x06\ae\xab\xac\xd9fS_\xc5?\xb8)\ap\x12w\xa0\x0e\xfb\x90\xe9\xec\u00f5\xb8]\U00049c75\xef\x006c\x1d>G\xa6\xf39\xd6I\x87\x01[\xfa\xb2\x9b\xd8\f\xe9\xeb\xdbQ,\xc2D,\xc5!\x9f'0\x96\xca\x1a\x8b\x8c\xeeR\xed\xef\x1b\xc7&,\xc36\x1c\xf7y\xc4p\x1b\x96\xc9Zq\x9b\xfa\xcaQ3#\xbf\x11c=*p\x83\xfc\xf9 \xfaa:\xfd\xb2\xf6z\xb9W\x05\x9e\x83\"\xd6\xf7\u074d\x064\u025f\xbfD\x12\xa6\x93\x94\xb5w\xa3\t\r\xd8mS_\x06/}\x8d\xa6\v\x8bQ\x86ix\x10M\xe8\xc0\x17\xe8\x17_\u0235&y\x9fi(\xc3bY#\x98\xd8\xdf7\x86-x\x04\xab\u040c=\xf8\x14_!)\xbe\x92k{\u040cU\xf21[\x10\xfb&\xf5\u0347[\x12X-,\x88u}\x93\xd8%\xa2\xbe\x82\x81\x9b\xc9\xdf\xe9\xb5C\x98O\xd47\x85.\x11\xf5\xf5\x90/\xff\xd1G2<P\"\x91H\x94\xdcT*\x95\x13%\x12\x89D2\xcf\xc1IH$\x12\x89D\xf9\x1f\x1e\xee\x9e\xc7\xc78\x9b\x12\x00\x00\x00\x00IEND\xaeB`\x82")
+
+func web_rootCssGreen2xPngBytes() ([]byte, error) {
+	return _web_rootCssGreen2xPng, nil
+}
+
+func web_rootCssGreen2xPng() (*asset, error) {
+	bytes, err := web_rootCssGreen2xPngBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "web_root/css/green@2x.png", size: 3117, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
 var _web_rootCssMainCss = []byte(`html, body { height: 100%; }
 body { color: #666;  background-color: #eee; }
 
@@ -328,6 +435,8 @@ code { color: green; white-space: pre !important;}
   border: 1px solid #ccc !important; padding: 0 1em !important; background: #fff !important;
 }
 .ace_doc-tooltip pre { cursor: pointer !important; }
+.ace_gutter-layer { width: 40px !important; }
+.editor-navbar { margin-top: 5px; margin-left: 40px; }
 
 /* DASHBOARD STYLES */
 .left_col.menu_fixed { top: 0; overflow-y: auto; }
@@ -371,6 +480,9 @@ input.form-control { box-shadow: none !important; }
 
 /* CODE PAGE */
 .descr { color: silver; }
+.list-group-item.title { background-color: #eee; xbackground: rgb(42, 63, 84); xcolor: #eee;}
+.list-group-item:not(.title) { cursor: pointer;}
+.list-group-item.project.selected { background-color: #ffe; }
 
 /* FILE MANAGER PAGE */
 #file-list { overflow-y: auto; }
@@ -468,7 +580,7 @@ func web_rootCssMainCss() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/css/main.css", size: 4930, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/css/main.css", size: 5236, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3364,6 +3476,7 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
   <link href="css/bootstrap-tour.min.css" rel="stylesheet">
   <link href="css/font-awesome.min.css" rel="stylesheet">
   <link href="css/pnotify.min.css" rel="stylesheet">
+  <link href="css/green.css" rel="stylesheet">
   <link href="css/custom.min.css" rel="stylesheet">
   <link href="css/main.css" rel="stylesheet">
 </head>
@@ -3376,13 +3489,13 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
           <div id="sidebar-menu" class="main_menu_side hidden-print main_menu">
             <div class="menu_section">
               <ul class="nav side-menu">
-                <!-- <li><a tab="code"><i class="fa fa-file-code-o"></i> Code </a></li> -->
                 <li><a tab="files"><i class="fa fa-microchip"></i> Device&nbsp;Files </a></li>
                 <li><a tab="examples"><i class="fa fa-search"></i> Examples </a></li>
-                <li><a tab="configuration"><i class="fa fa-gears"></i> Configuration </a></li>
-                <li><a tab="rpc"><i class="fa fa-puzzle-piece"></i>RPC&nbsp;Services</a></li>
+                <li><a tab="configuration"><i class="fa fa-gears"></i> Device&nbsp;Config </a></li>
+                <li><a tab="rpc"><i class="fa fa-puzzle-piece"></i>Device&nbsp;Services</a></li>
                 <li><a tab="terminal"><i class="fa fa-terminal"></i> Terminal</a></li>
                 <!-- <li><a tab="cloud"><i class="fa fa-cloud"></i> Cloud Dash</a></li> -->
+                <li class="hidden"><a tab="code"><i class="fa fa-file-code-o"></i> Code </a></li>
               </ul>
             </div>
           </div>
@@ -3576,6 +3689,7 @@ var _web_rootIndexHtml = []byte(`<!DOCTYPE html>
   <script src="js/bootstrap.min.js"></script>
   <script src="js/moment.min.js"></script>
   <script src="js/pnotify.min.js"></script>
+  <script src="js/icheck.min.js"></script>
   <script src="js/custom.min.js"></script>
   <script src="js/dash.js"></script>
   <script src="js/ws.js"></script>
@@ -3598,7 +3712,7 @@ func web_rootIndexHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/index.html", size: 10669, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/index.html", size: 10773, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -3872,6 +3986,7 @@ var getCookie = function(name) {
 
 $.ajaxSetup({
   type: 'POST',
+  cache: false,
   // beforeSend: function() { if (!devConnected) return false; },
 });
 
@@ -4108,7 +4223,7 @@ var updateDeviceStatus = function() {
   var titles = ['no device address', 'not connected', 'connected, no IP', 'online'];
   var wifi = ui.info && ui.info.wifi && ui.info.wifi.sta_ip;
   var n = !ui.address ? 0 : !ui.connected || !ui.info ? 1 : wifi ? 3 : 2;
-  console.log(n, ui.connected, ui.address, ui.info);
+  // console.log(n, ui.connected, ui.address, ui.info);
 
   $('.devconn-icon').removeClass(classes.join(' ')).addClass(classes[n] || classes[0]);
   $('.devconn-text').text(titles[n] || titles[0]);
@@ -4217,12 +4332,14 @@ $(document).on('click', '#prototype-button', function() {
 
 var addLog = function(msg, type) {
   var el = type == 'uart' ? $('#device-logs') : $('#mos-logs');
-  el.each(function(i, el) {
-    var mustScroll = (el.scrollTop === (el.scrollHeight - el.clientHeight));
-    var data = (msg || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-    el.innerHTML += data;
-    if (mustScroll) el.scrollTop = el.scrollHeight;
-  });
+  // el.each(function(i, el) {
+  var mustScroll = (el.scrollTop === (el.scrollHeight - el.clientHeight));
+  var data = (msg || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // el.innerHTML += data;
+  $('<span/>').text(data).appendTo(el);
+  // el.append($('<span/>').text(data));
+  if (mustScroll) el.scrollTop = el.scrollHeight;
+  // });
 };`)
 
 func web_rootJsDashJsBytes() ([]byte, error) {
@@ -4235,7 +4352,35 @@ func web_rootJsDashJs() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/js/dash.js", size: 12301, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/js/dash.js", size: 12402, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	a := &asset{bytes: bytes, info: info}
+	return a, nil
+}
+
+var _web_rootJsIcheckMinJs = []byte(`/*! iCheck v1.0.2 by Damir Sultanov, http://git.io/arlzeA, MIT Licensed */
+(function(f){function A(a,b,d){var c=a[0],g=/er/.test(d)?_indeterminate:/bl/.test(d)?n:k,e=d==_update?{checked:c[k],disabled:c[n],indeterminate:"true"==a.attr(_indeterminate)||"false"==a.attr(_determinate)}:c[g];if(/^(ch|di|in)/.test(d)&&!e)x(a,g);else if(/^(un|en|de)/.test(d)&&e)q(a,g);else if(d==_update)for(var f in e)e[f]?x(a,f,!0):q(a,f,!0);else if(!b||"toggle"==d){if(!b)a[_callback]("ifClicked");e?c[_type]!==r&&q(a,g):x(a,g)}}function x(a,b,d){var c=a[0],g=a.parent(),e=b==k,u=b==_indeterminate,
+v=b==n,s=u?_determinate:e?y:"enabled",F=l(a,s+t(c[_type])),B=l(a,b+t(c[_type]));if(!0!==c[b]){if(!d&&b==k&&c[_type]==r&&c.name){var w=a.closest("form"),p='input[name="'+c.name+'"]',p=w.length?w.find(p):f(p);p.each(function(){this!==c&&f(this).data(m)&&q(f(this),b)})}u?(c[b]=!0,c[k]&&q(a,k,"force")):(d||(c[b]=!0),e&&c[_indeterminate]&&q(a,_indeterminate,!1));D(a,e,b,d)}c[n]&&l(a,_cursor,!0)&&g.find("."+C).css(_cursor,"default");g[_add](B||l(a,b)||"");g.attr("role")&&!u&&g.attr("aria-"+(v?n:k),"true");
+g[_remove](F||l(a,s)||"")}function q(a,b,d){var c=a[0],g=a.parent(),e=b==k,f=b==_indeterminate,m=b==n,s=f?_determinate:e?y:"enabled",q=l(a,s+t(c[_type])),r=l(a,b+t(c[_type]));if(!1!==c[b]){if(f||!d||"force"==d)c[b]=!1;D(a,e,s,d)}!c[n]&&l(a,_cursor,!0)&&g.find("."+C).css(_cursor,"pointer");g[_remove](r||l(a,b)||"");g.attr("role")&&!f&&g.attr("aria-"+(m?n:k),"false");g[_add](q||l(a,s)||"")}function E(a,b){if(a.data(m)){a.parent().html(a.attr("style",a.data(m).s||""));if(b)a[_callback](b);a.off(".i").unwrap();
+f(_label+'[for="'+a[0].id+'"]').add(a.closest(_label)).off(".i")}}function l(a,b,f){if(a.data(m))return a.data(m).o[b+(f?"":"Class")]}function t(a){return a.charAt(0).toUpperCase()+a.slice(1)}function D(a,b,f,c){if(!c){if(b)a[_callback]("ifToggled");a[_callback]("ifChanged")[_callback]("if"+t(f))}}var m="iCheck",C=m+"-helper",r="radio",k="checked",y="un"+k,n="disabled";_determinate="determinate";_indeterminate="in"+_determinate;_update="update";_type="type";_click="click";_touch="touchbegin.i touchend.i";
+_add="addClass";_remove="removeClass";_callback="trigger";_label="label";_cursor="cursor";_mobile=/ipad|iphone|ipod|android|blackberry|windows phone|opera mini|silk/i.test(navigator.userAgent);f.fn[m]=function(a,b){var d='input[type="checkbox"], input[type="'+r+'"]',c=f(),g=function(a){a.each(function(){var a=f(this);c=a.is(d)?c.add(a):c.add(a.find(d))})};if(/^(check|uncheck|toggle|indeterminate|determinate|disable|enable|update|destroy)$/i.test(a))return a=a.toLowerCase(),g(this),c.each(function(){var c=
+f(this);"destroy"==a?E(c,"ifDestroyed"):A(c,!0,a);f.isFunction(b)&&b()});if("object"!=typeof a&&a)return this;var e=f.extend({checkedClass:k,disabledClass:n,indeterminateClass:_indeterminate,labelHover:!0},a),l=e.handle,v=e.hoverClass||"hover",s=e.focusClass||"focus",t=e.activeClass||"active",B=!!e.labelHover,w=e.labelHoverClass||"hover",p=(""+e.increaseArea).replace("%","")|0;if("checkbox"==l||l==r)d='input[type="'+l+'"]';-50>p&&(p=-50);g(this);return c.each(function(){var a=f(this);E(a);var c=this,
+b=c.id,g=-p+"%",d=100+2*p+"%",d={position:"absolute",top:g,left:g,display:"block",width:d,height:d,margin:0,padding:0,background:"#fff",border:0,opacity:0},g=_mobile?{position:"absolute",visibility:"hidden"}:p?d:{position:"absolute",opacity:0},l="checkbox"==c[_type]?e.checkboxClass||"icheckbox":e.radioClass||"i"+r,z=f(_label+'[for="'+b+'"]').add(a.closest(_label)),u=!!e.aria,y=m+"-"+Math.random().toString(36).substr(2,6),h='<div class="'+l+'" '+(u?'role="'+c[_type]+'" ':"");u&&z.each(function(){h+=
+'aria-labelledby="';this.id?h+=this.id:(this.id=y,h+=y);h+='"'});h=a.wrap(h+"/>")[_callback]("ifCreated").parent().append(e.insert);d=f('<ins class="'+C+'"/>').css(d).appendTo(h);a.data(m,{o:e,s:a.attr("style")}).css(g);e.inheritClass&&h[_add](c.className||"");e.inheritID&&b&&h.attr("id",m+"-"+b);"static"==h.css("position")&&h.css("position","relative");A(a,!0,_update);if(z.length)z.on(_click+".i mouseover.i mouseout.i "+_touch,function(b){var d=b[_type],e=f(this);if(!c[n]){if(d==_click){if(f(b.target).is("a"))return;
+A(a,!1,!0)}else B&&(/ut|nd/.test(d)?(h[_remove](v),e[_remove](w)):(h[_add](v),e[_add](w)));if(_mobile)b.stopPropagation();else return!1}});a.on(_click+".i focus.i blur.i keyup.i keydown.i keypress.i",function(b){var d=b[_type];b=b.keyCode;if(d==_click)return!1;if("keydown"==d&&32==b)return c[_type]==r&&c[k]||(c[k]?q(a,k):x(a,k)),!1;if("keyup"==d&&c[_type]==r)!c[k]&&x(a,k);else if(/us|ur/.test(d))h["blur"==d?_remove:_add](s)});d.on(_click+" mousedown mouseup mouseover mouseout "+_touch,function(b){var d=
+b[_type],e=/wn|up/.test(d)?t:v;if(!c[n]){if(d==_click)A(a,!1,!0);else{if(/wn|er|in/.test(d))h[_add](e);else h[_remove](e+" "+t);if(z.length&&B&&e==v)z[/ut|nd/.test(d)?_remove:_add](w)}if(_mobile)b.stopPropagation();else return!1}})})}})(window.jQuery||window.Zepto);
+`)
+
+func web_rootJsIcheckMinJsBytes() ([]byte, error) {
+	return _web_rootJsIcheckMinJs, nil
+}
+
+func web_rootJsIcheckMinJs() (*asset, error) {
+	bytes, err := web_rootJsIcheckMinJsBytes()
+	if err != nil {
+		return nil, err
+	}
+
+	info := bindataFileInfo{name: "web_root/js/icheck.min.js", size: 4931, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -4899,42 +5044,41 @@ func web_rootPage_cloudHtml() (*asset, error) {
 	return a, nil
 }
 
-var _web_rootPage_codeHtml = []byte(`<div data-title="Develop" style="height: 100%;">
-  <div class="col-xs-4 main-left-column">
-<!--     <div style="margin-top: 5px; ">
-      <button class="btn btn-sm btn-default"><i class="fa fa-plus"></i> New App</button>
-      <button class="btn btn-sm btn-default"><i class="fa fa-plus"></i> New Lib</button>
-    </div>
-    <div class="list-group upcontrol" id="example-list" style="padding: 0; margin: 0; xtop: 5px;">
- -->
+var _web_rootPage_codeHtml = []byte(`<div data-title="Code" style="height: 100%;">
+  <div class="col-xs-3 main-left-column">
 
-    <div class="tree" style="margin-top: 5px;">
-      <ul>
-        <li>
-          <span><i class="fa fa-folder icon-minus-sign"></i> Apps</span>
-          <a class="btn btn-xs btn-default pull-right">create new</a>
-          <ul>
-            <li><span><i class="fa fa-folder"></i>
-              LED Blink (JS)</span>
-              <a class="btn btn-xs btn-default pull-right">delete</a>
-            </li>
-            <li><span><i class="fa fa-folder"></i> MQTT publish (JS)</span></li>
-            <li><span><i class="fa fa-folder"></i> MQTT subscribe (JS)</span></li>
-          </ul>
-        </li>
-        <li><span><i class="fa fa-folder"></i> Libs</span></li>
-      </ul>
-      
-
+    <div class="list-group upcontrol" id="projects" style="padding: 0; margin: 0; top: 5px;">
+      <li class="list-group-item title" id="apps-header">
+        <strong class="header">My Apps</strong>
+        <a style="margin-top: -5px;" class="btn btn-success btn-sm pull-right" data-toggle="modal" data-target="#app-manager"> <i class="fa fa-plus"></i> Add app</a>
+      </li>
+      <li class="list-group-item justify-content-between title" id="libs-header">
+        <strong class="header">My Libs</strong>
+        <button style="margin-top: -5px;" class="btn btn-success btn-sm pull-right" data-toggle="modal" data-target="#lib-manager"> <i class="fa fa-plus"></i> Add lib&nbsp;&nbsp;</button>
+      </li>
     </div>
+
   </div>
 
-  <div class="col-xs-8 main-right-column">
-    <div style="margin-top: 5px; ">
+  <div class="col-xs-9 main-right-column">
+    <div class="editor-navbar">
+
+      <span class="form-inline">
+        <select class="form-control input-sm" style="margin-top: -5px; width: 15em;">
+          <option>init.js</option>
+          <option>README.md</option>
+        </select>
+      </span>
+      &nbsp;
+
       <button class="btn btn-sm btn-success"><i class="fa fa-save"></i> Save</button>
-      <button class="btn btn-sm btn-success "><i class="fa fa-save"></i> Save + Rebuild + Flash</button>
-      <button class="btn btn-sm btn-success "><i class="fa fa-save"></i> Save + Copy + Reboot (fast)</button>
-      <button class="btn btn-sm btn-info pull-right"><i class="fa fa-share"></i> Publish to GitHub <span class="caret"></span></button>
+      <button class="btn btn-sm btn-success"><i class="fa fa-remove"></i> Delete</button>
+      <button class="btn btn-sm btn-success"><i class="fa fa-file-o"></i> New</button>
+      &nbsp;|&nbsp;&nbsp;
+      <button class="btn btn-sm btn-success "><i class="fa fa-flash"></i> Build + Flash</button>
+      <button class="btn btn-sm btn-success "><i class="fa fa-retweet"></i> Copy + Reboot</button>
+
+      <button class="btn btn-sm btn-info pull-right" style="margin-right: 0;"><i class="fa fa-share"></i> Share this project</button>
     </div>
     <div class="form-group upcontrol">
       <div id="editor"></div>
@@ -4942,28 +5086,191 @@ var _web_rootPage_codeHtml = []byte(`<div data-title="Develop" style="height: 10
   </div>
 </div>
 
+
+<li class="list-group-item local-project hidden" id="local-entry-template">
+  <span class="name"></span>
+  <span class="tags descr" style="margin-right: 10px;"></span>
+  <span class="pull-right ctl">
+  </span>
+</li>
+
+
+<div class="btn-group project-control-toolbar hidden" id="ctl">
+  <button class="btn btn-xs btn-default descr do-rename" data-toggle="tooltip" data-placement="top" title="Rename&nbsp;project"><i class="fa fa-pencil"></i></button>
+  <button class="btn btn-xs btn-default descr do-duplicate" data-toggle="tooltip" data-placement="top" title="Duplicate&nbsp;project"><i class="fa fa-copy"></i></button>
+  <button class="btn btn-xs btn-default descr do-remove" data-toggle="tooltip" data-placement="top" title="Remove&nbsp;project"><i class="fa fa-remove"></i></button>
+</div>
+
+
+<div class="modal fade" id="lib-manager" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h2 class="modal-title text-center">Library Manager</h2>
+      </div>
+      <div class="modal-body">
+        <div class="form form-inline" style="margin-bottom: 0px;">
+          <!-- <button class="btn btn-success" id="download-lib-button"><i class="fa fa-download"></i> Download selected</button> -->
+          <div class="input-group xpull-right">
+            <span class="input-group-addon"><i class="fa fa-search"></i></span>
+            <input type="text" class="form-control" style="min-width: 17em;" placeholder="type filter ...">
+          </div>
+        </div>
+        <table class="table">
+          <thead>
+            <th>Name</th>
+            <th>Title</th>
+            <th>Tags</th>
+            <th>Author</th>
+            <th style="text-align: ">Download</th>
+          </thead>
+          <tbody class="projects"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal fade" id="app-manager" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h2 class="modal-title text-center">App Manager</h2>
+      </div>
+      <div class="modal-body">
+        <div class="form form-inline" style="margin-bottom: 0px;">
+          <div class="input-group xpull-right">
+            <span class="input-group-addon"><i class="fa fa-search"></i></span>
+            <input type="text" class="form-control" style="min-width: 17em;" placeholder="type filter ...">
+          </div>
+        </div>
+        <table class="table">
+          <thead>
+            <th>Name</th>
+            <th>Title</th>
+            <th>Tags</th>
+            <th>Author</th>
+            <th style="text-align: ">Download</th>
+          </thead>
+          <tbody class="projects"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<table role="table" class="table hidden">
+  <tr id="remote-entry-template" class="remote-project">
+    <td><a target="_blank" class="name" href></a></td>
+    <td class="title"></td>
+    <td class="tags"></td>
+    <td class="author"></td>
+    <td>
+      <button class="btn btn-xs btn-success" style="margin: 0;"><i class="fa fa-download"></i> Download</button>
+      <div class="hidden imported descr"><i class="fa fa-check"></i> downloaded</div>
+    </td>
+  </tr>
+</table>
+
+
 <script>
   var editor = mkeditor();
   editor.setValue('let x = 1234;', -1);
   editor.session.setMode('ace/mode/javascript');
 
+  var clone = function(sel) {
+    return $(sel).clone().removeClass('hidden').removeAttr('id');
+  };
 
+  $(document).off('click', '.list-group-item');
+  $(document).on('click', '.list-group-item', function() {
+    if ($(this).hasClass('title')) return false;
+    $('.list-group-item').removeClass('selected');
+    $(this).addClass('selected');
+  });
 
+  var syncImportedProjects = function(type) {
+    var url = '/list-' + type + 's';
+    var dialogSelector = '#' + type + '-manager';
+    var itemClass = 'imported-' + type;
+    var headerSelector = '#' + type + 's-header';
 
-$(function () {
-    $('.tree li:has(ul)').addClass('parent_li').find(' > span').attr('title', 'Collapse this branch');
-    $('.tree li.parent_li > span').on('click', function (e) {
-        var children = $(this).parent('li.parent_li').find(' > ul > li');
-        if (children.is(":visible")) {
-            children.hide('fast');
-            $(this).attr('title', 'Expand this branch').find(' > i').addClass('icon-plus-sign').removeClass('icon-minus-sign');
-        } else {
-            children.show('fast');
-            $(this).attr('title', 'Collapse this branch').find(' > i').addClass('icon-minus-sign').removeClass('icon-plus-sign');
-        }
-        e.stopPropagation();
+    return $.ajax({url: url}).then(function(data) {
+      $(dialogSelector + ' .btn').removeClass('hidden');
+      $(dialogSelector + ' .imported').addClass('hidden');
+      $('#ctl').addClass('hidden').appendTo('body');  // Save project toolbar before items removal
+      $('.' + itemClass).remove();
+      $.each(data.result || {}, function(k, v) {
+        $(dialogSelector + ' [rel="' + k + '"] .btn').addClass('hidden');
+        $(dialogSelector + ' [rel="' + k + '"] .imported').removeClass('hidden');
+        var e = clone('#local-entry-template').addClass(itemClass);
+        e.find('.name').text(k).attr({type: type});
+        e.find('.tags').text((v.tags || []).join(' '));
+        $(headerSelector).after(e);
+      });
     });
-});
+  };
+
+  $(document).off('click', '.remote-project .btn');
+  $(document).on('click', '.remote-project .btn', function() {
+    var btn = $(this);
+    var type = btn.closest('[type]').attr('type');
+    var url = $(this).closest('tr').find('a.name').attr('href');
+    startSpinner(btn);
+    $.ajax({url: '/import-' + type, data: {url: url}}).always(function() {
+      syncImportedProjects(type).always(function() {
+        btn.button('reset');
+      });
+    });
+  });
+
+  var loadRemoteProjects = function(type) {
+    var file = type + 's.json';
+    var dialogSelector = '#' + type + '-manager';
+    var org = 'mongoose-os-' + type + 's';
+    return $.getJSON('https://mongoose-os.com/downloads/' + file).then(function(data) {
+      $.each(data, function(k, v) {
+        var entry = clone('#remote-entry-template').appendTo(dialogSelector + ' .projects');
+        entry.find('.name').text(k).attr({href: 'https://github.com/' + org + '/' + k});
+        entry.find('.title').text(v.description || '');
+        entry.find('.tags').text((v.tags || []).join(' '));
+        entry.find('.author').text(v.author || '');
+        entry.attr({rel: k, type: type});
+      });
+      // $('[type="checkbox"]').iCheck({checkboxClass: 'icheckbox_flat-green', radioClass: 'iradio_flat-green'});
+    }).always(function() {
+      syncImportedProjects(type);
+    });
+  };
+  loadRemoteProjects('app');
+  loadRemoteProjects('lib');
+
+  $(document).off('mouseenter mouseleave', '.local-project');
+  $(document).on('mouseenter', '.local-project', function(ev) {
+    var el = $(this).find('.ctl');
+    $('#ctl').removeClass('hidden').appendTo(el);
+  }).on('mouseleave', '.local-project', function() {
+    $('#ctl').addClass('hidden');
+  });
+
+  $(document).off('click', '.project-control-toolbar .do-remove');
+  $(document).on('click', '.project-control-toolbar .do-remove', function() {
+    if (!confirm('Click "OK" to delete this project.')) return;
+    var el = $(this).closest('.local-project').find('.name');
+    var name = el.text();
+    var type = el.attr('type');
+    var data = {filename: '.'};
+    data[type] = name;
+    $.ajax({global:true, url: '/' + type + '/rm', data: data}).always(function() {
+      syncImportedProjects(type);
+    });
+  });
+
+  $('[data-toggle="tooltip"]').tooltip()
 
 </script>
 `)
@@ -4978,7 +5285,7 @@ func web_rootPage_codeHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_code.html", size: 2584, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_code.html", size: 9144, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -5408,10 +5715,9 @@ var _web_rootPage_filesHtml = []byte(`<div data-title="Device File Manager" styl
       <div class="list-group upcontrol" id="file-list" style="padding: 0; margin: 0; top: 5px;"></div>
     </div>
     <div class="col-xs-9 main-right-column">
-      <div style="margin-top: 5px;">
-        &nbsp;
+      <div class="editor-navbar">
         <button class="btn btn-sm btn-success disabled file-control" id="file-save-button"><i class="fa fa-save"></i> Save File</button>
-        <button class="btn btn-sm btn-success disabled file-control" id="file-savereboot-button"><i class="fa fa-refresh"></i> Save &amp; Reboot</button>
+        <button class="btn btn-sm btn-success disabled file-control" id="file-savereboot-button"><i class="fa fa-retweet"></i> Save + Reboot</button>
         &nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
         <div style="position: relative; display: inline-block;">
           <button class="btn btn-sm btn-info file-control dropdown-toggle" id="share-button"
@@ -5616,7 +5922,7 @@ func web_rootPage_filesHtml() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "web_root/page_files.html", size: 7673, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "web_root/page_files.html", size: 7651, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
@@ -5826,6 +6132,9 @@ var _bindata = map[string]func() (*asset, error){
 	"web_root/css/bootstrap.min.css":           web_rootCssBootstrapMinCss,
 	"web_root/css/custom.min.css":              web_rootCssCustomMinCss,
 	"web_root/css/font-awesome.min.css":        web_rootCssFontAwesomeMinCss,
+	"web_root/css/green.css":                   web_rootCssGreenCss,
+	"web_root/css/green.png":                   web_rootCssGreenPng,
+	"web_root/css/green@2x.png":                web_rootCssGreen2xPng,
 	"web_root/css/main.css":                    web_rootCssMainCss,
 	"web_root/css/pnotify.min.css":             web_rootCssPnotifyMinCss,
 	"web_root/fonts/FontAwesome.otf":           web_rootFontsFontawesomeOtf,
@@ -5853,6 +6162,7 @@ var _bindata = map[string]func() (*asset, error){
 	"web_root/js/bootstrap.min.js":             web_rootJsBootstrapMinJs,
 	"web_root/js/custom.min.js":                web_rootJsCustomMinJs,
 	"web_root/js/dash.js":                      web_rootJsDashJs,
+	"web_root/js/icheck.min.js":                web_rootJsIcheckMinJs,
 	"web_root/js/jquery-resizable.js":          web_rootJsJqueryResizableJs,
 	"web_root/js/jquery.min.js":                web_rootJsJqueryMinJs,
 	"web_root/js/marked.min.js":                web_rootJsMarkedMinJs,
@@ -5921,6 +6231,9 @@ var _bintree = &bintree{nil, map[string]*bintree{
 			"bootstrap.min.css":      &bintree{web_rootCssBootstrapMinCss, map[string]*bintree{}},
 			"custom.min.css":         &bintree{web_rootCssCustomMinCss, map[string]*bintree{}},
 			"font-awesome.min.css":   &bintree{web_rootCssFontAwesomeMinCss, map[string]*bintree{}},
+			"green.css":              &bintree{web_rootCssGreenCss, map[string]*bintree{}},
+			"green.png":              &bintree{web_rootCssGreenPng, map[string]*bintree{}},
+			"green@2x.png":           &bintree{web_rootCssGreen2xPng, map[string]*bintree{}},
 			"main.css":               &bintree{web_rootCssMainCss, map[string]*bintree{}},
 			"pnotify.min.css":        &bintree{web_rootCssPnotifyMinCss, map[string]*bintree{}},
 		}},
@@ -5956,6 +6269,7 @@ var _bintree = &bintree{nil, map[string]*bintree{
 			"bootstrap.min.js":      &bintree{web_rootJsBootstrapMinJs, map[string]*bintree{}},
 			"custom.min.js":         &bintree{web_rootJsCustomMinJs, map[string]*bintree{}},
 			"dash.js":               &bintree{web_rootJsDashJs, map[string]*bintree{}},
+			"icheck.min.js":         &bintree{web_rootJsIcheckMinJs, map[string]*bintree{}},
 			"jquery-resizable.js":   &bintree{web_rootJsJqueryResizableJs, map[string]*bintree{}},
 			"jquery.min.js":         &bintree{web_rootJsJqueryMinJs, map[string]*bintree{}},
 			"marked.min.js":         &bintree{web_rootJsMarkedMinJs, map[string]*bintree{}},
