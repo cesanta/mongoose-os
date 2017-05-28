@@ -1,39 +1,38 @@
-<div data-title="Develop" style="height: 100%;">
-  <div class="col-xs-4 main-left-column">
-<!--     <div style="margin-top: 5px; ">
-      <button class="btn btn-sm btn-default"><i class="fa fa-plus"></i> New App</button>
-      <button class="btn btn-sm btn-default"><i class="fa fa-plus"></i> New Lib</button>
-    </div>
-    <div class="list-group upcontrol" id="example-list" style="padding: 0; margin: 0; xtop: 5px;">
- -->
+<div data-title="Code" style="height: 100%;">
+  <div class="col-xs-3 main-left-column">
 
-    <div class="tree" style="margin-top: 5px;">
-      <ul>
-        <li>
-          <span><i class="fa fa-folder icon-minus-sign"></i> Apps</span>
-          <a class="btn btn-xs btn-default pull-right">create new</a>
-          <ul>
-            <li><span><i class="fa fa-folder"></i>
-              LED Blink (JS)</span>
-              <a class="btn btn-xs btn-default pull-right">delete</a>
-            </li>
-            <li><span><i class="fa fa-folder"></i> MQTT publish (JS)</span></li>
-            <li><span><i class="fa fa-folder"></i> MQTT subscribe (JS)</span></li>
-          </ul>
-        </li>
-        <li><span><i class="fa fa-folder"></i> Libs</span></li>
-      </ul>
-      
-
+    <div class="list-group upcontrol" id="projects" style="padding: 0; margin: 0; top: 5px;">
+      <li class="list-group-item title" id="apps-header">
+        <strong class="header">My Apps</strong>
+        <a style="margin-top: -5px;" class="btn btn-success btn-sm pull-right" data-toggle="modal" data-target="#app-manager"> <i class="fa fa-plus"></i> Add app</a>
+      </li>
+      <li class="list-group-item justify-content-between title" id="libs-header">
+        <strong class="header">My Libs</strong>
+        <button style="margin-top: -5px;" class="btn btn-success btn-sm pull-right" data-toggle="modal" data-target="#lib-manager"> <i class="fa fa-plus"></i> Add lib&nbsp;&nbsp;</button>
+      </li>
     </div>
+
   </div>
 
-  <div class="col-xs-8 main-right-column">
-    <div style="margin-top: 5px; ">
+  <div class="col-xs-9 main-right-column">
+    <div class="editor-navbar">
+
+      <span class="form-inline">
+        <select class="form-control input-sm" style="margin-top: -5px; width: 15em;">
+          <option>init.js</option>
+          <option>README.md</option>
+        </select>
+      </span>
+      &nbsp;
+
       <button class="btn btn-sm btn-success"><i class="fa fa-save"></i> Save</button>
-      <button class="btn btn-sm btn-success "><i class="fa fa-save"></i> Save + Rebuild + Flash</button>
-      <button class="btn btn-sm btn-success "><i class="fa fa-save"></i> Save + Copy + Reboot (fast)</button>
-      <button class="btn btn-sm btn-info pull-right"><i class="fa fa-share"></i> Publish to GitHub <span class="caret"></span></button>
+      <button class="btn btn-sm btn-success"><i class="fa fa-remove"></i> Delete</button>
+      <button class="btn btn-sm btn-success"><i class="fa fa-file-o"></i> New</button>
+      &nbsp;|&nbsp;&nbsp;
+      <button class="btn btn-sm btn-success "><i class="fa fa-flash"></i> Build + Flash</button>
+      <button class="btn btn-sm btn-success "><i class="fa fa-retweet"></i> Copy + Reboot</button>
+
+      <button class="btn btn-sm btn-info pull-right" style="margin-right: 0;"><i class="fa fa-share"></i> Share this project</button>
     </div>
     <div class="form-group upcontrol">
       <div id="editor"></div>
@@ -41,27 +40,190 @@
   </div>
 </div>
 
+
+<li class="list-group-item local-project hidden" id="local-entry-template">
+  <span class="name"></span>
+  <span class="tags descr" style="margin-right: 10px;"></span>
+  <span class="pull-right ctl">
+  </span>
+</li>
+
+
+<div class="btn-group project-control-toolbar hidden" id="ctl">
+  <button class="btn btn-xs btn-default descr do-rename" data-toggle="tooltip" data-placement="top" title="Rename&nbsp;project"><i class="fa fa-pencil"></i></button>
+  <button class="btn btn-xs btn-default descr do-duplicate" data-toggle="tooltip" data-placement="top" title="Duplicate&nbsp;project"><i class="fa fa-copy"></i></button>
+  <button class="btn btn-xs btn-default descr do-remove" data-toggle="tooltip" data-placement="top" title="Remove&nbsp;project"><i class="fa fa-remove"></i></button>
+</div>
+
+
+<div class="modal fade" id="lib-manager" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h2 class="modal-title text-center">Library Manager</h2>
+      </div>
+      <div class="modal-body">
+        <div class="form form-inline" style="margin-bottom: 0px;">
+          <!-- <button class="btn btn-success" id="download-lib-button"><i class="fa fa-download"></i> Download selected</button> -->
+          <div class="input-group xpull-right">
+            <span class="input-group-addon"><i class="fa fa-search"></i></span>
+            <input type="text" class="form-control" style="min-width: 17em;" placeholder="type filter ...">
+          </div>
+        </div>
+        <table class="table">
+          <thead>
+            <th>Name</th>
+            <th>Title</th>
+            <th>Tags</th>
+            <th>Author</th>
+            <th style="text-align: ">Download</th>
+          </thead>
+          <tbody class="projects"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="modal fade" id="app-manager" tabindex="-1" role="dialog">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
+        <h2 class="modal-title text-center">App Manager</h2>
+      </div>
+      <div class="modal-body">
+        <div class="form form-inline" style="margin-bottom: 0px;">
+          <div class="input-group xpull-right">
+            <span class="input-group-addon"><i class="fa fa-search"></i></span>
+            <input type="text" class="form-control" style="min-width: 17em;" placeholder="type filter ...">
+          </div>
+        </div>
+        <table class="table">
+          <thead>
+            <th>Name</th>
+            <th>Title</th>
+            <th>Tags</th>
+            <th>Author</th>
+            <th style="text-align: ">Download</th>
+          </thead>
+          <tbody class="projects"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<table role="table" class="table hidden">
+  <tr id="remote-entry-template" class="remote-project">
+    <td><a target="_blank" class="name" href></a></td>
+    <td class="title"></td>
+    <td class="tags"></td>
+    <td class="author"></td>
+    <td>
+      <button class="btn btn-xs btn-success" style="margin: 0;"><i class="fa fa-download"></i> Download</button>
+      <div class="hidden imported descr"><i class="fa fa-check"></i> downloaded</div>
+    </td>
+  </tr>
+</table>
+
+
 <script>
   var editor = mkeditor();
   editor.setValue('let x = 1234;', -1);
   editor.session.setMode('ace/mode/javascript');
 
+  var clone = function(sel) {
+    return $(sel).clone().removeClass('hidden').removeAttr('id');
+  };
 
+  $(document).off('click', '.list-group-item');
+  $(document).on('click', '.list-group-item', function() {
+    if ($(this).hasClass('title')) return false;
+    $('.list-group-item').removeClass('selected');
+    $(this).addClass('selected');
+  });
 
+  var syncImportedProjects = function(type) {
+    var url = '/list-' + type + 's';
+    var dialogSelector = '#' + type + '-manager';
+    var itemClass = 'imported-' + type;
+    var headerSelector = '#' + type + 's-header';
 
-$(function () {
-    $('.tree li:has(ul)').addClass('parent_li').find(' > span').attr('title', 'Collapse this branch');
-    $('.tree li.parent_li > span').on('click', function (e) {
-        var children = $(this).parent('li.parent_li').find(' > ul > li');
-        if (children.is(":visible")) {
-            children.hide('fast');
-            $(this).attr('title', 'Expand this branch').find(' > i').addClass('icon-plus-sign').removeClass('icon-minus-sign');
-        } else {
-            children.show('fast');
-            $(this).attr('title', 'Collapse this branch').find(' > i').addClass('icon-minus-sign').removeClass('icon-plus-sign');
-        }
-        e.stopPropagation();
+    return $.ajax({url: url}).then(function(data) {
+      $(dialogSelector + ' .btn').removeClass('hidden');
+      $(dialogSelector + ' .imported').addClass('hidden');
+      $('#ctl').addClass('hidden').appendTo('body');  // Save project toolbar before items removal
+      $('.' + itemClass).remove();
+      $.each(data.result || {}, function(k, v) {
+        $(dialogSelector + ' [rel="' + k + '"] .btn').addClass('hidden');
+        $(dialogSelector + ' [rel="' + k + '"] .imported').removeClass('hidden');
+        var e = clone('#local-entry-template').addClass(itemClass);
+        e.find('.name').text(k).attr({type: type});
+        e.find('.tags').text((v.tags || []).join(' '));
+        $(headerSelector).after(e);
+      });
     });
-});
+  };
+
+  $(document).off('click', '.remote-project .btn');
+  $(document).on('click', '.remote-project .btn', function() {
+    var btn = $(this);
+    var type = btn.closest('[type]').attr('type');
+    var url = $(this).closest('tr').find('a.name').attr('href');
+    startSpinner(btn);
+    $.ajax({url: '/import-' + type, data: {url: url}}).always(function() {
+      syncImportedProjects(type).always(function() {
+        btn.button('reset');
+      });
+    });
+  });
+
+  var loadRemoteProjects = function(type) {
+    var file = type + 's.json';
+    var dialogSelector = '#' + type + '-manager';
+    var org = 'mongoose-os-' + type + 's';
+    return $.getJSON('https://mongoose-os.com/downloads/' + file).then(function(data) {
+      $.each(data, function(k, v) {
+        var entry = clone('#remote-entry-template').appendTo(dialogSelector + ' .projects');
+        entry.find('.name').text(k).attr({href: 'https://github.com/' + org + '/' + k});
+        entry.find('.title').text(v.description || '');
+        entry.find('.tags').text((v.tags || []).join(' '));
+        entry.find('.author').text(v.author || '');
+        entry.attr({rel: k, type: type});
+      });
+      // $('[type="checkbox"]').iCheck({checkboxClass: 'icheckbox_flat-green', radioClass: 'iradio_flat-green'});
+    }).always(function() {
+      syncImportedProjects(type);
+    });
+  };
+  loadRemoteProjects('app');
+  loadRemoteProjects('lib');
+
+  $(document).off('mouseenter mouseleave', '.local-project');
+  $(document).on('mouseenter', '.local-project', function(ev) {
+    var el = $(this).find('.ctl');
+    $('#ctl').removeClass('hidden').appendTo(el);
+  }).on('mouseleave', '.local-project', function() {
+    $('#ctl').addClass('hidden');
+  });
+
+  $(document).off('click', '.project-control-toolbar .do-remove');
+  $(document).on('click', '.project-control-toolbar .do-remove', function() {
+    if (!confirm('Click "OK" to delete this project.')) return;
+    var el = $(this).closest('.local-project').find('.name');
+    var name = el.text();
+    var type = el.attr('type');
+    var data = {filename: '.'};
+    data[type] = name;
+    $.ajax({global:true, url: '/' + type + '/rm', data: data}).always(function() {
+      syncImportedProjects(type);
+    });
+  });
+
+  $('[data-toggle="tooltip"]').tooltip()
 
 </script>

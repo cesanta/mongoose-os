@@ -61,6 +61,9 @@ ifeq "$(MGOS_ENABLE_I2C)" "1"
     SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_i2c_gpio_config.yaml
   endif
 endif
+ifeq "$(MGOS_ENABLE_MQTT)" "1"
+  SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_mqtt_config.yaml
+endif
 ifeq "$(MGOS_ENABLE_SPI)" "1"
   ifneq "$(MGOS_ENABLE_SPI_GPIO)" "1"
     MGOS_SRCS += esp32_spi_master.c
@@ -118,6 +121,7 @@ C_CXX_CFLAGS += -DMGOS_APP=\"$(APP)\" -DFW_ARCHITECTURE=$(APP_PLATFORM) \
                 -DMGOS_NUM_GPIO=40 \
                 -DMG_ENABLE_FILESYSTEM \
                 -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS \
+                -DMG_SSL_IF_MBEDTLS_FREE_CERTS \
                 -DMG_ENABLE_DIRECTORY_LISTING \
                 -DCS_DISABLE_MD5 -DMG_EXT_MD5 \
                 -DCS_DISABLE_SHA1 -DMG_EXT_SHA1 \

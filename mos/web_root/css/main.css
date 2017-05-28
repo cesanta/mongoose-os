@@ -7,6 +7,8 @@ code { color: green; white-space: pre !important;}
   border: 1px solid #ccc !important; padding: 0 1em !important; background: #fff !important;
 }
 .ace_doc-tooltip pre { cursor: pointer !important; }
+.ace_gutter-layer { width: 40px !important; }
+.editor-navbar { margin-top: 5px; margin-left: 40px; }
 
 /* DASHBOARD STYLES */
 .left_col.menu_fixed { top: 0; overflow-y: auto; }
@@ -50,6 +52,9 @@ input.form-control { box-shadow: none !important; }
 
 /* CODE PAGE */
 .descr { color: silver; }
+.list-group-item.title { background-color: #eee; xbackground: rgb(42, 63, 84); xcolor: #eee;}
+.list-group-item:not(.title) { cursor: pointer;}
+.list-group-item.project.selected { background-color: #ffe; }
 
 /* FILE MANAGER PAGE */
 #file-list { overflow-y: auto; }

@@ -30,6 +30,12 @@ type FWAppManifest struct {
 	Libs              []SWModule         `yaml:"libs,omitempty" json:"libs,omitempty"`
 	ConfigSchema      []ConfigSchemaItem `yaml:"config_schema" json:"config_schema,omitempty"`
 	BuildVars         map[string]string  `yaml:"build_vars" json:"build_vars,omitempty"`
+	Tags              []string           `yaml:"tags" json:"tags,omitempty"`
+
+	// Deps are names of the libraries which need to be initialized before the
+	// application. The user doesn't have to set this field manually, it's set
+	// automatically during libs "expansion" (see Libs above)
+	Deps []string `yaml:"deps" json:"deps,omitempty"`
 }
 
 // ConfigSchemaItem represents a single config schema item, like this:

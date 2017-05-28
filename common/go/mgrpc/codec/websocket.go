@@ -91,15 +91,34 @@ func (c *wsCodec) MaxNumFrames() int {
 }
 
 func (c *wsCodec) Info() ConnectionInfo {
-	r := ConnectionInfo{
-		IsConnected: true,
-		TLS:         c.conn.Request().TLS != nil,
-		RemoteAddr:  c.conn.Request().RemoteAddr,
+
+	req := c.conn.Request()
+
+	// For server connections, request is not nil, and for client connection
+	// it's nil, so we have different logic here
+	if req != nil {
+		// Server websocket connection
+
+		r := ConnectionInfo{
+			IsConnected: true,
+			TLS:         req.TLS != nil,
+			RemoteAddr:  req.RemoteAddr,
+		}
+		if r.TLS {
+			r.PeerCertificates = c.conn.Request().TLS.PeerCertificates
+		}
+		return r
+	} else {
+		// Client websocket connection
+
+		r := ConnectionInfo{
+			IsConnected: true,
+			TLS:         c.conn.Config().TlsConfig != nil,
+			RemoteAddr:  c.conn.RemoteAddr().String(),
+		}
+		// TODO(dfrank): set r.PeerCertificates
+		return r
 	}
-	if r.TLS {
-		r.PeerCertificates = c.conn.Request().TLS.PeerCertificates
-	}
-	return r
 }
 
 func (c *wsCodec) SetOptions(opts *Options) error {

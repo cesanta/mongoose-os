@@ -78,16 +78,18 @@ int mbedtls_aes_setkey_dec(mbedtls_aes_context *ctx, const unsigned char *key,
   return 0;
 }
 
-void mbedtls_aes_encrypt(mbedtls_aes_context *ctx,
-                         const unsigned char input[16],
-                         unsigned char output[16]) {
+int mbedtls_internal_aes_encrypt(mbedtls_aes_context *ctx,
+                                 const unsigned char input[16],
+                                 unsigned char output[16]) {
   aes_encrypt(ctx, input, output);
+  return 0;
 }
 
-void mbedtls_aes_decrypt(mbedtls_aes_context *ctx,
-                         const unsigned char input[16],
-                         unsigned char output[16]) {
+int mbedtls_internal_aes_decrypt(mbedtls_aes_context *ctx,
+                                 const unsigned char input[16],
+                                 unsigned char output[16]) {
   aes_decrypt(ctx, input, output);
+  return 0;
 }
 
 /* os_get_random uses hardware RNG, so it's cool. */
