@@ -1,6 +1,5 @@
 ---
 items:
-  - { name: mgos_aws_shadow.h }
   - { name: mgos_bitbang.h }
   - { name: mgos_config.h }
   - { name: mgos_gpio.h }

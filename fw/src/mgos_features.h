@@ -10,10 +10,6 @@
 #define MGOS_ENABLE_ARDUINO_API 0
 #endif
 
-#ifndef MGOS_ENABLE_AWS_SHADOW
-#define MGOS_ENABLE_AWS_SHADOW 0
-#endif
-
 #ifndef MGOS_ENABLE_BITBANG
 #define MGOS_ENABLE_BITBANG 0
 #endif

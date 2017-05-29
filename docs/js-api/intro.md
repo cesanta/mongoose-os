@@ -2,7 +2,6 @@
 title: "API"
 items:
   - { name: api_adc.js }
-  - { name: api_aws.js }
   - { name: api_bitbang.js }
   - { name: api_config.js }
   - { name: api_gpio.js }
