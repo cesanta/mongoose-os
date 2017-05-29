@@ -49,7 +49,7 @@ struct mg_connection *mgos_connect(const char *addr, mg_event_handler_t func,
                                    void *ud);
 struct mg_connection *mgos_connect_ssl(const char *addr, mg_event_handler_t f,
                                        void *ud, const char *cert,
-                                       const char *ca_cert);
+                                       const char *key, const char *ca_cert);
 void mgos_disconnect(struct mg_connection *c);
 
 struct mg_connection *mgos_bind_http(const char *addr);
@@ -59,7 +59,7 @@ struct mg_connection *mgos_connect_http(const char *addr, mg_event_handler_t,
                                         void *ud);
 struct mg_connection *mgos_connect_http_ssl(const char *addr,
                                             mg_event_handler_t f, void *ud,
-                                            const char *cert,
+                                            const char *cert, const char *key,
                                             const char *ca_cert);
 
 enum http_message_param {

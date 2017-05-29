@@ -35,7 +35,7 @@ let URL = {
 
 let HTTP = {
   _c: ffi('void *mgos_connect_http(char *, void (*)(void *, int, void *, userdata), userdata)'),
-  _cs: ffi('void *mgos_connect_http_ssl(char *, void (*)(void *, int, void *, userdata), userdata, char *, char *)'),
+  _cs: ffi('void *mgos_connect_http_ssl(char *, void (*)(void *, int, void *, userdata), userdata, char *, char *, char *)'),
   _pk: ffi('void *mjs_mem_get_ptr(void *, int)'),
   _p: ffi('void *mjs_mem_to_ptr(int)'),
   _getu: ffi('double mjs_mem_get_uint(void *, int, int)'),
@@ -89,7 +89,7 @@ let HTTP = {
     };
     obj.f = f;
     if (obj.u.ssl) {
-      this._cs(obj.u.addr, f, obj, obj.cert || '', obj.ca_cert || 'ca.pem');
+      this._cs(obj.u.addr, f, obj, obj.cert || '', obj.key || '', obj.ca_cert || 'ca.pem');
     } else {
       this._c(obj.u.addr, f, obj);
     }
