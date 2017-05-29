@@ -14,4 +14,5 @@ items:
   - { name: mgos_uart.h }
   - { name: mgos_utils.h }
   - { name: mgos_wifi.h }
+  - { name: mgos_aws_shadow.h }
 ---
