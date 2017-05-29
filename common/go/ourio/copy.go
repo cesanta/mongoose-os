@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 
 	"github.com/cesanta/errors"
+	"github.com/golang/glog"
 )
 
 // CopyFile copies the contents of the file named src to the file named
@@ -15,6 +16,7 @@ import (
 // destination file exists, all it's contents will be replaced by the contents
 // of the source file. The file mode will be copied from the source.
 func CopyFile(src, dst string) (err error) {
+	glog.Infof("CopyFile %q -> %q", src, dst)
 	in, err := os.Open(src)
 	if err != nil {
 		err = errors.Trace(err)
@@ -54,10 +56,30 @@ func CopyFile(src, dst string) (err error) {
 	return
 }
 
+// LinkOrCopyFile creates a copy of src at dst. If possible, it uses hard link
+// as an optimization. If not, a full copy is performed (via CopyFile).
+func LinkOrCopyFile(src, dst string) (err error) {
+	glog.Infof("LinkOrCopyFile %q -> %q", src, dst)
+	if err = os.Link(src, dst); err != nil {
+		if os.IsExist(err) {
+			if err = os.Remove(dst); err == nil {
+				err = os.Link(src, dst)
+			}
+		}
+	}
+	if err == nil {
+		return nil
+	}
+	// Fall back to Copy file: maybe src and dst are on different filesystems or
+	// the OS does not support hard linking.
+	return CopyFile(src, dst)
+}
+
 // CopyDir recursively copies a directory tree, attempting to preserve permissions.
 // Source directory must exist, destination must either not exist or be a
 // directory.
 func CopyDir(src, dst string, blacklist []string) (err error) {
+	glog.Infof("CopyDir %q -> %q (blacklist %s)", src, dst, blacklist)
 	src = filepath.Clean(src)
 	dst = filepath.Clean(dst)
 
