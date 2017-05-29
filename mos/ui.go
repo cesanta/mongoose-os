@@ -779,7 +779,9 @@ func getAppsLibs(dirPath string) (appLibList, error) {
 
 	for _, f := range files {
 		name := f.Name()
-		manifest, _, err := readManifest(filepath.Join(dirPath, name))
+		// Returned manifest will be "generic", i.e. without arch-specific
+		// adjustments.
+		manifest, _, err := readManifest(filepath.Join(dirPath, name), nil)
 		if err != nil {
 			return nil, errors.Trace(err)
 		}

@@ -209,10 +209,18 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		return errors.Trace(err)
 	}
 
-	manifest, mtime, err := readManifestWithLibs(appDir, nil, logFile, libsDir, false /* skip clean */)
+	manifest, mtime, err := readManifestWithLibs(
+		appDir, bParams, nil, logFile, libsDir, false, /* skip clean */
+	)
 	if err != nil {
 		return errors.Trace(err)
 	}
+
+	if manifest.Arch == "" {
+		return errors.Errorf("--arch must be specified or mos.yml should contain an arch key")
+	}
+
+	mVars.SetVar("arch", manifest.Arch)
 
 	// Prepare local copies of all sw modules {{{
 	for _, m := range manifest.Modules {
@@ -239,12 +247,6 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		setModuleVars(mVars, name, targetDir)
 	}
 	// }}}
-
-	archEffective, err := detectArch(manifest, bParams)
-	if err != nil {
-		return errors.Trace(err)
-	}
-	mVars.SetVar("arch", archEffective)
 
 	// Determine mongoose-os dir (mosDirEffective) {{{
 	var mosDirEffective string
@@ -376,7 +378,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	var errs error
 	for k, v := range map[string]string{
 		"MGOS_PATH":      dockerMgosPath,
-		"PLATFORM":       archEffective,
+		"PLATFORM":       manifest.Arch,
 		"BUILD_DIR":      objsDirDocker,
 		"FW_DIR":         fwDirDocker,
 		"GEN_DIR":        path.Join(buildDir, "gen"),
@@ -492,7 +494,9 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		}
 
 		// Get build image name and tag
-		sdkVersionBytes, err := ioutil.ReadFile(filepath.Join(mosDirEffective, "fw/platforms", archEffective, "sdk.version"))
+		sdkVersionBytes, err := ioutil.ReadFile(
+			filepath.Join(mosDirEffective, "fw/platforms", manifest.Arch, "sdk.version"),
+		)
 		if err != nil {
 			return errors.Annotatef(err, "failed to read sdk version file")
 		}
@@ -539,7 +543,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 
 	// Copy firmware to build/fw.zip
 	err = ourio.LinkOrCopyFile(
-		filepath.Join(fwDir, fmt.Sprintf("%s-%s-last.zip", appName, archEffective)),
+		filepath.Join(fwDir, fmt.Sprintf("%s-%s-last.zip", appName, manifest.Arch)),
 		fwFilename,
 	)
 	if err != nil {
@@ -663,18 +667,6 @@ func runCmd(cmd *exec.Cmd, logFile io.Writer) error {
 	return nil
 }
 
-func detectArch(manifest *build.FWAppManifest, bParams *buildParams) (string, error) {
-	a := bParams.Arch
-	if a == "" {
-		a = manifest.Arch
-	}
-
-	if a == "" {
-		return "", errors.Errorf("--arch must be specified or mos.yml should contain an arch key")
-	}
-	return strings.ToLower(a), nil
-}
-
 func getCodeDir() (string, error) {
 	absCodeDir, err := filepath.Abs(codeDir)
 	if err != nil {
@@ -690,8 +682,57 @@ func getCodeDir() (string, error) {
 	return absCodeDir, nil
 }
 
-func readManifest(appDir string) (*build.FWAppManifest, time.Time, error) {
+// readManifest reads manifest file(s) from the specific directory; if the
+// manifest or given buildParams have arch specified, then the returned
+// manifest will contain all arch-specific adjustments (if any)
+func readManifest(appDir string, bParams *buildParams) (*build.FWAppManifest, time.Time, error) {
 	manifestFullName := filepath.Join(appDir, build.ManifestFileName)
+	manifest, mtime, err := readManifestFile(manifestFullName, true)
+	if err != nil {
+		return nil, time.Time{}, errors.Trace(err)
+	}
+
+	// Override arch with the value given in command line
+	if bParams != nil && bParams.Arch != "" {
+		manifest.Arch = bParams.Arch
+	}
+	manifest.Arch = strings.ToLower(manifest.Arch)
+
+	if manifest.Arch != "" {
+		manifestArchFullName := filepath.Join(
+			appDir,
+			fmt.Sprintf(build.ManifestArchFileFmt, manifest.Arch),
+		)
+		_, err := os.Stat(manifestArchFullName)
+		if err == nil {
+			// Arch-specific mos.yml does exist, so, handle it
+			archManifest, archMtime, err := readManifestFile(manifestArchFullName, false)
+			if err != nil {
+				return nil, time.Time{}, errors.Trace(err)
+			}
+
+			// We should return the latest modification date of all encountered
+			// manifests, so let's see if we got the later mtime here
+			if archMtime.After(mtime) {
+				mtime = archMtime
+			}
+
+			// Extend common app manifest with arch-specific things.
+			extendManifest(manifest, manifest, archManifest, "", "")
+		} else if !os.IsNotExist(err) {
+			// Some error other than non-existing mos_<arch>.yml; complain.
+			return nil, time.Time{}, errors.Trace(err)
+		}
+	}
+
+	return manifest, mtime, nil
+}
+
+// readManifestFile reads single manifest file (which can be either "main" app
+// or lib manifest, or some arch-specific adjustment manifest)
+func readManifestFile(
+	manifestFullName string, skeletonVersionMandatory bool,
+) (*build.FWAppManifest, time.Time, error) {
 	manifestSrc, err := ioutil.ReadFile(manifestFullName)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
@@ -702,18 +743,24 @@ func readManifest(appDir string) (*build.FWAppManifest, time.Time, error) {
 		return nil, time.Time{}, errors.Trace(err)
 	}
 
-	// Check if manifest skeleton version is supported by the mos tool
-	if manifest.SkeletonVersion < minSkeletonVersion {
-		return nil, time.Time{}, errors.Errorf(
-			"too old skeleton_version %q in %q (oldest supported is %q)",
-			manifest.SkeletonVersion, manifestFullName, minSkeletonVersion,
-		)
-	}
+	if manifest.SkeletonVersion != "" {
+		// Check if manifest skeleton version is supported by the mos tool
+		if manifest.SkeletonVersion < minSkeletonVersion {
+			return nil, time.Time{}, errors.Errorf(
+				"too old skeleton_version %q in %q (oldest supported is %q)",
+				manifest.SkeletonVersion, manifestFullName, minSkeletonVersion,
+			)
+		}
 
-	if manifest.SkeletonVersion > maxSkeletonVersion {
+		if manifest.SkeletonVersion > maxSkeletonVersion {
+			return nil, time.Time{}, errors.Errorf(
+				"too new skeleton_version %q in %q (latest supported is %q). Please run \"mos update\".",
+				manifest.SkeletonVersion, manifestFullName, maxSkeletonVersion,
+			)
+		}
+	} else if skeletonVersionMandatory {
 		return nil, time.Time{}, errors.Errorf(
-			"too new skeleton_version %q in %q (latest supported is %q). Please run \"mos update\".",
-			manifest.SkeletonVersion, manifestFullName, maxSkeletonVersion,
+			"skeleton version is missing in %q", manifestFullName,
 		)
 	}
 
@@ -765,19 +812,15 @@ func buildRemote(bParams *buildParams) error {
 	}
 
 	// Get manifest which includes stuff from all libs
-	manifest, _, err := readManifestWithLibs(tmpCodeDir, nil, os.Stdout, userLibsDir, true /* skip clean */)
+	manifest, _, err := readManifestWithLibs(
+		tmpCodeDir, bParams, nil, os.Stdout, userLibsDir, true, /* skip clean */
+	)
 	if err != nil {
 		return errors.Trace(err)
 	}
 
 	// Print a warning if APP_CONF_SCHEMA is set in manifest manually
 	printConfSchemaWarn(manifest)
-
-	// Override arch with the value given in command line
-	if bParams.Arch != "" {
-		manifest.Arch = bParams.Arch
-	}
-	manifest.Arch = strings.ToLower(manifest.Arch)
 
 	// Amend build vars with the values given in command line
 	if len(buildVarsSlice) > 0 {
@@ -1057,7 +1100,7 @@ func cleanupModuleName(name string) string {
 // If skipClean is true, then clean or non-existing libs will NOT be expanded,
 // it's useful when crafting a manifest to send to the remote builder.
 func readManifestWithLibs(
-	dir string, visitedDirs []string, logFile io.Writer,
+	dir string, bParams *buildParams, visitedDirs []string, logFile io.Writer,
 	userLibsDir string, skipClean bool,
 ) (*build.FWAppManifest, time.Time, error) {
 	for _, v := range visitedDirs {
@@ -1066,7 +1109,7 @@ func readManifestWithLibs(
 		}
 	}
 
-	manifest, mtime, err := readManifest(dir)
+	manifest, mtime, err := readManifest(dir, bParams)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
 	}
@@ -1145,63 +1188,24 @@ func readManifestWithLibs(
 		reportf("Prepared local dir: %q", libDirAbs)
 
 		libManifest, libMtime, err := readManifestWithLibs(
-			libDirAbs, append(visitedDirs, dir), logFile, userLibsDir, skipClean,
+			libDirAbs, bParams, append(visitedDirs, dir), logFile, userLibsDir, skipClean,
 		)
 		if err != nil {
 			return nil, time.Time{}, errors.Trace(err)
 		}
 
-		// We should return the earliest modification date of all encountered
-		// manifests, so let's see if we got the earlier mtime here
+		// We should return the latest modification date of all encountered
+		// manifests, so let's see if we got the later mtime here
 		if libMtime.After(mtime) {
 			mtime = libMtime
 		}
 
-		// Extend manifest with libManifest {{{
-		for _, s := range libManifest.Sources {
-			// If the path is not absolute, and does not start with the variable,
-			// prepend it with the library's path
-			if s[0] != '$' && !filepath.IsAbs(s) {
-				s = filepath.Join(libDirForManifest, s)
-			}
-			manifest.Sources = append(manifest.Sources, s)
-		}
-
-		for _, s := range libManifest.Filesystem {
-			// If the path is not absolute, and does not start with the variable,
-			// prepend it with the library's path
-			if s[0] != '$' && !filepath.IsAbs(s) {
-				s = filepath.Join(libDirForManifest, s)
-			}
-			manifest.Filesystem = append(manifest.Filesystem, s)
-		}
-
-		// Add modules from lib
-		manifest.Modules = append(manifest.Modules, libManifest.Modules...)
-
-		// Add config schema from lib
-		// NOTE: lib config schema should go _before_, because app's config schema
-		// might depend on lib's schema (like, override default value)
-		manifest.ConfigSchema = append(libManifest.ConfigSchema, manifest.ConfigSchema...)
-
-		for k, s := range libManifest.BuildVars {
-			switch k {
-			case "APP_CONF_SCHEMA":
-				return nil, time.Time{}, errors.Errorf(
-					"APP_CONF_SCHEMA build var is illegal in lib manifest, use config_schema instead",
-				)
-			default:
-				// If build var is not yet set in the "outer" manifest, set it from
-				// the lib
-				if _, ok := manifest.BuildVars[k]; !ok {
-					manifest.BuildVars[k] = s
-				}
-			}
-		}
+		// Extend app's manifest with that of a lib, and lib's one should go
+		// first
+		extendManifest(manifest, libManifest, manifest, libDirForManifest, "")
 
 		newDeps = append(newDeps, libManifest.Deps...)
 		newDeps = append(newDeps, name)
-		// }}}
 
 		os.Chdir(curDir)
 	}
@@ -1239,4 +1243,81 @@ func getDepsInitCCode(manifest *build.FWAppManifest) ([]byte, error) {
 	}
 
 	return c.Bytes(), nil
+}
+
+// extendManifest extends one manifest with another one.
+//
+// Currently there are two use cases for it:
+// - when extending app's manifest with library's manifest;
+// - when extending common app's manifest with the arch-specific one.
+//
+// These cases have different semantics: in the first case, the app's manifest
+// should take precedence, but in the second case, the arch-specific manifest
+// should take the precedence over that of an app. But NOTE: in both cases,
+// it's app's manifest which should get extended.
+//
+// So, extendManifest takes 3 pointers to manifest:
+// - mMain: main manifest which will be extended;
+// - m1: lower-precedence manifest (which goes "first", this matters e.g.
+//   for config_schema);
+// - m2: higher-precedence manifest (which goes "second").
+//
+// mMain should typically be the same as either m1 or m2.
+//
+// m2 takes precedence over m1, and can depend on things defined in m1. So
+// e.g. when extending app manifest with lib manifest, lib should be m1, app
+// should be m2: config schema defined in lib will go before that of an app,
+// and if both an app and a lib define the same build variable, app will win.
+//
+// m1Dir and m2Dir are optional paths for manifests m1 and m2, respectively.
+// If the dir is not empty, then it gets prepended to each source and
+// filesystem entry (except entries with absolute paths or paths starting with
+// a variable)
+func extendManifest(mMain, m1, m2 *build.FWAppManifest, m1Dir, m2Dir string) error {
+
+	// Extend sources
+	mMain.Sources = append(
+		prependPaths(m1.Sources, m1Dir),
+		prependPaths(m2.Sources, m2Dir)...,
+	)
+	// Extend filesystem
+	mMain.Filesystem = append(
+		prependPaths(m1.Filesystem, m1Dir),
+		prependPaths(m2.Filesystem, m2Dir)...,
+	)
+
+	// Add modules and libs from lib
+	mMain.Modules = append(m1.Modules, m2.Modules...)
+	mMain.Libs = append(m1.Libs, m2.Libs...)
+	mMain.ConfigSchema = append(m1.ConfigSchema, m2.ConfigSchema...)
+
+	// NOTE that we can't do mMain.BuildVars = make(....), because mMain is
+	// either m1 or m2 which we'll be iterating through.
+	bv := make(map[string]string)
+	for k, v := range m2.BuildVars {
+		bv[k] = v
+	}
+	for k, s := range m1.BuildVars {
+		// If build var is not yet set in the second manifest, so set it from the
+		// first one
+		if _, ok := bv[k]; !ok {
+			bv[k] = s
+		}
+	}
+	mMain.BuildVars = bv
+
+	return nil
+}
+
+func prependPaths(items []string, dir string) []string {
+	ret := []string{}
+	for _, s := range items {
+		// If the path is not absolute, and does not start with the variable,
+		// prepend it with the library's path
+		if dir != "" && s[0] != '$' && !filepath.IsAbs(s) {
+			s = filepath.Join(dir, s)
+		}
+		ret = append(ret, s)
+	}
+	return ret
 }
