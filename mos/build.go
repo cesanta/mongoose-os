@@ -1123,6 +1123,7 @@ func readManifestWithLibs(
 	customLibLocations := getCustomLibLocations()
 	var cleanLibs []build.SWModule
 	var newDeps []string
+libs:
 	for _, m := range manifest.Libs {
 		name, err := m.GetName()
 		if err != nil {
@@ -1130,6 +1131,15 @@ func readManifestWithLibs(
 		}
 
 		reportf("Handling lib %q...", name)
+
+		// Check if this lib is already handled (present in deps)
+		// If yes, skip
+		for _, v := range append(manifest.Deps, newDeps...) {
+			if v == name {
+				reportf("Already handled, skipping")
+				continue libs
+			}
+		}
 
 		libDirAbs, ok := customLibLocations[name]
 
