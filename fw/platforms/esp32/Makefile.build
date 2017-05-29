@@ -31,7 +31,6 @@ endif
 APP_FS_DIRS = $(sort $(dir $(APP_FS_FILES)))
 
 MGOS_ENABLE_CONSOLE ?= 0
-MGOS_ENABLE_GCP ?= 1
 
 MGOS_PATH ?= ../../..
 COMMON_PATH ?= $(MGOS_PATH)/common

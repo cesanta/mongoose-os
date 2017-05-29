@@ -11,7 +11,6 @@
 #include "fw/src/mgos_console.h"
 #include "fw/src/mgos_deps.h"
 #include "fw/src/mgos_dns_sd.h"
-#include "fw/src/mgos_gcp.h"
 #include "fw/src/mgos_gpio.h"
 #include "fw/src/mgos_gpio_service.h"
 #include "fw/src/mgos_hal.h"
@@ -128,10 +127,6 @@ enum mgos_init_result mgos_init(void) {
 #if MGOS_ENABLE_MQTT
   r = mgos_mqtt_init();
   if (r != MGOS_INIT_OK) return r;
-#if MGOS_ENABLE_GCP
-  r = mgos_gcp_init();
-  if (r != MGOS_INIT_OK) return r;
-#endif
 #endif /* MGOS_ENABLE_MQTT */
 
 #if MGOS_ENABLE_ARDUINO_API

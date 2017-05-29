@@ -56,7 +56,6 @@ userdata is the value given as a third argument to `Net.connect()`.
 The same as `Net.connect`, but establishes SSL connection
 Additional parameters are:
 - `cert` is a client certificate file name or "" if not required
-- `key` is a client key file name or "" if not required
 - `ca_cert` is a CA certificate or "" if peer verification is not required.
 The certificate files must be in PEM format.
 
