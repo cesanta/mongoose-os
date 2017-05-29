@@ -109,12 +109,19 @@ func init() {
 }
 
 type buildParams struct {
-	Arch string
+	Arch               string
+	CustomLibLocations map[string]string
 }
 
 func buildHandler(ctx context.Context, devConn *dev.DevConn) error {
+	cll, err := getCustomLibLocations()
+	if err != nil {
+		return errors.Trace(err)
+	}
+
 	bParams := buildParams{
-		Arch: *arch,
+		Arch:               *arch,
+		CustomLibLocations: cll,
 	}
 
 	return errors.Trace(doBuild(ctx, &bParams))
@@ -1120,7 +1127,6 @@ func readManifestWithLibs(
 	}
 
 	// Prepare all libs {{{
-	customLibLocations := getCustomLibLocations()
 	var cleanLibs []build.SWModule
 	var newDeps []string
 libs:
@@ -1141,7 +1147,7 @@ libs:
 			}
 		}
 
-		libDirAbs, ok := customLibLocations[name]
+		libDirAbs, ok := bParams.CustomLibLocations[name]
 
 		if !ok {
 			reportf("The --lib flag was not given for it, checking repository")
@@ -1165,13 +1171,6 @@ libs:
 				return nil, time.Time{}, errors.Trace(err)
 			}
 		} else {
-			// Absolutize the given lib path
-			var err error
-			libDirAbs, err = filepath.Abs(libDirAbs)
-			if err != nil {
-				return nil, time.Time{}, errors.Trace(err)
-			}
-
 			reportf("Using the location %q as is (given as a --lib flag)", libDirAbs)
 		}
 
@@ -1229,13 +1228,21 @@ libs:
 	return manifest, mtime, nil
 }
 
-func getCustomLibLocations() map[string]string {
+func getCustomLibLocations() (map[string]string, error) {
 	customLibLocations := map[string]string{}
 	for _, l := range *libs {
 		parts := strings.SplitN(l, ":", 2)
+
+		// Absolutize the given lib path
+		var err error
+		parts[1], err = filepath.Abs(parts[1])
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+
 		customLibLocations[parts[0]] = parts[1]
 	}
-	return customLibLocations
+	return customLibLocations, nil
 }
 
 func getDepsInitCCode(manifest *build.FWAppManifest) ([]byte, error) {
