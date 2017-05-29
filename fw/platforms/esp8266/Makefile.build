@@ -40,7 +40,6 @@ endif
 APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
 APP_FS_DIRS = $(sort $(dir $(APP_FS_FILES)))
 
-MGOS_ENABLE_GCP ?= 1
 MGOS_DEBUG_UART = 0
 
 MGOS_PATH ?= ../../..
