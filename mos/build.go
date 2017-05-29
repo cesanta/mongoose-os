@@ -368,8 +368,6 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 
 	reportf("Building...")
 
-	defer os.RemoveAll(fwDir)
-
 	appName, err := fixupAppName(manifest.Name)
 	if err != nil {
 		return errors.Trace(err)
@@ -539,8 +537,8 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	}
 	// }}}
 
-	// Move firmware as build/fw.zip
-	err = os.Rename(
+	// Copy firmware to build/fw.zip
+	err = ourio.LinkOrCopyFile(
 		filepath.Join(fwDir, fmt.Sprintf("%s-%s-last.zip", appName, archEffective)),
 		fwFilename,
 	)
@@ -548,8 +546,8 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		return errors.Trace(err)
 	}
 
-	// Move elf as fw.elf
-	err = os.Rename(
+	// Copy ELF file to fw.elf
+	err = ourio.LinkOrCopyFile(
 		filepath.Join(objsDir, fmt.Sprintf("%s.elf", appName)), elfFilename,
 	)
 	if err != nil {
