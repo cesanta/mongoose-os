@@ -187,6 +187,9 @@ func dataCaVerisignG5CrtPem() (*asset, error) {
 
 var _dataDeps_initCTmpl = []byte(`#include <stdbool.h>
 #include <stdio.h>
+
+#include "common/cs_dbg.h"
+
 #include "fw/src/mgos_app.h"
 
 {{range .Deps}}
@@ -195,7 +198,7 @@ extern bool mgos_{{.}}_init(void);{{end}}
 bool mgos_deps_init(void) {
 {{range .Deps}}
   if (!mgos_{{.}}_init()) {
-    printf("%s init failed\n", "{{.}}");
+    LOG(LL_ERROR, ("%s init failed", "{{.}}"));
     return false;
   }
 {{end}}
@@ -213,7 +216,7 @@ func dataDeps_initCTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/deps_init.c.tmpl", size: 289, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "data/deps_init.c.tmpl", size: 325, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
