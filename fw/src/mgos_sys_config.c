@@ -178,6 +178,9 @@ static void conf_handler(struct mg_connection *c, int ev, void *p,
       char *acl_copy = (tmp.conf_acl == NULL ? NULL : strdup(tmp.conf_acl));
       if (mgos_conf_parse(hm->body, acl_copy, sys_config_schema(), &tmp)) {
         status = (save_cfg(&tmp, &msg) ? 0 : -10);
+        if (status == 0) {
+          json_printf(&jsout, "{status: %d}", status);
+        }
       } else {
         status = -11;
       }
