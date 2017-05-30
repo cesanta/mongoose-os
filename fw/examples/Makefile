@@ -25,6 +25,7 @@ $(EXAMPLES): $(MJS_PATH)/mjs.c $(MJS_PATH)/mjs.h
 	@cd $@ && $(MOS) build --local --clean --arch $(PLATFORM) \
 		--repo $(REPO_ROOT) \
 		--lib aws:$(LIBS_PATH)/aws \
+		--lib gcp:$(LIBS_PATH)/gcp \
 		--lib mjs:$(LIBS_PATH)/mjs \
 		--lib blynk:$(LIBS_PATH)/blynk \
 		--module mjs:$(MJS_PATH) \

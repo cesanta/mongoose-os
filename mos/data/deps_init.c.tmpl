@@ -1,5 +1,8 @@
 #include <stdbool.h>
 #include <stdio.h>
+
+#include "common/cs_dbg.h"
+
 #include "fw/src/mgos_app.h"
 
 {{range .Deps}}
@@ -8,7 +11,7 @@ extern bool mgos_{{.}}_init(void);{{end}}
 bool mgos_deps_init(void) {
 {{range .Deps}}
   if (!mgos_{{.}}_init()) {
-    printf("%s init failed\n", "{{.}}");
+    LOG(LL_ERROR, ("%s init failed", "{{.}}"));
     return false;
   }
 {{end}}

@@ -18,5 +18,4 @@ libs:
   - origin: https://github.com/mongoose-os-libs/aws
 build_vars:
   MGOS_ENABLE_MQTT: 1
-  SSL: mbedTLS
   MGOS_ENABLE_ONEWIRE: 1
