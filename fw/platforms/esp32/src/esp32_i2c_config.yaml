@@ -1,6 +1,6 @@
 [
   ["i2c.freq", 400000],
   ["i2c.unit_no", "i", 0, {title: "Which hardware unit ot use, 0 or 1"}],
-  ["i2c.sda_gpio", "i", 22, {title: "GPIO to use for SDA"}],
-  ["i2c.scl_gpio", "i", 23, {title: "GPIO to use for SCL"}],
+  ["i2c.sda_gpio", "i", 32, {title: "GPIO to use for SDA"}],
+  ["i2c.scl_gpio", "i", 33, {title: "GPIO to use for SCL"}],
 ]
