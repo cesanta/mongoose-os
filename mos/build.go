@@ -613,17 +613,8 @@ func getMakeArgs(dir string, manifest *build.FWAppManifest) []string {
 func globify(srcPaths []string, globs []string) (sources []string, dirs []string, err error) {
 	for _, p := range srcPaths {
 		finfo, err := os.Stat(p)
-		if err != nil {
-			if os.IsNotExist(errors.Cause(err)) {
-				// Silently ignore non-existing entries
-				continue
-			}
-			// Some error other than non-existing file, return an error
-			return nil, nil, errors.Trace(err)
-		}
-
 		var curDir string
-		if finfo.IsDir() {
+		if err == nil && finfo.IsDir() {
 			for _, glob := range globs {
 				sources = append(sources, filepath.Join(p, glob))
 			}
