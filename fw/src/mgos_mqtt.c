@@ -306,7 +306,7 @@ bool mgos_mqtt_pub(const char *topic, const void *message, size_t len,
   struct mg_connection *c = mgos_mqtt_get_global_conn();
   if (c == NULL || !s_connected) return false;
   LOG(LL_DEBUG, ("Publishing to %s @ %d (%d): [%.*s]", topic, qos, (int) len,
-                 (int) len, message));
+                 (int) len, (const char *) message));
   mg_mqtt_publish(c, topic, mgos_mqtt_get_packet_id(), MG_MQTT_QOS(qos),
                   message, len);
   return true;

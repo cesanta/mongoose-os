@@ -562,7 +562,7 @@ bool spiffs_vfs_gc_all(spiffs *fs) {
     del_before = fs->stats_p_deleted;
     int r = SPIFFS_gc(fs, total - used - 2 * fs->cfg.log_page_size);
     del_after = fs->stats_p_deleted;
-    LOG(LL_DEBUG, ("GC result %d del pages %u -> %u", r, del_before, del_after));
+    LOG(LL_DEBUG, ("GC result %d del pages %u -> %u", r, (unsigned int) del_before, (unsigned int) del_after));
   } while (del_after < del_before);
   return true;
 }
@@ -634,7 +634,7 @@ bool spiffs_vfs_enc_fs(spiffs *fs) {
         ("%s (%u) es %u ps %u", e.name, e.obj_id, e.size, fm->plain_size));
     if (fm->plain_size != DEFAULT_PLAIN_SIZE) continue; /* Already encrypted */
     if (!fm->encryption_not_started) {
-      LOG(LL_ERROR, ("%s is half-encrypted; FS is corrupted."));
+      LOG(LL_ERROR, ("%s is half-encrypted; FS is corrupted.", e.name));
       continue;
     }
     if (!spiffs_vfs_enc_name((const char *) e.name, enc_name,

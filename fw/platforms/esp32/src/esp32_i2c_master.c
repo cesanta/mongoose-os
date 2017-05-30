@@ -187,7 +187,7 @@ bool mgos_i2c_read(struct mgos_i2c *c, uint16_t addr, void *data, size_t len,
   bool start = (addr != MGOS_I2C_ADDR_CONTINUE);
   if (c->debug) {
     LOG(LL_DEBUG,
-        ("read %d from %d, start? %d, stop? %d %08x", len, addr, start, stop));
+        ("read %d from %d, start? %d, stop? %d", len, addr, start, stop));
   }
   if (start) {
     dev->fifo_conf.rx_fifo_rst = true;
