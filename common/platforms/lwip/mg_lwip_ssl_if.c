@@ -33,7 +33,7 @@ void mg_lwip_ssl_do_hs(struct mg_connection *nc) {
   enum mg_ssl_if_result res;
   if (nc->flags & MG_F_CLOSE_IMMEDIATELY) return;
   res = mg_ssl_if_handshake(nc);
-  DBG(("%p %d %d %d", nc, nc->flags, server_side, res));
+  DBG(("%p %lu %d %d", nc, nc->flags, server_side, res));
   if (res != MG_SSL_OK) {
     if (res == MG_SSL_WANT_WRITE) {
       nc->flags |= MG_F_WANT_WRITE;

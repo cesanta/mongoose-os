@@ -215,10 +215,10 @@ static void mg_lwip_handle_recv_tcp(struct mg_connection *nc) {
 static err_t mg_lwip_tcp_sent_cb(void *arg, struct tcp_pcb *tpcb,
                                  u16_t num_sent) {
   struct mg_connection *nc = (struct mg_connection *) arg;
-  DBG(("%p %p %u %u %u", nc, tpcb, num_sent, tpcb->unsent, tpcb->unacked));
+  DBG(("%p %p %u %p %p", nc, tpcb, num_sent, tpcb->unsent, tpcb->unacked));
   if (nc == NULL) return ERR_OK;
   if ((nc->flags & MG_F_SEND_AND_CLOSE) && !(nc->flags & MG_F_WANT_WRITE) &&
-      nc->send_mbuf.len == 0 && tpcb->unsent == 0 && tpcb->unacked == 0) {
+      nc->send_mbuf.len == 0 && tpcb->unsent == NULL && tpcb->unacked == NULL) {
     mg_lwip_post_signal(MG_SIG_CLOSE_CONN, nc);
   }
   return ERR_OK;

@@ -127,12 +127,14 @@ static int prepare_to_write(struct mgos_upd_hal_ctx *ctx,
   struct json_token expected_sha1 = JSON_INVALID_TOKEN;
   json_scanf(part->ptr, part->len, "{cs_sha1: %T}", &expected_sha1);
   if (verify_checksum(fname, fi->size, &expected_sha1)) {
-    LOG(LL_INFO, ("Digest matched for %s %u (%.*s)", fname, fi->size,
-                  (int) expected_sha1.len, expected_sha1.ptr));
+    LOG(LL_INFO,
+        ("Digest matched for %s %u (%.*s)", fname, (unsigned int) fi->size,
+         (int) expected_sha1.len, expected_sha1.ptr));
     return 0;
   }
-  LOG(LL_INFO, ("Storing %s %u -> %s %u (%.*s)", fi->name, fi->size, fname,
-                falloc, (int) expected_sha1.len, expected_sha1.ptr));
+  LOG(LL_INFO, ("Storing %s %u -> %s %u (%.*s)", fi->name,
+                (unsigned int) fi->size, fname, (unsigned int) falloc,
+                (int) expected_sha1.len, expected_sha1.ptr));
   ctx->cur_fn = (const _u8 *) fname;
   sl_FsDel(ctx->cur_fn, 0);
   _i32 r = sl_FsOpen(ctx->cur_fn, FS_MODE_OPEN_CREATE(falloc, 0), NULL,
@@ -334,9 +336,9 @@ int mgos_upd_finalize(struct mgos_upd_hal_ctx *ctx) {
     return r;
   }
   LOG(LL_INFO,
-      ("Boot cfg %d: 0x%llx, 0x%u, %s @ 0x%08x, %s", ctx->cur_boot_cfg_idx,
-       cur_cfg.seq, cur_cfg.flags, cur_cfg.app_image_file,
-       cur_cfg.app_load_addr, cur_cfg.fs_container_prefix));
+      ("Boot cfg %d: 0x%llx, 0x%x, %s @ 0x%08x, %s", ctx->cur_boot_cfg_idx,
+       cur_cfg.seq, (unsigned int) cur_cfg.flags, cur_cfg.app_image_file,
+       (unsigned int) cur_cfg.app_load_addr, cur_cfg.fs_container_prefix));
   memset(&new_cfg, 0, sizeof(new_cfg));
   new_cfg.seq = cur_cfg.seq - 1;
   new_cfg.flags |= BOOT_F_FIRST_BOOT;
@@ -359,9 +361,9 @@ int mgos_upd_finalize(struct mgos_upd_hal_ctx *ctx) {
     strcpy(new_cfg.fs_container_prefix, cur_cfg.fs_container_prefix);
   }
   LOG(LL_INFO,
-      ("Boot cfg %d: 0x%llx, 0x%u, %s @ 0x%08x, %s", ctx->new_boot_cfg_idx,
-       new_cfg.seq, new_cfg.flags, new_cfg.app_image_file,
-       new_cfg.app_load_addr, new_cfg.fs_container_prefix));
+      ("Boot cfg %d: 0x%llx, 0x%x, %s @ 0x%08x, %s", ctx->new_boot_cfg_idx,
+       new_cfg.seq, (unsigned int) new_cfg.flags, new_cfg.app_image_file,
+       (unsigned int) new_cfg.app_load_addr, new_cfg.fs_container_prefix));
   r = write_boot_cfg(&new_cfg, ctx->new_boot_cfg_idx);
   if (r < 0) {
     ctx->status_msg = "Could not write new boot cfg";

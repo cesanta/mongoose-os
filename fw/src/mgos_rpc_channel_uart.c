@@ -106,9 +106,10 @@ void mg_rpc_channel_uart_dispatcher(int uart_no, void *arg) {
             uint32_t expected_crc = 0;
             if (sscanf(meta.p, "%x", (int *) &expected_crc) != 1 ||
                 crc != expected_crc) {
-              LOG(LL_WARN, ("%p Corrupted frame (%d): '%.*s' '%.*s' %08x %08x",
-                            ch, (int) f.len, (int) f.len, f.p, (int) meta.len,
-                            meta.p, expected_crc, crc));
+              LOG(LL_WARN,
+                  ("%p Corrupted frame (%d): '%.*s' '%.*s' %08x %08x", ch,
+                   (int) f.len, (int) f.len, f.p, (int) meta.len, meta.p,
+                   (unsigned int) expected_crc, (unsigned int) crc));
               f.len = 0;
             }
           }

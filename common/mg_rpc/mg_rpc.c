@@ -328,8 +328,8 @@ bool mg_rpc_parse_frame(const struct mg_str f, struct mg_rpc_frame *frame) {
   frame->result = mg_mk_str_n(result.ptr, result.len);
   frame->error_msg = mg_mk_str_n(error_msg.ptr, error_msg.len);
 
-  LOG(LL_DEBUG, ("%lld '%.*s' '%.*s' '%.*s'", frame->id, (int) src.len,
-                 (src.len > 0 ? src.ptr : ""), (int) dst.len,
+  LOG(LL_DEBUG, ("%lld '%.*s' '%.*s' '%.*s'", (long long int) frame->id,
+                 (int) src.len, (src.len > 0 ? src.ptr : ""), (int) dst.len,
                  (dst.len > 0 ? dst.ptr : ""), (int) method.len,
                  (method.len > 0 ? method.ptr : "")));
 
@@ -436,13 +436,15 @@ static void mg_rpc_ev_handler(struct mg_rpc_channel *ch,
     }
     case MG_RPC_CHANNEL_FRAME_RECD_PARSED: {
       const struct mg_rpc_frame *frame = (const struct mg_rpc_frame *) ev_data;
-      LOG(LL_DEBUG, ("%p GOT PARSED FRAME from %.*s: %.*s %.*s", ch,
-                     frame->src.len, frame->src.p, frame->method.len,
-                     frame->method.p, frame->args.len, frame->args.p));
+      LOG(LL_DEBUG,
+          ("%p GOT PARSED FRAME from %.*s: %.*s %.*s", ch, (int) frame->src.len,
+           frame->src.p, (int) frame->method.len, frame->method.p,
+           (int) frame->args.len, frame->args.p));
       if (!mg_rpc_handle_frame(c, ci, frame)) {
-        LOG(LL_ERROR, ("%p INVALID PARSED FRAME from %.*s: %.*s %.*s", ch,
-                       frame->src.len, frame->src.p, frame->method.len,
-                       frame->method.p, frame->args.len, frame->args.p));
+        LOG(LL_ERROR,
+            ("%p INVALID PARSED FRAME from %.*s: %.*s %.*s", ch,
+             (int) frame->src.len, frame->src.p, (int) frame->method.len,
+             frame->method.p, (int) frame->args.len, frame->args.p));
         if (!ch->is_persistent(ch)) ch->ch_close(ch);
       }
       break;

@@ -278,7 +278,7 @@ static int parse_zip_file_header(struct update_context *ctx) {
     return -1;
   }
 
-  LOG(LL_DEBUG, ("File size: %d", ctx->info.current_file.size));
+  LOG(LL_DEBUG, ("File size: %u", (unsigned int) ctx->info.current_file.size));
 
   uint16_t gen_flag;
   memcpy(&gen_flag, ctx->data + ZIP_GENFLAG_OFFSET, sizeof(gen_flag));
@@ -289,7 +289,7 @@ static int parse_zip_file_header(struct update_context *ctx) {
   memcpy(&ctx->current_file_crc, ctx->data + ZIP_CRC32_OFFSET,
          sizeof(ctx->current_file_crc));
 
-  LOG(LL_DEBUG, ("CRC32: 0x%08x", ctx->current_file_crc));
+  LOG(LL_DEBUG, ("CRC32: 0x%08x", (unsigned int) ctx->current_file_crc));
 
   context_remove_data(ctx, ZIP_LOCAL_HDR_SIZE + file_name_len + extras_len);
 
@@ -342,7 +342,8 @@ static int finalize_write(struct update_context *ctx, struct mg_str tail) {
   if (ctx->current_file_crc != 0 &&
       ctx->current_file_crc != ctx->current_file_crc_calc) {
     CONSOLE_LOG(LL_ERROR, ("Invalid CRC, want 0x%x, got 0x%x",
-                           ctx->current_file_crc, ctx->current_file_crc_calc));
+                           (unsigned int) ctx->current_file_crc,
+                           (unsigned int) ctx->current_file_crc_calc));
     ctx->status_msg = "Invalid CRC";
     return -1;
   }
@@ -499,7 +500,7 @@ static int updater_process_int(struct update_context *ctx, const char *data,
         }
         LOG(LL_DEBUG,
             ("Processed %d, up to %u, %u left in the buffer", num_processed,
-             ctx->info.current_file.processed, ctx->data_len));
+             (unsigned int) ctx->info.current_file.processed, ctx->data_len));
         if (s_event_cb != NULL) {
           s_event_cb(MGOS_UPD_EV_PROGRESS, &ctx->info, s_event_cb_arg);
         }
@@ -526,8 +527,8 @@ static int updater_process_int(struct update_context *ctx, const char *data,
             MIN(ctx->data_len,
                 ctx->info.current_file.size - ctx->info.current_file.processed);
         ctx->info.current_file.processed += to_skip;
-        LOG(LL_DEBUG, ("Skipping %u bytes, %u total", to_skip,
-                       ctx->info.current_file.processed));
+        LOG(LL_DEBUG, ("Skipping %u bytes, %u total", (unsigned int) to_skip,
+                       (unsigned int) ctx->info.current_file.processed));
         context_remove_data(ctx, to_skip);
         if (s_event_cb != NULL) {
           s_event_cb(MGOS_UPD_EV_PROGRESS, &ctx->info, s_event_cb_arg);
@@ -643,20 +644,20 @@ static int file_copy(spiffs *old_fs, const char *file_name) {
   int ret = 0;
   FILE *f = NULL;
   struct stat st;
-  int32_t readen, to_read = 0, total = 0;
+  int readen, to_read = 0, total = 0;
 
   CONSOLE_LOG(LL_INFO, ("Copying %s", file_name));
 
   int fd = spiffs_vfs_open(old_fs, file_name, O_RDONLY, 0);
   if (fd < 0) {
     CONSOLE_LOG(LL_ERROR, ("Failed to open %s, error %d", file_name,
-                           SPIFFS_errno(old_fs)));
+                           (int) SPIFFS_errno(old_fs)));
     return 0;
   }
 
   if (spiffs_vfs_fstat(old_fs, fd, &st) != 0) {
     CONSOLE_LOG(LL_ERROR, ("Update failed: cannot get previous %s size (%d)",
-                           file_name, SPIFFS_errno(old_fs)));
+                           file_name, (int) SPIFFS_errno(old_fs)));
     goto exit;
   }
 
@@ -672,7 +673,7 @@ static int file_copy(spiffs *old_fs, const char *file_name) {
   while (to_read != 0) {
     if ((readen = spiffs_vfs_read(old_fs, fd, buf, to_read)) < 0) {
       CONSOLE_LOG(LL_ERROR, ("Failed to read %d bytes from %s, error %d",
-                             to_read, file_name, SPIFFS_errno(old_fs)));
+                             to_read, file_name, (int) SPIFFS_errno(old_fs)));
       goto exit;
     }
 

@@ -43,7 +43,11 @@ void cs_log_set_level(enum cs_log_level level);
 void cs_log_set_file(FILE *file);
 extern enum cs_log_level cs_log_threshold;
 void cs_log_print_prefix(enum cs_log_level level, const char *func);
-void cs_log_printf(const char *fmt, ...);
+void cs_log_printf(const char *fmt, ...)
+#ifdef __GNUC__
+    __attribute__((format(printf, 1, 2)))
+#endif
+    ;
 
 #define LOG(l, x)                       \
   do {                                  \
