@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 OS=`uname`
 DESTDIR=$1
