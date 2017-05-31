@@ -20,11 +20,11 @@ struct mgos_spi {
   int miso_gpio;
   int mosi_gpio;
   int sclk_gpio;
+  int cs_gpio[3];
   /* Clock polarity, CPOL = 0 -> active high */
   unsigned int cpol : 1;
   /* Clock phase: CPHA = 0 -> sample on inactive to active transition */
   unsigned int cpha : 1;
-  unsigned int msb_first : 1;
   unsigned int debug : 1;
 };
 
@@ -55,8 +55,10 @@ struct mgos_spi *mgos_spi_create(const struct sys_config_spi *cfg) {
     goto out_err;
   }
 
-  LOG(LL_INFO, ("SPI GPIO init ok (MISO: %d, MOSI: %d, SCLK: %d; mode %d)",
-                c->miso_gpio, c->mosi_gpio, c->sclk_gpio, cfg->mode));
+  LOG(LL_INFO, ("SPI GPIO init ok (MISO: %d, MOSI: %d, SCLK: %d; "
+                "CS0/1/2: %d/%d/%d)",
+                c->miso_gpio, c->mosi_gpio, c->sclk_gpio, c->cs_gpio[0],
+                c->cs_gpio[1], c->cs_gpio[2]));
   return c;
 
 out_err:
@@ -66,10 +68,6 @@ out_err:
 }
 
 bool mgos_spi_configure(struct mgos_spi *c, const struct sys_config_spi *cfg) {
-  if (!mgos_spi_set_mode(c, cfg->mode)) {
-    return false;
-  }
-
   if (cfg->miso_gpio >= 0 &&
       mgos_gpio_set_mode(cfg->miso_gpio, MGOS_GPIO_MODE_INPUT) &&
       mgos_gpio_set_pull(cfg->miso_gpio, MGOS_GPIO_PULL_UP)) {
@@ -90,8 +88,29 @@ bool mgos_spi_configure(struct mgos_spi *c, const struct sys_config_spi *cfg) {
     return false;
   }
 
-  if (!mgos_spi_set_msb_first(c, cfg->msb_first)) {
-    return false;
+  if (cfg->cs0_gpio >= 0) {
+    if (mgos_gpio_set_mode(cfg->cs0_gpio, MGOS_GPIO_MODE_OUTPUT)) {
+      mgos_gpio_write(cfg->cs0_gpio, 1);
+      c->cs_gpio[0] = cfg->cs0_gpio;
+    } else {
+      return false;
+    }
+  }
+  if (cfg->cs1_gpio >= 0) {
+    if (mgos_gpio_set_mode(cfg->cs1_gpio, MGOS_GPIO_MODE_OUTPUT)) {
+      mgos_gpio_write(cfg->cs1_gpio, 1);
+      c->cs_gpio[1] = cfg->cs1_gpio;
+    } else {
+      return false;
+    }
+  }
+  if (cfg->cs2_gpio >= 0) {
+    if (mgos_gpio_set_mode(cfg->cs2_gpio, MGOS_GPIO_MODE_OUTPUT)) {
+      mgos_gpio_write(cfg->cs2_gpio, 1);
+      c->cs_gpio[2] = cfg->cs2_gpio;
+    } else {
+      return false;
+    }
   }
 
   c->debug = cfg->debug;
@@ -108,7 +127,7 @@ bool mgos_spi_set_freq(struct mgos_spi *c, int freq) {
   return true;
 }
 
-bool mgos_spi_set_mode(struct mgos_spi *c, int mode) {
+static bool mgos_spi_set_mode(struct mgos_spi *c, int mode) {
   if (mode < 0 || mode > 3) {
     return false;
   }
@@ -117,13 +136,8 @@ bool mgos_spi_set_mode(struct mgos_spi *c, int mode) {
   return true;
 }
 
-bool mgos_spi_set_msb_first(struct mgos_spi *c, bool msb_first) {
-  c->msb_first = !!msb_first;
-  return true;
-}
-
-bool mgos_spi_txn(struct mgos_spi *c, const void *tx_data, void *rx_data,
-                  size_t len) {
+static bool mgos_spi_run_txn_fd(struct mgos_spi *c, const void *tx_data,
+                                void *rx_data, size_t len) {
   size_t i, j;
   if (c->debug) {
     LOG(LL_DEBUG, ("len %d", (int) len));
@@ -164,8 +178,9 @@ bool mgos_spi_txn(struct mgos_spi *c, const void *tx_data, void *rx_data,
   return true;
 }
 
-bool mgos_spi_txn_hd(struct mgos_spi *c, const void *tx_data, size_t tx_len,
-                     void *rx_data, size_t rx_len) {
+static bool mgos_spi_run_txn_hd(struct mgos_spi *c, const uint8_t *tx_data,
+                                size_t tx_len, size_t num_dummy,
+                                uint8_t *rx_data, size_t rx_len) {
   size_t i, j;
   if (c->debug) {
     LOG(LL_DEBUG, ("tx_len %d rx_len %d", (int) tx_len, (int) rx_len));
@@ -173,7 +188,7 @@ bool mgos_spi_txn_hd(struct mgos_spi *c, const void *tx_data, size_t tx_len,
   if (tx_len > 0) {
     if (c->mosi_gpio < 0) return false;
     for (i = 0; i < tx_len; i++) {
-      uint8_t byte = ((uint8_t *) tx_data)[i];
+      uint8_t byte = tx_data[i];
       if (c->debug) LOG(LL_DEBUG, ("write 0x%02x", byte));
       if (c->cpha == 0) {
         for (j = 0; j < 8; j++, byte <<= 1) {
@@ -199,6 +214,9 @@ bool mgos_spi_txn_hd(struct mgos_spi *c, const void *tx_data, size_t tx_len,
       }
     }
   }
+  if (num_dummy > 0) {
+    rx_len += num_dummy;
+  }
   if (rx_len > 0) {
     if (c->miso_gpio < 0) return false;
     for (i = 0; i < rx_len; i++) {
@@ -223,11 +241,43 @@ bool mgos_spi_txn_hd(struct mgos_spi *c, const void *tx_data, size_t tx_len,
         }
         mgos_spi_half_delay(c);
       }
-      if (c->debug) LOG(LL_DEBUG, ("read 0x%02x", byte));
-      ((uint8_t *) rx_data)[i] = byte;
+      if (num_dummy > 0) {
+        if (c->debug) LOG(LL_DEBUG, ("dummy byte: 0x%x", byte));
+        num_dummy--;
+      } else {
+        if (c->debug) LOG(LL_DEBUG, ("read 0x%02x", byte));
+        *rx_data++ = byte;
+      }
     }
   }
   return true;
+}
+
+bool mgos_spi_run_txn(struct mgos_spi *c, bool full_duplex,
+                      const struct mgos_spi_txn *txn) {
+  bool ret = false;
+  int cs_gpio = -1;
+  if (txn->cs >= 0) {
+    if (txn->cs > 2 || c->cs_gpio[txn->cs] < 0) return false;
+    cs_gpio = c->cs_gpio[txn->cs];
+    mgos_gpio_write(cs_gpio, 0);
+    mgos_spi_half_delay(c);
+    mgos_spi_half_delay(c);
+  }
+  if (!mgos_spi_set_mode(c, txn->mode)) {
+    return false;
+  }
+  if (full_duplex) {
+    ret = mgos_spi_run_txn_fd(c, txn->fd.tx_data, txn->fd.rx_data, txn->fd.len);
+  } else {
+    ret = mgos_spi_run_txn_hd(c, (const uint8_t *) txn->hd.tx_data,
+                              txn->hd.tx_len, txn->hd.dummy_len,
+                              (uint8_t *) txn->hd.rx_data, txn->hd.rx_len);
+  }
+  if (cs_gpio >= 0) {
+    mgos_gpio_write(cs_gpio, 1);
+  }
+  return ret;
 }
 
 void mgos_spi_close(struct mgos_spi *spi) {

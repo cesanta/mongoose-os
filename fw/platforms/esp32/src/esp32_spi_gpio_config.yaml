@@ -1,5 +1,6 @@
 [
-  ["spi.miso_gpio", 16],
-  ["spi.mosi_gpio", 18],
-  ["spi.sclk_gpio", 19],
+  ["spi.miso_gpio", 19],
+  ["spi.mosi_gpio", 23],
+  ["spi.sclk_gpio", 18],
+  ["spi.cs0_gpio", 5],
 ]
