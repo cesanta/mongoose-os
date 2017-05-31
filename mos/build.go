@@ -615,11 +615,35 @@ func globify(srcPaths []string, globs []string) (sources []string, dirs []string
 		finfo, err := os.Stat(p)
 		var curDir string
 		if err == nil && finfo.IsDir() {
+			// Item exists and is a directory; add given globs to it
 			for _, glob := range globs {
 				sources = append(sources, filepath.Join(p, glob))
 			}
 			curDir = p
 		} else {
+			if err != nil {
+				// Item either does not exist or is a glob
+				if !os.IsNotExist(errors.Cause(err)) {
+					// Some error other than non-existing file, return an error
+					return nil, nil, errors.Trace(err)
+				}
+
+				// Try to interpret current item as a glob; if it does not resolve
+				// to anything, we'll silently ignore it
+				matches, err := filepath.Glob(p)
+				if err != nil {
+					return nil, nil, errors.Trace(err)
+				}
+
+				if len(matches) == 0 {
+					// The item did not resolve to anything when interpreted as a glob,
+					// assume it does not exist, and silently ignore
+					continue
+				}
+			}
+
+			// Item is an existing file or a glob which resolves to something; just
+			// add it as it is
 			sources = append(sources, p)
 			curDir = filepath.Dir(p)
 		}
