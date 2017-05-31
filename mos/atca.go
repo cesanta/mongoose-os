@@ -2,11 +2,15 @@ package main
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
+	"io"
 	"io/ioutil"
+	"math/big"
 	"os"
 	"strconv"
 	"strings"
@@ -20,8 +24,9 @@ import (
 )
 
 var (
-	format   string
-	writeKey string
+	format      string
+	writeKey    string
+	csrTemplate string
 )
 
 func initATCAFlags() {
@@ -30,6 +35,7 @@ func initATCAFlags() {
 	}
 	flag.StringVar(&format, "format", "", "Config format, hex or json")
 	flag.StringVar(&writeKey, "write-key", "", "Write key file")
+	flag.StringVar(&csrTemplate, "csr-template", "", "CSR template to use")
 }
 
 func getFormat(f, fn string) string {
@@ -332,7 +338,31 @@ func atcaSetKey(ctx context.Context, dc *dev.DevConn) error {
 	return nil
 }
 
-func genCSR(csrTemplateFile string, slot int, cl atcaService.Service) error {
+func writePEM(derBytes []byte, blockType string, outputFileName string) error {
+	var out io.Writer
+	switch outputFileName {
+	case "":
+		out = os.Stdout
+	case "-":
+		out = os.Stdout
+	case "--":
+		out = os.Stderr
+	default:
+		f, err := os.OpenFile(outputFileName, os.O_RDWR|os.O_CREATE, 0644)
+		if err != nil {
+			return errors.Annotatef(err, "failed to open %s for writing", outputFileName)
+		}
+		out = f
+		defer func() {
+			f.Close()
+			reportf("Wrote %s", outputFileName)
+		}()
+	}
+	pem.Encode(out, &pem.Block{Type: blockType, Bytes: derBytes})
+	return nil
+}
+
+func genCSR(csrTemplateFile string, slot int, cl atcaService.Service, outputFileName string) error {
 	reportf("Generating CSR using template from %s", csrTemplateFile)
 	data, err := ioutil.ReadFile(csrTemplateFile)
 	if err != nil {
@@ -367,8 +397,23 @@ func genCSR(csrTemplateFile string, slot int, cl atcaService.Service) error {
 		return errors.Annotatef(err, "failed to create new CSR")
 	}
 
-	pem.Encode(os.Stdout, &pem.Block{Type: "CERTIFICATE REQUEST", Bytes: csr})
-	return nil
+	return writePEM(csr, "CERTIFICATE REQUEST", outputFileName)
+}
+
+func writePubKey(pubKeyData []byte, outputFileName string) error {
+	if len(pubKeyData) != 64 {
+		return errors.Errorf("expected 64 bytes of public key data, got %d", len(pubKeyData))
+	}
+	pubKey := &ecdsa.PublicKey{
+		Curve: elliptic.P256(),
+		X:     big.NewInt(0).SetBytes(pubKeyData[0:32]),
+		Y:     big.NewInt(0).SetBytes(pubKeyData[32:64]),
+	}
+	pubKeyDERBytes, err := x509.MarshalPKIXPublicKey(pubKey)
+	if err != nil {
+		return errors.Annotatef(err, "failed to marshal public key")
+	}
+	return writePEM(pubKeyDERBytes, "PUBLIC KEY", outputFileName)
 }
 
 func atcaGenKey(ctx context.Context, dc *dev.DevConn) error {
@@ -381,9 +426,9 @@ func atcaGenKey(ctx context.Context, dc *dev.DevConn) error {
 		return errors.Errorf("invalid slot number %q", args[1])
 	}
 
-	csrTemplate := ""
+	outputFileName := ""
 	if len(args) == 3 {
-		csrTemplate = args[2]
+		outputFileName = args[2]
 	}
 
 	cl, _, _, err := atca.Connect(ctx, dc)
@@ -418,13 +463,12 @@ func atcaGenKey(ctx context.Context, dc *dev.DevConn) error {
 		return errors.Errorf("expected %d bytes, got %d", atca.PublicKeySize, len(keyData))
 	}
 
-	reportf("Generated new ECC key on slot %d, public key:\n\n%s",
-		slot, atca.WriteHex(keyData, 16))
-
-	reportf("GenKey successful.")
+	reportf("Generated new ECC key on slot %d", slot)
 
 	if csrTemplate != "" {
-		return genCSR(csrTemplate, int(slot), cl)
+		return genCSR(csrTemplate, int(slot), cl, outputFileName)
+	} else {
+		return writePubKey(keyData, outputFileName)
 	}
 
 	return nil
@@ -440,9 +484,9 @@ func atcaGetPubKey(ctx context.Context, dc *dev.DevConn) error {
 		return errors.Errorf("invalid slot number %q", args[1])
 	}
 
-	csrTemplate := ""
+	outputFileName := ""
 	if len(args) == 3 {
-		csrTemplate = args[2]
+		outputFileName = args[2]
 	}
 
 	cl, _, _, err := atca.Connect(ctx, dc)
@@ -469,12 +513,10 @@ func atcaGetPubKey(ctx context.Context, dc *dev.DevConn) error {
 		return errors.Errorf("expected %d bytes, got %d", atca.PublicKeySize, len(keyData))
 	}
 
-	reportf("Slot %d, public key:\n\n%s", slot, atca.WriteHex(keyData, 16))
-
-	reportf("GetPubKey successful.")
-
 	if csrTemplate != "" {
-		return genCSR(csrTemplate, int(slot), cl)
+		return genCSR(csrTemplate, int(slot), cl, outputFileName)
+	} else {
+		return writePubKey(keyData, outputFileName)
 	}
 
 	return nil
