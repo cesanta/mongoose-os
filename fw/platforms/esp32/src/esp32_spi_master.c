@@ -28,7 +28,8 @@
 struct mgos_spi {
   spi_dev_t *dev;
   spi_host_device_t host;
-  unsigned int eff_freq : 28;
+  int freq;
+  int eff_freq;
   unsigned int mode : 2;
   unsigned int native_pins : 1;
   unsigned int debug : 1;
@@ -73,10 +74,11 @@ struct mgos_spi *mgos_spi_create(const struct sys_config_spi *cfg) {
     goto out_err;
   }
 
-  LOG(LL_INFO,
-      ("SPI%d init ok (MISO: %d, MOSI: %d, SCLK: %d; mode %d; freq %u)",
-       cfg->unit_no, cfg->miso_gpio, cfg->mosi_gpio, cfg->sclk_gpio, cfg->mode,
-       c->eff_freq));
+  LOG(LL_INFO, ("SPI%d init ok (MISO: %d, MOSI: %d, SCLK: %d; "
+                "CS0/1/2: %d/%d/%d; native? %s)",
+                cfg->unit_no, cfg->miso_gpio, cfg->mosi_gpio, cfg->sclk_gpio,
+                cfg->cs0_gpio, cfg->cs1_gpio, cfg->cs2_gpio,
+                (c->native_pins ? "yes" : "no")));
   return c;
 
 out_err:
@@ -89,18 +91,7 @@ out_err:
 bool mgos_spi_configure(struct mgos_spi *c, const struct sys_config_spi *cfg) {
   spi_dev_t *dev = c->dev;
 
-  dev->pin.val = 0;
-
-  if (!mgos_spi_set_mode(c, cfg->mode)) {
-    return false;
-  }
-
-  /* We don't drive CS. */
-  dev->pin.cs0_dis = 1;
-  dev->pin.cs1_dis = 1;
-  dev->pin.cs2_dis = 1;
-
-  mgos_spi_set_msb_first(c, cfg->msb_first);
+  dev->slave.slave_mode = false;
 
   spi_bus_config_t bus_cfg = {
       .mosi_io_num = cfg->mosi_gpio,
@@ -118,15 +109,20 @@ bool mgos_spi_configure(struct mgos_spi *c, const struct sys_config_spi *cfg) {
   }
   c->native_pins = !!is_native;
 
-  if (!mgos_spi_set_freq(c, cfg->freq)) {
-    return false;
+  if (cfg->cs0_gpio >= 0) {
+    spicommon_cs_initialize(c->host, cfg->cs0_gpio, 0,
+                            false /* force_gpio_matrix */);
+  }
+  if (cfg->cs1_gpio >= 0) {
+    spicommon_cs_initialize(c->host, cfg->cs1_gpio, 1,
+                            false /* force_gpio_matrix */);
+  }
+  if (cfg->cs2_gpio >= 0) {
+    spicommon_cs_initialize(c->host, cfg->cs2_gpio, 2,
+                            false /* force_gpio_matrix */);
   }
 
-  if (!mgos_spi_set_msb_first(c, cfg->msb_first)) {
-    return false;
-  }
-
-  dev->slave.slave_mode = false;
+  c->dev->ctrl.rd_bit_order = c->dev->ctrl.wr_bit_order = 0; /* MSB first */
 
   c->debug = cfg->debug;
 
@@ -134,7 +130,8 @@ bool mgos_spi_configure(struct mgos_spi *c, const struct sys_config_spi *cfg) {
 }
 
 /* See SPI_CLOCK_REG description in the TRM. */
-bool mgos_spi_set_freq(struct mgos_spi *c, int freq) {
+static bool mgos_spi_set_freq(struct mgos_spi *c, int freq) {
+  if (c->freq == freq) return true;
   spi_dev_t *dev = c->dev;
   int pre, cnt_n;
   if (freq >= APB_CLK_FREQ / 2 && !c->native_pins) {
@@ -177,6 +174,7 @@ bool mgos_spi_set_freq(struct mgos_spi *c, int freq) {
   dev->clock.clkcnt_n = cnt_n;
   dev->clock.clkcnt_h = cnt_h;
   dev->clock.clkcnt_l = cnt_n; /* Per TRM, cnt_l = cnt_n */
+  c->freq = freq;
   c->eff_freq = APB_CLK_FREQ / ((pre + 1) * (cnt_n + 1));
   if (c->debug) {
     LOG(LL_DEBUG, ("freq %d => pre %d cnt_n %d cnt_h %d => eff_freq %u", freq,
@@ -185,7 +183,7 @@ bool mgos_spi_set_freq(struct mgos_spi *c, int freq) {
   return true;
 }
 
-bool mgos_spi_set_mode(struct mgos_spi *c, int mode) {
+static bool mgos_spi_set_mode(struct mgos_spi *c, int mode) {
   spi_dev_t *dev = c->dev;
   /* See TRM, section 5.4.1, table 23 */
   int idle_edge, out_edge, delay_mode;
@@ -223,11 +221,6 @@ bool mgos_spi_set_mode(struct mgos_spi *c, int mode) {
   return true;
 }
 
-bool mgos_spi_set_msb_first(struct mgos_spi *c, bool msb_first) {
-  c->dev->ctrl.rd_bit_order = c->dev->ctrl.wr_bit_order = (!msb_first);
-  return true;
-}
-
 static void esp32_spi_set_tx_data(spi_dev_t *dev, const uint8_t *data,
                                   size_t len) {
   size_t i, wi;
@@ -238,12 +231,18 @@ static void esp32_spi_set_tx_data(spi_dev_t *dev, const uint8_t *data,
   }
 }
 
-static void esp32_spi_get_rx_data(spi_dev_t *dev, uint8_t *data, size_t len) {
+static void esp32_spi_get_rx_data(spi_dev_t *dev, uint8_t *data, size_t skip,
+                                  size_t len) {
   size_t i, j, wi;
   for (i = 0, wi = 0; i < len; wi++) {
     uint32_t w = dev->data_buf[wi];
-    for (j = 0; j < 4 && i < len; i++, j++) {
-      data[i] = (w & 0xff);
+    for (j = 0; j < 4 && i < len; j++) {
+      uint8_t byte = (w & 0xff);
+      if (skip > 0) {
+        skip--;
+      } else {
+        data[i++] = byte;
+      }
       w >>= 8;
     }
   }
@@ -254,6 +253,8 @@ static void esp32_spi_txn_setup_common(struct mgos_spi *c) {
   bool out_edge = dev->user.ck_out_edge;
   dev->user.val = 0;
   dev->user.ck_out_edge = out_edge;
+  dev->user.cs_setup = true;
+  dev->ctrl2.setup_time = 0;          /* 1 CS setup cycle */
   dev->user.usr_mosi_highpart = true; /* 0-7 for RX, 8-15 for TX */
   if (c->eff_freq >= APB_CLK_FREQ / 2) {
     /* Add a dummy cycle (user1.usr_dummy_cyclelen is set to 0 below). */
@@ -263,8 +264,8 @@ static void esp32_spi_txn_setup_common(struct mgos_spi *c) {
   dev->user2.val = 0;
 }
 
-bool mgos_spi_txn(struct mgos_spi *c, const void *tx_data, void *rx_data,
-                  size_t len) {
+static bool mgos_spi_run_txn_fd(struct mgos_spi *c, const void *tx_data,
+                                void *rx_data, size_t len) {
   spi_dev_t *dev = c->dev;
   if (c->debug) {
     LOG(LL_DEBUG, ("len %d", (int) len));
@@ -283,11 +284,12 @@ bool mgos_spi_txn(struct mgos_spi *c, const void *tx_data, void *rx_data,
     dev->mosi_dlen.usr_mosi_dbitlen = dbitlen;
     dev->miso_dlen.usr_miso_dbitlen = dbitlen;
     esp32_spi_set_tx_data(dev, txdp, dlen);
+    len -= dlen;
+    dev->pin.cs_keep_active = (len > 0);
     dev->cmd.usr = true;
     while (dev->cmd.usr) {
     }
-    esp32_spi_get_rx_data(dev, rxdp, dlen);
-    len -= dlen;
+    esp32_spi_get_rx_data(dev, rxdp, 0, dlen);
     txdp += dlen;
     rxdp += dlen;
   }
@@ -295,8 +297,9 @@ bool mgos_spi_txn(struct mgos_spi *c, const void *tx_data, void *rx_data,
   return true;
 }
 
-bool mgos_spi_txn_hd(struct mgos_spi *c, const void *tx_data, size_t tx_len,
-                     void *rx_data, size_t rx_len) {
+static bool mgos_spi_run_txn_hd(struct mgos_spi *c, const void *tx_data,
+                                size_t tx_len, size_t dummy_len, void *rx_data,
+                                size_t rx_len) {
   spi_dev_t *dev = c->dev;
   if (c->debug) {
     LOG(LL_DEBUG, ("tx_len %d rx_len %d", (int) tx_len, (int) rx_len));
@@ -313,11 +316,16 @@ bool mgos_spi_txn_hd(struct mgos_spi *c, const void *tx_data, size_t tx_len,
     size_t dbitlen = dlen * 8 - 1;
     dev->mosi_dlen.usr_mosi_dbitlen = dbitlen;
     esp32_spi_set_tx_data(dev, txdp, dlen);
+    tx_len -= dlen;
+    dev->pin.cs_keep_active = (tx_len > 0 || rx_len > 0);
     dev->cmd.usr = true;
     while (dev->cmd.usr) {
     }
-    tx_len -= dlen;
     txdp += dlen;
+  }
+
+  if (dummy_len > 0) {
+    rx_len += dummy_len;
   }
 
   uint8_t *rxdp = (uint8_t *) rx_data;
@@ -328,15 +336,59 @@ bool mgos_spi_txn_hd(struct mgos_spi *c, const void *tx_data, size_t tx_len,
     if (dlen > 16) dlen = 16;
     size_t dbitlen = dlen * 8 - 1;
     dev->miso_dlen.usr_miso_dbitlen = dbitlen;
+    rx_len -= dlen;
+    dev->pin.cs_keep_active = (rx_len > 0);
     dev->cmd.usr = true;
     while (dev->cmd.usr) {
     }
-    esp32_spi_get_rx_data(dev, rxdp, dlen);
-    rx_len -= dlen;
+    size_t skip = dummy_len;
+    if (skip > dlen) skip = dlen;
+    dlen -= skip;
+    esp32_spi_get_rx_data(dev, rxdp, skip, dlen);
     rxdp += dlen;
+    dummy_len -= skip;
   }
 
   return true;
+}
+
+bool mgos_spi_run_txn(struct mgos_spi *c, bool full_duplex,
+                      const struct mgos_spi_txn *txn) {
+  bool ret = false;
+  spi_dev_t *dev = c->dev;
+  dev->pin.cs0_dis = dev->pin.cs1_dis = dev->pin.cs2_dis = true;
+  switch (txn->cs) {
+    case 0:
+      dev->pin.cs0_dis = false;
+      dev->pin.master_cs_pol &= 6; /* Active-low CS0 */
+      break;
+    case 1:
+      dev->pin.cs1_dis = false;
+      dev->pin.master_cs_pol &= 5; /* Active-low CS1 */
+      break;
+    case 2:
+      dev->pin.cs2_dis = false;
+      dev->pin.master_cs_pol &= 3; /* Active-low CS2 */
+      break;
+    case -1:
+      break;
+    default:
+      return false;
+  }
+  if (!mgos_spi_set_mode(c, txn->mode)) {
+    return false;
+  }
+  if (txn->freq > 0 && !mgos_spi_set_freq(c, txn->freq)) {
+    return false;
+  }
+  if (full_duplex) {
+    ret = mgos_spi_run_txn_fd(c, txn->fd.tx_data, txn->fd.rx_data, txn->fd.len);
+  } else {
+    ret =
+        mgos_spi_run_txn_hd(c, txn->hd.tx_data, txn->hd.tx_len,
+                            txn->hd.dummy_len, txn->hd.rx_data, txn->hd.rx_len);
+  }
+  return ret;
 }
 
 void mgos_spi_close(struct mgos_spi *c) {

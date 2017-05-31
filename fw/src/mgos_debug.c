@@ -15,6 +15,7 @@
 
 #include "fw/src/mgos_features.h"
 #include "fw/src/mgos_hal.h"
+#include "fw/src/mgos_hooks.h"
 #include "fw/src/mgos_mqtt.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_uart.h"
@@ -92,6 +93,14 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
     if (msg != buf) free(msg);
   }
 #endif /* MGOS_ENABLE_MQTT */
+
+  /* Invoke all registered debug_write hooks */
+  {
+    struct mgos_hook_arg arg = {{.debug = {
+                                     .fd = fd, .data = data, .len = len, }}};
+    mgos_hook_trigger(MGOS_HOOK_DEBUG_WRITE, &arg);
+  }
+
   s_in_debug = false;
   mgos_unlock();
   (void) buf;
