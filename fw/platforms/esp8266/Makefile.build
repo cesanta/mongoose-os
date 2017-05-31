@@ -108,6 +108,7 @@ MGOS_ESP_SRC_PATH = $(MGOS_ESP8266_PATH)/src
 MGOS_SRCS = cs_file.c cs_rbuf.c \
             mgos_config.c \
             mgos_gpio.c \
+            mgos_hooks.c \
             mgos_init.c \
             mgos_timers_mongoose.c \
             mgos_wifi.c \
