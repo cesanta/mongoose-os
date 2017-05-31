@@ -1,5 +1,8 @@
 [
   ["spi", "o", {title: "SPI settings"}],
   ["spi.enable", "b", false, {title: "Enable SPI"}],
+  ["spi.freq", "i", 1000000, {title: "SPI clock frequency"}],
+  ["spi.mode", "i", 0, {title: "SPI edge/clock idle mode, 0-3"}],
+  ["spi.msb_first", "b", true, {title: "SPI bit order: MSB first / LSB first"}],
   ["spi.debug", "b", false, {title: "Debug SPI bus activity"}],
 ]
