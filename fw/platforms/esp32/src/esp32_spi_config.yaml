@@ -1,6 +1,9 @@
 [
   ["spi.unit_no", "i", 3, {title: "Which SPI unit to use, 2 or 3"}],
-  ["spi.miso_gpio", "i", 16, {title: "GPIO to use for MISO"}],
-  ["spi.mosi_gpio", "i", 18, {title: "GPIO to use for MOSI"}],
-  ["spi.sclk_gpio", "i", 19, {title: "GPIO to use for SCLK"}],
+  ["spi.miso_gpio", "i", 19, {title: "GPIO to use for MISO"}],
+  ["spi.mosi_gpio", "i", 23, {title: "GPIO to use for MOSI"}],
+  ["spi.sclk_gpio", "i", 18, {title: "GPIO to use for SCLK"}],
+  ["spi.cs0_gpio", "i", 5, {title: "GPIO to use for CS0"}],
+  ["spi.cs1_gpio", "i", -1, {title: "GPIO to use for CS1"}],
+  ["spi.cs2_gpio", "i", -1, {title: "GPIO to use for CS2"}],
 ]
