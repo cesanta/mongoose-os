@@ -19,6 +19,8 @@ type AppManifest struct {
 type FWAppManifest struct {
 	AppManifest       `yaml:",inline"`
 	Arch              string             `yaml:"arch" json:"arch,omitempty"`
+	Author            string             `yaml:"author" json:"author,omitempty"`
+	Description       string             `yaml:"description" json:"description,omitempty"`
 	MongooseOsVersion string             `yaml:"mongoose_os_version" json:"mongoose_os_version,omitempty"`
 	Sources           []string           `yaml:"sources" json:"sources,omitempty"`
 	Filesystem        []string           `yaml:"filesystem" json:"filesystem,omitempty"`

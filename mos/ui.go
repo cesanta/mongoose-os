@@ -2,18 +2,15 @@ package main
 
 import (
 	"context"
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
 	"sort"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 
@@ -173,19 +170,8 @@ func UDPLogCatcher() {
 	}
 }
 
-func removeFile(w http.ResponseWriter, r *http.Request, pt projectType) {
-	w.Header().Set("Content-Type", "application/json")
-	err := removeAppLibFile(pt, r)
-	httpReply(w, true, err)
-}
-
 func startUI(ctx context.Context, devConn *dev.DevConn) error {
 	var devConnMtx sync.Mutex
-
-	// So far, building is only possible from the current directory,
-	// so before building some app we need to change current dir, and ensure
-	// that other builds won't interfere
-	var buildMtx sync.Mutex
 
 	glog.CopyStandardLogTo("INFO")
 	go reportConsoleLogs()
@@ -434,7 +420,8 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 			return
 		}
 		args := r.FormValue("args")
-		glog.Errorf("Calling: %+v, args: %+v", method, args)
+		glog.Errorf("Calling: %+v", method)
+		glog.Infof("Calling: %+v, args: %+v", method, args)
 
 		timeout, err2 := strconv.ParseInt(r.FormValue("timeout"), 10, 64)
 		if err2 != nil {
@@ -456,7 +443,8 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 			// Saving config causes the device to reboot, so we have to wait a bit
 			waitForReboot()
 		}
-		glog.Errorf("Call result: %+v, error: %+v", result, err)
+		glog.Errorf("Call complete, error: %v", err)
+		glog.Infof("Call result: %+v, error: %+v", result, err)
 		httpReply(w, result, err)
 	})
 
@@ -511,6 +499,8 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		httpReply(w, true, err)
 	})
 
+	initProjectManagementEndpoints()
+
 	http.HandleFunc("/update", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
@@ -523,213 +513,6 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		}
 
 		httpReply(w, result, err)
-	})
-
-	http.HandleFunc("/list-libs", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-
-		result, err := getAppsLibs(libsDir)
-		if err != nil {
-			err = errors.Trace(err)
-		}
-
-		httpReply(w, result, err)
-	})
-
-	http.HandleFunc("/list-apps", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-
-		result, err := getAppsLibs(appsDir)
-		if err != nil {
-			err = errors.Trace(err)
-		}
-
-		httpReply(w, result, err)
-	})
-
-	http.HandleFunc("/import-lib", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-
-		result, err := importAppLib(libsDir, r)
-		if err != nil {
-			err = errors.Trace(err)
-		}
-
-		httpReply(w, result, err)
-	})
-
-	http.HandleFunc("/import-app", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-
-		result, err := importAppLib(appsDir, r)
-		if err != nil {
-			err = errors.Trace(err)
-		}
-
-		httpReply(w, result, err)
-	})
-
-	http.HandleFunc("/app/ls", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-
-		result, err := listAppLibFiles(projectTypeApp, r)
-		if err != nil {
-			err = errors.Trace(err)
-		}
-
-		httpReply(w, result, err)
-	})
-
-	http.HandleFunc("/lib/ls", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-
-		result, err := listAppLibFiles(projectTypeLib, r)
-		if err != nil {
-			err = errors.Trace(err)
-		}
-
-		httpReply(w, result, err)
-	})
-
-	http.HandleFunc("/app/mv", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-
-		result := true
-
-		err := moveAppLibFile(projectTypeApp, r)
-		if err != nil {
-			err = errors.Trace(err)
-			result = false
-		}
-
-		httpReply(w, result, err)
-	})
-
-	http.HandleFunc("/lib/mv", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-
-		result := true
-
-		err := moveAppLibFile(projectTypeLib, r)
-		if err != nil {
-			err = errors.Trace(err)
-			result = false
-		}
-
-		httpReply(w, result, err)
-	})
-
-	http.HandleFunc("/app/get", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-
-		result, err := getAppLibFile(projectTypeApp, r)
-		if err != nil {
-			err = errors.Trace(err)
-		}
-
-		httpReply(w, result, err)
-	})
-
-	http.HandleFunc("/lib/get", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-
-		result, err := getAppLibFile(projectTypeLib, r)
-		if err != nil {
-			err = errors.Trace(err)
-		}
-
-		httpReply(w, result, err)
-	})
-
-	http.HandleFunc("/app/set", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-
-		result := true
-
-		err := saveAppLibFile(projectTypeApp, r)
-		if err != nil {
-			err = errors.Trace(err)
-			result = false
-		}
-
-		httpReply(w, result, err)
-	})
-
-	http.HandleFunc("/lib/set", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-
-		result := true
-
-		err := saveAppLibFile(projectTypeLib, r)
-		if err != nil {
-			err = errors.Trace(err)
-			result = false
-		}
-
-		httpReply(w, result, err)
-	})
-
-	http.HandleFunc("/lib/rm", func(w http.ResponseWriter, r *http.Request) {
-		removeFile(w, r, projectTypeLib)
-	})
-	http.HandleFunc("/app/rm", func(w http.ResponseWriter, r *http.Request) {
-		removeFile(w, r, projectTypeApp)
-	})
-
-	http.HandleFunc("/app/build", func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-
-		// So far, building is only possible from the current directory,
-		// so before building some app we need to change current dir, and ensure
-		// that other builds won't interfere
-		buildMtx.Lock()
-		defer buildMtx.Unlock()
-
-		var err error
-
-		pname := r.FormValue("app")
-		if pname == "" {
-			httpReply(w, false, errors.Errorf("app is required"))
-			return
-		}
-
-		bParams := buildParams{
-			Arch: r.FormValue("arch"),
-		}
-
-		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
-		defer cancel()
-
-		// Get current directory, and defer chdir-ing back to it
-		prevDir, err := os.Getwd()
-		if err != nil {
-			err = errors.Trace(err)
-			httpReply(w, false, err)
-			return
-		}
-
-		defer func() {
-			os.Chdir(prevDir)
-		}()
-
-		// Get app directory and chdir there
-		appDir := filepath.Join(appsDir, pname)
-
-		if err := os.Chdir(appDir); err != nil {
-			err = errors.Trace(err)
-			httpReply(w, false, err)
-			return
-		}
-
-		// Build the firmware
-		err = doBuild(ctx, &bParams)
-		if err != nil {
-			err = errors.Trace(err)
-			httpReply(w, false, err)
-			return
-		}
-
-		httpReply(w, true, err)
 	})
 
 	if wwwRoot != "" {
@@ -757,245 +540,6 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 	// Unreacahble
 	return nil
-}
-
-// getAppsLibs takes a path and returns a slice of directory entries. In
-// the future each entry may contain some apps- or libs-specific things, but
-// for now it's just a name.
-//
-// If given path does not exist, it's not an error: empty slice is returned.
-func getAppsLibs(dirPath string) (appLibList, error) {
-	ret := appLibList{}
-
-	files, err := ioutil.ReadDir(dirPath)
-	if err != nil {
-		if os.IsNotExist(err) {
-			// On non-existing path, just return an empty slice
-			return ret, nil
-		}
-		// On some other error, return an error
-		return nil, errors.Trace(err)
-	}
-
-	for _, f := range files {
-		name := f.Name()
-		// Returned manifest will be "generic", i.e. without arch-specific
-		// adjustments.
-		manifest, _, err := readManifest(filepath.Join(dirPath, name), nil)
-		if err != nil {
-			return nil, errors.Trace(err)
-		}
-		ret[name] = manifest
-	}
-
-	return ret, nil
-}
-
-func importAppLib(dirPath string, r *http.Request) (string, error) {
-	url := r.FormValue("url")
-	if url == "" {
-		return "", errors.Errorf("url is required")
-	}
-
-	swmod := build.SWModule{
-		Origin: url,
-	}
-
-	_, err := swmod.PrepareLocalDir(dirPath, os.Stdout, true)
-	if err != nil {
-		return "", errors.Trace(err)
-	}
-
-	name, err := swmod.GetName()
-	if err != nil {
-		return "", errors.Trace(err)
-	}
-
-	return name, nil
-}
-
-func listAppLibFiles(pt projectType, r *http.Request) ([]string, error) {
-	ret := []string{}
-
-	rootDir, err := getRootByProjectType(pt)
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	pname := r.FormValue(string(pt))
-	if pname == "" {
-		return nil, errors.Errorf("%s is required", pt)
-	}
-
-	projectPath := filepath.Join(rootDir, pname)
-
-	if _, err := os.Stat(projectPath); err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	err = filepath.Walk(projectPath, func(path string, fi os.FileInfo, _ error) error {
-
-		// Ignore the root path
-		if path == projectPath {
-			return nil
-		}
-
-		// Strip the path to dir
-		path = path[len(projectPath)+1:]
-
-		// Ignore ".git"
-		if strings.HasPrefix(path, ".git") {
-			return nil
-		}
-
-		ret = append(ret, path)
-
-		return nil
-	})
-	if err != nil {
-		return nil, errors.Trace(err)
-	}
-
-	return ret, nil
-}
-
-func getAppLibFile(pt projectType, r *http.Request) (string, error) {
-	rootDir, err := getRootByProjectType(pt)
-	if err != nil {
-		return "", errors.Trace(err)
-	}
-
-	pname := r.FormValue(string(pt))
-	if pname == "" {
-		return "", errors.Errorf("%s is required", pt)
-	}
-
-	filename := r.FormValue("filename")
-	if filename == "" {
-		return "", errors.Errorf("filename is required")
-	}
-
-	data, err := ioutil.ReadFile(filepath.Join(rootDir, pname, filename))
-	if err != nil {
-		return "", errors.Trace(err)
-	}
-
-	return base64.StdEncoding.EncodeToString(data), nil
-}
-
-func getFullPath(pt projectType, r *http.Request) (string, error) {
-	rootDir, err := getRootByProjectType(pt)
-	if err != nil {
-		return "", errors.Trace(err)
-	}
-
-	pname := r.FormValue(string(pt))
-	if pname == "" {
-		return "", errors.Errorf("%s is required", pt)
-	}
-
-	filename := r.FormValue("filename")
-	if filename == "" {
-		return "", errors.Errorf("filename is required")
-	}
-
-	return filepath.Join(rootDir, pname, filename), nil
-}
-
-func removeAppLibFile(pt projectType, r *http.Request) error {
-	fullPath, err := getFullPath(pt, r)
-	if err != nil {
-		return errors.Trace(err)
-	}
-	return os.RemoveAll(fullPath)
-}
-
-func saveAppLibFile(pt projectType, r *http.Request) error {
-	rootDir, err := getRootByProjectType(pt)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	// Read body and get file data from it
-	//
-	// NOTE: we have to read data from r.Body before calling r.FormValue, because
-	// r.FormValue reads the body on its own.
-	par := saveAppLibFileParams{}
-
-	decoder := json.NewDecoder(r.Body)
-	if err := decoder.Decode(&par); err != nil {
-		return errors.Annotatef(err, "decoding JSON")
-	}
-
-	data, err := base64.StdEncoding.DecodeString(par.Data)
-	if err != nil {
-		return errors.Annotatef(err, "decoding base64")
-	}
-
-	// get pname and filename from the query string
-	// (we may have put it into saveAppLibFileParams as well, but just to make
-	// it symmetric with the getAppLibFile, they are in they query string)
-	pname := r.FormValue(string(pt))
-	if pname == "" {
-		return errors.Errorf("%s is required", pt)
-	}
-
-	filename := r.FormValue("filename")
-	if filename == "" {
-		return errors.Errorf("filename is required")
-	}
-
-	err = ioutil.WriteFile(filepath.Join(rootDir, pname, filename), data, 0755)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	return nil
-}
-
-func moveAppLibFile(pt projectType, r *http.Request) error {
-	rootDir, err := getRootByProjectType(pt)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	// get pname and filename from the query string
-	// (we may have put it into saveAppLibFileParams as well, but just to make
-	// it symmetric with the getAppLibFile, they are in they query string)
-	pname := r.FormValue(string(pt))
-	if pname == "" {
-		return errors.Errorf("%s is required", pt)
-	}
-
-	filename := r.FormValue("filename")
-	if filename == "" {
-		return errors.Errorf("filename is required")
-	}
-
-	newFilename := r.FormValue("to")
-	if newFilename == "" {
-		return errors.Errorf(`"to" is required`)
-	}
-
-	err = os.Rename(
-		filepath.Join(rootDir, pname, filename),
-		filepath.Join(rootDir, pname, newFilename),
-	)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	return nil
-}
-
-func getRootByProjectType(pt projectType) (string, error) {
-	switch pt {
-	case projectTypeApp:
-		return appsDir, nil
-	case projectTypeLib:
-		return libsDir, nil
-	}
-	return "", errors.Errorf("invalid project type: %q", pt)
 }
 
 func addExpiresHeader(d time.Duration, handler http.Handler) http.HandlerFunc {

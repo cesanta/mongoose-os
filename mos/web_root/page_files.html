@@ -72,14 +72,6 @@
     return false;
   });
 
-  // https://developer.mozilla.org/en/docs/Web/API/WindowBase64/Base64_encoding_and_decoding
-  function b64enc(str) {
-    return btoa(
-        encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1) {
-          return String.fromCharCode('0x' + p1);
-        }));
-  };
-
   var onSave = function() {
     var fileName = $('.file.selected').attr('rel');
     var text = editor.getValue();
