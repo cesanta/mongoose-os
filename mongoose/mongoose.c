@@ -8563,6 +8563,8 @@ static void mg_send_file_data(struct mg_connection *nc, FILE *fp) {
   }
 }
 
+#define fileno(x) -1
+
 static void mg_do_ssi_include(struct mg_connection *nc, struct http_message *hm,
                               const char *ssi, char *tag, int include_level,
                               const struct mg_serve_http_opts *opts) {
