@@ -1,14 +1,20 @@
-<div data-title="Code" style="height: 100%;">
+<div data-title="Porjects" style="height: 100%;">
   <div class="col-xs-3 main-left-column">
 
     <div class="list-group upcontrol" id="projects" style="padding: 0; margin: 0; top: 5px;">
       <li class="list-group-item title" id="apps-header">
         <strong class="header">My Apps</strong>
-        <a style="margin-top: -5px;" class="btn btn-success btn-sm pull-right" data-toggle="modal" data-target="#app-manager"> <i class="fa fa-plus"></i> Add app</a>
+        <div class="pull-right">
+          <button style="margin-top: -5px;" class="btn btn-success btn-sm create-project-button"> <i class="fa fa-plus"></i> Create new</button>
+          <button style="margin-top: -5px;" class="btn btn-success btn-sm" data-toggle="modal" data-target="#app-manager"> <i class="fa fa-download"></i> Import</button>
+        </div>
       </li>
       <li class="list-group-item justify-content-between title" id="libs-header">
         <strong class="header">My Libs</strong>
-        <button style="margin-top: -5px;" class="btn btn-success btn-sm pull-right" data-toggle="modal" data-target="#lib-manager"> <i class="fa fa-plus"></i> Add lib&nbsp;&nbsp;</button>
+        <div class="pull-right">
+          <button style="margin-top: -5px;" class="btn btn-success btn-sm create-project-button"> <i class="fa fa-plus"></i> Create new</button>
+          <button style="margin-top: -5px;" class="btn btn-success btn-sm" data-toggle="modal" data-target="#lib-manager"> <i class="fa fa-download"></i> Import</button>
+        </div>
       </li>
     </div>
 
@@ -18,21 +24,19 @@
     <div class="editor-navbar">
 
       <span class="form-inline">
-        <select class="form-control input-sm" style="margin-top: -5px; width: 15em;">
-          <option>init.js</option>
-          <option>README.md</option>
-        </select>
+        <select class="form-control input-sm" id="file-dropdown"></select>
       </span>
       &nbsp;
-
-      <button class="btn btn-sm btn-success"><i class="fa fa-save"></i> Save</button>
-      <button class="btn btn-sm btn-success"><i class="fa fa-remove"></i> Delete</button>
-      <button class="btn btn-sm btn-success"><i class="fa fa-file-o"></i> New</button>
+      <button class="btn btn-sm btn-success" id="toolbar-save-button" data-toggle="tooltip" data-placement="top" title="Save&nbsp;currently&nbsp;opened&nbsp;file"><i class="fa fa-save"></i> </button>
+      <button class="btn btn-sm btn-success" id="toolbar-delete-button" data-toggle="tooltip" data-placement="top" title="Delete&nbsp;currently&nbsp;opened&nbsp;file"><i class="fa fa-remove"></i> </button>
+      <button class="btn btn-sm btn-success" id="toolbar-new-button" data-toggle="tooltip" data-placement="top" title="Create&nbsp;new&nbsp;file"><i class="fa fa-file-o"></i> </button>
       &nbsp;|&nbsp;&nbsp;
-      <button class="btn btn-sm btn-success "><i class="fa fa-flash"></i> Build + Flash</button>
-      <button class="btn btn-sm btn-success "><i class="fa fa-retweet"></i> Copy + Reboot</button>
+      <button class="btn btn-sm btn-success" id="toolbar-copy-button" data-toggle="tooltip" data-placement="top" title="Save&nbsp;file,&nbsp;copy&nbsp;to&nbsp;device,&nbsp;reboot&nbsp;device"><i class="fa fa-upload"></i> </button>
+      &nbsp;|&nbsp;&nbsp;
+      <button class="btn btn-sm btn-success" id="toolbar-build-button" data-toggle="tooltip" data-placement="top" title="Rebuild&nbsp;app&nbsp;firmware&nbsp;(slow)"><i class="fa fa-wrench"></i> </button>
+      <button class="btn btn-sm btn-success" id="toolbar-flash-button" data-toggle="tooltip" data-placement="top" title="Flash&nbsp;app&nbsp;firmware&nbsp;to&nbsp;device&nbsp;(slow)"><i class="fa fa-flash"></i> </button>
 
-      <button class="btn btn-sm btn-info pull-right" style="margin-right: 0;"><i class="fa fa-share"></i> Share this project</button>
+      <button class="btn btn-sm btn-info pull-right" id="toolbar-share-button" disabled style="margin-right: 0;"><i class="fa fa-share-square-o"></i> Share this project</button>
     </div>
     <div class="form-group upcontrol">
       <div id="editor"></div>
@@ -41,16 +45,16 @@
 </div>
 
 
-<li class="list-group-item local-project hidden" id="local-entry-template">
-  <span class="name"></span>
-  <span class="tags descr" style="margin-right: 10px;"></span>
-  <span class="pull-right ctl">
-  </span>
+<li class="list-group-item local-project hidden row" id="local-entry-template" style="position: relative;">
+  <span class="name col-xs-3"></span>
+  <span class="title descr text-truncate col-xs-9" style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;"></span>
+  <!-- <span class="tags descr hidden" style="margin-right: 10px;"></span> -->
 </li>
 
 
-<div class="btn-group project-control-toolbar hidden" id="ctl">
-  <button class="btn btn-xs btn-default descr do-rename" data-toggle="tooltip" data-placement="top" title="Rename&nbsp;project"><i class="fa fa-pencil"></i></button>
+<div class="btn-group project-control-toolbar hidden" id="ctl"
+    style="position: absolute; top: 9px; right: 20px; ">
+  <!-- <button class="btn btn-xs btn-default descr do-rename" data-toggle="tooltip" data-placement="top" title="Rename&nbsp;project"><i class="fa fa-pencil"></i></button> -->
   <button class="btn btn-xs btn-default descr do-duplicate" data-toggle="tooltip" data-placement="top" title="Duplicate&nbsp;project"><i class="fa fa-copy"></i></button>
   <button class="btn btn-xs btn-default descr do-remove" data-toggle="tooltip" data-placement="top" title="Remove&nbsp;project"><i class="fa fa-remove"></i></button>
 </div>
@@ -107,7 +111,7 @@
             <th>Title</th>
             <th>Tags</th>
             <th>Author</th>
-            <th style="text-align: ">Download</th>
+            <th>Import</th>
           </thead>
           <tbody class="projects"></tbody>
         </table>
@@ -124,8 +128,8 @@
     <td class="tags"></td>
     <td class="author"></td>
     <td>
-      <button class="btn btn-xs btn-success" style="margin: 0;"><i class="fa fa-download"></i> Download</button>
-      <div class="hidden imported descr"><i class="fa fa-check"></i> downloaded</div>
+      <button class="btn btn-xs btn-success" style="margin: 0;"><i class="fa fa-download"></i> Import</button>
+      <div class="hidden imported descr"><i class="fa fa-check"></i> imported</div>
     </td>
   </tr>
 </table>
@@ -133,53 +137,91 @@
 
 <script>
   var editor = mkeditor();
-  editor.setValue('let x = 1234;', -1);
-  editor.session.setMode('ace/mode/javascript');
 
   var clone = function(sel) {
     return $(sel).clone().removeClass('hidden').removeAttr('id');
   };
 
-  $(document).off('click', '.list-group-item');
-  $(document).on('click', '.list-group-item', function() {
-    if ($(this).hasClass('title')) return false;
-    $('.list-group-item').removeClass('selected');
-    $(this).addClass('selected');
+  // Load file that user selects in a file dropdown
+  $(document).off('change', '#file-dropdown');
+  $(document).on('change', '#file-dropdown', function() {
+    var el = $('.local-project.selected');
+    var filename = $(this).val();
+    var data = { type: el.attr('mos-type'), project: el.attr('mos-name'), filename: filename };
+    $.ajax({url: '/p/get', global: true, data: data}).done(function(data){
+      editor.setValue(atob(data.result || ''), -1);
+      editor.session.setMode('ace/mode/' + guesslang(filename));
+    }).always(function() {
+    });
   });
 
+  // User clicks on a project in a list. Switch project, load new set of files
+  $(document).off('click', '.local-project');
+  $(document).on('click', '.local-project', function() {
+    var el = $(this);
+    var d = { type: el.attr('mos-type'), project: el.attr('mos-name') };
+    $.ajax({url: '/p/ls', global: true, data: d}).then(function(data) {
+      $('.list-group-item').removeClass('selected');
+      el.addClass('selected');  // Select project, to make file download work correctly
+      $('#file-dropdown').empty();
+      document.cookie = 'mos-type=' + d.type;
+      document.cookie = 'mos-name=' + d.project;
+      var ar = data.result || [];
+      $.each(ar, function(i, v) {
+        $('<option/>').text(v).appendTo('#file-dropdown');
+      });
+      var pname = 'src/' + el.attr('mos-name') + '.c';
+      var s = $.inArray('fs/init.js', ar) >= 0 ? 'fs/init.js' :
+              $.inArray('src/main.c', ar) >= 0 ? 'src/main.c' :
+              $.inArray(pname, ar) >= 0 ? pname : 'README.md';
+      $('#file-dropdown').val(s).change();
+      $('#toolbar-build-button').prop('disabled', d.type == 'lib');
+    }).always(function() {
+      $('.list-group-item').removeClass('selected');
+      el.addClass('selected');
+    });
+  });
+
+  // Load local projects, populate project list and mark remote projects as downloaded
   var syncImportedProjects = function(type) {
-    var url = '/list-' + type + 's';
     var dialogSelector = '#' + type + '-manager';
-    var itemClass = 'imported-' + type;
+    var itemClass = 'local-' + type;
     var headerSelector = '#' + type + 's-header';
 
-    return $.ajax({url: url}).then(function(data) {
+    return $.ajax({url: '/list-projects', data: {type: type}}).then(function(data) {
       $(dialogSelector + ' .btn').removeClass('hidden');
       $(dialogSelector + ' .imported').addClass('hidden');
       $('#ctl').addClass('hidden').appendTo('body');  // Save project toolbar before items removal
       $('.' + itemClass).remove();
       $.each(data.result || {}, function(k, v) {
-        $(dialogSelector + ' [rel="' + k + '"] .btn').addClass('hidden');
-        $(dialogSelector + ' [rel="' + k + '"] .imported').removeClass('hidden');
+        $(dialogSelector + ' [mos-name="' + k + '"] .btn').addClass('hidden');
+        $(dialogSelector + ' [mos-name="' + k + '"] .imported').removeClass('hidden');
         var e = clone('#local-entry-template').addClass(itemClass);
         e.find('.name').text(k).attr({type: type});
+        e.find('.title').text(v.description || '');
         e.find('.tags').text((v.tags || []).join(' '));
+        e.attr({'mos-name': k, 'mos-type': type});
         $(headerSelector).after(e);
       });
+
+      // Select last-used project
+      var ptype = getCookie('mos-type');
+      var pname = getCookie('mos-name');
+      $('.local-project[mos-name="' + pname + '"][mos-type="' + ptype + '"]').click();
     });
   };
 
   $(document).off('click', '.remote-project .btn');
   $(document).on('click', '.remote-project .btn', function() {
     var btn = $(this);
-    var type = btn.closest('[type]').attr('type');
+    var type = btn.closest('[mos-type]').attr('mos-type');
     var url = $(this).closest('tr').find('a.name').attr('href');
-    startSpinner(btn);
-    $.ajax({url: '/import-' + type, data: {url: url}}).always(function() {
+    spin(btn);
+    $.ajax({url: '/import-project', data: {url: url, type: type}}).always(function() {
       syncImportedProjects(type).always(function() {
-        btn.button('reset');
+        stopspin(btn);
       });
-    });
+    }).fail(function() { stopspin(btn); });
   });
 
   var loadRemoteProjects = function(type) {
@@ -193,7 +235,7 @@
         entry.find('.title').text(v.description || '');
         entry.find('.tags').text((v.tags || []).join(' '));
         entry.find('.author').text(v.author || '');
-        entry.attr({rel: k, type: type});
+        entry.attr({'mos-name': k, 'mos-type': type});
       });
       // $('[type="checkbox"]').iCheck({checkboxClass: 'icheckbox_flat-green', radioClass: 'iradio_flat-green'});
     }).always(function() {
@@ -205,8 +247,7 @@
 
   $(document).off('mouseenter mouseleave', '.local-project');
   $(document).on('mouseenter', '.local-project', function(ev) {
-    var el = $(this).find('.ctl');
-    $('#ctl').removeClass('hidden').appendTo(el);
+    $('#ctl').removeClass('hidden').appendTo(this);
   }).on('mouseleave', '.local-project', function() {
     $('#ctl').addClass('hidden');
   });
@@ -214,16 +255,151 @@
   $(document).off('click', '.project-control-toolbar .do-remove');
   $(document).on('click', '.project-control-toolbar .do-remove', function() {
     if (!confirm('Click "OK" to delete this project.')) return;
-    var el = $(this).closest('.local-project').find('.name');
-    var name = el.text();
-    var type = el.attr('type');
-    var data = {filename: '.'};
-    data[type] = name;
-    $.ajax({global:true, url: '/' + type + '/rm', data: data}).always(function() {
-      syncImportedProjects(type);
+    var el = $(this).closest('.local-project');
+    var data = { type: el.attr('mos-type'), project: el.attr('mos-name'), filename: '.' };
+    el.removeClass('selected');
+    $.ajax({global:true, url: '/p/rm', data: data}).always(function() {
+      syncImportedProjects(data.type);
     });
   });
 
-  $('[data-toggle="tooltip"]').tooltip()
+  $(document).off('click', '.project-control-toolbar .do-duplicate');
+  $(document).on('click', '.project-control-toolbar .do-duplicate', function() {
+    var el = $(this).closest('.local-project');
+    var data = { type: el.attr('mos-type'), project: el.attr('mos-name') };
+    var fname = prompt('Enter project name, for example: ' + data.project '-1');
+    if (!fname || !fname.match(/^[\w_-]+$/)) {
+      addLog('Bad project name. Use digits, letters, dashes, underscores');
+      return;
+    }
+    $.ajax({global:true, url: '/xx', data: data}).always(function() {
+      syncImportedProjects(data.type);
+    });
+  });
 
+  var saveFile = function() {
+    var el = $('.local-project.selected');
+    var data = {
+      type: el.attr('mos-type'),
+      project: el.attr('mos-name'),
+      filename: $('#file-dropdown').val(),
+      data: b64enc(editor.getValue()),
+    };
+    return $.ajax({global:true, url: '/p/set', data: data}).always(function() {
+      $('#file-dropdown').change();
+      addLog('File ' + data.filename + ' saved.\n');
+    });
+  };
+
+  $(document).off('click', '#toolbar-save-button');
+  $(document).on('click', '#toolbar-save-button', function() {
+    var btn = $(this);
+    spin(btn);
+    saveFile().always(function() { stopspin(btn); });
+  });
+
+  $(document).off('click', '#toolbar-delete-button');
+  $(document).on('click', '#toolbar-delete-button', function() {
+    if (!confirm('Click "OK" to delete this file.')) return;
+    var el = $('.local-project.selected');
+    var d = { type: el.attr('mos-type'), project: el.attr('mos-name'), filename: $('#file-dropdown').val() };
+    $.ajax({global:true, url: '/p/rm', data: d}).always(function() {
+      $('.local-project.selected').click();
+      addLog('File ' + d.filename + ' deleted.\n');
+    });
+  });
+
+  $(document).off('click', '#toolbar-new-button');
+  $(document).on('click', '#toolbar-new-button', function() {
+    var fname = prompt('Enter file name, for example: fs/data.txt', '');
+    if (!fname) return;
+    var el = $('.local-project.selected');
+    var d = { type: el.attr('mos-type'), project: el.attr('mos-name'), filename: fname, data: '' };
+    $.ajax({global:true, url: '/p/set', data: d}).always(function() {
+      $('.local-project.selected').click();
+      addLog('File ' + d.filename + ' created.\n');
+    });
+  });
+
+  $(document).off('click', '#toolbar-copy-button');
+  $(document).on('click', '#toolbar-copy-button', function() {
+    var btn = $(this);
+    var fileName = $('#file-dropdown').val().replace(/^.*\//, '');
+    var text = editor.getValue();
+    if (!fileName) return;
+    spin(btn);
+    saveFile().then(function() {
+      var d = {method: 'FS.Put', args: JSON.stringify({filename: fileName, data: b64enc(text)})}
+      $.ajax({url: '/call', data: d}).then(function() {
+        addLog('File ' + fileName + ' copied.\n');
+        $.ajax({url: '/call', data: {method: 'Sys.Reboot'}}).always(function() {
+          setTimeout(function() {
+            $.ajax({url: '/call', data: {method: 'Sys.GetInfo'}}).always(function() {
+              stopspin(btn);
+            });
+          }, 1000);
+        });
+      }).fail(function() { stopspin(btn); });
+    });
+  });
+
+  $(document).off('click', '#toolbar-build-button');
+  $(document).on('click', '#toolbar-build-button', function() {
+    var btn = $(this);
+    var el = $('.local-project.selected');
+    var d = { app: el.attr('mos-name'), arch: (ui.info || {}).arch };
+    if (!d.app || !d.arch) {
+      new PNotify({ title: 'Need application and architecture selected', type: 'error' });
+      return;
+    }
+    spin(btn);
+    $.ajax({ global: false, url: '/app/build', data: d }).always(function(data) {
+      stopspin(btn);
+    });
+  });
+
+  $(document).off('click', '#toolbar-flash-button');
+  $(document).on('click', '#toolbar-flash-button', function() {
+    var btn = $(this);
+    var el = $('.local-project.selected');
+    var d = { project: el.attr('mos-name'), type: el.attr('mos-type') };
+    spin(btn);
+    $.ajax({ global: false, url: '/app/getfwpath', data: d }).then(function(data) {
+      return $.ajax({global: false, url: '/flash', data: {firmware: data.result}});
+    }).done(function() {
+      stopspin(btn);
+    });
+  });
+
+  $(document).off('click', '.create-project-button');
+  $(document).on('click', '.create-project-button', function() {
+    var type = $(this).closest('.title').attr('id') == 'libs-header' ? 'lib' : 'app';
+    var fname = prompt('Enter project name, for example: my-' + type, '');
+    if (!fname || !fname.match(/^[\w_-]+$/)) {
+      addLog('Bad project name. Use digits, letters, dashes, underscores');
+      return;
+    }
+    var d = {
+      type: type,
+      url: 'https://github.com/mongoose-os-' + type + 's/empty',
+      target_name: fname,
+    };
+    var btn = spin(this);
+    console.log(d);
+    $.ajax({url: '/import-project', global: false, data: d}).always(function() {
+      syncImportedProjects(type).always(function() {
+        stopspin(btn);
+      });
+    }).always(function() { stopspin(btn); });
+  });
+
+  $(document).on('mos-devconn');
+  $(document).on('mos-devconn', function() {
+    var devAddr = $('.connect-input').val() || '';
+    $('#toolbar-flash-button').prop('disabled', devAddr[0] != '/');
+  });
+  $(document).trigger('mos-devconn');
+
+  $('[data-toggle="tooltip"]').tooltip();
+  //# sourceURL=page_code.js
 </script>

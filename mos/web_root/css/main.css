@@ -11,6 +11,7 @@ code { color: green; white-space: pre !important;}
 .editor-navbar { margin-top: 5px; margin-left: 40px; }
 
 /* DASHBOARD STYLES */
+.tooltip-inner { max-width: 40em !important; }
 .left_col.menu_fixed { top: 0; overflow-y: auto; }
 .side-menu { margin-top: 0 !important;}
 #top_nav { line-height: 32px; height: 32px; margin: 0 10px; border-bottom: 1px solid #ccc; position: relative; }
@@ -54,7 +55,9 @@ input.form-control { box-shadow: none !important; }
 .descr { color: silver; }
 .list-group-item.title { background-color: #eee; xbackground: rgb(42, 63, 84); xcolor: #eee;}
 .list-group-item:not(.title) { cursor: pointer;}
-.list-group-item.project.selected { background-color: #ffe; }
+.local-project.selected { background-color: #ffe; }
+#file-dropdown { font-family: Consolas, Menlo, Monaco, monospace; margin-top: -5px; width: 15em; }
+/*#apps-header .btn, #libs-header .btn { min-width: 10em; }*/
 
 /* FILE MANAGER PAGE */
 #file-list { overflow-y: auto; }
