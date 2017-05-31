@@ -34,7 +34,7 @@ NM = xtensa-esp32-elf-nm
 COMPONENT_EXTRA_INCLUDES = $(MGOS_PATH) $(MGOS_ESP_PATH)/include $(SPIFFS_PATH) \
                            $(GEN_DIR) $(APP_SOURCE_DIRS)
 
-MGOS_SRCS += mgos_config.c mgos_gpio.c mgos_hooks.c mgos_init.c mgos_mongoose.c \
+MGOS_SRCS += mgos_config.c mgos_gpio.c mgos_init.c mgos_mongoose.c \
              mgos_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
              mgos_timers_mongoose.c mgos_uart.c mgos_utils.c mgos_dlsym.c \
              esp_mmap.c \
