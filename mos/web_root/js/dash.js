@@ -2,7 +2,6 @@ var ui = {
   connected: null,    // Whether the device is connected
   address: null,      // Serial port, or RPC address of the device
   info: null,         // Result of the Sys.GetInfo call
-  showWizard: true,
   checkPortsTimer: null,
   checkPortsFreq: 1000,
   pageCache: {}
@@ -50,7 +49,7 @@ $(document).on('click', '#reboot-button', function() {
 $(document).on('click', '#version-update', function(ev) {
   if (!confirm('Click "OK" to start self-update. Restart mos tool when done.')) return;
   var btn = $(this);
-  spin(btn);
+  startSpinner(btn);
   $.ajax({url: '/update', global: false}).done(function() {
     new PNotify({title: 'Update successful. Please restart mos tool.', type: 'success'});
   }).fail(function(err) {
@@ -59,7 +58,7 @@ $(document).on('click', '#version-update', function(ev) {
       new PNotify({title: 'Error', text: text, type: 'error'});
     }
   }).always(function() {
-    stopspin(btn);
+    btn.button('reset');
   });
 });
 
@@ -124,8 +123,6 @@ var guesslang = function(filename) {
   if ((filename || '').match(/\.js$/)) return 'javascript';
   if ((filename || '').match(/\.json$/)) return 'json';
   if ((filename || '').match(/\.ya?ml$/)) return 'yaml';
-  if ((filename || '').match(/\.(c|cpp|h)$/)) return 'c_cpp';
-  if ((filename || '').match(/\.md$/)) return 'markdown';
   return 'text';
 };
 var mkeditor = function(id, lang) {
@@ -221,16 +218,10 @@ $(window).resize(function(ev) {
 // Device connect code
 ///////////////////////////////////////////////////////////////////////////////
 
-var spin = function(btn) {
-  var el = $(btn).attr('orig-class', $(btn).find('.fa').attr('class'));
-  el.find('.fa').attr('class', 'fa fa-refresh fa-spin')
-  el.prop('disabled', true);
-  return el;
-};
-
-var stopspin = function(btn) {
-  $(btn).find('.fa').attr('class', btn.attr('orig-class'));
-  $(btn).prop('disabled', false);
+var startSpinner = function(btn) {
+  $(btn).attr('data-loading-text', '<i class="fa fa-refresh fa-spin"></i>' + $(btn).text());
+  $(btn).prop('disabled', true);
+  $(btn).button('loading');
 };
 
 var formatSize = function(free, max) {
@@ -308,10 +299,7 @@ var checkPorts = function() {
       ui.connected = result.IsConnected;
       ui.address = port;
       if (ui.connected && ui.address) probeDevice();
-      if (!ui.connected && showWizard) {
-        showWizard = false;
-        $('#splash').modal();
-      }
+      if (!ui.connected) $('#splash').modal();
       updateDeviceStatus();
     }
     if (ports.length > 0) {
@@ -334,11 +322,10 @@ $(document).on('click', '.connect-button', function() {
   var btn = $(this);
   var port = btn.closest('.form').find('.connect-input').val();
   if (!port || port.match(/^\s*$/)) return;
-  spin(btn);
-  $(document).trigger('mos-devconn');
+  startSpinner(btn);
   $.ajax({url: '/connect', global: false, data: {port: port, reconnect: true}}).always(function() {
     checkPorts().always(function() {
-      stopspin(btn);
+      btn.button('reset');
     });
   });
 });
@@ -346,10 +333,10 @@ $(document).on('click', '.connect-button', function() {
 $(document).on('click', '#flash-button', function() {
   var btn = $(this);
   var arch = btn.closest('.block_content').find('[name="options"]:checked').val();
-  spin(btn);
+  startSpinner(btn);
   $.ajax({url: '/flash', global: false, data: {firmware: arch}}).always(function() {
     setTimeout(function() {
-      probeDevice().always(function() { stopspin(btn); });
+      probeDevice().always(function() { btn.button('reset'); });
     }, 2000);
   });
 });
@@ -358,12 +345,12 @@ $(document).on('click', '#wifi-button', function() {
   var ssid = $('#wifi\\.sta\\.ssid').val();
   var pass = $('#wifi\\.sta\\.pass').val();
   var btn = $(this);
-  spin(btn);
+  startSpinner(btn);
   $.ajax({url: '/wifi', data: {ssid: ssid, pass: pass}}).done(function() {
     document.cookie = 'ssid=' + ssid + '; pass=' + pass;
   }).always(function(json) {
     setTimeout(function() {
-      probeDevice().always(function() { stopspin(btn); });
+      probeDevice().always(function() { btn.button('reset'); });
     }, 2000);
   });
 });
@@ -375,17 +362,13 @@ $(document).on('click', '#prototype-button', function() {
 });
 
 var addLog = function(msg, type) {
-  var el = type == 'uart' ? $('#device-logs')[0] : $('#mos-logs')[0];
+  var el = type == 'uart' ? $('#device-logs') : $('#mos-logs');
+  // el.each(function(i, el) {
   var mustScroll = (el.scrollTop === (el.scrollHeight - el.clientHeight));
   var data = (msg || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  // el.innerHTML += data;
   $('<span/>').text(data).appendTo(el);
+  // el.append($('<span/>').text(data));
   if (mustScroll) el.scrollTop = el.scrollHeight;
-};
-
-// https://developer.mozilla.org/en/docs/Web/API/WindowBase64/Base64_encoding_and_decoding
-function b64enc(str) {
-  return btoa(
-      encodeURIComponent(str).replace(/%([0-9A-F]{2})/g, function(match, p1) {
-        return String.fromCharCode('0x' + p1);
-      }));
+  // });
 };
