@@ -212,24 +212,27 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
   uart_div_modify(us->uart_no, UART_CLK_FREQ / cfg->baud_rate);
 
   if (us->uart_no == 0) {
-    PIN_PULLUP_DIS(PERIPHS_IO_MUX_U0TXD_U);
-    PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0TXD_U, FUNC_U0TXD);
     if (cfg->dev.swap_rxcts_txrts) {
+      PIN_PULLUP_DIS(PERIPHS_IO_MUX_MTCK_U);
+      PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTCK_U, 4 /* FUNC_U0CTS */);
+      PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U, FUNC_U0RTS);
       SET_PERI_REG_MASK(PERIPHS_DPORT_BASEADDR + HOST_INF_SEL,
                         PERI_IO_UART0_PIN_SWAP);
     } else {
+      PIN_PULLUP_DIS(PERIPHS_IO_MUX_U0TXD_U);
+      PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0TXD_U, FUNC_U0TXD);
+      PIN_FUNC_SELECT(PERIPHS_IO_MUX_U0RXD_U, 0 /* FUNC_U0RXD */);
       CLEAR_PERI_REG_MASK(PERIPHS_DPORT_BASEADDR + HOST_INF_SEL,
                           PERI_IO_UART0_PIN_SWAP);
     }
   } else {
-    PIN_PULLUP_DIS(PERIPHS_IO_MUX_GPIO2_U);
-    PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO2_U, FUNC_U1TXD_BK);
     if (cfg->dev.swap_rxcts_txrts) {
-      SET_PERI_REG_MASK(PERIPHS_DPORT_BASEADDR + HOST_INF_SEL,
-                        PERI_IO_UART1_PIN_SWAP);
+      /* Swapping pins of UART1 is not supported, they all conflict with SPI
+       * flash anyway. */
+      return false;
     } else {
-      CLEAR_PERI_REG_MASK(PERIPHS_DPORT_BASEADDR + HOST_INF_SEL,
-                          PERI_IO_UART1_PIN_SWAP);
+      PIN_PULLUP_DIS(PERIPHS_IO_MUX_GPIO2_U);
+      PIN_FUNC_SELECT(PERIPHS_IO_MUX_GPIO2_U, FUNC_U1TXD_BK);
     }
   }
 
@@ -283,4 +286,33 @@ uint32_t esp_uart_raw_ints(int uart_no) {
 
 uint32_t esp_uart_int_mask(int uart_no) {
   return READ_PERI_REG(UART_INT_ENA(uart_no));
+}
+
+/*
+ * Accessor function which sets params. Intended for ffi.
+ */
+void esp_uart_config_set_params(struct mgos_uart_config *cfg,
+                                int rx_fifo_full_thresh, int rx_fifo_fc_thresh,
+                                int rx_fifo_alarm, int tx_fifo_empty_thresh,
+                                bool swap_rxcts_txrts) {
+  mgos_uart_hal_config_set_defaults(-1 /* uart_no, not used anyway */, cfg);
+  struct mgos_uart_dev_config *dcfg = &cfg->dev;
+
+  if (rx_fifo_full_thresh != -1) {
+    dcfg->rx_fifo_full_thresh = rx_fifo_full_thresh;
+  }
+
+  if (rx_fifo_fc_thresh != -1) {
+    dcfg->rx_fifo_fc_thresh = rx_fifo_fc_thresh;
+  }
+
+  if (rx_fifo_alarm != -1) {
+    dcfg->rx_fifo_alarm = rx_fifo_alarm;
+  }
+
+  if (tx_fifo_empty_thresh != -1) {
+    dcfg->tx_fifo_empty_thresh = tx_fifo_empty_thresh;
+  }
+
+  dcfg->swap_rxcts_txrts = swap_rxcts_txrts;
 }
