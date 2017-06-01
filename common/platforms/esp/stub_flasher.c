@@ -61,24 +61,22 @@ extern uint32_t _bss_start, _bss_end;
 int do_flash_erase(uint32_t addr, uint32_t len) {
   if (addr % FLASH_SECTOR_SIZE != 0) return 0x32;
   if (len % FLASH_SECTOR_SIZE != 0) return 0x33;
-  if (esp_rom_spiflash_unlock() != 0) return 0x34;
+  if (SPIUnlock() != 0) return 0x34;
 
   while (len > 0 && (addr % FLASH_BLOCK_SIZE != 0)) {
-    if (esp_rom_spiflash_erase_sector(addr / FLASH_SECTOR_SIZE) != 0)
-      return 0x35;
+    if (SPIEraseSector(addr / FLASH_SECTOR_SIZE) != 0) return 0x35;
     len -= FLASH_SECTOR_SIZE;
     addr += FLASH_SECTOR_SIZE;
   }
 
   while (len > FLASH_BLOCK_SIZE) {
-    if (esp_rom_spiflash_erase_block(addr / FLASH_BLOCK_SIZE) != 0) return 0x36;
+    if (SPIEraseBlock(addr / FLASH_BLOCK_SIZE) != 0) return 0x36;
     len -= FLASH_BLOCK_SIZE;
     addr += FLASH_BLOCK_SIZE;
   }
 
   while (len > 0) {
-    if (esp_rom_spiflash_erase_sector(addr / FLASH_SECTOR_SIZE) != 0)
-      return 0x37;
+    if (SPIEraseSector(addr / FLASH_SECTOR_SIZE) != 0) return 0x37;
     len -= FLASH_SECTOR_SIZE;
     addr += FLASH_SECTOR_SIZE;
   }
@@ -136,7 +134,7 @@ int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
 
   if (addr % FLASH_SECTOR_SIZE != 0) return 0x32;
   if (len % FLASH_SECTOR_SIZE != 0) return 0x33;
-  if (esp_rom_spiflash_unlock() != 0) return 0x34;
+  if (SPIUnlock() != 0) return 0x34;
 
   ub.nr = 0;
   ub.pr = ub.pw = ub.data;
@@ -162,13 +160,11 @@ int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
     while (erase && num_erased < wp.num_written + FLASH_WRITE_SIZE) {
       const uint32_t num_left = (len - num_erased);
       if (num_left >= FLASH_BLOCK_SIZE && addr % FLASH_BLOCK_SIZE == 0) {
-        if (esp_rom_spiflash_erase_block(addr / FLASH_BLOCK_SIZE) != 0)
-          return 0x35;
+        if (SPIEraseBlock(addr / FLASH_BLOCK_SIZE) != 0) return 0x35;
         num_erased += FLASH_BLOCK_SIZE;
       } else {
         /* len % FLASH_SECTOR_SIZE == 0 is enforced, no further checks needed */
-        if (esp_rom_spiflash_erase_sector(addr / FLASH_SECTOR_SIZE) != 0)
-          return 0x36;
+        if (SPIEraseSector(addr / FLASH_SECTOR_SIZE) != 0) return 0x36;
         num_erased += FLASH_SECTOR_SIZE;
       }
     }
@@ -181,8 +177,7 @@ int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
     wr.wait_time += ccount() - start_count;
     MD5Update(&ctx, ub.pr, FLASH_WRITE_SIZE);
     start_count = ccount();
-    if (esp_rom_spiflash_write(addr, (uint32_t *) ub.pr, FLASH_WRITE_SIZE) != 0)
-      return 0x37;
+    if (SPIWrite(addr, (uint32_t *) ub.pr, FLASH_WRITE_SIZE) != 0) return 0x37;
     wr.write_time += ccount() - start_count;
     ets_intr_lock();
     *nr -= FLASH_WRITE_SIZE;
@@ -216,7 +211,7 @@ int do_flash_read(uint32_t addr, uint32_t len, uint32_t block_size,
     while (num_sent < len && num_sent - num_acked < max_in_flight) {
       uint32_t n = len - num_sent;
       if (n > block_size) n = block_size;
-      if (esp_rom_spiflash_read(addr, (uint32_t *) buf, n) != 0) return 0x53;
+      if (SPIRead(addr, (uint32_t *) buf, n) != 0) return 0x53;
       send_packet(buf, n);
       MD5Update(&ctx, buf, n);
       addr += n;
@@ -245,7 +240,7 @@ int do_flash_digest(uint32_t addr, uint32_t len, uint32_t digest_block_size) {
     struct MD5Context block_ctx;
     MD5Init(&block_ctx);
     if (n > read_block_size) n = read_block_size;
-    if (esp_rom_spiflash_read(addr, (uint32_t *) buf, n) != 0) return 0x63;
+    if (SPIRead(addr, (uint32_t *) buf, n) != 0) return 0x63;
     MD5Update(&ctx, buf, n);
     if (digest_block_size > 0) {
       MD5Update(&block_ctx, buf, n);
@@ -325,7 +320,7 @@ uint8_t cmd_loop(void) {
         break;
       }
       case CMD_FLASH_ERASE_CHIP: {
-        resp = esp_rom_spiflash_erase_chip();
+        resp = SPIEraseChip();
         break;
       }
       case CMD_BOOT_FW:
@@ -355,15 +350,11 @@ void stub_main(void) {
   SelectSpiFunction();
   SET_PERI_REG_MASK(0x3FF00014, 1); /* Switch to 160 MHz */
 #elif defined(ESP32)
-  esp_rom_spiflash_attach(0 /* ishspi */, 0 /* legacy */);
-  /* Set flash to 40 MHz. Note: clkdiv _should_ be 2, but actual meausrement
-   * shows that with clkdiv = 1 clock is indeed 40 MHz. */
-  esp_rom_spiflash_config_clk(1, 1);
+  spi_flash_attach(0, 0);
 #endif
 
-  esp_rom_spiflash_config_param(
-      0 /* deviceId */, 16 * 1024 * 1024 /* chip_size */, FLASH_BLOCK_SIZE,
-      FLASH_SECTOR_SIZE, FLASH_PAGE_SIZE, 0xffff /* status_mask */);
+  SPIParamCfg(0, 16 * 1024 * 1024, FLASH_BLOCK_SIZE, FLASH_SECTOR_SIZE,
+              FLASH_PAGE_SIZE, 0xffff);
 
   if (baud_rate > 0) {
     ets_delay_us(10000);

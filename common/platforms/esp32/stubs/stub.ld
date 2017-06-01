@@ -40,6 +40,3 @@ SECTIONS {
 }
 
 INCLUDE "components/esp32/ld/esp32.rom.ld"
-
-PROVIDE(esp_rom_spiflash_attach = 0x40062a6c);
-PROVIDE(esp_rom_spiflash_config_clk = 0x40062bc8);

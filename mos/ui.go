@@ -384,9 +384,10 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		type GetPortsResult struct {
 			IsConnected bool
 			CurrentPort string
+			PortFlag    string
 			Ports       []string
 		}
-		reply := GetPortsResult{false, "", enumerateSerialPorts()}
+		reply := GetPortsResult{false, "", *portFlag, enumerateSerialPorts()}
 		if devConn != nil {
 			reply.CurrentPort = devConn.ConnectAddr
 			reply.IsConnected = devConn.IsConnected()

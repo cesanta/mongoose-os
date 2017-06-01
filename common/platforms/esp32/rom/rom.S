@@ -9,8 +9,6 @@ here = .
 
 #include "rom_functions.S"
 
-PROVIDE ( _x_unk_40061b88, 0x40061b88 )
-PROVIDE ( _x_unk_spi_400622c0, 0x400622c0 )
 PROVIDE ( _c_3ff000c8, 0x40062df0 )
 PROVIDE ( _c_3ff5b024, 0x40062e0c )
 PROVIDE ( _c_3ff5b000, 0x40062e10 )

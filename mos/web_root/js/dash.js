@@ -308,8 +308,8 @@ var checkPorts = function() {
       ui.connected = result.IsConnected;
       ui.address = port;
       if (ui.connected && ui.address) probeDevice();
-      if (!ui.connected && showWizard) {
-        showWizard = false;
+      if (!ui.connected && ui.showWizard) {
+        ui.showWizard = false;
         $('#splash').modal();
       }
       updateDeviceStatus();
@@ -328,7 +328,6 @@ var checkPorts = function() {
     ui.checkPortsTimer = setTimeout(checkPorts, ui.checkPortsFreq);
   });
 };
-checkPorts();
 
 $(document).on('click', '.connect-button', function() {
   var btn = $(this);
@@ -389,3 +388,18 @@ function b64enc(str) {
         return String.fromCharCode('0x' + p1);
       }));
 };
+
+// When we run first time, look at PortFlag, which is a --port mos argument.
+// If a user has specified --port, then connect to a device automatically.
+$.ajax({url: '/getports'}).then(function(data) {
+  var r = data.result || {};
+  if (!r.IsConnected && r.PortFlag != 'auto') {
+    ui.showWizard = false;
+    $.ajax({url: '/connect', data: {reconnect: true}}).always(function() {
+      checkPorts();
+    });
+  } else {
+    checkPorts();
+  }
+  console.log(data);
+});
