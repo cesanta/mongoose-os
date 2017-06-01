@@ -1273,9 +1273,18 @@ func getCustomLibLocations() (map[string]string, error) {
 	return customLibLocations, nil
 }
 
+type depsInitData struct {
+	Deps []string
+}
+
 func getDepsInitCCode(manifest *build.FWAppManifest) ([]byte, error) {
 	if len(manifest.Deps) == 0 {
 		return nil, nil
+	}
+
+	tplData := depsInitData{}
+	for _, v := range manifest.Deps {
+		tplData.Deps = append(tplData.Deps, strings.Replace(v, "-", "_", -1))
 	}
 
 	tpl := template.Must(template.New("depsInit").Parse(
@@ -1283,7 +1292,7 @@ func getDepsInitCCode(manifest *build.FWAppManifest) ([]byte, error) {
 	))
 
 	var c bytes.Buffer
-	if err := tpl.Execute(&c, manifest); err != nil {
+	if err := tpl.Execute(&c, tplData); err != nil {
 		return nil, errors.Trace(err)
 	}
 
