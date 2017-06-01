@@ -4,7 +4,7 @@ var ui = {
   info: null,         // Result of the Sys.GetInfo call
   showWizard: true,
   checkPortsTimer: null,
-  checkPortsFreq: 1000,
+  checkPortsFreq: 3000,
   pageCache: {}
 };
 
