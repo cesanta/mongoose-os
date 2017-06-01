@@ -267,7 +267,7 @@
   $(document).on('click', '.project-control-toolbar .do-duplicate', function() {
     var el = $(this).closest('.local-project');
     var data = { type: el.attr('mos-type'), project: el.attr('mos-name') };
-    var fname = prompt('Enter project name, for example: ' + data.project '-1');
+    var fname = prompt('Enter project name, for example: ' + data.project + '-1');
     if (!fname || !fname.match(/^[\w_-]+$/)) {
       addLog('Bad project name. Use digits, letters, dashes, underscores');
       return;

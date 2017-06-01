@@ -159,9 +159,6 @@ func main() {
 
 	defer glog.Flush()
 
-	// If no arguments are given, show help and start UI
-	isUI = len(os.Args) == 1
-
 	consoleMsgs = make(chan []byte, 10)
 
 	// -X, if given, must be the first arg.
@@ -173,11 +170,9 @@ func main() {
 	initFlags()
 	flag.Parse()
 	pflagenv.Parse(envPrefix)
-	if flag.Arg(0) == "ui" {
-		isUI = true
-	}
 
-	if isUI {
+	if len(flag.Args()) == 0 || flag.Arg(0) == "ui" {
+		isUI = true
 		*reconnect = true
 	}
 
@@ -201,11 +196,7 @@ func main() {
 	}
 	if cmd != nil && cmd.needDevConn {
 		var err error
-		if cmd.name == "ui" {
-			devConn, err = createDevConnWithJunkHandler(ctx, consoleJunkHandler, MqttLogHandler)
-		} else {
-			devConn, err = createDevConn(ctx)
-		}
+		devConn, err = createDevConn(ctx)
 		if err != nil {
 			fmt.Println(errors.Trace(err))
 			return
