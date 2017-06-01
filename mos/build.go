@@ -217,7 +217,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	}
 
 	manifest, mtime, err := readManifestWithLibs(
-		appDir, bParams, nil, logFile, libsDir, false, /* skip clean */
+		appDir, bParams, nil, nil, logFile, libsDir, false, /* skip clean */
 	)
 	if err != nil {
 		return errors.Trace(err)
@@ -844,7 +844,7 @@ func buildRemote(bParams *buildParams) error {
 
 	// Get manifest which includes stuff from all libs
 	manifest, _, err := readManifestWithLibs(
-		tmpCodeDir, bParams, nil, os.Stdout, userLibsDir, true, /* skip clean */
+		tmpCodeDir, bParams, nil, nil, os.Stdout, userLibsDir, true, /* skip clean */
 	)
 	if err != nil {
 		return errors.Trace(err)
@@ -1131,7 +1131,7 @@ func cleanupModuleName(name string) string {
 // If skipClean is true, then clean or non-existing libs will NOT be expanded,
 // it's useful when crafting a manifest to send to the remote builder.
 func readManifestWithLibs(
-	dir string, bParams *buildParams, visitedDirs []string, logFile io.Writer,
+	dir string, bParams *buildParams, visitedDirs, parentDeps []string, logFile io.Writer,
 	userLibsDir string, skipClean bool,
 ) (*build.FWAppManifest, time.Time, error) {
 	for _, v := range visitedDirs {
@@ -1162,9 +1162,13 @@ libs:
 
 		reportf("Handling lib %q...", name)
 
+		// Collect all deps: from parent manifest(s), main manifest, and all libs
+		// encountered so far
+		curDeps := append(parentDeps, append(manifest.Deps, newDeps...)...)
+
 		// Check if this lib is already handled (present in deps)
 		// If yes, skip
-		for _, v := range append(manifest.Deps, newDeps...) {
+		for _, v := range curDeps {
 			if v == name {
 				reportf("Already handled, skipping")
 				continue libs
@@ -1221,7 +1225,7 @@ libs:
 		reportf("Prepared local dir: %q", libDirAbs)
 
 		libManifest, libMtime, err := readManifestWithLibs(
-			libDirAbs, bParams, append(visitedDirs, dir), logFile, userLibsDir, skipClean,
+			libDirAbs, bParams, append(visitedDirs, dir), curDeps, logFile, userLibsDir, skipClean,
 		)
 		if err != nil {
 			return nil, time.Time{}, errors.Trace(err)
