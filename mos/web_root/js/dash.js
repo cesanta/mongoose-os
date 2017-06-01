@@ -263,7 +263,6 @@ var updateDeviceStatus = function() {
   var titles = ['no device address', 'not connected', 'connected, no IP', 'online'];
   var wifi = ui.info && ui.info.wifi && ui.info.wifi.sta_ip;
   var n = !ui.address ? 0 : !ui.connected || !ui.info ? 1 : wifi ? 3 : 2;
-  // console.log(n, ui.connected, ui.address, ui.info);
 
   $('.devconn-icon').removeClass(classes.join(' ')).addClass(classes[n] || classes[0]);
   $('.devconn-text').text(titles[n] || titles[0]);
@@ -290,6 +289,12 @@ var updateDeviceStatus = function() {
 var probeDevice = function() {
   return $.ajax({url: '/call', global: false, data: {method: 'Sys.GetInfo', timeout: 5}}).then(function(data) {
     ui.info = data.result;
+    // Let other pages know that the device info has changed
+    var infostr = JSON.stringify(ui.info);
+    if (ui.infostr != infostr) {
+      ui.infostr = infostr;
+      $(document).trigger('mos-devinfo');
+    }
   }).fail(function() {
     ui.info = null;
   }).always(function() {
@@ -307,6 +312,7 @@ var checkPorts = function() {
     if (ui.connected != result.IsConnected || ui.address != port) {
       ui.connected = result.IsConnected;
       ui.address = port;
+      if (ui.connected) ui.showWizard = false;  // Dont trigger wizard dialog from this point on
       if (ui.connected && ui.address) probeDevice();
       if (!ui.connected && ui.showWizard) {
         ui.showWizard = false;
@@ -334,7 +340,6 @@ $(document).on('click', '.connect-button', function() {
   var port = btn.closest('.form').find('.connect-input').val();
   if (!port || port.match(/^\s*$/)) return;
   spin(btn);
-  $(document).trigger('mos-devconn');
   $.ajax({url: '/connect', global: false, data: {port: port, reconnect: true}}).always(function() {
     checkPorts().always(function() {
       stopspin(btn);
@@ -401,5 +406,4 @@ $.ajax({url: '/getports'}).then(function(data) {
   } else {
     checkPorts();
   }
-  console.log(data);
 });

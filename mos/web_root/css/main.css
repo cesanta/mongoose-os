@@ -56,8 +56,8 @@ input.form-control { box-shadow: none !important; }
 .list-group-item.title { background-color: #eee; xbackground: rgb(42, 63, 84); xcolor: #eee;}
 .list-group-item:not(.title) { cursor: pointer;}
 .local-project.selected { background-color: #ffe; }
-#file-dropdown { font-family: Consolas, Menlo, Monaco, monospace; margin-top: -5px; width: 15em; }
-/*#apps-header .btn, #libs-header .btn { min-width: 10em; }*/
+#file-dropdown, #arch-dropdown { font-family: Consolas, Menlo, Monaco, monospace; margin-top: -5px; }
+#file-dropdown { width: 15em; }
 
 /* FILE MANAGER PAGE */
 #file-list { overflow-y: auto; }
