@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"cesanta.com/common/go/ourio"
 	"cesanta.com/mos/build"
 )
 
@@ -140,6 +141,23 @@ func initProjectManagementEndpoints() {
 		}
 
 		httpReply(w, ret, err)
+	})
+
+	http.HandleFunc("/duplicate-project", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		project_path, err := getProjectPath(r)
+		if err != nil {
+			httpReply(w, false, err)
+			return
+		}
+		target_name := r.FormValue("target_name")
+		if target_name == "" {
+			httpReply(w, false, errors.Errorf("target_name is required"))
+			return
+		}
+		target_path := filepath.Join(filepath.Dir(project_path), target_name)
+		err = ourio.CopyDir(project_path, target_path, nil)
+		httpReply(w, err == nil, err)
 	})
 
 	http.HandleFunc("/import-project", func(w http.ResponseWriter, r *http.Request) {
