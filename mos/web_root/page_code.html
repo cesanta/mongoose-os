@@ -33,6 +33,14 @@
       &nbsp;|&nbsp;&nbsp;
       <button class="btn btn-sm btn-success" id="toolbar-copy-button" data-toggle="tooltip" data-placement="top" title="Save&nbsp;file,&nbsp;copy&nbsp;to&nbsp;device,&nbsp;reboot&nbsp;device"><i class="fa fa-upload"></i> </button>
       &nbsp;|&nbsp;&nbsp;
+      <span class="form-inline">
+        <select class="form-control input-sm" id="arch-dropdown">
+          <option>esp32</option>
+          <option>esp8266</option>
+          <option>cc3200</option>
+        </select>
+      </span>
+      &nbsp;
       <button class="btn btn-sm btn-success" id="toolbar-build-button" data-toggle="tooltip" data-placement="top" title="Rebuild&nbsp;app&nbsp;firmware&nbsp;(slow)"><i class="fa fa-wrench"></i> </button>
       <button class="btn btn-sm btn-success" id="toolbar-flash-button" data-toggle="tooltip" data-placement="top" title="Flash&nbsp;app&nbsp;firmware&nbsp;to&nbsp;device&nbsp;(slow)"><i class="fa fa-flash"></i> </button>
 
@@ -348,13 +356,17 @@
   $(document).on('click', '#toolbar-build-button', function() {
     var btn = $(this);
     var el = $('.local-project.selected');
-    var d = { app: el.attr('mos-name'), arch: (ui.info || {}).arch };
+    var d = { app: el.attr('mos-name'), arch: $('#arch-dropdown').val() };
     if (!d.app || !d.arch) {
       new PNotify({ title: 'Need application and architecture selected', type: 'error' });
       return;
     }
     spin(btn);
-    $.ajax({ global: false, url: '/app/build', data: d }).always(function(data) {
+    $.ajax({ global: false, url: '/app/build', data: d }).fail(function(xhr) {
+      var errorText = xhr.responseJSON ? xhr.responseJSON.error : 'internal error';
+      addLog('Build failed:' + errorText);
+      new PNotify({ title: 'Build failed', text: errorText, type: 'error' });
+    }).always(function(data) {
       stopspin(btn);
     });
   });
@@ -394,13 +406,13 @@
     }).always(function() { stopspin(btn); });
   });
 
-  $(document).on('mos-devconn');
-  $(document).on('mos-devconn', function() {
+  $(document).off('mos-devinfo');
+  $(document).on('mos-devinfo', function() {
     var devAddr = $('.connect-input').val() || '';
     $('#toolbar-flash-button').prop('disabled', devAddr[0] != '/');
+    $('#arch-dropdown').val(ui.info ? ui.info.arch : 'esp32');
   });
-  $(document).trigger('mos-devconn');
+  $(document).trigger('mos-devinfo');
 
   $('[data-toggle="tooltip"]').tooltip();
-  //# sourceURL=page_code.js
 </script>
