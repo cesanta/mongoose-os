@@ -24,7 +24,7 @@ void mg_json_emit_str(struct mbuf *b, const struct mg_str s, int quote);
 #define JSON_OUT_MBUF(mbuf_addr)   \
   {                                \
     mg_json_printer_mbuf, {        \
-      { (char *) mbuf_addr, 0, 0 } \
+      { (void *) mbuf_addr, 0, 0 } \
     }                              \
   }
 

@@ -59,7 +59,8 @@ Example:
 ```javascript
 HTTP.query({
   url: 'http://httpbin.org/post',
-  data: {foo: 1, bar: 'baz'},  // Optional. If set, POST is used
+  headers: { 'X-Foo': 'bar' },  // Optional - headers
+  data: {foo: 1, bar: 'baz'},   // Optional. If set, POST is used
   success: function(body, full_http_msg) { print(body); },
   error: function(err) { print(err); },  // Optional
 });
