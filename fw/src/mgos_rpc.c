@@ -14,7 +14,6 @@
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_mongoose.h"
 #include "fw/src/mgos_rpc.h"
-#include "fw/src/mgos_rpc_channel_mqtt.h"
 #include "fw/src/mgos_rpc_channel_uart.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_uart.h"
@@ -191,16 +190,6 @@ enum mgos_init_result mgos_rpc_init(void) {
 
 #if MGOS_ENABLE_RPC_CHANNEL_HTTP
   mgos_register_http_endpoint(HTTP_URI_PREFIX, mgos_rpc_http_handler, NULL);
-#endif
-
-#if MGOS_ENABLE_RPC_CHANNEL_MQTT
-  if (sccfg->mqtt.enable) {
-    struct mg_rpc_channel *mch =
-        mg_rpc_channel_mqtt(mg_mk_str(get_cfg()->device.id));
-    if (mch == NULL) return MGOS_INIT_MG_RPC_FAILED;
-    mg_rpc_add_channel(c, mg_mk_str(MG_RPC_DST_DEFAULT), mch,
-                       sccfg->mqtt.is_trusted);
-  }
 #endif
 
 #if MGOS_ENABLE_RPC_CHANNEL_UART
