@@ -73,7 +73,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-        <h2 class="modal-title text-center">Library Manager</h2>
+        <h2 class="modal-title text-center">Library Manager &nbsp;&nbsp;&nbsp;<small class="xhidden"><i class="fa fa-refresh fa-spin"></i> loading...</small></h2>
       </div>
       <div class="modal-body">
         <div class="form form-inline" style="margin-bottom: 0px;">
@@ -104,7 +104,7 @@
     <div class="modal-content">
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-        <h2 class="modal-title text-center">App Manager</h2>
+        <h2 class="modal-title text-center">App Manager &nbsp;&nbsp;&nbsp;<small class="hidden"><i class="fa fa-refresh fa-spin"></i> loading...</small> </h2>
       </div>
       <div class="modal-body">
         <div class="form form-inline" style="margin-bottom: 0px;">
@@ -245,13 +245,8 @@
         entry.find('.author').text(v.author || '');
         entry.attr({'mos-name': k, 'mos-type': type});
       });
-      // $('[type="checkbox"]').iCheck({checkboxClass: 'icheckbox_flat-green', radioClass: 'iradio_flat-green'});
-    }).always(function() {
-      syncImportedProjects(type);
     });
   };
-  loadRemoteProjects('app');
-  loadRemoteProjects('lib');
 
   $(document).off('mouseenter mouseleave', '.local-project');
   $(document).on('mouseenter', '.local-project', function(ev) {
@@ -412,7 +407,21 @@
     $('#toolbar-flash-button').prop('disabled', devAddr[0] != '/');
     $('#arch-dropdown').val(ui.info ? ui.info.arch : 'esp32');
   });
-  $(document).trigger('mos-devinfo');
 
+  $(document).off('show.bs.modal', '#app-manager, #lib-manager');
+  $(document).on('show.bs.modal', '#app-manager, #lib-manager', function(ev) {
+    var modal = $(this);
+    var type = modal.attr('id') == 'app-manager' ? 'app' : 'lib';
+    var loadingMessage = modal.find('h2 small').removeClass('hidden');
+    modal.find('.projects').empty();
+    loadRemoteProjects(type).always(function() {
+      loadingMessage.addClass('hidden');
+    });
+  });
+
+  syncImportedProjects('app');
+  syncImportedProjects('lib');
+
+  $(document).trigger('mos-devinfo');
   $('[data-toggle="tooltip"]').tooltip();
 </script>
