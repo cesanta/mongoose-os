@@ -173,7 +173,6 @@ static void mgos_mqtt_ev(struct mg_connection *nc, int ev, void *ev_data,
     /* fall through */
     case MG_EV_MQTT_PUBACK:
     case MG_EV_MQTT_CONNECT:
-    case MG_EV_MQTT_PUBREC:
     case MG_EV_MQTT_PUBREL:
     case MG_EV_MQTT_PUBCOMP:
     case MG_EV_MQTT_SUBSCRIBE:
@@ -183,6 +182,12 @@ static void mgos_mqtt_ev(struct mg_connection *nc, int ev, void *ev_data,
     case MG_EV_MQTT_DISCONNECT:
       call_global_handlers(nc, ev, ev_data, user_data);
       break;
+    case MG_EV_MQTT_PUBREC: {
+      struct mg_mqtt_message *msg = (struct mg_mqtt_message *) ev_data;
+      mg_mqtt_pubrel(nc, msg->message_id);
+      call_global_handlers(nc, ev, ev_data, user_data);
+      break;
+    }
   }
 }
 
