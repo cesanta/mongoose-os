@@ -23,6 +23,7 @@
 
 static mgos_wifi_scan_cb_t s_wifi_scan_cb;
 static void *s_wifi_scan_cb_arg;
+static uint8_t s_cur_mode = NULL_MODE;
 
 static void invoke_wifi_on_change_cb(void *arg) {
   mgos_wifi_on_change_cb((enum mgos_wifi_status)(int) arg);
@@ -87,18 +88,18 @@ static bool mgos_wifi_set_mode(uint8_t mode) {
     return false;
   }
 
+  s_cur_mode = mode;
+
   return true;
 }
 
 static bool mgos_wifi_add_mode(uint8_t mode) {
-  uint8_t cur_mode = wifi_get_opmode();
-
-  if (cur_mode == mode || cur_mode == STATIONAP_MODE) {
+  if (s_cur_mode == mode || s_cur_mode == STATIONAP_MODE) {
     return true;
   }
 
-  if ((cur_mode == SOFTAP_MODE && mode == STATION_MODE) ||
-      (cur_mode == STATION_MODE && mode == SOFTAP_MODE)) {
+  if ((s_cur_mode == SOFTAP_MODE && mode == STATION_MODE) ||
+      (s_cur_mode == STATION_MODE && mode == SOFTAP_MODE)) {
     mode = STATIONAP_MODE;
   }
 
@@ -106,16 +107,14 @@ static bool mgos_wifi_add_mode(uint8_t mode) {
 }
 
 static bool mgos_wifi_remove_mode(uint8_t mode) {
-  uint8_t cur_mode = wifi_get_opmode();
-
-  if ((mode == STATION_MODE && cur_mode == SOFTAP_MODE) ||
-      (mode == SOFTAP_MODE && cur_mode == STATION_MODE)) {
+  if ((mode == STATION_MODE && s_cur_mode == SOFTAP_MODE) ||
+      (mode == SOFTAP_MODE && s_cur_mode == STATION_MODE)) {
     /* Nothing to do. */
     return true;
   }
   if (mode == STATIONAP_MODE ||
-      (mode == STATION_MODE && cur_mode == STATION_MODE) ||
-      (mode == SOFTAP_MODE && cur_mode == SOFTAP_MODE)) {
+      (mode == STATION_MODE && s_cur_mode == STATION_MODE) ||
+      (mode == SOFTAP_MODE && s_cur_mode == SOFTAP_MODE)) {
     mode = NULL_MODE;
   } else if (mode == STATION_MODE) {
     mode = SOFTAP_MODE;
