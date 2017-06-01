@@ -7,3 +7,5 @@ sources:
 config_schema:
   - ["c_rpc", "o", {"title": "c_rpc app settings"}]
   - ["c_rpc.peer", "s", "", {"title": "Peer address"}]
+libs:
+  - origin: https://github.com/mongoose-os-libs/rpc-mqtt
