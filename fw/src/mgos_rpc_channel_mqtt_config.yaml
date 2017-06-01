@@ -1,0 +1,5 @@
+[
+  ["rpc.mqtt", "o", {title: "RPC over MQTT settings"}],
+  ["rpc.mqtt.enable", "b", true, {title: "Enable RPC over MQTT"}],
+  ["rpc.mqtt.is_trusted", "b", true, {title: "Whether this channel can be used for privileged commands, such as changing configuration"}],
+]

@@ -28,7 +28,6 @@ $(EXAMPLES): $(MJS_PATH)/mjs.c $(MJS_PATH)/mjs.h
 		--lib gcp:$(LIBS_PATH)/gcp \
 		--lib mjs:$(LIBS_PATH)/mjs \
 		--lib blynk:$(LIBS_PATH)/blynk \
-		--lib rpc-mqtt:$(LIBS_PATH)/rpc-mqtt \
 		--module mjs:$(MJS_PATH) \
 		--module arduino-drivers:$(REPO_ROOT)/arduino_drivers
 
