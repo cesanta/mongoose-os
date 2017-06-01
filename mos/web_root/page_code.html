@@ -1,7 +1,7 @@
 <div data-title="Porjects" style="height: 100%;">
   <div class="col-xs-3 main-left-column">
 
-    <div class="list-group upcontrol" id="projects" style="padding: 0; margin: 0; top: 5px;">
+    <div class="list-group upcontrol" style="padding: 0; margin: 0; top: 5px;">
       <li class="list-group-item title" id="apps-header">
         <strong class="header">My Apps</strong>
         <div class="pull-right">
@@ -128,7 +128,7 @@
     <td class="tags"></td>
     <td class="author"></td>
     <td>
-      <button class="btn btn-xs btn-success" style="margin: 0;"><i class="fa fa-download"></i> Import</button>
+      <button class="btn btn-xs btn-success" style="padding: 0 15px;"><i class="fa fa-download"></i> Import</button>
       <div class="hidden imported descr"><i class="fa fa-check"></i> imported</div>
     </td>
   </tr>
@@ -272,7 +272,8 @@
       addLog('Bad project name. Use digits, letters, dashes, underscores');
       return;
     }
-    $.ajax({global:true, url: '/xx', data: data}).always(function() {
+    data.target_name = fname;
+    $.ajax({global:true, url: '/duplicate-project', data: data}).always(function() {
       syncImportedProjects(data.type);
     });
   });
