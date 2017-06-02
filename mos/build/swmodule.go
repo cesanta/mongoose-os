@@ -47,10 +47,8 @@ func (m *SWModule) IsClean(libsDir string) (bool, error) {
 
 		if _, err := os.Stat(lp); err != nil {
 			if os.IsNotExist(err) {
-				// Dir does not exist: we treat it as "dirty", just in order to fetch
-				// all libs locally, so that it's more obvious for people that they can
-				// edit those libs
-				return false, nil
+				// Dir does not exist: it means it's "clean"
+				return true, nil
 			}
 
 			// Some error other than non-existing dir
