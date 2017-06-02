@@ -52,7 +52,7 @@ userdata is the value given as a third argument to `Net.connect()`.
 
 
 
-## **`Net.connect_ssl(addr, handler, userdata, cert, ca_cert)`**
+## **`Net.connect_ssl(addr, handler, userdata, cert, key, ca_cert)`**
 The same as `Net.connect`, but establishes SSL connection
 Additional parameters are:
 - `cert` is a client certificate file name or "" if not required
