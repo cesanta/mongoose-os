@@ -11,6 +11,10 @@ code { color: green; white-space: pre !important;}
 .editor-navbar { margin-top: 5px; margin-left: 40px; }
 
 /* DASHBOARD STYLES */
+#breadcrumb, .devinfo { color: #BAB8B8; }
+.popover { min-width: 580px; }
+.dropdown-header { font-weight: bold; }
+.dropdown-ports li { font-size: 14px; border: none !important; }
 .tooltip-inner { max-width: 40em !important; }
 .left_col.menu_fixed { top: 0; overflow-y: auto; }
 .side-menu { margin-top: 0 !important;}

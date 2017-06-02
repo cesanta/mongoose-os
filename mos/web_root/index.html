@@ -121,11 +121,23 @@
                             <span class="caret"></span>
                             <span class="sr-only">Toggle Dropdown</span>
                           </button>
-                          <ul class="dropdown-menu dropdown-ports"></ul>
+                          <ul class="dropdown-menu dropdown-ports">
+                            <li class="dropdown-header serial">Serial ports on this machine:</li>
+                            <li class="dropdown-header recent">Recently used:</li>
+                          </ul>
                         </div>
                       </span>
                       <input type="text" class="form-control connect-input" style="min-width: 17em;" placeholder="e.g. COM1, or /dev/ttyUSB0">
                     </div>
+<a href="#" data-container="body" data-toggle="popover"
+  data-placement="bottom" xtitle="Device addresses"
+  data-content="Choose device address in a dropdown, or type into the text field, then click Select. Possible formats of device addresses:<div style='margin-top: 10px;'><b>COMx</b> - serial port on Windows</div><div><b>/dev/ttyUSBx</b> - serial port on Linux</div><div><b>/dev/cu.xxxxxx</b> - serial port on MacOS</div><div><b>ws://IP_ADDRESS/rpc</b> - device on a local network</div><div><b>mqtt://MQTT_SERVER:PORT/DEVICE_ID</b> - device connected to an MQTT server</div>">
+  <span class="fa-stack fa-lg" style="margin-left: 5px; margin-top: -8px; color: #ddd;">
+    <i class="fa fa-circle-o fa-stack-2x"></i>
+    <i class="fa fa-question fa-stack-1x"></i>
+  </span>
+</a>
+
                     <button class="btn btn-default btn-mos connect-button pull-right" type="button"><i class="fa fa-link"></i> Select</button>
                   </div>
 
