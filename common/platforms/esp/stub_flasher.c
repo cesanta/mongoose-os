@@ -29,6 +29,7 @@
 #include "ets_sys.h"
 #elif defined(ESP32)
 #include "soc/uart_reg.h"
+#include "led.h"
 #endif
 
 #include "slip.h"
@@ -89,7 +90,7 @@ int do_flash_erase(uint32_t addr, uint32_t len) {
 struct uart_buf {
   uint8_t data[UART_BUF_SIZE];
   uint32_t nr;
-  uint8_t *pr, *pw;
+  uint8_t *pr, *pw, *pe;
 };
 
 uint32_t ccount(void) {
@@ -115,16 +116,21 @@ static struct uart_buf ub;
 
 void uart_isr(void *arg) {
   uint32_t int_st = READ_PERI_REG(UART_INT_ST_REG(0));
-  uint8_t fifo_len;
+  uint8_t fifo_len, nr, i;
+  // led_on(22);
   while ((fifo_len = READ_PERI_REG(UART_STATUS_REG(0))) > 0 &&
          ub.nr < UART_BUF_SIZE) {
-    while (fifo_len-- > 0 && ub.nr < UART_BUF_SIZE) {
+    nr = fifo_len;
+    if (ub.nr + nr > UART_BUF_SIZE) nr = UART_BUF_SIZE - ub.nr;
+    if (nr > ub.pe - ub.pw) nr = ub.pe - ub.pw;
+    for (i = 0; i < nr; i++) {
       uint8_t byte = READ_PERI_REG(UART_FIFO_REG(0));
       *ub.pw++ = byte;
-      ub.nr++;
-      if (ub.pw >= ub.data + UART_BUF_SIZE) ub.pw = ub.data;
     }
+    if (ub.pw == ub.pe) ub.pw = ub.data;
+    ub.nr += nr;
   }
+  // led_off(22);
   WRITE_PERI_REG(UART_INT_CLR_REG(0), int_st);
   (void) arg;
 }
@@ -140,6 +146,7 @@ int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
 
   ub.nr = 0;
   ub.pr = ub.pw = ub.data;
+  ub.pe = ub.data + UART_BUF_SIZE;
   ets_isr_attach(ETS_UART0_INUM, uart_isr, &ub);
   uint32_t saved_conf1 = READ_PERI_REG(UART_CONF1_REG(0));
   /* Reduce frequency of UART interrupts */
@@ -176,14 +183,20 @@ int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
     start_count = ccount();
     /* Wait for data to arrive. */
     wp.buf_level = *nr;
+    // led_on(16);
     while (*nr < FLASH_WRITE_SIZE) {
     }
+    // led_off(16);
     wr.wait_time += ccount() - start_count;
     MD5Update(&ctx, ub.pr, FLASH_WRITE_SIZE);
+    // led_on(2);
     start_count = ccount();
-    if (esp_rom_spiflash_write(addr, (uint32_t *) ub.pr, FLASH_WRITE_SIZE) != 0)
+    if (esp_rom_spiflash_write(addr, (uint32_t *) ub.pr, FLASH_WRITE_SIZE) !=
+        0) {
       return 0x37;
+    }
     wr.write_time += ccount() - start_count;
+    // led_off(2);
     ets_intr_lock();
     *nr -= FLASH_WRITE_SIZE;
     ets_intr_unlock();
@@ -374,6 +387,10 @@ void stub_main(void) {
   ets_delay_us(50000);
 
   SLIP_send(&greeting, 4);
+
+  // led_setup(22);
+  // led_setup(16);
+  // led_setup(2);
 
   last_cmd = cmd_loop();
 
