@@ -924,6 +924,13 @@ func buildRemote(bParams *buildParams) error {
 	if _, err := part.Write(src); err != nil {
 		return errors.Trace(err)
 	}
+
+	if *cleanBuild {
+		if err := mpw.WriteField("clean", "1"); err != nil {
+			return errors.Trace(err)
+		}
+	}
+
 	if err := mpw.Close(); err != nil {
 		return errors.Trace(err)
 	}
