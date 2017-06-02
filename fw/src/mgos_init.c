@@ -3,32 +3,7 @@
  * All rights reserved
  */
 
-#include "fw/src/mgos_init.h"
-
-#include "fw/src/mgos_app.h"
-#include "fw/src/mgos_arduino.h"
-#include "fw/src/mgos_atca.h"
-#include "fw/src/mgos_console.h"
-#include "fw/src/mgos_deps.h"
-#include "fw/src/mgos_dns_sd.h"
-#include "fw/src/mgos_gpio.h"
-#include "fw/src/mgos_gpio_service.h"
-#include "fw/src/mgos_hal.h"
-#include "fw/src/mgos_i2c.h"
-#include "fw/src/mgos_i2c_service.h"
-#include "fw/src/mgos_mdns.h"
-#include "fw/src/mgos_mongoose.h"
-#include "fw/src/mgos_mqtt.h"
-#include "fw/src/mgos_rpc.h"
-#include "fw/src/mgos_service_config.h"
-#include "fw/src/mgos_service_filesystem.h"
-#include "fw/src/mgos_sntp.h"
-#include "fw/src/mgos_spi.h"
-#include "fw/src/mgos_sys_config.h"
-#include "fw/src/mgos_timers.h"
-#include "fw/src/mgos_updater_rpc.h"
-#include "fw/src/mgos_updater_http.h"
-#include "fw/src/mgos_wifi.h"
+#include "fw/src/mgos.h"
 
 enum mgos_init_result mgos_init(void) {
   enum mgos_init_result r;
