@@ -58,7 +58,8 @@ let HTTP = {
   // ```javascript
   // HTTP.query({
   //   url: 'http://httpbin.org/post',
-  //   data: {foo: 1, bar: 'baz'},  // Optional. If set, POST is used
+  //   headers: { 'X-Foo': 'bar' },  // Optional - headers
+  //   data: {foo: 1, bar: 'baz'},   // Optional. If set, POST is used
   //   success: function(body, full_http_msg) { print(body); },
   //   error: function(err) { print(err); },  // Optional
   // });
@@ -72,6 +73,10 @@ let HTTP = {
         let meth = body ? 'POST' : 'GET';
         let host = 'Host: ' + ud.u.addr + '\r\n';
         let cl = 'Content-Length: ' + JSON.stringify(body.length) + '\r\n';
+        let hdrs = ud.headers || {};
+        for (let k in hdrs) {
+          cl += k + ': ' + hdrs[k] + '\r\n';
+        }
         let req = meth + ' ' + ud.u.uri + ' HTTP/1.0\r\n' + host + cl + '\r\n';
         Net.send(conn, req);
         Net.send(conn, body);
