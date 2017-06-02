@@ -45,13 +45,7 @@ func ConnectToFlasherClient(ct esp.ChipType, opts *esp.FlashOpts) (*cfResult, er
 
 	r.rc, err = rom_client.ConnectToROM(ct, opts)
 	if err != nil {
-		return nil, errors.Annotatef(
-			err,
-			"Failed to talk to bootloader. See "+
-				"https://mongoose-os.com/docs/#/quickstart/flash.md/ "+
-				"for wiring instructions or put the device into flashing mode manually by "+
-				"pulling GPIO0 low and resetting.",
-		)
+		return nil, errors.Trace(err)
 	}
 	ownROMClient := true
 	defer func() {
