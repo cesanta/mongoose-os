@@ -395,6 +395,8 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		"APP_SOURCES":    strings.Join(appSources, " "),
 		"APP_FS_FILES":   strings.Join(appFSFiles, " "),
 		"FFI_SYMBOLS":    strings.Join(ffiSymbols, " "),
+		"APP_CFLAGS":     generateCflags(manifest.CFlags, manifest.CDefs),
+		"APP_CXXFLAGS":   generateCflags(manifest.CXXFlags, manifest.CDefs),
 	} {
 		err := addBuildVar(manifest, k, v)
 		if err != nil {
@@ -1381,4 +1383,12 @@ func prependPaths(items []string, dir string) []string {
 		ret = append(ret, s)
 	}
 	return ret
+}
+
+func generateCflags(cflags []string, cdefs map[string]string) string {
+	for k, v := range cdefs {
+		cflags = append(cflags, fmt.Sprintf("-D%s=%s", k, v))
+	}
+
+	return strings.Join(append(cflags), " ")
 }
