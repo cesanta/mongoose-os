@@ -5,6 +5,7 @@ var ui = {
   showWizard: true,
   checkPortsTimer: null,
   checkPortsFreq: 3000,
+  recentDevicesCookieName: 'recently_used',
   pageCache: {}
 };
 
@@ -286,6 +287,13 @@ var updateDeviceStatus = function() {
   $('#prototype-button').prop('disabled', n < 2);
 };
 
+var addToRecentlyUsedList = function(str) {
+  var list = getCookie(ui.recentDevicesCookieName).split(',');
+  list.push(str);
+  var unique = list.filter(function(v, i, a) { return i == a.indexOf(v); });
+  document.cookie = ui.recentDevicesCookieName + '=' + unique.join(',');
+};
+
 var probeDevice = function() {
   return $.ajax({url: '/call', global: false, data: {method: 'Sys.GetInfo', timeout: 5}}).then(function(data) {
     ui.info = data.result;
@@ -293,6 +301,7 @@ var probeDevice = function() {
     var infostr = JSON.stringify(ui.info);
     if (ui.infostr != infostr) {
       ui.infostr = infostr;
+      addToRecentlyUsedList($('.connect-input').val());
       $(document).trigger('mos-devinfo');
     }
   }).fail(function() {
@@ -305,7 +314,7 @@ var probeDevice = function() {
 // Repeatedly pull list of serial ports when we're on the first tab
 var checkPorts = function() {
   return $.ajax({url: '/getports', global: false}).then(function(json) {
-    $('.dropdown-ports').empty();
+    $('.device-address').remove();
     var result = json.result || {};
     var ports = result.Ports || [];
     var port = (result.CurrentPort || '').replace(/^serial:\/\//, '');
@@ -322,7 +331,7 @@ var checkPorts = function() {
     }
     if (ports.length > 0) {
       $.each(ports, function(i, v) {
-        $('<li><a href="#">' + v + '</a></li>').appendTo('.dropdown-ports');
+        $('<li class="device-address"><a href="#">' + v + '</a></li>').insertAfter('.dropdown-ports .serial');
       });
       $('#noports-warning').hide();
     } else {
@@ -393,6 +402,24 @@ function b64enc(str) {
         return String.fromCharCode('0x' + p1);
       }));
 };
+
+var initRecentlyUsedDeviceAddresses = function() {
+  var list = getCookie(ui.recentDevicesCookieName).split(',');
+  $.each(list, function(i, v) {
+    $('<li><a href="#">' + v + '</a></li>').insertAfter('.dropdown-ports .recent');
+  });
+};
+
+// Initialise device wizard address help popover
+$('[data-toggle="popover"]').popover({html:true});
+$(document).on('hide.bs.modal', function() {
+  $('[data-toggle="popover"]').popover('hide');
+});
+$(document).on('click', 'input, button', function() {
+  $('[data-toggle="popover"]').popover('hide');
+});
+
+initRecentlyUsedDeviceAddresses();
 
 // When we run first time, look at PortFlag, which is a --port mos argument.
 // If a user has specified --port, then connect to a device automatically.
