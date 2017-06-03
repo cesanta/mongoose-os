@@ -551,6 +551,10 @@ enum mgos_init_result mgos_sys_config_init(void) {
   }
   LOG(LL_INFO, ("MAC: %s", s_ro_vars.mac_address));
   mgos_expand_mac_address_placeholders(s_cfg.device.id);
+#if MGOS_ENABLE_MQTT
+  mgos_expand_mac_address_placeholders(s_cfg.debug.stdout_topic);
+  mgos_expand_mac_address_placeholders(s_cfg.debug.stderr_topic);
+#endif
 
   LOG(LL_INFO, ("WDT: %d seconds", s_cfg.sys.wdt_timeout));
   mgos_wdt_set_timeout(s_cfg.sys.wdt_timeout);

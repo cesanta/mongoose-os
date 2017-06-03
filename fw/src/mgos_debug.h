@@ -19,10 +19,7 @@ extern "C" {
 #define MGOS_DEBUG_UART_BAUD_RATE 115200
 #endif
 
-#define MGOS_DEBUG_TMP_BUF_SIZE 256
-
 struct mgos_debug_hook_arg {
-  char *buf; /* size of the buffer is MGOS_DEBUG_TMP_BUF_SIZE */
   int fd;
   const void *data;
   size_t len;

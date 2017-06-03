@@ -1,0 +1,4 @@
+[
+  ["debug.stdout_topic", "esp8266_??????/log"],
+  ["debug.stderr_topic", "esp8266_??????/log"],
+]

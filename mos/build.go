@@ -61,15 +61,10 @@ const (
 
 	buildLog = "build.log"
 
-	// Skeleton version changes:
-	//
-	// - 2017-06-03: added support for @all_libs in filesystem and sources
 	minSkeletonVersion = "2017-03-17"
-	maxSkeletonVersion = "2017-06-03"
+	maxSkeletonVersion = "2017-05-18"
 
 	localLibsDir = "local_libs"
-
-	allLibsKeyword = "@all_libs"
 )
 
 func init() {
@@ -228,10 +223,6 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		return errors.Trace(err)
 	}
 
-	if err := expandManifestAllLibsPaths(manifest); err != nil {
-		return errors.Trace(err)
-	}
-
 	if manifest.Arch == "" {
 		return errors.Errorf("--arch must be specified or mos.yml should contain an arch key")
 	}
@@ -310,6 +301,13 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	appSourceDirs := []string{}
 	appFSDirs := []string{}
 
+	// Makefile expects globs, not dir names, so we convert source and filesystem
+	// dirs to the appropriate globs. Non-dir items will stay intact.
+	appSources, appSourceDirs, err = globify(appSources, []string{"*.c", "*.cpp"})
+	if err != nil {
+		return errors.Trace(err)
+	}
+
 	// Generate deps_init C code, and if it's not empty, write it to the temp
 	// file and add to sources
 	depsCCode, err := getDepsInitCCode(manifest)
@@ -335,6 +333,11 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		}()
 
 		appSources = append(appSources, fname)
+	}
+
+	appFSFiles, appFSDirs, err = globify(appFSFiles, []string{"*"})
+	if err != nil {
+		return errors.Trace(err)
 	}
 
 	ffiSymbols := manifest.FFISymbols
@@ -368,18 +371,6 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		if err := os.Chtimes(confSchemaFile.Name(), mtime, mtime); err != nil {
 			return errors.Trace(err)
 		}
-	}
-
-	// Makefile expects globs, not dir names, so we convert source and filesystem
-	// dirs to the appropriate globs. Non-dir items will stay intact.
-	appSources, appSourceDirs, err = globify(appSources, []string{"*.c", "*.cpp"})
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	appFSFiles, appFSDirs, err = globify(appFSFiles, []string{"*"})
-	if err != nil {
-		return errors.Trace(err)
 	}
 
 	reportf("Sources: %v", appSources)
@@ -1149,8 +1140,8 @@ func cleanupModuleName(name string) string {
 // If skipClean is true, then clean or non-existing libs will NOT be expanded,
 // it's useful when crafting a manifest to send to the remote builder.
 func readManifestWithLibs(
-	dir string, bParams *buildParams, visitedDirs []string, parentDeps []build.FWAppManifestLibHandled,
-	logFile io.Writer, userLibsDir string, skipClean bool,
+	dir string, bParams *buildParams, visitedDirs, parentDeps []string, logFile io.Writer,
+	userLibsDir string, skipClean bool,
 ) (*build.FWAppManifest, time.Time, error) {
 	for _, v := range visitedDirs {
 		if dir == v {
@@ -1168,16 +1159,9 @@ func readManifestWithLibs(
 		return nil, time.Time{}, errors.Trace(err)
 	}
 
-	// Backward compatibility with "Deps", deprecated since 03.06.2017
-	for _, v := range manifest.Deps {
-		manifest.LibsHandled = append(manifest.LibsHandled, build.FWAppManifestLibHandled{
-			Name: v,
-		})
-	}
-
 	// Prepare all libs {{{
 	var cleanLibs []build.SWModule
-	var newDeps []build.FWAppManifestLibHandled
+	var newDeps []string
 libs:
 	for _, m := range manifest.Libs {
 		name, err := m.GetName()
@@ -1189,12 +1173,12 @@ libs:
 
 		// Collect all deps: from parent manifest(s), main manifest, and all libs
 		// encountered so far
-		curDeps := append(parentDeps, append(manifest.LibsHandled, newDeps...)...)
+		curDeps := append(parentDeps, append(manifest.Deps, newDeps...)...)
 
 		// Check if this lib is already handled (present in deps)
 		// If yes, skip
 		for _, v := range curDeps {
-			if v.Name == name {
+			if v == name {
 				reportf("Already handled, skipping")
 				continue libs
 			}
@@ -1266,11 +1250,8 @@ libs:
 		// first
 		extendManifest(manifest, libManifest, manifest, libDirForManifest, "")
 
-		newDeps = append(newDeps, libManifest.LibsHandled...)
-		newDeps = append(newDeps, build.FWAppManifestLibHandled{
-			Name: name,
-			Path: libDirForManifest,
-		})
+		newDeps = append(newDeps, libManifest.Deps...)
+		newDeps = append(newDeps, name)
 
 		os.Chdir(curDir)
 	}
@@ -1279,7 +1260,7 @@ libs:
 	manifest.Libs = cleanLibs
 
 	// Place new deps before the existing ones
-	manifest.LibsHandled = append(newDeps, manifest.LibsHandled...)
+	manifest.Deps = append(newDeps, manifest.Deps...)
 
 	return manifest, mtime, nil
 }
@@ -1306,13 +1287,13 @@ type depsInitData struct {
 }
 
 func getDepsInitCCode(manifest *build.FWAppManifest) ([]byte, error) {
-	if len(manifest.LibsHandled) == 0 {
+	if len(manifest.Deps) == 0 {
 		return nil, nil
 	}
 
 	tplData := depsInitData{}
-	for _, v := range manifest.LibsHandled {
-		tplData.Deps = append(tplData.Deps, strings.Replace(v.Name, "-", "_", -1))
+	for _, v := range manifest.Deps {
+		tplData.Deps = append(tplData.Deps, strings.Replace(v, "-", "_", -1))
 	}
 
 	tpl := template.Must(template.New("depsInit").Parse(
@@ -1375,8 +1356,8 @@ func extendManifest(mMain, m1, m2 *build.FWAppManifest, m1Dir, m2Dir string) err
 	mMain.CFlags = append(m1.CFlags, m2.CFlags...)
 	mMain.CXXFlags = append(m1.CXXFlags, m2.CXXFlags...)
 
-	mMain.BuildVars = mergeMapsString(m1.BuildVars, m2.BuildVars)
-	mMain.CDefs = mergeMapsString(m1.CDefs, m2.CDefs)
+	mMain.BuildVars = extendMapString(m1.BuildVars, m2.BuildVars)
+	mMain.CDefs = extendMapString(m1.CDefs, m2.CDefs)
 
 	return nil
 }
@@ -1386,7 +1367,7 @@ func prependPaths(items []string, dir string) []string {
 	for _, s := range items {
 		// If the path is not absolute, and does not start with the variable,
 		// prepend it with the library's path
-		if dir != "" && s[0] != '$' && s[0] != '@' && !filepath.IsAbs(s) {
+		if dir != "" && s[0] != '$' && !filepath.IsAbs(s) {
 			s = filepath.Join(dir, s)
 		}
 		ret = append(ret, s)
@@ -1402,56 +1383,17 @@ func generateCflags(cflags []string, cdefs map[string]string) string {
 	return strings.Join(append(cflags), " ")
 }
 
-// mergeMapsString merges two map[string]string into a new one; m2 takes
-// precedence over m1
-func mergeMapsString(m1, m2 map[string]string) map[string]string {
+func extendMapString(m1, m2 map[string]string) map[string]string {
 	bv := make(map[string]string)
-
-	for k, v := range m1 {
-		bv[k] = v
-	}
 	for k, v := range m2 {
 		bv[k] = v
 	}
-
-	return bv
-}
-
-// expandManifestAllLibsPaths expands "@all_libs" for manifest's Sources
-// and Filesystem paths
-func expandManifestAllLibsPaths(manifest *build.FWAppManifest) error {
-	var err error
-
-	manifest.Sources, err = expandAllLibsPaths(manifest.Sources, manifest.LibsHandled)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	manifest.Filesystem, err = expandAllLibsPaths(manifest.Filesystem, manifest.LibsHandled)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	return nil
-}
-
-// expandAllLibsPaths expands "@all_libs" for the given paths slice, and
-// returns a new slice
-func expandAllLibsPaths(
-	paths []string, libsHandled []build.FWAppManifestLibHandled,
-) ([]string, error) {
-	ret := []string{}
-
-	for _, p := range paths {
-		if strings.HasPrefix(p, allLibsKeyword) {
-			innerPath := p[len(allLibsKeyword):]
-			for _, lh := range libsHandled {
-				ret = append(ret, filepath.Join(lh.Path, innerPath))
-			}
-		} else {
-			ret = append(ret, p)
+	for k, s := range m1 {
+		// If build var is not yet set in the second manifest, so set it from the
+		// first one
+		if _, ok := bv[k]; !ok {
+			bv[k] = s
 		}
 	}
-
-	return ret, nil
+	return bv
 }

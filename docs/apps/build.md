@@ -55,6 +55,7 @@ build_vars:
   MGOS_ENABLE_CONFIG_SERVICE: 1       # Needed for mos config-* commands to work
   MGOS_ENABLE_DNS_SD: 1               # Enable network discovery
   MGOS_ENABLE_FILESYSTEM_SERVICE: 1   # Needed for mos ls,put,get to work
+  MGOS_ENABLE_MQTT: 1                 # Enable MQTT support
   MGOS_ENABLE_UPDATER: 1              # Enable OTA updates
   MGOS_ENABLE_UPDATER_RPC: 0          # Enable OTA via mg_rpc framing protocol
   MGOS_ENABLE_UPDATER_POST: 1         # Enable OTA via HTTP POST

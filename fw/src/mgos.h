@@ -36,6 +36,7 @@
 #include "fw/src/mgos_init.h"
 #include "fw/src/mgos_mdns.h"
 #include "fw/src/mgos_mongoose.h"
+#include "fw/src/mgos_mqtt.h"
 #include "fw/src/mgos_onewire.h"
 #include "fw/src/mgos_pwm.h"
 #include "fw/src/mgos_rpc.h"

@@ -4,8 +4,6 @@ version: 1.0
 skeleton_version: 2017-05-18
 sources:
   - src
-libs:
-  - origin: https://github.com/mongoose-os-libs/mqtt
 config_schema:
   - ["c_rpc", "o", {"title": "c_rpc app settings"}]
   - ["c_rpc.peer", "s", "", {"title": "Peer address"}]

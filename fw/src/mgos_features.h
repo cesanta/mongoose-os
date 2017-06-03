@@ -34,6 +34,10 @@
 #define MGOS_ENABLE_I2C_SERVICE 0
 #endif
 
+#ifndef MGOS_ENABLE_MQTT
+#define MGOS_ENABLE_MQTT 0
+#endif
+
 #ifndef MGOS_ENABLE_RPC
 #define MGOS_ENABLE_RPC 0
 #endif
@@ -72,6 +76,10 @@
 
 #ifndef MGOS_ENABLE_MDNS
 #define MGOS_ENABLE_MDNS 0
+#endif
+
+#ifndef MGOS_ENABLE_MQTT
+#define MGOS_ENABLE_MQTT 0
 #endif
 
 #ifndef MGOS_ENABLE_ONEWIRE
