@@ -310,13 +310,6 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	appSourceDirs := []string{}
 	appFSDirs := []string{}
 
-	// Makefile expects globs, not dir names, so we convert source and filesystem
-	// dirs to the appropriate globs. Non-dir items will stay intact.
-	appSources, appSourceDirs, err = globify(appSources, []string{"*.c", "*.cpp"})
-	if err != nil {
-		return errors.Trace(err)
-	}
-
 	// Generate deps_init C code, and if it's not empty, write it to the temp
 	// file and add to sources
 	depsCCode, err := getDepsInitCCode(manifest)
@@ -342,11 +335,6 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		}()
 
 		appSources = append(appSources, fname)
-	}
-
-	appFSFiles, appFSDirs, err = globify(appFSFiles, []string{"*"})
-	if err != nil {
-		return errors.Trace(err)
 	}
 
 	ffiSymbols := manifest.FFISymbols
@@ -380,6 +368,18 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		if err := os.Chtimes(confSchemaFile.Name(), mtime, mtime); err != nil {
 			return errors.Trace(err)
 		}
+	}
+
+	// Makefile expects globs, not dir names, so we convert source and filesystem
+	// dirs to the appropriate globs. Non-dir items will stay intact.
+	appSources, appSourceDirs, err = globify(appSources, []string{"*.c", "*.cpp"})
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	appFSFiles, appFSDirs, err = globify(appFSFiles, []string{"*"})
+	if err != nil {
+		return errors.Trace(err)
 	}
 
 	reportf("Sources: %v", appSources)
