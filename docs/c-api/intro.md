@@ -6,7 +6,6 @@ items:
   - { name: mgos_i2c.h }
   - { name: mgos_mongoose.h }
   - { name: mg_rpc.h }
-  - { name: mgos_mqtt.h }
   - { name: mgos_sntp.h }
   - { name: mgos_spi.h }
   - { name: mgos_sys_config.h }
@@ -15,4 +14,5 @@ items:
   - { name: mgos_utils.h }
   - { name: mgos_wifi.h }
   - { name: mgos_aws_shadow.h }
+  - { name: mgos_mqtt.h }
 ---

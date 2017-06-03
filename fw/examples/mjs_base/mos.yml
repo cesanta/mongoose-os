@@ -13,5 +13,4 @@ libs:
   - origin: https://github.com/mongoose-os-libs/mjs
   - origin: https://github.com/mongoose-os-libs/rpc-mqtt
 build_vars:
-  MGOS_ENABLE_MQTT: 1
   MGOS_ENABLE_ONEWIRE: 1

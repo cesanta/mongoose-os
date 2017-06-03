@@ -16,16 +16,11 @@
 #include "fw/src/mgos_features.h"
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_hooks.h"
-#include "fw/src/mgos_mqtt.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_uart.h"
 
 #ifndef IRAM
 #define IRAM
-#endif
-
-#ifndef MGOS_MQTT_LOG_PUSHBACK_THRESHOLD
-#define MGOS_MQTT_LOG_PUSHBACK_THRESHOLD 2048
 #endif
 
 static int8_t s_stdout_uart = MGOS_DEBUG_UART;
@@ -37,7 +32,7 @@ static int8_t s_in_debug = 0;
 extern enum cs_log_level cs_log_cur_msg_level;
 
 void mgos_debug_write(int fd, const void *data, size_t len) {
-  char buf[256];
+  char buf[MGOS_DEBUG_TMP_BUF_SIZE];
   int uart_no = -1;
   mgos_lock();
   if (s_in_debug) {
@@ -76,34 +71,17 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
     s_seq++;
   }
 #endif /* MGOS_ENABLE_DEBUG_UDP */
-#if MGOS_ENABLE_MQTT
-  const char *topic = (fd == 1 ? cfg->debug.stdout_topic
-                               : fd == 2 ? cfg->debug.stderr_topic : NULL);
-  if (topic != NULL &&
-      mgos_mqtt_num_unsent_bytes() < MGOS_MQTT_LOG_PUSHBACK_THRESHOLD) {
-    static uint32_t s_seq = 0;
-    char *msg = buf;
-    int msg_len = mg_asprintf(&msg, sizeof(buf), "%s %u %.3lf %d|%.*s",
-                              (cfg->device.id ? cfg->device.id : "-"), s_seq,
-                              mg_time(), fd, (int) len, data);
-    if (len > 0) {
-      mgos_mqtt_pub(topic, msg, msg_len, 0 /* qos */);
-      s_seq++;
-    }
-    if (msg != buf) free(msg);
-  }
-#endif /* MGOS_ENABLE_MQTT */
 
   /* Invoke all registered debug_write hooks */
   {
-    struct mgos_hook_arg arg = {{.debug = {
-                                     .fd = fd, .data = data, .len = len, }}};
+    struct mgos_hook_arg arg = {
+        {.debug = {
+             .buf = buf, .fd = fd, .data = data, .len = len, }}};
     mgos_hook_trigger(MGOS_HOOK_DEBUG_WRITE, &arg);
   }
 
   s_in_debug = false;
   mgos_unlock();
-  (void) buf;
 }
 
 void mgos_debug_flush(void) {
