@@ -32,6 +32,9 @@ type FWAppManifest struct {
 	Libs              []SWModule         `yaml:"libs,omitempty" json:"libs,omitempty"`
 	ConfigSchema      []ConfigSchemaItem `yaml:"config_schema" json:"config_schema,omitempty"`
 	BuildVars         map[string]string  `yaml:"build_vars" json:"build_vars,omitempty"`
+	CFlags            []string           `yaml:"cflags" json:"cflags,omitempty"`
+	CXXFlags          []string           `yaml:"cxxflags" json:"cxxflags,omitempty"`
+	CDefs             map[string]string  `yaml:"cdefs" json:"cdefs,omitempty"`
 	Tags              []string           `yaml:"tags" json:"tags,omitempty"`
 
 	// Deps are names of the libraries which need to be initialized before the
