@@ -1353,21 +1353,11 @@ func extendManifest(mMain, m1, m2 *build.FWAppManifest, m1Dir, m2Dir string) err
 	mMain.Modules = append(m1.Modules, m2.Modules...)
 	mMain.Libs = append(m1.Libs, m2.Libs...)
 	mMain.ConfigSchema = append(m1.ConfigSchema, m2.ConfigSchema...)
+	mMain.CFlags = append(m1.CFlags, m2.CFlags...)
+	mMain.CXXFlags = append(m1.CXXFlags, m2.CXXFlags...)
 
-	// NOTE that we can't do mMain.BuildVars = make(....), because mMain is
-	// either m1 or m2 which we'll be iterating through.
-	bv := make(map[string]string)
-	for k, v := range m2.BuildVars {
-		bv[k] = v
-	}
-	for k, s := range m1.BuildVars {
-		// If build var is not yet set in the second manifest, so set it from the
-		// first one
-		if _, ok := bv[k]; !ok {
-			bv[k] = s
-		}
-	}
-	mMain.BuildVars = bv
+	mMain.BuildVars = extendMapString(m1.BuildVars, m2.BuildVars)
+	mMain.CDefs = extendMapString(m1.CDefs, m2.CDefs)
 
 	return nil
 }
@@ -1391,4 +1381,19 @@ func generateCflags(cflags []string, cdefs map[string]string) string {
 	}
 
 	return strings.Join(append(cflags), " ")
+}
+
+func extendMapString(m1, m2 map[string]string) map[string]string {
+	bv := make(map[string]string)
+	for k, v := range m2 {
+		bv[k] = v
+	}
+	for k, s := range m1 {
+		// If build var is not yet set in the second manifest, so set it from the
+		// first one
+		if _, ok := bv[k]; !ok {
+			bv[k] = s
+		}
+	}
+	return bv
 }
