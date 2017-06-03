@@ -1356,8 +1356,8 @@ func extendManifest(mMain, m1, m2 *build.FWAppManifest, m1Dir, m2Dir string) err
 	mMain.CFlags = append(m1.CFlags, m2.CFlags...)
 	mMain.CXXFlags = append(m1.CXXFlags, m2.CXXFlags...)
 
-	mMain.BuildVars = extendMapString(m1.BuildVars, m2.BuildVars)
-	mMain.CDefs = extendMapString(m1.CDefs, m2.CDefs)
+	mMain.BuildVars = mergeMapsString(m1.BuildVars, m2.BuildVars)
+	mMain.CDefs = mergeMapsString(m1.CDefs, m2.CDefs)
 
 	return nil
 }
@@ -1383,17 +1383,17 @@ func generateCflags(cflags []string, cdefs map[string]string) string {
 	return strings.Join(append(cflags), " ")
 }
 
-func extendMapString(m1, m2 map[string]string) map[string]string {
+// mergeMapsString merges two map[string]string into a new one; m2 takes
+// precedence over m1
+func mergeMapsString(m1, m2 map[string]string) map[string]string {
 	bv := make(map[string]string)
+
+	for k, v := range m1 {
+		bv[k] = v
+	}
 	for k, v := range m2 {
 		bv[k] = v
 	}
-	for k, s := range m1 {
-		// If build var is not yet set in the second manifest, so set it from the
-		// first one
-		if _, ok := bv[k]; !ok {
-			bv[k] = s
-		}
-	}
+
 	return bv
 }
