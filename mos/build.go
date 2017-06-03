@@ -61,10 +61,15 @@ const (
 
 	buildLog = "build.log"
 
+	// Skeleton version changes:
+	//
+	// - 2017-06-03: added support for @all_libs in filesystem and sources
 	minSkeletonVersion = "2017-03-17"
-	maxSkeletonVersion = "2017-05-18"
+	maxSkeletonVersion = "2017-06-03"
 
 	localLibsDir = "local_libs"
+
+	allLibsKeyword = "@all_libs"
 )
 
 func init() {
@@ -220,6 +225,10 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		appDir, bParams, nil, nil, logFile, libsDir, false, /* skip clean */
 	)
 	if err != nil {
+		return errors.Trace(err)
+	}
+
+	if err := expandManifestAllLibsPaths(manifest); err != nil {
 		return errors.Trace(err)
 	}
 
@@ -1140,8 +1149,8 @@ func cleanupModuleName(name string) string {
 // If skipClean is true, then clean or non-existing libs will NOT be expanded,
 // it's useful when crafting a manifest to send to the remote builder.
 func readManifestWithLibs(
-	dir string, bParams *buildParams, visitedDirs, parentDeps []string, logFile io.Writer,
-	userLibsDir string, skipClean bool,
+	dir string, bParams *buildParams, visitedDirs []string, parentDeps []build.FWAppManifestLibHandled,
+	logFile io.Writer, userLibsDir string, skipClean bool,
 ) (*build.FWAppManifest, time.Time, error) {
 	for _, v := range visitedDirs {
 		if dir == v {
@@ -1159,9 +1168,16 @@ func readManifestWithLibs(
 		return nil, time.Time{}, errors.Trace(err)
 	}
 
+	// Backward compatibility with "Deps", deprecated since 03.06.2017
+	for _, v := range manifest.Deps {
+		manifest.LibsHandled = append(manifest.LibsHandled, build.FWAppManifestLibHandled{
+			Name: v,
+		})
+	}
+
 	// Prepare all libs {{{
 	var cleanLibs []build.SWModule
-	var newDeps []string
+	var newDeps []build.FWAppManifestLibHandled
 libs:
 	for _, m := range manifest.Libs {
 		name, err := m.GetName()
@@ -1173,12 +1189,12 @@ libs:
 
 		// Collect all deps: from parent manifest(s), main manifest, and all libs
 		// encountered so far
-		curDeps := append(parentDeps, append(manifest.Deps, newDeps...)...)
+		curDeps := append(parentDeps, append(manifest.LibsHandled, newDeps...)...)
 
 		// Check if this lib is already handled (present in deps)
 		// If yes, skip
 		for _, v := range curDeps {
-			if v == name {
+			if v.Name == name {
 				reportf("Already handled, skipping")
 				continue libs
 			}
@@ -1250,8 +1266,11 @@ libs:
 		// first
 		extendManifest(manifest, libManifest, manifest, libDirForManifest, "")
 
-		newDeps = append(newDeps, libManifest.Deps...)
-		newDeps = append(newDeps, name)
+		newDeps = append(newDeps, libManifest.LibsHandled...)
+		newDeps = append(newDeps, build.FWAppManifestLibHandled{
+			Name: name,
+			Path: libDirForManifest,
+		})
 
 		os.Chdir(curDir)
 	}
@@ -1260,7 +1279,7 @@ libs:
 	manifest.Libs = cleanLibs
 
 	// Place new deps before the existing ones
-	manifest.Deps = append(newDeps, manifest.Deps...)
+	manifest.LibsHandled = append(newDeps, manifest.LibsHandled...)
 
 	return manifest, mtime, nil
 }
@@ -1287,13 +1306,13 @@ type depsInitData struct {
 }
 
 func getDepsInitCCode(manifest *build.FWAppManifest) ([]byte, error) {
-	if len(manifest.Deps) == 0 {
+	if len(manifest.LibsHandled) == 0 {
 		return nil, nil
 	}
 
 	tplData := depsInitData{}
-	for _, v := range manifest.Deps {
-		tplData.Deps = append(tplData.Deps, strings.Replace(v, "-", "_", -1))
+	for _, v := range manifest.LibsHandled {
+		tplData.Deps = append(tplData.Deps, strings.Replace(v.Name, "-", "_", -1))
 	}
 
 	tpl := template.Must(template.New("depsInit").Parse(
@@ -1367,7 +1386,7 @@ func prependPaths(items []string, dir string) []string {
 	for _, s := range items {
 		// If the path is not absolute, and does not start with the variable,
 		// prepend it with the library's path
-		if dir != "" && s[0] != '$' && !filepath.IsAbs(s) {
+		if dir != "" && s[0] != '$' && s[0] != '@' && !filepath.IsAbs(s) {
 			s = filepath.Join(dir, s)
 		}
 		ret = append(ret, s)
@@ -1396,4 +1415,43 @@ func mergeMapsString(m1, m2 map[string]string) map[string]string {
 	}
 
 	return bv
+}
+
+// expandManifestAllLibsPaths expands "@all_libs" for manifest's Sources
+// and Filesystem paths
+func expandManifestAllLibsPaths(manifest *build.FWAppManifest) error {
+	var err error
+
+	manifest.Sources, err = expandAllLibsPaths(manifest.Sources, manifest.LibsHandled)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	manifest.Filesystem, err = expandAllLibsPaths(manifest.Filesystem, manifest.LibsHandled)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	return nil
+}
+
+// expandAllLibsPaths expands "@all_libs" for the given paths slice, and
+// returns a new slice
+func expandAllLibsPaths(
+	paths []string, libsHandled []build.FWAppManifestLibHandled,
+) ([]string, error) {
+	ret := []string{}
+
+	for _, p := range paths {
+		if strings.HasPrefix(p, allLibsKeyword) {
+			innerPath := p[len(allLibsKeyword):]
+			for _, lh := range libsHandled {
+				ret = append(ret, filepath.Join(lh.Path, innerPath))
+			}
+		} else {
+			ret = append(ret, p)
+		}
+	}
+
+	return ret, nil
 }
