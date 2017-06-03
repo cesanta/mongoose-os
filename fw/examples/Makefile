@@ -24,6 +24,7 @@ $(EXAMPLES): $(MJS_PATH)/mjs.c $(MJS_PATH)/mjs.h
 	@echo "=== Building $@ / $(PLATFORM)"
 	@cd $@ && $(MOS) build --local --clean --arch $(PLATFORM) \
 		--repo $(REPO_ROOT) \
+		--lib mqtt:$(LIBS_PATH)/mqtt \
 		--lib aws:$(LIBS_PATH)/aws \
 		--lib gcp:$(LIBS_PATH)/gcp \
 		--lib mjs:$(LIBS_PATH)/mjs \

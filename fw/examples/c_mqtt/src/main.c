@@ -4,9 +4,10 @@
 #include "fw/src/mgos_app.h"
 #include "fw/src/mgos_gpio.h"
 #include "fw/src/mgos_i2c.h"
-#include "fw/src/mgos_mqtt.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_wifi.h"
+
+#include "mgos_mqtt.h"
 
 enum {
   ERROR_UNKNOWN_COMMAND = -1,

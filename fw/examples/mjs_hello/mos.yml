@@ -15,7 +15,8 @@ modules:
 config_schema:
   - ["mqtt.server", "test.mosca.io:1883"]
   - ["i2c.enable", true]
+libs:
+  - origin: https://github.com/mongoose-os-libs/mqtt
 build_vars:
-  MGOS_ENABLE_MQTT: 1
   SSL: mbedTLS
   MGOS_ENABLE_ONEWIRE: 1
