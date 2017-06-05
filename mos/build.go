@@ -49,6 +49,8 @@ var (
 
 	buildVarsSlice []string
 
+	noLibsUpdate = flag.Bool("no-libs-update", false, "if true, never try to pull existing libs (treat existing default locations as if they were given in --lib)")
+
 	tmpDir     = ""
 	libsDir    = ""
 	appsDir    = ""
@@ -1213,24 +1215,42 @@ libs:
 
 		if !ok {
 			reportf("The --lib flag was not given for it, checking repository")
-			if skipClean {
-				isClean, err := m.IsClean(libsDir)
+
+			needPull := true
+
+			if *noLibsUpdate {
+				localDir, err := m.GetLocalDir(libsDir)
 				if err != nil {
 					return nil, time.Time{}, errors.Trace(err)
 				}
 
-				if isClean {
-					reportf("Clean, skipping (will be handled remotely)")
-					cleanLibs = append(cleanLibs, m)
-					continue
+				if _, err := os.Stat(localDir); err == nil {
+					reportf("--no-libs-update was given, and %q exists: skipping update", localDir)
+					libDirAbs = localDir
+					needPull = false
 				}
 			}
 
-			// Note: we always call PrepareLocalDir for libsDir, but then,
-			// if userLibsDir is different, will need to copy it to the new location
-			libDirAbs, err = m.PrepareLocalDir(libsDir, os.Stdout, true)
-			if err != nil {
-				return nil, time.Time{}, errors.Trace(err)
+			if needPull {
+				if skipClean {
+					isClean, err := m.IsClean(libsDir)
+					if err != nil {
+						return nil, time.Time{}, errors.Trace(err)
+					}
+
+					if isClean {
+						reportf("Clean, skipping (will be handled remotely)")
+						cleanLibs = append(cleanLibs, m)
+						continue
+					}
+				}
+
+				// Note: we always call PrepareLocalDir for libsDir, but then,
+				// if userLibsDir is different, will need to copy it to the new location
+				libDirAbs, err = m.PrepareLocalDir(libsDir, os.Stdout, true)
+				if err != nil {
+					return nil, time.Time{}, errors.Trace(err)
+				}
 			}
 		} else {
 			reportf("Using the location %q as is (given as a --lib flag)", libDirAbs)

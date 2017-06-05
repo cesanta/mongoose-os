@@ -79,15 +79,14 @@ func (m *SWModule) PrepareLocalDir(
 	libsDir string, logFile io.Writer, deleteIfFailed bool,
 ) (string, error) {
 	if m.localPath == "" {
+
+		lp, err := m.GetLocalDir(libsDir)
+		if err != nil {
+			return "", errors.Trace(err)
+		}
+
 		switch m.GetType() {
 		case SWModuleTypeGit:
-			name, err := m.GetName()
-			if err != nil {
-				return "", errors.Trace(err)
-			}
-
-			lp := filepath.Join(libsDir, getGitDirName(name, m.Version))
-
 			if err := prepareLocalCopyGit(m.Origin, m.Version, lp, logFile, deleteIfFailed); err != nil {
 				return "", errors.Trace(err)
 			}
@@ -96,17 +95,35 @@ func (m *SWModule) PrepareLocalDir(
 			m.localPath = lp
 
 		case SWModuleTypeLocal:
-			if m.Origin != "" {
-				m.localPath = m.Origin
-			} else if m.Name != "" {
-				m.localPath = filepath.Join(libsDir, m.Name)
-			} else {
-				return "", errors.Errorf("neither name nor origin is specified")
-			}
+			m.localPath = lp
 		}
 	}
 
 	return m.localPath, nil
+}
+
+func (m *SWModule) GetLocalDir(libsDir string) (string, error) {
+	switch m.GetType() {
+	case SWModuleTypeGit:
+		name, err := m.GetName()
+		if err != nil {
+			return "", errors.Trace(err)
+		}
+
+		return filepath.Join(libsDir, getGitDirName(name, m.Version)), nil
+
+	case SWModuleTypeLocal:
+		if m.Origin != "" {
+			return m.Origin, nil
+		} else if m.Name != "" {
+			return filepath.Join(libsDir, m.Name), nil
+		} else {
+			return "", errors.Errorf("neither name nor origin is specified")
+		}
+
+	default:
+		return "", errors.Errorf("Illegal module type: %v", m.GetType())
+	}
 }
 
 // FetchableFromInternet returns whether the library could be fetched
