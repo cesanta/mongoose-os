@@ -788,7 +788,9 @@ func readManifestFile(
 	// If SkeletonVersion is specified, but ManifestVersion is not, then use the
 	// former
 	if manifest.ManifestVersion == "" && manifest.SkeletonVersion != "" {
-		reportf("WARNING: skeleton_version is deprecated and will be removed eventually, please rename it to manifest_version")
+		// TODO(dfrank): uncomment the warning below when our examples use
+		// manifest_version
+		//reportf("WARNING: skeleton_version is deprecated and will be removed eventually, please rename it to manifest_version")
 		manifest.ManifestVersion = manifest.SkeletonVersion
 	}
 
