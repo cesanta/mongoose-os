@@ -16,7 +16,7 @@
     <div class="upcontrol">
       <div id="simple" style="height: 100%;" class="row">
 
-        <div class="col-md-4 col-xs-12">
+        <div class="col-md-4 col-xs-12" id="section-sntp">
           <div class="x_panel">
             <div class="x_title">SNTP Settings</div>
             <div class="x_content form-horizontal">
@@ -33,7 +33,7 @@
           </div>
         </div>
 
-        <div class="col-md-4 col-xs-12">
+        <div class="col-md-4 col-xs-12" id="section-dns-sd">
           <div class="x_panel">
             <div class="x_title">Local Network Discovery</div>
             <div class="x_content form-horizontal">
@@ -50,7 +50,7 @@
           </div>
         </div>
 
-        <div class="col-md-4 col-xs-12">
+        <div class="col-md-4 col-xs-12" id="section-debug">
           <div class="x_panel">
             <div class="x_title">Debug Settings</div>
             <div class="x_content form-horizontal">
@@ -67,7 +67,7 @@
           </div>
         </div>
 
-        <div class="col-md-6 col-xs-12">
+        <div class="col-md-6 col-xs-12"  id="section-mqtt">
           <div class="x_panel">
             <div class="x_title">MQTT Settings</div>
             <div class="x_content form-horizontal">
@@ -105,7 +105,7 @@
           </div>
         </div>
 
-        <div class="col-md-6 col-xs-12">
+        <div class="col-md-6 col-xs-12"  id="section-aws">
           <div class="x_panel">
             <div class="x_title">
               Provision device on AWS IoT
@@ -209,44 +209,68 @@
       addLog('Configuration loaded\n');
 
       var c = json.result;
-      $('#mqtt\\.enable').prop('checked', c.mqtt.enable);
-      $('#mqtt\\.server').val(c.mqtt.server || getCookie('mqtt'));
-      $('#mqtt\\.user').val(c.mqtt.user || '');
-      $('#mqtt\\.pass').val(c.mqtt.pass || '');
-      $('#sntp\\.enable').prop('checked', c.sntp.enable);
-      $('#sntp\\.server').val(c.sntp.server || getCookie('sntp'));
-      $('#dns_sd\\.enable').prop('checked', c.dns_sd.enable);
-      $('#dns_sd\\.host_name').val(c.dns_sd.host_name || '');
-      $('#debug\\.hexdump').prop('checked', c.debug.mg_mgr_hexdump_file == '-');
-      $('#debug\\.level').val(c.debug.level || 2);
+      if (c.mqtt) {
+        $('#mqtt\\.enable').prop('checked', c.mqtt.enable);
+        $('#mqtt\\.server').val(c.mqtt.server || getCookie('mqtt'));
+        $('#mqtt\\.user').val(c.mqtt.user || '');
+        $('#mqtt\\.pass').val(c.mqtt.pass || '');
 
-      var mqttAddr = c.mqtt.ssl_ca_cert ? 'mqtts://' : 'mqtt://';
-      if (c.mqtt.user) mqttAddr += c.mqtt.user + ':' + c.mqtt.pass + '@';
-      mqttAddr += c.mqtt.server + '/' + c.device.id;
-      $('#mqtt-device-address').text(mqttAddr);
+        var mqttAddr = c.mqtt.ssl_ca_cert ? 'mqtts://' : 'mqtt://';
+        if (c.mqtt.user) mqttAddr += c.mqtt.user + ':' + c.mqtt.pass + '@';
+        mqttAddr += c.mqtt.server + '/' + c.device.id;
+        $('#mqtt-device-address').text(mqttAddr);
+      } else {
+        $('#section-mqtt').addClass('hidden');
+      }
 
-      $.ajax({url: '/check-aws-credentials'}).then(function(json) {
-        var hasAwsCredentials = json.result;
-        $('#aws-setup').toggleClass('hidden', !hasAwsCredentials);
-        $('#aws-cred').toggleClass('hidden', hasAwsCredentials);
-        if (hasAwsCredentials) {
-          $.ajax({url: '/regions'}).then(function(json) {
-            if (!json.result) return;
-            $('#dropdown-regions').empty();
-            $.each(json.result, function(i, v) {
-              $('<li><a href="#">' + v + '</a></li>').appendTo('#dropdown-regions');
-            });
-            var region = $('#input-region').val();
-            $.ajax({url: '/policies', data: {region: region }}).then(function(json) {
+      if (c.sntp) {
+        $('#sntp\\.enable').prop('checked', c.sntp.enable);
+        $('#sntp\\.server').val(c.sntp.server || getCookie('sntp'));
+      } else {
+        $('#section-sntp').addClass('hidden');
+      }
+
+      if (c.dns_sd) {
+        $('#dns_sd\\.enable').prop('checked', c.dns_sd.enable);
+        $('#dns_sd\\.host_name').val(c.dns_sd.host_name || '');
+      } else {
+        $('#section-dns-sd').addClass('hidden');
+      }
+
+      if (c.debug) {
+        $('#debug\\.hexdump').prop('checked', c.debug.mg_mgr_hexdump_file == '-');
+        $('#debug\\.level').val(c.debug.level || 2);
+      } else {
+        $('#section-debug').addClass('hidden');
+      }
+
+      if (c.aws) {
+        $.ajax({url: '/check-aws-credentials'}).then(function(json) {
+          var hasAwsCredentials = json.result;
+          $('#aws-setup').toggleClass('hidden', !hasAwsCredentials);
+          $('#aws-cred').toggleClass('hidden', hasAwsCredentials);
+          if (hasAwsCredentials) {
+            $.ajax({url: '/regions'}).then(function(json) {
               if (!json.result) return;
-              $('#dropdown-policies').empty();
+              $('#dropdown-regions').empty();
               $.each(json.result, function(i, v) {
-                $('<li><a href="#">' + v + '</a></li>').appendTo('#dropdown-policies');
+                $('<li><a href="#">' + v + '</a></li>').appendTo('#dropdown-regions');
+              });
+              var region = $('#input-region').val();
+              $.ajax({url: '/policies', data: {region: region }}).then(function(json) {
+                if (!json.result) return;
+                $('#dropdown-policies').empty();
+                $.each(json.result, function(i, v) {
+                  $('<li><a href="#">' + v + '</a></li>').appendTo('#dropdown-policies');
+                });
               });
             });
-          });
-        }
-      });
+          }
+        });
+      } else {
+        $('#section-aws').addClass('hidden');
+      }
+
     });
   };
   loadConfig();

@@ -1,0 +1,13 @@
+name: c_arduino_dht
+# arch: PLATFORM
+version: 1.0
+skeleton_version: 2017-05-18
+modules:
+  - origin: https://github.com/cesanta/arduino-drivers
+sources:
+  - src
+  - ${arduino_drivers_path}/Arduino
+  - ${arduino_drivers_path}/Adafruit_DHT
+build_vars:
+  MGOS_ENABLE_ARDUINO_API: 1
+  MGOS_ENABLE_ONEWIRE: 1

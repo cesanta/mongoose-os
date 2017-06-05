@@ -1,0 +1,17 @@
+name: c_arduino_ssd1306
+# arch: PLATFORM
+version: 1.0
+skeleton_version: 2017-05-18
+modules:
+  - origin: https://github.com/cesanta/arduino-drivers
+sources:
+  - src
+  - ${arduino_drivers_path}/Arduino
+  - ${arduino_drivers_path}/Adafruit_SSD1306
+  - ${arduino_drivers_path}/Adafruit-GFX-Library
+filesystem:
+  - fs
+build_vars:
+  MGOS_ENABLE_ARDUINO_API: 1
+  MGOS_ENABLE_I2C: 1
+  MGOS_ENABLE_SPI: 1
