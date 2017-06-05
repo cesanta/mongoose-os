@@ -18,6 +18,7 @@
 #include "common/cs_dbg.h"
 #include "common/cs_rbuf.h"
 #include "fw/src/mgos_uart_hal.h"
+#include "fw/src/mgos_gpio.h"
 
 #define UART_RX_INTS (UART_RXFIFO_FULL_INT_ENA | UART_RXFIFO_TOUT_INT_ENA)
 #define UART_TX_INTS (UART_TXFIFO_EMPTY_INT_ENA)
@@ -142,6 +143,11 @@ IRAM void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us) {
   uint32_t txn = 0;
   /* TX */
   if (txb->len > 0) {
+    /* If RS485 mode, assert TxEn pin during transmit */
+    if (us->cfg.rs485_ena) {
+      mgos_gpio_write(us->cfg.dev.tx_en_gpio, 1);
+      us->cfg.rs485_active = true;
+    }
     while (txb->len > 0) {
       size_t tx_av = 128 - esp32_uart_tx_fifo_len(uart_no);
       size_t len = MIN(txb->len, tx_av);
@@ -166,6 +172,10 @@ IRAM void mgos_uart_hal_dispatch_bottom(struct mgos_uart_state *us) {
   WRITE_PERI_REG(UART_INT_ENA_REG(us->uart_no), int_ena);
 }
 
+IRAM bool mgos_uart_is_tx_fifo_empty(struct mgos_uart_state *us) {
+  return (esp32_uart_tx_fifo_len(us->uart_no) == 0);
+}
+
 void mgos_uart_hal_flush_fifo(struct mgos_uart_state *us) {
   while (esp32_uart_tx_fifo_len(us->uart_no) > 0) {
   }
@@ -179,7 +189,8 @@ bool esp32_uart_validate_config(const struct mgos_uart_config *c) {
       c->rx_linger_micros > 200 || c->dev.tx_fifo_empty_thresh < 0 ||
       c->dev.rx_gpio < 0 || c->dev.tx_gpio < 0 ||
       (c->rx_fc_ena && c->dev.rts_gpio < 0) ||
-      (c->tx_fc_ena && c->dev.cts_gpio < 0)) {
+      (c->tx_fc_ena && c->dev.cts_gpio < 0) ||
+      (c->rs485_ena && c->dev.tx_en_gpio < 0)) {
     return false;
   }
   return true;
@@ -193,24 +204,28 @@ static void set_default_pins(int uart_no, struct mgos_uart_config *cfg) {
       dcfg->tx_gpio = 1;
       dcfg->cts_gpio = 19;
       dcfg->rts_gpio = 22;
+      dcfg->tx_en_gpio = -1;
       break;
     case 1:
       dcfg->rx_gpio = 13;
       dcfg->tx_gpio = 14;
       dcfg->cts_gpio = 15;
       dcfg->rts_gpio = 16;
+      dcfg->tx_en_gpio = -1;
       break;
     case 2:
       dcfg->rx_gpio = 17;
       dcfg->tx_gpio = 25;
       dcfg->cts_gpio = 26;
       dcfg->rts_gpio = 27;
+      dcfg->tx_en_gpio = -1;
       break;
     default:
       dcfg->rx_gpio = -1;
       dcfg->tx_gpio = -1;
       dcfg->cts_gpio = -1;
       dcfg->rts_gpio = -1;
+      dcfg->tx_en_gpio = -1;
       break;
   }
 }
@@ -279,6 +294,12 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
     return false;
   }
 
+  /* If RS485 mode, deassert TxEn pin to allow receive */
+  if (cfg->rs485_ena) {
+    mgos_gpio_set_mode(cfg->dev.tx_en_gpio, MGOS_GPIO_MODE_OUTPUT);  
+    mgos_gpio_write(cfg->dev.tx_en_gpio, 0);
+  }
+  
   uint32_t conf0 = UART_TICK_REF_ALWAYS_ON | (3 << UART_BIT_NUM_S) | /* 8 */
                    (0 << UART_PARITY_EN_S) |                         /* N */
                    (1 << UART_STOP_BIT_NUM_S);                       /* 1 */
@@ -337,7 +358,7 @@ uint32_t esp32_uart_int_mask(int uart_no) {
  */
 void esp32_uart_config_set_pins(int uart_no, struct mgos_uart_config *cfg,
                                 int rx_gpio, int tx_gpio, int cts_gpio,
-                                int rts_gpio) {
+                                int rts_gpio, int tx_en_gpio) {
   set_default_pins(uart_no, cfg);
   struct mgos_uart_dev_config *dcfg = &cfg->dev;
 
@@ -355,6 +376,10 @@ void esp32_uart_config_set_pins(int uart_no, struct mgos_uart_config *cfg,
 
   if (rts_gpio != -1) {
     dcfg->rts_gpio = rts_gpio;
+  }
+
+  if (tx_en_gpio != -1) {
+    dcfg->tx_en_gpio = tx_en_gpio;
   }
 }
 

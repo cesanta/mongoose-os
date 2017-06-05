@@ -47,6 +47,12 @@ struct mgos_uart_config {
   int tx_buf_size;
   /* Enable flow control for Tx (CTS pin), default: off */
   bool tx_fc_ena;
+  
+  /* Enable RS485 mode with TxEn (Tx Enable pin), default: off */
+  bool rs485_ena;
+  
+  /* Remember whether RS485 TxEn (Tx Enable pin) is active, default: false */
+  bool rs485_active;
 
   /* Platform-specific configuration options. */
   struct mgos_uart_dev_config dev;
@@ -150,10 +156,16 @@ void mgos_uart_config_set_rx_params(struct mgos_uart_config *cfg,
 
 /*
  * Set Tx params in the provided config structure: buffer size `tx_buf_size`
- * and whether Tx flow control is enabled (`tx_fc_ena`).
+ * and whether Tx flow control is enabled (`tx_fc_ena`)
+ * 
+ * and whether TxEn (TxEnable) pin is enabled for RS485 mode (`rs485_ena`) where
+ * data is transmitted and received via the same twisted pair (half duplex).
+ * For RS485 mode, it's assumed that one GPIO pin is connected to the 
+ * interface device (e.g. MAX487) and is used to control DE and nRE pins
+ * simultaneously.  High = transmit, LOW = receive.
  */
 void mgos_uart_config_set_tx_params(struct mgos_uart_config *cfg,
-                                    int tx_buf_size, bool tx_fc_ena);
+                                    int tx_buf_size, bool tx_fc_ena, bool rs485_ena);
 
 /* }}} */
 

@@ -58,6 +58,9 @@ void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us);
  */
 void mgos_uart_hal_dispatch_bottom(struct mgos_uart_state *us);
 
+/* Check whether tx_fifo is empty */
+bool mgos_uart_is_tx_fifo_empty(struct mgos_uart_state *us);
+
 /* Wait for the FIFO to drain */
 void mgos_uart_hal_flush_fifo(struct mgos_uart_state *us);
 
