@@ -28,6 +28,7 @@ $(STUB_ELF): $(STUB) $(LIBS)
          -mtext-section-literals -mlongcalls -nostdlib -fno-builtin \
          -I. -I/src/common/platforms/esp \
          -I/opt/Espressif/esp-idf/components/esp32/include \
+         -I/opt/Espressif/esp-idf/components/soc/esp32/include \
          -L/opt/Espressif/esp-idf -Wl,-static \
          -ffunction-sections -Wl,--gc-sections \
          -Tstub.ld -o $@ $^"

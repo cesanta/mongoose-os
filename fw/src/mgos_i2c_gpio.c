@@ -5,8 +5,6 @@
  * I2C implementation using GPIO (bit-banging).
  */
 
-#if MGOS_ENABLE_I2C && MGOS_ENABLE_I2C_GPIO
-
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -42,10 +40,10 @@ enum i2c_rw {
 };
 
 /* This function delays for half of a SCL pulse, i.e. quarter of a period. */
-static void mgos_i2c_half_delay(struct mgos_i2c *c) {
+static inline void mgos_i2c_half_delay(struct mgos_i2c *c) {
   (void) c;
-  /* This is ~70 KHz. TODO(rojer): Make speed configurable. */
-  mgos_usleep(1);
+  /* This is ~100 KHz on ESP8266, ~112 KHz on ESP32. */
+  (mgos_nsleep100)(23);
 }
 
 static void set_gpio_val(int pin, uint8_t val) {
@@ -61,8 +59,8 @@ static void set_gpio_val(int pin, uint8_t val) {
   }
 }
 
-static void mgos_i2c_set_sda_scl(struct mgos_i2c *c, uint8_t sda_val,
-                                 uint8_t scl_val) {
+static inline void mgos_i2c_set_sda_scl(struct mgos_i2c *c, uint8_t sda_val,
+                                        uint8_t scl_val) {
   set_gpio_val(c->sda_gpio, sda_val);
   set_gpio_val(c->scl_gpio, scl_val);
 }
@@ -109,40 +107,30 @@ void mgos_i2c_stop(struct mgos_i2c *c) {
 
 static enum i2c_ack_type mgos_i2c_send_byte(struct mgos_i2c *c, uint8_t data) {
   enum i2c_ack_type ret_val;
-  int8_t i;
+  int i, bit;
 
-  mgos_ints_disable();
-  for (i = 7; i >= 0; i--) {
-    int8_t bit = (data >> i) & 1;
-    mgos_i2c_set_sda_scl(c, bit, I2C_LOW);
-    mgos_i2c_half_delay(c);
+  set_gpio_val(c->scl_gpio, I2C_LOW);
+  for (i = 0; i < 8; i++, data <<= 1) {
+    bit = (data & 0x80) ? 1 : 0;
     mgos_i2c_set_sda_scl(c, bit, I2C_HIGH);
     mgos_i2c_half_delay(c);
-    mgos_i2c_half_delay(c);
-    mgos_i2c_set_sda_scl(c, bit, I2C_LOW);
+    set_gpio_val(c->scl_gpio, I2C_LOW);
     mgos_i2c_half_delay(c);
   }
-
   /* release the bus for slave to write ack */
-  mgos_i2c_set_sda_scl(c, I2C_INPUT, I2C_LOW);
-  mgos_i2c_half_delay(c);
   mgos_i2c_set_sda_scl(c, I2C_INPUT, I2C_HIGH);
   mgos_i2c_half_delay(c);
   ret_val = mgos_gpio_read(c->sda_gpio);
-  mgos_ints_enable();
+  mgos_i2c_half_delay(c);
+  mgos_i2c_set_sda_scl(c, I2C_INPUT, I2C_LOW);
   if (c->debug) {
     LOG(LL_DEBUG,
         (" sent 0x%02x, recd %s", data, (ret_val == I2C_ACK ? "ACK" : "NAK")));
   }
-  mgos_i2c_half_delay(c);
-  mgos_i2c_set_sda_scl(c, I2C_INPUT, I2C_LOW);
-  mgos_i2c_half_delay(c);
-
   return ret_val;
 }
 
 static void mgos_i2c_send_ack(struct mgos_i2c *c, enum i2c_ack_type ack_type) {
-  mgos_ints_disable();
   mgos_i2c_set_sda_scl(c, ack_type, I2C_LOW);
   mgos_i2c_half_delay(c);
   mgos_i2c_set_sda_scl(c, ack_type, I2C_HIGH);
@@ -150,14 +138,12 @@ static void mgos_i2c_send_ack(struct mgos_i2c *c, enum i2c_ack_type ack_type) {
   mgos_i2c_half_delay(c);
   mgos_i2c_set_sda_scl(c, ack_type, I2C_LOW);
   mgos_i2c_half_delay(c);
-  mgos_ints_enable();
 }
 
 static uint8_t mgos_i2c_read_byte(struct mgos_i2c *c,
                                   enum i2c_ack_type ack_type) {
   uint8_t i, ret_val = 0;
 
-  mgos_ints_disable();
   mgos_i2c_set_sda_scl(c, I2C_INPUT, I2C_LOW);
   mgos_i2c_half_delay(c);
 
@@ -167,12 +153,10 @@ static uint8_t mgos_i2c_read_byte(struct mgos_i2c *c,
     mgos_i2c_half_delay(c);
     bit = mgos_gpio_read(c->sda_gpio);
     ret_val |= (bit << (7 - i));
-    mgos_i2c_half_delay(c);
     mgos_i2c_set_sda_scl(c, I2C_INPUT, I2C_LOW);
     mgos_i2c_half_delay(c);
   }
   mgos_i2c_send_ack(c, ack_type);
-  mgos_ints_enable();
   if (c->debug) {
     LOG(LL_DEBUG, (" recd 0x%02x, sent %s", ret_val,
                    (ack_type == I2C_ACK ? "ACK" : "NAK")));
@@ -234,6 +218,16 @@ out:
   return res;
 }
 
+int mgos_i2c_get_freq(struct mgos_i2c *c) {
+  (void) c;
+  return MGOS_I2C_FREQ_100KHZ;
+}
+
+bool mgos_i2c_set_freq(struct mgos_i2c *c, int freq) {
+  (void) c;
+  return (freq == MGOS_I2C_FREQ_100KHZ);
+}
+
 struct mgos_i2c *mgos_i2c_create(const struct sys_config_i2c *cfg) {
   struct mgos_i2c *c = NULL;
 
@@ -244,6 +238,11 @@ struct mgos_i2c *mgos_i2c_create(const struct sys_config_i2c *cfg) {
   c->scl_gpio = cfg->scl_gpio;
   c->started = false;
   c->debug = cfg->debug;
+
+  /* We can barely do 100 KHz, sort of. */
+  if (cfg->freq != MGOS_I2C_FREQ_100KHZ) {
+    goto out_err;
+  }
 
   if (!mgos_gpio_set_mode(c->sda_gpio, MGOS_GPIO_MODE_INPUT) ||
       !mgos_gpio_set_pull(c->sda_gpio, MGOS_GPIO_PULL_UP)) {
@@ -269,5 +268,3 @@ void mgos_i2c_close(struct mgos_i2c *c) {
   if (c->started) mgos_i2c_stop(c);
   free(c);
 }
-
-#endif /* MGOS_ENABLE_I2C && MGOS_ENABLE_I2C_GPIO */

@@ -1,10 +1,16 @@
 name: heater
 arch: esp8266
 version: 1.0
-skeleton_version: 2017-03-17
+skeleton_version: 2017-05-18
 sources:
   - src
 filesystem:
   - fs
-build_vars:
-  APP_CONF_SCHEMA: src/config.yaml
+config_schema:
+  # Enable I2C by default.
+  - ["i2c.enable", true]
+
+  - ["hsw", "o", {title: "Heater switch configuration"}]
+  - ["hsw.sensor_data_url", "s", {title: "Report sensor data here"}]
+  - ["hsw.sensor_report_interval_ms", "i", {title: "Sensor data report interval"}]
+  - ["hsw.auth", "s", {title: "Authorization header"}]

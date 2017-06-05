@@ -53,14 +53,14 @@ extern const char *build_version, *build_id;
 extern const char *mg_build_version, *mg_build_id;
 
 /* From esp32_wifi.c */
-esp_err_t wifi_event_handler(system_event_t *event);
+esp_err_t esp32_wifi_ev(system_event_t *event);
 bool mgos_wifi_set_config(const struct sys_config_wifi *cfg);
 
 esp_err_t event_handler(void *ctx, system_event_t *event) {
   switch (event->event_id) {
     case SYSTEM_EVENT_STA_GOT_IP:
       /* https://github.com/espressif/esp-idf/issues/161 */
-      return wifi_event_handler(event);
+      return esp32_wifi_ev(event);
     case SYSTEM_EVENT_STA_CONNECTED:
     case SYSTEM_EVENT_STA_DISCONNECTED:
     case SYSTEM_EVENT_AP_STACONNECTED:
@@ -158,7 +158,7 @@ static void IRAM_ATTR mgos_mg_poll_cb(void *arg) {
     mongoose_poll(0);
     timeout_ms = mg_lwip_get_poll_delay_ms(mgos_get_mgr());
     portENTER_CRITICAL(&s_poll_spinlock);
-    if (timeout_ms > 1000) timeout_ms = 1000;
+    if (timeout_ms > 100) timeout_ms = 100;
     timeout_ticks = timeout_ms / portTICK_PERIOD_MS;
     n++;
   } while (n < 10 && (s_mg_want_poll || timeout_ticks == 0));

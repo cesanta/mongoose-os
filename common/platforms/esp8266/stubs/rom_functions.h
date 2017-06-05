@@ -28,6 +28,15 @@ uint32_t SPI_read_status();
 uint32_t Wait_SPI_Idle();
 void spi_flash_attach();
 
+/* ESP32 API compatibility */
+#define esp_rom_spiflash_unlock SPIUnlock
+#define esp_rom_spiflash_erase_sector SPIEraseSector
+#define esp_rom_spiflash_erase_block SPIEraseBlock
+#define esp_rom_spiflash_erase_chip SPIEraseChip
+#define esp_rom_spiflash_read SPIRead
+#define esp_rom_spiflash_write SPIWrite
+#define esp_rom_spiflash_config_param SPIParamCfg
+
 void SelectSpiFunction();
 void SPIFlashModeConfig(uint32_t a, uint32_t b);
 void SPIReadModeCnfig(uint32_t a);

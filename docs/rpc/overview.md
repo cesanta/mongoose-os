@@ -34,13 +34,3 @@ Using port /dev/cu.SLAB_USBtoUART
   "I2C.ReadRegB",
   ...
 ```
-
-Scan I2C bus and return addresses of I2C peripherals from a device
-at IP address 192.168.1.4:
-
-```
-$ mos --port ws://192.168.1.4/rpc call I2C.Scan
-[
-  31
-]
-```

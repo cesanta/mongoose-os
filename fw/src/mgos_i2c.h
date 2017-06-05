@@ -54,6 +54,21 @@ bool mgos_i2c_write(struct mgos_i2c *i2c, uint16_t addr, const void *data,
  */
 void mgos_i2c_stop(struct mgos_i2c *i2c);
 
+/* Most implementations should support these two, support for other frequencies
+ * is platform-dependent. */
+#define MGOS_I2C_FREQ_100KHZ 100000
+#define MGOS_I2C_FREQ_400KHZ 400000
+
+/*
+ * Get I2C interface frequency.
+ */
+int mgos_i2c_get_freq(struct mgos_i2c *i2c);
+
+/*
+ * Set I2C interface frequency.
+ */
+bool mgos_i2c_set_freq(struct mgos_i2c *i2c, int freq);
+
 /*
  * Register read/write routines.
  * These are helpers for reading register values from a device.
@@ -67,10 +82,15 @@ void mgos_i2c_stop(struct mgos_i2c *i2c);
  */
 int mgos_i2c_read_reg_b(struct mgos_i2c *conn, uint16_t addr, uint8_t reg);
 int mgos_i2c_read_reg_w(struct mgos_i2c *conn, uint16_t addr, uint8_t reg);
+bool mgos_i2c_read_reg_n(struct mgos_i2c *conn, uint16_t addr, uint8_t reg,
+                         size_t n, uint8_t *buf);
+
 bool mgos_i2c_write_reg_b(struct mgos_i2c *conn, uint16_t addr, uint8_t reg,
                           uint8_t value);
 bool mgos_i2c_write_reg_w(struct mgos_i2c *conn, uint16_t addr, uint8_t reg,
                           uint16_t value);
+bool mgos_i2c_write_reg_n(struct mgos_i2c *conn, uint16_t addr, uint8_t reg,
+                          size_t n, const uint8_t *buf);
 
 /* Close i2c connection and free resources. */
 void mgos_i2c_close(struct mgos_i2c *conn);

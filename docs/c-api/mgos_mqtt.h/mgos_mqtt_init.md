@@ -3,7 +3,7 @@ title: "mgos_mqtt_init()"
 decl_name: "mgos_mqtt_init"
 symbol_kind: "func"
 signature: |
-  enum mgos_init_result mgos_mqtt_init(void);
+  bool mgos_mqtt_init(void);
 ---
 
 Initialises global MQTT connection 

@@ -1,9 +1,8 @@
 name: c_aws_shadow
 # arch: PLATFORM
 version: 1.0
-skeleton_version: 2017-03-17
+skeleton_version: 2017-05-18
 sources:
   - src
-build_vars:
-  MGOS_ENABLE_MQTT: 1
-  MGOS_ENABLE_AWS_SHADOW: 1
+libs:
+  - origin: https://github.com/mongoose-os-libs/aws

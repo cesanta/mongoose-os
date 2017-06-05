@@ -12,9 +12,9 @@
 extern "C" {
 #endif /* __cplusplus */
 
-int cs_varint_encode(int64_t num, uint8_t *to);
-int64_t cs_varint_decode(const uint8_t *from, int *llen);
-int cs_varint_llen(int64_t num);
+int cs_varint_encode(uint64_t num, uint8_t *to);
+uint64_t cs_varint_decode(const uint8_t *from, int *llen);
+int cs_varint_llen(uint64_t num);
 
 #if defined(__cplusplus)
 }

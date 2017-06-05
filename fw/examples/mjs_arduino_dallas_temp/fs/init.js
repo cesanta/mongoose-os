@@ -15,11 +15,11 @@ load('api_arduino_dallas_temp.js');
 let pin = 13;
 
 // Initialize 1-Wire bus
-let ow = OneWire.init(pin);
+let ow = OneWire.create(pin);
 // Initialize DallasTemperature library
-let dt = DallasTemperature.init(ow);
+let dt = DallasTemperature.create(ow);
 // Start up the library
-DallasTemperature.begin(dt);
+dt.begin();
 // Number of sensors found on the 1-Wire bus
 let n = 0;
 // Sensors addresses
@@ -27,25 +27,20 @@ let sens = [];
 
 // This function reads data from the DS sensors every 2 seconds
 Timer.set(2000 /* milliseconds */, true /* repeat */, function() {
-
   if (n === 0) {
-    n = DallasTemperature.getDeviceCount(dt);
-
-    print('Sensors found:');
-    print(n);
+    n = dt.getDeviceCount();
+    print('Sensors found:', n);
 
     for (let i = 0; i < n; i++) {
       sens[i] = '01234567';
-      if (DallasTemperature.getAddress(dt, sens[i], i) !== 1) {
-        print('Sensor address:');
-        print(DallasTemperature.toHexStr(sens[i]));
+      if (dt.getAddress(sens[i], i) === 1) {
+        print('Sensor#', i, 'address:', dt.toHexStr(sens[i]));
       }
     }
   }
 
-  DallasTemperature.requestTemperatures(dt);
+  dt.requestTemperatures();
   for (let i = 0; i < n; i++) {
-    print('Temperature: ');
-    print(DallasTemperature.getTempC(dt, sens[i]));
+    print('Sensor#', i, 'Temperature:', dt.getTempC(sens[i]), '*C');
   }
 }, null);

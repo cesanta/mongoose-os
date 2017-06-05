@@ -60,7 +60,7 @@ int start_nwp(void) {
   memset(&ver, 0, sizeof(ver));
   sl_DevGet(SL_DEVICE_GENERAL_CONFIGURATION, &opt, &len,
             (unsigned char *) (&ver));
-  LOG(LL_INFO, ("NWP v%d.%d.%d.%d started, host driver v%d.%d.%d.%d",
+  LOG(LL_INFO, ("NWP v%lu.%lu.%lu.%lu started, host driver v%ld.%ld.%ld.%ld",
                 ver.NwpVersion[0], ver.NwpVersion[1], ver.NwpVersion[2],
                 ver.NwpVersion[3], SL_MAJOR_VERSION_NUM, SL_MINOR_VERSION_NUM,
                 SL_VERSION_NUM, SL_SUB_VERSION_NUM));
@@ -102,9 +102,11 @@ static enum cc3200_init_result cc3200_init(void *arg) {
     return CC3200_INIT_FAILED_TO_READ_BOOT_CFG;
   }
 
-  LOG(LL_INFO, ("Boot cfg %d: 0x%llx, 0x%u, %s @ 0x%08x, %s", g_boot_cfg_idx,
-                g_boot_cfg.seq, g_boot_cfg.flags, g_boot_cfg.app_image_file,
-                g_boot_cfg.app_load_addr, g_boot_cfg.fs_container_prefix));
+  LOG(LL_INFO,
+      ("Boot cfg %d: 0x%llx, 0x%u, %s @ 0x%08x, %s", g_boot_cfg_idx,
+       g_boot_cfg.seq, (unsigned int) g_boot_cfg.flags,
+       g_boot_cfg.app_image_file, (unsigned int) g_boot_cfg.app_load_addr,
+       g_boot_cfg.fs_container_prefix));
 
 #if MGOS_ENABLE_UPDATER
   if (g_boot_cfg.flags & BOOT_F_FIRST_BOOT) {

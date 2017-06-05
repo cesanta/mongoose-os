@@ -226,6 +226,7 @@ func (fc *FlasherClient) Write(addr uint32, data []byte, erase bool) error {
 		bb := bytes.NewBuffer(buf)
 		binary.Read(bb, binary.LittleEndian, &numWritten)
 		binary.Read(bb, binary.LittleEndian, &bufLevel)
+		glog.V(3).Infof("<= %d %d; %d", numWritten, bufLevel, numSent-numWritten)
 		for numSent < uint32(len(data)) {
 			inFlight := numSent - numWritten
 			canSend := int(UART_BUF_SIZE - FLASH_WRITE_SIZE - inFlight)
@@ -324,7 +325,7 @@ func (fc *FlasherClient) Digest(addr, length, blockSize uint32) ([][]byte, error
 	if !fc.connected {
 		return nil, errors.New("not connected")
 	}
-	result, err := fc.simpleCmd(cmdFlashDigest, []uint32{addr, length, blockSize}, 2*time.Second)
+	result, err := fc.simpleCmd(cmdFlashDigest, []uint32{addr, length, blockSize}, 5*time.Second)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}

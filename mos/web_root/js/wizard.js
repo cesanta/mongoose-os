@@ -231,4 +231,23 @@
       }
     });
   });
+
+  $(document)
+    .on('click', '#version-update', function(ev) {
+      if (confirm("Update mos tool?")) {
+        $(ev.target).addClass('spinner').prop('disabled', true);
+        $.ajax({url: '/update'})
+          .done(function() {
+            $(ev.target).removeClass('spinner')
+            new PNotify({title: 'Update successful. Please restart mos tool.', type: 'success'});
+          })
+          .fail(function(err) {
+            $(ev.target).removeClass('spinner')
+            var text = err.responseJSON ? err.responseJSON.error : err.responseText;
+            if (text) {
+              new PNotify({title: 'Error', text: text, type: 'error'});
+            }
+          });
+      }
+    });
 })(jQuery);

@@ -35,7 +35,7 @@ let URL = {
 
 let HTTP = {
   _c: ffi('void *mgos_connect_http(char *, void (*)(void *, int, void *, userdata), userdata)'),
-  _cs: ffi('void *mgos_connect_http_ssl(char *, void (*)(void *, int, void *, userdata), userdata, char *, char *)'),
+  _cs: ffi('void *mgos_connect_http_ssl(char *, void (*)(void *, int, void *, userdata), userdata, char *, char *, char *)'),
   _pk: ffi('void *mjs_mem_get_ptr(void *, int)'),
   _p: ffi('void *mjs_mem_to_ptr(int)'),
   _getu: ffi('double mjs_mem_get_uint(void *, int, int)'),
@@ -58,7 +58,8 @@ let HTTP = {
   // ```javascript
   // HTTP.query({
   //   url: 'http://httpbin.org/post',
-  //   data: {foo: 1, bar: 'baz'},  // Optional. If set, POST is used
+  //   headers: { 'X-Foo': 'bar' },  // Optional - headers
+  //   data: {foo: 1, bar: 'baz'},   // Optional. If set, POST is used
   //   success: function(body, full_http_msg) { print(body); },
   //   error: function(err) { print(err); },  // Optional
   // });
@@ -72,6 +73,10 @@ let HTTP = {
         let meth = body ? 'POST' : 'GET';
         let host = 'Host: ' + ud.u.addr + '\r\n';
         let cl = 'Content-Length: ' + JSON.stringify(body.length) + '\r\n';
+        let hdrs = ud.headers || {};
+        for (let k in hdrs) {
+          cl += k + ': ' + hdrs[k] + '\r\n';
+        }
         let req = meth + ' ' + ud.u.uri + ' HTTP/1.0\r\n' + host + cl + '\r\n';
         Net.send(conn, req);
         Net.send(conn, body);
@@ -89,7 +94,7 @@ let HTTP = {
     };
     obj.f = f;
     if (obj.u.ssl) {
-      this._cs(obj.u.addr, f, obj, '', '');
+      this._cs(obj.u.addr, f, obj, obj.cert || '', obj.key || '', obj.ca_cert || 'ca.pem');
     } else {
       this._c(obj.u.addr, f, obj);
     }

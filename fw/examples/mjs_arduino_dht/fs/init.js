@@ -16,19 +16,16 @@ load('api_arduino_dht.js');
 let pin = 13;
 
 // Initialize Adafruit DHT library
-let dht = DHT.init(pin, DHT.DHT22);
+let dht = DHT.create(pin, DHT.DHT22);
 // Initialize a device
-DHT.begin(dht);
+dht.begin();
 
 // This function reads data from the DHT sensor every 2 second
 Timer.set(2000 /* milliseconds */, true /* repeat */, function() {
-  let t = DHT.readTemperature(dht, 0, 0);
-  let h = DHT.readHumidity(dht, 0);
+  let t = dht.readTemperature(0, 0);
+  let h = dht.readHumidity(0);
 
-  print('Temperature, *C: ');
-  print(t);
-  print('Humidity, %: ');
-  print(h);
-  print('Heat index, *C: ');
-  print(DHT.computeHeatIndex(dht, t, h, 0));
+  print('Temperature:', t, '*C');
+  print('Humidity:', h, '%');
+  print('Heat index:', dht.computeHeatIndex(t, h, 0), '*C');
 }, null);

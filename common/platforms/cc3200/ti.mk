@@ -7,15 +7,20 @@ AR = $(TOOLCHAIN)/bin/armar
 NM = nm
 GENFILES_LIST ?=
 
-CFLAGS = --c99 -mv7M4 --little_endian --code_state=16 --float_support=vfplib --abi=eabi \
-         -O4 --opt_for_speed=0 --unaligned_access=on --small_enum \
-         --gen_func_subsections=on --diag_wrap=off --display_error_number \
-         --emit_warnings_as_errors -Dccs
-CFLAGS += -I$(TOOLCHAIN)/include
+C_CXX_FLAGS = -mv7M4 --little_endian --code_state=16 --float_support=vfplib --abi=eabi \
+              -O4 --opt_for_speed=0 --unaligned_access=on --small_enum \
+              --gen_func_subsections=on --diag_wrap=off --display_error_number \
+              --emit_warnings_as_errors -Dccs -I$(TOOLCHAIN)/include
+CFLAGS += --c99 $(C_CXX_FLAGS)
+CXXFLAGS += $(C_CXX_FLAGS)
 
 # cc flags,file
 define cc
 	$(vecho) "TICC  $2 -> $@"
+	$(Q) $(CC_WRAPPER) $(CC) -c --preproc_with_compile -ppd=$@.d $1 --output_file=$@ $2
+endef
+define cxx
+	$(vecho) "TICXX $2 -> $@"
 	$(Q) $(CC_WRAPPER) $(CC) -c --preproc_with_compile -ppd=$@.d $1 --output_file=$@ $2
 endef
 

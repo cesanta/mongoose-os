@@ -1,8 +1,13 @@
 name: c_rpc
 # arch: PLATFORM
 version: 1.0
-skeleton_version: 2017-03-17
+skeleton_version: 2017-05-18
 sources:
   - src
-build_vars:
-  APP_CONF_SCHEMA: src/conf_schema.yaml
+libs:
+  - origin: https://github.com/mongoose-os-libs/mqtt
+config_schema:
+  - ["c_rpc", "o", {"title": "c_rpc app settings"}]
+  - ["c_rpc.peer", "s", "", {"title": "Peer address"}]
+libs:
+  - origin: https://github.com/mongoose-os-libs/rpc-mqtt

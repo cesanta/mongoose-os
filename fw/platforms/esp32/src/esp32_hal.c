@@ -19,8 +19,7 @@
 #include "fw/platforms/esp32/src/esp32_fs.h"
 
 size_t mgos_get_heap_size(void) {
-  /* ESP-IDF does not have a function for this. TODO(rojer): Implement. */
-  return 0;
+  return xPortGetHeapSize();
 }
 
 size_t mgos_get_free_heap_size(void) {
@@ -43,7 +42,7 @@ void mgos_system_restart(int exit_code) {
 }
 
 void device_get_mac_address(uint8_t mac[6]) {
-  esp_efuse_read_mac(mac);
+  esp_efuse_mac_get_default(mac);
 }
 
 /* In components/newlib/time.c. Returns a monotonic microsecond counter. */
@@ -54,10 +53,9 @@ void mgos_msleep(uint32_t msecs) {
 }
 
 void mgos_usleep(uint32_t usecs) {
+  uint64_t threshold = get_time_since_boot() + (uint64_t) usecs;
   int ticks = usecs / (1000000 / configTICK_RATE_HZ);
-  int remainder = usecs % (1000000 / configTICK_RATE_HZ);
   if (ticks > 0) vTaskDelay(ticks);
-  uint64_t threshold = get_time_since_boot() + remainder;
   while (get_time_since_boot() < threshold) {
   }
 }

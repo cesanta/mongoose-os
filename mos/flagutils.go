@@ -10,6 +10,7 @@ import (
 	"cesanta.com/common/go/multierror"
 
 	"github.com/cesanta/errors"
+	"github.com/fatih/color"
 	flag "github.com/spf13/pflag"
 )
 
@@ -90,7 +91,25 @@ func usage() {
 		}
 	}
 
-	fmt.Fprintf(w, "The Mongoose OS command line tool, v. %s. Usage:\n", BuildId)
+	fmt.Fprintf(w, "The Mongoose OS command line tool, v. %s.\n", BuildId)
+	fmt.Fprintf(w, "Checking updates... ")
+	w.Flush()
+
+	serverVersion, err := getServerMosVersion()
+	if err != nil {
+		color.New(color.FgRed).Fprintf(w, "Failed to check server version: %s\n", err)
+	} else {
+		if serverVersion.BuildId != BuildId {
+			color.New(color.FgRed).Fprintf(
+				w, "\nOut of date: new version available: %s\nPlease run \"mos update\"\n",
+				serverVersion.BuildId,
+			)
+		} else {
+			color.New(color.FgGreen).Fprintf(w, "Up to date.\n")
+		}
+	}
+
+	fmt.Fprintf(w, "Usage:\n")
 	fmt.Fprintf(w, "  %s <command>\n", os.Args[0])
 	fmt.Fprintf(w, "\nCommands:\n")
 

@@ -45,12 +45,13 @@ LDFLAGS ?=
 MGOS_POSIX_FEATURES ?= -DMGOS_PROMPT_DISABLE_ECHO -DMGOS_MAX_NUM_UARTS=2 -DMGOS_NUM_GPIO=16
 MONGOOSE_FEATURES = \
   -DMG_USE_READ_WRITE -DMG_ENABLE_THREADS -DMG_ENABLE_THREADS \
-  -DMG_ENABLE_HTTP_STREAMING_MULTIPART -DMG_DISABLE_DAV
+  -DMG_ENABLE_HTTP_STREAMING_MULTIPART -DMG_DISABLE_DAV \
+  -DMG_MODULE_LINES
 
 
 INCLUDES = $(MGOS_PATH) $(SRC_PATH) $(BUILD_DIR)
 MGOS_SRCS = $(notdir $(wildcard *.c)) mgos_init.c  \
-            mongoose.c frozen.c mgos_mongoose.c mgos_gpio.c \
+            mongoose.c frozen.c mgos_mongoose.c mgos_gpio.c mgos_hooks.c \
             mgos_timers_mongoose.c \
             mgos_config.c mgos_sys_config.c \
             $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \

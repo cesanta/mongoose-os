@@ -15,16 +15,12 @@
 
 #include "fw/src/mgos_features.h"
 #include "fw/src/mgos_hal.h"
-#include "fw/src/mgos_mqtt.h"
+#include "fw/src/mgos_hooks.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_uart.h"
 
 #ifndef IRAM
 #define IRAM
-#endif
-
-#ifndef MGOS_MQTT_LOG_PUSHBACK_THRESHOLD
-#define MGOS_MQTT_LOG_PUSHBACK_THRESHOLD 2048
 #endif
 
 static int8_t s_stdout_uart = MGOS_DEBUG_UART;
@@ -36,9 +32,14 @@ static int8_t s_in_debug = 0;
 extern enum cs_log_level cs_log_cur_msg_level;
 
 void mgos_debug_write(int fd, const void *data, size_t len) {
-  char buf[256];
+  char buf[MGOS_DEBUG_TMP_BUF_SIZE];
   int uart_no = -1;
   mgos_lock();
+  if (s_in_debug) {
+    mgos_unlock();
+    return;
+  }
+  s_in_debug = true;
   if (s_uart_suspended <= 0) {
     if (fd == 1) {
       uart_no = s_stdout_uart;
@@ -52,42 +53,33 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
   }
   const struct sys_config *cfg = get_cfg();
   /* Only send LL_DEBUG messages and below, to avoid loops. */
-  if (s_in_debug || cfg == NULL || cs_log_cur_msg_level > LL_DEBUG) {
+  if (cfg == NULL || cs_log_cur_msg_level > LL_DEBUG) {
+    s_in_debug = false;
     mgos_unlock();
     return;
   }
-  s_in_debug = true;
 #if MGOS_ENABLE_DEBUG_UDP
   /* Only send STDERR to UDP. */
   if (fd == 2 && cfg->debug.udp_log_addr != NULL) {
     static uint32_t s_seq = 0;
-    if (mgos_mqtt_num_unsent_bytes() < MGOS_MQTT_LOG_PUSHBACK_THRESHOLD) {
-      int n = snprintf(buf, sizeof(buf), "%s %u %.3lf %d|",
-                       (cfg->device.id ? cfg->device.id : "-"), s_seq,
-                       mg_time(), fd);
-      if (n > 0) {
-        mgos_debug_udp_send(mg_mk_str_n(buf, n), mg_mk_str_n(data, len));
-      }
+    int n =
+        snprintf(buf, sizeof(buf), "%s %u %.3lf %d|",
+                 (cfg->device.id ? cfg->device.id : "-"), s_seq, mg_time(), fd);
+    if (n > 0) {
+      mgos_debug_udp_send(mg_mk_str_n(buf, n), mg_mk_str_n(data, len));
     }
     s_seq++;
   }
 #endif /* MGOS_ENABLE_DEBUG_UDP */
-#if MGOS_ENABLE_MQTT
-  const char *topic = (fd == 1 ? cfg->debug.stdout_topic
-                               : fd == 2 ? cfg->debug.stderr_topic : NULL);
-  if (topic != NULL) {
-    static uint32_t s_seq = 0;
-    char *msg = buf;
-    int msg_len = mg_asprintf(&msg, sizeof(buf), "%s %u %.3lf %d|%.*s",
-                              (cfg->device.id ? cfg->device.id : "-"), s_seq,
-                              mg_time(), fd, (int) len, data);
-    if (len > 0) {
-      mgos_mqtt_pub(topic, msg, msg_len, 0 /* qos */);
-      s_seq++;
-    }
-    if (msg != buf) free(msg);
+
+  /* Invoke all registered debug_write hooks */
+  {
+    struct mgos_hook_arg arg = {
+        {.debug = {
+             .buf = buf, .fd = fd, .data = data, .len = len, }}};
+    mgos_hook_trigger(MGOS_HOOK_DEBUG_WRITE, &arg);
   }
-#endif /* MGOS_ENABLE_MQTT */
+
   s_in_debug = false;
   mgos_unlock();
 }

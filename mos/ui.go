@@ -14,6 +14,7 @@ import (
 	"sync"
 	"time"
 
+	"cesanta.com/mos/build"
 	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"
 	"github.com/elazarl/go-bindata-assetfs"
@@ -25,16 +26,37 @@ import (
 	"golang.org/x/net/websocket"
 )
 
+const (
+	expireTime = 1 * time.Minute
+)
+
+type projectType string
+
+const (
+	projectTypeApp projectType = "app"
+	projectTypeLib projectType = "lib"
+)
+
 var (
 	httpPort     = 1992
+	udpAddr      = ":1993"
 	wsClients    = make(map[*websocket.Conn]int)
 	wsClientsMtx = sync.Mutex{}
 	wwwRoot      = ""
+	startBrowser = true
 )
 
 type wsmessage struct {
 	Cmd  string `json:"cmd"`
 	Data string `json:"data"`
+}
+
+// Return result of the /list-apps and /list-libs endpoints
+type appLibList map[string]*build.FWAppManifest
+
+type saveAppLibFileParams struct {
+	// base64-encoded data
+	Data string `yaml:"data"`
 }
 
 func wsSend(ws *websocket.Conn, m wsmessage) {
@@ -111,10 +133,44 @@ func httpReply(w http.ResponseWriter, result interface{}, err error) {
 func init() {
 	flag.StringVar(&wwwRoot, "web-root", "", "UI Web root to use instead of built-in")
 	hiddenFlags = append(hiddenFlags, "web-root")
+
+	flag.IntVar(&httpPort, "http-port", 1992, "Web UI HTTP port")
+	hiddenFlags = append(hiddenFlags, "http-port")
+
+	flag.BoolVar(&startBrowser, "start-browser", true, "Automatically start browser")
+	hiddenFlags = append(hiddenFlags, "start-browser")
 }
 
 func reconnectToDevice(ctx context.Context) (*dev.DevConn, error) {
-	return createDevConnWithJunkHandler(ctx, consoleJunkHandler)
+	return createDevConnWithJunkHandler(ctx, consoleJunkHandler, MqttLogHandler)
+}
+
+func MqttLogHandler(topic string, data []byte) {
+	wsBroadcast(wsmessage{"uart", string(data)})
+}
+
+func UDPLogCatcher() {
+	addr, err := net.ResolveUDPAddr("udp", udpAddr)
+	if err != nil {
+		fmt.Println("Error: ", err)
+		return
+	}
+	conn, err := net.ListenUDP("udp", addr)
+	if err != nil {
+		fmt.Println("Error: ", err)
+		return
+	}
+	defer conn.Close()
+	buf := make([]byte, 2048)
+	for {
+		n, _, err := conn.ReadFromUDP(buf)
+		if err != nil {
+			fmt.Println("Error: ", err)
+			wsBroadcast(wsmessage{"uart", fmt.Sprintf("Error: %v", err)})
+		} else {
+			wsBroadcast(wsmessage{"uart", string(buf[:n])})
+		}
+	}
 }
 
 func startUI(ctx context.Context, devConn *dev.DevConn) error {
@@ -122,6 +178,7 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 	glog.CopyStandardLogTo("INFO")
 	go reportConsoleLogs()
+	go UDPLogCatcher()
 	http.Handle("/ws", websocket.Handler(wsHandler))
 
 	r, w, _ := os.Pipe()
@@ -184,6 +241,11 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 		devConnMtx.Lock()
 		defer devConnMtx.Unlock()
+
+		if devConn == nil {
+			httpReply(w, nil, errors.Errorf("Device is not connected"))
+			return
+		}
 
 		err := internalConfigSet(ctx2, devConn, args)
 		result := "false"
@@ -271,6 +333,11 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		devConnMtx.Lock()
 		defer devConnMtx.Unlock()
 
+		if devConn == nil {
+			httpReply(w, nil, errors.Errorf("Device is not connected"))
+			return
+		}
+
 		text, err := getFile(ctx2, devConn, r.FormValue("name"))
 		if err == nil {
 			text2, err2 := json.Marshal(text)
@@ -320,9 +387,10 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		type GetPortsResult struct {
 			IsConnected bool
 			CurrentPort string
+			PortFlag    string
 			Ports       []string
 		}
-		reply := GetPortsResult{false, "", enumerateSerialPorts()}
+		reply := GetPortsResult{false, "", *portFlag, enumerateSerialPorts()}
 		if devConn != nil {
 			reply.CurrentPort = devConn.ConnectAddr
 			reply.IsConnected = devConn.IsConnected()
@@ -356,8 +424,8 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 			return
 		}
 		args := r.FormValue("args")
-
-		fmt.Println("Calling", method, args)
+		glog.Errorf("Calling: %+v", method)
+		glog.Infof("Calling: %+v, args: %+v", method, args)
 
 		timeout, err2 := strconv.ParseInt(r.FormValue("timeout"), 10, 64)
 		if err2 != nil {
@@ -369,11 +437,18 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		devConnMtx.Lock()
 		defer devConnMtx.Unlock()
 
+		if devConn == nil {
+			httpReply(w, nil, errors.Errorf("Device is not connected"))
+			return
+		}
+
 		result, err := callDeviceService(ctx2, devConn, method, args)
 		if method == "Config.Save" {
 			// Saving config causes the device to reboot, so we have to wait a bit
 			waitForReboot()
 		}
+		glog.Errorf("Call complete, error: %v", err)
+		glog.Infof("Call result: %+v, error: %+v", result, err)
 		httpReply(w, result, err)
 	})
 
@@ -428,14 +503,30 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		httpReply(w, true, err)
 	})
 
+	initProjectManagementEndpoints()
+
+	http.HandleFunc("/update", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		result := true
+
+		err := update(ctx, devConn)
+		if err != nil {
+			err = errors.Trace(err)
+			result = false
+		}
+
+		httpReply(w, result, err)
+	})
+
 	if wwwRoot != "" {
-		http.Handle("/", http.FileServer(http.Dir(wwwRoot)))
+		http.HandleFunc("/", addExpiresHeader(0, http.FileServer(http.Dir(wwwRoot))))
 	} else {
 		assetInfo := func(path string) (os.FileInfo, error) {
 			return os.Stat(path)
 		}
-		http.Handle("/", http.FileServer(&assetfs.AssetFS{Asset: Asset,
-			AssetDir: AssetDir, AssetInfo: assetInfo, Prefix: "web_root"}))
+		http.Handle("/", addExpiresHeader(expireTime, http.FileServer(&assetfs.AssetFS{Asset: Asset,
+			AssetDir: AssetDir, AssetInfo: assetInfo, Prefix: "web_root"})))
 	}
 	addr := fmt.Sprintf("127.0.0.1:%d", httpPort)
 	url := fmt.Sprintf("http://%s", addr)
@@ -446,9 +537,19 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 	if err != nil {
 		return errors.Trace(err)
 	}
-	open.Start(url)
+	if startBrowser {
+		open.Start(url)
+	}
 	http.Serve(listener, nil)
 
 	// Unreacahble
 	return nil
+}
+
+func addExpiresHeader(d time.Duration, handler http.Handler) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		const layout = "Mon, 02 Jan 2006 15:04:05 GMT"
+		w.Header().Set("Expires", time.Now().UTC().Add(d).Format(layout))
+		handler.ServeHTTP(w, r)
+	}
 }

@@ -79,6 +79,22 @@ func GitFetch(repo string) error {
 	return nil
 }
 
+func IsClean(repo string) (bool, error) {
+	resp, err := git(repo, "diff", "--shortstat")
+
+	if err != nil {
+		return false, errors.Annotatef(err, "failed to git diff --shortstat")
+	}
+
+	if resp != "" {
+		// Working dir is dirty
+		return false, nil
+	}
+
+	// Working dir is clean
+	return true, nil
+}
+
 func GitClone(srcURL, targetDir, referenceDir string) error {
 	args := []string{"clone"}
 	if referenceDir != "" {

@@ -15,6 +15,7 @@ MAKEFLAGS += --warn-undefined-variables
 APP ?= mongoose-os
 APP_PLATFORM = esp8266
 APP_CFLAGS ?=
+APP_CXXFLAGS ?=
 APP_EXTRA_SRCS ?=
 FFI_SYMBOLS ?=
 # List of app source files, globs are supported
@@ -50,7 +51,7 @@ COMMON_ESP_PATH ?= $(COMMON_PATH)/platforms/esp/src
 COMMON_ESP8266_PATH ?= $(COMMON_PATH)/platforms/esp8266
 MGOS_ESP8266_PATH ?= $(MGOS_PATH)/fw/platforms/esp8266
 MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
-MBEDTLS_PATH ?= /opt/mbedtls
+MBEDTLS_PATH ?= /opt/cs_mbedtls
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 UMM_MALLOC_PATH ?= $(COMMON_PATH)/umm_malloc
 COMMON_FS_PATH ?= $(MGOS_PATH)/fw/skeleton/fs
@@ -107,6 +108,7 @@ MGOS_ESP_SRC_PATH = $(MGOS_ESP8266_PATH)/src
 MGOS_SRCS = cs_file.c cs_rbuf.c \
             mgos_config.c \
             mgos_gpio.c \
+            mgos_hooks.c \
             mgos_init.c \
             mgos_timers_mongoose.c \
             mgos_wifi.c \
@@ -276,12 +278,14 @@ endif
 ifeq "$(SSL)" "mbedTLS"
   IPATH += $(MBEDTLS_PATH)/include
   MGOS_SRCS += esp_crypto.c
-  MGOS_ESP_FEATURES += -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS -DMG_SSL_IF_MBEDTLS_FREE_CERTS
-  MBEDTLS_CFLAGS = $(CFLAGS) -Wno-unused-variable -Wno-unused-function
+  MGOS_ESP_FEATURES += -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS \
+                       -DMG_SSL_IF_MBEDTLS_FREE_CERTS \
+                       -DMBEDTLS_X509_CA_CHAIN_ON_DISK
+  MBEDTLS_CFLAGS = $(CFLAGS)
   SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp_mbedtls_config.yaml
   ifeq "$(MGOS_ENABLE_ATCA)" "1"
-    MBEDTLS_CFLAGS += -DMBEDTLS_ECP_ATCA -I$(ATCA_PATH)/lib
-    SSL_LIBS = $(addprefix $(MBEDTLS_PATH)/library/,libmbedcrypto_atca.a libmbedtls_atca.a libmbedx509.a)
+    MBEDTLS_CFLAGS += -DMBEDTLS_ECP_ATCA -DMBEDTLS_X509_CA_CHAIN_ON_DISK -I$(ATCA_PATH)/lib
+    SSL_LIBS = $(addprefix $(MBEDTLS_PATH)/library/,libmbedcrypto_atca.a libmbedtls_atca.a libmbedx509_atca.a)
   else
     SSL_LIBS = $(addprefix $(MBEDTLS_PATH)/library/,libmbedcrypto.a libmbedtls.a libmbedx509.a)
   endif
@@ -345,10 +349,13 @@ INCDIRS = $(addprefix -I,$(IPATH)) -I$(GEN_DIR)
 LIBDIRS = $(addprefix -L,$(LPATH))
 
 C_CXX_FLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) \
-              -DFW_RF_CAL_DATA_ADDR=$(FW_RF_CAL_DATA_ADDR) \
-              -DFW_ARCHITECTURE=$(APP_PLATFORM) \
-              $(MGOS_CFLAGS) $(APP_CFLAGS) $(CFLAGS_EXTRA) \
-              $(HEAP_LOG_FLAGS) $(MINIZ_FLAGS) $(BOOTLOADER_FLAGS)
+               -DFW_RF_CAL_DATA_ADDR=$(FW_RF_CAL_DATA_ADDR) \
+               -DFW_ARCHITECTURE=$(APP_PLATFORM) \
+               $(MGOS_CFLAGS) $(CFLAGS_EXTRA) \
+               $(HEAP_LOG_FLAGS) $(MINIZ_FLAGS) $(BOOTLOADER_FLAGS)
+
+CFLAGS += $(APP_CFLAGS)
+CXXFLAGS += $(APP_CXXFLAGS)
 
 $(BUILD_DIR) $(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
 	$(vecho) "MKDIR $@"

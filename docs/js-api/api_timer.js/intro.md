@@ -6,6 +6,8 @@ items:
 Timer API. Source C API is defined at:
 [mgos_timers.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_timers.h).
 
+load('api_math.js');
+
 
 
 ## **`Timer.set(milliseconds, repeat, handler)`**
@@ -33,4 +35,10 @@ Return current time as double value, UNIX epoch (seconds since 1970).
 
 ## **`Timer.del(id)`**
 Cancel previously installed timer.
+
+
+
+## **`Timer.fmt(fmt, time)`**
+Formats the time 'time' according to the strftime-like format
+specification 'fmt'
 

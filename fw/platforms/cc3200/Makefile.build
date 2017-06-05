@@ -10,6 +10,7 @@ MAKEFLAGS += --warn-undefined-variables
 APP ?= mongoose-os
 APP_PLATFORM = cc3200
 APP_CFLAGS ?=
+APP_CXXFLAGS ?=
 APP_SLFS_PATH ?=
 APP_EXTRA_SRCS ?=
 FFI_SYMBOLS ?=
@@ -130,13 +131,13 @@ SYS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/sys_config_schema.json
 SYS_RO_VARS_C = $(GEN_DIR)/sys_ro_vars.c
 SYS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/sys_ro_vars_schema.json
 BUILD_INFO_C = $(GEN_DIR)/build_info.c
-BUILD_INFO_O = $(BUILD_DIR)/build_info.o
+BUILD_INFO_O = $(BUILD_DIR)/build_info.c.o
 BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
 MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
-MG_BUILD_INFO_O = $(BUILD_DIR)/mg_build_info.o
+MG_BUILD_INFO_O = $(BUILD_DIR)/mg_build_info.c.o
 SYMBOLS_DUMP = $(GEN_DIR)/symbols_dump.txt
 FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
-FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.o
+FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.c.o
 BOOT_CFG_0 = $(BUILD_DIR)/mg-boot.cfg.0
 BOOT_CFG_1 = $(BUILD_DIR)/mg-boot.cfg.1
 MK_FS_META_BIN = $(BUILD_DIR)/mkfsmeta
@@ -146,6 +147,7 @@ GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 .PHONY: all clean flash
 
 MGOS_SRCS = mgos_gpio.c \
+            mgos_hooks.c \
             mgos_init.c \
             mgos_mongoose.c \
             mgos_timers_mongoose.c \
@@ -195,7 +197,11 @@ include $(MGOS_PATH)/fw/src/mgos_features.mk
 include $(MGOS_PATH)/fw/src/spiffs.mk
 
 ifeq "$(MGOS_ENABLE_I2C)" "1"
-  SYS_CONF_SCHEMA += $(MGOS_CC3200_SRC_PATH)/cc3200_i2c_config.yaml
+  ifneq "$(MGOS_ENABLE_I2C_GPIO)" "1"
+    SYS_CONF_SCHEMA += $(MGOS_CC3200_SRC_PATH)/cc3200_i2c_config.yaml
+  else
+    SYS_CONF_SCHEMA += $(MGOS_CC3200_SRC_PATH)/cc3200_i2c_gpio_config.yaml
+  endif
 endif
 ifeq "$(MGOS_ENABLE_SPI)" "1"
   SYS_CONF_SCHEMA += $(MGOS_CC3200_SRC_PATH)/cc3200_spi_config.yaml
@@ -240,9 +246,9 @@ ifeq "$(CC3200_SAFE_CODE_UPDATE)" "1"
 endif
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
 
-SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SDK_SRCS)))
-MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(MGOS_SRCS)))
-APP_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(APP_SRCS)))
+SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(SDK_SRCS:=.o))
+MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o))
+APP_OBJS = $(addprefix $(BUILD_DIR)/,$(APP_SRCS:=.o))
 
 include $(MGOS_PATH)/common/scripts/build_info.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
@@ -269,7 +275,7 @@ ifeq "$(TOOLCHAIN)" "gcc"
 include $(COMMON_CC3200_PATH)/gcc.mk
 APP_LD_SCRIPT ?= $(COMMON_CC3200_PATH)/cc3200.ld
 APP_LD_FLAGS ?= --defsym=ORG=$(APP_ORG) --defsym=RAM_SIZE=$(RAM_SIZE) --entry=ResetISR
-MGOS_OBJS += $(BUILD_DIR)/startup_gcc.o
+MGOS_OBJS += $(BUILD_DIR)/startup_gcc.c.o
 VPATH += $(MGOS_CC3200_PATH)/tools
 
 else
@@ -280,23 +286,26 @@ APP_LD_FLAGS ?= --heap_size=0 --stack_size=0x100 \
                 --disable_auto_rts -l rtsv7M4_T_le_eabi_cesanta.lib
 
 MGOS_CFLAGS += -DMG_TI_NO_HOST_INTERFACE=1
-MGOS_OBJS += $(BUILD_DIR)/exc_handler_top.o \
-             $(BUILD_DIR)/portasm.o \
-             $(BUILD_DIR)/startup_ccs.o
+MGOS_OBJS += $(BUILD_DIR)/exc_handler_top.asm.o \
+             $(BUILD_DIR)/portasm.asm.o \
+             $(BUILD_DIR)/startup_ccs.c.o
 VPATH += $(MGOS_CC3200_PATH)/src/ti
 
 # Selectively inhibit warnings in external code.
-$(BUILD_DIR)/spiffs_gc.o: CFLAGS += --diag_suppress=1944
-$(BUILD_DIR)/spiffs_hydrogen.o: CFLAGS += --diag_suppress=770,1944
-$(BUILD_DIR)/port.o: CFLAGS += --diag_suppress=193,225
-$(BUILD_DIR)/tasks.o: CFLAGS += --diag_suppress=225
+$(BUILD_DIR)/spiffs_gc.c.o: CFLAGS += --diag_suppress=1944
+$(BUILD_DIR)/spiffs_hydrogen.c.o: CFLAGS += --diag_suppress=770,1944
+$(BUILD_DIR)/port.c.o: CFLAGS += --diag_suppress=193,225
+$(BUILD_DIR)/tasks.c.o: CFLAGS += --diag_suppress=225
 endif
 
-CFLAGS += $(patsubst %,-I%,$(subst :, ,$(IPATH)))
-CFLAGS += -DNDEBUG -DCS_NDEBUG \
-          -DFW_ARCHITECTURE=$(APP_PLATFORM) \
-          $(MG_FEATURES) $(MGOS_FEATURES) $(MGOS_CC3200_FEATURES) \
-          $(MGOS_CFLAGS) $(APP_CFLAGS) $(CFLAGS_EXTRA)
+C_CXX_FLAGS += -DNDEBUG -DCS_NDEBUG \
+               -DFW_ARCHITECTURE=$(APP_PLATFORM) \
+               $(patsubst %,-I%,$(subst :, ,$(IPATH))) \
+               $(MG_FEATURES) $(MGOS_FEATURES) $(MGOS_CC3200_FEATURES) \
+               $(MGOS_CFLAGS)
+
+CFLAGS += $(APP_CFLAGS)
+CXXFLAGS += $(APP_CXXFLAGS)
 
 $(BUILD_DIR)/cc3200_fs_spiffs_container.o: \
     CFLAGS += -DDEFAULT_FS_SIZE=$(FS_SIZE) \
@@ -341,13 +350,16 @@ $(APP_ELF): $(APP_OBJS) $(MGOS_LIB) $(ATCA_LIB) $(FFI_EXPORTS_O) $(BUILD_INFO_O)
 $(MGOS_LIB): $(MGOS_OBJS) $(SDK_OBJS)
 	$(call ar,$^)
 
-$(BUILD_DIR)/%.o: %.c $(GENFILES_LIST)
+$(BUILD_DIR)/%.c.o: %.c $(GENFILES_LIST)
 	$(call cc,$(CFLAGS),$<)
 
-$(BUILD_DIR)/%.o: $(GEN_DIR)/%.c $(GENFILES_LIST)
+$(BUILD_DIR)/%.cpp.o: %.cpp $(GENFILES_LIST)
+	$(call cxx,$(CXXFLAGS),$<)
+
+$(BUILD_DIR)/%.c.o: $(GEN_DIR)/%.c $(GENFILES_LIST)
 	$(call cc,$(CFLAGS),$<)
 
-$(BUILD_DIR)/%.o: %.asm $(GENFILES_LIST)
+$(BUILD_DIR)/%.asm.o: %.asm $(GENFILES_LIST)
 	$(call asm,$(CFLAGS),$<)
 
 $(SYMBOLS_DUMP): $(APP_OBJS) $(MGOS_OBJS)

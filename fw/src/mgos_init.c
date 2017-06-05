@@ -3,31 +3,7 @@
  * All rights reserved
  */
 
-#include "fw/src/mgos_init.h"
-
-#include "fw/src/mgos_app.h"
-#include "fw/src/mgos_arduino.h"
-#include "fw/src/mgos_atca.h"
-#include "fw/src/mgos_console.h"
-#include "fw/src/mgos_dns_sd.h"
-#include "fw/src/mgos_gpio.h"
-#include "fw/src/mgos_gpio_service.h"
-#include "fw/src/mgos_hal.h"
-#include "fw/src/mgos_i2c.h"
-#include "fw/src/mgos_i2c_service.h"
-#include "fw/src/mgos_mdns.h"
-#include "fw/src/mgos_mongoose.h"
-#include "fw/src/mgos_mqtt.h"
-#include "fw/src/mgos_rpc.h"
-#include "fw/src/mgos_service_config.h"
-#include "fw/src/mgos_service_filesystem.h"
-#include "fw/src/mgos_sntp.h"
-#include "fw/src/mgos_spi.h"
-#include "fw/src/mgos_sys_config.h"
-#include "fw/src/mgos_timers.h"
-#include "fw/src/mgos_updater_rpc.h"
-#include "fw/src/mgos_updater_http.h"
-#include "fw/src/mgos_wifi.h"
+#include "fw/src/mgos.h"
 
 enum mgos_init_result mgos_init(void) {
   enum mgos_init_result r;
@@ -123,24 +99,23 @@ enum mgos_init_result mgos_init(void) {
   mgos_updater_http_init(); /* After HTTP init */
 #endif
 
-#if MGOS_ENABLE_MQTT
-  r = mgos_mqtt_init();
-  if (r != MGOS_INIT_OK) return r;
-#endif /* MGOS_ENABLE_MQTT */
-
-  if (mgos_app_init() != MGOS_APP_INIT_SUCCESS) {
-    return MGOS_INIT_APP_INIT_FAILED;
-  }
-
 #if MGOS_ENABLE_ARDUINO_API
   if (mgos_arduino_init() != MGOS_INIT_OK) {
     return MGOS_INIT_APP_INIT_FAILED;
   }
 #endif
 
-  LOG(LL_INFO,
-      ("Init done, RAM: %d free, %d min free", (int) mgos_get_free_heap_size(),
-       (int) mgos_get_min_free_heap_size()));
+  if (!mgos_deps_init()) {
+    return MGOS_INIT_DEPS_FAILED;
+  }
+
+  if (mgos_app_init() != MGOS_APP_INIT_SUCCESS) {
+    return MGOS_INIT_APP_INIT_FAILED;
+  }
+
+  LOG(LL_INFO, ("Init done, RAM: %d total, %d free, %d min free",
+                (int) mgos_get_heap_size(), (int) mgos_get_free_heap_size(),
+                (int) mgos_get_min_free_heap_size()));
   mgos_set_enable_min_heap_free_reporting(true);
 
   return MGOS_INIT_OK;
@@ -148,6 +123,11 @@ enum mgos_init_result mgos_init(void) {
 
 void mgos_app_preinit(void) __attribute__((weak));
 void mgos_app_preinit(void) {
+}
+
+bool mgos_deps_init(void) __attribute__((weak));
+bool mgos_deps_init(void) {
+  return true;
 }
 
 enum mgos_app_init_result mgos_app_init(void) __attribute__((weak));

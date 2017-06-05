@@ -1,13 +1,20 @@
 name: c_mqtt
 # arch: PLATFORM
 version: 1.0
-skeleton_version: 2017-03-17
+skeleton_version: 2017-05-18
 sources:
   - src
 filesystem:
   - fs
+config_schema:
+  - ["mqtt.pub", "s", "/response", {title: "Publish topic"}]
+  - ["mqtt.sub", "s", "/request", {title: "Subscribe topic"}]
+  - ["mqtt.server", "broker.mqttdashboard.com:1883"]
+  - ["device.id", "test"]
+  - ["device.password", "test"]
+  - ["i2c.enable", true]
+libs:
+  - origin: https://github.com/mongoose-os-libs/mqtt
 build_vars:
-  MGOS_ENABLE_MQTT: 1
   MGOS_ENABLE_ATCA_SERVICE: 1
   SSL: mbedTLS
-  APP_CONF_SCHEMA: src/conf_schema.yaml

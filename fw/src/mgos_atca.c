@@ -108,10 +108,13 @@ static ATCA_STATUS mgos_atca_hal_i2c_wake(ATCAIface iface) {
 
   /*
    * ATCA devices define "wake up" token as START, 80 us of SDA low, STOP.
-   * Simulate this by trying to send 0 bytes to address 0. This will fail,
-   * but we're not expecting an ACK, so don't check for return value.
+   * Simulate this by trying to send 0 bytes to address 0 @ 100 kHz. This will
+   * fail, but we're not expecting an ACK, so don't check for return value.
    */
+  int old_freq = mgos_i2c_get_freq(i2c);
+  mgos_i2c_set_freq(i2c, MGOS_I2C_FREQ_100KHZ);
   mgos_i2c_write(i2c, 0, response, 1, true /* stop */);
+  mgos_i2c_set_freq(i2c, old_freq);
 
   /* After wake signal we need to wait some time for device to init. */
   atca_delay_us(cfg->wake_delay);

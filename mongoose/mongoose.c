@@ -230,7 +230,11 @@ void cs_log_set_level(enum cs_log_level level);
 void cs_log_set_file(FILE *file);
 extern enum cs_log_level cs_log_threshold;
 void cs_log_print_prefix(enum cs_log_level level, const char *func);
-void cs_log_printf(const char *fmt, ...);
+void cs_log_printf(const char *fmt, ...)
+#ifdef __GNUC__
+    __attribute__((format(printf, 1, 2)))
+#endif
+    ;
 
 #define LOG(l, x)                       \
   do {                                  \
@@ -2075,7 +2079,7 @@ void mg_if_poll(struct mg_connection *nc, time_t now) {
   }
 }
 
-static void mg_destroy_conn(struct mg_connection *conn, int destroy_if) {
+void mg_destroy_conn(struct mg_connection *conn, int destroy_if) {
   if (destroy_if) conn->iface->vtable->destroy_conn(conn);
   if (conn->proto_data != NULL && conn->proto_data_destructor != NULL) {
     conn->proto_data_destructor(conn->proto_data);
@@ -2461,6 +2465,7 @@ void mg_send(struct mg_connection *nc, const void *buf, int len) {
 }
 
 void mg_if_sent_cb(struct mg_connection *nc, int num_sent) {
+  DBG(("%p %d", nc, num_sent));
 #if !defined(NO_LIBC) && MG_ENABLE_HEXDUMP
   if (nc->mgr && nc->mgr->hexdump_file != NULL) {
     char *buf = nc->send_mbuf.buf;
@@ -2917,7 +2922,7 @@ int mg_check_ip_acl(const char *acl, uint32_t remote_ip) {
     }
   }
 
-  DBG(("%08x %c", remote_ip, allowed));
+  DBG(("%08x %c", (unsigned int) remote_ip, allowed));
   return allowed == '+';
 }
 
@@ -2935,7 +2940,7 @@ double mg_set_timer(struct mg_connection *c, double timestamp) {
    * connections, so not processed yet. It has a DNS resolver connection
    * linked to it. Set up a timer for the DNS connection.
    */
-  DBG(("%p %p %d -> %lu", c, c->priv_2, c->flags & MG_F_RESOLVING,
+  DBG(("%p %p %d -> %lu", c, c->priv_2, (c->flags & MG_F_RESOLVING ? 1 : 0),
        (unsigned long) timestamp));
   if ((c->flags & MG_F_RESOLVING) && c->priv_2 != NULL) {
     ((struct mg_connection *) c->priv_2)->ev_timer_time = timestamp;
@@ -3882,7 +3887,7 @@ void mg_tun_if_tcp_send(struct mg_connection *nc, const void *buf, size_t len) {
 #if MG_ENABLE_HEXDUMP
   char hex[512];
   mg_hexdump(buf, len, hex, sizeof(hex));
-  LOG(LL_DEBUG, ("sending to stream %zu:\n%s", stream_id, hex));
+  LOG(LL_DEBUG, ("sending to stream 0x%x:\n%s", (unsigned int) stream_id, hex));
 #endif
 
   mg_tun_send_frame(client->disp, stream_id, MG_TUN_DATA_FRAME, 0, msg);
@@ -3913,7 +3918,7 @@ void mg_tun_if_destroy_conn(struct mg_connection *nc) {
     uint32_t stream_id = (uint32_t)(uintptr_t) nc->mgr_data;
     struct mg_str msg = {NULL, 0};
 
-    LOG(LL_DEBUG, ("closing %zu:", stream_id));
+    LOG(LL_DEBUG, ("closing 0x%x:", (unsigned int) stream_id));
     mg_tun_send_frame(client->disp, stream_id, MG_TUN_DATA_FRAME,
                       MG_TUN_F_END_STREAM, msg);
   }
@@ -3969,13 +3974,14 @@ struct mg_connection *mg_tun_if_find_conn(struct mg_tun_client *client,
 
   if (stream_id > client->last_stream_id) {
     /* create a new connection */
-    LOG(LL_DEBUG, ("new stream 0x%lx, accepting", stream_id));
+    LOG(LL_DEBUG, ("new stream 0x%x, accepting", (unsigned int) stream_id));
     nc = mg_if_accept_new_conn(client->listener);
     nc->mgr_data = (void *) (uintptr_t) stream_id;
     client->last_stream_id = stream_id;
   } else {
-    LOG(LL_DEBUG, ("Ignoring stream 0x%lx (last_stream_id 0x%lx)", stream_id,
-                   client->last_stream_id));
+    LOG(LL_DEBUG,
+        ("Ignoring stream 0x%x (last_stream_id 0x%x)", (unsigned int) stream_id,
+         (unsigned int) client->last_stream_id));
   }
 
   return nc;
@@ -4601,6 +4607,12 @@ static void mg_ssl_if_mbed_free_certs_and_keys(struct mg_ssl_if_ctx *ctx) {
   }
   if (ctx->ca_cert != NULL) {
     mbedtls_ssl_conf_ca_chain(ctx->conf, NULL, NULL);
+#ifdef MBEDTLS_X509_CA_CHAIN_ON_DISK
+    if (ctx->ca_cert->ca_chain_file != NULL) {
+      MG_FREE((void *) ctx->ca_cert->ca_chain_file);
+      ctx->ca_cert->ca_chain_file = NULL;
+    }
+#endif
     mbedtls_x509_crt_free(ctx->ca_cert);
     MG_FREE(ctx->ca_cert);
     ctx->ca_cert = NULL;
@@ -4686,9 +4698,16 @@ static enum mg_ssl_if_result mg_use_ca_cert(struct mg_ssl_if_ctx *ctx,
   }
   ctx->ca_cert = (mbedtls_x509_crt *) MG_CALLOC(1, sizeof(*ctx->ca_cert));
   mbedtls_x509_crt_init(ctx->ca_cert);
+#ifdef MBEDTLS_X509_CA_CHAIN_ON_DISK
+  ca_cert = strdup(ca_cert);
+  if (mbedtls_x509_crt_set_ca_chain_file(ctx->ca_cert, ca_cert) != 0) {
+    return MG_SSL_ERROR;
+  }
+#else
   if (mbedtls_x509_crt_parse_file(ctx->ca_cert, ca_cert) != 0) {
     return MG_SSL_ERROR;
   }
+#endif
   mbedtls_ssl_conf_ca_chain(ctx->conf, ctx->ca_cert, NULL);
   mbedtls_ssl_conf_authmode(ctx->conf, MBEDTLS_SSL_VERIFY_REQUIRED);
   return MG_SSL_OK;
@@ -5507,21 +5526,26 @@ static void mg_http_transfer_file_data(struct mg_connection *nc) {
 
   if (pd->file.type == DATA_FILE) {
     struct mbuf *io = &nc->send_mbuf;
-    if (io->len < sizeof(buf)) {
-      to_read = sizeof(buf) - io->len;
+    if (io->len >= MG_MAX_HTTP_SEND_MBUF) {
+      to_read = 0;
+    } else {
+      to_read = MG_MAX_HTTP_SEND_MBUF - io->len;
     }
-
-    if (left > 0 && to_read > left) {
+    if (to_read > left) {
       to_read = left;
     }
-
-    if (to_read == 0) {
-      /* Rate limiting. send_mbuf is too full, wait until it's drained. */
-    } else if (pd->file.sent < pd->file.cl &&
-               (n = mg_fread(buf, 1, to_read, pd->file.fp)) > 0) {
-      mg_send(nc, buf, n);
-      pd->file.sent += n;
+    if (to_read > 0) {
+      n = mg_fread(buf, 1, to_read, pd->file.fp);
+      if (n > 0) {
+        mg_send(nc, buf, n);
+        pd->file.sent += n;
+        DBG(("%p sent %d (total %d)", nc, (int) n, (int) pd->file.sent));
+      }
     } else {
+      /* Rate-limited */
+    }
+    if (pd->file.sent >= pd->file.cl) {
+      LOG(LL_DEBUG, ("%p done, %d bytes", nc, (int) pd->file.sent));
       if (!pd->file.keepalive) nc->flags |= MG_F_SEND_AND_CLOSE;
       mg_http_free_proto_data_file(&pd->file);
     }
@@ -9878,7 +9902,7 @@ MG_INTERNAL int parse_mqtt(struct mbuf *io, struct mg_mqtt_message *mm) {
       LOG(LL_DEBUG,
           ("%d %2x %d proto [%.*s] client_id [%.*s] will_topic [%.*s] "
            "will_msg [%.*s] user_name [%.*s] password [%.*s]",
-           len, (int) mm->connect_flags, (int) mm->keep_alive_timer,
+           (int) len, (int) mm->connect_flags, (int) mm->keep_alive_timer,
            (int) mm->protocol_name.len, mm->protocol_name.p,
            (int) mm->client_id.len, mm->client_id.p, (int) mm->will_topic.len,
            mm->will_topic.p, (int) mm->will_message.len, mm->will_message.p,
@@ -9933,7 +9957,7 @@ static void mqtt_handler(struct mg_connection *nc, int ev,
   nc->handler(nc, ev, ev_data MG_UD_ARG(user_data));
 
   switch (ev) {
-    case MG_EV_RECV:
+    case MG_EV_RECV: {
       /* There can be multiple messages in the buffer, process them all. */
       while (1) {
         int len = parse_mqtt(io, &mm);
@@ -9942,6 +9966,17 @@ static void mqtt_handler(struct mg_connection *nc, int ev,
         mbuf_remove(io, len);
       }
       break;
+    }
+    case MG_EV_POLL: {
+      struct mg_mqtt_proto_data *pd =
+          (struct mg_mqtt_proto_data *) nc->proto_data;
+      double now = mg_time();
+      if (pd->keep_alive > 0 && pd->last_control_time > 0 &&
+          (now - pd->last_control_time) > pd->keep_alive) {
+        LOG(LL_DEBUG, ("Send PINGREQ"));
+        mg_mqtt_ping(nc);
+      }
+    }
   }
 }
 
@@ -9983,6 +10018,7 @@ void mg_set_protocol_mqtt(struct mg_connection *nc) {
 
 static void mg_mqtt_prepend_header(struct mg_connection *nc, uint8_t cmd,
                                    uint8_t flags, size_t len) {
+  struct mg_mqtt_proto_data *pd = (struct mg_mqtt_proto_data *) nc->proto_data;
   size_t off = nc->send_mbuf.len - len;
   uint8_t header = cmd << 4 | (uint8_t) flags;
 
@@ -10002,6 +10038,7 @@ static void mg_mqtt_prepend_header(struct mg_connection *nc, uint8_t cmd,
   } while (len > 0);
 
   mbuf_insert(&nc->send_mbuf, off, buf, vlen - buf);
+  pd->last_control_time = mg_time();
 }
 
 void mg_send_mqtt_handshake(struct mg_connection *nc, const char *client_id) {
@@ -11110,6 +11147,7 @@ int mg_resolve_async_opt(struct mg_mgr *mgr, const char *name, int query,
 
 void mg_set_nameserver(struct mg_mgr *mgr, const char *nameserver) {
   MG_FREE((char *) mgr->nameserver);
+  mgr->nameserver = NULL;
   if (nameserver != NULL) {
     mgr->nameserver = strdup(nameserver);
   }
@@ -11751,9 +11789,10 @@ static void mg_tun_init_client(struct mg_tun_client *client, struct mg_mgr *mgr,
 }
 
 void mg_tun_log_frame(struct mg_tun_frame *frame) {
-  LOG(LL_DEBUG, ("Got TUN frame: type=0x%x, flags=0x%x stream_id=0x%lx, "
-                 "len=%zu",
-                 frame->type, frame->flags, frame->stream_id, frame->body.len));
+  LOG(LL_DEBUG, ("Got TUN frame: type=0x%x, flags=0x%x stream_id=0x%x, "
+                 "len=%d",
+                 frame->type, frame->flags, (unsigned int) frame->stream_id,
+                 (int) frame->body.len));
 #if MG_ENABLE_HEXDUMP
   {
     char hex[512];
@@ -11816,7 +11855,7 @@ static void mg_tun_client_handler(struct mg_connection *nc, int ev,
       struct mg_tun_frame frame;
 
       if (mg_tun_parse_frame(wm->data, wm->size, &frame) == -1) {
-        LOG(LL_ERROR, ("Got invalid tun frame dropping", wm->size));
+        LOG(LL_ERROR, ("Got invalid tun frame dropping"));
         break;
       }
 
@@ -14056,7 +14095,7 @@ void mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr);
 #include <lwip/tcp.h>
 #include <lwip/tcpip.h>
 #if LWIP_VERSION >= 0x01050000
-#include <lwip/priv/tcpip_priv.h> /* For tcp_seg */
+#include <lwip/priv/tcp_priv.h> /* For tcp_seg */
 #else
 #include <lwip/tcp_impl.h>
 #endif
@@ -14259,10 +14298,10 @@ static void mg_lwip_handle_recv_tcp(struct mg_connection *nc) {
 static err_t mg_lwip_tcp_sent_cb(void *arg, struct tcp_pcb *tpcb,
                                  u16_t num_sent) {
   struct mg_connection *nc = (struct mg_connection *) arg;
-  DBG(("%p %p %u", nc, tpcb, num_sent));
+  DBG(("%p %p %u %p %p", nc, tpcb, num_sent, tpcb->unsent, tpcb->unacked));
   if (nc == NULL) return ERR_OK;
   if ((nc->flags & MG_F_SEND_AND_CLOSE) && !(nc->flags & MG_F_WANT_WRITE) &&
-      nc->send_mbuf.len == 0 && tpcb->unacked == 0) {
+      nc->send_mbuf.len == 0 && tpcb->unsent == NULL && tpcb->unacked == NULL) {
     mg_lwip_post_signal(MG_SIG_CLOSE_CONN, nc);
   }
   return ERR_OK;
@@ -14530,7 +14569,8 @@ static void mg_lwip_tcp_write_tcpip(void *arg) {
   struct mg_connection *nc = ctx->nc;
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
   struct tcp_pcb *tpcb = cs->pcb.tcp;
-  uint16_t len = MIN(tpcb->mss, MIN(ctx->len, tpcb->snd_buf));
+  size_t len = MIN(tpcb->mss, MIN(ctx->len, tpcb->snd_buf));
+  size_t unsent, unacked;
   if (len == 0) {
     DBG(("%p no buf avail %u %u %u %p %p", tpcb, tpcb->acked, tpcb->snd_buf,
          tpcb->snd_queuelen, tpcb->unsent, tpcb->unacked));
@@ -14538,6 +14578,8 @@ static void mg_lwip_tcp_write_tcpip(void *arg) {
     ctx->ret = 0;
     return;
   }
+  unsent = (tpcb->unsent != NULL ? tpcb->unsent->len : 0);
+  unacked = (tpcb->unacked != NULL ? tpcb->unacked->len : 0);
 /*
  * On ESP8266 we only allow one TCP segment in flight at any given time.
  * This may increase latency and reduce efficiency of tcp windowing,
@@ -14545,16 +14587,16 @@ static void mg_lwip_tcp_write_tcpip(void *arg) {
  * reduce footprint.
  */
 #if CS_PLATFORM == CS_P_ESP8266
-  if (tpcb->unacked != NULL) {
+  if (unacked > 0) {
     ctx->ret = 0;
     return;
   }
-  if (tpcb->unsent != NULL) {
-    len = MIN(len, (TCP_MSS - tpcb->unsent->len));
-  }
+  len = MIN(len, (TCP_MSS - unsent));
 #endif
   cs->err = tcp_write(tpcb, ctx->data, len, TCP_WRITE_FLAG_COPY);
-  DBG(("%p tcp_write %u = %d", tpcb, len, cs->err));
+  unsent = (tpcb->unsent != NULL ? tpcb->unsent->len : 0);
+  unacked = (tpcb->unacked != NULL ? tpcb->unacked->len : 0);
+  DBG(("%p tcp_write %u = %d, %u %u", tpcb, len, cs->err, unsent, unacked));
   if (cs->err != ERR_OK) {
     /*
      * We ignore ERR_MEM because memory will be freed up when the data is sent
@@ -14874,7 +14916,7 @@ void mg_ev_mgr_lwip_process_signals(struct mg_mgr *mgr) {
 }
 
 void mg_lwip_if_init(struct mg_iface *iface) {
-  LOG(LL_INFO, ("%p Mongoose init"));
+  LOG(LL_INFO, ("%p Mongoose init", iface));
   iface->data = MG_CALLOC(1, sizeof(struct mg_ev_mgr_lwip_data));
 }
 
@@ -14984,7 +15026,11 @@ uint32_t mg_lwip_get_poll_delay_ms(struct mg_mgr *mgr) {
       }
       num_timers++;
     }
-    if (nc->send_mbuf.len > 0) {
+    if (nc->send_mbuf.len > 0
+#if MG_ENABLE_SSL
+        || (nc->flags & MG_F_WANT_WRITE)
+#endif
+            ) {
       int can_send = 0;
       /* We have stuff to send, but can we? */
       if (nc->flags & MG_F_UDP) {
@@ -15049,7 +15095,7 @@ void mg_lwip_ssl_do_hs(struct mg_connection *nc) {
   enum mg_ssl_if_result res;
   if (nc->flags & MG_F_CLOSE_IMMEDIATELY) return;
   res = mg_ssl_if_handshake(nc);
-  DBG(("%p %d %d %d", nc, nc->flags, server_side, res));
+  DBG(("%p %lu %d %d", nc, nc->flags, server_side, res));
   if (res != MG_SSL_OK) {
     if (res == MG_SSL_WANT_WRITE) {
       nc->flags |= MG_F_WANT_WRITE;
@@ -15097,11 +15143,9 @@ void mg_lwip_ssl_send(struct mg_connection *nc) {
     len = MIN(MG_LWIP_SSL_IO_SIZE, nc->send_mbuf.len);
   }
   int ret = mg_ssl_if_write(nc, nc->send_mbuf.buf, len);
-  DBG(("%p SSL_write %u = %d, %d", nc, len, ret));
+  DBG(("%p SSL_write %u = %d", nc, len, ret));
   if (ret > 0) {
     mg_if_sent_cb(nc, ret);
-    mbuf_remove(&nc->send_mbuf, ret);
-    mbuf_trim(&nc->send_mbuf);
     cs->last_ssl_write_size = 0;
   } else if (ret < 0) {
     /* This is tricky. We must remember the exact data we were sending to retry
@@ -15186,8 +15230,8 @@ int ssl_socket_send(void *ctx, const unsigned char *buf, size_t len) {
   struct mg_connection *nc = (struct mg_connection *) ctx;
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
   int ret = mg_lwip_tcp_write(cs->nc, buf, len);
-  LOG(LL_DEBUG, ("%p %d -> %d", nc, len, ret));
   if (ret == 0) ret = MBEDTLS_ERR_SSL_WANT_WRITE;
+  LOG(LL_DEBUG, ("%p %d -> %d", nc, len, ret));
   return ret;
 }
 

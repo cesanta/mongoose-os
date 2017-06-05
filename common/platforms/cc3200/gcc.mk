@@ -2,14 +2,17 @@ APP_LDFLAGS ?=
 CC_WRAPPER ?=
 GENFILES_LIST ?=
 CC = arm-none-eabi-gcc
+CXX = arm-none-eabi-g++
 AR = arm-none-eabi-ar
 NM = arm-none-eabi-nm
 
 IPATH += $(SDK_PATH)/third_party/FreeRTOS/source/portable/GCC/ARM_CM4
 VPATH += $(SDK_PATH)/third_party/FreeRTOS/source/portable/GCC/ARM_CM4
 
-CFLAGS = -mthumb -mcpu=cortex-m4 -ffunction-sections -fdata-sections \
-         -MD -std=c99 -Os -ggdb -Wall -Werror -Dgcc
+C_CXX_FLAGS = -mthumb -mcpu=cortex-m4 -ffunction-sections -fdata-sections \
+              -MD -Os -ggdb -Wall -Werror -Dgcc
+CFLAGS += -std=c99 $(C_CXX_FLAGS)
+CXXFLAGS += -std=g++11 $(C_CXX_FLAGS)
 
 AR = arm-none-eabi-ar
 LD = arm-none-eabi-ld
@@ -28,6 +31,10 @@ $(SDK_OBJS): CFLAGS += -include common/platform.h
 define cc
 	$(vecho) "GCC   $2 -> $@"
 	$(Q) $(CC_WRAPPER) $(CC) -c $1 -o $@ $2
+endef
+define cxx
+	$(vecho) "G++   $2 -> $@"
+	$(Q) $(CC_WRAPPER) $(CXX) -c $1 -o $@ $2
 endef
 
 # ar files

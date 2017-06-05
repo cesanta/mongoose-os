@@ -1,10 +1,7 @@
 [
   "button_message.js",
   "button_blink.js",
-  "button_http_post.js",
   "button_mqtt.js",
   "mqtt_subscribe.js",
-  "http_server.js",
-  "grove.js",
-  "tcp_server.js"
+  "grove.js"
 ]

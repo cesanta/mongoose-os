@@ -96,7 +96,7 @@ func init() {
 	commands = []command{
 		{"ui", startUI, `Start GUI`, nil, nil, false},
 		{"init", initFW, `Initialise firmware directory structure in the current directory`, nil, []string{"arch", "force"}, false},
-		{"build", doBuild, `Build a firmware from the sources located in the current directory`, nil, []string{"arch", "local", "repo", "clean", "server"}, false},
+		{"build", buildHandler, `Build a firmware from the sources located in the current directory`, nil, []string{"arch", "local", "repo", "clean", "server"}, false},
 		{"flash", flash, `Flash firmware to the device`, nil, []string{"port", "firmware"}, false},
 		{"flash-read", flashRead, `Read a region of flash`, []string{"arch"}, []string{"port"}, false},
 		{"console", console, `Simple serial port console`, nil, []string{"port"}, false}, //TODO: needDevConn
@@ -159,9 +159,6 @@ func main() {
 
 	defer glog.Flush()
 
-	// If no arguments are given, show help and start UI
-	isUI = len(os.Args) == 1
-
 	consoleMsgs = make(chan []byte, 10)
 
 	// -X, if given, must be the first arg.
@@ -173,11 +170,9 @@ func main() {
 	initFlags()
 	flag.Parse()
 	pflagenv.Parse(envPrefix)
-	if flag.Arg(0) == "ui" {
-		isUI = true
-	}
 
-	if isUI {
+	if len(flag.Args()) == 0 || flag.Arg(0) == "ui" {
+		isUI = true
 		*reconnect = true
 	}
 
@@ -201,7 +196,7 @@ func main() {
 	}
 	if cmd != nil && cmd.needDevConn {
 		var err error
-		devConn, err = createDevConnWithJunkHandler(ctx, consoleJunkHandler)
+		devConn, err = createDevConn(ctx)
 		if err != nil {
 			fmt.Println(errors.Trace(err))
 			return

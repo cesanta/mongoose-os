@@ -100,8 +100,12 @@ mgos_timer_id mgos_set_timer(int msecs, int repeat, timer_callback cb,
 
 void mgos_clear_timer(mgos_timer_id id) {
   if (id == MGOS_INVALID_TIMER_ID) return;
-  struct timer_info *ti = (struct timer_info *) id;
+  struct timer_info *ti = (struct timer_info *) id, *ti2;
   mgos_lock();
+  LIST_FOREACH(ti2, &s_timer_data->timers, entries) {
+    if (ti2 == ti) break;
+  }
+  if (ti2 == NULL) return; /* Not a valid timer */
   LIST_REMOVE(ti, entries);
   if (s_timer_data->current == ti) {
     schedule_next_timer(s_timer_data);
@@ -146,4 +150,10 @@ double mgos_uptime(void) {
 
 void mgos_uptime_init(void) {
   start_time = mg_time();
+}
+
+int mgos_strftime(char *s, int size, char *fmt, int time) {
+  time_t t = (time_t) time;
+  struct tm *tmp = localtime(&t);
+  return tmp == NULL ? -1 : (int) strftime(s, size, fmt, tmp);
 }

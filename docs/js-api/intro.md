@@ -5,7 +5,6 @@ items:
   - { name: api_sys.js }
   - { name: api_i2c.js }
   - { name: api_neopixel.js }
-  - { name: api_mqtt.js }
   - { name: api_timer.js }
   - { name: api_bitbang.js }
   - { name: api_grove.js }
@@ -14,7 +13,6 @@ items:
   - { name: api_http.js }
   - { name: api_log.js }
   - { name: api_config.js }
-  - { name: api_aws.js }
   - { name: api_rpc.js }
   - { name: api_gpio.js }
 ---

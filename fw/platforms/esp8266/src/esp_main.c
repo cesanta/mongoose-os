@@ -78,7 +78,7 @@ static void mongoose_poll_cb(void *arg) {
   mongoose_poll(0);
   if (!s_mg_poll_scheduled) {
     uint32_t timeout_ms = mg_lwip_get_poll_delay_ms(mgos_get_mgr());
-    if (timeout_ms > 1000) timeout_ms = 1000;
+    if (timeout_ms > 100) timeout_ms = 100;
     os_timer_disarm(&s_mg_poll_tmr);
     /* We set repeat = true in case things get stuck for any reason. */
     os_timer_arm(&s_mg_poll_tmr, timeout_ms, 1 /* repeat */);

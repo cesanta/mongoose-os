@@ -34,7 +34,7 @@ NM = xtensa-esp32-elf-nm
 COMPONENT_EXTRA_INCLUDES = $(MGOS_PATH) $(MGOS_ESP_PATH)/include $(SPIFFS_PATH) \
                            $(GEN_DIR) $(APP_SOURCE_DIRS)
 
-MGOS_SRCS += mgos_config.c mgos_gpio.c mgos_init.c mgos_mongoose.c \
+MGOS_SRCS += mgos_config.c mgos_gpio.c mgos_hooks.c mgos_init.c mgos_mongoose.c \
              mgos_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
              mgos_timers_mongoose.c mgos_uart.c mgos_utils.c mgos_dlsym.c \
              esp_mmap.c \
@@ -54,10 +54,20 @@ ifeq "$(MGOS_ENABLE_DNS_SD)" "1"
   SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_dns_sd_config.yaml
 endif
 ifeq "$(MGOS_ENABLE_I2C)" "1"
-  SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_i2c_config.yaml
+  ifneq "$(MGOS_ENABLE_I2C_GPIO)" "1"
+    MGOS_SRCS += esp32_i2c_master.c
+    SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_i2c_config.yaml
+  else
+    SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_i2c_gpio_config.yaml
+  endif
 endif
 ifeq "$(MGOS_ENABLE_SPI)" "1"
-  SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_spi_config.yaml
+  ifneq "$(MGOS_ENABLE_SPI_GPIO)" "1"
+    MGOS_SRCS += esp32_spi_master.c
+    SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_spi_config.yaml
+  else
+    SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_spi_gpio_config.yaml
+  endif
 endif
 ifeq "$(MGOS_ENABLE_UPDATER)" "1"
   MGOS_SRCS += esp32_updater.c
@@ -100,19 +110,22 @@ APP_OBJS = $(addsuffix .o,$(basename $(APP_SRCS)))
 BUILD_INFO_OBJS = $(addsuffix .o,$(basename $(notdir $(BUILD_INFO_C)) $(notdir $(MG_BUILD_INFO_C))))
 COMPONENT_OBJS = $(MGOS_OBJS) $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_OBJS)
 
-C_CXX_CFLAGS += $(MG_FEATURES_TINY) -DMG_NET_IF=MG_NET_IF_LWIP_LOW_LEVEL \
+C_CXX_CFLAGS += -DMGOS_APP=\"$(APP)\" -DFW_ARCHITECTURE=$(APP_PLATFORM) \
+                -DIRAM='__attribute__((section(".iram1")))' \
+                $(MG_FEATURES_TINY) -DMG_NET_IF=MG_NET_IF_LWIP_LOW_LEVEL \
                 $(MGOS_FEATURES) -DMGOS_MAX_NUM_UARTS=3 \
                 -DMGOS_DEBUG_UART=$(MGOS_DEBUG_UART) \
                 -DMGOS_NUM_GPIO=40 \
                 -DMG_ENABLE_FILESYSTEM \
                 -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS \
+                -DMG_SSL_IF_MBEDTLS_FREE_CERTS \
                 -DMG_ENABLE_DIRECTORY_LISTING \
                 -DCS_DISABLE_MD5 -DMG_EXT_MD5 \
                 -DCS_DISABLE_SHA1 -DMG_EXT_SHA1 \
-                -DCS_MMAP -DSPIFFS_ON_PAGE_MOVE_HOOK=esp_spiffs_on_page_move_hook
+                -DCS_MMAP
 
-CFLAGS += $(C_CXX_CFLAGS)
-CXXFLAGS += -std=c++11 -fno-exceptions $(C_CXX_CFLAGS)
+CFLAGS += $(C_CXX_CFLAGS) $(APP_CFLAGS)
+CXXFLAGS += -std=c++11 -fno-exceptions $(C_CXX_CFLAGS) $(APP_CXXFLAGS)
 COMPONENT_EXTRA_INCLUDES += $(IPATH)
 
 COMPONENT_ADD_LDFLAGS := -Wl,--whole-archive -lsrc -Wl,--no-whole-archive
@@ -126,7 +139,7 @@ $(MG_BUILD_INFO_C): $(MGOS_OBJS)
 libsrc.a: $(GEN_DIR)/sys_config.o
 
 $(SYMBOLS_DUMP): $(MGOS_OBJS) $(APP_OBJS)
-	$(vecho) "GEN   $@"
+	$(vecho) "GEN $@"
 	$(NM) --defined-only --print-file-name -g $^ > $@
 
 # In ffi exports file we use fake signatures: void func(void), and it conflicts
@@ -134,21 +147,21 @@ $(SYMBOLS_DUMP): $(MGOS_OBJS) $(APP_OBJS)
 $(FFI_EXPORTS_O): CFLAGS += -fno-builtin
 
 $(FFI_EXPORTS_O): $(FFI_EXPORTS_C)
-	$(summary) "  CC $@"
+	$(summary) "CC $@"
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
 $(FFI_EXPORTS_C): $(SYMBOLS_DUMP) $(FS_FILES)
 	$(call gen_ffi_exports,$<,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))
 
 ./%.o: %.c $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
-	$(summary) "  CC $@"
+	$(summary) "CC $@"
 	$(CC) $(CFLAGS) $(CPPFLAGS) \
 	  $(addprefix -I ,$(COMPONENT_INCLUDES)) \
 	  $(addprefix -I ,$(COMPONENT_EXTRA_INCLUDES)) \
 	  -c $< -o $@
 
 ./%.o: %.cpp $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
-	$(summary) "  CXX $@"
+	$(summary) "CXX $@"
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) \
 	  $(addprefix -I ,$(COMPONENT_INCLUDES)) \
 	  $(addprefix -I ,$(COMPONENT_EXTRA_INCLUDES)) \

@@ -44,6 +44,8 @@ enum mgos_init_result mgos_timers_init(void);
 double mgos_uptime(void);
 void mgos_uptime_init(void);
 
+int mgos_strftime(char *s, int size, char *fmt, int time);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

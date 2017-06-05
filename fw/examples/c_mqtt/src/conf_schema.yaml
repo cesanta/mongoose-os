@@ -1,8 +1,0 @@
-[
-  ["mqtt.pub", "s", "/response", {title: "Publish topic"}],
-  ["mqtt.sub", "s", "/request", {title: "Subscribe topic"}],
-  ["mqtt.server", "broker.mqttdashboard.com:1883"],
-  ["device.id", "test"],
-  ["device.password", "test"],
-  ["i2c.enable", true],
-]

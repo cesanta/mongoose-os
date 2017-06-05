@@ -10,10 +10,6 @@
 #define MGOS_ENABLE_ARDUINO_API 0
 #endif
 
-#ifndef MGOS_ENABLE_AWS_SHADOW
-#define MGOS_ENABLE_AWS_SHADOW 0
-#endif
-
 #ifndef MGOS_ENABLE_BITBANG
 #define MGOS_ENABLE_BITBANG 0
 #endif
@@ -36,10 +32,6 @@
 
 #ifndef MGOS_ENABLE_I2C_SERVICE
 #define MGOS_ENABLE_I2C_SERVICE 0
-#endif
-
-#ifndef MGOS_ENABLE_MQTT
-#define MGOS_ENABLE_MQTT 0
 #endif
 
 #ifndef MGOS_ENABLE_RPC
@@ -80,10 +72,6 @@
 
 #ifndef MGOS_ENABLE_MDNS
 #define MGOS_ENABLE_MDNS 0
-#endif
-
-#ifndef MGOS_ENABLE_MQTT
-#define MGOS_ENABLE_MQTT 0
 #endif
 
 #ifndef MGOS_ENABLE_ONEWIRE

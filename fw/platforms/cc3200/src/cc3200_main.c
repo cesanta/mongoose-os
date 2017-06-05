@@ -69,9 +69,12 @@ void umm_oom_cb(size_t size, unsigned short int blocks_cnt) {
   LOG(LL_ERROR, ("Failed to allocate %u", size));
 }
 
+void cc3200_nsleep100(uint32_t n);
+
 int main(void) {
   MAP_IntVTableBaseSet((unsigned long) &g_pfnVectors[0]);
   cc3200_exc_init();
+  mgos_nsleep100 = &cc3200_nsleep100;
 
   /* Early init app hook. */
   mgos_app_preinit();
