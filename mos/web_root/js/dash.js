@@ -390,8 +390,7 @@ $(document).on('click', '#prototype-button', function() {
 var addLog = function(msg, type) {
   var el = type == 'uart' ? $('#device-logs')[0] : $('#mos-logs')[0];
   var mustScroll = (el.scrollTop === (el.scrollHeight - el.clientHeight));
-  var data = (msg || '').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-  $('<span/>').text(data).appendTo(el);
+  $('<span/>').text(msg || '').appendTo(el);
   if (mustScroll) el.scrollTop = el.scrollHeight;
 };
 
