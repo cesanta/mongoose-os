@@ -54,8 +54,8 @@
 
 
 <li class="list-group-item local-project hidden row" id="local-entry-template" style="position: relative;">
-  <span class="name col-xs-3"></span>
-  <span class="title descr text-truncate col-xs-9"></span>
+  <span class="name col-xs-4 text-truncate"></span>
+  <span class="title descr text-truncate col-xs-8"></span>
   <!-- <span class="tags descr hidden" style="margin-right: 10px;"></span> -->
 </li>
 
@@ -205,9 +205,8 @@
         $(dialogSelector + ' [mos-name="' + k + '"] .btn').addClass('hidden');
         $(dialogSelector + ' [mos-name="' + k + '"] .imported').removeClass('hidden');
         var e = clone('#local-entry-template').addClass(itemClass);
-        e.find('.name').text(k).attr({type: type});
-        e.find('.title').text(v.description || '');
-        e.find('.tags').text((v.tags || []).join(' '));
+        e.find('.name').text(k).attr({type: type, title: k});
+        e.find('.title').text(v.description || '').attr({title: v.description || ''});
         e.attr({'mos-name': k, 'mos-type': type});
         $(headerSelector).after(e);
       });
