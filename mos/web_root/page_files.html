@@ -75,13 +75,7 @@
   var onSave = function() {
     var fileName = $('.file.selected').attr('rel');
     var text = editor.getValue();
-    return $.ajax({
-      url: '/call',
-      data: {
-        method: 'FS.Put',
-        args: JSON.stringify({filename: fileName, data: b64enc(text)})
-      }
-    }).then(function() {
+    return $.ajax({url: '/put', data: {data: text, path: fileName}}).then(function() {
       addLog('Saved ' + fileName + '\n');
     });
   };

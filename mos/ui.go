@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -323,6 +324,31 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 	http.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		httpReply(w, BuildId, nil)
+	})
+
+	http.HandleFunc("/put", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+
+		data := r.FormValue("data")
+		path := r.FormValue("path")
+		if path == "" {
+			httpReply(w, false, errors.Errorf("path is not specified"))
+			return
+		}
+
+		ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+
+		devConnMtx.Lock()
+		defer devConnMtx.Unlock()
+
+		if devConn == nil {
+			httpReply(w, nil, errors.Errorf("Device is not connected"))
+			return
+		}
+
+		err := fsPutData(ctx2, devConn, bytes.NewReader([]byte(data)), path)
+		httpReply(w, err == nil, err)
 	})
 
 	http.HandleFunc("/get", func(w http.ResponseWriter, r *http.Request) {
