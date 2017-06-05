@@ -16,6 +16,8 @@
 #include "fw/src/mgos_init.h"
 #include "fw/src/mgos_timers.h"
 
+#include "mgos_arduino_spi.h"
+
 void pinMode(uint8_t pin, uint8_t mode) {
   switch (mode) {
     case INPUT:
@@ -85,6 +87,9 @@ void loop_cb(void *arg) {
 }
 
 enum mgos_init_result mgos_arduino_init(void) {
+#if MGOS_ENABLE_SPI
+  mgos_arduino_spi_init();
+#endif
   setup();
   s_loop_timer = mgos_set_timer(0, true /* repeat */, loop_cb, NULL);
   return MGOS_INIT_OK;
