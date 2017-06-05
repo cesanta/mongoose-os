@@ -134,6 +134,9 @@ func init() {
 	flag.StringVar(&wwwRoot, "web-root", "", "UI Web root to use instead of built-in")
 	hiddenFlags = append(hiddenFlags, "web-root")
 
+	flag.IntVar(&httpPort, "http-port", 1992, "Web UI HTTP port")
+	hiddenFlags = append(hiddenFlags, "http-port")
+
 	flag.BoolVar(&startBrowser, "start-browser", true, "Automatically start browser")
 	hiddenFlags = append(hiddenFlags, "start-browser")
 }
