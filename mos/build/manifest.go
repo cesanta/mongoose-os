@@ -31,7 +31,6 @@ type FWAppManifest struct {
 	Filesystem        []string           `yaml:"filesystem" json:"filesystem,omitempty"`
 	ExtraFiles        []string           `yaml:"extra_files" json:"extra_files,omitempty"`
 	EnableJavascript  bool               `yaml:"enable_javascript,omitempty" json:"enable_javascript,omitempty"`
-	SkeletonVersion   string             `yaml:"skeleton_version" json:"skeleton_version,omitempty"`
 	FFISymbols        []string           `yaml:"ffi_symbols" json:"ffi_symbols,omitempty"`
 	Modules           []SWModule         `yaml:"modules,omitempty" json:"modules,omitempty"`
 	Libs              []SWModule         `yaml:"libs,omitempty" json:"libs,omitempty"`
@@ -41,6 +40,10 @@ type FWAppManifest struct {
 	CXXFlags          []string           `yaml:"cxxflags" json:"cxxflags,omitempty"`
 	CDefs             map[string]string  `yaml:"cdefs" json:"cdefs,omitempty"`
 	Tags              []string           `yaml:"tags" json:"tags,omitempty"`
+
+	ManifestVersion string `yaml:"manifest_version" json:"manifest_version,omitempty"`
+	// SkeletonVersion is deprecated since 05.06.2017
+	SkeletonVersion string `yaml:"skeleton_version" json:"skeleton_version,omitempty"`
 
 	// Old form of LibsHandled, deprecated since 03.06.2017
 	// TODO: remove
