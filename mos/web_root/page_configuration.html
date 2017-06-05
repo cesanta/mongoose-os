@@ -293,28 +293,26 @@
       new PNotify({title: 'Invalid AWS IoT credentials', type: 'error'});      
       return false;
     }
-    var btn = $(this);
-    startSpinner(btn);
+    var btn = spin(this);
     $.ajax({url: '/aws-store-creds', global: false, data: {key: key, secret: secret}}).then(function(json) {
       new PNotify({title: 'Saved AWS IoT credentials', type: 'success'});
       loadConfig();
     }).always(function() {
-      btn.button('reset');
+      stopspin(btn);
     });
   });
 
   $(document).on('click', '#aws-setup-button', function() {
     var policy = $('#input-policy').val();
     var region = $('#input-region').val();
-    var btn = $(this);
-    startSpinner(btn);
+    var btn = spin(this);
     $.ajax({url: '/aws-iot-setup', global: false, data: {region: region, policy: policy}}).then(function(json) {
       new PNotify({title: 'AWS IoT provisioning success', type: 'success'});
       loadConfig();
     }).fail(function(xhr) {
       new PNotify({title: 'AWS IoT provisioning failed: ' + (xhr.responseText || ''), type: 'error'});
     }).always(function() {
-      btn.button('reset');
+      stopspin(btn);
     });
   });
 
