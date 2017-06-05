@@ -159,7 +159,7 @@ void mgos_uart_config_set_rx_params(struct mgos_uart_config *cfg,
  * and whether Tx flow control is enabled (`tx_fc_ena`)
  * 
  * and whether TxEn (TxEnable) pin is enabled for RS485 mode (`rs485_ena`) where
- * date is transmitted and received via the same twisted pair (half duplex).
+ * data is transmitted and received via the same twisted pair (half duplex).
  * For RS485 mode, it's assumed that one GPIO pin is connected to the 
  * interface device (e.g. MAX487) and is used to control DE and nRE pins
  * simultaneously.  High = transmit, LOW = receive.
