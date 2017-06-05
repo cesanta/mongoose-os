@@ -61,11 +61,11 @@ const (
 
 	buildLog = "build.log"
 
-	// Skeleton version changes:
+	// Manifest version changes:
 	//
 	// - 2017-06-03: added support for @all_libs in filesystem and sources
-	minSkeletonVersion = "2017-03-17"
-	maxSkeletonVersion = "2017-06-03"
+	minManifestVersion = "2017-03-17"
+	maxManifestVersion = "2017-06-03"
 
 	localLibsDir = "local_libs"
 
@@ -773,7 +773,7 @@ func readManifest(appDir string, bParams *buildParams) (*build.FWAppManifest, ti
 // readManifestFile reads single manifest file (which can be either "main" app
 // or lib manifest, or some arch-specific adjustment manifest)
 func readManifestFile(
-	manifestFullName string, skeletonVersionMandatory bool,
+	manifestFullName string, manifestVersionMandatory bool,
 ) (*build.FWAppManifest, time.Time, error) {
 	manifestSrc, err := ioutil.ReadFile(manifestFullName)
 	if err != nil {
@@ -785,24 +785,31 @@ func readManifestFile(
 		return nil, time.Time{}, errors.Trace(err)
 	}
 
-	if manifest.SkeletonVersion != "" {
-		// Check if manifest skeleton version is supported by the mos tool
-		if manifest.SkeletonVersion < minSkeletonVersion {
+	// If SkeletonVersion is specified, but ManifestVersion is not, then use the
+	// former
+	if manifest.ManifestVersion == "" && manifest.SkeletonVersion != "" {
+		reportf("WARNING: skeleton_version is deprecated and will be removed eventually, please rename it to manifest_version")
+		manifest.ManifestVersion = manifest.SkeletonVersion
+	}
+
+	if manifest.ManifestVersion != "" {
+		// Check if manifest manifest version is supported by the mos tool
+		if manifest.ManifestVersion < minManifestVersion {
 			return nil, time.Time{}, errors.Errorf(
-				"too old skeleton_version %q in %q (oldest supported is %q)",
-				manifest.SkeletonVersion, manifestFullName, minSkeletonVersion,
+				"too old manifest_version %q in %q (oldest supported is %q)",
+				manifest.ManifestVersion, manifestFullName, minManifestVersion,
 			)
 		}
 
-		if manifest.SkeletonVersion > maxSkeletonVersion {
+		if manifest.ManifestVersion > maxManifestVersion {
 			return nil, time.Time{}, errors.Errorf(
-				"too new skeleton_version %q in %q (latest supported is %q). Please run \"mos update\".",
-				manifest.SkeletonVersion, manifestFullName, maxSkeletonVersion,
+				"too new manifest_version %q in %q (latest supported is %q). Please run \"mos update\".",
+				manifest.ManifestVersion, manifestFullName, maxManifestVersion,
 			)
 		}
-	} else if skeletonVersionMandatory {
+	} else if manifestVersionMandatory {
 		return nil, time.Time{}, errors.Errorf(
-			"skeleton version is missing in %q", manifestFullName,
+			"manifest version is missing in %q", manifestFullName,
 		)
 	}
 
