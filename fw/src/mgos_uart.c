@@ -48,7 +48,7 @@ void mgos_uart_dispatcher(void *arg) {
   if (us->tx_buf.len == 0) mbuf_trim(&us->tx_buf);
   
   if (us->cfg.rs485_ena) {
-    if (mgos_uart_is_tx_fifo_empty(us)) {      
+    if ((mgos_uart_is_tx_fifo_empty(us)) && (us->cfg.rs485_active)) {  
       /* If the uart_tx_fifo is empty, all the data has been sent so
        * it is time to de-assert the TxEn line and start listening again
        * but the final character may not have been transmitted so
@@ -56,6 +56,7 @@ void mgos_uart_dispatcher(void *arg) {
        * 
        * Assume worst case of 8bit, 1bit parity, 2 stop bits = 12 bits
        * therefore wait 18 bit periods */			 
+      us->cfg.rs485_active = false;
       final_char_delay_us = 18000000;
       final_char_delay_us /= us->cfg.baud_rate;
       mgos_usleep(final_char_delay_us);
@@ -208,6 +209,7 @@ void mgos_uart_config_set_tx_params(struct mgos_uart_config *cfg,
   cfg->tx_buf_size = tx_buf_size;
   cfg->tx_fc_ena = tx_fc_ena;
   cfg->rs485_ena = rs485_ena;
+  if (rs485_ena) cfg->rs485_active = false;
 }
 
 void mgos_uart_set_dispatcher(int uart_no, mgos_uart_dispatcher_t cb,

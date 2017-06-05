@@ -50,6 +50,9 @@ struct mgos_uart_config {
   
   /* Enable RS485 mode with TxEn (Tx Enable pin), default: off */
   bool rs485_ena;
+  
+  /* Remember whether RS485 TxEn (Tx Enable pin) is active, default: false */
+  bool rs485_active;
 
   /* Platform-specific configuration options. */
   struct mgos_uart_dev_config dev;

@@ -146,6 +146,7 @@ IRAM void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us) {
     /* If RS485 mode, assert TxEn pin during transmit */
     if (us->cfg.rs485_ena) {
       mgos_gpio_write(us->cfg.dev.tx_en_gpio, 1);
+      us->cfg.rs485_active = true;
     }
     while (txb->len > 0) {
       size_t tx_av = 128 - esp32_uart_tx_fifo_len(uart_no);
@@ -294,7 +295,7 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
   }
 
   /* If RS485 mode, deassert TxEn pin to allow receive */
-  if (cfg->rs485_ena) {  
+  if (cfg->rs485_ena) {
     mgos_gpio_set_mode(cfg->dev.tx_en_gpio, MGOS_GPIO_MODE_OUTPUT);  
     mgos_gpio_write(cfg->dev.tx_en_gpio, 0);
   }
