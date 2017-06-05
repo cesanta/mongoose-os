@@ -333,8 +333,7 @@
     if (!fileName) return;
     spin(btn);
     saveFile().then(function() {
-      var d = {method: 'FS.Put', args: JSON.stringify({filename: fileName, data: b64enc(text)})}
-      $.ajax({url: '/call', data: d}).then(function() {
+      $.ajax({url: '/put', data: {data: text, path: fileName}}).then(function() {
         addLog('File ' + fileName + ' copied.\n');
         $.ajax({url: '/call', data: {method: 'Sys.Reboot'}}).always(function() {
           setTimeout(function() {
