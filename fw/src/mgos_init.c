@@ -72,9 +72,6 @@ enum mgos_init_result mgos_init(void) {
 #if MGOS_ENABLE_CONFIG_SERVICE
   mgos_service_config_init();
 #endif
-#if MGOS_ENABLE_FILESYSTEM_SERVICE
-  mgos_service_filesystem_init();
-#endif
 #endif
 #if MGOS_ENABLE_GPIO_SERVICE
   r = mgos_gpio_service_init();
