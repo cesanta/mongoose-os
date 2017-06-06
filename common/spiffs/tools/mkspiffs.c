@@ -56,6 +56,9 @@ bool copy(char *src, char *dst) {
 
   if (SPIFFS_write(&fs, sfd, (uint8_t *) buf, size) != size) {
     fprintf(stderr, "SPIFFS_write failed: %d\n", SPIFFS_errno(&fs));
+    if (SPIFFS_errno(&fs) == SPIFFS_ERR_FULL) {
+      fprintf(stderr, "*** Out of space, tried to write %d bytes ***\n", (int) size);
+    }
     goto spiffs_cleanup;
   }
 

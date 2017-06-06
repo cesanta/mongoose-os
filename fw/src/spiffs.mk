@@ -15,5 +15,5 @@ define mkspiffs
 	  echo "  CP    $(f) -> $(FS_STAGING_DIR)"; \
 	  cp $(f) $(FS_STAGING_DIR);)
 	$(vecho) "MKFS  $(FS_STAGING_DIR) ($(FS_SIZE)) -> $@"
-	$(Q) $(MKSPIFFS) $1 $(FS_STAGING_DIR) > $@
+	$(Q) $(MKSPIFFS) $1 $(FS_STAGING_DIR) $@
 endef
