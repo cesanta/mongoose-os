@@ -8,7 +8,6 @@
 #include "fw/src/mgos_timers.h"
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_dlsym.h"
-#include "mjs.h"
 
 #if CS_PLATFORM == CS_P_ESP8266
 #define LED_GPIO 2 /* On ESP-12E there is a blue LED connected to GPIO2  */
@@ -31,13 +30,5 @@ int get_led_gpio_pin(void) {
 }
 
 enum mgos_app_init_result mgos_app_init(void) {
-  /* Initialize JavaScript engine */
-  struct mjs *mjs = mjs_create();
-  mjs_set_ffi_resolver(mjs, mgos_dlsym);
-  mjs_err_t err = mjs_exec_file(mjs, "init.js", NULL);
-  if (err != MJS_OK) {
-    LOG(LL_ERROR, ("MJS exec error: %s\n", mjs_strerror(mjs, err)));
-  }
-
   return MGOS_APP_INIT_SUCCESS;
 }
