@@ -54,7 +54,6 @@ build_vars:
   MGOS_ENABLE_RPC_CHANNEL_UART: 1     # Needed for make mos tool to work.
   MGOS_ENABLE_DNS_SD: 1               # Enable network discovery
   MGOS_ENABLE_UPDATER: 1              # Enable OTA updates
-  MGOS_ENABLE_UPDATER_RPC: 0          # Enable OTA via mg_rpc framing protocol
   MGOS_ENABLE_UPDATER_POST: 1         # Enable OTA via HTTP POST
 ```
 

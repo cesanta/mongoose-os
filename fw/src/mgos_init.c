@@ -66,9 +66,6 @@ enum mgos_init_result mgos_init(void) {
 #if MGOS_ENABLE_RPC
   r = mgos_rpc_init(); /* After mgos_sys_config_init_http */
   if (r != MGOS_INIT_OK) return r;
-#if MGOS_ENABLE_UPDATER_RPC
-  mgos_updater_rpc_init();
-#endif
 #endif
 #if MGOS_ENABLE_GPIO_SERVICE
   r = mgos_gpio_service_init();

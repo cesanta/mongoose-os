@@ -19,7 +19,6 @@
 #include "fw/src/mgos_console.h"
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_sys_config.h"
-#include "fw/src/mgos_updater_rpc.h"
 #include "fw/src/mgos_updater_hal.h"
 #include "fw/src/mgos_updater_util.h"
 #include "fw/platforms/esp8266/src/esp_flash_writer.h"

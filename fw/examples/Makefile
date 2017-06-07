@@ -32,6 +32,7 @@ $(EXAMPLES): $(MJS_PATH)/mjs.c $(MJS_PATH)/mjs.h
 		--lib rpc-mqtt:$(LIBS_PATH)/rpc-mqtt \
 		--lib rpc-service-config:$(LIBS_PATH)/rpc-service-config \
 		--lib rpc-service-fs:$(LIBS_PATH)/rpc-service-fs \
+		--lib updater-rpc:$(LIBS_PATH)/updater-rpc \
 		--module mjs:$(MJS_PATH) \
 
 $(MJS_PATH)/mjs.c $(MJS_PATH)/mjs.h:

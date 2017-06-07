@@ -17,7 +17,6 @@
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_timers.h"
-#include "fw/src/mgos_updater_rpc.h"
 #include "fw/src/mgos_updater_hal.h"
 
 /*
