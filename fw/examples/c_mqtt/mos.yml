@@ -15,6 +15,6 @@ config_schema:
   - ["i2c.enable", true]
 libs:
   - origin: https://github.com/mongoose-os-libs/mqtt
+  - origin: https://github.com/mongoose-os-libs/rpc-service-atca
 build_vars:
-  MGOS_ENABLE_ATCA_SERVICE: 1
   SSL: mbedTLS

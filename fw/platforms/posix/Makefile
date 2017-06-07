@@ -22,7 +22,6 @@ DEBUG ?= 0
 CC_WRAPPER ?=
 
 MGOS_ENABLE_ATCA = 0
-MGOS_ENABLE_ATCA_SERVICE = 0
 
 # Explicitly disable updater, it's not supported on POSIX build yet.
 MGOS_ENABLE_UPDATER = 0
