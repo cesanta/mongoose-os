@@ -76,11 +76,6 @@ enum mgos_init_result mgos_init(void) {
   mgos_console_init(); /* After mgos_rpc_init */
 #endif
 
-#if MGOS_ENABLE_I2C && MGOS_ENABLE_RPC && MGOS_ENABLE_I2C_SERVICE
-  r = mgos_i2c_service_init();
-  if (r != MGOS_INIT_OK) return r;
-#endif
-
 #if MGOS_ENABLE_UPDATER
   mgos_updater_http_init(); /* After HTTP init */
 #endif

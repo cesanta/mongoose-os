@@ -30,10 +30,6 @@
 #define MGOS_ENABLE_I2C_GPIO 0
 #endif
 
-#ifndef MGOS_ENABLE_I2C_SERVICE
-#define MGOS_ENABLE_I2C_SERVICE 0
-#endif
-
 #ifndef MGOS_ENABLE_RPC
 #define MGOS_ENABLE_RPC 0
 #endif
