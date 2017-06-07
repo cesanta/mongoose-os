@@ -69,9 +69,6 @@ enum mgos_init_result mgos_init(void) {
 #if MGOS_ENABLE_UPDATER_RPC
   mgos_updater_rpc_init();
 #endif
-#if MGOS_ENABLE_CONFIG_SERVICE
-  mgos_service_config_init();
-#endif
 #endif
 #if MGOS_ENABLE_GPIO_SERVICE
   r = mgos_gpio_service_init();

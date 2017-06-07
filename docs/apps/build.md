@@ -52,7 +52,6 @@ build_vars:
   MGOS_DEBUG_UART: 0                  # Enable UART debugging
   MGOS_ENABLE_RPC: 1                  # Framing protocol for communication.
   MGOS_ENABLE_RPC_CHANNEL_UART: 1     # Needed for make mos tool to work.
-  MGOS_ENABLE_CONFIG_SERVICE: 1       # Needed for mos config-* commands to work
   MGOS_ENABLE_DNS_SD: 1               # Enable network discovery
   MGOS_ENABLE_UPDATER: 1              # Enable OTA updates
   MGOS_ENABLE_UPDATER_RPC: 0          # Enable OTA via mg_rpc framing protocol

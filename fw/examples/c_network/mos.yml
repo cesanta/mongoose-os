@@ -8,3 +8,5 @@ filesystem:
 build_vars:
   MGOS_ENABLE_DNS_SD: 0
   MGOS_ENABLE_UPDATER_POST: 1
+libs:
+  - origin: https://github.com/mongoose-os-libs/rpc-service-config

@@ -17,6 +17,7 @@ config_schema:
   - ["i2c.enable", true]
 libs:
   - origin: https://github.com/mongoose-os-libs/mqtt
+  - origin: https://github.com/mongoose-os-libs/rpc-service-config
 build_vars:
   SSL: mbedTLS
   MGOS_ENABLE_ONEWIRE: 1
