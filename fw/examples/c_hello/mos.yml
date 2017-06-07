@@ -9,3 +9,9 @@ filesystem:
 config_schema:
   - ["hello", "o", {"title": "Hello app settings"}]
   - ["hello.who", "s", "world", {"title": "Who to say hello to"}]
+libs:
+  - origin: https://github.com/mongoose-os-libs/rpc-mqtt
+  - origin: https://github.com/mongoose-os-libs/rpc-service-config
+  - origin: https://github.com/mongoose-os-libs/rpc-service-fs
+  - origin: https://github.com/mongoose-os-libs/rpc-service-i2c
+  - origin: https://github.com/mongoose-os-libs/updater-rpc
