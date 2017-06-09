@@ -4,7 +4,14 @@
  */
 
 /*
- * GPIO API
+ * This file is part of [Mongoose OS](https://mongoose-os.com).
+ * You can view it online:
+ * [mgos_gpio.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_gpio.h)
+ *
+ * It provides
+ * [General Purpose Input/Output
+ *  (GPIO)](https://en.wikipedia.org/wiki/General-purpose_input/output)
+ * hardware access interface.
  */
 
 #ifndef CS_FW_SRC_MGOS_GPIO_H_
@@ -56,7 +63,7 @@ bool mgos_gpio_toggle(int pin);
  * Install a GPIO interrupt handler.
  *
  * Note that this will not enable the interrupt, this must be done explicitly
- * with mgos_gpio_enable_int.
+ * with `mgos_gpio_enable_int()`.
  */
 bool mgos_gpio_set_int_handler(int pin, enum mgos_gpio_int_mode mode,
                                mgos_gpio_int_handler_f cb, void *arg);
@@ -69,23 +76,27 @@ bool mgos_gpio_disable_int(int pin);
 
 /*
  * Removes a previosuly set interrupt handler.
- * If cb and arg are not NULL, they will contain previous handler and arg.
+ *
+ * If `cb` and `arg` are not NULL, they will contain previous handler and arg.
  */
 void mgos_gpio_remove_int_handler(int pin, mgos_gpio_int_handler_f *old_cb,
                                   void **old_arg);
 
 /*
  * Handle a button on the specified pin.
+ *
  * Configures the pin for input with specified pull-up and performs debouncing:
  * upon first triggering user's callback is invoked immediately but further
  * interrupts are inhibited for the following debounce_ms millseconds.
+ *
  * Typically 50 ms of debouncing time is sufficient.
- * int_mode is one of the MGOS_GPIO_INT_EDGE_* values and will specify whether
+ * int_mode is one of the `MGOS_GPIO_INT_EDGE_*` values and will specify whether
  * the handler triggers when button is pressed, released or both.
  * Which is which depends on how the button is wired: if the normal state is
- * pull-up (typical), then MGOS_GPIO_INT_EDGE_NEG is press and _POS is release.
+ * pull-up (typical), then `MGOS_GPIO_INT_EDGE_NEG` is press and
+ * `_POS` is release.
  *
- * Calling with cb = NULL will remove a previously installed handler.
+ * Calling with `cb` = NULL will remove a previously installed handler.
  *
  * Note: implicitly enables the interrupt.
  */
