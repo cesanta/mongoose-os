@@ -14,9 +14,7 @@
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_mongoose.h"
 #include "fw/src/mgos_rpc.h"
-#include "fw/src/mgos_rpc_channel_uart.h"
 #include "fw/src/mgos_sys_config.h"
-#include "fw/src/mgos_uart.h"
 #include "fw/src/mgos_utils.h"
 #include "fw/src/mgos_wifi.h"
 #include "fw/src/mgos_timers.h"
@@ -190,32 +188,6 @@ enum mgos_init_result mgos_rpc_init(void) {
 
 #if MGOS_ENABLE_RPC_CHANNEL_HTTP
   mgos_register_http_endpoint(HTTP_URI_PREFIX, mgos_rpc_http_handler, NULL);
-#endif
-
-#if MGOS_ENABLE_RPC_CHANNEL_UART
-  if (sccfg->uart.uart_no >= 0) {
-    const struct sys_config_rpc_uart *scucfg = &get_cfg()->rpc.uart;
-    bool ok = true;
-    /* Only reconfigure UART if it is not one of debug ports */
-    if (scucfg->uart_no != mgos_get_stdout_uart() &&
-        scucfg->uart_no != mgos_get_stderr_uart()) {
-      struct mgos_uart_config ucfg;
-      mgos_uart_config_set_defaults(scucfg->uart_no, &ucfg);
-      ucfg.baud_rate = scucfg->baud_rate;
-      ucfg.rx_fc_ena = ucfg.tx_fc_ena = scucfg->fc_enable;
-      mgos_uart_flush(scucfg->uart_no);
-      ok = mgos_uart_configure(scucfg->uart_no, &ucfg);
-    }
-    if (ok) {
-      struct mg_rpc_channel *uch =
-          mg_rpc_channel_uart(scucfg->uart_no, scucfg->wait_for_start_frame);
-      mg_rpc_add_channel(c, mg_mk_str(""), uch, true /* is_trusted */);
-      uch->ch_connect(uch);
-    } else {
-      LOG(LL_ERROR, ("UART%d init failed", scucfg->uart_no));
-      return MGOS_INIT_UART_FAILED;
-    }
-  }
 #endif
 
 #if MGOS_ENABLE_RPC_CHANNEL_LOOPBACK

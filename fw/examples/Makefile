@@ -35,6 +35,7 @@ $(EXAMPLES): $(MJS_PATH)/mjs.c $(MJS_PATH)/mjs.h
 		--lib rpc-service-fs:$(LIBS_PATH)/rpc-service-fs \
 		--lib rpc-service-gpio:$(LIBS_PATH)/rpc-service-gpio \
 		--lib rpc-service-i2c:$(LIBS_PATH)/rpc-service-i2c \
+		--lib rpc-uart:$(LIBS_PATH)/rpc-uart \
 		--lib updater-rpc:$(LIBS_PATH)/updater-rpc \
 		--module mjs:$(MJS_PATH) \
 

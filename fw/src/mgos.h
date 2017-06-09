@@ -37,7 +37,6 @@
 #include "fw/src/mgos_onewire.h"
 #include "fw/src/mgos_pwm.h"
 #include "fw/src/mgos_rpc.h"
-#include "fw/src/mgos_rpc_channel_uart.h"
 #include "fw/src/mgos_sntp.h"
 #include "fw/src/mgos_spi.h"
 #include "fw/src/mgos_sys_config.h"
