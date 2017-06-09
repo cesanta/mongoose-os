@@ -18,10 +18,6 @@
 #define MGOS_ENABLE_DEBUG_UDP 0
 #endif
 
-#ifndef MGOS_ENABLE_GPIO_SERVICE
-#define MGOS_ENABLE_GPIO_SERVICE 0
-#endif
-
 #ifndef MGOS_ENABLE_I2C
 #define MGOS_ENABLE_I2C 0
 #endif

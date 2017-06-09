@@ -28,7 +28,6 @@
 #include "fw/src/mgos_features.h"
 #include "fw/src/mgos_gpio.h"
 #include "fw/src/mgos_gpio_hal.h"
-#include "fw/src/mgos_gpio_service.h"
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_hooks.h"
 #include "fw/src/mgos_i2c.h"
