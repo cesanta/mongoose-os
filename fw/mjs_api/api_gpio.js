@@ -1,6 +1,3 @@
-// GPIO API. Source C API is defined at
-// [mgos_gpio.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_gpio.h)
-
 let GPIO = {
   // ## **`GPIO.set_mode(pin, mode)`** 
   // Set GPIO pin mode.

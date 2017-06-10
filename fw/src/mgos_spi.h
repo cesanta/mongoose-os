@@ -4,14 +4,8 @@
  */
 
 /*
- * This file is part of [Mongoose OS](https://mongoose-os.com).
- * You can view it online:
+ * View this file on GitHub:
  * [mgos_spi.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_spi.h)
- *
- * It provides
- * [Serial Peripheral Interface Bus
- * (SPI)](https://en.wikipedia.org/wiki/Serial_Peripheral_Interface_Bus)
- * hardware access interface.
  */
 
 #ifndef CS_FW_SRC_MGOS_SPI_H_

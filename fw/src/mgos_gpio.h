@@ -4,14 +4,8 @@
  */
 
 /*
- * This file is part of [Mongoose OS](https://mongoose-os.com).
- * You can view it online:
+ * View this file on GitHub:
  * [mgos_gpio.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_gpio.h)
- *
- * It provides
- * [General Purpose Input/Output
- *  (GPIO)](https://en.wikipedia.org/wiki/General-purpose_input/output)
- * hardware access interface.
  */
 
 #ifndef CS_FW_SRC_MGOS_GPIO_H_
