@@ -3,6 +3,11 @@
  * All rights reserved
  */
 
+/*
+ * View this file on GitHub:
+ * [mgos_timers.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_timers.h)
+ */
+
 #ifndef CS_FW_SRC_MGOS_TIMERS_H_
 #define CS_FW_SRC_MGOS_TIMERS_H_
 

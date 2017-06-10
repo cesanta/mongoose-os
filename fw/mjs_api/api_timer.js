@@ -1,6 +1,3 @@
-// Timer API. Source C API is defined at:
-// [mgos_timers.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_timers.h).
-
 load('api_math.js');
 
 let Timer = {
