@@ -3,12 +3,15 @@
  * All rights reserved
  */
 
+/*
+ * See on GitHub:
+ * [mgos_hal.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_hal.h)
+ *
+ * These interfaces need to be implemented for each hardware platform.
+ */
+
 #ifndef CS_FW_SRC_MGOS_HAL_H_
 #define CS_FW_SRC_MGOS_HAL_H_
-
-/*
- * Interfaces that need to be implemented for each devices.
- */
 
 #include <stdbool.h>
 #include <stdint.h>

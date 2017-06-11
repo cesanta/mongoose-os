@@ -3,6 +3,12 @@
  * All rights reserved
  */
 
+/*
+ * See on GitHub:
+ * [mgos_uart.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_uart.h),
+ * [mgos_uart.c](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_uart.c)
+ */
+
 #ifndef CS_FW_SRC_MGOS_UART_H_
 #define CS_FW_SRC_MGOS_UART_H_
 

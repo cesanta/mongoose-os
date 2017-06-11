@@ -1,17 +1,4 @@
-// RPC means Remote Procedure Call. In Mongoose OS, that is simply a C
-// (or JS) function that:
-//
-// - Has a name, for example "GPIO.Toggle",
-// - Takes a JSON object with function arguments,
-// - Gives back a JSON object with results.
-//
-//
-// These JSON messages could be carried out by many different channels.
-// Mongoose OS by default supports Serial (UART), HTTP, WebSocket, MQTT channels.
-
 let RPC = {
-  // NOTE: we need strdup to return `void *` instead of `char *`, in order to
-  // make mJS not to process it in any way, and just pass pointer as is.
   _strdup: ffi('void *strdup(char *)'),
   _addHandler: ffi('void *mgos_rpc_add_handler(void *, void (*)(void *, char *, char *, userdata), userdata)'),
   _sendResponse: ffi('bool mgos_rpc_send_response(void *, char *)'),

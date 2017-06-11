@@ -1,6 +1,3 @@
-// System API. Source C API is defined at:
-// [mgos_hal.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_hal.h)
-
 let Sys = {
   // ## **`Sys.calloc(nmemb, size)`**
   // Allocate a memory region.
