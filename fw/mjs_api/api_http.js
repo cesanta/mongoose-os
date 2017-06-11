@@ -1,13 +1,14 @@
-// Note: if you want to create RESTful handlers, use RPC API instead.
-// With RPC, you'll get a RESTful endpoint for free, plus many other extras
-// like ability to call your API via other transports like Websocket, MQTT,
-// serial, etc.
-
 load('api_net.js');
 
 let URL = {
   // ## **`URL.parse(url)`**
   // Parse URL string, return and object with `ssl`, `addr`, `uri` keys.
+  //
+  // Example:
+  // ```javascript
+  // print(JSON.stringify(URL.parse('https://a.b:1234/foo?bar')));
+  // // Prints: {"uri":"/foo?bar","addr":"a.b:1234","ssl":true}
+  // ```
   parse: function(url) {
     let ssl = false, addr, port = '80', uri = '/', app = true;
     if (url.slice(0, 8) === 'https://') {
@@ -48,18 +49,24 @@ let HTTP = {
     return len ? fstr(p, len) : '';
   },
 
-  // ## **`HTTP.query(options)`**
+  // ## **`HTTP.query(options);`**
   // Send HTTP request. Options object accepts the following fields:
   // `url` - mandatory URL to fetch, `success` - optional callback function 
   // that receives reply body, `error` - optional error callback that receives
   // error string, `data` - optional object with request parameters.
-  // By default, `GET` method is used, unless `data` is specified.
+  // By default, `GET` method is used. If `data` is specified, POST method
+  // is used, the `data` object gets `JSON.stringify()`-ed and used as a
+  // HTTP message body.
+  //
+  // In order to send HTTPS request, use `https://...` URL. Note that in that
+  // case `ca.pem` file must contain CA certificate of the requested server.
+  //
   // Example:
   // ```javascript
   // HTTP.query({
   //   url: 'http://httpbin.org/post',
-  //   headers: { 'X-Foo': 'bar' },  // Optional - headers
-  //   data: {foo: 1, bar: 'baz'},   // Optional. If set, POST is used
+  //   headers: { 'X-Foo': 'bar' },     // Optional - headers
+  //   data: {foo: 1, bar: 'baz'},      // Optional. If set, JSON-encoded and POST-ed
   //   success: function(body, full_http_msg) { print(body); },
   //   error: function(err) { print(err); },  // Optional
   // });

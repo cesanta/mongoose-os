@@ -1,8 +1,14 @@
 /*
  * Copyright 2015 Cesanta
- *
- * i2c low-level API for ESP8266
+ * All rights reserved
  */
+
+/*
+ * See on GitHub:
+ * [mgos_i2c.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_i2c.h),
+ * [mgos_i2c.c](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_i2c.c)
+ */
+
 #ifndef CS_FW_SRC_MGOS_I2C_H_
 #define CS_FW_SRC_MGOS_I2C_H_
 

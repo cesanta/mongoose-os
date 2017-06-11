@@ -3,6 +3,19 @@
  * All rights reserved
  */
 
+/*
+ * See on GitHub:
+ * [mgos_config.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_config.h),
+ * [mgos_config.c](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_config.c)
+ *
+ * The usage pattern is this:
+ * 1. Create an empty config struct at the beginning.
+ * 2. Load the defaults.
+ * 3. Then, apply overrides.
+ *
+ * When override is applied, previously allocated values are freed.
+ */
+
 #ifndef CS_FW_SRC_MGOS_CONFIG_H_
 #define CS_FW_SRC_MGOS_CONFIG_H_
 
@@ -15,16 +28,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
-
-/*
- * The usage pattern is this:
- * 1. Create an empty config struct at the beginning.
- * 2. Load the defaults.
- * 3. Then, apply overrides.
- *
- * When override is applied, previously allocated values are freed.
- * See ../test/unit_test.c for an example.
- */
 
 bool mgos_conf_check_access(const struct mg_str key, const char *acl);
 

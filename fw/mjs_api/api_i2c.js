@@ -1,6 +1,3 @@
-// I2C API. Source C API is defined at:
-// [mgos_i2c.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_i2c.h)
-
 let I2C = {
   _rrn: ffi('int mgos_i2c_read_reg_n(void *, int, int, int, char *)'),
   // ## **`I2C.get_default()`**

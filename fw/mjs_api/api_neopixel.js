@@ -1,5 +1,5 @@
-// Driver code for the AdaFruit NeoPixel RGB LED strips.
-//   https://www.adafruit.com/category/168
+// See on GitHub:
+// [api_neopixel.js](https://github.com/cesanta/mongoose-os/blob/master/fw/mjs_api/api_neopixel.js)
 
 load("api_bitbang.js");
 load("api_gpio.js");
@@ -11,7 +11,7 @@ let NeoPixel = {
   BGR: 2,
 
   // ## **`NeoPixel.create(pin, numPixels, order)`**
-  // Create a NeoPixel strip object. Example:
+  // Create and return a NeoPixel strip object. Example:
   // ```javascript
   // let pin = 5, numPixels = 16, colorOrder = NeoPixel.GRB;
   // let strip = NeoPixel.create(pin, numPixels, colorOrder);

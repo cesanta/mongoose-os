@@ -4,8 +4,9 @@
  */
 
 /*
- * View this file on GitHub:
- * [mgos_gpio.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_gpio.h)
+ * See on GitHub:
+ * [mgos_gpio.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_gpio.h),
+ * [mgos_gpio.c](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_gpio.c)
  */
 
 #ifndef CS_FW_SRC_MGOS_GPIO_H_
