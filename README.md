@@ -39,4 +39,60 @@ To submit contributions, sign
 [Cesanta CLA](https://docs.cesanta.com/contributors_la.shtml)
 and send GitHub pull request. You retain the copyright on your contributions.
 
+## Building the mos tool for developers
+
+### Dockerised builds
+
+First, install Docker using the instructions from [download.docker.com](https://download.docker.com/).
+
+**For PC or Mac**, simply do
+
+```
+docker build -t mos .
+docker run -p 1992:1992 -v /dev/ttyUSB0:/dev/ttyUSB0 --privileged mos
+```
+
+If you are on a Mac, change the first ttyUSB0 to whatever your Mac calls your attached device (leave the second one alone).
+
+**For Raspberry Pi and other ARM SBCs**, (Beagle Bone, Orange Pi, Nano Pi etc), do:
+
+```
+docker build -t golang-armhf -f Dockerfile-golang-armhf .
+docker build -t mos -f Dockerfile-armhf .
+docker run -p 1992:1992 -v /dev/ttyUSB0:/dev/ttyUSB0 --privileged mos
+```
+
+A Dockerised build allows you to run the Mongoose OS UI on a separate
+system (such as a battery powered Raspberry Pi) giving you a shareable
+and portable device programming station.
+
+### Local builds
+
+This presumes you are using Debian or Ubuntu.
+
+**Install Go**
+
+Install go using the instructions from [golang.org](http://golang.org).  (You could
+also type `sudo apt install golang`, but you will get an older version of Go)
+
+**Install dependencies**
+
+```
+apt install libftdi-dev python-git
+go get -v github.com/kardianos/govendor
+```
+
+**Check out and build Mongoose OS**
+
+```
+git clone https://github.com/cesanta/mongoose-os/
+cd mongoose-os
+ln -s $PWD $GOPATH/src/cesanta.com
+cd mos
+go get -d -v
+govendor fetch github.com/jteeuwen/go-bindata/go-bindata
+govendor fetch github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
+make install
+```
+
 [![Analytics](https://ga-beacon.appspot.com/UA-42732794-6/project-page)](https://github.com/cesanta/mongoose-os)
