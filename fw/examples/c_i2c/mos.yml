@@ -7,6 +7,7 @@ sources:
 config_schema:
   - ["i2c.enable", true]
 libs:
+  - origin: https://github.com/mongoose-os-libs/rpc-loopback
   - origin: https://github.com/mongoose-os-libs/rpc-mqtt
   - origin: https://github.com/mongoose-os-libs/rpc-service-config
   - origin: https://github.com/mongoose-os-libs/rpc-service-fs

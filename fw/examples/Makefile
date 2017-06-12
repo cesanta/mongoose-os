@@ -29,6 +29,7 @@ $(EXAMPLES): $(MJS_PATH)/mjs.c $(MJS_PATH)/mjs.h
 		--lib gcp:$(LIBS_PATH)/gcp \
 		--lib mjs:$(LIBS_PATH)/mjs \
 		--lib blynk:$(LIBS_PATH)/blynk \
+		--lib rpc-loopback:$(LIBS_PATH)/rpc-loopback \
 		--lib rpc-mqtt:$(LIBS_PATH)/rpc-mqtt \
 		--lib rpc-service-atca:$(LIBS_PATH)/rpc-service-atca \
 		--lib rpc-service-config:$(LIBS_PATH)/rpc-service-config \

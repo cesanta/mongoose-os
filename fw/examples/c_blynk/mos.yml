@@ -19,6 +19,7 @@ config_schema:
   - ["blynk.auth", "s", "", {"title": "Auth token"}]
 libs:
   - origin: https://github.com/mongoose-os-libs/aws
+  - origin: https://github.com/mongoose-os-libs/rpc-loopback
   - origin: https://github.com/mongoose-os-libs/rpc-mqtt
   - origin: https://github.com/mongoose-os-libs/rpc-service-config
   - origin: https://github.com/mongoose-os-libs/rpc-service-fs
