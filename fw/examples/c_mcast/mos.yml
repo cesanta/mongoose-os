@@ -10,7 +10,5 @@ config_schema:
   - ["mcast", "o", {title: "Multicast example parameters"}]
   - ["mcast.group", "s", "224.0.0.251", {title: "Multicast example group IP"}]
   - ["mcast.port", "i", 5353, {title: "Multicast example UDP port"}]
-build_vars:
-  MGOS_ENABLE_RPC: 0
 libs:
   - origin: https://github.com/mongoose-os-libs/mqtt

@@ -63,11 +63,6 @@ enum mgos_init_result mgos_init(void) {
   if (r != MGOS_INIT_OK) return r;
 #endif
 
-#if MGOS_ENABLE_RPC
-  r = mgos_rpc_init(); /* After mgos_sys_config_init_http */
-  if (r != MGOS_INIT_OK) return r;
-#endif
-
 #if MGOS_ENABLE_CONSOLE
   mgos_console_init(); /* After mgos_rpc_init */
 #endif

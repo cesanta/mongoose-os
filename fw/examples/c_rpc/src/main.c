@@ -5,13 +5,14 @@
 
 #include <stdio.h>
 
+#include "mgos_rpc.h"
+
 #include "common/cs_dbg.h"
 #include "common/json_utils.h"
 #include "common/platform.h"
 #include "frozen/frozen.h"
 #include "fw/src/mgos_app.h"
 #include "fw/src/mgos_gpio.h"
-#include "fw/src/mgos_rpc.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_wifi.h"
 

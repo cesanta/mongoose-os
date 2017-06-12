@@ -10,7 +10,6 @@ config_schema:
   - ["i2c.enable", true]
 libs:
   - origin: https://github.com/mongoose-os-libs/aws
-  - origin: https://github.com/mongoose-os-libs/mjs
   - origin: https://github.com/mongoose-os-libs/rpc-loopback
   - origin: https://github.com/mongoose-os-libs/rpc-mqtt
   - origin: https://github.com/mongoose-os-libs/rpc-service-config
@@ -19,5 +18,8 @@ libs:
   - origin: https://github.com/mongoose-os-libs/rpc-service-i2c
   - origin: https://github.com/mongoose-os-libs/rpc-uart
   - origin: https://github.com/mongoose-os-libs/updater-rpc
+
+    # mjs should go last, because user script might use some of the other libs
+  - origin: https://github.com/mongoose-os-libs/mjs
 build_vars:
   MGOS_ENABLE_ONEWIRE: 1

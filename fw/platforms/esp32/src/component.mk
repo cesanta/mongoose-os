@@ -87,9 +87,6 @@ VPATH += $(MGOS_ESP_SRC_PATH) $(MGOS_PATH)/common \
          $(MGOS_PATH)/common/platforms/esp/src
 
 MGOS_SRCS += cs_crc32.c cs_dbg.c cs_file.c cs_rbuf.c json_utils.c
-ifeq "$(MGOS_ENABLE_RPC)" "1"
-  VPATH += $(MGOS_PATH)/common/mg_rpc
-endif
 
 VPATH += $(MGOS_PATH)/fw/src
 

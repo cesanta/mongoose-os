@@ -26,14 +26,6 @@
 #define MGOS_ENABLE_I2C_GPIO 0
 #endif
 
-#ifndef MGOS_ENABLE_RPC
-#define MGOS_ENABLE_RPC 0
-#endif
-
-#ifndef MGOS_ENABLE_RPC_CHANNEL_HTTP
-#define MGOS_ENABLE_RPC_CHANNEL_HTTP 0
-#endif
-
 #ifndef MGOS_ENABLE_SPI
 #define MGOS_ENABLE_SPI 0
 #endif
@@ -64,10 +56,6 @@
 
 #ifndef MGOS_ENABLE_ONEWIRE
 #define MGOS_ENABLE_ONEWIRE 0
-#endif
-
-#ifndef MGOS_ENABLE_RPC
-#define MGOS_ENABLE_RPC 0
 #endif
 
 #ifndef MGOS_ENABLE_SNTP

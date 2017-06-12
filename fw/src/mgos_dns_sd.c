@@ -117,11 +117,14 @@ static void add_txt_record(const char *name, struct mg_dns_reply *reply,
   append_label(rdata, mg_mk_str("id"), mg_mk_str(c->device.id));
   append_label(rdata, mg_mk_str("fw_id"), mg_mk_str(v->fw_id));
   append_label(rdata, mg_mk_str("arch"), mg_mk_str(v->arch));
-#if MGOS_ENABLE_RPC
+/*
+ * TODO(dfrank): probably improve hooks so that we can add functionality
+ * here from the rpc-common
+ */
+
+#if 0
   append_label(rdata, mg_mk_str("rpc"),
                c->rpc.enable ? mg_mk_str("enabled") : mg_mk_str("disabled"));
-#else
-  append_label(rdata, mg_mk_str("rpc"), mg_mk_str("n/a"));
 #endif
 
   /* Append extra labels from config */
