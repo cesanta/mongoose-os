@@ -8,12 +8,26 @@
 {{range .Deps}}
 extern bool mgos_{{.}}_init(void);{{end}}
 
-bool mgos_deps_init(void) {
+static const struct lib_descr {
+  const char *title;
+  bool (*init)(void);
+} descrs[] = {
 {{range .Deps}}
-  if (!mgos_{{.}}_init()) {
-    LOG(LL_ERROR, ("%s init failed", "{{.}}"));
-    return false;
+  {
+    .title = "{{.}}",
+    .init = mgos_{{.}}_init,
+  },{{end}}
+};
+
+bool mgos_deps_init(void) {
+  size_t i;
+  for (i = 0; i < sizeof(descrs) / sizeof(struct lib_descr); i++) {
+    LOG(LL_DEBUG, ("init %s...", descrs[i].title));
+    if (!descrs[i].init()) {
+      LOG(LL_ERROR, ("%s init failed", descrs[i].title));
+      return false;
+    }
   }
-{{end}}
+
   return true;
 }
