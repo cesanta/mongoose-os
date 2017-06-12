@@ -19,6 +19,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 enum mgos_hook_type {
+  MGOS_HOOK_INIT_DONE,
   MGOS_HOOK_DEBUG_WRITE,
 
   MGOS_HOOK_TYPES_CNT

@@ -90,6 +90,9 @@ enum mgos_init_result mgos_init(void) {
                 (int) mgos_get_min_free_heap_size()));
   mgos_set_enable_min_heap_free_reporting(true);
 
+  /* Invoke all registered init_done hooks */
+  mgos_hook_trigger(MGOS_HOOK_INIT_DONE, NULL);
+
   return MGOS_INIT_OK;
 }
 
