@@ -4,7 +4,8 @@ body { color: #666;  background-color: #eee; }
 code { color: green; white-space: pre !important;}
 .ace_doc-tooltip {
   white-space: normal !important; box-shadow: none !important;
-  border: 1px solid #ccc !important; padding: 0 1em !important; background: #fff !important;
+  border: 1px solid #ccc !important; padding: 0 1em !important;
+  background: #fafafa !important; font-size: 14px !important;
 }
 .ace_doc-tooltip pre { cursor: pointer !important; }
 .ace_gutter-layer { width: 40px !important; }
@@ -65,6 +66,11 @@ input.form-control { box-shadow: none !important; }
 #file-dropdown, #arch-dropdown { font-family: Consolas, Menlo, Monaco, monospace; margin-top: -5px; }
 #file-dropdown { width: 15em; }
 #app-manager .modal-dialog, #lib-manager .modal-dialog { min-width: 760px !important; }
+.api_def {
+  font-family: Consolas, Menlo, Monaco, monospace;
+  white-space: pre; font-size: 14px; font-weight: bold; color: teal;
+  margin-bottom: 1em; margin-top: 0.5em;
+}
 
 /* FILE MANAGER PAGE */
 #file-list { overflow-y: auto; }

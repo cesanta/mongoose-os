@@ -157,8 +157,10 @@
     var filename = $(this).val();
     var data = { type: el.attr('mos-type'), project: el.attr('mos-name'), filename: filename };
     $.ajax({url: '/p/get', global: true, data: data}).done(function(data){
+      editor.lang = guesslang(filename);
       editor.setValue(atob(data.result || ''), -1);
-      editor.session.setMode('ace/mode/' + guesslang(filename));
+      editor.session.setMode('ace/mode/' + editor.lang);
+      editor.loadSnippets();
     }).always(function() {
     });
   });

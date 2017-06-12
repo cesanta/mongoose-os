@@ -61,10 +61,10 @@
     $.ajax({url: '/get', data: {name: name}}).done(function(json) {
       $('.file').removeClass('selected');
       $t.addClass('selected');
-
+      editor.lang = guesslang(name);
       editor.setValue(json.result || '', -1);
-      editor.session.setMode('ace/mode/' + guesslang(name));
-      editor.scanTextForSnippets();
+      editor.session.setMode('ace/mode/' + editor.lang);
+      editor.loadSnippets();
 
       $('.file-control').toggleClass('disabled', false);
       addLog('Loaded ' + name + '\n');

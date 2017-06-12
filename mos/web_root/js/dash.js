@@ -6,6 +6,8 @@ var ui = {
   checkPortsTimer: null,
   checkPortsFreq: 3000,
   recentDevicesCookieName: 'recently_used',
+  apiDocsURL: 'https://mongoose-os.com/downloads/api.json',
+  apidocs: null,
   pageCache: {}
 };
 
@@ -149,50 +151,24 @@ var mkeditor = function(id, lang) {
   });
   if (lang) editor.session.setMode('ace/mode/' + lang);
 
-  editor.scanTextForSnippets = function() {
-    var text = this.getValue() || '';
-    var m, re = /['"](api_\w+.js)['"]/g, snippets = [], qname = 'snippets';
-    if (!this.loadedSnippets) this.loadedSnippets = {};
-    var ls = this.loadedSnippets;
-    var scanSnippets = function(text) {
-      var snippets = [], m, re = /((?:\s*\/\/.*\n)+)/g;
-      while ((m = re.exec(text)) !== null) {
-        var t = m[1].replace(/(\n)\s*\/\/ ?/g, '$1').replace(/^\s+|\s+$/, '');
-        var m2 = t.match(/^[^\n]+`((.+?)\(.+?)`.*?\n/);
-        if (!m2) continue;
-        snippets.push({
-          caption: m2[2],
-          snippet: m2[1],
-          docHTML: marked(t),
-          type: 'snippet',
-        });
-      }
-      return snippets;
-    };
-    while ((m = re.exec(text)) !== null) {
-      var file = m[1];
-
-      // Ignore files that are not present on the device
-      if ($('.file[rel="' + file + '"]').length === 0) continue;
-
-      if (ls[file]) {
-        Array.prototype.push.apply(snippets, ls[file]);
-      } else {
-        ls[file] = [];
-        // Using immediate function for passing a file loop arg to the deferred
-        (function(file) {
-          $.ajax({url: '/get', data: { name: file }}).done(function(json) {
-            ls[file] = scanSnippets(json.result || '');
-          });
-        })(file);
-      }
-    }
-    Array.prototype.push.apply(snippets, scanSnippets(text));
+  editor.loadSnippets = function() {
+    var lang = editor.lang, snippets = [];    
+    var doc = (ui.apidocs || {})[lang == 'c_cpp' ? 'c' : lang] || {};
+    $.each(doc, function(k, v) {
+      if (k.match(/\.h$/)) return;
+      snippets.push({
+        caption: k,
+        snippet: k,
+        docHTML: v,
+        type: 'snippet',
+      });
+    });
+    snippets.sort(function(a, b) { return a.caption - b.caption; });
     return snippets;
   };
   editor.completers = [{
     getCompletions: function(editor, session, pos, prefix, callback) {
-     callback(null, editor.scanTextForSnippets());
+     callback(null, editor.loadSnippets());
     },
   }];
   // NOTE(lsm): enable this for local autocompletions
@@ -390,6 +366,7 @@ $(document).on('click', '#prototype-button', function() {
 var addLog = function(msg, type) {
   var el = type == 'uart' ? $('#device-logs')[0] : $('#mos-logs')[0];
   var mustScroll = (el.scrollTop === (el.scrollHeight - el.clientHeight));
+  if (type != 'uart' && !msg.match(/.*\n$/)) msg += '\n';
   $('<span/>').text(msg || '').appendTo(el);
   if (mustScroll) el.scrollTop = el.scrollHeight;
 };
@@ -419,6 +396,14 @@ $(document).on('click', 'input, button', function() {
 });
 
 initRecentlyUsedDeviceAddresses();
+
+// Load API documentation
+$.getJSON(ui.apiDocsURL).then(function(data) {
+  ui.apidocs = data;
+  addLog('Loaded ' + ui.apiDocsURL, ui.apidocs);
+}).fail(function() {
+  addLog('Error: failed to load ' + ui.apiDocsURL);
+});
 
 // When we run first time, look at PortFlag, which is a --port mos argument.
 // If a user has specified --port, then connect to a device automatically.
