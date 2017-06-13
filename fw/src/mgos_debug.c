@@ -48,7 +48,6 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
     }
   }
   if (uart_no >= 0) {
-    mgos_wdt_feed();
     len = mgos_uart_write(uart_no, data, len);
     mgos_uart_flush(uart_no);
   }
