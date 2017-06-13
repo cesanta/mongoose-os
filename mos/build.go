@@ -40,9 +40,10 @@ var (
 		"esp8266=docker.cesanta.com/mg-iot-cloud-project-esp8266:release,"+
 			"cc3200=docker.cesanta.com/mg-iot-cloud-project-cc3200:release",
 		"build images, arch1=image1,arch2=image2")
-	cleanBuild = flag.Bool("clean", false, "perform a clean build, wipe the previous build state")
-	modules    = flag.StringSlice("module", []string{}, "location of the module from mos.yaml, in the format: \"module_name:/path/to/location\". Can be used multiple times.")
-	libs       = flag.StringSlice("lib", []string{}, "location of the lib from mos.yaml, in the format: \"lib_name:/path/to/location\". Can be used multiple times.")
+	cleanBuild    = flag.Bool("clean", false, "perform a clean build, wipe the previous build state")
+	keepTempFiles = flag.Bool("keep-temp-files", false, "keep temp files after the build is done (by default they are in ~/.mos/tmp)")
+	modules       = flag.StringSlice("module", []string{}, "location of the module from mos.yaml, in the format: \"module_name:/path/to/location\". Can be used multiple times.")
+	libs          = flag.StringSlice("lib", []string{}, "location of the lib from mos.yaml, in the format: \"lib_name:/path/to/location\". Can be used multiple times.")
 
 	buildDockerExtra = flag.StringSlice("build-docker-extra", []string{}, "extra docker flags, added before image name. Can be used multiple times: e.g. --build-docker-extra -v --build-docker-extra /foo:/bar.")
 	buildCmdExtra    = flag.StringSlice("build-cmd-extra", []string{}, "extra make flags, added at the end of the make command. Can be used multiple times.")
@@ -332,9 +333,11 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 			return errors.Trace(err)
 		}
 
-		defer func() {
-			os.RemoveAll(fname)
-		}()
+		if !*keepTempFiles {
+			defer func() {
+				os.RemoveAll(fname)
+			}()
+		}
 
 		appSources = append(appSources, fname)
 	}
@@ -353,7 +356,9 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		defer func() {
 			name := confSchemaFile.Name()
 			confSchemaFile.Close()
-			os.RemoveAll(name)
+			if !*keepTempFiles {
+				os.RemoveAll(name)
+			}
 		}()
 
 		confSchemaData, err := yaml.Marshal(manifest.ConfigSchema)
@@ -845,7 +850,9 @@ func buildRemote(bParams *buildParams) error {
 	if err != nil {
 		return errors.Trace(err)
 	}
-	defer os.RemoveAll(tmpCodeDir)
+	if !*keepTempFiles {
+		defer os.RemoveAll(tmpCodeDir)
+	}
 
 	// Since we're going to copy sources to the temp dir, make sure that nobody
 	// else can read them
