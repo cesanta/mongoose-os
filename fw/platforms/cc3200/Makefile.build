@@ -38,7 +38,6 @@ APP_FS_DIRS = $(sort $(dir $(APP_FS_FILES)))
 
 MGOS_ENABLE_ATCA = 0
 MGOS_ENABLE_DEBUG_UDP = 0
-MGOS_ENABLE_DNS_SD = 0
 MGOS_DEBUG_UART = 0
 
 TOOLCHAIN ?= $(wildcard /opt/*arm_*)

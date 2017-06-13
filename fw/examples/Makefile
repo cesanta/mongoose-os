@@ -26,6 +26,7 @@ $(EXAMPLES): $(MJS_PATH)/mjs.c $(MJS_PATH)/mjs.h
 		--repo $(REPO_ROOT) \
 		--lib aws:$(LIBS_PATH)/aws \
 		--lib blynk:$(LIBS_PATH)/blynk \
+		--lib dns-sd:$(LIBS_PATH)/dns-sd \
 		--lib gcp:$(LIBS_PATH)/gcp \
 		--lib mjs:$(LIBS_PATH)/mjs \
 		--lib mqtt:$(LIBS_PATH)/mqtt \

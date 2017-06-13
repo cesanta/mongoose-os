@@ -42,10 +42,6 @@
 #define MGOS_ENABLE_CONSOLE_FILE_BUFFER 0
 #endif
 
-#ifndef MGOS_ENABLE_DNS_SD
-#define MGOS_ENABLE_DNS_SD 0
-#endif
-
 #ifndef MGOS_ENABLE_FILE_UPLOAD
 #define MGOS_ENABLE_FILE_UPLOAD 0
 #endif

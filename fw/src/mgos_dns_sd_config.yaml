@@ -1,7 +1,0 @@
-[
-  ["dns_sd", "o", {title: "DNS-SD service discovery"}],
-  ["dns_sd.enable", "b", false, {title: "Enable service discovery"}],
-  ["dns_sd.host_name", "s", "mOS_??????", {title: "DNS-SD host name. '?' chars will be expanded with MAC address hex digits"}],
-  ["dns_sd.txt", "s", "", {title: "Extra comma-separated key=value pairs to put into the TXT service record"}],
-  ["dns_sd.ttl", "i", 120, {title: "Time-to-live in seconds"}],
-]

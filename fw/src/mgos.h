@@ -24,7 +24,6 @@
 #include "fw/src/mgos_debug_hal.h"
 #include "fw/src/mgos_deps.h"
 #include "fw/src/mgos_dlsym.h"
-#include "fw/src/mgos_dns_sd.h"
 #include "fw/src/mgos_features.h"
 #include "fw/src/mgos_gpio.h"
 #include "fw/src/mgos_gpio_hal.h"

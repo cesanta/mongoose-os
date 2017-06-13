@@ -169,9 +169,6 @@ LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip $(MGOS_ESP_SRC_PATH)
 
 include $(MGOS_PATH)/fw/src/mgos_features.mk
 
-ifeq "$(MGOS_ENABLE_DNS_SD)" "1"
-  SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp_dns_sd_config.yaml
-endif
 ifeq "$(MGOS_ENABLE_I2C)" "1"
   SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp_i2c_config.yaml
 endif

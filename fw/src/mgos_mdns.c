@@ -11,7 +11,6 @@
 #include "common/cs_dbg.h"
 #include "common/queue.h"
 
-#include "fw/src/mgos_dns_sd.h"
 #include "fw/src/mgos_mongoose.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_wifi.h"
@@ -71,8 +70,6 @@ static void handler(struct mg_connection *nc, int ev, void *ev_data,
 enum mgos_init_result mgos_mdns_init(void) {
   char listener_spec[128];
   struct mg_mgr *mgr = mgos_get_mgr();
-
-  if (!get_cfg()->dns_sd.enable) return MGOS_INIT_OK;
 
   snprintf(listener_spec, sizeof(listener_spec), "udp://:%d", MDNS_PORT);
   LOG(LL_INFO, ("Listening on %s", listener_spec));

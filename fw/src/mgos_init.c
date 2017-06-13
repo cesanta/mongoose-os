@@ -30,10 +30,6 @@ enum mgos_init_result mgos_init(void) {
                            mgos_sys_config_init_platform */
   if (r != MGOS_INIT_OK) return r;
 #endif
-#if MGOS_ENABLE_DNS_SD
-  r = mgos_dns_sd_init(); /* Before mgos_rpc_init */
-  if (r != MGOS_INIT_OK) return r;
-#endif
 #if MGOS_ENABLE_SNTP
   r = mgos_sntp_init();
   if (r != MGOS_INIT_OK) return r;
