@@ -21,8 +21,8 @@
 
 #include "config.h"
 #include "sys_config.h"
-#include "cc3200_fs.h"
-#include "cc3200_main_task.h"
+#include "fw/platforms/cc3200/src/cc3200_main_task.h"
+#include "fw/platforms/cc3200/src/cc3200_vfs_dev_slfs_container.h"
 
 struct cc3200_wifi_config {
   char *ssid;
@@ -56,14 +56,14 @@ static int restart_nwp(void) {
    * Properly close FS container if it's open for writing.
    * Suspend FS I/O while NWP is being restarted.
    */
-  cc3200_fs_lock();
-  cc3200_fs_flush_locked();
+  mgos_lock();
+  cc3200_vfs_dev_slfs_container_flush_all();
   /* We don't need TI's web server. */
   sl_NetAppStop(SL_NET_APP_HTTP_SERVER_ID);
   /* Without a delay in sl_Stop subsequent sl_Start gets stuck sometimes. */
   sl_Stop(10);
   s_current_role = sl_Start(NULL, NULL, NULL);
-  cc3200_fs_unlock();
+  mgos_unlock();
   sl_restart_cb(mgos_get_mgr());
   return (s_current_role >= 0);
 }

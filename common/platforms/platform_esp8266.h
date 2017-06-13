@@ -19,7 +19,9 @@
 #define SIZE_T_FMT "u"
 typedef struct stat cs_stat_t;
 #define DIRSEP '/'
+#if !defined(MGOS_VFS_DEFINE_DIRENT)
 #define CS_DEFINE_DIRENT
+#endif
 
 #define to64(x) strtoll(x, NULL, 10)
 #define INT64_FMT PRId64

@@ -14,6 +14,7 @@
  */
 #define MAX_APP_IMAGE_FILE_LEN 50
 #define MAX_FS_CONTAINER_PREFIX_LEN 50
+#define MAX_FS_CONTAINER_FNAME_LEN (MAX_FS_CONTAINER_PREFIX_LEN + 3)
 
 struct boot_cfg {
   uint64_t seq;

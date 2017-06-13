@@ -21,6 +21,8 @@
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_updater_hal.h"
 #include "fw/src/mgos_updater_util.h"
+#include "fw/src/mgos_vfs.h"
+
 #include "fw/platforms/esp8266/src/esp_flash_writer.h"
 #include "fw/platforms/esp8266/src/esp_fs.h"
 
@@ -279,23 +281,17 @@ void mgos_upd_hal_ctx_free(struct mgos_upd_hal_ctx *ctx) {
 int mgos_upd_apply_update() {
   rboot_config *cfg = get_rboot_config();
   if (!cfg->user_flags & BOOT_F_MERGE_FS) return 0;
-
-  uint8_t spiffs_work_buf[LOG_PAGE_SIZE * 2];
-  uint8_t spiffs_fds[32 * 2];
-  spiffs old_fs;
-  int ret = 0;
-  uint32_t old_fs_size = cfg->fs_sizes[cfg->previous_rom];
   uint32_t old_fs_addr = cfg->fs_addresses[cfg->previous_rom];
+  uint32_t old_fs_size = cfg->fs_sizes[cfg->previous_rom];
   LOG(LL_INFO, ("Mounting old FS: %d @ 0x%x", old_fs_size, old_fs_addr));
-  if (fs_mount(&old_fs, old_fs_addr, old_fs_size, spiffs_work_buf, spiffs_fds,
-               sizeof(spiffs_fds))) {
+  if (!esp_fs_mount("/old", old_fs_addr, old_fs_size)) {
     LOG(LL_ERROR, ("Update failed: cannot mount previous file system"));
     return -1;
   }
 
-  ret = mgos_upd_merge_spiffs(&old_fs);
+  int ret = (mgos_upd_merge_fs("/old", "/") ? 0 : -2);
 
-  SPIFFS_unmount(&old_fs);
+  mgos_vfs_umount("/old");
 
   if (ret == 0) {
     cfg->user_flags &= ~BOOT_F_MERGE_FS;

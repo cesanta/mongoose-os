@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_PLATFORMS_ESP8266_USER_ESP_EXC_H_
-#define CS_FW_PLATFORMS_ESP8266_USER_ESP_EXC_H_
+#ifndef CS_FW_PLATFORMS_ESP8266_SRC_ESP_EXC_H_
+#define CS_FW_PLATFORMS_ESP8266_SRC_ESP_EXC_H_
 
 #include <stdint.h>
 #include <xtensa/xtruntime-frames.h>
@@ -44,4 +44,4 @@ void esp_exc_common(uint32_t cause, struct regfile *regs);
  */
 extern struct regfile g_exc_regs;
 
-#endif /* CS_FW_PLATFORMS_ESP8266_USER_ESP_EXC_H_ */
+#endif /* CS_FW_PLATFORMS_ESP8266_SRC_ESP_EXC_H_ */

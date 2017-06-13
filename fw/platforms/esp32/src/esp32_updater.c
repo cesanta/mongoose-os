@@ -25,6 +25,7 @@
 #include "fw/src/mgos_updater_hal.h"
 #include "fw/src/mgos_updater_util.h"
 #include "fw/src/mgos_utils.h"
+#include "fw/src/mgos_vfs.h"
 
 #include "fw/platforms/esp32/src/esp32_fs.h"
 
@@ -464,13 +465,15 @@ int mgos_upd_apply_update() {
     LOG(LL_ERROR, ("No old FS partition"));
     return -1;
   }
-  struct mount_info *m;
-  if (esp32_fs_mount(old_fs_part, &m) != MGOS_INIT_OK) {
+
+  if (!esp32_fs_mount_part(old_fs_part->label, "/old")) {
     LOG(LL_ERROR, ("Failed to mount old file system"));
     return -1;
   }
-  ret = mgos_upd_merge_spiffs(&m->fs);
-  esp32_fs_umount(m);
+
+  ret = (mgos_upd_merge_fs("/old", "/") ? 0 : -2);
+
+  mgos_vfs_umount("/old");
 
   return ret;
 }

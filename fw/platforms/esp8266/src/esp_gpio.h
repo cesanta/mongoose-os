@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_PLATFORMS_ESP8266_USER_ESP_GPIO_H_
-#define CS_FW_PLATFORMS_ESP8266_USER_ESP_GPIO_H_
+#ifndef CS_FW_PLATFORMS_ESP8266_SRC_ESP_GPIO_H_
+#define CS_FW_PLATFORMS_ESP8266_SRC_ESP_GPIO_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -17,4 +17,4 @@
 /* Returns true if next reboot will boot into the boot loader. */
 bool esp_strapping_to_bootloader(void);
 
-#endif /* CS_FW_PLATFORMS_ESP8266_USER_ESP_GPIO_H_ */
+#endif /* CS_FW_PLATFORMS_ESP8266_SRC_ESP_GPIO_H_ */

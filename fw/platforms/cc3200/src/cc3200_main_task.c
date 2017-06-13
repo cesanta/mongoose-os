@@ -25,7 +25,7 @@
 #include "fw/platforms/cc3200/src/config.h"
 #include "fw/platforms/cc3200/src/cc3200_crypto.h"
 #include "fw/platforms/cc3200/src/cc3200_fs.h"
-#include "fw/platforms/cc3200/src/cc3200_fs_spiffs_container.h"
+#include "fw/platforms/cc3200/src/cc3200_vfs_dev_slfs_container.h"
 
 #define CB_ADDR_MASK 0xe0000000
 #define CB_ADDR_PREFIX 0x20000000
@@ -119,9 +119,8 @@ static enum cc3200_init_result cc3200_init(void *arg) {
   }
 #endif
 
-  r = cc3200_fs_init(g_boot_cfg.fs_container_prefix);
-  if (r < 0) {
-    LOG(LL_ERROR, ("FS init error: %d", r));
+  if (!cc3200_fs_init(g_boot_cfg.fs_container_prefix)) {
+    LOG(LL_ERROR, ("FS init error"));
     return CC3200_INIT_FS_INIT_FAILED;
   } else {
     /*
@@ -131,7 +130,8 @@ static enum cc3200_init_result cc3200_init(void *arg) {
     struct boot_cfg cfg;
     int inactive_idx = (g_boot_cfg_idx == 0 ? 1 : 0);
     if (read_boot_cfg(inactive_idx, &cfg) >= 0) {
-      fs_delete_inactive_container(cfg.fs_container_prefix);
+      cc3200_vfs_dev_slfs_container_delete_inactive_container(
+          cfg.fs_container_prefix);
     }
   }
 

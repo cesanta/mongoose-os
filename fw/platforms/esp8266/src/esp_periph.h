@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_PLATFORMS_ESP8266_USER_ESP_PERIPH_H_
-#define CS_FW_PLATFORMS_ESP8266_USER_ESP_PERIPH_H_
+#ifndef CS_FW_PLATFORMS_ESP8266_SRC_ESP_PERIPH_H_
+#define CS_FW_PLATFORMS_ESP8266_SRC_ESP_PERIPH_H_
 
 #include <stdint.h>
 
@@ -16,4 +16,4 @@ struct gpio_info {
 
 const struct gpio_info *get_gpio_info(uint8_t gpio_no);
 
-#endif /* CS_FW_PLATFORMS_ESP8266_USER_ESP_PERIPH_H_ */
+#endif /* CS_FW_PLATFORMS_ESP8266_SRC_ESP_PERIPH_H_ */

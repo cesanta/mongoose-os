@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_PLATFORMS_ESP8266_USER_ESP_UART_H_
-#define CS_FW_PLATFORMS_ESP8266_USER_ESP_UART_H_
+#ifndef CS_FW_PLATFORMS_ESP8266_SRC_ESP_UART_H_
+#define CS_FW_PLATFORMS_ESP8266_SRC_ESP_UART_H_
 
 #include <stdint.h>
 
@@ -26,4 +26,4 @@ bool esp_uart_cts(int uart_no);
 uint32_t esp_uart_raw_ints(int uart_no);
 uint32_t esp_uart_int_mask(int uart_no);
 
-#endif /* CS_FW_PLATFORMS_ESP8266_USER_ESP_UART_H_ */
+#endif /* CS_FW_PLATFORMS_ESP8266_SRC_ESP_UART_H_ */

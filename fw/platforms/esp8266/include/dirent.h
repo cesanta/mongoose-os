@@ -6,7 +6,6 @@
 #ifndef CS_FW_PLATFORMS_ESP8266_INCLUDE_DIRENT_H_
 #define CS_FW_PLATFORMS_ESP8266_INCLUDE_DIRENT_H_
 
-#include "spiffs_config.h"
-#include "common/cs_dirent.h"
+#include "fw/src/mgos_vfs.h"
 
 #endif /* CS_FW_PLATFORMS_ESP8266_INCLUDE_DIRENT_H_ */

@@ -1,0 +1,69 @@
+/*
+ * Copyright (c) 2014-2017 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#include <string.h>
+
+#include "fw/src/mgos_vfs_dev.h"
+
+#include "common/cs_dbg.h"
+#include "common/queue.h"
+
+struct mgos_vfs_dev_entry {
+  const char *type;
+  const struct mgos_vfs_dev_ops *ops;
+  SLIST_ENTRY(mgos_vfs_dev_entry) next;
+};
+
+static SLIST_HEAD(s_devs,
+                  mgos_vfs_dev_entry) s_devs = SLIST_HEAD_INITIALIZER(s_devs);
+
+bool mgos_vfs_dev_register_type(const char *type,
+                                const struct mgos_vfs_dev_ops *ops) {
+  if (ops->init == NULL || ops->read == NULL || ops->write == NULL ||
+      ops->erase == NULL || ops->get_size == NULL || ops->close == NULL) {
+    /* All methods must be implemented, even if with dummy functions. */
+    LOG(LL_ERROR, ("%s: not all methods are implemented", type));
+    abort();
+  }
+  struct mgos_vfs_dev_entry *de =
+      (struct mgos_vfs_dev_entry *) calloc(1, sizeof(*de));
+  if (de == NULL) return false;
+  de->type = type;
+  de->ops = ops;
+  SLIST_INSERT_HEAD(&s_devs, de, next);
+  return true;
+}
+
+struct mgos_vfs_dev *mgos_vfs_dev_init(const char *type, const char *opts) {
+  struct mgos_vfs_dev *dev = NULL;
+  struct mgos_vfs_dev_entry *de;
+  SLIST_FOREACH(de, &s_devs, next) {
+    if (strcmp(type, de->type) == 0) {
+      dev = (struct mgos_vfs_dev *) calloc(1, sizeof(*dev));
+      LOG(LL_INFO, ("%s (%s) -> %p", type, opts, dev));
+      dev->ops = de->ops;
+      if (!de->ops->init(dev, opts)) {
+        free(dev);
+        dev = NULL;
+      }
+      break;
+    }
+  };
+  if (dev == NULL) {
+    LOG(LL_ERROR, ("Dev %s init failed", type));
+  }
+  return dev;
+}
+
+bool mgos_vfs_dev_close(struct mgos_vfs_dev *dev) {
+  bool ret = false;
+  dev->refs--;
+  LOG(LL_INFO, ("%p refs %d", dev, dev->refs));
+  if (dev->refs <= 0) {
+    ret = dev->ops->close(dev);
+    if (ret) free(dev);
+  }
+  return ret;
+}

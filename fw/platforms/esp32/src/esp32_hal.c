@@ -14,8 +14,9 @@
 
 #include "fw/src/mgos_debug.h"
 #include "fw/src/mgos_hal.h"
-#include "fw/src/mgos_wifi.h"
 #include "fw/src/mgos_sys_config.h"
+#include "fw/src/mgos_vfs.h"
+#include "fw/src/mgos_wifi.h"
 #include "fw/platforms/esp32/src/esp32_fs.h"
 
 size_t mgos_get_heap_size(void) {
@@ -32,7 +33,7 @@ size_t mgos_get_min_free_heap_size(void) {
 
 void mgos_system_restart(int exit_code) {
   (void) exit_code;
-  esp32_fs_deinit();
+  mgos_vfs_umount_all();
 #if MGOS_ENABLE_WIFI
   mgos_wifi_disconnect();
 #endif

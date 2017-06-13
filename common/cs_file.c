@@ -43,9 +43,9 @@ char *cs_read_file(const char *path, size_t *size) {
 char *cs_mmap_file(const char *path, size_t *size) WEAK;
 char *cs_mmap_file(const char *path, size_t *size) {
   char *r;
-  int fd = open(path, O_RDONLY);
+  int fd = open(path, O_RDONLY, 0);
   struct stat st;
-  if (fd == -1) return NULL;
+  if (fd < 0) return NULL;
   fstat(fd, &st);
   *size = (size_t) st.st_size;
   r = (char *) mmap(NULL, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);

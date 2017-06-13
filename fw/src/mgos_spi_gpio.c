@@ -257,6 +257,7 @@ bool mgos_spi_run_txn(struct mgos_spi *c, bool full_duplex,
                       const struct mgos_spi_txn *txn) {
   bool ret = false;
   int cs_gpio = -1;
+  if (c == NULL) return false;
   if (txn->cs >= 0) {
     if (txn->cs > 2 || c->cs_gpio[txn->cs] < 0) return false;
     cs_gpio = c->cs_gpio[txn->cs];

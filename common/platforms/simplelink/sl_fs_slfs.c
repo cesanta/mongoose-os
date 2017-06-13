@@ -21,8 +21,8 @@
 #include "common/mg_mem.h"
 
 /* From sl_fs.c */
-extern int set_errno(int e);
-static const char *drop_dir(const char *fname, bool *is_slfs);
+int set_errno(int e);
+const char *drop_dir(const char *fname, bool *is_slfs);
 
 /*
  * With SLFS, you have to pre-declare max file size. Yes. Really.
@@ -85,6 +85,7 @@ int fs_slfs_open(const char *pathname, int flags, mode_t mode) {
   _u32 am = 0;
   fi->size = (size_t) -1;
   int rw = (flags & 3);
+  size_t new_size = FS_SLFS_MAX_FILE_SIZE;
   if (rw == O_RDONLY) {
     SlFsFileInfo_t sl_fi;
     _i32 r = sl_FsGetInfo((const _u8 *) pathname, 0, &sl_fi);
@@ -99,25 +100,24 @@ int fs_slfs_open(const char *pathname, int flags, mode_t mode) {
       return set_errno(ENOTSUP);
     }
     if (flags & O_CREAT) {
-      size_t i, size = FS_SLFS_MAX_FILE_SIZE;
+      size_t i;
       for (i = 0; i < MAX_OPEN_SLFS_FILES; i++) {
         if (s_sl_file_size_hints[i].name != NULL &&
             strcmp(s_sl_file_size_hints[i].name, pathname) == 0) {
-          size = s_sl_file_size_hints[i].size;
+          new_size = s_sl_file_size_hints[i].size;
           MG_FREE(s_sl_file_size_hints[i].name);
           s_sl_file_size_hints[i].name = NULL;
           break;
         }
       }
-      DBG(("creating %s with max size %d", pathname, (int) size));
-      am = FS_MODE_OPEN_CREATE(size, 0);
+      am = FS_MODE_OPEN_CREATE(new_size, 0);
     } else {
       am = FS_MODE_OPEN_WRITE;
     }
   }
   _i32 r = sl_FsOpen((_u8 *) pathname, am, NULL, &fi->fh);
-  DBG(("sl_FsOpen(%s, 0x%x) = %d, %d", pathname, (int) am, (int) r,
-       (int) fi->fh));
+  LOG(LL_DEBUG, ("sl_FsOpen(%s, 0x%x) sz %u = %d, %d", pathname, (int) am,
+                 (unsigned int) new_size, (int) r, (int) fi->fh));
   if (r == SL_FS_OK) {
     fi->pos = 0;
     r = fd;
@@ -132,7 +132,7 @@ int fs_slfs_close(int fd) {
   struct sl_fd_info *fi = &s_sl_fds[fd];
   if (fi->fh <= 0) return set_errno(EBADF);
   _i32 r = sl_FsClose(fi->fh, NULL, NULL, 0);
-  DBG(("sl_FsClose(%d) = %d", (int) fi->fh, (int) r));
+  LOG(LL_DEBUG, ("sl_FsClose(%d) = %d", (int) fi->fh, (int) r));
   s_sl_fds[fd].fh = -1;
   return set_errno(sl_fs_to_errno(r));
 }

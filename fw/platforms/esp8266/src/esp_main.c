@@ -129,10 +129,9 @@ enum mgos_init_result esp_mgos_init2(rboot_config *bcfg) {
                 mgos_get_heap_size(), mgos_get_free_heap_size()));
   esp_print_reset_info();
 
-  int r = fs_init(bcfg->fs_addresses[bcfg->current_rom],
-                  bcfg->fs_sizes[bcfg->current_rom]);
-  if (r != 0) {
-    LOG(LL_ERROR, ("FS init error: %d", r));
+  if (!esp_fs_init(bcfg->fs_addresses[bcfg->current_rom],
+                   bcfg->fs_sizes[bcfg->current_rom])) {
+    LOG(LL_ERROR, ("FS init error"));
     return MGOS_INIT_FS_INIT_FAILED;
   }
 

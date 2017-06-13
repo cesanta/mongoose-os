@@ -22,8 +22,8 @@
 * SOFTWARE.
 */
 
-#ifndef CS_FW_PLATFORMS_ESP8266_USER_ESP_SPI_H_
-#define CS_FW_PLATFORMS_ESP8266_USER_ESP_SPI_H_
+#ifndef CS_FW_PLATFORMS_ESP8266_SRC_ESP_SPI_H_
+#define CS_FW_PLATFORMS_ESP8266_SRC_ESP_SPI_H_
 
 /*
 * SPI low level API
@@ -204,4 +204,4 @@ void spi_rx_byte_order(uint8_t spi_no, uint8_t byte_order);
 #define spi_rx16(spi_no) (uint16_t) spi_txn(spi_no, 0, 0, 0, 0, 0, 0, 16, 0)
 #define spi_rx32(spi_no) (uint16_t) spi_txn(spi_no, 0, 0, 0, 0, 0, 0, 32, 0)
 
-#endif /* CS_FW_PLATFORMS_ESP8266_USER_ESP_SPI_H_ */
+#endif /* CS_FW_PLATFORMS_ESP8266_SRC_ESP_SPI_H_ */

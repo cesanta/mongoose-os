@@ -11,7 +11,6 @@
 #include "common/cs_crc32.h"
 #include "common/cs_file.h"
 #include "common/str_util.h"
-#include "common/spiffs/spiffs_vfs.h"
 
 #include "fw/src/mgos_console.h"
 #include "fw/src/mgos_hal.h"
@@ -639,96 +638,89 @@ void bin2hex(const uint8_t *src, int src_len, char *dst) {
   }
 }
 
-static int file_copy(spiffs *old_fs, const char *file_name) {
-  int ret = 0;
-  FILE *f = NULL;
+static bool file_copy(const char *old_path, const char *new_path,
+                      const char *name, char tmp_name[MG_MAX_PATH]) {
+  bool ret = false;
+  FILE *old_f = NULL, *new_f = NULL;
   struct stat st;
   int readen, to_read = 0, total = 0;
 
-  CONSOLE_LOG(LL_INFO, ("Copying %s", file_name));
+  LOG(LL_INFO, ("Copying %s", name));
 
-  int fd = spiffs_vfs_open(old_fs, file_name, O_RDONLY, 0);
-  if (fd < 0) {
-    CONSOLE_LOG(LL_ERROR, ("Failed to open %s, error %d", file_name,
-                           (int) SPIFFS_errno(old_fs)));
-    return 0;
+  sprintf(tmp_name, "%s/%s", old_path, name);
+  old_f = fopen(tmp_name, "r");
+  if (old_f == NULL) {
+    LOG(LL_ERROR, ("Failed to open %s for reading", tmp_name));
+    goto out;
+  }
+  if (stat(tmp_name, &st) != 0) {
+    LOG(LL_ERROR, ("Cannot get previous %s size", tmp_name));
+    goto out;
   }
 
-  if (spiffs_vfs_fstat(old_fs, fd, &st) != 0) {
-    CONSOLE_LOG(LL_ERROR, ("Update failed: cannot get previous %s size (%d)",
-                           file_name, (int) SPIFFS_errno(old_fs)));
-    goto exit;
-  }
-
-  f = fopen(file_name, "w");
-  if (f == NULL) {
-    CONSOLE_LOG(LL_ERROR, ("Failed to open %s", file_name));
-    goto exit;
+  sprintf(tmp_name, "%s/%s", new_path, name);
+  new_f = fopen(tmp_name, "w");
+  if (new_f == NULL) {
+    LOG(LL_ERROR, ("Failed to open %s for writing", tmp_name));
+    goto out;
   }
 
   char buf[128];
   to_read = MIN(sizeof(buf), (size_t) st.st_size);
-
   while (to_read != 0) {
-    if ((readen = spiffs_vfs_read(old_fs, fd, buf, to_read)) < 0) {
-      CONSOLE_LOG(LL_ERROR, ("Failed to read %d bytes from %s, error %d",
-                             to_read, file_name, (int) SPIFFS_errno(old_fs)));
-      goto exit;
+    if ((readen = fread(buf, 1, to_read, old_f)) < 0) {
+      LOG(LL_ERROR, ("Failed to read %d bytes from %s", to_read, name));
+      goto out;
     }
 
-    if (fwrite(buf, 1, readen, f) != (size_t) readen) {
-      CONSOLE_LOG(LL_ERROR,
-                  ("Failed to write %d bytes to %s", readen, file_name));
-      goto exit;
+    if (fwrite(buf, 1, readen, new_f) != (size_t) readen) {
+      LOG(LL_ERROR, ("Failed to write %d bytes to %s", readen, name));
+      goto out;
     }
 
     total += readen;
     to_read = MIN(sizeof(buf), (size_t)(st.st_size - total));
   }
 
-  LOG(LL_DEBUG, ("Wrote %d to %s", total, file_name));
+  LOG(LL_DEBUG, ("Wrote %d to %s", total, tmp_name));
 
-  ret = 1;
+  ret = true;
 
-exit:
-  if (fd >= 0) spiffs_vfs_close(old_fs, fd);
-  if (f != NULL) fclose(f);
-
+out:
+  if (old_f != NULL) fclose(old_f);
+  if (new_f != NULL) {
+    fclose(new_f);
+    if (!ret) remove(tmp_name);
+  }
   return ret;
 }
 
-int mgos_upd_merge_spiffs(spiffs *old_fs) {
-  int ret = -1;
-  /*
-   * here we can use fread & co to read
-   * current fs and SPIFFs functions to read
-   * old one
-   */
-
-  DIR *dir = spiffs_vfs_opendir(old_fs, ".");
+bool mgos_upd_merge_fs(const char *old_fs_path, const char *new_fs_path) {
+  bool ret = false;
+  DIR *dir = opendir(old_fs_path);
   if (dir == NULL) {
-    CONSOLE_LOG(LL_ERROR, ("Failed to open root directory"));
-    goto cleanup;
+    LOG(LL_ERROR, ("Failed to open root directory"));
+    goto out;
   }
 
   struct dirent *de;
-  while ((de = spiffs_vfs_readdir(old_fs, dir)) != NULL) {
+  while ((de = readdir(dir)) != NULL) {
     struct stat st;
-    if (stat(de->d_name, &st) != 0) {
+    char tmp_name[MG_MAX_PATH];
+    sprintf(tmp_name, "%s/%s", new_fs_path, de->d_name);
+    if (stat(tmp_name, &st) != 0) {
       /* File not found on the new fs, copy. */
-      if (!file_copy(old_fs, de->d_name)) {
-        CONSOLE_LOG(LL_ERROR, ("Failed to copy %s", de->d_name));
-        goto cleanup;
+      if (!file_copy(old_fs_path, new_fs_path, de->d_name, tmp_name)) {
+        LOG(LL_ERROR, ("Failed to copy %s", de->d_name));
+        goto out;
       }
     }
     mgos_wdt_feed();
   }
+  ret = true;
 
-  ret = 0;
-
-cleanup:
-  if (dir != NULL) spiffs_vfs_closedir(old_fs, dir);
-
+out:
+  if (dir != NULL) closedir(dir);
   return ret;
 }
 

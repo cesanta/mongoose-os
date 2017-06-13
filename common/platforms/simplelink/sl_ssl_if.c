@@ -7,6 +7,13 @@
 
 #include "common/mg_mem.h"
 
+#ifndef MG_SSL_IF_SIMPLELINK_SLFS_PREFIX
+#define MG_SSL_IF_SIMPLELINK_SLFS_PREFIX "SL:"
+#endif
+
+#define MG_SSL_IF_SIMPLELINK_SLFS_PREFIX_LEN \
+  (sizeof(MG_SSL_IF_SIMPLELINK_SLFS_PREFIX) - 1)
+
 struct mg_ssl_if_ctx {
   char *ssl_cert;
   char *ssl_key;
@@ -71,7 +78,8 @@ bool pem_to_der(const char *pem_file, const char *der_file) {
   pf = fopen(pem_file, "r");
   if (pf == NULL) goto clean;
   remove(der_file);
-  fs_slfs_set_new_file_size(der_file + 3, 2048);
+  fs_slfs_set_new_file_size(der_file + MG_SSL_IF_SIMPLELINK_SLFS_PREFIX_LEN,
+                            2048);
   df = fopen(der_file, "w");
   if (df == NULL) goto clean;
   while (1) {
@@ -113,8 +121,8 @@ static char *sl_pem2der(const char *pem_file) {
   }
   char *der_file = NULL;
   /* DER file must be located on SLFS, add prefix. */
-  int l = mg_asprintf(&der_file, 0, "SL:%.*s.der", (int) (pem_ext - pem_file),
-                      pem_file);
+  int l = mg_asprintf(&der_file, 0, MG_SSL_IF_SIMPLELINK_SLFS_PREFIX "%.*s.der",
+                      (int) (pem_ext - pem_file), pem_file);
   if (der_file == NULL) return NULL;
   bool result = false;
   cs_stat_t st;
@@ -127,7 +135,8 @@ static char *sl_pem2der(const char *pem_file) {
   }
   if (result) {
     /* Strip the SL: prefix we added since NWP does not expect it. */
-    memmove(der_file, der_file + 3, l - 2 /* including \0 */);
+    memmove(der_file, der_file + MG_SSL_IF_SIMPLELINK_SLFS_PREFIX_LEN,
+            l - 2 /* including \0 */);
   } else {
     MG_FREE(der_file);
     der_file = NULL;

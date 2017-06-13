@@ -76,7 +76,7 @@ struct stat {
 };
 
 int _stat(const char *pathname, struct stat *st);
-#define stat(a, b) _stat(a, b)
+int stat(const char *pathname, struct stat *st);
 
 #define __S_IFMT 0170000
 

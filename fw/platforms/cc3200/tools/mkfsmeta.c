@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "src/cc3200_fs_spiffs_container_meta.h"
+#include "src/cc3200_vfs_dev_slfs_container_meta.h"
 
 int main(int argc, char **argv) {
   if (argc < 5) return 1;

@@ -5,6 +5,9 @@
 
 #include "fw/platforms/esp32/src/esp32_fs.h"
 
+#include "spiffs.h"
+#include "spiffs_nucleus.h"
+
 #include "esp_spi_flash.h"
 
 #include "mbedtls/aes.h"
@@ -41,14 +44,14 @@
 
 mbedtls_aes_context s_aes_ctx_enc, s_aes_ctx_dec;
 
-enum mgos_init_result esp32_fs_crypt_init(void) {
+bool esp32_fs_crypt_init(void) {
   uint8_t tmp[32];
   uint32_t addr = 0;
   for (addr = 0; addr < spi_flash_get_chip_size(); addr += 32) {
     mgos_wdt_feed();
     if (spi_flash_read(addr, tmp, sizeof(tmp)) != ESP_OK) {
       LOG(LL_ERROR, ("SPI read error at 0x%x", addr));
-      return MGOS_INIT_FS_INIT_FAILED;
+      return false;
     }
     int j;
     for (j = 0; j < sizeof(tmp); j++) {
@@ -58,7 +61,7 @@ enum mgos_init_result esp32_fs_crypt_init(void) {
     /* Found a suitably empty location, now decrypt it. */
     if (spi_flash_read_encrypted(addr, tmp, sizeof(tmp)) != ESP_OK) {
       LOG(LL_ERROR, ("SPI encrypted read error at 0x%x", addr));
-      return MGOS_INIT_FS_INIT_FAILED;
+      return false;
     }
     /* Now in tmp we have 32 x 0xff processed with the flash encryption key. */
     mbedtls_aes_init(&s_aes_ctx_enc);
@@ -66,14 +69,14 @@ enum mgos_init_result esp32_fs_crypt_init(void) {
     mbedtls_aes_init(&s_aes_ctx_dec);
     mbedtls_aes_setkey_dec(&s_aes_ctx_dec, tmp, 256);
     LOG(LL_INFO, ("FS encryption key set up, seed @ 0x%x", addr));
-    return MGOS_INIT_OK;
+    return true;
   }
   LOG(LL_ERROR, ("Could not a suitable seed area for FS encryption"));
-  return MGOS_INIT_FS_INIT_FAILED;
+  return false;
 }
 
-bool spiffs_vfs_encrypt_block(spiffs_obj_id obj_id, uint32_t offset, void *data,
-                              uint32_t len) {
+bool mgos_vfs_fs_spiffs_encrypt_block(spiffs_obj_id obj_id, uint32_t offset,
+                                      void *data, uint32_t len) {
   if (len % 16 != 0) return false;
   uint8_t *p = (uint8_t *) data;
   while (len > 0) {
@@ -89,8 +92,8 @@ bool spiffs_vfs_encrypt_block(spiffs_obj_id obj_id, uint32_t offset, void *data,
   return true;
 }
 
-bool spiffs_vfs_decrypt_block(spiffs_obj_id obj_id, uint32_t offset, void *data,
-                              uint32_t len) {
+bool mgos_vfs_fs_spiffs_decrypt_block(spiffs_obj_id obj_id, uint32_t offset,
+                                      void *data, uint32_t len) {
   if (len % 16 != 0) return false;
   uint8_t *p = (uint8_t *) data;
   while (len > 0) {

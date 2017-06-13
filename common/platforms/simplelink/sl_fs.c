@@ -6,6 +6,32 @@
 #if MG_NET_IF == MG_NET_IF_SIMPLELINK && \
     (defined(MG_FS_SLFS) || defined(MG_FS_SPIFFS))
 
+int set_errno(int e) {
+  errno = e;
+  return (e == 0 ? 0 : -1);
+}
+
+const char *drop_dir(const char *fname, bool *is_slfs) {
+  if (is_slfs != NULL) {
+    *is_slfs = (strncmp(fname, "SL:", 3) == 0);
+    if (*is_slfs) fname += 3;
+  }
+  /* Drop "./", if any */
+  if (fname[0] == '.' && fname[1] == '/') {
+    fname += 2;
+  }
+  /*
+   * Drop / if it is the only one in the path.
+   * This allows use of /pretend/directories but serves /file.txt as normal.
+   */
+  if (fname[0] == '/' && strchr(fname + 1, '/') == NULL) {
+    fname++;
+  }
+  return fname;
+}
+
+#if !defined(MG_FS_NO_VFS)
+
 #include <errno.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -42,30 +68,6 @@
 #define MG_UART_WRITE(fd, buf, len)
 #endif /* CS_PLATFORM == CS_P_CC3200 */
 #endif /* !MG_UART_CHAR_PUT */
-
-int set_errno(int e) {
-  errno = e;
-  return (e == 0 ? 0 : -1);
-}
-
-static const char *drop_dir(const char *fname, bool *is_slfs) {
-  if (is_slfs != NULL) {
-    *is_slfs = (strncmp(fname, "SL:", 3) == 0);
-    if (*is_slfs) fname += 3;
-  }
-  /* Drop "./", if any */
-  if (fname[0] == '.' && fname[1] == '/') {
-    fname += 2;
-  }
-  /*
-   * Drop / if it is the only one in the path.
-   * This allows use of /pretend/directories but serves /file.txt as normal.
-   */
-  if (fname[0] == '/' && strchr(fname + 1, '/') == NULL) {
-    fname++;
-  }
-  return fname;
-}
 
 enum fd_type {
   FD_INVALID,
@@ -404,5 +406,6 @@ int sl_fs_init(void) {
   return ret;
 }
 
+#endif /* !defined(MG_FS_NO_VFS) */
 #endif /* MG_NET_IF == MG_NET_IF_SIMPLELINK && (defined(MG_FS_SLFS) || \
           defined(MG_FS_SPIFFS)) */

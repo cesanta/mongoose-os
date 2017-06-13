@@ -8,7 +8,11 @@
 
 #ifdef CS_MMAP
 
-#include <esp_vfs.h>
+#include "esp_partition.h"
+#include "esp_vfs.h"
+
+#include "fw/src/mgos_vfs.h"
+#include "fw/src/mgos_vfs_fs_spiffs.h"
 
 #include "fw/platforms/esp32/src/esp32_fs.h"
 
@@ -37,8 +41,12 @@
     tmp;                                                 \
   })
 
+/* We assume SPIFFS on esp32part here. TODO(rojer): Generalize. */
+#define SPIFFS_DATA_FROM_VFS(vfs) \
+  ((struct mgos_vfs_spiffs_data *) (vfs)->fs_data)
+#define ESP32PART_DATA_FROM_VFS(vfs) ((esp_partition_t *) (vfs)->dev->dev_data)
 #define FLASH_BASE(fs) \
-  (((struct mount_info *) ((fs)->user_data))->part->address)
+  ESP32PART_DATA_FROM_VFS((struct mgos_vfs_fs *)(fs)->user_data)->address
 
 #endif /* CS_MMAP */
 #endif /* CS_FW_PLATFORMS_ESP32_SRC_ESP32_MMAP_H_ */

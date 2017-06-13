@@ -109,13 +109,16 @@ MGOS_CC3200_FEATURES ?= -DMGOS_ENABLE_FILE_UPLOAD -DMGOS_NUM_GPIO=65 '-DUMM_ONFR
 
 MG_FEATURES ?= $(MG_FEATURES_TINY) \
                -DMG_LOCALS -DMG_ENABLE_SSL \
-               -DMG_DISABLE_MQTT \
-               -DMG_FS_SLFS \
+               -DMG_FS_SLFS -DMG_FS_NO_VFS \
+               -DMG_ENABLE_FILESYSTEM \
+               -DMG_ENABLE_DIRECTORY_LISTING \
                -DCS_DISABLE_MD5 -DMG_EXT_MD5 \
                -DCS_DISABLE_SHA1 -DMG_EXT_SHA1 \
                -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5
 
-MGOS_FEATURES ?=
+MGOS_FEATURES ?= -DMGOS_VFS_DECLARE_LIBC_DIR_API \
+                 -DMGOS_VFS_DEFINE_LIBC_DIR_API \
+                 -DMGOS_VFS_DEFINE_DIRENT
 
 APP_BIN = $(BUILD_DIR)/$(APP).bin
 BOOT_BIN = $(BOOT_FW_DIR)/mg-boot.bin
@@ -152,6 +155,9 @@ MGOS_SRCS = mgos_gpio.c \
             mgos_timers_mongoose.c \
             mgos_config.c mgos_sys_config.c \
             mgos_dlsym.c \
+            mgos_vfs.c \
+            mgos_vfs_dev.c \
+            mgos_vfs_fs_spiffs.c \
             $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
             cs_crc32.c cs_file.c \
             cs_frbuf.c mgos_utils.c \
@@ -187,8 +193,8 @@ MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3200_SRC_PATH)/*.c))
 APP_SRCS = $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 
 MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" -DCS_PLATFORM=CS_P_CC3200 \
-              -DCC3200_FS_SPIFFS -DCS_SPIFFS_ENABLE_VFS \
               -DMGOS_MAX_NUM_UARTS=2 \
+              -DMG_SSL_IF_SIMPLELINK_SLFS_PREFIX=\"/slfs/\" \
               $(SDK_CFLAGS) \
               -DC_DISABLE_BUILTIN_SNPRINTF
 
@@ -305,12 +311,6 @@ C_CXX_FLAGS += -DNDEBUG -DCS_NDEBUG \
 
 CFLAGS += $(APP_CFLAGS)
 CXXFLAGS += $(APP_CXXFLAGS)
-
-$(BUILD_DIR)/cc3200_fs_spiffs_container.o: \
-    CFLAGS += -DDEFAULT_FS_SIZE=$(FS_SIZE) \
-              -DDEFAULT_FS_BLOCK_SIZE=$(FS_BLOCK_SIZE) \
-              -DDEFAULT_FS_PAGE_SIZE=$(FS_PAGE_SIZE) \
-              -DDEFAULT_FS_ERASE_SIZE=$(FS_ERASE_SIZE)
 
 all: $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(FS_STAGING_DIR) $(FW_ZIP)
 

@@ -31,6 +31,11 @@
 
 #ifdef CS_MMAP
 
+#define SPIFFS_PAGE_HEADER_SIZE (sizeof(spiffs_page_header))
+/* XXX: This should really be taken from a particular fs */
+#define LOG_PAGE_SIZE 256
+#define SPIFFS_PAGE_DATA_SIZE ((LOG_PAGE_SIZE) - (SPIFFS_PAGE_HEADER_SIZE))
+
 #define MMAP_DESCS_ADD_SIZE 4
 
 #define MMAP_ADDR_MASK ((1 << MMAP_ADDR_BITS) - 1)
@@ -247,11 +252,10 @@ void esp_spiffs_on_page_move_hook(spiffs *fs, spiffs_file fh,
 }
 
 int esp_spiffs_dummy_read(spiffs *fs, u32_t addr, u32_t size, u8_t *dst) {
-  (void) fs;
   (void) size;
 
   if (dst >= DUMMY_MMAP_BUFFER_START && dst < DUMMY_MMAP_BUFFER_END) {
-    if ((addr - SPIFFS_PAGE_HEADER_SIZE) % LOG_PAGE_SIZE == 0) {
+    if ((addr - SPIFFS_PAGE_HEADER_SIZE) % SPIFFS_CFG_LOG_PAGE_SZ(fs) == 0) {
       addr &= MMAP_ADDR_MASK;
       cur_mmap_desc->blocks[cur_mmap_desc->pages++] = FLASH_BASE(fs) + addr;
     }

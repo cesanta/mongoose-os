@@ -28,6 +28,7 @@
 #include "semphr.h"
 
 #include "fw/src/mgos_hal.h"
+#include "fw/src/mgos_vfs.h"
 
 #include "fw/platforms/cc3200/src/config.h"
 #include "fw/platforms/cc3200/src/cc3200_fs.h"
@@ -101,7 +102,7 @@ void mgos_wdt_disable(void) {
 void mgos_system_restart(int exit_code) {
   (void) exit_code;
   if (exit_code != 100) {
-    cc3200_fs_umount();
+    mgos_vfs_umount_all();
     sl_Stop(50 /* ms */);
   }
   /* Turns out to be not that easy. In particular, using *Reset functions is

@@ -14,9 +14,10 @@
 
 #include "fw/platforms/cc3200/boot/lib/boot.h"
 #include "fw/platforms/cc3200/src/cc3200_crypto.h"
-#include "fw/platforms/cc3200/src/cc3200_fs_spiffs_container.h"
-#include "fw/platforms/cc3200/src/cc3200_fs_spiffs_container_meta.h"
+#include "fw/platforms/cc3200/src/cc3200_fs.h"
 #include "fw/platforms/cc3200/src/cc3200_main_task.h"
+#include "fw/platforms/cc3200/src/cc3200_vfs_dev_slfs_container.h"
+#include "fw/platforms/cc3200/src/cc3200_vfs_dev_slfs_container_meta.h"
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_updater_hal.h"
@@ -258,9 +259,9 @@ enum mgos_upd_file_action mgos_upd_file_begin(
       create_fname(part_name, ctx->new_boot_cfg_idx, fs_container_prefix,
                    sizeof(fs_container_prefix));
       /* Delete container 1 (if any) so that 0 is the only one. */
-      fs_delete_container(fs_container_prefix, 1);
-      fs_container_fname(fs_container_prefix, 0,
-                         (_u8 *) ctx->fs_container_file);
+      cc3200_vfs_dev_slfs_container_delete_container(fs_container_prefix, 1);
+      cc3200_vfs_dev_slfs_container_fname(fs_container_prefix, 0,
+                                          (_u8 *) ctx->fs_container_file);
       fname = ctx->fs_container_file;
       if (fi->size > ctx->fs_size) {
         /* Assume meta has already been added. */
@@ -304,12 +305,11 @@ int mgos_upd_file_end(struct mgos_upd_hal_ctx *ctx,
   int r = tail.len;
   assert(tail.len == 0);
   if (ctx->cur_fn == (_u8 *) ctx->fs_container_file) {
-    int ret = fs_write_meta(ctx->cur_fh, FS_INITIAL_SEQ, ctx->fs_size,
-                            ctx->fs_block_size, ctx->fs_page_size,
-                            ctx->fs_erase_size);
-    if (ret < 0) {
+    if (!cc3200_vfs_dev_slfs_container_write_meta(
+            ctx->cur_fh, FS_INITIAL_SEQ, ctx->fs_size, ctx->fs_block_size,
+            ctx->fs_page_size, ctx->fs_erase_size)) {
       ctx->status_msg = "Failed to write fs meta";
-      r = ret;
+      r = -1;
     }
   }
   if (sl_FsClose(ctx->cur_fh, NULL, NULL, 0) != 0) {
@@ -430,14 +430,14 @@ int mgos_upd_apply_update() {
     struct boot_cfg old_boot_cfg;
     int r = read_boot_cfg(old_boot_cfg_idx, &old_boot_cfg);
     if (r < 0) return r;
-    struct mount_info old_fs;
-    r = fs_mount(old_boot_cfg.fs_container_prefix, &old_fs);
-    if (r < 0) return r;
-    r = mgos_upd_merge_spiffs(&old_fs.fs);
-    if (r < 0) return r;
-    fs_umount(&old_fs);
-    cc3200_fs_flush();
-    cfg->flags &= ~(BOOT_F_MERGE_SPIFFS);
+    if (!cc3200_fs_mount("/old", old_boot_cfg.fs_container_prefix)) return -123;
+    if (mgos_upd_merge_fs("/old", "/")) {
+      r = 0;
+      cfg->flags &= ~(BOOT_F_MERGE_SPIFFS);
+    } else {
+      r = -124;
+    }
+    mgos_vfs_umount("/old");
   }
   return 0;
 }

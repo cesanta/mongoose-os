@@ -10,6 +10,8 @@
 
 #include "mongoose/mongoose.h"
 
+#include "fw/src/mgos_init.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -24,7 +26,8 @@ void mgos_register_http_endpoint_opt(const char *uri_path,
                                      mg_event_handler_t handler,
                                      struct mg_http_endpoint_opts opts);
 
-void mongoose_init(void);
+enum mgos_init_result mongoose_init(void);
+
 int mongoose_poll(int ms);
 void mongoose_destroy(void);
 

@@ -116,6 +116,9 @@ MGOS_SRCS = cs_file.c cs_rbuf.c \
             mgos_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
             mgos_uart.c \
             mgos_utils.c \
+            mgos_vfs.c \
+            mgos_vfs_dev.c \
+            mgos_vfs_fs_spiffs.c \
             mgos_dlsym.c \
             cs_crc32.c \
             rboot-bigflash.c rboot-api.c \
@@ -123,8 +126,7 @@ MGOS_SRCS = cs_file.c cs_rbuf.c \
             umm_malloc.c \
             mongoose.c frozen.c
 
-MGOS_SRCS += esp8266_mmap.c \
-             esp_adc.c \
+MGOS_SRCS += esp_adc.c \
              esp_config.c \
              esp_coredump.c \
              esp_debug.c \
@@ -143,6 +145,7 @@ MGOS_SRCS += esp8266_mmap.c \
              esp_pwm.c \
              esp_uart.c \
              esp_updater.c \
+             esp_vfs_dev_sysflash.c \
              esp_wifi.c
 
 MGOS_SRCS += $(notdir $(foreach m,$(SPIFFS_PATH) $(COMMON_ESP8266_PATH),$(wildcard $(m)/*.c)))
@@ -201,7 +204,11 @@ FEATURES_EXTRA ?=
 FEATURES = $(MG_FEATURES) $(MGOS_FEATURES) $(MGOS_ESP_FEATURES) \
            $(FEATURES_EXTRA) \
            -DCS_ENABLE_SPIFFS \
-           -DBOOT_BIG_FLASH -DCS_SPIFFS_ENABLE_VFS -DESP_UMM_ENABLE
+           -DBOOT_BIG_FLASH -DESP_UMM_ENABLE \
+           -DMGOS_VFS_DEFINE_LIBC_REENT_API \
+           -DMGOS_VFS_DEFINE_LIBC_DIR_API \
+           -DMGOS_VFS_DEFINE_DIRENT \
+           -DMG_LOCALS
 
 MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5
 

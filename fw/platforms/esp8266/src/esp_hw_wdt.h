@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_PLATFORMS_ESP8266_USER_ESP_HW_WDT_H_
-#define CS_FW_PLATFORMS_ESP8266_USER_ESP_HW_WDT_H_
+#ifndef CS_FW_PLATFORMS_ESP8266_SRC_ESP_HW_WDT_H_
+#define CS_FW_PLATFORMS_ESP8266_SRC_ESP_HW_WDT_H_
 
 #include <stdint.h>
 
@@ -25,4 +25,4 @@ void esp_hw_wdt_enable();
 void esp_hw_wdt_disable();
 void esp_hw_wdt_feed();
 
-#endif /* CS_FW_PLATFORMS_ESP8266_USER_ESP_HW_WDT_H_ */
+#endif /* CS_FW_PLATFORMS_ESP8266_SRC_ESP_HW_WDT_H_ */

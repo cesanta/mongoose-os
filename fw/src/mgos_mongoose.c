@@ -10,6 +10,7 @@
 
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_sys_config.h"
+#include "fw/src/mgos_timers.h"
 #include "fw/src/mgos_utils.h"
 #include "fw/src/mgos_wifi.h"
 
@@ -32,8 +33,9 @@ IRAM struct mg_mgr *mgos_get_mgr() {
   return &s_mgr;
 }
 
-void mongoose_init(void) {
+enum mgos_init_result mongoose_init(void) {
   mg_mgr_init(&s_mgr, NULL);
+  return mgos_timers_init();
 }
 
 void mongoose_destroy(void) {
