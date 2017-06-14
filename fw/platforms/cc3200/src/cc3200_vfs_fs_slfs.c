@@ -13,33 +13,52 @@
 
 #include "fw/src/mgos_vfs.h"
 
+bool s_slfs_mounted = false;
+
+static bool cc3200_vfs_fs_slfs_mkfs(struct mgos_vfs_fs *fs, const char *opts) {
+  /* Not supported */
+  (void) fs;
+  (void) opts;
+  return false;
+}
+
 static bool cc3200_vfs_fs_slfs_mount(struct mgos_vfs_fs *fs, const char *opts) {
+  (void) fs;
+  (void) opts;
+  if (s_slfs_mounted) return false;
+  s_slfs_mounted = true;
   return true;
 }
 
 bool cc3200_vfs_fs_slfs_umount(struct mgos_vfs_fs *fs) {
+  /* Nothing to do. */
+  (void) fs;
+  if (!s_slfs_mounted) return false;
+  s_slfs_mounted = false;
   return true;
 }
 
 size_t cc3200_vfs_fs_slfs_get_space_total(struct mgos_vfs_fs *fs) {
-  return 0;
   /* Not supported. */
+  (void) fs;
+  return 0;
 }
 
 size_t cc3200_vfs_fs_slfs_get_space_used(struct mgos_vfs_fs *fs) {
-  return 0;
   /* Not supported. */
+  (void) fs;
+  return 0;
 }
 
 size_t cc3200_vfs_fs_slfs_get_space_free(struct mgos_vfs_fs *fs) {
-  (void) fs;
   /* Not supported. */
+  (void) fs;
   return 0;
 }
 
 bool cc3200_vfs_fs_slfs_gc(struct mgos_vfs_fs *fs) {
-  (void) fs;
   /* Nothing to do. */
+  (void) fs;
   return true;
 }
 
@@ -115,6 +134,7 @@ static int cc3200_vfs_fs_slfs_closedir(struct mgos_vfs_fs *fs, DIR *dir) {
 #endif /* MG_ENABLE_DIRECTORY_LISTING */
 
 static const struct mgos_vfs_fs_ops cc3200_vfs_fs_slfs_ops = {
+    .mkfs = cc3200_vfs_fs_slfs_mkfs,
     .mount = cc3200_vfs_fs_slfs_mount,
     .umount = cc3200_vfs_fs_slfs_umount,
     .get_space_total = cc3200_vfs_fs_slfs_get_space_total,

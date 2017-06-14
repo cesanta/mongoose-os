@@ -30,6 +30,7 @@ struct mgos_vfs_fs_spiffs_data {
   spiffs fs;
   u8_t *work;
   u8_t *fds;
+  bool encrypt;
 };
 
 /* XXX: a kludge to keep mmap working for now. */
@@ -65,9 +66,9 @@ static s32_t mgos_spiffs_erase(spiffs *spfs, u32_t addr, u32_t size) {
   return SPIFFS_OK;
 }
 
-static bool mgos_vfs_fs_spiffs_mount(struct mgos_vfs_fs *fs, const char *opts) {
+static bool mgos_vfs_fs_spiffs_mount_common(struct mgos_vfs_fs *fs,
+                                            const char *opts) {
   s32_t r = -1;
-  bool encrypt = false;
   unsigned int num_fds;
   spiffs_config cfg;
   spiffs *spfs;
@@ -85,7 +86,7 @@ static bool mgos_vfs_fs_spiffs_mount(struct mgos_vfs_fs *fs, const char *opts) {
         opts, strlen(opts),
         "{addr: %u, size: %u, bs: %u, ps: %u, es: %u, nfd: %u, encr: %B}",
         &cfg.phys_addr, &cfg.phys_size, &cfg.log_block_size, &cfg.log_page_size,
-        &cfg.phys_erase_block, &num_fds, &encrypt);
+        &cfg.phys_erase_block, &num_fds, &fsd->encrypt);
   }
   fsd->fds = (u8_t *) calloc(num_fds, sizeof(spiffs_fd));
   fsd->work = (u8_t *) calloc(2, cfg.log_page_size);
@@ -100,33 +101,71 @@ static bool mgos_vfs_fs_spiffs_mount(struct mgos_vfs_fs *fs, const char *opts) {
       ("addr 0x%x size %u bs %u ps %u es %u nfd %u encr %d",
        (unsigned int) cfg.phys_addr, (unsigned int) cfg.phys_size,
        (unsigned int) cfg.log_block_size, (unsigned int) cfg.log_page_size,
-       (unsigned int) cfg.phys_erase_block, (unsigned int) num_fds, encrypt));
+       (unsigned int) cfg.phys_erase_block, (unsigned int) num_fds,
+       fsd->encrypt));
   r = SPIFFS_mount(spfs, &cfg, fsd->work, fsd->fds, num_fds * sizeof(spiffs_fd),
                    NULL, 0, NULL);
-  if (r == SPIFFS_OK) {
-    if (s_root_fs == NULL) {
-      s_root_fs = spfs;
+out:
+  return (r == SPIFFS_OK);
+}
+
+static bool mgos_vfs_fs_spiffs_mkfs(struct mgos_vfs_fs *fs, const char *opts) {
+  /* SPIFFS requires MKFS before formatting. We don't expect it to succeed. */
+  bool ret = mgos_vfs_fs_spiffs_mount_common(fs, opts);
+  struct mgos_vfs_fs_spiffs_data *fsd =
+      (struct mgos_vfs_fs_spiffs_data *) fs->fs_data;
+  if (fsd == NULL) return false;
+  spiffs *spfs = &fsd->fs;
+  if (ret) {
+    bool force = false;
+    /* Mount succeeded, there's a filesystem there already. To re-format it,
+     * user must set "force". */
+    SPIFFS_unmount(spfs);
+    json_scanf(opts, strlen(opts), "{force: %B}", &force);
+    if (!force) {
+      LOG(LL_ERROR, ("There is a valid FS already, but 'force' is not set"));
+      ret = false;
+      goto out;
     }
+  }
+  ret = (SPIFFS_format(spfs) == SPIFFS_OK);
+out:
+  free(fsd->work);
+  free(fsd->fds);
+  free(fsd);
+  return ret;
+}
+
+static bool mgos_vfs_fs_spiffs_mount(struct mgos_vfs_fs *fs, const char *opts) {
+  bool ret = mgos_vfs_fs_spiffs_mount_common(fs, opts);
+  struct mgos_vfs_fs_spiffs_data *fsd =
+      (struct mgos_vfs_fs_spiffs_data *) fs->fs_data;
+  spiffs *spfs = NULL;
+  if (ret) {
+    spfs = &fsd->fs;
     /* https://github.com/pellepl/spiffs/issues/137#issuecomment-287192259 */
     if (SPIFFS_check(spfs) != SPIFFS_OK) {
       LOG(LL_ERROR, ("Filesystem is corrupted, continuing anyway"));
     }
 #if CS_SPIFFS_ENABLE_ENCRYPTION
-    if (encrypt && !mgos_vfs_fs_spiffs_enc_fs(spfs)) {
-      r = SPIFFS_ERR_FULL;
-      goto out;
+    if (fsd->encrypt && !mgos_vfs_fs_spiffs_enc_fs(spfs)) {
+      ret = false;
     }
 #endif
+    if (ret && s_root_fs == NULL) {
+      s_root_fs = spfs;
+    }
   }
-
-out:
-  if (r != SPIFFS_OK) {
+  if (!ret) {
     LOG(LL_ERROR, ("SPIFFS mount failed"));
-    free(fsd->work);
-    free(fsd->fds);
-    free(fsd);
+    if (spfs != NULL && SPIFFS_mounted(spfs)) SPIFFS_unmount(spfs);
+    if (fsd != NULL) {
+      free(fsd->work);
+      free(fsd->fds);
+      free(fsd);
+    }
   }
-  return (r == SPIFFS_OK);
+  return ret;
 }
 
 bool mgos_vfs_fs_spiffs_umount(struct mgos_vfs_fs *fs) {
@@ -881,6 +920,7 @@ int esp_translate_fd(int fd, spiffs **pfs) {
 }
 
 static const struct mgos_vfs_fs_ops mgos_vfs_fs_spiffs_ops = {
+    .mkfs = mgos_vfs_fs_spiffs_mkfs,
     .mount = mgos_vfs_fs_spiffs_mount,
     .umount = mgos_vfs_fs_spiffs_umount,
     .get_space_total = mgos_vfs_fs_spiffs_get_space_total,

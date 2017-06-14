@@ -62,6 +62,7 @@ int closedir(DIR *pdir);
 #endif /* MG_ENABLE_DIRECTORY_LISTING */
 
 struct mgos_vfs_fs_ops {
+  bool (*mkfs)(struct mgos_vfs_fs *fs, const char *opts);
   bool (*mount)(struct mgos_vfs_fs *fs, const char *opts);
   bool (*umount)(struct mgos_vfs_fs *fs);
   size_t (*get_space_total)(struct mgos_vfs_fs *fs);
@@ -94,6 +95,9 @@ struct mgos_vfs_fs_ops {
 
 bool mgos_vfs_fs_register_type(const char *type,
                                const struct mgos_vfs_fs_ops *ops);
+
+bool mgos_vfs_mkfs(const char *dev_type, const char *dev_opts,
+                   const char *fs_type, const char *fs_opts);
 
 bool mgos_vfs_mount(const char *path, const char *dev_type,
                     const char *dev_opts, const char *fs_type,
