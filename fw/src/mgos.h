@@ -43,7 +43,6 @@
 #include "fw/src/mgos_updater.h"
 #include "fw/src/mgos_updater_common.h"
 #include "fw/src/mgos_updater_hal.h"
-#include "fw/src/mgos_updater_http.h"
 #include "fw/src/mgos_updater_util.h"
 #include "fw/src/mgos_utils.h"
 #include "fw/src/mgos_wifi.h"

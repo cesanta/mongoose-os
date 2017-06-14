@@ -30,6 +30,8 @@ $(EXAMPLES): $(MJS_PATH)/mjs.c $(MJS_PATH)/mjs.h
 		--lib gcp:$(LIBS_PATH)/gcp \
 		--lib mjs:$(LIBS_PATH)/mjs \
 		--lib mqtt:$(LIBS_PATH)/mqtt \
+		--lib ota-http-client:$(LIBS_PATH)/ota-http-client \
+		--lib ota-http-server:$(LIBS_PATH)/ota-http-server \
 		--lib rpc-common:$(LIBS_PATH)/rpc-common \
 		--lib rpc-loopback:$(LIBS_PATH)/rpc-loopback \
 		--lib rpc-mqtt:$(LIBS_PATH)/rpc-mqtt \

@@ -14,6 +14,7 @@ config_schema:
   - ["device.password", "test"]
   - ["i2c.enable", true]
 libs:
+  - origin: https://github.com/mongoose-os-libs/ota-http-server
   - origin: https://github.com/mongoose-os-libs/rpc-loopback
   - origin: https://github.com/mongoose-os-libs/rpc-mqtt
   - origin: https://github.com/mongoose-os-libs/rpc-service-config

@@ -58,10 +58,6 @@
 #define MGOS_ENABLE_UPDATER 0
 #endif
 
-#ifndef MGOS_ENABLE_UPDATER_POST
-#define MGOS_ENABLE_UPDATER_POST 0
-#endif
-
 #ifndef MGOS_ENABLE_WEB_CONFIG
 #define MGOS_ENABLE_WEB_CONFIG 0
 #endif

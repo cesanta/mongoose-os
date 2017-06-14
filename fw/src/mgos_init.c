@@ -56,10 +56,6 @@ enum mgos_init_result mgos_init(void) {
   if (r != MGOS_INIT_OK) return r;
 #endif
 
-#if MGOS_ENABLE_UPDATER
-  mgos_updater_http_init(); /* After HTTP init */
-#endif
-
 #if MGOS_ENABLE_ARDUINO_API
   if (mgos_arduino_init() != MGOS_INIT_OK) {
     return MGOS_INIT_APP_INIT_FAILED;

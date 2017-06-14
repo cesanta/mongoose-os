@@ -65,7 +65,13 @@ struct update_context {
   } fctx __attribute__((packed));
 };
 
-struct update_context *updater_context_create();
+struct update_context *updater_context_create(void);
+
+/*
+ * Returns updater context of the update in progress. If no update is in
+ * progress, returns NULL.
+ */
+struct update_context *updater_context_get_current(void);
 int updater_process(struct update_context *ctx, const char *data, size_t len);
 void updater_finish(struct update_context *ctx);
 void updater_context_free(struct update_context *ctx);

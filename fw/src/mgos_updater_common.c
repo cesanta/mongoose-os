@@ -125,6 +125,10 @@ struct update_context *updater_context_create() {
   return s_ctx;
 }
 
+struct update_context *updater_context_get_current(void) {
+  return s_ctx;
+}
+
 void updater_set_status(struct update_context *ctx, enum update_state st) {
   LOG(LL_DEBUG, ("Update state %d -> %d", (int) ctx->update_state, (int) st));
   ctx->update_state = st;

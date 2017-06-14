@@ -1,11 +1,5 @@
 [
   ["update", "o", {title: "Firmware updater"}],
-  ["update.url", "s", {title : "Fetch updates form here"}],
-  ["update.interval", "i", {title : "Check for updates this often"}],
   ["update.timeout", "i", 300, {title : "Update will be aborted if it does not finish within this time"}],
   ["update.commit_timeout", "i", {title : "After applying update, wait for commit up to this long"}],
-  # Default CA bundle for updating from mongoose-os.com (and any other site that uses LetsEncrypt) and S3.
-  ["update.ssl_ca_file", "s", "ca.pem", {title : "TLS CA file"}],
-  ["update.ssl_client_cert_file", "s", {title: "TLS client cert file"}],
-  ["update.ssl_server_name", "s", {title : "TLS Server Name"}],
 ]
