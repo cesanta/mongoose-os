@@ -302,10 +302,6 @@ else
   SSL_LIBS =
 endif
 
-ifeq "$(MGOS_ENABLE_ARDUINO_API)" "1"
-  MGOS_FEATURES += -DESP8266 -DF_CPU=160000000
-endif
-
 include $(MGOS_PATH)/fw/src/spiffs.mk
 
 MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o)) \

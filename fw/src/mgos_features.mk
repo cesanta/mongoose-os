@@ -1,4 +1,3 @@
-MGOS_ENABLE_ARDUINO_API ?= 0
 MGOS_ENABLE_ATCA ?= 1
 MGOS_ENABLE_BITBANG ?= 1
 MGOS_ENABLE_DEBUG_UDP ?= 1
@@ -27,11 +26,6 @@ MGOS_FEATURES += -DMGOS_DEBUG_UART=$(MGOS_DEBUG_UART) \
                  -DMG_ENABLE_CALLBACK_USERDATA
 
 SYS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_http_config.yaml
-
-ifeq "$(MGOS_ENABLE_ARDUINO_API)" "1"
-  MGOS_FEATURES += -DARDUINO=150 -DMGOS_ENABLE_ARDUINO_API=1
-  MGOS_SRCS += mgos_arduino.cpp
-endif
 
 ifeq "$(MGOS_ENABLE_ATCA)" "1"
   ATCA_PATH ?= $(MGOS_PATH)/third_party/cryptoauthlib
@@ -134,7 +128,6 @@ endif
 
 # Export all the feature switches.
 # This is required for needed make invocations (i.e. ESP32 IDF)
-export MGOS_ENABLE_ARDUINO_API
 export MGOS_ENABLE_ATCA
 export MGOS_ENABLE_BITBANG
 export MGOS_ENABLE_DEBUG_UDP

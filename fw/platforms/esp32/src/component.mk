@@ -49,9 +49,6 @@ include $(MGOS_PATH)/common/scripts/ffi_exports.mk
 
 SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_config.yaml
 
-ifeq "$(MGOS_ENABLE_ARDUINO_API)" "1"
-  MGOS_FEATURES += -DESP32 -DF_CPU=160000000
-endif
 ifeq "$(MGOS_ENABLE_I2C)" "1"
   ifneq "$(MGOS_ENABLE_I2C_GPIO)" "1"
     MGOS_SRCS += esp32_i2c_master.c
