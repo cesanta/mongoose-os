@@ -3,6 +3,10 @@ name: FS
 methods:
   List:
     doc: List names of the files on the device's filesystem.
+    args:
+      path:
+        type: string
+        doc: Directory to list, defaults to /.
     result:
       type: array
       items:
@@ -10,6 +14,10 @@ methods:
         doc: Filename
   ListExt:
     doc: List files on the device's filesystem.
+    args:
+      path:
+        type: string
+        doc: Directory to list, defaults to /.
     result:
       type: array
       items:

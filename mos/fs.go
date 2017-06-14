@@ -28,12 +28,12 @@ var (
 	fsOpAttempts = 3
 )
 
-func listFiles(ctx context.Context, devConn *dev.DevConn) (res []fwfs.ListExtResult, err error) {
+func listFiles(ctx context.Context, devConn *dev.DevConn, path string) (res []fwfs.ListExtResult, err error) {
 	if *longFormat {
-		res, err = devConn.CFilesystem.ListExt(ctx)
+		res, err = devConn.CFilesystem.ListExt(ctx, &fwfs.ListExtArgs{Path: &path})
 	} else {
 		// Get file list from the attached device
-		names, err := devConn.CFilesystem.List(ctx)
+		names, err := devConn.CFilesystem.List(ctx, &fwfs.ListArgs{Path: &path})
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
@@ -46,7 +46,12 @@ func listFiles(ctx context.Context, devConn *dev.DevConn) (res []fwfs.ListExtRes
 }
 
 func fsLs(ctx context.Context, devConn *dev.DevConn) error {
-	files, err := listFiles(ctx, devConn)
+	args := flag.Args()
+	path := "/"
+	if len(args) >= 2 {
+		path = args[1]
+	}
+	files, err := listFiles(ctx, devConn, path)
 	if err != nil {
 		return errors.Trace(err)
 	}

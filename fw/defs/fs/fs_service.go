@@ -37,6 +37,14 @@ type GetResult struct {
 	Left *int64  `json:"left,omitempty"`
 }
 
+type ListArgs struct {
+	Path *string `json:"path,omitempty"`
+}
+
+type ListExtArgs struct {
+	Path *string `json:"path,omitempty"`
+}
+
 type ListExtResult struct {
 	Name *string `json:"name,omitempty"`
 	Size *int64  `json:"size,omitempty"`
@@ -54,8 +62,8 @@ type RemoveArgs struct {
 
 type Service interface {
 	Get(ctx context.Context, args *GetArgs) (*GetResult, error)
-	List(ctx context.Context) ([]string, error)
-	ListExt(ctx context.Context) ([]ListExtResult, error)
+	List(ctx context.Context, args *ListArgs) ([]string, error)
+	ListExt(ctx context.Context, args *ListExtArgs) ([]ListExtResult, error)
 	Put(ctx context.Context, args *PutArgs) error
 	Remove(ctx context.Context, args *RemoveArgs) error
 }
@@ -98,10 +106,12 @@ func (c *_Client) Get(ctx context.Context, args *GetArgs) (res *GetResult, err e
 	return r, nil
 }
 
-func (c *_Client) List(ctx context.Context) (res []string, err error) {
+func (c *_Client) List(ctx context.Context, args *ListArgs) (res []string, err error) {
 	cmd := &frame.Command{
 		Cmd: "FS.List",
 	}
+
+	cmd.Args = ourjson.DelayMarshaling(args)
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -118,10 +128,12 @@ func (c *_Client) List(ctx context.Context) (res []string, err error) {
 	return r, nil
 }
 
-func (c *_Client) ListExt(ctx context.Context) (res []ListExtResult, err error) {
+func (c *_Client) ListExt(ctx context.Context, args *ListExtArgs) (res []ListExtResult, err error) {
 	cmd := &frame.Command{
 		Cmd: "FS.ListExt",
 	}
+
+	cmd.Args = ourjson.DelayMarshaling(args)
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -205,11 +217,23 @@ func (s *_Server) Get(ctx context.Context, src string, cmd *frame.Command) (inte
 }
 
 func (s *_Server) List(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
-	return s.impl.List(ctx)
+	var args ListArgs
+	if len(cmd.Args) > 0 {
+		if err := cmd.Args.UnmarshalInto(&args); err != nil {
+			return nil, errors.Annotatef(err, "unmarshaling args")
+		}
+	}
+	return s.impl.List(ctx, &args)
 }
 
 func (s *_Server) ListExt(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
-	return s.impl.ListExt(ctx)
+	var args ListExtArgs
+	if len(cmd.Args) > 0 {
+		if err := cmd.Args.UnmarshalInto(&args); err != nil {
+			return nil, errors.Annotatef(err, "unmarshaling args")
+		}
+	}
+	return s.impl.ListExt(ctx, &args)
 }
 
 func (s *_Server) Put(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
@@ -274,6 +298,12 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
       }
     },
     "List": {
+      "args": {
+        "path": {
+          "doc": "Directory to list, defaults to /.",
+          "type": "string"
+        }
+      },
       "doc": "List names of the files on the device's filesystem.",
       "result": {
         "items": {
@@ -284,6 +314,12 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
       }
     },
     "ListExt": {
+      "args": {
+        "path": {
+          "doc": "Directory to list, defaults to /.",
+          "type": "string"
+        }
+      },
       "doc": "List files on the device's filesystem.",
       "result": {
         "items": {

@@ -42,6 +42,14 @@ type GetResult struct {
 	Left *int64  `json:"left,omitempty"`
 }
 
+type ListArgs struct {
+	Path *string `json:"path,omitempty"`
+}
+
+type ListExtArgs struct {
+	Path *string `json:"path,omitempty"`
+}
+
 type ListExtResult struct {
 	Name *string `json:"name,omitempty"`
 	Size *int64  `json:"size,omitempty"`
@@ -59,8 +67,8 @@ type RemoveArgs struct {
 
 type Service interface {
 	Get(ctx context.Context, args *GetArgs) (*GetResult, error)
-	List(ctx context.Context) ([]string, error)
-	ListExt(ctx context.Context) ([]ListExtResult, error)
+	List(ctx context.Context, args *ListArgs) ([]string, error)
+	ListExt(ctx context.Context, args *ListExtArgs) ([]ListExtResult, error)
 	Put(ctx context.Context, args *PutArgs) error
 	Remove(ctx context.Context, args *RemoveArgs) error
 }
@@ -75,7 +83,11 @@ type _validators struct {
 	// This comment prevents gofmt from aligning types in the struct.
 	GetResult *schema.Validator
 	// This comment prevents gofmt from aligning types in the struct.
+	ListArgs *schema.Validator
+	// This comment prevents gofmt from aligning types in the struct.
 	ListResult *schema.Validator
+	// This comment prevents gofmt from aligning types in the struct.
+	ListExtArgs *schema.Validator
 	// This comment prevents gofmt from aligning types in the struct.
 	ListExtResult *schema.Validator
 	// This comment prevents gofmt from aligning types in the struct.
@@ -144,7 +156,33 @@ func initValidators() {
 	if err != nil {
 		panic(err)
 	}
+	s = &ucl.Object{
+		Value: map[ucl.Key]ucl.Value{
+			ucl.Key{Value: "properties"}: service.(*ucl.Object).Find("methods").(*ucl.Object).Find("List").(*ucl.Object).Find("args"),
+			ucl.Key{Value: "type"}:       &ucl.String{Value: "object"},
+		},
+	}
+	if req, found := service.(*ucl.Object).Find("methods").(*ucl.Object).Find("List").(*ucl.Object).Lookup("required_args"); found {
+		s.Value[ucl.Key{Value: "required"}] = req
+	}
+	validators.ListArgs, err = schema.NewValidator(s, loader)
+	if err != nil {
+		panic(err)
+	}
 	validators.ListResult, err = schema.NewValidator(service.(*ucl.Object).Find("methods").(*ucl.Object).Find("List").(*ucl.Object).Find("result"), loader)
+	if err != nil {
+		panic(err)
+	}
+	s = &ucl.Object{
+		Value: map[ucl.Key]ucl.Value{
+			ucl.Key{Value: "properties"}: service.(*ucl.Object).Find("methods").(*ucl.Object).Find("ListExt").(*ucl.Object).Find("args"),
+			ucl.Key{Value: "type"}:       &ucl.String{Value: "object"},
+		},
+	}
+	if req, found := service.(*ucl.Object).Find("methods").(*ucl.Object).Find("ListExt").(*ucl.Object).Lookup("required_args"); found {
+		s.Value[ucl.Key{Value: "required"}] = req
+	}
+	validators.ListExtArgs, err = schema.NewValidator(s, loader)
 	if err != nil {
 		panic(err)
 	}
@@ -241,9 +279,25 @@ func (c *_Client) Get(ctx context.Context, args *GetArgs) (res *GetResult, err e
 	return r, nil
 }
 
-func (c *_Client) List(ctx context.Context) (res []string, err error) {
+func (c *_Client) List(ctx context.Context, args *ListArgs) (res []string, err error) {
 	cmd := &frame.Command{
 		Cmd: "FS.List",
+	}
+
+	cmd.Args = ourjson.DelayMarshaling(args)
+	b, err := cmd.Args.MarshalJSON()
+	if err != nil {
+		glog.Errorf("Failed to marshal args as JSON: %+v", err)
+	} else {
+		v, err := ucl.Parse(bytes.NewReader(b))
+		if err != nil {
+			glog.Errorf("Failed to parse just serialized JSON value %q: %+v", string(b), err)
+		} else {
+			if err := validators.ListArgs.Validate(v); err != nil {
+				glog.Warningf("Sending invalid args for List: %+v", err)
+				return nil, errors.Annotatef(err, "invalid args for List")
+			}
+		}
 	}
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
@@ -273,9 +327,25 @@ func (c *_Client) List(ctx context.Context) (res []string, err error) {
 	return r, nil
 }
 
-func (c *_Client) ListExt(ctx context.Context) (res []ListExtResult, err error) {
+func (c *_Client) ListExt(ctx context.Context, args *ListExtArgs) (res []ListExtResult, err error) {
 	cmd := &frame.Command{
 		Cmd: "FS.ListExt",
+	}
+
+	cmd.Args = ourjson.DelayMarshaling(args)
+	b, err := cmd.Args.MarshalJSON()
+	if err != nil {
+		glog.Errorf("Failed to marshal args as JSON: %+v", err)
+	} else {
+		v, err := ucl.Parse(bytes.NewReader(b))
+		if err != nil {
+			glog.Errorf("Failed to parse just serialized JSON value %q: %+v", string(b), err)
+		} else {
+			if err := validators.ListExtArgs.Validate(v); err != nil {
+				glog.Warningf("Sending invalid args for ListExt: %+v", err)
+				return nil, errors.Annotatef(err, "invalid args for ListExt")
+			}
+		}
 	}
 	resp, err := c.i.Call(ctx, c.addr, cmd)
 	if err != nil {
@@ -430,7 +500,26 @@ func (s *_Server) Get(ctx context.Context, src string, cmd *frame.Command) (inte
 }
 
 func (s *_Server) List(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
-	r, err := s.impl.List(ctx)
+	b, err := cmd.Args.MarshalJSON()
+	if err != nil {
+		glog.Errorf("Failed to marshal args as JSON: %+v", err)
+	} else {
+		if v, err := ucl.Parse(bytes.NewReader(b)); err != nil {
+			glog.Errorf("Failed to parse valid JSON value %q: %+v", string(b), err)
+		} else {
+			if err := validators.ListArgs.Validate(v); err != nil {
+				glog.Warningf("Got invalid args for List: %+v", err)
+				return nil, errors.Annotatef(err, "invalid args for List")
+			}
+		}
+	}
+	var args ListArgs
+	if len(cmd.Args) > 0 {
+		if err := cmd.Args.UnmarshalInto(&args); err != nil {
+			return nil, errors.Annotatef(err, "unmarshaling args")
+		}
+	}
+	r, err := s.impl.List(ctx, &args)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -450,7 +539,26 @@ func (s *_Server) List(ctx context.Context, src string, cmd *frame.Command) (int
 }
 
 func (s *_Server) ListExt(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
-	r, err := s.impl.ListExt(ctx)
+	b, err := cmd.Args.MarshalJSON()
+	if err != nil {
+		glog.Errorf("Failed to marshal args as JSON: %+v", err)
+	} else {
+		if v, err := ucl.Parse(bytes.NewReader(b)); err != nil {
+			glog.Errorf("Failed to parse valid JSON value %q: %+v", string(b), err)
+		} else {
+			if err := validators.ListExtArgs.Validate(v); err != nil {
+				glog.Warningf("Got invalid args for ListExt: %+v", err)
+				return nil, errors.Annotatef(err, "invalid args for ListExt")
+			}
+		}
+	}
+	var args ListExtArgs
+	if len(cmd.Args) > 0 {
+		if err := cmd.Args.UnmarshalInto(&args); err != nil {
+			return nil, errors.Annotatef(err, "unmarshaling args")
+		}
+	}
+	r, err := s.impl.ListExt(ctx, &args)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -557,6 +665,12 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
       }
     },
     "List": {
+      "args": {
+        "path": {
+          "doc": "Directory to list, defaults to /.",
+          "type": "string"
+        }
+      },
       "doc": "List names of the files on the device's filesystem.",
       "result": {
         "items": {
@@ -567,6 +681,12 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
       }
     },
     "ListExt": {
+      "args": {
+        "path": {
+          "doc": "Directory to list, defaults to /.",
+          "type": "string"
+        }
+      },
       "doc": "List files on the device's filesystem.",
       "result": {
         "items": {
