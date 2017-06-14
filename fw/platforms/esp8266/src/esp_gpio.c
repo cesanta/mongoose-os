@@ -84,6 +84,23 @@ bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
     return true;
   }
 
+  if (pin >= 6 && pin <= 11) {
+    LOG(LL_ERROR, ("GPIO%d is used by SPI flash, don't use it", pin));
+    /*
+     * Alright, so you're here to investigate what's up with this error. So,
+     * GPIO6-11 are used for SPI flash and messing with them causes crashes.
+     * In theory, if flash is configured for double or single mode, GPIO9 and
+     * GPIO10 can be reclaimed. And /CS could be hard-wired to 0 if flash is
+     * the only device, reclaiming GPIO11. However, on all the modules currently
+     * in existence they are connected to the flash chip's pins, which, when not
+     * used for quad i/o, are usually /HOLD and /WP. Thus, using them will still
+     * crash most ESP8266 modules, but in a different way.
+     * So really, just stay away from GPIO6-11 if you can help it.
+     * If you are sure you know what you're doing, copy the code below.
+     */
+    return false;
+  }
+
   const struct gpio_info *gi = get_gpio_info(pin);
   if (gi == NULL) return false;
 
