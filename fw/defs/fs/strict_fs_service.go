@@ -55,6 +55,19 @@ type ListExtResult struct {
 	Size *int64  `json:"size,omitempty"`
 }
 
+type MkfsArgs struct {
+	Dev_opts *string `json:"dev_opts,omitempty"`
+	Dev_type *string `json:"dev_type,omitempty"`
+	Fs_type  *string `json:"fs_type,omitempty"`
+}
+
+type MountArgs struct {
+	Dev_opts *string `json:"dev_opts,omitempty"`
+	Dev_type *string `json:"dev_type,omitempty"`
+	Fs_type  *string `json:"fs_type,omitempty"`
+	Path     *string `json:"path,omitempty"`
+}
+
 type PutArgs struct {
 	Append   *bool   `json:"append,omitempty"`
 	Data     *string `json:"data,omitempty"`
@@ -65,12 +78,19 @@ type RemoveArgs struct {
 	Filename *string `json:"filename,omitempty"`
 }
 
+type UmountArgs struct {
+	Path *string `json:"path,omitempty"`
+}
+
 type Service interface {
 	Get(ctx context.Context, args *GetArgs) (*GetResult, error)
 	List(ctx context.Context, args *ListArgs) ([]string, error)
 	ListExt(ctx context.Context, args *ListExtArgs) ([]ListExtResult, error)
+	Mkfs(ctx context.Context, args *MkfsArgs) error
+	Mount(ctx context.Context, args *MountArgs) error
 	Put(ctx context.Context, args *PutArgs) error
 	Remove(ctx context.Context, args *RemoveArgs) error
+	Umount(ctx context.Context, args *UmountArgs) error
 }
 
 type Instance interface {
@@ -91,9 +111,15 @@ type _validators struct {
 	// This comment prevents gofmt from aligning types in the struct.
 	ListExtResult *schema.Validator
 	// This comment prevents gofmt from aligning types in the struct.
+	MkfsArgs *schema.Validator
+	// This comment prevents gofmt from aligning types in the struct.
+	MountArgs *schema.Validator
+	// This comment prevents gofmt from aligning types in the struct.
 	PutArgs *schema.Validator
 	// This comment prevents gofmt from aligning types in the struct.
 	RemoveArgs *schema.Validator
+	// This comment prevents gofmt from aligning types in the struct.
+	UmountArgs *schema.Validator
 }
 
 var (
@@ -192,6 +218,32 @@ func initValidators() {
 	}
 	s = &ucl.Object{
 		Value: map[ucl.Key]ucl.Value{
+			ucl.Key{Value: "properties"}: service.(*ucl.Object).Find("methods").(*ucl.Object).Find("Mkfs").(*ucl.Object).Find("args"),
+			ucl.Key{Value: "type"}:       &ucl.String{Value: "object"},
+		},
+	}
+	if req, found := service.(*ucl.Object).Find("methods").(*ucl.Object).Find("Mkfs").(*ucl.Object).Lookup("required_args"); found {
+		s.Value[ucl.Key{Value: "required"}] = req
+	}
+	validators.MkfsArgs, err = schema.NewValidator(s, loader)
+	if err != nil {
+		panic(err)
+	}
+	s = &ucl.Object{
+		Value: map[ucl.Key]ucl.Value{
+			ucl.Key{Value: "properties"}: service.(*ucl.Object).Find("methods").(*ucl.Object).Find("Mount").(*ucl.Object).Find("args"),
+			ucl.Key{Value: "type"}:       &ucl.String{Value: "object"},
+		},
+	}
+	if req, found := service.(*ucl.Object).Find("methods").(*ucl.Object).Find("Mount").(*ucl.Object).Lookup("required_args"); found {
+		s.Value[ucl.Key{Value: "required"}] = req
+	}
+	validators.MountArgs, err = schema.NewValidator(s, loader)
+	if err != nil {
+		panic(err)
+	}
+	s = &ucl.Object{
+		Value: map[ucl.Key]ucl.Value{
 			ucl.Key{Value: "properties"}: service.(*ucl.Object).Find("methods").(*ucl.Object).Find("Put").(*ucl.Object).Find("args"),
 			ucl.Key{Value: "type"}:       &ucl.String{Value: "object"},
 		},
@@ -213,6 +265,19 @@ func initValidators() {
 		s.Value[ucl.Key{Value: "required"}] = req
 	}
 	validators.RemoveArgs, err = schema.NewValidator(s, loader)
+	if err != nil {
+		panic(err)
+	}
+	s = &ucl.Object{
+		Value: map[ucl.Key]ucl.Value{
+			ucl.Key{Value: "properties"}: service.(*ucl.Object).Find("methods").(*ucl.Object).Find("Umount").(*ucl.Object).Find("args"),
+			ucl.Key{Value: "type"}:       &ucl.String{Value: "object"},
+		},
+	}
+	if req, found := service.(*ucl.Object).Find("methods").(*ucl.Object).Find("Umount").(*ucl.Object).Lookup("required_args"); found {
+		s.Value[ucl.Key{Value: "required"}] = req
+	}
+	validators.UmountArgs, err = schema.NewValidator(s, loader)
 	if err != nil {
 		panic(err)
 	}
@@ -375,6 +440,66 @@ func (c *_Client) ListExt(ctx context.Context, args *ListExtArgs) (res []ListExt
 	return r, nil
 }
 
+func (c *_Client) Mkfs(ctx context.Context, args *MkfsArgs) (err error) {
+	cmd := &frame.Command{
+		Cmd: "FS.Mkfs",
+	}
+
+	cmd.Args = ourjson.DelayMarshaling(args)
+	b, err := cmd.Args.MarshalJSON()
+	if err != nil {
+		glog.Errorf("Failed to marshal args as JSON: %+v", err)
+	} else {
+		v, err := ucl.Parse(bytes.NewReader(b))
+		if err != nil {
+			glog.Errorf("Failed to parse just serialized JSON value %q: %+v", string(b), err)
+		} else {
+			if err := validators.MkfsArgs.Validate(v); err != nil {
+				glog.Warningf("Sending invalid args for Mkfs: %+v", err)
+				return errors.Annotatef(err, "invalid args for Mkfs")
+			}
+		}
+	}
+	resp, err := c.i.Call(ctx, c.addr, cmd)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	if resp.Status != 0 {
+		return errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+	}
+	return nil
+}
+
+func (c *_Client) Mount(ctx context.Context, args *MountArgs) (err error) {
+	cmd := &frame.Command{
+		Cmd: "FS.Mount",
+	}
+
+	cmd.Args = ourjson.DelayMarshaling(args)
+	b, err := cmd.Args.MarshalJSON()
+	if err != nil {
+		glog.Errorf("Failed to marshal args as JSON: %+v", err)
+	} else {
+		v, err := ucl.Parse(bytes.NewReader(b))
+		if err != nil {
+			glog.Errorf("Failed to parse just serialized JSON value %q: %+v", string(b), err)
+		} else {
+			if err := validators.MountArgs.Validate(v); err != nil {
+				glog.Warningf("Sending invalid args for Mount: %+v", err)
+				return errors.Annotatef(err, "invalid args for Mount")
+			}
+		}
+	}
+	resp, err := c.i.Call(ctx, c.addr, cmd)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	if resp.Status != 0 {
+		return errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+	}
+	return nil
+}
+
 func (c *_Client) Put(ctx context.Context, args *PutArgs) (err error) {
 	cmd := &frame.Command{
 		Cmd: "FS.Put",
@@ -441,14 +566,47 @@ func (c *_Client) Remove(ctx context.Context, args *RemoveArgs) (err error) {
 	return nil
 }
 
+func (c *_Client) Umount(ctx context.Context, args *UmountArgs) (err error) {
+	cmd := &frame.Command{
+		Cmd: "FS.Umount",
+	}
+
+	cmd.Args = ourjson.DelayMarshaling(args)
+	b, err := cmd.Args.MarshalJSON()
+	if err != nil {
+		glog.Errorf("Failed to marshal args as JSON: %+v", err)
+	} else {
+		v, err := ucl.Parse(bytes.NewReader(b))
+		if err != nil {
+			glog.Errorf("Failed to parse just serialized JSON value %q: %+v", string(b), err)
+		} else {
+			if err := validators.UmountArgs.Validate(v); err != nil {
+				glog.Warningf("Sending invalid args for Umount: %+v", err)
+				return errors.Annotatef(err, "invalid args for Umount")
+			}
+		}
+	}
+	resp, err := c.i.Call(ctx, c.addr, cmd)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	if resp.Status != 0 {
+		return errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+	}
+	return nil
+}
+
 //func RegisterService(i *clubby.Instance, impl Service) error {
 //validatorsOnce.Do(initValidators)
 //s := &_Server{impl}
 //i.RegisterCommandHandler("FS.Get", s.Get)
 //i.RegisterCommandHandler("FS.List", s.List)
 //i.RegisterCommandHandler("FS.ListExt", s.ListExt)
+//i.RegisterCommandHandler("FS.Mkfs", s.Mkfs)
+//i.RegisterCommandHandler("FS.Mount", s.Mount)
 //i.RegisterCommandHandler("FS.Put", s.Put)
 //i.RegisterCommandHandler("FS.Remove", s.Remove)
+//i.RegisterCommandHandler("FS.Umount", s.Umount)
 //i.RegisterService(ServiceID, _ServiceDefinition)
 //return nil
 //}
@@ -577,6 +735,52 @@ func (s *_Server) ListExt(ctx context.Context, src string, cmd *frame.Command) (
 	return r, nil
 }
 
+func (s *_Server) Mkfs(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
+	b, err := cmd.Args.MarshalJSON()
+	if err != nil {
+		glog.Errorf("Failed to marshal args as JSON: %+v", err)
+	} else {
+		if v, err := ucl.Parse(bytes.NewReader(b)); err != nil {
+			glog.Errorf("Failed to parse valid JSON value %q: %+v", string(b), err)
+		} else {
+			if err := validators.MkfsArgs.Validate(v); err != nil {
+				glog.Warningf("Got invalid args for Mkfs: %+v", err)
+				return nil, errors.Annotatef(err, "invalid args for Mkfs")
+			}
+		}
+	}
+	var args MkfsArgs
+	if len(cmd.Args) > 0 {
+		if err := cmd.Args.UnmarshalInto(&args); err != nil {
+			return nil, errors.Annotatef(err, "unmarshaling args")
+		}
+	}
+	return nil, s.impl.Mkfs(ctx, &args)
+}
+
+func (s *_Server) Mount(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
+	b, err := cmd.Args.MarshalJSON()
+	if err != nil {
+		glog.Errorf("Failed to marshal args as JSON: %+v", err)
+	} else {
+		if v, err := ucl.Parse(bytes.NewReader(b)); err != nil {
+			glog.Errorf("Failed to parse valid JSON value %q: %+v", string(b), err)
+		} else {
+			if err := validators.MountArgs.Validate(v); err != nil {
+				glog.Warningf("Got invalid args for Mount: %+v", err)
+				return nil, errors.Annotatef(err, "invalid args for Mount")
+			}
+		}
+	}
+	var args MountArgs
+	if len(cmd.Args) > 0 {
+		if err := cmd.Args.UnmarshalInto(&args); err != nil {
+			return nil, errors.Annotatef(err, "unmarshaling args")
+		}
+	}
+	return nil, s.impl.Mount(ctx, &args)
+}
+
 func (s *_Server) Put(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
 	b, err := cmd.Args.MarshalJSON()
 	if err != nil {
@@ -627,6 +831,29 @@ func (s *_Server) Remove(ctx context.Context, src string, cmd *frame.Command) (i
 		return nil, errors.Errorf("Filename is required")
 	}
 	return nil, s.impl.Remove(ctx, &args)
+}
+
+func (s *_Server) Umount(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
+	b, err := cmd.Args.MarshalJSON()
+	if err != nil {
+		glog.Errorf("Failed to marshal args as JSON: %+v", err)
+	} else {
+		if v, err := ucl.Parse(bytes.NewReader(b)); err != nil {
+			glog.Errorf("Failed to parse valid JSON value %q: %+v", string(b), err)
+		} else {
+			if err := validators.UmountArgs.Validate(v); err != nil {
+				glog.Warningf("Got invalid args for Umount: %+v", err)
+				return nil, errors.Annotatef(err, "invalid args for Umount")
+			}
+		}
+	}
+	var args UmountArgs
+	if len(cmd.Args) > 0 {
+		if err := cmd.Args.UnmarshalInto(&args); err != nil {
+			return nil, errors.Annotatef(err, "unmarshaling args")
+		}
+	}
+	return nil, s.impl.Umount(ctx, &args)
 }
 
 var _ServiceDefinition = json.RawMessage([]byte(`{
@@ -708,6 +935,44 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
         "type": "array"
       }
     },
+    "Mkfs": {
+      "args": {
+        "dev_opts": {
+          "doc": "File system creation options. Format is specific to the fs type.\nUsually a serialized JSON object.\n",
+          "type": "string"
+        },
+        "dev_type": {
+          "doc": "Type of the underlying device. Must be one of registered device types.\n",
+          "type": "string"
+        },
+        "fs_type": {
+          "doc": "Type of the file system to create. Must be one of registered fs types.\n",
+          "type": "string"
+        }
+      },
+      "doc": "Create a filesystem."
+    },
+    "Mount": {
+      "args": {
+        "dev_opts": {
+          "doc": "File system creation options. Format is specific to the fs type.\nUsually a serialized JSON object.\n",
+          "type": "string"
+        },
+        "dev_type": {
+          "doc": "Type of the underlying device. Must be one of registered device types.\n",
+          "type": "string"
+        },
+        "fs_type": {
+          "doc": "Type of the file system to create. Must be one of registered fs types.\n",
+          "type": "string"
+        },
+        "path": {
+          "doc": "Mount point for the new file system.",
+          "type": "string"
+        }
+      },
+      "doc": "Mount a filesystem."
+    },
     "Put": {
       "args": {
         "append": {
@@ -739,6 +1004,15 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
       "required_args": [
         "filename"
       ]
+    },
+    "Umount": {
+      "args": {
+        "path": {
+          "doc": "Mount point of the file system to unmount.",
+          "type": "string"
+        }
+      },
+      "doc": "Unount a filesystem."
     }
   },
   "name": "FS",

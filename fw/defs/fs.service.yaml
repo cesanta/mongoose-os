@@ -84,3 +84,57 @@ methods:
         type: string
         doc: Name of the file to delete.
     required_args: [filename]
+
+  Mkfs:
+    doc: Create a filesystem.
+    args:
+      dev_type:
+        type: string
+        doc: |
+          Type of the underlying device. Must be one of registered device types.
+      dev_opts:
+        type: string
+        doc: |
+          Device options. Format is specific to the device type.
+          Usually a serialized JSON object.
+      fs_type:
+        type: string
+        doc: |
+          Type of the file system to create. Must be one of registered fs types.
+      dev_opts:
+        type: string
+        doc: |
+          File system creation options. Format is specific to the fs type.
+          Usually a serialized JSON object.
+
+  Mount:
+    doc: Mount a filesystem.
+    args:
+      path:
+        type: string
+        doc: Mount point for the new file system.
+      dev_type:
+        type: string
+        doc: |
+          Type of the underlying device. Must be one of registered device types.
+      dev_opts:
+        type: string
+        doc: |
+          Device options. Format is specific to the device type.
+          Usually a serialized JSON object.
+      fs_type:
+        type: string
+        doc: |
+          Type of the file system to create. Must be one of registered fs types.
+      dev_opts:
+        type: string
+        doc: |
+          File system creation options. Format is specific to the fs type.
+          Usually a serialized JSON object.
+
+  Umount:
+    doc: Unount a filesystem.
+    args:
+      path:
+        type: string
+        doc: Mount point of the file system to unmount.
