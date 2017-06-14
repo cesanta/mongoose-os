@@ -3,7 +3,6 @@
 
 #include "common/platform.h"
 #include "fw/src/mgos_app.h"
-#include "fw/src/mgos_console.h"
 #include "fw/src/mgos_gpio.h"
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_i2c.h"
@@ -32,7 +31,7 @@
 static bool s_heater = false;
 
 static void set_heater(bool on) {
-  CONSOLE_LOG(LL_INFO, ("Heater %s", (on ? "on" : "off")));
+  LOG(LL_INFO, ("Heater %s", (on ? "on" : "off")));
   mgos_gpio_write(LED_GPIO, on);
   mgos_gpio_write(RELAY_GPIO, on);
   s_heater = on;

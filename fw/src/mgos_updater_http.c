@@ -6,7 +6,6 @@
 #include "fw/src/mgos_updater_http.h"
 
 #include "common/cs_dbg.h"
-#include "fw/src/mgos_console.h"
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_mongoose.h"
 #include "fw/src/mgos_sys_config.h"
@@ -64,8 +63,7 @@ static void fw_download_handler(struct mg_connection *c, int ev, void *p,
         if (hm.body.len != 0) {
           LOG(LL_DEBUG, ("HTTP header: file size: %d", (int) hm.body.len));
           if (hm.body.len == (size_t) ~0) {
-            CONSOLE_LOG(LL_ERROR,
-                        ("Invalid content-length, perhaps chunked-encoding"));
+            LOG(LL_ERROR, ("Invalid content-length, perhaps chunked-encoding"));
             ctx->status_msg =
                 "Invalid content-length, perhaps chunked-encoding";
             c->flags |= MG_F_CLOSE_IMMEDIATELY;
@@ -92,8 +90,7 @@ static void fw_download_handler(struct mg_connection *c, int ev, void *p,
 
         if (res < 0) {
           /* Error */
-          CONSOLE_LOG(LL_ERROR,
-                      ("Update error: %d %s", ctx->result, ctx->status_msg));
+          LOG(LL_ERROR, ("Update error: %d %s", ctx->result, ctx->status_msg));
         }
         c->flags |= MG_F_CLOSE_IMMEDIATELY;
       }
@@ -109,7 +106,7 @@ static void fw_download_handler(struct mg_connection *c, int ev, void *p,
         if (ctx->status_msg == NULL) ctx->status_msg = "Update failed";
         ctx->result = -1;
       } else if (is_reboot_required(ctx)) {
-        CONSOLE_LOG(LL_INFO, ("Rebooting device"));
+        LOG(LL_INFO, ("Rebooting device"));
         mgos_system_restart_after(100);
       }
       updater_finish(ctx);
@@ -121,8 +118,8 @@ static void fw_download_handler(struct mg_connection *c, int ev, void *p,
 }
 
 void mgos_updater_http_start(struct update_context *ctx, const char *url) {
-  CONSOLE_LOG(LL_INFO, ("Update URL: %s, ct: %d, isv? %d", url,
-                        ctx->fctx.commit_timeout, ctx->ignore_same_version));
+  LOG(LL_INFO, ("Update URL: %s, ct: %d, isv? %d", url,
+                ctx->fctx.commit_timeout, ctx->ignore_same_version));
 
   struct mg_connect_opts opts;
   memset(&opts, 0, sizeof(opts));
@@ -150,7 +147,7 @@ void mgos_updater_http_start(struct update_context *ctx, const char *url) {
   if (extra_headers != ehb) free(extra_headers);
 
   if (c == NULL) {
-    CONSOLE_LOG(LL_ERROR, ("Failed to connect to %s", url));
+    LOG(LL_ERROR, ("Failed to connect to %s", url));
     ctx->result = -10;
     ctx->need_reboot = false;
     ctx->status_msg = "Failed to connect";

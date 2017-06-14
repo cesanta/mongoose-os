@@ -12,7 +12,6 @@
 #include "common/cs_file.h"
 #include "common/str_util.h"
 
-#include "fw/src/mgos_console.h"
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_timers.h"
@@ -85,7 +84,7 @@ enum update_state {
 static void updater_abort(void *arg) {
   struct update_context *ctx = (struct update_context *) arg;
   if (s_ctx != ctx) return;
-  CONSOLE_LOG(LL_ERROR, ("Update timed out"));
+  LOG(LL_ERROR, ("Update timed out"));
   /* Note that we do not free the context here, because whatever process
    * is stuck may still be referring to it. We close the network connection,
    * if there is one, to hopefully get things to wind down cleanly. */
@@ -95,33 +94,32 @@ static void updater_abort(void *arg) {
 
 struct update_context *updater_context_create() {
   if (s_ctx != NULL) {
-    CONSOLE_LOG(LL_ERROR, ("Update already in progress"));
+    LOG(LL_ERROR, ("Update already in progress"));
     return NULL;
   }
 
   if (!mgos_upd_is_committed()) {
-    CONSOLE_LOG(LL_ERROR, ("Previous update has not been committed yet"));
+    LOG(LL_ERROR, ("Previous update has not been committed yet"));
     return NULL;
   }
 
   if (s_event_cb != NULL) {
     bool ok = s_event_cb(MGOS_UPD_EV_INIT, NULL, s_event_cb_arg);
     if (!ok) {
-      CONSOLE_LOG(LL_ERROR, ("Update declined by user callback"));
+      LOG(LL_ERROR, ("Update declined by user callback"));
       return NULL;
     }
   }
 
   s_ctx = calloc(1, sizeof(*s_ctx));
   if (s_ctx == NULL) {
-    CONSOLE_LOG(LL_ERROR, ("Out of memory"));
+    LOG(LL_ERROR, ("Out of memory"));
     return NULL;
   }
 
   s_ctx->dev_ctx = mgos_upd_hal_ctx_create();
 
-  CONSOLE_LOG(LL_INFO,
-              ("Starting update (timeout %d)", get_cfg()->update.timeout));
+  LOG(LL_INFO, ("Starting update (timeout %d)", get_cfg()->update.timeout));
   s_ctx->wdt = mgos_set_timer(get_cfg()->update.timeout * 1000,
                               false /* repeat */, updater_abort, s_ctx);
   return s_ctx;
@@ -232,7 +230,7 @@ static int parse_zip_file_header(struct update_context *ctx) {
   if (compression_method != 0) {
     /* Do not support compressed archives */
     ctx->status_msg = "File is compressed";
-    CONSOLE_LOG(LL_ERROR, ("File is compressed)"));
+    LOG(LL_ERROR, ("File is compressed)"));
     return -1;
   }
 
@@ -256,7 +254,7 @@ static int parse_zip_file_header(struct update_context *ctx) {
 
   if (nodir_file_name_len >= sizeof(ctx->info.current_file.name)) {
     /* We are in charge of file names, right? */
-    CONSOLE_LOG(LL_ERROR, ("Too long file name"));
+    LOG(LL_ERROR, ("Too long file name"));
     ctx->status_msg = "Too long file name";
     return -1;
   }
@@ -271,7 +269,7 @@ static int parse_zip_file_header(struct update_context *ctx) {
 
   if (ctx->info.current_file.size != uncompressed_size) {
     /* Probably malformed archive*/
-    CONSOLE_LOG(LL_ERROR, ("Malformed archive"));
+    LOG(LL_ERROR, ("Malformed archive"));
     ctx->status_msg = "Malformed archive";
     return -1;
   }
@@ -318,8 +316,7 @@ static int parse_manifest(struct update_context *ctx) {
     return -1;
   }
 
-  CONSOLE_LOG(
-      LL_INFO,
+  LOG(LL_INFO,
       ("FW: %.*s %.*s %s %s -> %.*s %.*s", (int) info->name.len, info->name.ptr,
        (int) info->platform.len, info->platform.ptr, build_version, build_id,
        (int) info->version.len, info->version.ptr, (int) info->build_id.len,
@@ -339,9 +336,9 @@ static int finalize_write(struct update_context *ctx, struct mg_str tail) {
 
   if (ctx->current_file_crc != 0 &&
       ctx->current_file_crc != ctx->current_file_crc_calc) {
-    CONSOLE_LOG(LL_ERROR, ("Invalid CRC, want 0x%x, got 0x%x",
-                           (unsigned int) ctx->current_file_crc,
-                           (unsigned int) ctx->current_file_crc_calc));
+    LOG(LL_ERROR, ("Invalid CRC, want 0x%x, got 0x%x",
+                   (unsigned int) ctx->current_file_crc,
+                   (unsigned int) ctx->current_file_crc_calc));
     ctx->status_msg = "Invalid CRC";
     return -1;
   }
@@ -384,9 +381,8 @@ static int updater_process_int(struct update_context *ctx, const char *data,
         if (strncmp(ctx->info.current_file.name, MANIFEST_FILENAME,
                     sizeof(MANIFEST_FILENAME)) != 0) {
           /* We've got file header, but it isn't not metadata */
-          CONSOLE_LOG(LL_ERROR,
-                      ("Get %s instead of %s", ctx->info.current_file.name,
-                       MANIFEST_FILENAME));
+          LOG(LL_ERROR, ("Get %s instead of %s", ctx->info.current_file.name,
+                         MANIFEST_FILENAME));
           return -1;
         }
         updater_set_status(ctx, US_WAITING_MANIFEST);
@@ -413,9 +409,9 @@ static int updater_process_int(struct update_context *ctx, const char *data,
         if (strncasecmp(ctx->info.platform.ptr,
                         CS_STRINGIFY_MACRO(FW_ARCHITECTURE),
                         strlen(CS_STRINGIFY_MACRO(FW_ARCHITECTURE))) != 0) {
-          CONSOLE_LOG(LL_ERROR, ("Wrong platform: want \"%s\", got \"%s\"",
-                                 CS_STRINGIFY_MACRO(FW_ARCHITECTURE),
-                                 ctx->info.platform.ptr));
+          LOG(LL_ERROR,
+              ("Wrong platform: want \"%s\", got \"%s\"",
+               CS_STRINGIFY_MACRO(FW_ARCHITECTURE), ctx->info.platform.ptr));
           ctx->status_msg = "Wrong platform";
           return -1;
         }
@@ -439,7 +435,7 @@ static int updater_process_int(struct update_context *ctx, const char *data,
 
         if ((ret = mgos_upd_begin(ctx->dev_ctx, &ctx->info.parts)) < 0) {
           ctx->status_msg = mgos_upd_get_status_msg(ctx->dev_ctx);
-          CONSOLE_LOG(LL_ERROR, ("Bad manifest: %d %s", ret, ctx->status_msg));
+          LOG(LL_ERROR, ("Bad manifest: %d %s", ret, ctx->status_msg));
           return ret;
         }
 
@@ -564,8 +560,8 @@ static int updater_process_int(struct update_context *ctx, const char *data,
         ret = 1;
         ctx->status_msg = "Update applied, finalizing";
         if (ctx->fctx.commit_timeout > 0) {
-          CONSOLE_LOG(LL_INFO, ("Update requires commit, timeout: %d",
-                                ctx->fctx.commit_timeout));
+          LOG(LL_INFO, ("Update requires commit, timeout: %d",
+                        ctx->fctx.commit_timeout));
           if (!mgos_upd_set_commit_timeout(ctx->fctx.commit_timeout)) {
             ctx->status_msg = "Cannot save update status";
             return -1;
@@ -610,7 +606,7 @@ void updater_finish(struct update_context *ctx) {
   if (ctx->update_state == US_FINISHED) return;
   updater_set_status(ctx, US_FINISHED);
   const char *msg = (ctx->status_msg ? ctx->status_msg : "???");
-  CONSOLE_LOG(LL_INFO, ("Finished: %d %s", ctx->result, msg));
+  LOG(LL_INFO, ("Finished: %d %s", ctx->result, msg));
   updater_process_int(ctx, NULL, 0);
   if (s_event_cb != NULL) {
     (void) s_event_cb(MGOS_UPD_EV_END, &ctx->result, s_event_cb_arg);
@@ -619,7 +615,7 @@ void updater_finish(struct update_context *ctx) {
 
 void updater_context_free(struct update_context *ctx) {
   if (!is_update_finished(ctx)) {
-    CONSOLE_LOG(LL_ERROR, ("Update terminated unexpectedly"));
+    LOG(LL_ERROR, ("Update terminated unexpectedly"));
   }
   mgos_clear_timer(ctx->wdt);
   mgos_upd_hal_ctx_free(ctx->dev_ctx);
@@ -726,7 +722,7 @@ out:
 
 bool mgos_upd_commit() {
   if (mgos_upd_is_committed()) return false;
-  CONSOLE_LOG(LL_INFO, ("Committing update"));
+  LOG(LL_INFO, ("Committing update"));
   mgos_upd_boot_commit();
   remove(UPDATER_CTX_FILE_NAME);
   return true;
@@ -740,7 +736,7 @@ bool mgos_upd_is_committed() {
 
 bool mgos_upd_revert(bool reboot) {
   if (mgos_upd_is_committed()) return false;
-  CONSOLE_LOG(LL_INFO, ("Reverting update"));
+  LOG(LL_INFO, ("Reverting update"));
   mgos_upd_boot_revert();
   if (reboot) mgos_system_restart(0);
   return true;
@@ -749,7 +745,7 @@ bool mgos_upd_revert(bool reboot) {
 void mgos_upd_watchdog_cb(void *arg) {
   if (!mgos_upd_is_committed()) {
     /* Timer fired and update has not been committed. Revert! */
-    CONSOLE_LOG(LL_ERROR, ("Update commit timeout expired"));
+    LOG(LL_ERROR, ("Update commit timeout expired"));
     mgos_upd_revert(true /* reboot */);
   }
   (void) arg;
@@ -796,8 +792,7 @@ void mgos_upd_boot_finish(bool is_successful, bool is_first) {
   /* We booted. Now see if we have any special instructions. */
   int commit_timeout = mgos_upd_get_commit_timeout();
   if (commit_timeout > 0) {
-    CONSOLE_LOG(LL_INFO,
-                ("Arming commit watchdog for %d seconds", commit_timeout));
+    LOG(LL_INFO, ("Arming commit watchdog for %d seconds", commit_timeout));
     mgos_set_timer(commit_timeout * 1000, 0 /* repeat */, mgos_upd_watchdog_cb,
                    NULL);
   } else {

@@ -19,7 +19,6 @@
 #include "fw/src/mgos_atca.h"
 #include "fw/src/mgos_bitbang.h"
 #include "fw/src/mgos_config.h"
-#include "fw/src/mgos_console.h"
 #include "fw/src/mgos_debug.h"
 #include "fw/src/mgos_debug_hal.h"
 #include "fw/src/mgos_deps.h"
