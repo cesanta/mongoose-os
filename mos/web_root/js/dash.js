@@ -418,3 +418,35 @@ $.ajax({url: '/getports'}).then(function(data) {
     checkPorts();
   }
 });
+
+
+(function(w, d, t) {
+  var hasLoaded = false;
+  function l() { if (hasLoaded) { return; } hasLoaded = true; window.doorbellOptions.windowLoaded = true; var g = d.createElement(t);g.id = 'doorbellScript';g.type = 'text/javascript';g.async = true;g.src = 'https://embed.doorbell.io/button/6329?t='+(new Date().getTime());(d.getElementsByTagName('head')[0]||d.getElementsByTagName('body')[0]).appendChild(g); }
+  if (w.attachEvent) { w.attachEvent('onload', l); } else if (w.addEventListener) { w.addEventListener('load', l, false); } else { l(); }
+  if (d.readyState == 'complete') { l(); }
+}(window, document, 'script'));
+
+
+window.doorbellOptions = {
+  appKey: 'gxJXMpJ5k9y2ioZvwk07HLNPUVgwWhL2fmrjTYIzC47wNJiabQ75WAVlMYwOtBcP',
+  strings: {
+    'feedback-button-text': 'Problems? Let us know!',
+    'title': 'mos tool feedback',
+    'intro-text': '', // Empty by default
+    'feedback-textarea-placeholder': 'Describe your problem or suggestion and upload screenshot...',
+    'feedback-label': '',
+    'email-input-placeholder': 'Your email address',
+    'email-label': '',
+    'attach-a-screenshot': 'Attach a screenshot',
+    'submit-button-text': 'Send',
+    'add-attachments-label': '',
+
+    'message-success' : 'Feedback sent!',
+    'message-error-missing-email': 'Your email address is required',
+    'message-error-invalid-email': 'Invalid email address',
+    'message-error-missing-message': 'Your message is required',
+    'message-error-message-too-short': 'Your message is too short'
+  },
+  tags: 'mos', // Optional, tags to add to this thread. Can be an array as well: ['tag1', 'tag2']
+};

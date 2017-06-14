@@ -46,15 +46,7 @@ input.form-control { box-shadow: none !important; }
 .red { color: #f77; }
 .orange { color: #fa5; }
 .yellow { color: #ff7; }
-.pulsate {
-  -webkit-animation: pulsate 2s ease-out infinite;
-  -moz-animation: pulsate 2s ease-out infinite;
-}
-@-webkit-keyframes pulsate {
-    0% {-webkit-transform: scale(0.1, 0.1); opacity: 0.0;}
-    50% {opacity: 1.0;}
-    100% {-webkit-transform: scale(1.2, 1.2); opacity: 0.0;}
-}
+#doorbell-button { background: #5bc0de; }
 
 /* CODE PAGE */
 .descr { color: silver; }
