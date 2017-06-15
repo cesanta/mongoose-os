@@ -24,24 +24,7 @@ $(EXAMPLES): $(MJS_PATH)/mjs.c $(MJS_PATH)/mjs.h
 	@echo "=== Building $@ / $(PLATFORM)"
 	@cd $@ && $(MOS) build --local --clean --arch $(PLATFORM) \
 		--repo $(REPO_ROOT) \
-		--lib aws:$(LIBS_PATH)/aws \
-		--lib blynk:$(LIBS_PATH)/blynk \
-		--lib dns-sd:$(LIBS_PATH)/dns-sd \
-		--lib gcp:$(LIBS_PATH)/gcp \
-		--lib mjs:$(LIBS_PATH)/mjs \
-		--lib mqtt:$(LIBS_PATH)/mqtt \
-		--lib ota-http-client:$(LIBS_PATH)/ota-http-client \
-		--lib ota-http-server:$(LIBS_PATH)/ota-http-server \
-		--lib rpc-common:$(LIBS_PATH)/rpc-common \
-		--lib rpc-loopback:$(LIBS_PATH)/rpc-loopback \
-		--lib rpc-mqtt:$(LIBS_PATH)/rpc-mqtt \
-		--lib rpc-service-atca:$(LIBS_PATH)/rpc-service-atca \
-		--lib rpc-service-config:$(LIBS_PATH)/rpc-service-config \
-		--lib rpc-service-fs:$(LIBS_PATH)/rpc-service-fs \
-		--lib rpc-service-gpio:$(LIBS_PATH)/rpc-service-gpio \
-		--lib rpc-service-i2c:$(LIBS_PATH)/rpc-service-i2c \
-		--lib rpc-uart:$(LIBS_PATH)/rpc-uart \
-		--lib rpc-service-ota:$(LIBS_PATH)/rpc-service-ota \
+		--libs-dir $(LIBS_PATH) --no-libs-update \
 		--module mjs:$(MJS_PATH) \
 
 $(MJS_PATH)/mjs.c $(MJS_PATH)/mjs.h:
