@@ -62,7 +62,9 @@ const (
 	buildDir = "build"
 	codeDir  = "."
 
-	buildLog = "build.log"
+	buildLog           = "build.log"
+	depsInitCFileName  = "deps_init.c"
+	confSchemaFileName = "mos_conf_schema.yml"
 
 	// Manifest version changes:
 	//
@@ -169,6 +171,16 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 			io.Copy(os.Stdout, log)
 		}
 	}()
+
+	// Create temp directory for the current build
+	tmpBuildDir, err := ioutil.TempDir(tmpDir, "local_build_")
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	if !*keepTempFiles {
+		defer os.RemoveAll(tmpBuildDir)
+	}
 
 	dockerAppPath := "/app"
 	dockerMgosPath := "/mongoose-os"
@@ -321,7 +333,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	}
 
 	if len(depsCCode) != 0 {
-		fname := filepath.Join(tmpDir, fmt.Sprintf("deps_init_%s.c", manifest.Name))
+		fname := filepath.Join(tmpBuildDir, depsInitCFileName)
 
 		if err = ioutil.WriteFile(fname, depsCCode, 0666); err != nil {
 			return errors.Trace(err)
@@ -333,46 +345,30 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 			return errors.Trace(err)
 		}
 
-		if !*keepTempFiles {
-			defer func() {
-				os.RemoveAll(fname)
-			}()
-		}
-
 		appSources = append(appSources, fname)
 	}
 
 	ffiSymbols := manifest.FFISymbols
-	var confSchemaFile *os.File
+	curConfSchemaFName := ""
 
 	// If config schema is provided in manifest, generate a yaml file suitable
 	// for `APP_CONF_SCHEMA`
 	if manifest.ConfigSchema != nil && len(manifest.ConfigSchema) > 0 {
 		var err error
-		confSchemaFile, err = ioutil.TempFile(tmpDir, "mos_conf_schema_")
-		if err != nil {
-			return errors.Trace(err)
-		}
-		defer func() {
-			name := confSchemaFile.Name()
-			confSchemaFile.Close()
-			if !*keepTempFiles {
-				os.RemoveAll(name)
-			}
-		}()
+		curConfSchemaFName = filepath.Join(tmpBuildDir, confSchemaFileName)
 
 		confSchemaData, err := yaml.Marshal(manifest.ConfigSchema)
 		if err != nil {
 			return errors.Trace(err)
 		}
 
-		if _, err := confSchemaFile.Write(confSchemaData); err != nil {
+		if err = ioutil.WriteFile(curConfSchemaFName, confSchemaData, 0666); err != nil {
 			return errors.Trace(err)
 		}
 
 		// The modification time of conf schema file should be set to that of
 		// the manifest itself, so that make handles dependencies correctly.
-		if err := os.Chtimes(confSchemaFile.Name(), mtime, mtime); err != nil {
+		if err := os.Chtimes(curConfSchemaFName, mtime, mtime); err != nil {
 			return errors.Trace(err)
 		}
 	}
@@ -426,8 +422,8 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	// If config schema file was generated, set APP_CONF_SCHEMA appropriately.
 	// If not, then check if APP_CONF_SCHEMA was set manually, and warn about
 	// that.
-	if confSchemaFile != nil {
-		if err := addBuildVar(manifest, "APP_CONF_SCHEMA", confSchemaFile.Name()); err != nil {
+	if curConfSchemaFName != "" {
+		if err := addBuildVar(manifest, "APP_CONF_SCHEMA", curConfSchemaFName); err != nil {
 			return errors.Trace(err)
 		}
 	} else {
@@ -486,8 +482,8 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		}
 
 		// If generated config schema file is present, mount its dir as well
-		if confSchemaFile != nil {
-			d := filepath.Dir(confSchemaFile.Name())
+		if curConfSchemaFName != "" {
+			d := filepath.Dir(curConfSchemaFName)
 			dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", d, d))
 		}
 
