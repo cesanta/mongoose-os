@@ -14,6 +14,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"text/template"
@@ -55,6 +56,8 @@ var (
 	libsDir    = ""
 	appsDir    = ""
 	modulesDir = ""
+
+	varRegexp = regexp.MustCompile(`\$\{[^}]+\}`)
 )
 
 const (
@@ -340,12 +343,20 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	// Get sources and filesystem files from the manifest, expanding placeholders {{{
 	appSources := []string{}
 	for _, s := range manifest.Sources {
-		appSources = append(appSources, mVars.ExpandVars(s))
+		s, err = mVars.ExpandVars(s)
+		if err != nil {
+			return errors.Trace(err)
+		}
+		appSources = append(appSources, s)
 	}
 
 	appFSFiles := []string{}
 	for _, s := range manifest.Filesystem {
-		appFSFiles = append(appFSFiles, mVars.ExpandVars(s))
+		s, err = mVars.ExpandVars(s)
+		if err != nil {
+			return errors.Trace(err)
+		}
+		appFSFiles = append(appFSFiles, s)
 	}
 	// }}}
 
@@ -1153,14 +1164,20 @@ func NewManifestVars() *manifestVars {
 func (mv *manifestVars) SetVar(name, value string) {
 	// Note: we opted to use ${foo} instead of {{foo}}, because {{foo}} needs to
 	// be quoted in yaml, whereas ${foo} does not.
+	glog.Infof("Set '%s'='%s'", name, value)
 	mv.subst[fmt.Sprintf("${%s}", name)] = value
 }
 
-func (mv *manifestVars) ExpandVars(s string) string {
-	for k, v := range mv.subst {
-		s = strings.Replace(s, k, v, -1)
-	}
-	return s
+func (mv *manifestVars) ExpandVars(s string) (string, error) {
+	var err error
+	result := varRegexp.ReplaceAllStringFunc(s, func(v string) string {
+		val, found := mv.subst[v]
+		if !found {
+			err = errors.Errorf("Unknown var '%s'", v)
+		}
+		return val
+	})
+	return result, err
 }
 
 func setModuleVars(mVars *manifestVars, moduleName, path string) {
@@ -1170,7 +1187,7 @@ func setModuleVars(mVars *manifestVars, moduleName, path string) {
 func cleanupModuleName(name string) string {
 	ret := ""
 	for _, c := range name {
-		if !unicode.IsLetter(c) {
+		if !(unicode.IsLetter(c) || unicode.IsDigit(c)) {
 			c = '_'
 		}
 		ret += string(c)
