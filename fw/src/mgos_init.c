@@ -50,11 +50,8 @@ enum mgos_init_result mgos_init(void) {
   if (r != MGOS_INIT_OK) return r;
 #endif
 
-#if MGOS_ENABLE_HTTP_SERVER
-  /* Before mgos_rpc_init */
   r = mgos_sys_config_init_http(&get_cfg()->http, &get_cfg()->device);
   if (r != MGOS_INIT_OK) return r;
-#endif
 
   if (!mgos_deps_init()) {
     return MGOS_INIT_DEPS_FAILED;

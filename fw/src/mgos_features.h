@@ -66,10 +66,6 @@
 #define MGOS_PROMPT_DISABLE_ECHO 0
 #endif
 
-#ifndef MGOS_ENABLE_HTTP_SERVER
-#define MGOS_ENABLE_HTTP_SERVER 1
-#endif
-
 #ifndef MGOS_ENABLE_TUNNEL
 #define MGOS_ENABLE_TUNNEL 0
 #endif
