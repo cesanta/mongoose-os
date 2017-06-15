@@ -116,6 +116,28 @@ func buildInit() error {
 		modulesDir = homeDir + modulesDir[1:]
 	}
 
+	// Absolutize all given paths
+	var err error
+	tmpDir, err = filepath.Abs(tmpDir)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	libsDir, err = filepath.Abs(libsDir)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	appsDir, err = filepath.Abs(appsDir)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	modulesDir, err = filepath.Abs(modulesDir)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
 	if err := os.MkdirAll(tmpDir, 0777); err != nil {
 		return errors.Trace(err)
 	}
