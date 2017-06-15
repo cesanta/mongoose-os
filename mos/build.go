@@ -1308,8 +1308,16 @@ libs:
 
 		reportf("Prepared local dir: %q", libDirAbs)
 
+		// We need to create a copy of build params, and if arch is empty there,
+		// set it from the outer manifest, because arch is used in libs to handle
+		// arch-dependent submanifests, like mos_esp8266.yml.
+		bParams2 := *bParams
+		if bParams2.Arch == "" {
+			bParams2.Arch = manifest.Arch
+		}
+
 		libManifest, libMtime, err := readManifestWithLibs(
-			libDirAbs, bParams, append(visitedDirs, dir), curDeps, logFile, userLibsDir, skipClean,
+			libDirAbs, &bParams2, append(visitedDirs, dir), curDeps, logFile, userLibsDir, skipClean,
 		)
 		if err != nil {
 			return nil, time.Time{}, errors.Trace(err)
