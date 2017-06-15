@@ -206,6 +206,7 @@ void mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr) {
 void mgos_task(void *arg) {
   struct mgos_event e;
   s_main_queue = xQueueCreate(MGOS_TASK_QUEUE_LENGTH, sizeof(e));
+  srand(esp_random()); /* esp_random() uses HW RNG */
 
   mgos_app_preinit();
 
