@@ -208,7 +208,8 @@ ifeq "$(MGOS_ENABLE_I2C)" "1"
   endif
 endif
 ifeq "$(MGOS_ENABLE_SPI)" "1"
-  SYS_CONF_SCHEMA += $(MGOS_CC3200_SRC_PATH)/cc3200_spi_config.yaml
+  MGOS_ENABLE_SPI_GPIO = 1
+  SYS_CONF_SCHEMA += $(MGOS_CC3200_SRC_PATH)/cc3200_spi_gpio_config.yaml
 endif
 
 clean:
