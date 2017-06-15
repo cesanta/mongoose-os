@@ -407,7 +407,7 @@
   $(document).off('mos-devinfo');
   $(document).on('mos-devinfo', function() {
     var devAddr = $('.connect-input').val() || '';
-    $('#toolbar-flash-button').prop('disabled', devAddr[0] != '/');
+    $('#toolbar-flash-button').prop('disabled', !!devAddr.match(/^(ws|mqtt|http)/));
     $('#arch-dropdown').val(ui.info ? ui.info.arch : 'esp32');
   });
 
