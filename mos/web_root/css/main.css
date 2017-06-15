@@ -1,6 +1,8 @@
 html, body { height: 100%; }
 body { color: #666;  background-color: #eee; }
 
+.page { width: 100%; height: 100%; }
+
 code { color: green; white-space: pre !important;}
 .ace_doc-tooltip {
   white-space: normal !important; box-shadow: none !important;
@@ -69,7 +71,7 @@ input.form-control { box-shadow: none !important; }
 #file-textarea { font-family: Consolas, Menlo, Monaco, monospace; }
 .upcontrol { position: absolute; top: 40px; bottom: 0; overflow-y: auto; width: 100%; left: 0; right: 0;}
 .logs { height: 100%; font-size: 95%; overflow-y: auto; line-height: 1.2em; background: #fff; width: 100%; top: 0px !important;}
-#editor { height: 100%; background: #fff; border-radius: 0.3em; }
+.editor { height: 100%; background: #fff; border-radius: 0.3em; }
 .file .file-size { color: silver; }
 .file.is_js { color: #ffa500; }
 .file.is_json { color: #3cb371; }

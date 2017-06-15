@@ -87,19 +87,33 @@ var connected = false;
 var deferredLoadPage = undefined;
 
 var loadPage = function(page) {
-  var doit = function(html) {
-    $('#app_view').html(html);
-    $('#breadcrumb').html($('[data-title]').attr('data-title'));
+  var doit = function() {
+    $('#app_view .page').hide();
+    var p = $('#app_view .page.page_' + page).show(); //fadeIn(300);
+    // $('#app_view').html(html);
+    $('#breadcrumb').html(p.find('[data-title]').attr('data-title'));
     location.hash = page;
   };
-  if (ui.pageCache[page]) {
-    doit(ui.pageCache[page]);
-  } else {
+
+  if ($('#app_view .page.page_' + page).length == 0) {
     $.get('page_' + page + '.html').done(function(html) {
-      ui.pageCache[page] = html;
-      doit(html);
+      $('<div class="page page_' + page + '"/>').html(html).hide().appendTo('#app_view');
+      doit();
+      // ui.pageCache[page] = html;
+      // doit(html);
     });
+  } else {
+    doit();
   }
+
+  // if (ui.pageCache[page]) {
+  //   doit(ui.pageCache[page]);
+  // } else {
+  //   $.get('page_' + page + '.html').done(function(html) {
+  //     ui.pageCache[page] = html;
+  //     doit(html);
+  //   });
+  // }
 };
 
 $(document).on('click', 'a[tab]', function() {
@@ -335,6 +349,7 @@ $(document).on('click', '.connect-button', function() {
 $(document).on('click', '#flash-button', function() {
   var btn = $(this);
   var arch = btn.closest('.block_content').find('[name="options"]:checked').val();
+  console.log(arch, btn.closest('.block_content'));
   spin(btn);
   $.ajax({url: '/flash', global: false, data: {firmware: arch}}).always(function() {
     setTimeout(function() {
@@ -361,6 +376,7 @@ $(document).on('click', '#prototype-button', function() {
   $('#splash').modal('toggle');
   var currentTab = $('.side-menu li.active a').attr('tab');
   loadPage(currentTab);
+  $('#file-refresh-button').click();
 });
 
 var addLog = function(msg, type) {

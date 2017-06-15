@@ -193,19 +193,18 @@
 
       </div>
 
-      <div id="editor" class="hidden"></div>
+      <div id="config_editor" class="editor hidden"></div>
     </div>
   </div>
 </div>
 
 <script>
-  // console.log(1,2,3, editor, guesslang);
-  var editor = mkeditor();
+  var config_editor = mkeditor('config_editor');
   var loadConfig = function() {
     return $.ajax({url: '/call', data: {method: 'Config.Get'}}).then(function(json) {
       var text = JSON.stringify(json.result, null, '  ');
-      editor.setValue(text || '', -1);
-      editor.session.setMode('ace/mode/json');
+      config_editor.setValue(text || '', -1);
+      config_editor.session.setMode('ace/mode/json');
       addLog('Configuration loaded\n');
 
       var c = json.result;
@@ -290,7 +289,7 @@
       config.debug.level = + $('#debug\\.level').val();
       config.debug.mg_mgr_hexdump_file = $('#debug\\.hexdump').is(':checked') ? '-' : '';
     } else {
-      var text = editor.getValue();
+      var text = config_editor.getValue();
       try {
         config = JSON.parse(text);
       } catch (e) {
@@ -343,7 +342,7 @@
   $(document).off('change', '#view1, #view2');
   $(document).on('change', '#view1, #view2', function() {
     var v1 = $('#view1').is(':checked');
-    $('#editor').toggleClass('hidden', v1);
+    $('#config_editor').toggleClass('hidden', v1);
     $('#simple').toggleClass('hidden', !v1);
   });
 </script>

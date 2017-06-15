@@ -4,8 +4,9 @@
     </div>
     <div class="col-xs-9 main-right-column">
       <div class="editor-navbar">
-        <button class="btn btn-sm btn-success disabled file-control" id="file-save-button"><i class="fa fa-save"></i> Save File</button>
-        <button class="btn btn-sm btn-success disabled file-control" id="file-savereboot-button"><i class="fa fa-retweet"></i> Save + Reboot</button>
+        <button class="btn btn-sm btn-success file-control" id="file-refresh-button"><i class="fa fa-refresh"></i> Refresh File List</button>
+        <button class="btn btn-sm btn-success file-control" id="file-save-button"><i class="fa fa-save"></i> Save File</button>
+        <button class="btn btn-sm btn-success file-control" id="file-savereboot-button"><i class="fa fa-retweet"></i> Save + Reboot</button>
 <!-- 
         &nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;
         <div style="position: relative; display: inline-block;">
@@ -48,13 +49,13 @@
  -->
       </div>
       <div class="form-group upcontrol">
-        <div id="editor"></div>
+        <div id="device_file_editor" class="editor"></div>
       </div>
     </div>
 </div>
 
 <script>
-  var editor = mkeditor();
+  var file_editor = mkeditor('device_file_editor');
   $(document).off('click', '.file');
   $(document).on('click', '.file', function(ev) {
     var $t = $(ev.target).closest('.file');
@@ -62,12 +63,11 @@
     $.ajax({url: '/get', data: {name: name}}).done(function(json) {
       $('.file').removeClass('selected');
       $t.addClass('selected');
-      editor.lang = guesslang(name);
-      editor.setValue(json.result || '', -1);
-      editor.session.setMode('ace/mode/' + editor.lang);
-      editor.loadSnippets();
+      file_editor.lang = guesslang(name);
+      file_editor.setValue(json.result || '', -1);
+      file_editor.session.setMode('ace/mode/' + file_editor.lang);
+      file_editor.loadSnippets();
 
-      $('.file-control').toggleClass('disabled', false);
       addLog('Loaded ' + name + '\n');
     });
     return false;
@@ -75,7 +75,7 @@
 
   var onSave = function() {
     var fileName = $('.file.selected').attr('rel');
-    var text = editor.getValue();
+    var text = file_editor.getValue();
     return $.ajax({url: '/put', data: {data: text, path: fileName}}).then(function() {
       addLog('Saved ' + fileName + '\n');
     });
@@ -113,7 +113,7 @@
     };
     var data = {
       file_name: $('.file.selected').attr('rel'),
-      snippet_text: editor.getValue(),
+      snippet_text: file_editor.getValue(),
       title: $('#share-title-input').val(),
       author: $('#share-author-input').val(),
     };
@@ -154,33 +154,41 @@
     return false;
   });
 
-  $.ajax({url: '/call', data: {method: 'FS.ListExt', timeout: 2}}).done(function(json) {
-    var $tbody = $('#file-list').empty();
-    json.result.sort(function(a, b) {
-      if (a.name.match(/jsc$/) && b.name.match(/jsc$/)) return a.name > b.name ? 1 : -1;
-      if (a.name.match(/jsc$/)) return 1;
-      if (b.name.match(/jsc$/)) return -1;
-      if (a.name.match(/^api_/) && b.name.match(/^api_/)) return a.name > b.name ? 1 : -1;
-      if (a.name.match(/^api_/)) return 1;
-      if (b.name.match(/^api_/)) return -1;
-      return a.name > b.name ? 1 : -1;
+  var refreshFileList = function() {
+    return $.ajax({url: '/call', data: {method: 'FS.ListExt', timeout: 2}}).done(function(json) {
+      var $tbody = $('#file-list').empty();
+      json.result.sort(function(a, b) {
+        if (a.name.match(/jsc$/) && b.name.match(/jsc$/)) return a.name > b.name ? 1 : -1;
+        if (a.name.match(/jsc$/)) return 1;
+        if (b.name.match(/jsc$/)) return -1;
+        if (a.name.match(/^api_/) && b.name.match(/^api_/)) return a.name > b.name ? 1 : -1;
+        if (a.name.match(/^api_/)) return 1;
+        if (b.name.match(/^api_/)) return -1;
+        return a.name > b.name ? 1 : -1;
+      });
+      $.each(json.result, function(i, v) {
+        var sizeSpan = $('<span class="pull-right file-size"/>').text(v.size);
+        var nameSpan = $('<span class="file-name"/>').text(v.name);
+        var link = $('<a href="#" class="list-group-item file"/>')
+            .attr({rel: v.name})
+            .append(sizeSpan)
+            .append(nameSpan)
+            .addClass(v.name === 'init.js' ? 'is_init' : '')
+            .addClass(v.name.match(/\.js$/) ? 'is_js' : '')
+            .addClass(v.name.match(/\.jsc$/) ? 'is_jsc' : '')
+            .addClass(v.name.match(/\.json$/) ? 'is_json' : '')
+            .addClass(v.name.match(/^api_/) ? 'is_api' : '')
+            .appendTo($tbody);
+      });
+      file_editor.setValue('', -1);
     });
-    $.each(json.result, function(i, v) {
-      var sizeSpan = $('<span class="pull-right file-size"/>').text(v.size);
-      var nameSpan = $('<span class="file-name"/>').text(v.name);
-      var link = $('<a href="#" class="list-group-item file"/>')
-          .attr({rel: v.name})
-          .append(sizeSpan)
-          .append(nameSpan)
-          .addClass(v.name === 'init.js' ? 'is_init' : '')
-          .addClass(v.name.match(/\.js$/) ? 'is_js' : '')
-          .addClass(v.name.match(/\.jsc$/) ? 'is_jsc' : '')
-          .addClass(v.name.match(/\.json$/) ? 'is_json' : '')
-          .addClass(v.name.match(/^api_/) ? 'is_api' : '')
-          .appendTo($tbody);
-    });
+  };
 
-    // Open init.js automatically
+  $(document).off('click', '#file-refresh-button');
+  $(document).on('click', '#file-refresh-button', refreshFileList);
+
+  // Open init.js automatically
+  refreshFileList().done(function() {
     $('.file.is_init').click();
   });
 

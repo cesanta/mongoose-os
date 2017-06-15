@@ -44,10 +44,10 @@
       <button class="btn btn-sm btn-success" id="toolbar-build-button" data-toggle="tooltip" data-placement="top" title="Rebuild&nbsp;app&nbsp;firmware&nbsp;(slow)"><i class="fa fa-wrench"></i> </button>
       <button class="btn btn-sm btn-success" id="toolbar-flash-button" data-toggle="tooltip" data-placement="top" title="Flash&nbsp;app&nbsp;firmware&nbsp;to&nbsp;device&nbsp;(slow)"><i class="fa fa-flash"></i> </button>
 
-      <button class="btn btn-sm btn-info pull-right" id="toolbar-share-button" disabled style="margin-right: 0;"><i class="fa fa-share-square-o"></i> Share this project</button>
+      <!-- <button class="btn btn-sm btn-info pull-right" id="toolbar-share-button" disabled style="margin-right: 0;"><i class="fa fa-share-square-o"></i> Share this project</button> -->
     </div>
     <div class="form-group upcontrol">
-      <div id="editor"></div>
+      <div id="code_editor" class="editor"></div>
     </div>
   </div>
 </div>
@@ -144,7 +144,7 @@
 
 
 <script>
-  var editor = mkeditor();
+  var code_editor = mkeditor('code_editor');
 
   var clone = function(sel) {
     return $(sel).clone().removeClass('hidden').removeAttr('id');
@@ -157,10 +157,10 @@
     var filename = $(this).val();
     var data = { type: el.attr('mos-type'), project: el.attr('mos-name'), filename: filename };
     $.ajax({url: '/p/get', global: true, data: data}).done(function(data){
-      editor.lang = guesslang(filename);
-      editor.setValue(atob(data.result || ''), -1);
-      editor.session.setMode('ace/mode/' + editor.lang);
-      editor.loadSnippets();
+      code_editor.lang = guesslang(filename);
+      code_editor.setValue(atob(data.result || ''), -1);
+      code_editor.session.setMode('ace/mode/' + code_editor.lang);
+      code_editor.loadSnippets();
     }).always(function() {
     });
   });
@@ -171,7 +171,7 @@
     var el = $(this);
     var d = { type: el.attr('mos-type'), project: el.attr('mos-name') };
     $.ajax({url: '/p/ls', global: true, data: d}).then(function(data) {
-      $('.list-group-item').removeClass('selected');
+      $('.local-project').removeClass('selected');
       el.addClass('selected');  // Select project, to make file download work correctly
       $('#file-dropdown').empty();
       document.cookie = 'mos-type=' + d.type;
@@ -187,7 +187,7 @@
       $('#file-dropdown').val(s).change();
       $('#toolbar-build-button').prop('disabled', d.type == 'lib');
     }).always(function() {
-      $('.list-group-item').removeClass('selected');
+      $('.local-project').removeClass('selected');
       el.addClass('selected');
     });
   });
@@ -288,7 +288,7 @@
       type: el.attr('mos-type'),
       project: el.attr('mos-name'),
       filename: $('#file-dropdown').val(),
-      data: b64enc(editor.getValue()),
+      data: b64enc(code_editor.getValue()),
     };
     return $.ajax({global:true, url: '/p/set', data: data}).always(function() {
       $('#file-dropdown').change();
@@ -330,7 +330,7 @@
   $(document).on('click', '#toolbar-copy-button', function() {
     var btn = $(this);
     var fileName = $('#file-dropdown').val().replace(/^.*\//, '');
-    var text = editor.getValue();
+    var text = code_editor.getValue();
     if (!fileName) return;
     spin(btn);
     saveFile().then(function() {
