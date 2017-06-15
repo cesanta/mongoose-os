@@ -45,16 +45,15 @@ struct mgos_vfs_dev *mgos_vfs_dev_init(const char *type, const char *opts) {
       LOG(LL_INFO, ("%s (%s) -> %p", type, opts, dev));
       dev->ops = de->ops;
       if (!de->ops->init(dev, opts)) {
+        LOG(LL_ERROR, ("Dev %s %s init failed", type, opts));
         free(dev);
         dev = NULL;
       }
-      break;
+      return dev;
     }
   };
-  if (dev == NULL) {
-    LOG(LL_ERROR, ("Dev %s init failed", type));
-  }
-  return dev;
+  LOG(LL_ERROR, ("Unknown device type %s", type));
+  return NULL;
 }
 
 bool mgos_vfs_dev_close(struct mgos_vfs_dev *dev) {
