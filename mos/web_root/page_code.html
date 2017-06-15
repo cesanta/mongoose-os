@@ -203,7 +203,10 @@
       $(dialogSelector + ' .imported').addClass('hidden');
       $('#ctl').addClass('hidden').appendTo('body');  // Save project toolbar before items removal
       $('.' + itemClass).remove();
-      $.each(data.result || {}, function(k, v) {
+      var keys = $.map(data.result || {}, function(v, k) { return k; });
+      keys.sort(function (a, b) { return a < b ? 1 : -1; });
+      $.each(keys, function(i, k) {
+        var v = data.result[k];
         $(dialogSelector + ' [mos-name="' + k + '"] .btn').addClass('hidden');
         $(dialogSelector + ' [mos-name="' + k + '"] .imported').removeClass('hidden');
         var e = clone('#local-entry-template').addClass(itemClass);
