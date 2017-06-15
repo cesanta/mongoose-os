@@ -3,6 +3,7 @@ package codec
 import (
 	"context"
 	"io"
+	"runtime"
 	"sync"
 	"time"
 
@@ -60,10 +61,13 @@ func Serial(ctx context.Context, portName string, opts *SerialCodecOptions) (Cod
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
-	// Explicitly deactivate DTR and RTS.
-	// Some converters/drivers activate them which, in case of ESP, may put device in reset mode.
-	s.SetDTR(false)
-	s.SetRTS(false)
+
+	// On Linux all the serial drivers are known to behave sensibly.
+	// On other systems, some converters/drivers activate them which,
+	// in case of ESP, may put device in reset mode.
+	if runtime.GOOS != "linux" {
+		s.SetRTSDTR(false, false)
+	}
 
 	// Flush any data that might be not yet read
 	s.Flush()

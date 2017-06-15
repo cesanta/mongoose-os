@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"runtime"
 	"time"
 
 	"cesanta.com/mos/dev"
@@ -71,10 +72,14 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 	if err != nil {
 		return errors.Annotatef(err, "failed to open %s", port)
 	}
-	// Explicitly deactivate DTR and RTS.
-	// Some converters/drivers activate them which, in case of ESP, may put device in reset mode.
-	s.SetDTR(false)
-	s.SetRTS(false)
+
+	// On Linux all the serial drivers are known to behave sensibly.
+	// On other systems, some converters/drivers activate them which,
+	// in case of ESP, may put device in reset mode.
+	if runtime.GOOS != "linux" {
+		s.SetRTSDTR(false, false)
+	}
+
 	cctx, cancel := context.WithCancel(ctx)
 	go func() { // Serial -> Stdout
 		lineStart := true
