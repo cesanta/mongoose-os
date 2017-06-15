@@ -202,18 +202,13 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		}
 	}()
 
-	// Create temp directory for the current build
-	tmpBuildDir, err := ioutil.TempDir(tmpDir, "local_build_")
+	dockerAppPath := "/app"
+	dockerMgosPath := "/mongoose-os"
+
+	genDir, err := filepath.Abs(path.Join(buildDir, "gen"))
 	if err != nil {
 		return errors.Trace(err)
 	}
-
-	if !*keepTempFiles {
-		defer os.RemoveAll(tmpBuildDir)
-	}
-
-	dockerAppPath := "/app"
-	dockerMgosPath := "/mongoose-os"
 
 	fwDir := filepath.Join(buildDir, "fw")
 	fwDirDocker := path.Join(buildDir, "fw")
@@ -251,6 +246,11 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	}
 	defer logFile.Close()
 	// }}}
+
+	// Prepare gen dir
+	if err := os.MkdirAll(genDir, 0777); err != nil {
+		return errors.Trace(err)
+	}
 
 	// Create map of given module locations, via --module flag(s)
 	customModuleLocations := map[string]string{}
@@ -371,7 +371,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	}
 
 	if len(depsCCode) != 0 {
-		fname := filepath.Join(tmpBuildDir, depsInitCFileName)
+		fname := filepath.Join(genDir, depsInitCFileName)
 
 		if err = ioutil.WriteFile(fname, depsCCode, 0666); err != nil {
 			return errors.Trace(err)
@@ -393,7 +393,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	// for `APP_CONF_SCHEMA`
 	if manifest.ConfigSchema != nil && len(manifest.ConfigSchema) > 0 {
 		var err error
-		curConfSchemaFName = filepath.Join(tmpBuildDir, confSchemaFileName)
+		curConfSchemaFName = filepath.Join(genDir, confSchemaFileName)
 
 		confSchemaData, err := yaml.Marshal(manifest.ConfigSchema)
 		if err != nil {
@@ -438,7 +438,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		"PLATFORM":       manifest.Arch,
 		"BUILD_DIR":      objsDirDocker,
 		"FW_DIR":         fwDirDocker,
-		"GEN_DIR":        path.Join(buildDir, "gen"),
+		"GEN_DIR":        genDir,
 		"FS_STAGING_DIR": path.Join(buildDir, "fs"),
 		"APP":            appName,
 		"APP_VERSION":    manifest.Version,
