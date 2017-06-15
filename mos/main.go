@@ -8,6 +8,7 @@ import (
 	"context"
 	cRand "crypto/rand"
 	"fmt"
+	"log"
 	"math/big"
 	mRand "math/rand"
 	"os"
@@ -170,6 +171,10 @@ func main() {
 	initFlags()
 	flag.Parse()
 	pflagenv.Parse(envPrefix)
+
+	if err := buildInit(); err != nil {
+		log.Fatal(err)
+	}
 
 	if len(flag.Args()) == 0 || flag.Arg(0) == "ui" {
 		isUI = true

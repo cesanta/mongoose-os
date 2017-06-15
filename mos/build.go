@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"mime/multipart"
 	"net/http"
 	"os"
@@ -90,6 +89,10 @@ func init() {
 	flag.StringVar(&appsDir, "apps-dir", "~/.mos/apps", "Directory to store apps into")
 	flag.StringVar(&modulesDir, "modules-dir", "~/.mos/modules", "Directory to store modules into")
 
+}
+
+// buildInit() should be called after all flags are parsed
+func buildInit() error {
 	// Unfortunately user.Current() doesn't play nicely with static build, so
 	// we have to get home directory from the environment
 
@@ -114,8 +117,10 @@ func init() {
 	}
 
 	if err := os.MkdirAll(tmpDir, 0777); err != nil {
-		log.Fatalf("Failed to create temp dir %q\n", tmpDir)
+		return errors.Trace(err)
 	}
+
+	return nil
 }
 
 type buildParams struct {
