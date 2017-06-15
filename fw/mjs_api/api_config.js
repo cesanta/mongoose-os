@@ -26,16 +26,17 @@ let Cfg = {
   // ```
   get: function(path) {
     let entry = this._find(path, this._desc());
+    if (entry === null) return undefined;
     let type = this._type(entry);
-    let val = this._get();
+    let cfg = this._get();
     if (type === this._STR) {
-      return this._str(val, entry);
+      return this._str(cfg, entry);
     } else if (type === this._INT) {
-      return this._int(val, entry);
+      return this._int(cfg, entry);
     } else if (type === this._DBL) {
-      return this._dbl(val, entry);
+      return this._dbl(cfg, entry);
     } else if (type === this._BOOL) {
-      return (this._int(val, entry) !== 0);
+      return (this._int(cfg, entry) !== 0);
     } else if (type === this._OBJ) {
       /* TODO */
       return undefined;
