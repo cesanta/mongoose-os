@@ -51,9 +51,15 @@ type RebootArgs struct {
 	Delay_ms *int64 `json:"delay_ms,omitempty"`
 }
 
+type SetDebugArgs struct {
+	Level        *int64  `json:"level,omitempty"`
+	Udp_log_addr *string `json:"udp_log_addr,omitempty"`
+}
+
 type Service interface {
 	GetInfo(ctx context.Context) (*GetInfoResult, error)
 	Reboot(ctx context.Context, args *RebootArgs) error
+	SetDebug(ctx context.Context, args *SetDebugArgs) error
 }
 
 type Instance interface {
@@ -105,10 +111,27 @@ func (c *_Client) Reboot(ctx context.Context, args *RebootArgs) (err error) {
 	return nil
 }
 
+func (c *_Client) SetDebug(ctx context.Context, args *SetDebugArgs) (err error) {
+	cmd := &frame.Command{
+		Cmd: "Sys.SetDebug",
+	}
+
+	cmd.Args = ourjson.DelayMarshaling(args)
+	resp, err := c.i.Call(ctx, c.addr, cmd)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	if resp.Status != 0 {
+		return errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+	}
+	return nil
+}
+
 //func RegisterService(i *clubby.Instance, impl Service) error {
 //s := &_Server{impl}
 //i.RegisterCommandHandler("Sys.GetInfo", s.GetInfo)
 //i.RegisterCommandHandler("Sys.Reboot", s.Reboot)
+//i.RegisterCommandHandler("Sys.SetDebug", s.SetDebug)
 //i.RegisterService(ServiceID, _ServiceDefinition)
 //return nil
 //}
@@ -129,6 +152,16 @@ func (s *_Server) Reboot(ctx context.Context, src string, cmd *frame.Command) (i
 		}
 	}
 	return nil, s.impl.Reboot(ctx, &args)
+}
+
+func (s *_Server) SetDebug(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
+	var args SetDebugArgs
+	if len(cmd.Args) > 0 {
+		if err := cmd.Args.UnmarshalInto(&args); err != nil {
+			return nil, errors.Annotatef(err, "unmarshaling args")
+		}
+	}
+	return nil, s.impl.SetDebug(ctx, &args)
 }
 
 var _ServiceDefinition = json.RawMessage([]byte(`{
@@ -211,6 +244,19 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
         }
       },
       "doc": "Reboot the device"
+    },
+    "SetDebug": {
+      "args": {
+        "level": {
+          "doc": "Log level",
+          "type": "integer"
+        },
+        "udp_log_addr": {
+          "doc": "IP_ADDRESS:PORT string to send UDP logs to",
+          "type": "string"
+        }
+      },
+      "doc": "Set debug log parameters"
     }
   },
   "name": "Sys",

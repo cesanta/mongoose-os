@@ -56,9 +56,15 @@ type RebootArgs struct {
 	Delay_ms *int64 `json:"delay_ms,omitempty"`
 }
 
+type SetDebugArgs struct {
+	Level        *int64  `json:"level,omitempty"`
+	Udp_log_addr *string `json:"udp_log_addr,omitempty"`
+}
+
 type Service interface {
 	GetInfo(ctx context.Context) (*GetInfoResult, error)
 	Reboot(ctx context.Context, args *RebootArgs) error
+	SetDebug(ctx context.Context, args *SetDebugArgs) error
 }
 
 type Instance interface {
@@ -70,6 +76,8 @@ type _validators struct {
 	GetInfoResult *schema.Validator
 	// This comment prevents gofmt from aligning types in the struct.
 	RebootArgs *schema.Validator
+	// This comment prevents gofmt from aligning types in the struct.
+	SetDebugArgs *schema.Validator
 }
 
 var (
@@ -129,6 +137,19 @@ func initValidators() {
 		s.Value[ucl.Key{Value: "required"}] = req
 	}
 	validators.RebootArgs, err = schema.NewValidator(s, loader)
+	if err != nil {
+		panic(err)
+	}
+	s = &ucl.Object{
+		Value: map[ucl.Key]ucl.Value{
+			ucl.Key{Value: "properties"}: service.(*ucl.Object).Find("methods").(*ucl.Object).Find("SetDebug").(*ucl.Object).Find("args"),
+			ucl.Key{Value: "type"}:       &ucl.String{Value: "object"},
+		},
+	}
+	if req, found := service.(*ucl.Object).Find("methods").(*ucl.Object).Find("SetDebug").(*ucl.Object).Lookup("required_args"); found {
+		s.Value[ucl.Key{Value: "required"}] = req
+	}
+	validators.SetDebugArgs, err = schema.NewValidator(s, loader)
 	if err != nil {
 		panic(err)
 	}
@@ -206,11 +227,42 @@ func (c *_Client) Reboot(ctx context.Context, args *RebootArgs) (err error) {
 	return nil
 }
 
+func (c *_Client) SetDebug(ctx context.Context, args *SetDebugArgs) (err error) {
+	cmd := &frame.Command{
+		Cmd: "Sys.SetDebug",
+	}
+
+	cmd.Args = ourjson.DelayMarshaling(args)
+	b, err := cmd.Args.MarshalJSON()
+	if err != nil {
+		glog.Errorf("Failed to marshal args as JSON: %+v", err)
+	} else {
+		v, err := ucl.Parse(bytes.NewReader(b))
+		if err != nil {
+			glog.Errorf("Failed to parse just serialized JSON value %q: %+v", string(b), err)
+		} else {
+			if err := validators.SetDebugArgs.Validate(v); err != nil {
+				glog.Warningf("Sending invalid args for SetDebug: %+v", err)
+				return errors.Annotatef(err, "invalid args for SetDebug")
+			}
+		}
+	}
+	resp, err := c.i.Call(ctx, c.addr, cmd)
+	if err != nil {
+		return errors.Trace(err)
+	}
+	if resp.Status != 0 {
+		return errors.Trace(&mgrpc.ErrorResponse{Status: resp.Status, Msg: resp.StatusMsg})
+	}
+	return nil
+}
+
 //func RegisterService(i *clubby.Instance, impl Service) error {
 //validatorsOnce.Do(initValidators)
 //s := &_Server{impl}
 //i.RegisterCommandHandler("Sys.GetInfo", s.GetInfo)
 //i.RegisterCommandHandler("Sys.Reboot", s.Reboot)
+//i.RegisterCommandHandler("Sys.SetDebug", s.SetDebug)
 //i.RegisterService(ServiceID, _ServiceDefinition)
 //return nil
 //}
@@ -260,6 +312,29 @@ func (s *_Server) Reboot(ctx context.Context, src string, cmd *frame.Command) (i
 		}
 	}
 	return nil, s.impl.Reboot(ctx, &args)
+}
+
+func (s *_Server) SetDebug(ctx context.Context, src string, cmd *frame.Command) (interface{}, error) {
+	b, err := cmd.Args.MarshalJSON()
+	if err != nil {
+		glog.Errorf("Failed to marshal args as JSON: %+v", err)
+	} else {
+		if v, err := ucl.Parse(bytes.NewReader(b)); err != nil {
+			glog.Errorf("Failed to parse valid JSON value %q: %+v", string(b), err)
+		} else {
+			if err := validators.SetDebugArgs.Validate(v); err != nil {
+				glog.Warningf("Got invalid args for SetDebug: %+v", err)
+				return nil, errors.Annotatef(err, "invalid args for SetDebug")
+			}
+		}
+	}
+	var args SetDebugArgs
+	if len(cmd.Args) > 0 {
+		if err := cmd.Args.UnmarshalInto(&args); err != nil {
+			return nil, errors.Annotatef(err, "unmarshaling args")
+		}
+	}
+	return nil, s.impl.SetDebug(ctx, &args)
 }
 
 var _ServiceDefinition = json.RawMessage([]byte(`{
@@ -342,6 +417,19 @@ var _ServiceDefinition = json.RawMessage([]byte(`{
         }
       },
       "doc": "Reboot the device"
+    },
+    "SetDebug": {
+      "args": {
+        "level": {
+          "doc": "Log level",
+          "type": "integer"
+        },
+        "udp_log_addr": {
+          "doc": "IP_ADDRESS:PORT string to send UDP logs to",
+          "type": "string"
+        }
+      },
+      "doc": "Set debug log parameters"
     }
   },
   "name": "Sys",

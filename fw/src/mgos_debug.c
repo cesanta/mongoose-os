@@ -60,7 +60,7 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
   }
 #if MGOS_ENABLE_DEBUG_UDP
   /* Only send STDERR to UDP. */
-  if (fd == 2 && cfg->debug.udp_log_addr != NULL) {
+  if (fd == 2) {
     static uint32_t s_seq = 0;
     int n =
         snprintf(buf, sizeof(buf), "%s %u %.3lf %d|",

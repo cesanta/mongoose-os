@@ -1,6 +1,15 @@
 namespace: http://mongoose-iot.com/fw
 name: Sys
 methods:
+  SetDebug:
+    doc: Set debug log parameters
+    args:
+      udp_log_addr:
+        type: string
+        doc: IP_ADDRESS:PORT string to send UDP logs to
+      level:
+        type: integer
+        doc: Log level
   Reboot:
     doc: Reboot the device
     args:

@@ -39,7 +39,9 @@ enum mgos_init_result mgos_debug_udp_init(const char *dst) {
   if (upcb == NULL || udp_bind(upcb, IP_ADDR_ANY, 0 /* any port */) != ERR_OK) {
     return MGOS_INIT_DEBUG_INIT_FAILED;
   }
+  if (s_upcb != NULL) udp_remove(s_upcb);
   s_upcb = upcb;
+  LOG(LL_INFO, ("UDP log set up to %s", dst));
   return MGOS_INIT_OK;
 }
 

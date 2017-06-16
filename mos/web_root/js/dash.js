@@ -284,6 +284,15 @@ var addToRecentlyUsedList = function(str) {
   document.cookie = ui.recentDevicesCookieName + '=' + unique.join(',');
 };
 
+// Setup UDP logging for Websocket-connected devices
+var setUDPLog = function() {
+  return $.ajax({url: '/call', global: false, data: {method: 'RPC.Ping', timeout: 5}}).then(function(data) {
+    if (data && data.result && data.result.channel_info)
+      var d = {method: 'Sys.SetDebug', timeout: 5, args: JSON.stringify({udp_log_addr: data.result.channel_info + ':1993'})};
+      return $.ajax({url: '/call', global: false, data: d});
+  });
+};
+
 var probeDevice = function() {
   return $.ajax({url: '/call', global: false, data: {method: 'Sys.GetInfo', timeout: 5}}).then(function(data) {
     ui.info = data.result;
@@ -293,6 +302,7 @@ var probeDevice = function() {
       ui.infostr = infostr;
       addToRecentlyUsedList($('.connect-input').val());
       $(document).trigger('mos-devinfo');
+      if (ui.connected && ui.address && ui.address.match(/^ws/)) setUDPLog();
     }
   }).fail(function() {
     ui.info = null;
