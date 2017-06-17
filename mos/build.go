@@ -1197,10 +1197,10 @@ func (mv *manifestVars) ExpandVars(s string) (string, error) {
 }
 
 func setModuleVars(mVars *manifestVars, moduleName, path string) {
-	mVars.SetVar(fmt.Sprintf("%s_path", cleanupModuleName(moduleName)), path)
+	mVars.SetVar(fmt.Sprintf("%s_path", identifierFromString(moduleName)), path)
 }
 
-func cleanupModuleName(name string) string {
+func identifierFromString(name string) string {
 	ret := ""
 	for _, c := range name {
 		if !(unicode.IsLetter(c) || unicode.IsDigit(c)) {
@@ -1368,6 +1368,13 @@ libs:
 			return nil, time.Time{}, errors.Trace(err)
 		}
 
+		// Add a build var and C macro MGOS_HAVE_<lib_name>
+		haveName := fmt.Sprintf(
+			"MGOS_HAVE_%s", strings.ToUpper(identifierFromString(name)),
+		)
+		manifest.BuildVars[haveName] = "1"
+		manifest.CDefs[haveName] = "1"
+
 		newDeps = append(newDeps, libManifest.LibsHandled...)
 		newDeps = append(newDeps, build.FWAppManifestLibHandled{
 			Name: name,
@@ -1414,7 +1421,7 @@ func getDepsInitCCode(manifest *build.FWAppManifest) ([]byte, error) {
 
 	tplData := depsInitData{}
 	for _, v := range manifest.LibsHandled {
-		tplData.Deps = append(tplData.Deps, strings.Replace(v.Name, "-", "_", -1))
+		tplData.Deps = append(tplData.Deps, identifierFromString(v.Name))
 	}
 
 	tpl := template.Must(template.New("depsInit").Parse(
