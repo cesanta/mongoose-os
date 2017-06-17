@@ -507,29 +507,37 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 			appSubdir = appPath[len(gitToplevelDir):]
 		}
 
+		// Generate mountpoint args {{{
+		mp := mountPoints{}
+
 		// Note about mounts: we mount repo to a stable path (/app) as well as the
 		// original path outside the container, whatever it may be, so that absolute
 		// path references continue to work (e.g. Git submodules are known to use
 		// abs. paths).
-		dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", appMountPath, dockerAppPath))
-		dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", mosDirEffectiveAbs, dockerMgosPath))
-		dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", mosDirEffectiveAbs, mosDirEffectiveAbs))
+		mp.addMountPoint(appMountPath, dockerAppPath)
+		mp.addMountPoint(mosDirEffectiveAbs, dockerMgosPath)
+		mp.addMountPoint(mosDirEffectiveAbs, mosDirEffectiveAbs)
 
 		// Mount all dirs with source files
 		for _, d := range appSourceDirs {
-			dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", d, d))
+			mp.addMountPoint(d, d)
 		}
 
 		// Mount all dirs with filesystem files
 		for _, d := range appFSDirs {
-			dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", d, d))
+			mp.addMountPoint(d, d)
 		}
 
 		// If generated config schema file is present, mount its dir as well
 		if curConfSchemaFName != "" {
 			d := filepath.Dir(curConfSchemaFName)
-			dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", d, d))
+			mp.addMountPoint(d, d)
 		}
+
+		for containerPath, hostPath := range mp {
+			dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", hostPath, containerPath))
+		}
+		// }}}
 
 		// On Windows and Mac, run container as root since volume sharing on those
 		// OSes doesn't play nice with unprivileged user.
@@ -1616,4 +1624,22 @@ func expandAllLibsPaths(
 	}
 
 	return ret, nil
+}
+
+type mountPoints map[string]string
+
+// addMountPoint adds a mount point from given hostPath to containerPath. If
+// something is already mounted to the given containerPath, then it's compared
+// to the new hostPath value; if they are not equal, an error is returned.
+func (mp mountPoints) addMountPoint(hostPath, containerPath string) error {
+	if v, ok := mp[containerPath]; ok {
+		if hostPath != v {
+			return errors.Errorf("adding mount point from %q to %q, but it already mounted from %q", hostPath, containerPath, v)
+		}
+		// Mount point already exists and is right
+		return nil
+	}
+	mp[containerPath] = hostPath
+
+	return nil
 }
