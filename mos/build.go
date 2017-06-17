@@ -71,8 +71,10 @@ const (
 	// Manifest version changes:
 	//
 	// - 2017-06-03: added support for @all_libs in filesystem and sources
+	// - 2017-06-16: added support for conds with very basic expressions
+	//               (only build_vars)
 	minManifestVersion = "2017-03-17"
-	maxManifestVersion = "2017-06-03"
+	maxManifestVersion = "2017-06-16"
 
 	localLibsDir = "local_libs"
 
@@ -270,6 +272,10 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		appDir, bParams, nil, nil, logFile, libsDir, false, /* skip clean */
 	)
 	if err != nil {
+		return errors.Trace(err)
+	}
+
+	if err := expandManifestConds(manifest); err != nil {
 		return errors.Trace(err)
 	}
 
@@ -801,7 +807,9 @@ func readManifest(appDir string, bParams *buildParams) (*build.FWAppManifest, ti
 			}
 
 			// Extend common app manifest with arch-specific things.
-			extendManifest(manifest, manifest, archManifest, "", "")
+			if err := extendManifest(manifest, manifest, archManifest, "", ""); err != nil {
+				return nil, time.Time{}, errors.Trace(err)
+			}
 		} else if !os.IsNotExist(err) {
 			// Some error other than non-existing mos_<arch>.yml; complain.
 			return nil, time.Time{}, errors.Trace(err)
@@ -1348,7 +1356,9 @@ libs:
 
 		// Extend app's manifest with that of a lib, and lib's one should go
 		// first
-		extendManifest(manifest, libManifest, manifest, libDirForManifest, "")
+		if err := extendManifest(manifest, libManifest, manifest, libDirForManifest, ""); err != nil {
+			return nil, time.Time{}, errors.Trace(err)
+		}
 
 		newDeps = append(newDeps, libManifest.LibsHandled...)
 		newDeps = append(newDeps, build.FWAppManifestLibHandled{
@@ -1462,6 +1472,12 @@ func extendManifest(mMain, m1, m2 *build.FWAppManifest, m1Dir, m2Dir string) err
 	mMain.BuildVars = mergeMapsString(m1.BuildVars, m2.BuildVars)
 	mMain.CDefs = mergeMapsString(m1.CDefs, m2.CDefs)
 
+	// Extend conds
+	mMain.Conds = append(
+		prependCondPaths(m1.Conds, m1Dir),
+		prependCondPaths(m2.Conds, m2Dir)...,
+	)
+
 	return nil
 }
 
@@ -1474,6 +1490,23 @@ func prependPaths(items []string, dir string) []string {
 			s = filepath.Join(dir, s)
 		}
 		ret = append(ret, s)
+	}
+	return ret
+}
+
+// prependCondPaths takes a slice of "conds", and for each of them which
+// contains an "apply" clause (effectively, a submanifest), prepends paths of
+// sources and filesystem with the given dir.
+func prependCondPaths(conds []build.ManifestCond, dir string) []build.ManifestCond {
+	ret := []build.ManifestCond{}
+	for _, c := range conds {
+		if c.Apply != nil {
+			subManifest := *c.Apply
+			subManifest.Sources = prependPaths(subManifest.Sources, dir)
+			subManifest.Filesystem = prependPaths(subManifest.Filesystem, dir)
+			c.Apply = &subManifest
+		}
+		ret = append(ret, c)
 	}
 	return ret
 }
@@ -1499,6 +1532,51 @@ func mergeMapsString(m1, m2 map[string]string) map[string]string {
 	}
 
 	return bv
+}
+
+// expandManifestConds expands all "conds" in the manifest. Nested conds are
+// also expanded.
+func expandManifestConds(manifest *build.FWAppManifest) error {
+	for {
+		if len(manifest.Conds) == 0 {
+			break
+		}
+
+		// As we're expanding conds, we need to remove the conds themselves. But
+		// extending manifest could cause new conds to be added, so we just save
+		// current conds from the manifest in a separate variable, and clean the
+		// manifest's conds. This way, newly added conds (if any) won't mess
+		// with the old ones.
+		conds := manifest.Conds
+		manifest.Conds = nil
+
+		for _, cond := range conds {
+			res, err := manifest.EvaluateExprBool(cond.When)
+			if err != nil {
+				return errors.Trace(err)
+			}
+
+			if !res {
+				// The condition is false, skip handling
+				continue
+			}
+
+			// If error is not an empty string, it means misconfiguration of
+			// the current app, so, return an error
+			if cond.Error != "" {
+				return errors.New(cond.Error)
+			}
+
+			// Apply submanifest if present
+			if cond.Apply != nil {
+				if err := extendManifest(manifest, manifest, cond.Apply, "", ""); err != nil {
+					return errors.Trace(err)
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
 // expandManifestAllLibsPaths expands "@all_libs" for manifest's Sources

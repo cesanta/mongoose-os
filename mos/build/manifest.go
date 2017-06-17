@@ -8,6 +8,19 @@ import (
 	"github.com/cesanta/errors"
 )
 
+// ManifestCond represents a conditional addition to the manifest.
+type ManifestCond struct {
+	// The whole cond structure is considered if only When expression evaluates
+	// to true (see EvaluateExprBool())
+	When string `yaml:"when,omitempty" json:"when,omitempty"`
+
+	// If non-nil, outer manifest gets extended with this one.
+	Apply *FWAppManifest `yaml:"apply,omitempty" json:"apply,omitempty"`
+
+	// If not an empty string, results in an error being returned.
+	Error string `yaml:"error,omitempty" json:"error,omitempty"`
+}
+
 // AppManifest contains the common app manifest fields
 type AppManifest struct {
 	Name    string `yaml:"name,omitempty" json:"name,omitempty"`
@@ -41,6 +54,8 @@ type FWAppManifest struct {
 	CXXFlags          []string           `yaml:"cxxflags" json:"cxxflags,omitempty"`
 	CDefs             map[string]string  `yaml:"cdefs" json:"cdefs,omitempty"`
 	Tags              []string           `yaml:"tags" json:"tags,omitempty"`
+
+	Conds []ManifestCond `yaml:"conds" json:"conds,omitempty"`
 
 	ManifestVersion string `yaml:"manifest_version" json:"manifest_version,omitempty"`
 	// SkeletonVersion is deprecated since 05.06.2017
