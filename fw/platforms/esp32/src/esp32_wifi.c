@@ -13,18 +13,25 @@
 #include "apps/dhcpserver.h"
 #include "lwip/ip_addr.h"
 
+#include "common/queue.h"
+
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_wifi.h"
 
-static void invoke_wifi_on_change_cb(void *arg) {
-  mgos_wifi_on_change_cb((enum mgos_wifi_status)(int) arg);
-}
+struct wifi_scan_cb_info {
+  mgos_wifi_scan_cb_t cb;
+  void *arg;
+  SLIST_ENTRY(wifi_scan_cb_info) next;
+};
 
 SemaphoreHandle_t s_wifi_mux = NULL;
 static const char *s_sta_state = NULL;
 static bool s_sta_should_connect = false;
 static wifi_mode_t s_cur_mode = WIFI_MODE_NULL;
+static bool s_scan_in_progress = false;
+static SLIST_HEAD(s_scan_cbs, wifi_scan_cb_info)
+    s_scan_cbs = SLIST_HEAD_INITIALIZER(s_scan_cbs);
 
 static void esp32_wifi_lock() {
   while (!xSemaphoreTakeRecursive(s_wifi_mux, 10)) {
@@ -36,18 +43,33 @@ static void esp32_wifi_unlock() {
   }
 }
 
+static void invoke_wifi_on_change_cb(void *arg) {
+  mgos_wifi_on_change_cb((enum mgos_wifi_status)(int) arg);
+}
+
+static void invoke_scan_callbacks(struct wifi_scan_cb_info *cbs, int num_aps,
+                                  wifi_ap_record_t *aps);
+
 /* Note: cannot acquire wifi lock in this handler because it gets syncronously
  * invoked from wifi task during mode changes. */
-esp_err_t esp32_wifi_ev(system_event_t *event) {
+esp_err_t esp32_wifi_ev(system_event_t *ev) {
   int mg_ev = -1;
   bool pass_to_system = true;
-  system_event_info_t *info = &event->event_info;
-  switch (event->event_id) {
-    case SYSTEM_EVENT_STA_START:
+  system_event_info_t *info = &ev->event_info;
+  switch (ev->event_id) {
+    case SYSTEM_EVENT_STA_START: {
       /* We only start the station if we are connecting. */
       s_sta_state = "connecting";
+      break;
+    }
     case SYSTEM_EVENT_STA_STOP:
       s_sta_state = NULL;
+      if (s_scan_in_progress) {
+        s_scan_in_progress = false;
+        struct wifi_scan_cb_info *cbi = s_scan_cbs.slh_first;
+        s_scan_cbs.slh_first = NULL;
+        invoke_scan_callbacks(cbi, -1, NULL);
+      }
       break;
     case SYSTEM_EVENT_STA_DISCONNECTED:
       LOG(LL_INFO,
@@ -75,21 +97,41 @@ esp_err_t esp32_wifi_ev(system_event_t *event) {
       pass_to_system = false;
       break;
     case SYSTEM_EVENT_AP_STACONNECTED: {
-      const uint8_t *mac = event->event_info.sta_connected.mac;
+      const uint8_t *mac = ev->event_info.sta_connected.mac;
       LOG(LL_INFO, ("WiFi AP: station %02X%02X%02X%02X%02X%02X (aid %d) %s",
                     mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
                     info->sta_connected.aid, "connected"));
       break;
     }
     case SYSTEM_EVENT_AP_STADISCONNECTED: {
-      const uint8_t *mac = event->event_info.sta_disconnected.mac;
+      const uint8_t *mac = ev->event_info.sta_disconnected.mac;
       LOG(LL_INFO, ("WiFi AP: station %02X%02X%02X%02X%02X%02X (aid %d) %s",
                     mac[0], mac[1], mac[2], mac[3], mac[4], mac[5],
                     info->sta_disconnected.aid, "disconnected"));
       break;
     }
+    case SYSTEM_EVENT_SCAN_DONE: {
+      system_event_sta_scan_done_t *p = &ev->event_info.scan_done;
+      LOG(LL_INFO, ("WiFi scan done: status %u, %d APs", p->status, p->number));
+      esp32_wifi_lock();
+      s_scan_in_progress = false;
+      int num_aps = -1;
+      wifi_ap_record_t *aps = NULL;
+      if (p->status == 0) {
+        uint16_t number = p->number;
+        aps = (wifi_ap_record_t *) calloc(p->number, sizeof(*aps));
+        if (esp_wifi_scan_get_ap_records(&number, aps) == ESP_OK) {
+          num_aps = number;
+        }
+      }
+      struct wifi_scan_cb_info *cbi = s_scan_cbs.slh_first;
+      s_scan_cbs.slh_first = NULL;
+      invoke_scan_callbacks(cbi, num_aps, aps);
+      esp32_wifi_unlock();
+      break;
+    }
     default:
-      LOG(LL_INFO, ("WiFi event: %d", event->event_id));
+      LOG(LL_INFO, ("WiFi event: %d", ev->event_id));
   }
 
   if (mg_ev >= 0) {
@@ -97,7 +139,36 @@ esp_err_t esp32_wifi_ev(system_event_t *event) {
                    false /* from_isr */);
   }
 
-  return (pass_to_system ? esp_event_send(event) : ESP_OK);
+  return (pass_to_system ? esp_event_send(ev) : ESP_OK);
+}
+
+typedef esp_err_t (*wifi_func_t)(void *arg);
+
+static esp_err_t wifi_ensure_init_and_start(wifi_func_t func, void *arg) {
+  esp_err_t r = func(arg);
+  if (r == ESP_OK) goto out;
+  if (r == ESP_ERR_WIFI_NOT_INIT) {
+    wifi_init_config_t icfg = WIFI_INIT_CONFIG_DEFAULT();
+    icfg.event_handler = esp32_wifi_ev;
+    r = esp_wifi_init(&icfg);
+    if (r != ESP_OK) {
+      LOG(LL_ERROR, ("Failed to init WiFi: %d", r));
+      goto out;
+    }
+    esp_wifi_set_storage(WIFI_STORAGE_RAM);
+    r = func(arg);
+    if (r == ESP_OK) goto out;
+  }
+  if (r == ESP_ERR_WIFI_NOT_STARTED) {
+    r = esp_wifi_start();
+    if (r != ESP_OK) {
+      LOG(LL_ERROR, ("Failed to start WiFi: %d", r));
+      goto out;
+    }
+    r = func(arg);
+  }
+out:
+  return r;
 }
 
 static esp_err_t mgos_wifi_set_mode(wifi_mode_t mode) {
@@ -130,19 +201,8 @@ static esp_err_t mgos_wifi_set_mode(wifi_mode_t mode) {
     goto out;
   }
 
-  r = esp_wifi_set_mode(mode);
-  if (r == ESP_ERR_WIFI_NOT_INIT) {
-    wifi_init_config_t icfg = WIFI_INIT_CONFIG_DEFAULT();
-    icfg.event_handler = esp32_wifi_ev;
-    r = esp_wifi_init(&icfg);
-    if (r != ESP_OK) {
-      LOG(LL_ERROR, ("Failed to init WiFi: %d", r));
-      goto out;
-    }
-    esp_wifi_set_storage(WIFI_STORAGE_RAM);
-    r = esp_wifi_set_mode(mode);
-  }
-
+  r = wifi_ensure_init_and_start((wifi_func_t) esp_wifi_set_mode,
+                                 (void *) mode);
   if (r != ESP_OK) {
     LOG(LL_ERROR, ("Failed to set WiFi mode %d: %d", mode, r));
     goto out;
@@ -275,25 +335,7 @@ int mgos_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
     goto out;
   }
 
-  r = esp_wifi_connect();
-  if (r == ESP_ERR_WIFI_NOT_STARTED) {
-    r = esp_wifi_start();
-
-    if (host_r != ESP_OK) {
-      host_r = wifi_sta_set_host_name(cfg);
-      if (host_r != ESP_OK) {
-        LOG(LL_ERROR, ("WiFi STA: Failed to set host name"));
-        goto out;
-      }
-    }
-
-    if (r != ESP_OK) {
-      LOG(LL_ERROR, ("Failed to start WiFi: %d", r));
-      goto out;
-    }
-    r = esp_wifi_connect();
-  }
-
+  r = wifi_ensure_init_and_start((wifi_func_t) esp_wifi_connect, NULL);
   if (r != ESP_OK) {
     LOG(LL_ERROR, ("WiFi STA: Connect failed: %d", r));
     goto out;
@@ -487,4 +529,80 @@ char *mgos_wifi_get_sta_default_dns() {
     return NULL;
   }
   return dns;
+}
+
+struct scan_cb_cb_info {
+  struct wifi_scan_cb_info *cbs;
+  int num_aps;
+  wifi_ap_record_t *aps;
+};
+
+static void scan_cb_cb(void *arg) {
+  struct scan_cb_cb_info *cbcbi = (struct scan_cb_cb_info *) arg;
+  const char **ssids = NULL;
+  int i;
+  if (cbcbi->num_aps >= 0) {
+    ssids = (const char **) calloc(cbcbi->num_aps + 1, sizeof(*ssids));
+    for (i = 0; i < cbcbi->num_aps; i++) {
+      ssids[i] = strdup((const char *) cbcbi->aps[i].ssid);
+    }
+    ssids[i] = NULL;
+  }
+  SLIST_HEAD(cbh, wifi_scan_cb_info) cbh = {.slh_first = cbcbi->cbs};
+  struct wifi_scan_cb_info *cbi, *cbit;
+  SLIST_FOREACH_SAFE(cbi, &cbh, next, cbit) {
+    cbi->cb(ssids, cbi->arg);
+    free(cbi);
+  }
+  for (i = 0; i < cbcbi->num_aps; i++) free((void *) ssids[i]);
+  free(ssids);
+  free(cbcbi->aps);
+  free(cbcbi);
+}
+
+static void invoke_scan_callbacks(struct wifi_scan_cb_info *cbs, int num_aps,
+                                  wifi_ap_record_t *aps) {
+  struct scan_cb_cb_info *cbcbi =
+      (struct scan_cb_cb_info *) calloc(1, sizeof(*cbcbi));
+  cbcbi->cbs = cbs;
+  cbcbi->num_aps = num_aps;
+  cbcbi->aps = aps;
+  mgos_invoke_cb(scan_cb_cb, cbcbi, false /* from_isr */);
+}
+
+void mgos_wifi_scan(mgos_wifi_scan_cb_t cb, void *arg) {
+  struct wifi_scan_cb_info *cbi =
+      (struct wifi_scan_cb_info *) calloc(1, sizeof(*cbi));
+  if (cbi == NULL) return;
+  cbi->cb = cb;
+  cbi->arg = arg;
+  esp32_wifi_lock();
+  if (!s_scan_in_progress) {
+    esp_err_t r = ESP_OK;
+    if (s_cur_mode != WIFI_MODE_STA && s_cur_mode != WIFI_MODE_APSTA) {
+      r = mgos_wifi_add_mode(WIFI_MODE_STA);
+      if (r == ESP_OK) r = esp_wifi_start();
+    }
+    if (r == ESP_OK) {
+      wifi_scan_config_t scan_cfg = {.ssid = NULL,
+                                     .bssid = NULL,
+                                     .channel = 0,
+                                     .show_hidden = false,
+                                     .scan_type = WIFI_SCAN_TYPE_ACTIVE,
+                                     .scan_time = {
+                                         .active = {
+                                             .min = 10, .max = 50,
+                                         }, }};
+      r = esp_wifi_scan_start(&scan_cfg, false /* block */);
+      if (r == ESP_OK) s_scan_in_progress = true;
+    }
+    if (r != ESP_OK) {
+      LOG(LL_ERROR, ("Failed to start WiFi scan: %d", r));
+      invoke_scan_callbacks(cbi, -1, NULL);
+      goto out;
+    }
+  }
+  SLIST_INSERT_HEAD(&s_scan_cbs, cbi, next);
+out:
+  esp32_wifi_unlock();
 }
