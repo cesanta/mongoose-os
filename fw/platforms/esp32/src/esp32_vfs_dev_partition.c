@@ -20,11 +20,16 @@
 #include "fw/src/mgos_vfs.h"
 #include "fw/src/mgos_vfs_dev.h"
 
-static bool esp32_vfs_dev_partition_init(struct mgos_vfs_dev *dev,
+static bool esp32_vfs_dev_partition_open(struct mgos_vfs_dev *dev,
                                          const char *opts) {
   char *label = NULL;
   int subtype = 0xff; /* any subtype */
-  json_scanf(opts, strlen(opts), "{label: %Q, subtype: %d}", &label, &subtype);
+  json_scanf(opts, strlen(opts), "{name: %Q, label: %Q, subtype: %d}", &label,
+             &label, &subtype);
+  if (label == NULL) {
+    LOG(LL_ERROR, ("Must specify partition label"));
+    return false;
+  }
   const esp_partition_t *part =
       esp_partition_find_first(ESP_PARTITION_TYPE_DATA, subtype, label);
   if (part != NULL) {
@@ -89,7 +94,7 @@ static bool esp32_vfs_dev_partition_close(struct mgos_vfs_dev *dev) {
 }
 
 static const struct mgos_vfs_dev_ops esp32_vfs_dev_partition_ops = {
-    .init = esp32_vfs_dev_partition_init,
+    .open = esp32_vfs_dev_partition_open,
     .read = esp32_vfs_dev_partition_read,
     .write = esp32_vfs_dev_partition_write,
     .erase = esp32_vfs_dev_partition_erase,

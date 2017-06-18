@@ -21,7 +21,7 @@ static SLIST_HEAD(s_devs,
 
 bool mgos_vfs_dev_register_type(const char *type,
                                 const struct mgos_vfs_dev_ops *ops) {
-  if (ops->init == NULL || ops->read == NULL || ops->write == NULL ||
+  if (ops->open == NULL || ops->read == NULL || ops->write == NULL ||
       ops->erase == NULL || ops->get_size == NULL || ops->close == NULL) {
     /* All methods must be implemented, even if with dummy functions. */
     LOG(LL_ERROR, ("%s: not all methods are implemented", type));
@@ -36,16 +36,17 @@ bool mgos_vfs_dev_register_type(const char *type,
   return true;
 }
 
-struct mgos_vfs_dev *mgos_vfs_dev_init(const char *type, const char *opts) {
+struct mgos_vfs_dev *mgos_vfs_dev_open(const char *type, const char *opts) {
   struct mgos_vfs_dev *dev = NULL;
   struct mgos_vfs_dev_entry *de;
   SLIST_FOREACH(de, &s_devs, next) {
     if (strcmp(type, de->type) == 0) {
+      if (opts == NULL) opts = "";
       dev = (struct mgos_vfs_dev *) calloc(1, sizeof(*dev));
       LOG(LL_INFO, ("%s (%s) -> %p", type, opts, dev));
       dev->ops = de->ops;
-      if (!de->ops->init(dev, opts)) {
-        LOG(LL_ERROR, ("Dev %s %s init failed", type, opts));
+      if (!de->ops->open(dev, opts)) {
+        LOG(LL_ERROR, ("Dev %s %s open failed", type, opts));
         free(dev);
         dev = NULL;
       }

@@ -18,7 +18,7 @@
 
 #define FLASH_UNIT_SIZE 4
 
-static bool esp_vfs_dev_sysflash_init(struct mgos_vfs_dev *dev,
+static bool esp_vfs_dev_sysflash_open(struct mgos_vfs_dev *dev,
                                       const char *opts) {
   (void) dev;
   (void) opts;
@@ -117,7 +117,7 @@ static bool esp_vfs_dev_sysflash_close(struct mgos_vfs_dev *dev) {
 }
 
 static const struct mgos_vfs_dev_ops esp_vfs_dev_sysflash_ops = {
-    .init = esp_vfs_dev_sysflash_init,
+    .open = esp_vfs_dev_sysflash_open,
     .read = esp_vfs_dev_sysflash_read,
     .write = esp_vfs_dev_sysflash_write,
     .erase = esp_vfs_dev_sysflash_erase,

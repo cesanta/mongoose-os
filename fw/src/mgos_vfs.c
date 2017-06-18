@@ -71,14 +71,13 @@ bool mgos_vfs_mkfs(const char *dev_type, const char *dev_opts,
                    const char *fs_type, const char *fs_opts) {
   struct mgos_vfs_dev *dev = NULL;
   struct mgos_vfs_fs_entry *fe = NULL;
-  if (fs_type == NULL || fs_opts == NULL) {
-    return NULL;
-  }
+  if (fs_type == NULL) return NULL;
   SLIST_FOREACH(fe, &s_fses, next) {
     if (strcmp(fs_type, fe->type) == 0) {
       bool ret = false;
+      if (fs_opts == NULL) fs_opts = "";
       if (dev_type != NULL) {
-        dev = mgos_vfs_dev_init(dev_type, dev_opts);
+        dev = mgos_vfs_dev_open(dev_type, dev_opts);
         if (dev == NULL) return false;
         dev->refs++;
       }
@@ -102,13 +101,14 @@ bool mgos_vfs_mount(const char *path, const char *dev_type,
   struct mgos_vfs_dev *dev = NULL;
   struct mgos_vfs_fs *fs = NULL;
   struct mgos_vfs_fs_entry *fe = NULL;
-  if (path == NULL || path[0] != DIRSEP || fs_type == NULL || fs_opts == NULL) {
+  if (path == NULL || path[0] != DIRSEP || fs_type == NULL) {
     return NULL;
   }
   SLIST_FOREACH(fe, &s_fses, next) {
     if (strcmp(fs_type, fe->type) == 0) {
+      if (fs_opts == NULL) fs_opts = "";
       if (dev_type != NULL) {
-        dev = mgos_vfs_dev_init(dev_type, dev_opts);
+        dev = mgos_vfs_dev_open(dev_type, dev_opts);
         if (dev == NULL) return false;
         dev->refs++;
       }

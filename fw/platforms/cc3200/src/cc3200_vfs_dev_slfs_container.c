@@ -292,7 +292,7 @@ out_close_old:
   return r;
 }
 
-static bool cc3200_vfs_dev_slfs_container_init(struct mgos_vfs_dev *dev,
+static bool cc3200_vfs_dev_slfs_container_open(struct mgos_vfs_dev *dev,
                                                const char *opts) {
   int cidx = -1;
   bool ret = false;
@@ -424,7 +424,7 @@ static bool cc3200_vfs_dev_slfs_container_close(struct mgos_vfs_dev *dev) {
 }
 
 static const struct mgos_vfs_dev_ops cc3200_vfs_dev_slfs_container_ops = {
-    .init = cc3200_vfs_dev_slfs_container_init,
+    .open = cc3200_vfs_dev_slfs_container_open,
     .read = cc3200_vfs_dev_slfs_container_read,
     .write = cc3200_vfs_dev_slfs_container_write,
     .erase = cc3200_vfs_dev_slfs_container_erase,

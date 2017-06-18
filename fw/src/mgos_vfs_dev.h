@@ -21,7 +21,7 @@ struct mgos_vfs_dev {
 };
 
 struct mgos_vfs_dev_ops {
-  bool (*init)(struct mgos_vfs_dev *dev, const char *opts);
+  bool (*open)(struct mgos_vfs_dev *dev, const char *opts);
   bool (*read)(struct mgos_vfs_dev *dev, size_t offset, size_t len, void *dst);
   bool (*write)(struct mgos_vfs_dev *dev, size_t offset, size_t len,
                 const void *src);
@@ -33,7 +33,7 @@ struct mgos_vfs_dev_ops {
 bool mgos_vfs_dev_register_type(const char *name,
                                 const struct mgos_vfs_dev_ops *ops);
 
-struct mgos_vfs_dev *mgos_vfs_dev_init(const char *name, const char *opts);
+struct mgos_vfs_dev *mgos_vfs_dev_open(const char *name, const char *opts);
 
 bool mgos_vfs_dev_close(struct mgos_vfs_dev *dev);
 
