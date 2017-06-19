@@ -5,18 +5,20 @@
 
 #include "fw/src/mgos_app.h"
 
-{{range .Deps}}
-extern bool mgos_{{.}}_init(void);{{end}}
+{{range .Libs}}
+extern bool mgos_{{.Name}}_init(void);{{end}}
 
 static const struct lib_descr {
   const char *title;
   bool (*init)(void);
 } descrs[] = {
-{{range .Deps}}
+{{range .Libs}}
+  // "{{.Name}}". deps: [ {{range .Deps}}"{{.}}" {{end}}]
   {
-    .title = "{{.}}",
-    .init = mgos_{{.}}_init,
-  },{{end}}
+    .title = "{{.Name}}",
+    .init = mgos_{{.Name}}_init,
+  },
+{{end}}
 };
 
 bool mgos_deps_init(void) {

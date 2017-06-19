@@ -79,6 +79,8 @@ const (
 	localLibsDir = "local_libs"
 
 	allLibsKeyword = "@all_libs"
+
+	depsApp = "app"
 )
 
 func init() {
@@ -269,7 +271,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	}
 
 	manifest, mtime, err := readManifestWithLibs(
-		appDir, bParams, nil, nil, logFile, libsDir, false, /* skip clean */
+		appDir, bParams, logFile, libsDir, false, /* skip clean */
 	)
 	if err != nil {
 		return errors.Trace(err)
@@ -923,7 +925,7 @@ func buildRemote(bParams *buildParams) error {
 
 	// Get manifest which includes stuff from all libs
 	manifest, _, err := readManifestWithLibs(
-		tmpCodeDir, bParams, nil, nil, os.Stdout, userLibsDir, true, /* skip clean */
+		tmpCodeDir, bParams, os.Stdout, userLibsDir, true, /* skip clean */
 	)
 	if err != nil {
 		return errors.Trace(err)
@@ -1223,14 +1225,56 @@ func identifierFromString(name string) string {
 // If skipClean is true, then clean or non-existing libs will NOT be expanded,
 // it's useful when crafting a manifest to send to the remote builder.
 func readManifestWithLibs(
-	dir string, bParams *buildParams, visitedDirs []string, parentDeps []build.FWAppManifestLibHandled,
+	dir string, bParams *buildParams,
 	logFile io.Writer, userLibsDir string, skipClean bool,
 ) (*build.FWAppManifest, time.Time, error) {
-	for _, v := range visitedDirs {
-		if dir == v {
-			return nil, time.Time{}, errors.Errorf("cyclic dependency of the lib %q", dir)
-		}
+	libsHandled := map[string]build.FWAppManifestLibHandled{}
+
+	// Create a deps structure and add a root dep: an "app"
+	deps := NewDeps()
+	deps.AddNode(depsApp)
+
+	manifest, mtime, err := readManifestWithLibs2(
+		dir, bParams, logFile, userLibsDir, skipClean, depsApp, deps, libsHandled,
+	)
+	if err != nil {
+		return nil, time.Time{}, errors.Trace(err)
 	}
+
+	// Get all deps in topological order
+	topo, cycle := deps.Topological(true)
+	if cycle != nil {
+		return nil, time.Time{}, errors.Errorf(
+			"dependency cycle: %v", strings.Join(cycle, " -> "),
+		)
+	}
+
+	// Remove the last item from topo, which is depsApp
+	//
+	// TODO(dfrank): it would be nice to handle an app just another dependency
+	// and generate init code for it, but it would be a breaking change, at least
+	// because all libs init functions return bool, but mgos_app_init returns
+	// enum mgos_app_init_result.
+	topo = topo[0 : len(topo)-1]
+
+	// Create a LibsHandled slice in topological order computed above
+	manifest.LibsHandled = make([]build.FWAppManifestLibHandled, len(topo))
+	for i, v := range topo {
+		lh, ok := libsHandled[v]
+		if !ok {
+			return nil, time.Time{}, errors.Errorf("topo contains %q, but libsHandled doesn't. topo: %v, libsHandled: %v", v, topo, libsHandled)
+		}
+		manifest.LibsHandled[i] = lh
+	}
+
+	return manifest, mtime, nil
+}
+
+func readManifestWithLibs2(
+	dir string, bParams *buildParams,
+	logFile io.Writer, userLibsDir string, skipClean bool,
+	nodeName string, deps *Deps, libsHandled map[string]build.FWAppManifestLibHandled,
+) (*build.FWAppManifest, time.Time, error) {
 
 	manifest, mtime, err := readManifest(dir, bParams)
 	if err != nil {
@@ -1249,9 +1293,19 @@ func readManifestWithLibs(
 		})
 	}
 
+	// Take LibsHandled from manifest into account, add each lib to the current
+	// libsHandled map, and to deps.
+	for _, lh := range manifest.LibsHandled {
+		libsHandled[lh.Name] = lh
+
+		deps.AddDep(nodeName, lh.Name)
+		deps.AddNode(lh.Name)
+		for _, dep := range lh.Deps {
+			deps.AddDep(lh.Name, dep)
+		}
+	}
+
 	// Prepare all libs {{{
-	var cleanLibs []build.SWModule
-	var newDeps []build.FWAppManifestLibHandled
 libs:
 	for _, m := range manifest.Libs {
 		name, err := m.GetName()
@@ -1261,17 +1315,11 @@ libs:
 
 		reportf("Handling lib %q...", name)
 
-		// Collect all deps: from parent manifest(s), main manifest, and all libs
-		// encountered so far
-		curDeps := append(parentDeps, append(manifest.LibsHandled, newDeps...)...)
+		deps.AddDep(nodeName, name)
 
-		// Check if this lib is already handled (present in deps)
-		// If yes, skip
-		for _, v := range curDeps {
-			if v.Name == name {
-				reportf("Already handled, skipping")
-				continue libs
-			}
+		if deps.NodeExists(name) {
+			reportf("Already handled, skipping")
+			continue libs
 		}
 
 		libDirAbs, ok := bParams.CustomLibLocations[name]
@@ -1303,7 +1351,6 @@ libs:
 
 					if isClean {
 						reportf("Clean, skipping (will be handled remotely)")
-						cleanLibs = append(cleanLibs, m)
 						continue
 					}
 				}
@@ -1318,6 +1365,9 @@ libs:
 		} else {
 			reportf("Using the location %q as is (given as a --lib flag)", libDirAbs)
 		}
+
+		// Now that we know we need to handle current lib, add a node for it
+		deps.AddNode(name)
 
 		libDirForManifest := libDirAbs
 
@@ -1349,8 +1399,8 @@ libs:
 			bParams2.Arch = manifest.Arch
 		}
 
-		libManifest, libMtime, err := readManifestWithLibs(
-			libDirAbs, &bParams2, append(visitedDirs, dir), curDeps, logFile, userLibsDir, skipClean,
+		libManifest, libMtime, err := readManifestWithLibs2(
+			libDirAbs, &bParams2, logFile, userLibsDir, skipClean, name, deps, libsHandled,
 		)
 		if err != nil {
 			return nil, time.Time{}, errors.Trace(err)
@@ -1375,20 +1425,33 @@ libs:
 		manifest.BuildVars[haveName] = "1"
 		manifest.CDefs[haveName] = "1"
 
-		newDeps = append(newDeps, libManifest.LibsHandled...)
-		newDeps = append(newDeps, build.FWAppManifestLibHandled{
+		libsHandled[name] = build.FWAppManifestLibHandled{
 			Name: name,
 			Path: libDirForManifest,
-		})
+			Deps: deps.GetDeps(name),
+		}
 
 		os.Chdir(curDir)
 	}
 	// }}}
 
-	manifest.Libs = cleanLibs
+	// Remove handled libs from manifest.Libs {{{
+	// NOTE that this would be a bad idea to keep track of unhandled libs as we
+	// go, and just assign manifest.Libs = cleanLibs here, because expansion of
+	// some libs might result in new libs being added, and we should keep them.
+	newLibs := []build.SWModule{}
+	for _, l := range manifest.Libs {
+		name, err := l.GetName()
+		if err != nil {
+			return nil, time.Time{}, errors.Trace(err)
+		}
 
-	// Place new deps before the existing ones
-	manifest.LibsHandled = append(newDeps, manifest.LibsHandled...)
+		if _, ok := libsHandled[name]; !ok {
+			newLibs = append(newLibs, l)
+		}
+	}
+	manifest.Libs = newLibs
+	// }}}
 
 	return manifest, mtime, nil
 }
@@ -1410,8 +1473,13 @@ func getCustomLibLocations() (map[string]string, error) {
 	return customLibLocations, nil
 }
 
-type depsInitData struct {
+type libsInitDataItem struct {
+	Name string
 	Deps []string
+}
+
+type libsInitData struct {
+	Libs []libsInitDataItem
 }
 
 func getDepsInitCCode(manifest *build.FWAppManifest) ([]byte, error) {
@@ -1419,9 +1487,12 @@ func getDepsInitCCode(manifest *build.FWAppManifest) ([]byte, error) {
 		return nil, nil
 	}
 
-	tplData := depsInitData{}
+	tplData := libsInitData{}
 	for _, v := range manifest.LibsHandled {
-		tplData.Deps = append(tplData.Deps, identifierFromString(v.Name))
+		tplData.Libs = append(tplData.Libs, libsInitDataItem{
+			Name: identifierFromString(v.Name),
+			Deps: v.Deps,
+		})
 	}
 
 	tpl := template.Must(template.New("depsInit").Parse(
