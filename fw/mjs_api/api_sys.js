@@ -24,5 +24,11 @@ let Sys = {
   // ## **`Sys.usleep(microseconds)`**
   // Sleep given number of microseconds.
   // Return value: none.
-  usleep: ffi('void mgos_usleep(int)')
+  usleep: ffi('void mgos_usleep(int)'),
+
+  // ## **`Sys.deepsleep(microseconds)`**
+  // Deep Sleep given number of microseconds.
+  // Return value: none.
+  deepsleep:  ffi('void system_deep_sleep(int)')
+
 };
