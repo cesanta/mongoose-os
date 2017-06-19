@@ -51,7 +51,6 @@ static void mgos_gpio_int_cb(void *arg) {
   int pin = (intptr_t) arg;
   struct mgos_gpio_state *s = (struct mgos_gpio_state *) &s_state[pin];
   if (!s->cb_pending || s->cb == NULL) return;
-  s->cb(pin, s->cb_arg);
   if (s->debounce_ms == 0) {
     mgos_gpio_int_done_cb(arg);
   } else {
@@ -63,6 +62,7 @@ static void mgos_gpio_int_done_cb(void *arg) {
   int pin = (intptr_t) arg;
   struct mgos_gpio_state *s = (struct mgos_gpio_state *) &s_state[pin];
   if (!s->cb_pending) return;
+  s->cb(pin, s->cb_arg);
   s->cb_pending = false;
   mgos_gpio_hal_int_done(pin);
 }
