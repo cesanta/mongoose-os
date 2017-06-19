@@ -74,20 +74,23 @@ func (m *SWModule) IsClean(libsDir string) (bool, error) {
 }
 
 // PrepareLocalDir prepares local directory, if that preparation is needed
-// in the first place, and returns the path to it
+// in the first place, and returns the path to it. If defaultVersion is an
+// empty string, then the default will depend on the kind of lib (e.g. for
+// git it's "master")
 func (m *SWModule) PrepareLocalDir(
-	libsDir string, logFile io.Writer, deleteIfFailed bool,
+	libsDir string, logFile io.Writer, deleteIfFailed bool, defaultVersion string,
 ) (string, error) {
 	if m.localPath == "" {
 
-		lp, err := m.GetLocalDir(libsDir)
+		lp, err := m.GetLocalDir(libsDir, defaultVersion)
 		if err != nil {
 			return "", errors.Trace(err)
 		}
 
 		switch m.GetType() {
 		case SWModuleTypeGit:
-			if err := prepareLocalCopyGit(m.Origin, m.Version, lp, logFile, deleteIfFailed); err != nil {
+			version := m.getVersionGit(defaultVersion)
+			if err := prepareLocalCopyGit(m.Origin, version, lp, logFile, deleteIfFailed); err != nil {
 				return "", errors.Trace(err)
 			}
 
@@ -102,7 +105,18 @@ func (m *SWModule) PrepareLocalDir(
 	return m.localPath, nil
 }
 
-func (m *SWModule) GetLocalDir(libsDir string) (string, error) {
+func (m *SWModule) getVersionGit(defaultVersion string) string {
+	version := m.Version
+	if version == "" {
+		version = defaultVersion
+	}
+	if version == "" {
+		version = "master"
+	}
+	return version
+}
+
+func (m *SWModule) GetLocalDir(libsDir, defaultVersion string) (string, error) {
 	switch m.GetType() {
 	case SWModuleTypeGit:
 		name, err := m.GetName()
@@ -110,7 +124,7 @@ func (m *SWModule) GetLocalDir(libsDir string) (string, error) {
 			return "", errors.Trace(err)
 		}
 
-		return filepath.Join(libsDir, getGitDirName(name, m.Version)), nil
+		return filepath.Join(libsDir, getGitDirName(name, m.getVersionGit(defaultVersion))), nil
 
 	case SWModuleTypeLocal:
 		if m.Origin != "" {

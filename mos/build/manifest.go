@@ -56,6 +56,9 @@ type FWAppManifest struct {
 	CDefs             map[string]string  `yaml:"cdefs" json:"cdefs,omitempty"`
 	Tags              []string           `yaml:"tags" json:"tags,omitempty"`
 
+	LibsVersion    string `yaml:"libs_version" json:"libs_version,omitempty"`
+	ModulesVersion string `yaml:"modules_version" json:"modules_version,omitempty"`
+
 	Conds []ManifestCond `yaml:"conds" json:"conds,omitempty"`
 
 	ManifestVersion string `yaml:"manifest_version" json:"manifest_version,omitempty"`

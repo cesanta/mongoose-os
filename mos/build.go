@@ -305,7 +305,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 			reportf("The flag --module is not given for the module %q, going to use the repository", name)
 
 			var err error
-			targetDir, err = m.PrepareLocalDir(modulesDir, logFile, true)
+			targetDir, err = m.PrepareLocalDir(modulesDir, logFile, true, manifest.ModulesVersion)
 			if err != nil {
 				return errors.Trace(err)
 			}
@@ -335,7 +335,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		}
 
 		var err error
-		mosDirEffective, err = m.PrepareLocalDir(modulesDir, logFile, true)
+		mosDirEffective, err = m.PrepareLocalDir(modulesDir, logFile, true, "")
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -1235,7 +1235,7 @@ func readManifestWithLibs(
 	deps.AddNode(depsApp)
 
 	manifest, mtime, err := readManifestWithLibs2(
-		dir, bParams, logFile, userLibsDir, skipClean, depsApp, deps, libsHandled,
+		dir, bParams, logFile, userLibsDir, skipClean, depsApp, deps, libsHandled, nil,
 	)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
@@ -1274,11 +1274,18 @@ func readManifestWithLibs2(
 	dir string, bParams *buildParams,
 	logFile io.Writer, userLibsDir string, skipClean bool,
 	nodeName string, deps *Deps, libsHandled map[string]build.FWAppManifestLibHandled,
+	appManifest *build.FWAppManifest,
 ) (*build.FWAppManifest, time.Time, error) {
 
 	manifest, mtime, err := readManifest(dir, bParams)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
+	}
+
+	// If the given appManifest is nil, it means that we've just read one, so
+	// remember it as such
+	if appManifest == nil {
+		appManifest = manifest
 	}
 
 	curDir, err := getCodeDir()
@@ -1330,7 +1337,7 @@ libs:
 			needPull := true
 
 			if *noLibsUpdate {
-				localDir, err := m.GetLocalDir(libsDir)
+				localDir, err := m.GetLocalDir(libsDir, appManifest.LibsVersion)
 				if err != nil {
 					return nil, time.Time{}, errors.Trace(err)
 				}
@@ -1357,7 +1364,7 @@ libs:
 
 				// Note: we always call PrepareLocalDir for libsDir, but then,
 				// if userLibsDir is different, will need to copy it to the new location
-				libDirAbs, err = m.PrepareLocalDir(libsDir, os.Stdout, true)
+				libDirAbs, err = m.PrepareLocalDir(libsDir, os.Stdout, true, appManifest.LibsVersion)
 				if err != nil {
 					return nil, time.Time{}, errors.Trace(err)
 				}
@@ -1401,6 +1408,7 @@ libs:
 
 		libManifest, libMtime, err := readManifestWithLibs2(
 			libDirAbs, &bParams2, logFile, userLibsDir, skipClean, name, deps, libsHandled,
+			appManifest,
 		)
 		if err != nil {
 			return nil, time.Time{}, errors.Trace(err)

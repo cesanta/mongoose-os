@@ -184,7 +184,7 @@ func initProjectManagementEndpoints() {
 			swmod.Name = target_name
 		}
 
-		_, err = swmod.PrepareLocalDir(dirPath, os.Stdout, true)
+		_, err = swmod.PrepareLocalDir(dirPath, os.Stdout, true, "")
 		if err != nil {
 			httpReply(w, "", err)
 			return
