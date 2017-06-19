@@ -24,7 +24,7 @@ let Sys = {
   // ## **`Sys.usleep(microseconds)`**
   // Sleep given number of microseconds.
   // Return value: none.
-  usleep: ffi('void mgos_usleep(int)')
+  usleep: ffi('void mgos_usleep(int)'),
 
   // ## **`Sys.wdt_feed()`**
   // Feed the watchdog timer.
