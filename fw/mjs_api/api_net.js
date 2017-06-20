@@ -78,7 +78,7 @@ let Net = {
   // Set network status handler. A handler is a function that receives
   // events: `Net.STATUS_DISCONNECTED`, `Net.STATUS_CONNECTED`,
   // `Net.STATUS_GOT_IP`.
-  setStatusEventHandler = ffi('void mgos_wifi_add_on_change_cb(void (*)(int, userdata), userdata)'),
+  setStatusEventHandler: ffi('void mgos_wifi_add_on_change_cb(void (*)(int, userdata), userdata)'),
   STATUS_DISCONNECTED: 0,
   STATUS_CONNECTED: 1,
   STATUS_GOT_IP: 2,
