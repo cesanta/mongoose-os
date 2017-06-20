@@ -118,7 +118,8 @@ func (dc *DevConn) SetConfig(ctx context.Context, devConf *DevConf) error {
 
 func (dc *DevConn) GetInfo(ctx context.Context) (*fwsys.GetInfoResult, error) {
 	r, err := dc.CSys.GetInfo(ctx)
-	if err == nil && r.Arch != nil && *r.Arch == "esp32" || *r.Arch == "esp8266" {
+	// 2017/06/20: Temporarily disabled, need better UART handling on the devices to go FASTA.
+	if false && err == nil && r.Arch != nil && *r.Arch == "esp32" || *r.Arch == "esp8266" {
 		glog.Infof("MOAR FASTA")
 		dc.RPC.SetCodecOptions(
 			&codec.Options{
