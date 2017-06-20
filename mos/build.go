@@ -1394,6 +1394,8 @@ libs:
 			reportf("Using the location %q as is (given as a --lib flag)", libDirAbs)
 		}
 
+		reportf("Prepared local dir: %q", libDirAbs)
+
 		libDirForManifest := libDirAbs
 
 		// If libs should be placed in some specific dir, copy the current lib
@@ -1420,8 +1422,6 @@ libs:
 		deps.AddNode(name)
 
 		os.Chdir(libDirAbs)
-
-		reportf("Prepared local dir: %q", libDirAbs)
 
 		// We need to create a copy of build params, and if arch is empty there,
 		// set it from the outer manifest, because arch is used in libs to handle
@@ -1475,7 +1475,9 @@ libs:
 		}
 
 		if _, ok := libsHandled[name]; !ok {
-			newLibs = append(newLibs, l)
+			if !l.Weak {
+				newLibs = append(newLibs, l)
+			}
 		}
 	}
 	manifest.Libs = newLibs
