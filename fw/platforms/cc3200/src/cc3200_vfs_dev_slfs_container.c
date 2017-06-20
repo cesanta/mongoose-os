@@ -97,10 +97,9 @@ out_close:
 
 int fs_get_active_idx(const char *cpfx, struct fs_container_info *info) {
   struct fs_container_info fs0, fs1;
+  int r = -1;
   int r0 = fs_get_info(cpfx, 0, &fs0);
   int r1 = fs_get_info(cpfx, 1, &fs1);
-
-  DBG(("r0 = %d %llx, r1 = %d %llx", r0, fs0.seq, r1, fs1.seq));
 
   if (r0 == 0 && r1 == 0) {
     if (fs0.seq < fs1.seq) {
@@ -111,13 +110,16 @@ int fs_get_active_idx(const char *cpfx, struct fs_container_info *info) {
   }
   if (r0 == 0) {
     *info = fs0;
-    return 0;
-  }
-  if (r1 == 0) {
+    r = 0;
+  } else if (r1 == 0) {
     *info = fs1;
-    return 1;
+    r = 1;
   }
-  return -1;
+
+  LOG(LL_DEBUG, ("r0 = %d 0x%llx, r1 = %d 0x%llx => %d 0x%llx", r0, fs0.seq, r1,
+                 fs1.seq, r, info->seq));
+
+  return r;
 }
 
 bool cc3200_vfs_dev_slfs_container_write_meta(int fh, uint64_t seq,
@@ -137,7 +139,7 @@ bool cc3200_vfs_dev_slfs_container_write_meta(int fh, uint64_t seq,
 
   offset = FS_CONTAINER_SIZE(meta.info.fs_size) - sizeof(meta);
   r = sl_FsWrite(fh, offset, (_u8 *) &meta, sizeof(meta));
-  DBG(("write meta %llu @ %d: %d", seq, (int) offset, (int) r));
+  DBG(("write meta fh %d 0x%llx @ %d: %d", fh, seq, (int) offset, (int) r));
   if (r == sizeof(meta)) r = 0;
   return (r == 0);
 }
@@ -301,7 +303,6 @@ static bool cc3200_vfs_dev_slfs_container_open(struct mgos_vfs_dev *dev,
   bool create = false;
   struct dev_data *dd = NULL;
   struct fs_container_info info;
-  uint64_t seq = BOOT_CFG_INITIAL_SEQ;
   int flush_interval_ms = MGOS_VFS_DEV_SLFS_CONTAINER_FLUSH_INTERVAL_MS;
   json_scanf(opts, strlen(opts),
              "{prefix: %Q, size: %u, create: %B, flush_interval_ms: %d}", &cpfx,
@@ -336,16 +337,13 @@ static bool cc3200_vfs_dev_slfs_container_open(struct mgos_vfs_dev *dev,
   }
   if (dd->fh < 0) goto out;
   dd->cpfx = strdup(cpfx);
-  dd->seq = seq;
   dev->dev_data = dd;
-  LOG(LL_INFO,
-      ("%p %s.%d %lu 0x%llx", dev, dd->cpfx, dd->cidx, dd->size, dd->seq));
   SLIST_INSERT_HEAD(&s_devs, dd, next);
   ret = true;
 
 out:
-  LOG(LL_DEBUG, ("cpfx %s, cidx %d, seq 0x%llx, fh %ld", cpfx, cidx, seq,
-                 (dd ? dd->fh : -1)));
+  LOG(LL_INFO, ("%p %s.%d %lu 0x%llx", dev, cpfx, (dd ? dd->cidx : -1),
+                (dd ? dd->size : 0), (dd ? dd->seq : 0)));
   if (!ret) free(dd);
   free(cpfx);
   (void) dev;
