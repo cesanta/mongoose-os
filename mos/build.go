@@ -65,6 +65,7 @@ const (
 	codeDir  = "."
 
 	buildLog           = "build.log"
+	mosFinal           = "mos_final.yml"
 	depsInitCFileName  = "deps_init.c"
 	confSchemaFileName = "mos_conf_schema.yml"
 
@@ -283,6 +284,16 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 
 	if err := expandManifestAllLibsPaths(manifest); err != nil {
 		return errors.Trace(err)
+	}
+
+	// Write final manifest to build dir
+	{
+		d, err := yaml.Marshal(manifest)
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		ioutil.WriteFile(path.Join(buildDir, mosFinal), d, 0666)
 	}
 
 	if manifest.Arch == "" {

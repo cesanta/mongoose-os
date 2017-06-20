@@ -33,7 +33,7 @@ type FWAppManifestLibHandled struct {
 	Name     string         `yaml:"name" json:"name,omitempty"`
 	Path     string         `yaml:"path" json:"path,omitempty"`
 	Deps     []string       `yaml:"deps" json:"deps"`
-	Manifest *FWAppManifest `yaml:"manifest", json:"manifest,omitempty"`
+	Manifest *FWAppManifest `yaml:"manifest,omitempty", json:"manifest,omitempty"`
 }
 
 // FWAppManifest is the app manifest for firmware apps
