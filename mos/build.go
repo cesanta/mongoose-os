@@ -271,7 +271,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	}
 
 	manifest, mtime, err := readManifestWithLibs(
-		appDir, bParams, logFile, libsDir, false, /* skip clean */
+		appDir, bParams, logFile, libsDir, false /* skip clean */, true, /* expand libs */
 	)
 	if err != nil {
 		return errors.Trace(err)
@@ -878,6 +878,10 @@ func readManifestFile(
 		manifest.BuildVars = make(map[string]string)
 	}
 
+	if manifest.CDefs == nil {
+		manifest.CDefs = make(map[string]string)
+	}
+
 	if manifest.MongooseOsVersion == "" {
 		manifest.MongooseOsVersion = "master"
 	}
@@ -925,7 +929,7 @@ func buildRemote(bParams *buildParams) error {
 
 	// Get manifest which includes stuff from all libs
 	manifest, _, err := readManifestWithLibs(
-		tmpCodeDir, bParams, os.Stdout, userLibsDir, true, /* skip clean */
+		tmpCodeDir, bParams, os.Stdout, userLibsDir, true /* skip clean */, false, /* expand libs */
 	)
 	if err != nil {
 		return errors.Trace(err)
@@ -1226,7 +1230,7 @@ func identifierFromString(name string) string {
 // it's useful when crafting a manifest to send to the remote builder.
 func readManifestWithLibs(
 	dir string, bParams *buildParams,
-	logFile io.Writer, userLibsDir string, skipClean bool,
+	logFile io.Writer, userLibsDir string, skipClean bool, expandLibManifests bool,
 ) (*build.FWAppManifest, time.Time, error) {
 	libsHandled := map[string]build.FWAppManifestLibHandled{}
 
@@ -1265,6 +1269,12 @@ func readManifestWithLibs(
 			return nil, time.Time{}, errors.Errorf("topo contains %q, but libsHandled doesn't. topo: %v, libsHandled: %v", v, topo, libsHandled)
 		}
 		manifest.LibsHandled[i] = lh
+	}
+
+	if expandLibManifests {
+		if err := expandLibsHandledManifests(manifest); err != nil {
+			return nil, time.Time{}, errors.Trace(err)
+		}
 	}
 
 	return manifest, mtime, nil
@@ -1373,9 +1383,6 @@ libs:
 			reportf("Using the location %q as is (given as a --lib flag)", libDirAbs)
 		}
 
-		// Now that we know we need to handle current lib, add a node for it
-		deps.AddNode(name)
-
 		libDirForManifest := libDirAbs
 
 		// If libs should be placed in some specific dir, copy the current lib
@@ -1393,6 +1400,13 @@ libs:
 			libDirAbs = filepath.Join(userLibsDir, filepath.Base(libDirAbs))
 			libDirForManifest = filepath.Join(userLibsDirRel, filepath.Base(libDirAbs))
 		}
+
+		if m.Weak {
+			continue
+		}
+
+		// Now that we know we need to handle current lib, add a node for it
+		deps.AddNode(name)
 
 		os.Chdir(libDirAbs)
 
@@ -1420,12 +1434,6 @@ libs:
 			mtime = libMtime
 		}
 
-		// Extend app's manifest with that of a lib, and lib's one should go
-		// first
-		if err := extendManifest(manifest, libManifest, manifest, libDirForManifest, ""); err != nil {
-			return nil, time.Time{}, errors.Trace(err)
-		}
-
 		// Add a build var and C macro MGOS_HAVE_<lib_name>
 		haveName := fmt.Sprintf(
 			"MGOS_HAVE_%s", strings.ToUpper(identifierFromString(name)),
@@ -1434,9 +1442,10 @@ libs:
 		manifest.CDefs[haveName] = "1"
 
 		libsHandled[name] = build.FWAppManifestLibHandled{
-			Name: name,
-			Path: libDirForManifest,
-			Deps: deps.GetDeps(name),
+			Name:     name,
+			Path:     libDirForManifest,
+			Deps:     deps.GetDeps(name),
+			Manifest: libManifest,
 		}
 
 		os.Chdir(curDir)
@@ -1462,6 +1471,22 @@ libs:
 	// }}}
 
 	return manifest, mtime, nil
+}
+
+func expandLibsHandledManifests(manifest *build.FWAppManifest) error {
+	for k, lh := range manifest.LibsHandled {
+		// if lh.Manifest is nil, it means that it's already expanded.
+		// We can only encounter nil here if the client mos is old and does not
+		// support it. (probably after a while we should emit an error if we
+		// encounter nil here; today is 2017/06/20)
+		if lh.Manifest != nil {
+			if err := extendManifest(manifest, lh.Manifest, manifest, lh.Path, ""); err != nil {
+				return errors.Trace(err)
+			}
+		}
+		manifest.LibsHandled[k].Manifest = nil
+	}
+	return nil
 }
 
 func getCustomLibLocations() (map[string]string, error) {

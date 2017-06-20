@@ -22,6 +22,10 @@ type SWModule struct {
 	Version string `yaml:"version,omitempty" json:"version,omitempty"`
 	Name    string `yaml:"name,omitempty" json:"name,omitempty"`
 
+	// Weak is relevant if only SWModule represents a lib (as opposed to a
+	// module).
+	Weak bool `yaml:"weak,omitempty" json:"weak,omitempty"`
+
 	localPath string
 }
 
