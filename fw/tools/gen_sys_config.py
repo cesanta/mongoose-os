@@ -101,6 +101,8 @@ class SchemaEntry(object):
         if self.vtype is not None:
             if self.vtype not in (self.V_OBJECT, self.V_BOOL, self.V_INT, self.V_DOUBLE, self.V_STRING):
                 raise TypeError("%s: Invalid value type '%s'" % (self.path, self.vtype))
+            if self.vtype == SchemaEntry.V_DOUBLE and isinstance(self.default, int):
+                self.default = float(self.default)
             self.ValidateDefault()
 
         if self.params is not None and not isinstance(self.params, dict):
@@ -111,7 +113,7 @@ class SchemaEntry(object):
             self.vtype == SchemaEntry.V_INT and not isinstance(self.default, int) or
             self.vtype == SchemaEntry.V_DOUBLE and not isinstance(self.default, float) or
             self.vtype == SchemaEntry.V_STRING and not isinstance(self.default, basestring)):
-            raise TypeError("%s: Invalid default value type" % self.path)
+            raise TypeError("%s: Invalid default value type (%s)" % (self.path, type(self.default)))
 
     @property
     def key(self):
