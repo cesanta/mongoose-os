@@ -117,12 +117,11 @@ struct fstate {
 
 static int append_to_path(struct frozen *f, const char *str, int size) {
   int n = f->path_len;
-  f->path_len +=
-      snprintf(f->path + f->path_len, sizeof(f->path) - (f->path_len), "%.*s", size, str);
-  if (f->path_len > sizeof(f->path) - 1) {
-    f->path_len = sizeof(f->path) - 1;
-  }
-
+  int left = sizeof(f->path) - n - 1;
+  if (size > left) size = left;
+  memcpy(f->path + n, str, size);
+  f->path[n + size] = '\0';
+  f->path_len += size;
   return n;
 }
 
@@ -859,6 +858,7 @@ static void json_scanf_cb(void *callback_data, const char *name,
                           size_t name_len, const char *path,
                           const struct json_token *token) {
   struct json_scanf_info *info = (struct json_scanf_info *) callback_data;
+  char buf[32];  /* Must be enough to hold numbers */
 
   (void) name;
   (void) name_len;
@@ -944,7 +944,12 @@ static void json_scanf_cb(void *callback_data, const char *name,
       *(struct json_token *) info->target = *token;
       break;
     default:
-      info->num_conversions += sscanf(token->ptr, info->fmt, info->target);
+      /* Before scanf, copy into tmp buffer in order to 0-terminate it */
+      if (token->len < (int) sizeof(buf)) {
+        memcpy(buf, token->ptr, token->len);
+        buf[token->len] = '\0';
+        info->num_conversions += sscanf(buf, info->fmt, info->target);
+      }
       break;
   }
 }
