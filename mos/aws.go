@@ -64,7 +64,7 @@ func init() {
 	flag.StringVar(&awsRegion, "aws-region", "", "AWS region to use. If not specified, uses the default")
 	flag.BoolVar(&useATCA, "use-atca", false, "Use ATCA (AECC508A) to store private key.")
 	flag.IntVar(&atcaSlot, "atca-slot", 0, "When using ATCA, use this slot for key storage.")
-	flag.StringVar(&certType, "cert-type", "", "Type of the key for new cert, RSA or ECDSA. Default is ECDSA.")
+	flag.StringVar(&certType, "cert-type", "", "Type of the key for new cert, RSA or ECDSA. Default is "+defaultCertType+".")
 	flag.StringVar(&certCN, "cert-cn", "", "Common name for the certificate. By default uses device ID.")
 	flag.StringVar(&awsIoTPolicy, "aws-iot-policy", "", "Attach this policy to the generated certificate")
 	flag.StringVar(&awsIoTThing, "aws-iot-thing", "",
@@ -255,12 +255,7 @@ func genCert(ctx context.Context, iotSvc *iot.IoT, devConn *dev.DevConn, devConf
 		pkPEMBlockType = "EC PRIVATE KEY"
 	} else {
 		if certType == "" {
-			if strings.ToLower(*devInfo.Arch) == "cc3200" {
-				// CC3200 only supports RSA.
-				certType = "RSA"
-			} else {
-				certType = defaultCertType
-			}
+			certType = defaultCertType
 		}
 		switch strings.ToUpper(certType) {
 		case "RSA":
@@ -428,31 +423,6 @@ func askForCreds() (*credentials.Credentials, error) {
 	return storeCreds(ak, sak)
 }
 
-func getCAForCert(certFile string) (string, error) {
-	pemData, err := ioutil.ReadFile(certFile)
-	if err != nil {
-		return "", errors.Annotatef(err, "failed to read file")
-	}
-	pb, _ := pem.Decode(pemData)
-	if pb == nil {
-		return "", errors.New("failed to parse PEM data")
-	}
-	if pb.Type != "CERTIFICATE" {
-		return "", errors.Errorf("expected a certificate, got %s", pb.Type)
-	}
-	cert, err := x509.ParseCertificate(pb.Bytes)
-	if err != nil {
-		return "", errors.Annotatef(err, "failed to parse certificate")
-	}
-	switch cert.PublicKeyAlgorithm {
-	case x509.RSA:
-		return rsaCACert, nil
-	case x509.ECDSA:
-		return ecCACert, nil
-	}
-	return "", errors.New("unknown key algorithm")
-}
-
 func awsIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	iotSvc, err := getSvc()
 	if err != nil {
@@ -489,11 +459,6 @@ func awsIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 		}
 	}
 
-	caCertFile, err := getCAForCert(certFile)
-	if err != nil {
-		return errors.Annotatef(err, "failed to determine CA for %s", certFile)
-	}
-
 	reportf("Uploading certificate...")
 	err = fsPutFile(ctx, devConn, certFile, filepath.Base(certFile))
 	if err != nil {
@@ -508,11 +473,24 @@ func awsIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 		}
 	}
 
-	caCertData := MustAsset(caCertFile)
-	reportf("Uploading CA certificate...")
-	err = fsPutData(ctx, devConn, bytes.NewBuffer(caCertData), filepath.Base(caCertFile))
-	if err != nil {
-		return errors.Annotatef(err, "failed to upload %s", filepath.Base(caCertFile))
+	// ca.pem has both roots in it, so, for platforms other than CC3200, we can just use that
+	// after a while (roots were added to ca.pem on 2017/06/20).
+	// CC3200 does not support cert bundles and will always require specific CA cert.
+	caCertFile := ""
+	if useATCA {
+		caCertFile = ecCACert
+	} else {
+		caCertFile = rsaCACert
+	}
+	uploadCACert := true
+
+	if uploadCACert {
+		caCertData := MustAsset(caCertFile)
+		reportf("Uploading CA certificate...")
+		err = fsPutData(ctx, devConn, bytes.NewBuffer(caCertData), filepath.Base(caCertFile))
+		if err != nil {
+			return errors.Annotatef(err, "failed to upload %s", filepath.Base(caCertFile))
+		}
 	}
 
 	// Get the value of mqtt.server from aws
@@ -525,8 +503,13 @@ func awsIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 		"mqtt.enable":      "true",
 		"mqtt.server":      fmt.Sprintf("%s:8883", *de.EndpointAddress),
 		"mqtt.ssl_cert":    filepath.Base(certFile),
-		"mqtt.ssl_key":     keyFile,
+		"mqtt.ssl_key":     filepath.Base(keyFile),
 		"mqtt.ssl_ca_cert": filepath.Base(caCertFile),
+	}
+	if useATCA {
+		settings["mqtt.ssl_cipher_suites"] = "TLS-ECDHE-ECDSA-WITH-AES-128-GCM-SHA256"
+	} else {
+		settings["mqtt.ssl_cipher_suites"] = "TLS-ECDHE-RSA-WITH-AES-128-GCM-SHA256"
 	}
 
 	// MQTT requires device.id to be set.
