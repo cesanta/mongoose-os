@@ -34,10 +34,6 @@
 #define MGOS_ENABLE_SYS_SERVICE 0
 #endif
 
-#ifndef MGOS_ENABLE_FILE_UPLOAD
-#define MGOS_ENABLE_FILE_UPLOAD 0
-#endif
-
 #ifndef MGOS_ENABLE_MDNS
 #define MGOS_ENABLE_MDNS 0
 #endif
@@ -54,20 +50,12 @@
 #define MGOS_ENABLE_UPDATER 0
 #endif
 
-#ifndef MGOS_ENABLE_WEB_CONFIG
-#define MGOS_ENABLE_WEB_CONFIG 0
-#endif
-
 #ifndef MGOS_ENABLE_WIFI
 #define MGOS_ENABLE_WIFI 0
 #endif
 
 #ifndef MGOS_PROMPT_DISABLE_ECHO
 #define MGOS_PROMPT_DISABLE_ECHO 0
-#endif
-
-#ifndef MGOS_ENABLE_TUNNEL
-#define MGOS_ENABLE_TUNNEL 0
 #endif
 
 #endif /* CS_FW_SRC_MGOS_FEATURES_H_ */

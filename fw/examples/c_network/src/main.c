@@ -1,5 +1,7 @@
 #include <stdio.h>
 
+#include "mgos_http_server.h"
+
 #include "common/platform.h"
 #include "fw/src/mgos_app.h"
 #include "fw/src/mgos_gpio.h"

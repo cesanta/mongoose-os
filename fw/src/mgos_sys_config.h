@@ -19,6 +19,8 @@
 extern "C" {
 #endif /* __cplusplus */
 
+#define CONF_USER_FILE "conf9.json"
+
 enum mgos_config_level {
   MGOS_CONFIG_LEVEL_DEFAULTS = 0,
   MGOS_CONFIG_LEVEL_VENDOR_1 = 1,
@@ -47,6 +49,11 @@ struct sys_config *get_cfg(void);
 bool save_cfg(const struct sys_config *cfg, char **msg);
 
 /*
+ * Reset all config values to defaults.
+ */
+bool load_config_defaults(struct sys_config *cfg);
+
+/*
  * Reset config down to and including |level|.
  * 0 - defaults, 1-8 - vendor levels, 9 - user.
  * mgos_config_reset(MGOS_CONFIG_LEVEL_USER) will wipe user settings.
@@ -72,12 +79,7 @@ void device_get_mac_address(uint8_t mac[6]);
 void mgos_expand_mac_address_placeholders(char *str);
 
 enum mgos_init_result mgos_sys_config_init(void);
-enum mgos_init_result mgos_sys_config_init_http(
-    const struct sys_config_http *cfg,
-    const struct sys_config_device *device_cfg);
 enum mgos_init_result mgos_sys_config_init_platform(struct sys_config *cfg);
-
-struct mg_connection *mgos_get_sys_http_server(void);
 
 #ifdef __cplusplus
 }

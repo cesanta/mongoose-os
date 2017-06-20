@@ -8,10 +8,11 @@ filesystem:
   - fs
 config_schema:
   #- ["hello", "o", {"title": "Hello app settings"}]
-build_vars:
+cdefs:
   MGOS_ENABLE_WEB_CONFIG: 1
   MGOS_ENABLE_FILE_UPLOAD: 1
 libs:
+  - origin: https://github.com/mongoose-os-libs/http-server
   - origin: https://github.com/mongoose-os-libs/ota-http-server
   - origin: https://github.com/mongoose-os-libs/rpc-loopback
   - origin: https://github.com/mongoose-os-libs/rpc-mqtt

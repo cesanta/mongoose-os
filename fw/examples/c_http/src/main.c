@@ -1,5 +1,7 @@
 #include <stdio.h>
 
+#include "mgos_http_server.h"
+
 #include "common/cs_dbg.h"
 #include "common/platform.h"
 #include "frozen/frozen.h"

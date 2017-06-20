@@ -19,13 +19,6 @@ extern "C" {
 /* Return global event manager */
 struct mg_mgr *mgos_get_mgr(void);
 
-/* Register HTTP endpoint handler `handler` on URI `uri_path` */
-void mgos_register_http_endpoint(const char *uri_path,
-                                 mg_event_handler_t handler, void *user_data);
-void mgos_register_http_endpoint_opt(const char *uri_path,
-                                     mg_event_handler_t handler,
-                                     struct mg_http_endpoint_opts opts);
-
 enum mgos_init_result mongoose_init(void);
 
 int mongoose_poll(int ms);

@@ -50,9 +50,6 @@ enum mgos_init_result mgos_init(void) {
   if (r != MGOS_INIT_OK) return r;
 #endif
 
-  r = mgos_sys_config_init_http(&get_cfg()->http, &get_cfg()->device);
-  if (r != MGOS_INIT_OK) return r;
-
   if (!mgos_deps_init()) {
     return MGOS_INIT_DEPS_FAILED;
   }
