@@ -15,7 +15,6 @@
 
 #include "fw/src/mgos_adc.h"
 #include "fw/src/mgos_app.h"
-#include "fw/src/mgos_atca.h"
 #include "fw/src/mgos_bitbang.h"
 #include "fw/src/mgos_config.h"
 #include "fw/src/mgos_debug.h"

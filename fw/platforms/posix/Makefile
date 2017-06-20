@@ -21,8 +21,6 @@ SSL ?= None
 DEBUG ?= 0
 CC_WRAPPER ?=
 
-MGOS_ENABLE_ATCA = 0
-
 # Explicitly disable updater, it's not supported on POSIX build yet.
 MGOS_ENABLE_UPDATER = 0
 MGOS_ENABLE_DEBUG_UDP = 0

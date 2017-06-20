@@ -1,7 +1,0 @@
-[
-  ["sys.atca", "o", {title: "CryptoAuthLib configuration"}],
-  ["sys.atca.enable", "b", false, {title: "Enable the chip"}],
-  ["sys.atca.i2c_addr", "i", 0x60, {title: "I2C address of the chip"}],
-  # By default designate slots 2 and 3 for ECDH.
-  ["sys.atca.ecdh_slots_mask", "i", 0x0c, {title: "Which slots can be used for ECDH (bitmask)"}],
-]

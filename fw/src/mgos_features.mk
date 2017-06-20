@@ -1,4 +1,3 @@
-MGOS_ENABLE_ATCA ?= 1
 MGOS_ENABLE_BITBANG ?= 1
 MGOS_ENABLE_DEBUG_UDP ?= 1
 MGOS_ENABLE_MDNS ?= 0
@@ -22,13 +21,11 @@ MGOS_FEATURES += -DMGOS_DEBUG_UART=$(MGOS_DEBUG_UART) \
                  -DMGOS_DEBUG_UART_BAUD_RATE=$(MGOS_DEBUG_UART_BAUD_RATE) \
                  -DMG_ENABLE_CALLBACK_USERDATA
 
-ifeq "$(MGOS_ENABLE_ATCA)" "1"
+ifeq "$(MGOS_HAVE_ATCA)" "1"
   ATCA_PATH ?= $(MGOS_PATH)/third_party/cryptoauthlib
   ATCA_LIB = $(BUILD_DIR)/libatca.a
 
-  MGOS_SRCS += mgos_atca.c
-  MGOS_FEATURES += -DMGOS_ENABLE_ATCA -I$(ATCA_PATH)/lib
-  SYS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_atca_config.yaml
+  MGOS_FEATURES += -I$(ATCA_PATH)/lib
 
 $(BUILD_DIR)/atca/libatca.a:
 	$(Q) mkdir -p $(BUILD_DIR)/atca
@@ -42,7 +39,6 @@ $(ATCA_LIB): $(BUILD_DIR)/atca/libatca.a
 	$(Q) $(OBJCOPY) --rename-section .rodata.str1.1=.irom0.text $@
 else
   ATCA_LIB =
-  MGOS_FEATURES += -DMGOS_ENABLE_ATCA=0
 endif
 
 ifeq "$(MGOS_ENABLE_DEBUG_UDP)" "1"
@@ -109,7 +105,6 @@ endif
 
 # Export all the feature switches.
 # This is required for needed make invocations (i.e. ESP32 IDF)
-export MGOS_ENABLE_ATCA
 export MGOS_ENABLE_BITBANG
 export MGOS_ENABLE_DEBUG_UDP
 export MGOS_ENABLE_I2C
