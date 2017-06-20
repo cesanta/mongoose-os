@@ -85,11 +85,18 @@ void mgos_conf_set_str(char **vp, const char *v);
 enum mgos_conf_type mgos_conf_value_type(struct mgos_conf_entry *e);
 
 /*
- * Returns a string value from the config entry
+ * Returns a string value from the config entry. If the value is empty,
+ * returns NULL.
  */
 const char *mgos_conf_value_string(const void *cfg,
                                    const struct mgos_conf_entry *e);
 
+/*
+ * Same as mgos_conf_value_string(), but returns an empty string instead of
+ * NULL when the value is empty.
+ */
+const char *mgos_conf_value_string_nonnull(const void *cfg,
+                                           const struct mgos_conf_entry *e);
 /*
  * Returns an int or bool value from the config entry
  */

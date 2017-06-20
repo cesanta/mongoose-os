@@ -363,6 +363,15 @@ const char *mgos_conf_value_string(const void *cfg,
   return NULL;
 }
 
+const char *mgos_conf_value_string_nonnull(const void *cfg,
+                                           const struct mgos_conf_entry *e) {
+  const char *ret = mgos_conf_value_string(cfg, e);
+  if (ret == NULL) {
+    ret = "";
+  }
+  return ret;
+}
+
 int mgos_conf_value_int(const void *cfg, const struct mgos_conf_entry *e) {
   char *vp = (((char *) cfg) + e->offset);
   if (e->type == CONF_TYPE_INT || e->type == CONF_TYPE_BOOL) {

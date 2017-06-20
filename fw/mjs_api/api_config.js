@@ -3,7 +3,7 @@ let Cfg = {
   _desc: ffi('void *sys_config_schema()'),
   _find: ffi('void *mgos_conf_find_schema_entry(char *, void *)'),
   _type: ffi('int mgos_conf_value_type(void *)'),
-  _str: ffi('char *mgos_conf_value_string(void *, void *)'),
+  _str: ffi('char *mgos_conf_value_string_nonnull(void *, void *)'),
   _int: ffi('int mgos_conf_value_int(void *, void *)'),
   _dbl: ffi('double mgos_conf_value_double(void *, void *)'),
   _INT: 0,
