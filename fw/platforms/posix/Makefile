@@ -25,8 +25,6 @@ CC_WRAPPER ?=
 MGOS_ENABLE_UPDATER = 0
 MGOS_ENABLE_DEBUG_UDP = 0
 MGOS_ENABLE_BITBANG = 0
-MGOS_ENABLE_I2C = 0
-MGOS_ENABLE_I2C_GPIO = 0
 MGOS_ENABLE_SYS_SERVICE = 0
 MGOS_ENABLE_WIFI = 0
 
@@ -79,9 +77,6 @@ else
   UNAME_S := $(shell uname -s)
   ifeq ($(UNAME_S),Linux)
     BUILD_PLATFORM="LINUX"
-    ifeq "$(MGOS_ENABLE_I2C)" "1"
-      SYS_CONF_SCHEMA += lnx_i2c_config.yaml
-    endif
   else
     BUILD_PLATFORM="POSIX"
   endif

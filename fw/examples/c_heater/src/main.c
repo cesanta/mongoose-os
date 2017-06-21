@@ -2,12 +2,12 @@
 #include <stdio.h>
 
 #include "mgos_http_server.h"
+#include "mgos_i2c.h"
 
 #include "common/platform.h"
 #include "fw/src/mgos_app.h"
 #include "fw/src/mgos_gpio.h"
 #include "fw/src/mgos_hal.h"
-#include "fw/src/mgos_i2c.h"
 #include "fw/src/mgos_mongoose.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_timers.h"

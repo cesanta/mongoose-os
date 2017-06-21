@@ -99,8 +99,6 @@ MGOS_FEATURES =
 SYS_CONF_SCHEMA =
 FS_FILES =
 
-MGOS_ENABLE_I2C_GPIO = 1
-
 include $(MGOS_PATH)/fw/src/mgos_features.mk
 
 export MGOS_SRCS

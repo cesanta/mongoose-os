@@ -153,8 +153,6 @@ APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_S
 
 MGOS_FEATURES ?=
 
-MGOS_ENABLE_I2C_GPIO = 1
-
 VPATH = $(APP_SOURCE_DIRS) $(MGOS_SRC_PATH) $(MONGOOSE_PATH) \
         $(FROZEN_PATH) $(UMM_MALLOC_PATH) \
         $(BOOTLOADER_PATH)/rboot/appcode $(COMMON_PATH) $(COMMON_PATH)/mg_rpc \
@@ -169,9 +167,6 @@ LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip $(MGOS_ESP_SRC_PATH)
 
 include $(MGOS_PATH)/fw/src/mgos_features.mk
 
-ifeq "$(MGOS_ENABLE_I2C)" "1"
-  SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp_i2c_config.yaml
-endif
 ifeq "$(MGOS_ENABLE_WIFI)" "1"
   SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp_wifi_config.yaml
 endif

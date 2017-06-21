@@ -1,4 +1,4 @@
-#include "fw/src/mgos_i2c.h"
+#include "mgos_i2c.h"
 #include "mcp9808.h"
 
 #define MCP9808_ADDR 0x1F

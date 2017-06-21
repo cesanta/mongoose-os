@@ -1,5 +1,5 @@
 #include <stm32_sdk_hal.h>
-#include "fw/src/mgos_i2c.h"
+#include "mgos_i2c.h"
 #include "common/queue.h"
 
 enum i2c_it_status { I2C_IN_PROGRESS, I2C_COMPLETED, I2C_ERROR };

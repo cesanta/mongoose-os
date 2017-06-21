@@ -26,7 +26,6 @@
 #include "fw/src/mgos_gpio_hal.h"
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_hooks.h"
-#include "fw/src/mgos_i2c.h"
 #include "fw/src/mgos_init.h"
 #include "fw/src/mgos_mdns.h"
 #include "fw/src/mgos_mongoose.h"

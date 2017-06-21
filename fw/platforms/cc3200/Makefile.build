@@ -199,14 +199,6 @@ MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" -DCS_PLATFORM=CS_P_CC3200 \
 include $(MGOS_PATH)/fw/src/mgos_features.mk
 include $(MGOS_PATH)/fw/src/spiffs.mk
 
-ifeq "$(MGOS_ENABLE_I2C)" "1"
-  ifneq "$(MGOS_ENABLE_I2C_GPIO)" "1"
-    SYS_CONF_SCHEMA += $(MGOS_CC3200_SRC_PATH)/cc3200_i2c_config.yaml
-  else
-    SYS_CONF_SCHEMA += $(MGOS_CC3200_SRC_PATH)/cc3200_i2c_gpio_config.yaml
-  endif
-endif
-
 clean:
 	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)
 
