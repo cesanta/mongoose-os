@@ -33,7 +33,7 @@ func init() {
 		"Do not read from stdin, only print device's output to stdout")
 	flag.BoolVar(&hwFC, "hw-flow-control", false, "Enable hardware flow control (CTS/RTS)")
 
-	flag.StringVar(&tsfSpec, "timestamp", "",
+	flag.StringVar(&tsfSpec, "timestamp", "StampMilli",
 		"Prepend each line with a timestamp in the specified format. A number of specifications are supported:"+
 			"simple 'yes' or 'true' will use UNIX Epoch + .microseconds; the Go way of specifying date/time "+
 			"format, as described in https://golang.org/pkg/time/, including the constants "+
