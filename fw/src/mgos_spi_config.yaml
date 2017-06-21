@@ -1,5 +1,0 @@
-[
-  ["spi", "o", {title: "SPI settings"}],
-  ["spi.enable", "b", false, {title: "Enable SPI"}],
-  ["spi.debug", "b", false, {title: "Debug SPI bus activity"}],
-]
