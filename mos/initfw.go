@@ -30,16 +30,10 @@ func initFW(ctx context.Context, devConn *dev.DevConn) error {
 		}
 	}
 
-	fmt.Printf("Connecting to %s, user %s ...\n", *server, *user)
-
 	// Download zip data
-	fmt.Println("Downloading project skeleton...")
-	server, err := serverURL()
-	if err != nil {
-		return errors.Trace(err)
-	}
+	fmt.Println("Downloading empty app...")
 
-	url := fmt.Sprintf("%s/downloads/skeleton.zip", server)
+	url := fmt.Sprintf("https://github.com/mongoose-os-apps/empty/archive/master.zip")
 	resp, err := http.Get(url)
 	if resp.StatusCode != http.StatusOK {
 		return errors.Errorf("bad response %d on %q", resp.StatusCode, url)
@@ -60,6 +54,9 @@ func initFW(ctx context.Context, devConn *dev.DevConn) error {
 	if err := archive.UnzipInto(zipReader, zipReader.Size(), ".", 1); err != nil {
 		return errors.Trace(err)
 	}
+
+	// Remove LICENSE file, ignore any errors
+	os.RemoveAll(filepath.Join(".", "LICENSE"))
 
 	// If arch was provided, update yaml
 	if *arch != "" {
