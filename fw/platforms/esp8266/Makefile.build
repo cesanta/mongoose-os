@@ -266,6 +266,7 @@ else
   LD_SCRIPT_TEMPL = $(MGOS_ESP8266_PATH)/ld/non_os.ld
 
 $(LWIP_LIB): $(LWIP_PATH)
+	$(Q) mkdir -p $(abspath $(LWIP_BUILD_DIR))
 	$(Q) $(MAKE) -C $(LWIP_PATH) -j3 all \
 		APP=liblwip_cs BUILD_DIR=$(abspath $(LWIP_BUILD_DIR)) \
 		CFLAGS_EXTRA="$(HEAP_LOG_FLAGS)"
