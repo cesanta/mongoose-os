@@ -12,3 +12,4 @@ config_schema:
   - ["mcast.port", "i", 5353, {title: "Multicast example UDP port"}]
 libs:
   - origin: https://github.com/mongoose-os-libs/mqtt
+  - origin: https://github.com/mongoose-os-libs/spi

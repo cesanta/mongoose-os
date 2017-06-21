@@ -22,14 +22,6 @@
 #define MGOS_ENABLE_I2C_GPIO 0
 #endif
 
-#ifndef MGOS_ENABLE_SPI
-#define MGOS_ENABLE_SPI 0
-#endif
-
-#ifndef MGOS_ENABLE_SPI_GPIO
-#define MGOS_ENABLE_SPI_GPIO 0
-#endif
-
 #ifndef MGOS_ENABLE_SYS_SERVICE
 #define MGOS_ENABLE_SYS_SERVICE 0
 #endif

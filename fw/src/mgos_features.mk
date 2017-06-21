@@ -5,8 +5,6 @@ MGOS_ENABLE_I2C ?= 1
 MGOS_ENABLE_I2C_GPIO ?= 0
 MGOS_ENABLE_ONEWIRE ?= 0
 MGOS_ENABLE_SNTP ?= 1
-MGOS_ENABLE_SPI ?= 1
-MGOS_ENABLE_SPI_GPIO ?= 1
 MGOS_ENABLE_SYS_SERVICE ?= 1
 MGOS_ENABLE_UPDATER ?= 0
 MGOS_ENABLE_WIFI ?= 1
@@ -73,17 +71,6 @@ ifeq "$(MGOS_ENABLE_SNTP)" "1"
   SYS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_sntp_config.yaml
 endif
 
-ifeq "$(MGOS_ENABLE_SPI)" "1"
-  MGOS_SRCS += mgos_spi.c
-  MGOS_FEATURES += -DMGOS_ENABLE_SPI
-  SYS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_spi_config.yaml
-  ifeq "$(MGOS_ENABLE_SPI_GPIO)" "1"
-    MGOS_SRCS += mgos_spi_gpio.c
-    MGOS_FEATURES += -DMGOS_ENABLE_SPI_GPIO
-    SYS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_spi_gpio_config.yaml
-  endif
-endif
-
 ifeq "$(MGOS_ENABLE_UPDATER)" "1"
   SYS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_updater_config.yaml
   MGOS_SRCS += mgos_updater_common.c
@@ -111,8 +98,6 @@ export MGOS_ENABLE_I2C
 export MGOS_ENABLE_I2C_GPIO
 export MGOS_ENABLE_ONEWIRE
 export MGOS_ENABLE_SNTP
-export MGOS_ENABLE_SPI
-export MGOS_ENABLE_SPI_GPIO
 export MGOS_ENABLE_SYS_SERVICE
 export MGOS_ENABLE_UPDATER
 export MGOS_ENABLE_WIFI

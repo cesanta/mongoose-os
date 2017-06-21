@@ -100,7 +100,6 @@ SYS_CONF_SCHEMA =
 FS_FILES =
 
 MGOS_ENABLE_I2C_GPIO = 1
-MGOS_ENABLE_SPI_GPIO = 0
 
 include $(MGOS_PATH)/fw/src/mgos_features.mk
 

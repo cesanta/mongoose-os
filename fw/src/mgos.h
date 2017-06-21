@@ -33,7 +33,6 @@
 #include "fw/src/mgos_onewire.h"
 #include "fw/src/mgos_pwm.h"
 #include "fw/src/mgos_sntp.h"
-#include "fw/src/mgos_spi.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_timers.h"
 #include "fw/src/mgos_uart.h"

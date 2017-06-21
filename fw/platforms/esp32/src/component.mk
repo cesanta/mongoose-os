@@ -57,14 +57,6 @@ ifeq "$(MGOS_ENABLE_I2C)" "1"
     SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_i2c_gpio_config.yaml
   endif
 endif
-ifeq "$(MGOS_ENABLE_SPI)" "1"
-  ifneq "$(MGOS_ENABLE_SPI_GPIO)" "1"
-    MGOS_SRCS += esp32_spi_master.c
-    SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_spi_config.yaml
-  else
-    SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_spi_gpio_config.yaml
-  endif
-endif
 ifeq "$(MGOS_ENABLE_UPDATER)" "1"
   MGOS_SRCS += esp32_updater.c
 endif

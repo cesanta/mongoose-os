@@ -40,11 +40,6 @@ enum mgos_init_result mgos_init(void) {
   if (r != MGOS_INIT_OK) return r;
 #endif
 
-#if MGOS_ENABLE_SPI
-  r = mgos_spi_init();
-  if (r != MGOS_INIT_OK) return r;
-#endif
-
   if (!mgos_deps_init()) {
     return MGOS_INIT_DEPS_FAILED;
   }
