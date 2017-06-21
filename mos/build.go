@@ -274,17 +274,9 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	}
 
 	manifest, mtime, err := readManifestWithLibs(
-		appDir, bParams, logFile, libsDir, false /* skip clean */, true, /* expand libs */
+		appDir, bParams, logFile, libsDir, false /* skip clean */, true, /* finalize */
 	)
 	if err != nil {
-		return errors.Trace(err)
-	}
-
-	if err := expandManifestConds(manifest); err != nil {
-		return errors.Trace(err)
-	}
-
-	if err := expandManifestAllLibsPaths(manifest); err != nil {
 		return errors.Trace(err)
 	}
 
@@ -945,7 +937,7 @@ func buildRemote(bParams *buildParams) error {
 
 	// Get manifest which includes stuff from all libs
 	manifest, _, err := readManifestWithLibs(
-		tmpCodeDir, bParams, os.Stdout, userLibsDir, true /* skip clean */, false, /* expand libs */
+		tmpCodeDir, bParams, os.Stdout, userLibsDir, true /* skip clean */, false, /* finalize */
 	)
 	if err != nil {
 		return errors.Trace(err)
@@ -1246,7 +1238,7 @@ func identifierFromString(name string) string {
 // it's useful when crafting a manifest to send to the remote builder.
 func readManifestWithLibs(
 	dir string, bParams *buildParams,
-	logFile io.Writer, userLibsDir string, skipClean bool, expandLibManifests bool,
+	logFile io.Writer, userLibsDir string, skipClean bool, finalize bool,
 ) (*build.FWAppManifest, time.Time, error) {
 	libsHandled := map[string]build.FWAppManifestLibHandled{}
 
@@ -1287,8 +1279,12 @@ func readManifestWithLibs(
 		manifest.LibsHandled[i] = lh
 	}
 
-	if expandLibManifests {
-		if err := expandLibsHandledManifests(manifest); err != nil {
+	if finalize {
+		if err := expandManifestLibsAndConds(manifest); err != nil {
+			return nil, time.Time{}, errors.Trace(err)
+		}
+
+		if err := expandManifestAllLibsPaths(manifest); err != nil {
 			return nil, time.Time{}, errors.Trace(err)
 		}
 	}
@@ -1491,28 +1487,76 @@ libs:
 	return manifest, mtime, nil
 }
 
-func expandLibsHandledManifests(manifest *build.FWAppManifest) error {
-	// Note that we need to iterate LibsHandled in reverse order.
-	// extendManifest takes two manifests: m1 and m2; m1 goes first, m2 goes
-	// second and overrides m1. So, m1 in this case is a library, m2 is an app.
-	// But after the app is extended with the first library, that library becomes
-	// a part of an app, so if we need to expand multiple libraries, we need to
-	// start from those which depend on others, and finish with those which
-	// don't depend on anything (e.g. in reverse topological order).
-	for k := len(manifest.LibsHandled) - 1; k >= 0; k-- {
-		lh := manifest.LibsHandled[k]
-		// if lh.Manifest is nil, it means that it's already expanded.
-		// We can only encounter nil here if the client mos is old and does not
-		// support it. (probably after a while we should emit an error if we
-		// encounter nil here; today is 2017/06/20)
-		if lh.Manifest != nil {
-			if err := extendManifest(manifest, lh.Manifest, manifest, lh.Path, ""); err != nil {
-				return errors.Trace(err)
+// expandManifestLibsAndConds takes a manifest and expands all LibsHandled
+// and Conds inside all manifests (app and all libs). Since expanded
+// conds should be applied in topological order, the process is a bit
+// involved:
+//
+// 1. Create copy of the app manifest: commonManifest
+// 2. Expand all libs into that commonManifest
+// 3. If resulting manifest has no conds, we're done. Otherwise:
+//   a. For each of the manifests (app and all libs), expand conds, but
+//      evaluate cond expressions against the commonManifest
+//   b. Go to step 1
+func expandManifestLibsAndConds(manifest *build.FWAppManifest) error {
+
+	for {
+		commonManifest := *manifest
+
+		// Note that we need to iterate LibsHandled in reverse order.
+		// extendManifest takes two manifests: m1 and m2; m1 goes first, m2 goes
+		// second and overrides m1. So, m1 in this case is a library, m2 is an app.
+		// But after the app is extended with the first library, that library becomes
+		// a part of an app, so if we need to expand multiple libraries, we need to
+		// start from those which depend on others, and finish with those which
+		// don't depend on anything (e.g. in reverse topological order).
+		for k := len(commonManifest.LibsHandled) - 1; k >= 0; k-- {
+			lh := commonManifest.LibsHandled[k]
+			// if lh.Manifest is nil, it means that it's already expanded.
+			// We can only encounter nil here if the client mos is old and does not
+			// support it. (probably after a while we should emit an error if we
+			// encounter nil here; today is 2017/06/20)
+			if lh.Manifest != nil {
+				if err := extendManifest(&commonManifest, lh.Manifest, &commonManifest, lh.Path, ""); err != nil {
+					return errors.Trace(err)
+				}
 			}
 		}
-		manifest.LibsHandled[k].Manifest = nil
+
+		if len(commonManifest.Conds) == 0 {
+			// No more conds in the common manifest, so cleanup all libs manifests,
+			// and return commonManifest
+
+			for k, _ := range commonManifest.LibsHandled {
+				commonManifest.LibsHandled[k].Manifest = nil
+			}
+			*manifest = commonManifest
+
+			return nil
+		}
+
+		// There are some conds to be expanded. We can't expand them directly in
+		// the common manifest, because items should be inserted in topological
+		// order. Instead, we'll expand conds separately in the source app
+		// manifest, and in each lib's manifests, but we'll execute the cond
+		// expressions against the common manifest which we've just computed above,
+		// so it already has everything properly overridden.
+		//
+		// When it's done, we'll expand all libs manifests again, etc, until there
+		// are no conds left.
+
+		if err := expandManifestConds(manifest, &commonManifest); err != nil {
+			return errors.Trace(err)
+		}
+
+		for k := range manifest.LibsHandled {
+			if manifest.LibsHandled[k].Manifest != nil {
+				if err := expandManifestConds(manifest.LibsHandled[k].Manifest, &commonManifest); err != nil {
+					return errors.Trace(err)
+				}
+			}
+		}
 	}
-	return nil
 }
 
 func getCustomLibLocations() (map[string]string, error) {
@@ -1679,44 +1723,42 @@ func mergeMapsString(m1, m2 map[string]string) map[string]string {
 	return bv
 }
 
-// expandManifestConds expands all "conds" in the manifest. Nested conds are
-// also expanded.
-func expandManifestConds(manifest *build.FWAppManifest) error {
-	for {
-		if len(manifest.Conds) == 0 {
-			break
+// expandManifestConds expands all "conds" in the dstManifest, but all cond
+// expressions are evaluated against the refManifest. Nested conds are
+// not expanded: if there are some new conds left, a new refManifest should
+// be computed by the caller, and expandManifestConds should be called again
+// for each lib's manifest and for app's manifest.
+func expandManifestConds(dstManifest, refManifest *build.FWAppManifest) error {
+
+	// As we're expanding conds, we need to remove the conds themselves. But
+	// extending manifest could cause new conds to be added, so we just save
+	// current conds from the manifest in a separate variable, and clean the
+	// manifest's conds. This way, newly added conds (if any) won't mess
+	// with the old ones.
+	conds := dstManifest.Conds
+	dstManifest.Conds = nil
+
+	for _, cond := range conds {
+		res, err := refManifest.EvaluateExprBool(cond.When)
+		if err != nil {
+			return errors.Trace(err)
 		}
 
-		// As we're expanding conds, we need to remove the conds themselves. But
-		// extending manifest could cause new conds to be added, so we just save
-		// current conds from the manifest in a separate variable, and clean the
-		// manifest's conds. This way, newly added conds (if any) won't mess
-		// with the old ones.
-		conds := manifest.Conds
-		manifest.Conds = nil
+		if !res {
+			// The condition is false, skip handling
+			continue
+		}
 
-		for _, cond := range conds {
-			res, err := manifest.EvaluateExprBool(cond.When)
-			if err != nil {
+		// If error is not an empty string, it means misconfiguration of
+		// the current app, so, return an error
+		if cond.Error != "" {
+			return errors.New(cond.Error)
+		}
+
+		// Apply submanifest if present
+		if cond.Apply != nil {
+			if err := extendManifest(dstManifest, dstManifest, cond.Apply, "", ""); err != nil {
 				return errors.Trace(err)
-			}
-
-			if !res {
-				// The condition is false, skip handling
-				continue
-			}
-
-			// If error is not an empty string, it means misconfiguration of
-			// the current app, so, return an error
-			if cond.Error != "" {
-				return errors.New(cond.Error)
-			}
-
-			// Apply submanifest if present
-			if cond.Apply != nil {
-				if err := extendManifest(manifest, manifest, cond.Apply, "", ""); err != nil {
-					return errors.Trace(err)
-				}
 			}
 		}
 	}

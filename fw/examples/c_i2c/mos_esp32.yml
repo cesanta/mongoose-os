@@ -1,3 +1,12 @@
+build_vars:
+  MGOS_ENABLE_I2C_GPIO: 0
+
+config_schema:
+  - ["i2c.freq", 100000]
+    # Override the default just to ensure that we're able to override
+    # values whose schema was defined under the conds.
+  - ["i2c.unit_no", 0]
+
 libs:
   - origin: https://github.com/mongoose-os-libs/atca
   - origin: https://github.com/mongoose-os-libs/dns-sd
