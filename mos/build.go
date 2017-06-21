@@ -1487,7 +1487,15 @@ libs:
 }
 
 func expandLibsHandledManifests(manifest *build.FWAppManifest) error {
-	for k, lh := range manifest.LibsHandled {
+	// Note that we need to iterate LibsHandled in reverse order.
+	// extendManifest takes two manifests: m1 and m2; m1 goes first, m2 goes
+	// second and overrides m1. So, m1 in this case is a library, m2 is an app.
+	// But after the app is extended with the first library, that library becomes
+	// a part of an app, so if we need to expand multiple libraries, we need to
+	// start from those which depend on others, and finish with those which
+	// don't depend on anything (e.g. in reverse topological order).
+	for k := len(manifest.LibsHandled) - 1; k >= 0; k-- {
+		lh := manifest.LibsHandled[k]
 		// if lh.Manifest is nil, it means that it's already expanded.
 		// We can only encounter nil here if the client mos is old and does not
 		// support it. (probably after a while we should emit an error if we
