@@ -42,8 +42,10 @@ chmod 755 $FULLPATH
 
 mos --help 2>/dev/null
 if test "$?" == "127" ; then
-  echo "Adding $DESTDIR to your PATH in ~/.profile"
-  echo "PATH=\$PATH:$DESTDIR" >> ~/.profile
+  RC_FILE=$HOME/.bashrc
+  test -f $RC_FILE || RC_FILE=$HOME/.profile
+  echo "Adding $DESTDIR to your PATH in $RC_FILE"
+  echo "PATH=\"\$PATH:$DESTDIR\"" >> $RC_FILE
 fi
 
 echo "SUCCESS: $FULLPATH is installed."
