@@ -210,10 +210,12 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	dockerAppPath := "/app"
 	dockerMgosPath := "/mongoose-os"
 
-	genDir, err := filepath.Abs(path.Join(buildDir, "gen"))
+	buildDirAbs, err := filepath.Abs(buildDir)
 	if err != nil {
 		return errors.Trace(err)
 	}
+
+	genDir := path.Join(buildDirAbs, "gen")
 
 	fwDir := filepath.Join(buildDir, "fw")
 	fwDirDocker := path.Join(buildDir, "fw")
@@ -530,6 +532,9 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		mp.addMountPoint(appMountPath, dockerAppPath)
 		mp.addMountPoint(mosDirEffectiveAbs, dockerMgosPath)
 		mp.addMountPoint(mosDirEffectiveAbs, mosDirEffectiveAbs)
+
+		// Mount build dir
+		mp.addMountPoint(buildDirAbs, buildDirAbs)
 
 		// Mount all dirs with source files
 		for _, d := range appSourceDirs {
