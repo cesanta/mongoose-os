@@ -293,7 +293,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 			return errors.Trace(err)
 		}
 
-		ioutil.WriteFile(path.Join(buildDir, mosFinal), d, 0666)
+		ioutil.WriteFile(path.Join(genDir, mosFinal), d, 0666)
 	}
 
 	if manifest.Arch == "" {
