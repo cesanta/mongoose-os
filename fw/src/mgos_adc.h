@@ -3,6 +3,12 @@
  * All rights reserved
  */
 
+/*
+ * See on GitHub:
+ * [mgos_adc.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_adc.h),
+ * [mgos_adc.c](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_adc.c)
+ */
+
 #ifndef CS_FW_SRC_MGOS_ADC_H_
 #define CS_FW_SRC_MGOS_ADC_H_
 
@@ -12,11 +18,10 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* HAL */
-
+/* Read from the analog pin */
 int mgos_adc_read(int pin);
 
-/* return the voltage read by the ADC */
+/* Return the voltage read by the ADC */
 double mgos_adc_read_voltage(int pin);
 
 #ifdef __cplusplus

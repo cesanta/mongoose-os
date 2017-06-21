@@ -6,7 +6,7 @@
 /*
  * See on GitHub:
  * [mgos_spi.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_spi.h),
- * [mgos_spi.с](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_spi.с)
+ * [mgos_spi.c](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_spi.c)
  */
 
 #ifndef CS_FW_SRC_MGOS_SPI_H_
