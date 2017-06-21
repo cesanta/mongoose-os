@@ -473,7 +473,11 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 			// Saving config causes the device to reboot, so we have to wait a bit
 			waitForReboot()
 		}
-		glog.Errorf("Call complete, error: %v", err)
+		if err != nil {
+			glog.Errorf("Call complete, error: %v", err)
+		} else {
+			glog.Errorf("Call complete, success")
+		}
 		glog.Infof("Call result: %+v, error: %+v", result, err)
 		httpReply(w, result, err)
 	})
