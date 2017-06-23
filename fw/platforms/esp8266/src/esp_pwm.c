@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 
 #include "common/platforms/esp8266/esp_missing_includes.h"
 
@@ -19,18 +20,6 @@
 
 /*
  * Semi-hardware PWM - uses hardware timer 1 to generate base clock.
- *
- * PWM.set(pin, period, duty)
- *   pin:    GPIO number.
- *   period: Period, in microseconds, 100 is the minimum supported and any
- *             number will be rounded down to the nearest multiple of 50.
- *             period = 0 disables PWM on the pin (duty = 0 is similar but
- *             does not perform internal cleanup).
- *   duty:   How many microseconds to spend in "1" state. Must be between 0 and
- *             period (inclusive). 0 is "always off", period is "always on",
- *             period / 2 is a square wave. Number will be rounded down to the
- *             nearest multiple of 50.
- *
  *
  * Is it better than the PWM implementation that comes with the SDK? Yes it is.
  *
@@ -139,26 +128,28 @@ static void pwm_configure_timer(void) {
   ETS_FRC1_INTR_ENABLE();
 }
 
-int mgos_pwm_set(int pin, int period, int duty) {
+bool mgos_pwm_set(int pin, int freq, int duty) {
   struct pwm_info *p;
+  int period = freq > 0 ? roundf(1000000.0 / freq) : 0;
+  int d = roundf(period * duty / 100.0);
 
   if (pin != 16 && get_gpio_info(pin) == NULL) {
     fprintf(stderr, "Invalid pin number\n");
-    return 0;
+    return false;
   }
 
   if (period != 0 &&
-      (period < PWM_BASE_RATE_US * 2 || duty < 0 || duty > period)) {
+      (period < PWM_BASE_RATE_US * 2 || duty < 0 || d > period)) {
     fprintf(stderr, "Invalid period / duty value\n");
-    return 0;
+    return false;
   }
 
   period /= PWM_BASE_RATE_US;
-  duty /= PWM_BASE_RATE_US;
+  d /= PWM_BASE_RATE_US;
 
-  p = find_or_create_pwm_info(pin, (period > 0 && duty >= 0));
+  p = find_or_create_pwm_info(pin, (period > 0 && d >= 0));
   if (p == NULL) {
-    return 0;
+    return false;
   }
 
   if (period == 0) {
@@ -167,18 +158,18 @@ int mgos_pwm_set(int pin, int period, int duty) {
       pwm_configure_timer();
       mgos_gpio_write(pin, 0);
     }
-    return 1;
+    return true;
   }
 
-  if (p->period == (uint32_t) period && p->duty == (uint32_t) duty) {
-    return 1;
+  if (p->period == (uint32_t) period && p->duty == (uint32_t) d) {
+    return true;
   }
 
   mgos_gpio_set_mode(pin, MGOS_GPIO_MODE_OUTPUT);
 
   ETS_FRC1_INTR_DISABLE();
   p->period = period;
-  p->duty = duty;
+  p->duty = d;
   if (p->cnt == 0 || p->cnt > (uint32_t) period) {
     p->val = 1;
     p->cnt = p->duty;
@@ -186,12 +177,12 @@ int mgos_pwm_set(int pin, int period, int duty) {
   }
   ETS_FRC1_INTR_ENABLE();
 
-  if (duty == 0 || period == duty) {
-    mgos_gpio_write(pin, (period == duty));
+  if (d == 0 || period == d) {
+    mgos_gpio_write(pin, (period == d));
   }
 
   pwm_configure_timer();
-  return 1;
+  return true;
 }
 
 IRAM NOINSTR void pwm_timer_int_cb(void *arg) {

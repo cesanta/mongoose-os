@@ -2,11 +2,12 @@
  * Copyright (c) 2014-2016 Cesanta Software Limited
  * All rights reserved
  */
+#include <stdbool.h>
 
-int mgos_pwm_set(int pin, int period, int duty) {
+bool mgos_pwm_set(int pin, int freq, int duty) {
   (void) pin;
-  (void) period;
+  (void) freq;
   (void) duty;
 
-  return 0;
+  return false;
 }
