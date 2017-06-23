@@ -174,6 +174,12 @@ func buildHandler(ctx context.Context, devConn *dev.DevConn) error {
 
 func doBuild(ctx context.Context, bParams *buildParams) error {
 	var err error
+
+	// Fail fast if there is no manifest
+	if _, err := os.Stat(build.ManifestFileName); os.IsNotExist(err) {
+		return errors.Errorf("No mos.yml file")
+	}
+
 	if *local {
 		err = buildLocal(ctx, bParams)
 	} else {
