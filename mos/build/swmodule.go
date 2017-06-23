@@ -171,12 +171,12 @@ func (m *SWModule) GetName() (string, error) {
 
 		return parts[len(parts)-1], nil
 	case SWModuleTypeLocal:
-		parts := strings.Split(m.Origin, "/")
-		if len(parts) == 0 {
-			return "", errors.Errorf("path is empty in the origin %q", m.Origin)
+		_, name := filepath.Split(m.Origin)
+		if name == "" {
+			return "", errors.Errorf("name is empty in the origin %q", m.Origin)
 		}
 
-		return parts[len(parts)-1], nil
+		return name, nil
 	default:
 		return "", errors.Errorf("name is not specified, and the lib type is unknown")
 	}
