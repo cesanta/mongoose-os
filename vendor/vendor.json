@@ -171,6 +171,12 @@
 			"revisionTime": "2017-01-05T15:26:49Z"
 		},
 		{
+			"checksumSHA1": "C+ufqvOQ+wDxyolIN22rhYHK4Ik=",
+			"path": "github.com/cesanta/ubjson",
+			"revision": "3758bbe9c1d8afeedee478db8c928be86a5cf3c7",
+			"revisionTime": "2016-05-05T14:36:22Z"
+		},
+		{
 			"checksumSHA1": "YJQqkH5JJ/h8r8245J9GCP4zG38=",
 			"path": "github.com/eclipse/paho.mqtt.golang",
 			"revision": "dfe35ae8bd6ead198596c5e5f4af1f55914741cf",
@@ -187,6 +193,12 @@
 			"path": "github.com/elazarl/go-bindata-assetfs",
 			"revision": "30f82fa23fd844bd5bb1e5f216db87fd77b5eb43",
 			"revisionTime": "2017-02-27T21:27:28Z"
+		},
+		{
+			"checksumSHA1": "AANTVr9CVVyzsgviODY6Wi2thuM=",
+			"path": "github.com/fatih/color",
+			"revision": "62e9147c64a1ed519147b62a56a14e83e2be02c1",
+			"revisionTime": "2017-05-23T20:24:04Z"
 		},
 		{
 			"checksumSHA1": "94gx2lhRkCHR2wxEGcrKlpqIOgk=",
@@ -213,6 +225,18 @@
 			"revisionTime": "2017-03-09T17:28:38Z"
 		},
 		{
+			"checksumSHA1": "qNkx9+OTwZI6aFv7K9zuFCGODUw=",
+			"path": "github.com/mattn/go-colorable",
+			"revision": "941b50ebc6efddf4c41c8e4537a5f68a4e686b24",
+			"revisionTime": "2017-06-15T03:49:14Z"
+		},
+		{
+			"checksumSHA1": "U6lX43KDDlNOn+Z0Yyww+ZzHfFo=",
+			"path": "github.com/mattn/go-isatty",
+			"revision": "fc9e8d8ef48496124e79ae0df75490096eccf6fe",
+			"revisionTime": "2017-03-22T23:44:13Z"
+		},
+		{
 			"checksumSHA1": "3yckDt/xIreJZ/spvI+MvHOCmcY=",
 			"path": "github.com/mattn/go-shellwords",
 			"revision": "02e3cf038dcea8290e44424da473dd12be796a8a",
@@ -229,6 +253,42 @@
 			"path": "github.com/spf13/pflag",
 			"revision": "9ff6c6923cfffbcd502984b8e0c80539a94968b7",
 			"revisionTime": "2017-01-30T21:42:45Z"
+		},
+		{
+			"checksumSHA1": "Y+HGqEkYM15ir+J93MEaHdyFy0c=",
+			"path": "golang.org/x/net/context",
+			"revision": "30f03014b4f11f9f238fdeca8cca734746a24fbb",
+			"revisionTime": "2017-04-20T02:07:47Z"
+		},
+		{
+			"checksumSHA1": "UxahDzW2v4mf/+aFxruuupaoIwo=",
+			"path": "golang.org/x/net/internal/timeseries",
+			"revision": "30f03014b4f11f9f238fdeca8cca734746a24fbb",
+			"revisionTime": "2017-04-20T02:07:47Z"
+		},
+		{
+			"checksumSHA1": "u/r66lwYfgg682u5hZG7/E7+VCY=",
+			"path": "golang.org/x/net/trace",
+			"revision": "30f03014b4f11f9f238fdeca8cca734746a24fbb",
+			"revisionTime": "2017-04-20T02:07:47Z"
+		},
+		{
+			"checksumSHA1": "7EZyXN0EmZLgGxZxK01IJua4c8o=",
+			"path": "golang.org/x/net/websocket",
+			"revision": "30f03014b4f11f9f238fdeca8cca734746a24fbb",
+			"revisionTime": "2017-04-20T02:07:47Z"
+		},
+		{
+			"checksumSHA1": "2L67OZQlNdATOW57chc6+Hc8SO0=",
+			"path": "golang.org/x/sys/unix",
+			"revision": "c23410a886927bab8ca5e80b08af6a56faeb330d",
+			"revisionTime": "2017-06-23T11:49:42Z"
+		},
+		{
+			"checksumSHA1": "fALlQNY1fM99NesfLJ50KguWsio=",
+			"path": "gopkg.in/yaml.v2",
+			"revision": "cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b",
+			"revisionTime": "2017-04-07T17:21:22Z"
 		}
 	],
 	"rootPath": "cesanta.com"
