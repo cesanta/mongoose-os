@@ -24,9 +24,6 @@ bool mgos_adc_enable(int pin);
 /* Read from the analog pin */
 int mgos_adc_read(int pin);
 
-/* Return the voltage read by the ADC */
-double mgos_adc_read_voltage(int pin);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
