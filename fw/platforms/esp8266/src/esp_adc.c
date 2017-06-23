@@ -11,13 +11,17 @@
 #include <user_interface.h>
 #endif
 
+bool mgos_adc_enable(int pin) {
+  return pin == 0;
+}
+
 int mgos_adc_read(int pin) {
-  (void) pin;
-  return 0xFFFF & system_adc_read();
+  return pin == 0 ? 0xFFFF & system_adc_read() : -1;
 }
 
 double mgos_adc_read_voltage(int pin) {
-  return mgos_adc_read(pin) / 1024.0; /* ESP8266 has a 10-bit ADC */
+  int value = mgos_adc_read(pin);
+  return value != -1 ? value / 1024.0 : -1.0; /* ESP8266 has a 10-bit ADC */
 }
 
 static int s_adc_at_boot = 0;

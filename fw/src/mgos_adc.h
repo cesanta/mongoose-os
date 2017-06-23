@@ -18,6 +18,9 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/* Configure and enable ADC */
+bool mgos_adc_enable(int pin);
+
 /* Read from the analog pin */
 int mgos_adc_read(int pin);
 

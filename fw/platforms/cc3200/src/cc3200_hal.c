@@ -167,9 +167,3 @@ void mgos_unlock(void) {
   while (!xSemaphoreGiveRecursive(s_mgos_mux)) {
   }
 }
-
-int mgos_adc_read(int pin) {
-  /* TODO(rojer): implement */
-  (void) pin;
-  return 0;
-}
