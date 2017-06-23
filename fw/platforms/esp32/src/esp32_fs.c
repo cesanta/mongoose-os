@@ -58,9 +58,7 @@ bool esp32_fs_init(void) {
     .open = mgos_vfs_open,
     .close = mgos_vfs_close,
     .read = mgos_vfs_read,
-    /* Correct return type for write is ssize_t, it's a bug in ESP-IDF.
-     * https://github.com/espressif/esp-idf/pull/682 */
-    .write = (size_t (*) (int, const void *, size_t)) mgos_vfs_write,
+    .write = mgos_vfs_write,
     .stat = mgos_vfs_stat,
     .fstat = mgos_vfs_fstat,
     .lseek = mgos_vfs_lseek,
@@ -72,7 +70,7 @@ bool esp32_fs_init(void) {
     .closedir = mgos_vfs_closedir,
 #endif
   };
-  if (esp_vfs_register(ESP_VFS_DEFAULT, &esp_vfs, NULL) != ESP_OK) {
+  if (esp_vfs_register("", &esp_vfs, NULL) != ESP_OK) {
     LOG(LL_ERROR, ("ESP VFS registration failed"));
     return false;
   }

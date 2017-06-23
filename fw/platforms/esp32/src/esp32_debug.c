@@ -39,7 +39,7 @@ static ssize_t debug_read(int fd, void *dst, size_t size) {
   return -1;
 }
 
-static size_t debug_write(int fd, const void *data, size_t size) {
+static ssize_t debug_write(int fd, const void *data, size_t size) {
   if (fd == 1 || fd == 2) {
     mgos_debug_write(fd, data, size);
   } else {
