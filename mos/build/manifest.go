@@ -8,6 +8,11 @@ import (
 	"github.com/cesanta/errors"
 )
 
+const (
+	AppTypeApp = "app"
+	AppTypeLib = "lib"
+)
+
 // ManifestCond represents a conditional addition to the manifest.
 type ManifestCond struct {
 	// The whole cond structure is considered if only When expression evaluates

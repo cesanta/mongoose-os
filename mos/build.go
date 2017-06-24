@@ -286,6 +286,15 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		return errors.Trace(err)
 	}
 
+	switch manifest.Type {
+	case build.AppTypeApp:
+		// Fine
+	case build.AppTypeLib:
+		return errors.Errorf("can't build a library; only apps can be built. Libraries can be only used as dependencies for apps or for other libs")
+	default:
+		return errors.Errorf("invalid project type: %q", manifest.Type)
+	}
+
 	// Write final manifest to build dir
 	{
 		d, err := yaml.Marshal(manifest)
@@ -810,6 +819,11 @@ func readManifest(appDir string, bParams *buildParams) (*build.FWAppManifest, ti
 		manifest.Arch = bParams.Arch
 	}
 	manifest.Arch = strings.ToLower(manifest.Arch)
+
+	// If type is omitted, assume "app"
+	if manifest.Type == "" {
+		manifest.Type = build.AppTypeApp
+	}
 
 	if manifest.Arch != "" {
 		manifestArchFullName := filepath.Join(
