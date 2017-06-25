@@ -3,6 +3,12 @@
  * All rights reserved
  */
 
+/*
+ * See on GitHub:
+ * [mgos_mongoose.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_mongoose.h),
+ * [mgos_mongoose.c](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_mongoose.c)
+ */
+
 #ifndef CS_FW_SRC_MGOS_MONGOOSE_H_
 #define CS_FW_SRC_MGOS_MONGOOSE_H_
 
@@ -57,20 +63,6 @@ struct mg_connection *mgos_connect_http_ssl(const char *addr,
                                             mg_event_handler_t f, void *ud,
                                             const char *cert, const char *key,
                                             const char *ca_cert);
-
-enum http_message_param {
-  HTTP_MESSAGE_PARAM_METHOD = 0,
-  HTTP_MESSAGE_PARAM_URI = 1,
-  HTTP_MESSAGE_PARAM_PROTOCOL = 2,
-  HTTP_MESSAGE_PARAM_BODY = 3,
-  HTTP_MESSAGE_PARAM_MESSAGE = 4,
-  HTTP_MESSAGE_PARAM_QUERY_STRING = 5,
-};
-
-const char *mgos_get_http_message_param(const struct http_message *,
-                                        enum http_message_param);
-
-int mgos_peek(const void *ptr, int offset);
 
 #ifdef __cplusplus
 }

@@ -197,38 +197,39 @@ struct mg_connection *mgos_connect_http_ssl(const char *addr,
 }
 #endif
 
-const char *mgos_get_http_message_param(const struct http_message *m,
-                                        enum http_message_param p) {
-  const struct mg_str *s = NULL;
-  switch (p) {
-    case HTTP_MESSAGE_PARAM_METHOD:
-      s = &m->method;
-      break;
-    case HTTP_MESSAGE_PARAM_URI:
-      s = &m->uri;
-      break;
-    case HTTP_MESSAGE_PARAM_PROTOCOL:
-      s = &m->proto;
-      break;
-    case HTTP_MESSAGE_PARAM_BODY:
-      s = &m->body;
-      break;
-    case HTTP_MESSAGE_PARAM_MESSAGE:
-      s = &m->message;
-      break;
-    case HTTP_MESSAGE_PARAM_QUERY_STRING:
-      s = &m->query_string;
-      break;
-  }
-  if (s == NULL || s->p == NULL) return "";
-
-  /* WARNING: this modifies parsed HTTP message! Need to return C string. */
-  ((char *) s->p)[s->len] = '\0';
-  return s->p;
+/* For FFI. Return recv mbuf for the connection. */
+struct mbuf *mgos_get_recv_mbuf(struct mg_connection *c) {
+  return &c->recv_mbuf;
 }
 
-int mgos_peek(const void *ptr, int offset) {
-  return ((unsigned char *) ptr)[offset];
+/* For FFI. */
+void *mgos_get_mbuf_ptr(struct mbuf *m) {
+  return m->buf;
+}
+
+/* For FFI. */
+int mgos_get_mbuf_len(struct mbuf *m) {
+  return m->len;
+}
+
+/* For FFI. */
+void *mgos_get_mgstr_ptr(struct mg_str *s) {
+  return (void *) s->p;
+}
+
+/* For FFI. */
+int mgos_get_mgstr_len(struct mg_str *s) {
+  return s->len;
+}
+
+/* For FFI. */
+void *mgos_get_msg_ptr(struct http_message *m) {
+  return &m->message;
+}
+
+/* For FFI. */
+void *mgos_get_body_ptr(struct http_message *m) {
+  return &m->body;
 }
 
 char *mgos_get_nameserver() {
