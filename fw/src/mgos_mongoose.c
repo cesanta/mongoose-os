@@ -232,6 +232,10 @@ void *mgos_get_body_ptr(struct http_message *m) {
   return &m->body;
 }
 
+bool mgos_is_inbound(struct mg_connection *c) {
+  return c->listener != NULL;
+}
+
 char *mgos_get_nameserver() {
 #if MGOS_ENABLE_WIFI
   char *dns = NULL;
