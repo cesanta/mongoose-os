@@ -45,6 +45,9 @@ var (
 	wsClientsMtx = sync.Mutex{}
 	wwwRoot      = ""
 	startBrowser = true
+
+	origStdout = os.Stdout
+	origStderr = os.Stderr
 )
 
 type wsmessage struct {
@@ -565,6 +568,8 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 	fmt.Printf("Starting Web UI. If the browser does not start, navigate to %s\n", url)
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
+		os.Stdout = origStdout
+		os.Stderr = origStderr
 		return errors.Trace(err)
 	}
 	if startBrowser {
