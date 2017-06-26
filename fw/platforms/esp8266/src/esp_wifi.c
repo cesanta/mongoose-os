@@ -345,31 +345,50 @@ void wifi_scan_done(void *arg, STATUS status) {
   if (cb == NULL) return;
   if (status != OK) {
     LOG(LL_ERROR, ("wifi scan failed: %d", status));
-    cb(NULL, cb_arg);
+    cb(-1, NULL, cb_arg);
     return;
   }
   STAILQ_HEAD(, bss_info) *info = arg;
+  struct mgos_wifi_scan_result *res = NULL;
   struct bss_info *p;
-  const char **ssids;
   int n = 0;
   STAILQ_FOREACH(p, info, next) n++;
-  ssids = calloc(n + 1, sizeof(*ssids));
-  if (ssids == NULL) {
+  res = calloc(n, sizeof(*res));
+  if (res == NULL) {
     LOG(LL_ERROR, ("Out of memory"));
-    cb(NULL, cb_arg);
+    cb(-1, NULL, cb_arg);
     return;
   }
-  n = 0;
+  struct mgos_wifi_scan_result *r = res;
   STAILQ_FOREACH(p, info, next) {
-    int i;
-    /* Remove duplicates */
-    for (i = 0; i < n; i++) {
-      if (strcmp(ssids[i], (const char *) p->ssid) == 0) break;
+    strncpy(r->ssid, (const char *) p->ssid, sizeof(p->ssid));
+    memcpy(r->bssid, p->bssid, sizeof(r->bssid));
+    r->ssid[sizeof(r->ssid) - 1] = '\0';
+    r->channel = p->channel;
+    r->rssi = p->rssi;
+    switch (p->authmode) {
+      case AUTH_OPEN:
+        r->auth_mode = MGOS_WIFI_AUTH_MODE_OPEN;
+        break;
+      case AUTH_WEP:
+        r->auth_mode = MGOS_WIFI_AUTH_MODE_WEP;
+        break;
+      case AUTH_WPA_PSK:
+        r->auth_mode = MGOS_WIFI_AUTH_MODE_WPA_PSK;
+        break;
+      case AUTH_WPA2_PSK:
+        r->auth_mode = MGOS_WIFI_AUTH_MODE_WPA2_PSK;
+        break;
+      case AUTH_WPA_WPA2_PSK:
+        r->auth_mode = MGOS_WIFI_AUTH_MODE_WPA_WPA2_PSK;
+        break;
+      case AUTH_MAX:
+        break;
     }
-    if (i == n) ssids[n++] = (const char *) p->ssid;
+    r++;
   }
-  cb(ssids, cb_arg);
-  free(ssids);
+  cb(n, res, cb_arg);
+  free(res);
 }
 
 void mgos_wifi_scan(mgos_wifi_scan_cb_t cb, void *arg) {
@@ -380,7 +399,7 @@ void mgos_wifi_scan(mgos_wifi_scan_cb_t cb, void *arg) {
   s_wifi_scan_cb = cb;
   s_wifi_scan_cb_arg = arg;
   if (!wifi_station_scan(NULL, wifi_scan_done)) {
-    cb(NULL, arg);
+    cb(-1, NULL, arg);
     s_wifi_scan_cb = NULL;
     s_wifi_scan_cb_arg = NULL;
   }

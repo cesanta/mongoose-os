@@ -56,7 +56,27 @@ char *mgos_wifi_get_sta_default_dns(void);
  * Caller owns SSIDS, they are not freed by the callee.
  * Invoking inline is ok.
  */
-typedef void (*mgos_wifi_scan_cb_t)(const char **ssids, void *arg);
+
+enum mgos_wifi_auth_mode {
+  MGOS_WIFI_AUTH_MODE_OPEN = 0,
+  MGOS_WIFI_AUTH_MODE_WEP = 1,
+  MGOS_WIFI_AUTH_MODE_WPA_PSK = 2,
+  MGOS_WIFI_AUTH_MODE_WPA2_PSK = 3,
+  MGOS_WIFI_AUTH_MODE_WPA_WPA2_PSK = 4,
+  MGOS_WIFI_AUTH_MODE_WPA2_ENTERPRISE = 5,
+};
+
+struct mgos_wifi_scan_result {
+  char ssid[33];
+  uint8_t bssid[6];
+  enum mgos_wifi_auth_mode auth_mode;
+  int channel;
+  int rssi;
+};
+
+typedef void (*mgos_wifi_scan_cb_t)(int num_res,
+                                    struct mgos_wifi_scan_result *res,
+                                    void *arg);
 void mgos_wifi_scan(mgos_wifi_scan_cb_t cb, void *arg);
 
 /* Invoke this when Wifi connection state changes. */

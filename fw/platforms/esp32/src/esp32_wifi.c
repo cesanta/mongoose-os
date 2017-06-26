@@ -539,23 +539,28 @@ struct scan_cb_cb_info {
 
 static void scan_cb_cb(void *arg) {
   struct scan_cb_cb_info *cbcbi = (struct scan_cb_cb_info *) arg;
-  const char **ssids = NULL;
+  struct mgos_wifi_scan_result *res = NULL;
   int i;
   if (cbcbi->num_aps >= 0) {
-    ssids = (const char **) calloc(cbcbi->num_aps + 1, sizeof(*ssids));
-    for (i = 0; i < cbcbi->num_aps; i++) {
-      ssids[i] = strdup((const char *) cbcbi->aps[i].ssid);
+    res = (struct mgos_wifi_scan_result *) calloc(cbcbi->num_aps, sizeof(*res));
+    struct mgos_wifi_scan_result *r = res;
+    for (i = 0; i < cbcbi->num_aps; i++, r++) {
+      const wifi_ap_record_t *ap = &cbcbi->aps[i];
+      strncpy(r->ssid, (const char *) ap->ssid, sizeof(r->ssid));
+      memcpy(r->bssid, ap->bssid, sizeof(r->bssid));
+      r->ssid[sizeof(r->ssid) - 1] = '\0';
+      r->auth_mode = (enum mgos_wifi_auth_mode) ap->authmode;
+      r->channel = ap->primary;
+      r->rssi = ap->rssi;
     }
-    ssids[i] = NULL;
   }
   SLIST_HEAD(cbh, wifi_scan_cb_info) cbh = {.slh_first = cbcbi->cbs};
   struct wifi_scan_cb_info *cbi, *cbit;
   SLIST_FOREACH_SAFE(cbi, &cbh, next, cbit) {
-    cbi->cb(ssids, cbi->arg);
+    cbi->cb(cbcbi->num_aps, res, cbi->arg);
     free(cbi);
   }
-  for (i = 0; i < cbcbi->num_aps; i++) free((void *) ssids[i]);
-  free(ssids);
+  free(res);
   free(cbcbi->aps);
   free(cbcbi);
 }

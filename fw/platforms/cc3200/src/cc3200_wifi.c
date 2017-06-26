@@ -348,22 +348,52 @@ char *mgos_wifi_get_ap_ip(void) {
 }
 
 void mgos_wifi_scan(mgos_wifi_scan_cb_t cb, void *arg) {
-  const char *ssids[21];
-  const char **res = NULL;
-  int i, n;
+  int i, j, n = -1;
+  struct mgos_wifi_scan_result *res = NULL;
   Sl_WlanNetworkEntry_t info[20];
 
   if (!ensure_role_sta()) goto out;
 
   n = sl_WlanGetNetworkList(0, 20, info);
   if (n < 0) goto out;
-  for (i = 0; i < n; i++) {
-    ssids[i] = (char *) info[i].ssid;
+  res = (struct mgos_wifi_scan_result *) calloc(n, sizeof(*res));
+  if (res == NULL) {
+    n = -1;
+    goto out;
   }
-  ssids[i] = NULL;
-  res = ssids;
+
+  for (i = 0, j = 0; i < n; i++) {
+    Sl_WlanNetworkEntry_t *e = &info[i];
+    struct mgos_wifi_scan_result *r = &res[j];
+    strncpy(r->ssid, (const char *) e->ssid, sizeof(r->ssid));
+    memcpy(r->bssid, e->bssid, sizeof(r->bssid));
+    r->ssid[sizeof(r->ssid) - 1] = '\0';
+    r->channel = 0; /* n/a */
+    switch (e->sec_type) {
+      case SL_SCAN_SEC_TYPE_OPEN:
+        r->auth_mode = MGOS_WIFI_AUTH_MODE_OPEN;
+        break;
+      case SL_SCAN_SEC_TYPE_WEP:
+        r->auth_mode = MGOS_WIFI_AUTH_MODE_WEP;
+        break;
+      case SL_SCAN_SEC_TYPE_WPA:
+        r->auth_mode = MGOS_WIFI_AUTH_MODE_WPA_PSK;
+        break;
+      case SL_SCAN_SEC_TYPE_WPA2:
+        r->auth_mode = MGOS_WIFI_AUTH_MODE_WPA2_PSK;
+        break;
+      default:
+
+        continue;
+    }
+    r->rssi = e->rssi;
+    j++;
+  }
+  n = j;
+
 out:
-  cb(res, arg);
+  cb(n, res, arg);
+  free(res);
 }
 
 void mgos_wifi_hal_init(void) {
