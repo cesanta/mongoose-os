@@ -1297,6 +1297,15 @@ func readManifestWithLibs(
 			return nil, time.Time{}, errors.Errorf("topo contains %q, but libsHandled doesn't. topo: %v, libsHandled: %v", v, topo, libsHandled)
 		}
 		manifest.LibsHandled[i] = lh
+
+		// Move all sublibs to the app's manifest libs. It might happen when
+		// we prepare the manifest to build remotely: some lib is not fetchable
+		// from the Internet, so we handle it, but it might have other libs,
+		// so they should be taken care of.
+		for _, subLib := range manifest.LibsHandled[i].Manifest.Libs {
+			manifest.Libs = append(manifest.Libs, subLib)
+		}
+		manifest.LibsHandled[i].Manifest.Libs = nil
 	}
 
 	if finalize {
