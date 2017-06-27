@@ -176,6 +176,10 @@ func main() {
 		log.Fatal(err)
 	}
 
+	if err := mosConfigInit(); err != nil {
+		log.Fatal(err)
+	}
+
 	if len(flag.Args()) == 0 || flag.Arg(0) == "ui" {
 		isUI = true
 		*reconnect = true

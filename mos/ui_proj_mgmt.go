@@ -132,9 +132,11 @@ func initProjectManagementEndpoints() {
 			return
 		}
 
+		mVars := NewManifestVars()
+
 		for _, f := range files {
 			name := f.Name()
-			manifest, _, err := readManifest(filepath.Join(dirPath, name), nil)
+			manifest, _, err := readManifest(filepath.Join(dirPath, name), nil, mVars)
 			if err == nil {
 				ret[name] = manifest
 			}

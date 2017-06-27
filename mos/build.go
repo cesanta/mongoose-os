@@ -82,6 +82,8 @@ const (
 	allLibsKeyword = "@all_libs"
 
 	depsApp = "app"
+
+	mVarNameMosVersion = "mos_version"
 )
 
 func init() {
@@ -280,7 +282,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	}
 
 	manifest, mtime, err := readManifestWithLibs(
-		appDir, bParams, logFile, libsDir, false /* skip clean */, true, /* finalize */
+		appDir, bParams, logFile, libsDir, mVars, false /* skip clean */, true, /* finalize */
 	)
 	if err != nil {
 		return errors.Trace(err)
@@ -807,9 +809,11 @@ func getCodeDir() (string, error) {
 // readManifest reads manifest file(s) from the specific directory; if the
 // manifest or given buildParams have arch specified, then the returned
 // manifest will contain all arch-specific adjustments (if any)
-func readManifest(appDir string, bParams *buildParams) (*build.FWAppManifest, time.Time, error) {
+func readManifest(
+	appDir string, bParams *buildParams, mVars *manifestVars,
+) (*build.FWAppManifest, time.Time, error) {
 	manifestFullName := filepath.Join(appDir, build.ManifestFileName)
-	manifest, mtime, err := readManifestFile(manifestFullName, true)
+	manifest, mtime, err := readManifestFile(manifestFullName, mVars, true)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
 	}
@@ -833,7 +837,7 @@ func readManifest(appDir string, bParams *buildParams) (*build.FWAppManifest, ti
 		_, err := os.Stat(manifestArchFullName)
 		if err == nil {
 			// Arch-specific mos.yml does exist, so, handle it
-			archManifest, archMtime, err := readManifestFile(manifestArchFullName, false)
+			archManifest, archMtime, err := readManifestFile(manifestArchFullName, mVars, false)
 			if err != nil {
 				return nil, time.Time{}, errors.Trace(err)
 			}
@@ -860,7 +864,7 @@ func readManifest(appDir string, bParams *buildParams) (*build.FWAppManifest, ti
 // readManifestFile reads single manifest file (which can be either "main" app
 // or lib manifest, or some arch-specific adjustment manifest)
 func readManifestFile(
-	manifestFullName string, manifestVersionMandatory bool,
+	manifestFullName string, mVars *manifestVars, manifestVersionMandatory bool,
 ) (*build.FWAppManifest, time.Time, error) {
 	manifestSrc, err := ioutil.ReadFile(manifestFullName)
 	if err != nil {
@@ -914,6 +918,16 @@ func readManifestFile(
 		manifest.MongooseOsVersion = "master"
 	}
 
+	manifest.MongooseOsVersion, err = mVars.ExpandVars(manifest.MongooseOsVersion)
+	if err != nil {
+		return nil, time.Time{}, errors.Trace(err)
+	}
+
+	manifest.LibsVersion, err = mVars.ExpandVars(manifest.LibsVersion)
+	if err != nil {
+		return nil, time.Time{}, errors.Trace(err)
+	}
+
 	stat, err := os.Stat(manifestFullName)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
@@ -955,9 +969,11 @@ func buildRemote(bParams *buildParams) error {
 		return errors.Trace(err)
 	}
 
+	mVars := NewManifestVars()
+
 	// Get manifest which includes stuff from all libs
 	manifest, _, err := readManifestWithLibs(
-		tmpCodeDir, bParams, os.Stdout, userLibsDir, true /* skip clean */, false, /* finalize */
+		tmpCodeDir, bParams, os.Stdout, userLibsDir, mVars, true /* skip clean */, false, /* finalize */
 	)
 	if err != nil {
 		return errors.Trace(err)
@@ -1206,9 +1222,11 @@ type manifestVars struct {
 }
 
 func NewManifestVars() *manifestVars {
-	return &manifestVars{
+	ret := &manifestVars{
 		subst: make(map[string]string),
 	}
+	ret.SetVar(mVarNameMosVersion, mosConfig.MosVersion)
+	return ret
 }
 
 func (mv *manifestVars) SetVar(name, value string) {
@@ -1258,7 +1276,8 @@ func identifierFromString(name string) string {
 // it's useful when crafting a manifest to send to the remote builder.
 func readManifestWithLibs(
 	dir string, bParams *buildParams,
-	logFile io.Writer, userLibsDir string, skipClean bool, finalize bool,
+	logFile io.Writer, userLibsDir string, mVars *manifestVars,
+	skipClean bool, finalize bool,
 ) (*build.FWAppManifest, time.Time, error) {
 	libsHandled := map[string]build.FWAppManifestLibHandled{}
 
@@ -1267,7 +1286,7 @@ func readManifestWithLibs(
 	deps.AddNode(depsApp)
 
 	manifest, mtime, err := readManifestWithLibs2(
-		dir, bParams, logFile, userLibsDir, skipClean, depsApp, deps, libsHandled, nil,
+		dir, bParams, logFile, userLibsDir, skipClean, depsApp, deps, libsHandled, nil, mVars,
 	)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
@@ -1325,10 +1344,10 @@ func readManifestWithLibs2(
 	dir string, bParams *buildParams,
 	logFile io.Writer, userLibsDir string, skipClean bool,
 	nodeName string, deps *Deps, libsHandled map[string]build.FWAppManifestLibHandled,
-	appManifest *build.FWAppManifest,
+	appManifest *build.FWAppManifest, mVars *manifestVars,
 ) (*build.FWAppManifest, time.Time, error) {
 
-	manifest, mtime, err := readManifest(dir, bParams)
+	manifest, mtime, err := readManifest(dir, bParams, mVars)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
 	}
@@ -1463,7 +1482,7 @@ libs:
 
 		libManifest, libMtime, err := readManifestWithLibs2(
 			libDirAbs, &bParams2, logFile, userLibsDir, skipClean, name, deps, libsHandled,
-			appManifest,
+			appManifest, mVars,
 		)
 		if err != nil {
 			return nil, time.Time{}, errors.Trace(err)
