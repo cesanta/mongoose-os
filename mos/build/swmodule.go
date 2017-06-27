@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"cesanta.com/mos/build/gitutils"
 
@@ -83,6 +84,7 @@ func (m *SWModule) IsClean(libsDir string) (bool, error) {
 // git it's "master")
 func (m *SWModule) PrepareLocalDir(
 	libsDir string, logFile io.Writer, deleteIfFailed bool, defaultVersion string,
+	pullInterval time.Duration,
 ) (string, error) {
 	if m.localPath == "" {
 
@@ -94,7 +96,7 @@ func (m *SWModule) PrepareLocalDir(
 		switch m.GetType() {
 		case SWModuleTypeGit:
 			version := m.getVersionGit(defaultVersion)
-			if err := prepareLocalCopyGit(m.Origin, version, lp, logFile, deleteIfFailed); err != nil {
+			if err := prepareLocalCopyGit(m.Origin, version, lp, logFile, deleteIfFailed, pullInterval); err != nil {
 				return "", errors.Trace(err)
 			}
 
@@ -224,6 +226,7 @@ func (m *SWModule) GetType() SWModuleType {
 func prepareLocalCopyGit(
 	origin, version, targetDir string,
 	logFile io.Writer, deleteIfFailed bool,
+	pullInterval time.Duration,
 ) error {
 	if version == "" {
 		version = "master"
@@ -312,7 +315,7 @@ func prepareLocalCopyGit(
 			}
 
 			glog.V(2).Infof("calling prepareLocalCopyGit() again")
-			return prepareLocalCopyGit(origin, version, targetDir, logFile, false)
+			return prepareLocalCopyGit(origin, version, targetDir, logFile, false, pullInterval)
 		} else {
 			return errors.Trace(err)
 		}
@@ -374,10 +377,24 @@ func prepareLocalCopyGit(
 	glog.V(2).Infof("rev abbr=%q\n", curRevAbbr)
 
 	if curRevAbbr != "HEAD" {
-		glog.V(2).Infof("pulling..\n")
-		err = gitutils.GitPull(targetDir)
+		fInfo, err := os.Stat(targetDir)
 		if err != nil {
 			return errors.Trace(err)
+		}
+
+		if fInfo.ModTime().Add(pullInterval).Before(time.Now()) {
+			glog.V(2).Infof("pulling..")
+			err = gitutils.GitPull(targetDir)
+			if err != nil {
+				return errors.Trace(err)
+			}
+
+			// Update modification time
+			if err := os.Chtimes(targetDir, time.Now(), time.Now()); err != nil {
+				return errors.Trace(err)
+			}
+		} else {
+			glog.Infof("Repository %q is updated recently enough, don't touch it", targetDir)
 		}
 	}
 
