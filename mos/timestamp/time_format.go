@@ -6,6 +6,10 @@ import (
 	"time"
 )
 
+const (
+	StampUnixMicro = "StampUnixMicro"
+)
+
 func ParseTimeStampFormatSpec(tsfSpec string) string {
 	// Is it one of the constants?
 	switch tsfSpec {
@@ -13,8 +17,20 @@ func ParseTimeStampFormatSpec(tsfSpec string) string {
 		fallthrough
 	case "yes":
 		fallthrough
+	case "on":
+		fallthrough
 	case "%s.%f":
+		return StampUnixMicro
+
+	case "":
+		fallthrough
+	case "false":
+		fallthrough
+	case "no":
+		fallthrough
+	case "off":
 		return ""
+
 	case "UnixDate":
 		return time.UnixDate
 	case "RubyDate":
@@ -55,11 +71,14 @@ func ParseTimeStampFormatSpec(tsfSpec string) string {
 	return tsfSpec
 }
 
-func FormatTimestamp(ts time.Time, spec, goFormat string) string {
-	if goFormat != "" {
-		return ts.Format(goFormat)
-	} else {
+func FormatTimestamp(ts time.Time, goFormat string) string {
+	switch goFormat {
+	case "":
+		return ""
+	case StampUnixMicro:
 		return fmt.Sprintf("%d.%06d", ts.Unix(), ts.Nanosecond()/1000)
+	default:
+		return ts.Format(goFormat)
 	}
 }
 

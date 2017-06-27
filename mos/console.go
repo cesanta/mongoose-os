@@ -91,8 +91,8 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 				if tsfSpec != "" {
 					ts := time.Now()
 					for i, b := range buf[:n] {
-						if lineStart && tsfSpec != "" {
-							fmt.Printf("[%s] ", timestamp.FormatTimestamp(ts, tsfSpec, tsFormat))
+						if lineStart && tsFormat != "" {
+							fmt.Printf("[%s] ", timestamp.FormatTimestamp(ts, tsFormat))
 						}
 						out.Write(buf[i : i+1])
 						lineStart = (b == '\n')
