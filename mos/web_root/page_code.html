@@ -6,14 +6,14 @@
         <strong class="header">My Apps</strong>
         <div class="pull-right">
           <button style="margin-top: -5px;" class="btn btn-success btn-sm create-project-button"> <i class="fa fa-plus"></i> New</button>
-          <button style="margin-top: -5px;" class="btn btn-success btn-sm" data-toggle="modal" data-target="#app-manager"> <i class="fa fa-download"></i> Import</button>
+          <button style="margin-top: -5px;" class="btn btn-success btn-sm" data-toggle="modal" data-type="app" data-target="#proj-manager-modal"> <i class="fa fa-download"></i> Import</button>
         </div>
       </li>
       <li class="list-group-item justify-content-between title" id="libs-header">
         <strong class="header">My Libs</strong>
         <div class="pull-right">
           <button style="margin-top: -5px;" class="btn btn-success btn-sm create-project-button"> <i class="fa fa-plus"></i> New</button>
-          <button style="margin-top: -5px;" class="btn btn-success btn-sm" data-toggle="modal" data-target="#lib-manager"> <i class="fa fa-download"></i> Import</button>
+          <button style="margin-top: -5px;" class="btn btn-success btn-sm" data-toggle="modal" data-type="lib" data-target="#proj-manager-modal"> <i class="fa fa-download"></i> Import</button>
         </div>
       </li>
     </div>
@@ -62,66 +62,34 @@
 
 <div class="btn-group project-control-toolbar hidden" id="ctl"
     style="position: absolute; top: 9px; right: 20px; ">
-  <!-- <button class="btn btn-xs btn-default descr do-rename" data-toggle="tooltip" data-placement="top" title="Rename&nbsp;project"><i class="fa fa-pencil"></i></button> -->
   <button class="btn btn-xs btn-default descr do-duplicate" data-toggle="tooltip" data-placement="top" title="Duplicate&nbsp;project"><i class="fa fa-copy"></i></button>
   <button class="btn btn-xs btn-default descr do-remove" data-toggle="tooltip" data-placement="top" title="Remove&nbsp;project"><i class="fa fa-remove"></i></button>
 </div>
 
 
-<div class="modal fade" id="lib-manager" tabindex="-1" role="dialog">
+<div class="modal fade" id="proj-manager-modal" tabindex="-1" role="dialog">
   <div class="modal-dialog" role="document">
     <div class="modal-content">
       <div class="modal-header">
         <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-        <h2 class="modal-title text-center">Library Manager &nbsp;&nbsp;&nbsp;<small class="xhidden"><i class="fa fa-refresh fa-spin"></i> loading...</small></h2>
-      </div>
-      <div class="modal-body">
-        <div class="form form-inline" style="margin-bottom: 0px;">
-          <!-- <button class="btn btn-success" id="download-lib-button"><i class="fa fa-download"></i> Download selected</button> -->
-          <div class="input-group xpull-right">
-            <span class="input-group-addon"><i class="fa fa-search"></i></span>
-            <input type="text" class="form-control" style="min-width: 17em;" placeholder="type filter ...">
-          </div>
-        </div>
-        <table class="table">
-          <thead>
-            <th>Name</th>
-            <th>Title</th>
-            <th>Tags</th>
-            <th>Author</th>
-            <th style="text-align: ">Download</th>
-          </thead>
-          <tbody class="projects"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</div>
-
-
-<div class="modal fade" id="app-manager" tabindex="-1" role="dialog">
-  <div class="modal-dialog" role="document">
-    <div class="modal-content">
-      <div class="modal-header">
-        <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
-        <h2 class="modal-title text-center">App Manager &nbsp;&nbsp;&nbsp;<small class="hidden"><i class="fa fa-refresh fa-spin"></i> loading...</small> </h2>
+        <h2 class="modal-title text-center"><span class="title">App Manager</span> &nbsp;&nbsp;&nbsp;<small class="hidden"><i class="fa fa-refresh fa-spin"></i> loading...</small> </h2>
       </div>
       <div class="modal-body">
         <div class="form form-inline" style="margin-bottom: 0px;">
           <div class="input-group xpull-right">
             <span class="input-group-addon"><i class="fa fa-search"></i></span>
-            <input type="text" class="form-control" style="min-width: 17em;" placeholder="type filter ...">
+            <input type="text" class="form-control" style="min-width: 17em;" id="proj-manager-filter-input" placeholder="type filter ...">
           </div>
         </div>
-        <table class="table">
-          <thead>
-            <th>Name</th>
-            <th>Title</th>
-            <th>Tags</th>
-            <th>Author</th>
-            <th>Import</th>
-          </thead>
-          <tbody class="projects"></tbody>
+        <table class="table projects">
+          <tr><th class="category-title header" colspan="5">Cloud integration</th></tr>
+          <tr class="cloud"><th>Name</th><th>Title</th><th>Tags</th><th>Author</th><th>Import</th></tr>
+          <tr><th class="category-title" colspan="5">Hardware</th></tr>
+          <tr class="hardware"><th>Name</th><th>Title</th><th>Tags</th><th>Author</th><th>Import</th></tr>
+          <tr><th class="category-title" colspan="5">Remote Management</th></tr>
+          <tr class="remote-management"><th>Name</th><th>Title</th><th>Tags</th><th>Author</th><th>Import</th></tr>
+          <tr><th class="category-title" colspan="5">Core</th></tr>
+          <tr class="core"><th>Name</th><th>Title</th><th>Tags</th><th>Author</th><th>Import</th></tr>
         </table>
       </div>
     </div>
@@ -194,7 +162,7 @@
 
   // Load local projects, populate project list and mark remote projects as downloaded
   var syncImportedProjects = function(type) {
-    var dialogSelector = '#' + type + '-manager';
+    var dialogSelector = '#proj-manager-modal';
     var itemClass = 'local-' + type;
     var headerSelector = '#' + type + 's-header';
 
@@ -238,15 +206,23 @@
 
   var loadRemoteProjects = function(type) {
     var file = type + 's.json';
-    var dialogSelector = '#' + type + '-manager';
+    var dialogSelector = '#proj-manager-modal';
     var org = 'mongoose-os-' + type + 's';
     return $.getJSON('https://mongoose-os.com/downloads/' + file).then(function(data) {
       $.each(data, function(k, v) {
-        var entry = clone('#remote-entry-template').appendTo(dialogSelector + ' .projects');
+        var tags = (v.tags || []).join(' ');
+
+        // Figure out project category
+        var category = 'core';
+        if (tags.indexOf('cloud') > -1) category = 'cloud';
+        if (tags.indexOf('rpc') > -1) category = 'remote-management';
+        if (tags.indexOf('hw') > -1) category = 'hardware';
+
+        var entry = clone('#remote-entry-template').insertAfter(dialogSelector + ' .' + category);
         entry.find('.name').text(k).attr({href: 'https://github.com/' + org + '/' + k});
         entry.find('.title').text(v.description || '');
-        entry.find('.tags').text((v.tags || []).join(' '));
-        entry.find('.author').text(v.author || '');
+        entry.find('.tags').text(tags);
+        entry.find('.author').text((v.author || '').replace(/<.+>/, ''));
         entry.attr({'mos-name': k, 'mos-type': type});
       });
     });
@@ -411,14 +387,31 @@
     $('#arch-dropdown').val(ui.info ? ui.info.arch : 'esp32');
   });
 
-  $(document).off('show.bs.modal', '#app-manager, #lib-manager');
-  $(document).on('show.bs.modal', '#app-manager, #lib-manager', function(ev) {
+  $(document).off('show.bs.modal', '#proj-manager-modal');
+  $(document).on('show.bs.modal', '#proj-manager-modal', function(ev) {
+    $('#proj-manager-filter-input').val('');
     var modal = $(this);
-    var type = modal.attr('id') == 'app-manager' ? 'app' : 'lib';
+    var type = $(ev.relatedTarget).data('type');
+    modal.find('h2 .title').text(type == 'lib' ? 'Library Manager' : 'App Manager');
     var loadingMessage = modal.find('h2 small').removeClass('hidden');
-    modal.find('.projects').empty();
+    modal.find('.remote-project').remove();
     loadRemoteProjects(type).always(function() {
+      syncImportedProjects(type);
       loadingMessage.addClass('hidden');
+    });
+  });
+
+  $(document).off('change', '#proj-manager-filter-input');
+  $(document).on('change', '#proj-manager-filter-input', function(ev) {
+    var text = $(this).val();
+    $('#proj-manager-modal .remote-project').each(function(i, v) {
+      var matchFound = function(sel) {
+        var name = $(v).find(sel).text() || '';
+        return name.indexOf(text) > -1;
+      };
+      var m = matchFound('.name') || matchFound('.title') ||
+              matchFound('.tags') || matchFound('.author');
+      $(v).toggle(m);
     });
   });
 

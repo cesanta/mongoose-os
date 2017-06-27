@@ -60,6 +60,7 @@ input.form-control { box-shadow: none !important; }
 #file-dropdown, #arch-dropdown { font-family: Consolas, Menlo, Monaco, monospace; margin-top: -5px; }
 #file-dropdown { width: 15em; }
 #app-manager .modal-dialog, #lib-manager .modal-dialog { min-width: 760px !important; }
+.category-title { text-align: center; text-transform: uppercase; border: 0 !important; background: #f0f0f0; }
 .api_def {
   font-family: Consolas, Menlo, Monaco, monospace;
   white-space: pre; font-size: 14px; font-weight: bold; color: teal;
