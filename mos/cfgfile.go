@@ -4,6 +4,7 @@ import (
 	"flag"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"runtime"
 
 	"github.com/cesanta/errors"
@@ -54,8 +55,13 @@ func mosConfigInit() error {
 			return errors.Trace(err)
 		}
 
+		configFileDir := filepath.Dir(mosConfigFile)
+		if err := os.MkdirAll(configFileDir, 0777); err != nil {
+			return errors.Annotatef(err, "failed to create dir %q for config file", configFileDir)
+		}
+
 		if err := ioutil.WriteFile(mosConfigFile, data, 0666); err != nil {
-			return errors.Trace(err)
+			return errors.Annotatef(err, "failed to write config file")
 		}
 	}
 
