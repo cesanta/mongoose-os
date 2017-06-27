@@ -704,6 +704,11 @@ func getMakeArgs(dir string, manifest *build.FWAppManifest) []string {
 // directory adds each glob from provided globs. Other paths are added as they
 // are.
 func globify(srcPaths []string, globs []string) (sources []string, dirs []string, err error) {
+	cwd, err := filepath.Abs(".")
+	if err != nil {
+		return nil, nil, errors.Trace(err)
+	}
+
 	for _, p := range srcPaths {
 		finfo, err := os.Stat(p)
 		var curDir string
@@ -746,6 +751,16 @@ func globify(srcPaths []string, globs []string) (sources []string, dirs []string
 		}
 		dirs = append(dirs, d)
 	}
+
+	// We want source paths to be absolute, but sources are globs, so we can't do
+	// filepath.Abs on it. Instead, we can just do filepath.Join(cwd, s) if
+	// the path is not absolute.
+	for k, s := range sources {
+		if !filepath.IsAbs(s) {
+			sources[k] = filepath.Join(cwd, s)
+		}
+	}
+
 	return sources, dirs, nil
 }
 
