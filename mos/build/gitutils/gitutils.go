@@ -64,7 +64,7 @@ func GitCheckout(repo string, id string) error {
 }
 
 func GitPull(repo string) error {
-	_, err := git(repo, "pull")
+	_, err := git(repo, "pull", "--all")
 	if err != nil {
 		return errors.Annotatef(err, "failed to git pull")
 	}
