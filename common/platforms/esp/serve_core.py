@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 #
-# usage: tools/serve_core.py --iram firmware/0x00000.bin --irom firmware/0x11000.bin /tmp/esp-console.log
+# usage: tools/serve_core.py build/fw/objs/fw.elf /tmp/console.log
 #
 # Then you can connect with gdb. The ESP8266 SDK image provides a debugger with
 # reasonable support of lx106. Example invocation:
@@ -24,21 +24,16 @@ import os
 import struct
 import sys
 
-IRAM_BASE=0x40100000
-IROM_BASE=0x40200000
+import elftools.elf.elffile  # apt install python-pyelftools
+
 ROM_BASE= 0x40000000
 
 parser = argparse.ArgumentParser(description='Serve ESP core dump to GDB')
 parser.add_argument('--port', dest='port', default=1234, type=int, help='listening port')
-parser.add_argument('--iram', dest='iram', help='iram firmware section')
-parser.add_argument('--iram_addr', dest='iram_addr',
-                    type=lambda x: int(x,16), help='iram firmware section')
-parser.add_argument('--irom', dest='irom', required=False, help='irom firmware section')
-parser.add_argument('--irom_addr', dest='irom_addr',
-                    type=lambda x: int(x,16), help='irom firmware section')
 parser.add_argument('--rom', dest='rom', required=False, help='rom section')
 parser.add_argument('--rom_addr', dest='rom_addr', default=ROM_BASE,
                     type=lambda x: int(x,16), help='rom section')
+parser.add_argument('elf', help='Program executable')
 parser.add_argument('log', help='serial log containing core dump snippet')
 
 args = parser.parse_args()
@@ -79,12 +74,9 @@ class Core(object):
     def __init__(self, filename):
         self._dump = self._read(filename)
         self.mem = self._map_core(self._dump)
-        if args.iram:
-            self.mem.extend(self._map_firmware(args.iram_addr, args.iram, IRAM_BASE))
-        if args.irom:
-            self.mem.extend(self._map_firmware(args.irom_addr, args.irom, IROM_BASE))
         if args.rom_addr:
             self.mem.extend(self._map_firmware(args.rom_addr, args.rom, ROM_BASE))
+        self.mem.extend(self._map_elf(args.elf))
         self.regs = base64.decodestring(self._dump['REGS']['data'])
         self.tasks = dict((a, self._parse_tcb(a)) for a in self._dump.get('tasks', []))
 
@@ -171,6 +163,21 @@ class Core(object):
                 print >>sys.stderr, "Mapping {0} at {1:#02x}".format(filename, addr)
                 result.append((addr, addr + len(data), data))
             return result
+
+    def _map_elf(self, elf_file_name):
+        result = []
+        f = open(elf_file_name)
+        ef = elftools.elf.elffile.ELFFile(f)
+        for i, sec in enumerate(ef.iter_sections()):
+            addr, size, off = sec["sh_addr"], sec["sh_size"], sec["sh_offset"]
+            if addr > 0 and size > 0:
+                print >>sys.stderr, "Mapping {0}: {1} @ {2:#02x}".format(sec.name, size, addr)
+                f.seek(off)
+                assert f.tell() == off
+                data = f.read(size)
+                assert len(data) == size
+                result.append((addr, addr + size, data))
+        return result
 
     def read(self, addr, size):
         for base, end, data in self.mem:
