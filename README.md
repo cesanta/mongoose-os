@@ -1,11 +1,12 @@
-# Mongoose OS
+# Mongoose OS [![Gitter](https://badges.gitter.im/cesanta/mongoose-os.svg)](https://gitter.im/cesanta/mongoose-os?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
-- [Mongoose OS](https://mongoose-os.com) - open source embedded operating system for low-power connected microcontrollers. 
+- [Mongoose OS](https://mongoose-os.com) - open source embedded operating
+  system for low-power connected microcontrollers.
 
 Targeting commercial connected products:
 - Code in C or JavaScript;
-- security features like crypto chip support, filesystem encryption, etc; 
-- built-in AWS IoT integration;
+- security features like crypto chip support, filesystem encryption, etc;
+- built-in AWS IoT, Google IoT integration;
 - [Embedded JavaScript engine - mJS](https://github.com/cesanta/mjs);
 - available for ESP8266, ESP32, TI CC3200, STM32.
 
@@ -23,14 +24,14 @@ Trusted and Recommended By:
 # Docs, Support
 - [Video tutorials](https://mongoose-os.com/#videos)
 - [Mongoose OS Documentation](https://mongoose-os.com/docs/#/overview/)
-- [Support Forum - ask your technical questions here](http://forum.cesanta.com/)
+- [Support Forum - ask your technical questions here](http://forum.mongoose-os.com/)
 - [Commercial licensing and support available](https://mongoose-os.com/contact.html)
 
 # Licensing
 
 Mongoose OS is released under Commercial and [GNU GPL v.2](http://www.gnu.org/licenses/old-licenses/gpl-2.0.html) open source licenses.
 
-Commercial Projects: [Contact us for the commercial license.](https://www.cesanta.com/contact)
+Commercial Projects: [Contact us for the commercial license.](https://www.mongoose-os.com/contact.html)
 
 # Contributions
 
