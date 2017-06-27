@@ -264,7 +264,7 @@ func prepareLocalCopyGit(
 	}
 
 	if !repoExists {
-		fmt.Printf("Repository %q does not exist, cloning...\n", targetDir)
+		fmt.Printf("Repository %q does not exist, cloning...", targetDir)
 		err := gitutils.GitClone(origin, targetDir, "")
 		if err != nil {
 			return errors.Trace(err)
@@ -278,7 +278,7 @@ func prepareLocalCopyGit(
 		}
 
 		if !isClean {
-			fmt.Printf("Repository %q is dirty, leaving it intact\n", targetDir)
+			fmt.Printf("Repository %q is dirty, leaving it intact", targetDir)
 			return nil
 		}
 	}
@@ -300,7 +300,7 @@ func prepareLocalCopyGit(
 		if deleteIfFailed {
 			// Instead of returning an error, try to delete the directory and
 			// clone the fresh copy
-			glog.Warningf("%s\n", err)
+			glog.Warningf("%s", err)
 			glog.V(2).Infof("removing everything under %q", targetDir)
 
 			files, err := ioutil.ReadDir(targetDir)
@@ -321,11 +321,11 @@ func prepareLocalCopyGit(
 		}
 	}
 
-	glog.V(2).Infof("hash: %q\n", curHash)
+	glog.V(2).Infof("hash: %q", curHash)
 
 	// Check if it's equal to the desired one
 	if gitutils.HashesEqual(curHash, version) {
-		glog.V(2).Infof("hashes are equal %q, %q\n", curHash, version)
+		glog.V(2).Infof("hashes are equal %q, %q", curHash, version)
 		// Desired mongoose iot version is a fixed SHA, and it's equal to the
 		// current commit: we're all set.
 		return nil
@@ -339,7 +339,7 @@ func prepareLocalCopyGit(
 		return errors.Trace(err)
 	}
 
-	glog.V(2).Infof("branch %q exists=%v\n", version, branchExists)
+	glog.V(2).Infof("branch %q exists=%v", version, branchExists)
 
 	// Check if MongooseOsVersion is a known tag name
 	tagExists, err = gitutils.DoesGitTagExist(targetDir, version)
@@ -347,11 +347,11 @@ func prepareLocalCopyGit(
 		return errors.Trace(err)
 	}
 
-	glog.V(2).Infof("tag %q exists=%v\n", version, tagExists)
+	glog.V(2).Infof("tag %q exists=%v", version, tagExists)
 
 	// If the desired mongoose-os version isn't a known branch, do git fetch
 	if !branchExists && !tagExists {
-		glog.V(2).Infof("neither branch nor tag exists, fetching..\n")
+		glog.V(2).Infof("neither branch nor tag exists, fetching..")
 		err = gitutils.GitFetch(targetDir)
 		if err != nil {
 			return errors.Trace(err)
@@ -359,7 +359,7 @@ func prepareLocalCopyGit(
 	}
 
 	// Try to checkout to the requested version
-	glog.V(2).Infof("checking out..\n")
+	glog.V(2).Infof("checking out..")
 	err = gitutils.GitCheckout(targetDir, version)
 	if err != nil {
 		return errors.Trace(err)
@@ -374,7 +374,7 @@ func prepareLocalCopyGit(
 	if err != nil {
 		return errors.Trace(err)
 	}
-	glog.V(2).Infof("rev abbr=%q\n", curRevAbbr)
+	glog.V(2).Infof("rev abbr=%q", curRevAbbr)
 
 	if curRevAbbr != "HEAD" {
 		fInfo, err := os.Stat(targetDir)
@@ -400,7 +400,7 @@ func prepareLocalCopyGit(
 
 	// To be safe, do `git checkout .`, so that any possible corruptions
 	// of the working directory will be fixed
-	glog.V(2).Infof("doing checkout .\n")
+	glog.V(2).Infof("doing checkout.")
 	err = gitutils.GitCheckout(targetDir, ".")
 	if err != nil {
 		return errors.Trace(err)
