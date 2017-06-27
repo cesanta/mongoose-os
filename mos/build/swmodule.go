@@ -132,7 +132,12 @@ func (m *SWModule) GetLocalDir(libsDir, defaultVersion string) (string, error) {
 
 	case SWModuleTypeLocal:
 		if m.Origin != "" {
-			return m.Origin, nil
+			originAbs, err := filepath.Abs(m.Origin)
+			if err != nil {
+				return "", errors.Trace(err)
+			}
+
+			return originAbs, nil
 		} else if m.Name != "" {
 			return filepath.Join(libsDir, m.Name), nil
 		} else {
