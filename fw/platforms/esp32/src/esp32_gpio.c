@@ -49,7 +49,7 @@ IRAM void mgos_gpio_hal_int_done(int pin) {
   GPIO.pin[pin].int_ena = s_int_ena[pin];
 }
 
-bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
+IRAM bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
   gpio_mode_t m;
   switch (mode) {
     case MGOS_GPIO_MODE_INPUT:
@@ -87,7 +87,7 @@ bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
   return true;
 }
 
-bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
+IRAM bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
   gpio_pull_mode_t pm;
   switch (pull) {
     case MGOS_GPIO_PULL_NONE:
