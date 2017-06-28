@@ -308,9 +308,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		ioutil.WriteFile(path.Join(genDir, mosFinal), d, 0666)
 	}
 
-	if manifest.Arch == "" {
-		return errors.Errorf("--arch must be specified or mos.yml should contain an arch key")
-	}
+	// manifest.Arch is guaranteed to be non-empty now (checked in readManifest)
 
 	mVars.SetVar("arch", manifest.Arch)
 
@@ -839,6 +837,10 @@ func readManifest(
 		manifest.Arch = bParams.Arch
 	}
 	manifest.Arch = strings.ToLower(manifest.Arch)
+
+	if manifest.Arch == "" {
+		return nil, time.Time{}, errors.Errorf("--arch must be specified or mos.yml should contain an arch key")
+	}
 
 	// If type is omitted, assume "app"
 	if manifest.Type == "" {
