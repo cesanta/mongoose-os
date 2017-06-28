@@ -210,7 +210,8 @@ _i32 fs_switch_container(struct dev_data *dd, _u32 mask_begin, _u32 mask_len) {
   _i32 old_fh = dd->fh, new_fh;
   _u8 *buf;
   _u32 offset, len, buf_size;
-  LOG(LL_DEBUG, ("%s %d -> %d", dd->cpfx, dd->cidx, new_cidx));
+  LOG(LL_DEBUG, ("%lu %lu %d %s %d -> %d", mask_begin, mask_len, dd->rw,
+                 dd->cpfx, dd->cidx, new_cidx));
   if (old_fh > 0 && dd->rw) {
     /*
      * During the switch the destination container will be unusable.

@@ -36,11 +36,18 @@ void mgos_uart_dispatcher(void *arg) {
   if (us == NULL) return;
   mgos_lock();
   if (us->rx_enabled) mgos_uart_hal_dispatch_rx_top(us);
-  mgos_uart_hal_dispatch_tx_top(us);
+  if (!us->xoff_recd) mgos_uart_hal_dispatch_tx_top(us);
   if (us->dispatcher_cb != NULL) {
     us->dispatcher_cb(uart_no, us->dispatcher_data);
   }
   mgos_uart_hal_dispatch_bottom(us);
+  if (us->xoff_sent && us->rx_enabled && mgos_uart_rxb_free(us) > 0) {
+    char xon = MGOS_UART_XON_CHAR;
+    /* We put it at the end of tx_buf, so antire TX fifo will need to drain
+     * before remote transmitter will be re-enabled. */
+    mbuf_append(&us->tx_buf, &xon, 1);
+    us->xoff_sent = false;
+  }
   if (us->rx_buf.len == 0) mbuf_trim(&us->rx_buf);
   if (us->tx_buf.len == 0) mbuf_trim(&us->tx_buf);
   mgos_unlock();
@@ -83,7 +90,25 @@ size_t mgos_uart_read(int uart_no, void *buf, size_t len) {
   if (us == NULL || !us->rx_enabled) return 0;
   mgos_lock();
   size_t tr = MIN(len, us->rx_buf.len);
-  memcpy(buf, us->rx_buf.buf, tr);
+  if (us->cfg.tx_fc_type == MGOS_UART_FC_SW) {
+    size_t i, j;
+    for (i = 0, j = 0; i < tr; i++) {
+      uint8_t ch = (uint8_t) us->rx_buf.buf[i];
+      switch (ch) {
+        case MGOS_UART_XON_CHAR:
+          us->xoff_recd = false;
+          break;
+        case MGOS_UART_XOFF_CHAR:
+          us->xoff_recd = true;
+          break;
+        default:
+          ((uint8_t *) buf)[j++] = ch;
+          break;
+      }
+    }
+  } else {
+    memcpy(buf, us->rx_buf.buf, tr);
+  }
   mbuf_remove(&us->rx_buf, tr);
   mgos_unlock();
   return tr;
@@ -108,7 +133,7 @@ size_t mgos_uart_read_mbuf(int uart_no, struct mbuf *mb, size_t len) {
 
 void mgos_uart_flush(int uart_no) {
   struct mgos_uart_state *us = s_uart_state[uart_no];
-  if (us == NULL) return;
+  if (us == NULL || us->xoff_recd) return;
   while (us->tx_buf.len > 0) {
     mgos_lock();
     mgos_uart_hal_dispatch_tx_top(us);
@@ -142,6 +167,9 @@ bool mgos_uart_configure(int uart_no, const struct mgos_uart_config *cfg) {
     res = mgos_uart_hal_configure(us, cfg);
     if (res) {
       memcpy(&us->cfg, cfg, sizeof(us->cfg));
+      if (us->cfg.tx_fc_type != MGOS_UART_FC_SW) {
+        us->xoff_sent = us->xoff_recd = false;
+      }
     }
   }
   mgos_unlock();
@@ -149,6 +177,15 @@ bool mgos_uart_configure(int uart_no, const struct mgos_uart_config *cfg) {
     mgos_uart_schedule_dispatcher(uart_no, false /* from_isr */);
   }
   return res;
+}
+
+bool mgos_uart_config_get(int uart_no, struct mgos_uart_config *cfg) {
+  if (uart_no < 0 || uart_no >= MGOS_MAX_NUM_UARTS) return false;
+  struct mgos_uart_state *us = s_uart_state[uart_no];
+  /* A way of telling if the UART has been configured. */
+  if (us->cfg.rx_buf_size == 0 && us->cfg.tx_buf_size == 0) return false;
+  memcpy(cfg, &us->cfg, sizeof(*cfg));
+  return true;
 }
 
 void mgos_uart_config_set_defaults(int uart_no, struct mgos_uart_config *cfg) {
@@ -175,14 +212,14 @@ void mgos_uart_config_set_rx_params(struct mgos_uart_config *cfg,
                                     int rx_buf_size, bool rx_fc_ena,
                                     int rx_linger_micros) {
   cfg->rx_buf_size = rx_buf_size;
-  cfg->rx_fc_ena = rx_fc_ena;
+  cfg->rx_fc_type = (rx_fc_ena ? MGOS_UART_FC_HW : MGOS_UART_FC_NONE);
   cfg->rx_linger_micros = rx_linger_micros;
 }
 
 void mgos_uart_config_set_tx_params(struct mgos_uart_config *cfg,
                                     int tx_buf_size, bool tx_fc_ena) {
   cfg->tx_buf_size = tx_buf_size;
-  cfg->tx_fc_ena = tx_fc_ena;
+  cfg->rx_fc_type = (tx_fc_ena ? MGOS_UART_FC_HW : MGOS_UART_FC_NONE);
 }
 
 void mgos_uart_set_dispatcher(int uart_no, mgos_uart_dispatcher_t cb,

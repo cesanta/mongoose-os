@@ -30,7 +30,8 @@
 #define UART_TX_INTS (UART_INT_TX)
 #define UART_INFO_INTS (UART_INT_OE)
 
-#define CC3200_UART_ISR_RX_BUF_SIZE 256
+#define CC3200_UART_ISR_RX_BUF_SIZE 64
+#define CC3200_UART_ISR_RX_BUF_FC_THRESH 32
 
 struct cc3200_uart_state {
   uint32_t base;
@@ -65,20 +66,28 @@ static void cc3200_int_handler(struct mgos_uart_state *us) {
   struct cc3200_uart_state *ds = (struct cc3200_uart_state *) us->dev_data;
   uint32_t int_st = MAP_UARTIntStatus(ds->base, true /* masked */);
   us->stats.ints++;
-  uint32_t int_mask = UART_TX_INTS;
-  if (int_st & UART_INT_OE) us->stats.rx_overflows++;
+  uint32_t int_dis = UART_TX_INTS;
+  if (int_st & UART_INT_OE) {
+    us->stats.rx_overflows++;
+    HWREG(ds->base + UART_O_ECR) = 0xff;
+  }
   if (int_st & (UART_RX_INTS | UART_TX_INTS)) {
     if (int_st & UART_RX_INTS) {
-      struct cs_rbuf *irxb = &ds->isr_rx_buf;
       us->stats.rx_ints++;
+      struct cs_rbuf *irxb = &ds->isr_rx_buf;
       cc3200_uart_rx_bytes(ds->base, irxb);
+      if (us->cfg.rx_fc_type == MGOS_UART_FC_SW &&
+          irxb->used >= CC3200_UART_ISR_RX_BUF_FC_THRESH && !us->xoff_sent) {
+        MAP_UARTCharPut(ds->base, MGOS_UART_XOFF_CHAR);
+        us->xoff_sent = true;
+      }
       /* Do not disable RX ints if we have space in the ISR buffer. */
-      if (irxb->avail == 0) int_mask |= UART_RX_INTS;
+      if (irxb->avail == 0) int_dis |= UART_RX_INTS;
     }
     if (int_st & UART_TX_INTS) us->stats.tx_ints++;
     mgos_uart_schedule_dispatcher(us->uart_no, true /* from_isr */);
   }
-  MAP_UARTIntDisable(ds->base, int_mask);
+  MAP_UARTIntDisable(ds->base, int_dis);
   MAP_UARTIntClear(ds->base, int_st);
 }
 
@@ -90,7 +99,7 @@ void mgos_uart_hal_dispatch_rx_top(struct mgos_uart_state *us) {
 recv_more:
   recd = false;
   cc3200_uart_rx_bytes(ds->base, irxb);
-  while (irxb->used > 0) {
+  while (irxb->used > 0 && mgos_uart_rxb_free(us) > 0) {
     int num_recd = 0;
     do {
       uint8_t *data;
@@ -146,7 +155,7 @@ void mgos_uart_hal_set_rx_enabled(struct mgos_uart_state *us, bool enabled) {
   struct cc3200_uart_state *ds = (struct cc3200_uart_state *) us->dev_data;
   uint32_t ctl = HWREG(ds->base + UART_O_CTL);
   if (enabled) {
-    if (us->cfg.rx_fc_ena) {
+    if (us->cfg.rx_fc_type == MGOS_UART_FC_HW) {
       ctl |= UART_CTL_RTSEN;
     }
   } else {
@@ -212,7 +221,8 @@ bool mgos_uart_hal_init(struct mgos_uart_state *us) {
 bool mgos_uart_hal_configure(struct mgos_uart_state *us,
                              const struct mgos_uart_config *cfg) {
   uint32_t base = cc3200_uart_get_base(us->uart_no);
-  if (us->uart_no == 0 && (cfg->tx_fc_ena || cfg->rx_fc_ena)) {
+  if (us->uart_no == 0 && (cfg->tx_fc_type == MGOS_UART_FC_HW ||
+                           cfg->rx_fc_type == MGOS_UART_FC_HW)) {
     /* No FC on UART0, according to the TRM. */
     return false;
   }
@@ -221,20 +231,21 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
   MAP_UARTConfigSetExpClk(
       base, MAP_PRCMPeripheralClockGet(periph), cfg->baud_rate,
       (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
-  if (cfg->tx_fc_ena || cfg->rx_fc_ena) {
+  if (cfg->tx_fc_type == MGOS_UART_FC_HW ||
+      cfg->rx_fc_type == MGOS_UART_FC_HW) {
     /* Note: only UART1 */
     uint32_t ctl = HWREG(base + UART_O_CTL);
-    if (cfg->tx_fc_ena) {
+    if (cfg->tx_fc_type == MGOS_UART_FC_HW) {
       ctl |= UART_CTL_CTSEN;
       MAP_PinTypeUART(PIN_61, PIN_MODE_3); /* UART1_CTS */
     }
-    if (cfg->rx_fc_ena) {
+    if (cfg->rx_fc_type == MGOS_UART_FC_HW) {
       ctl |= UART_CTL_RTSEN;
       MAP_PinTypeUART(PIN_62, PIN_MODE_3); /* UART1_RTS */
     }
     HWREG(base + UART_O_CTL) = ctl;
   }
-  MAP_UARTFIFOLevelSet(base, UART_FIFO_TX1_8, UART_FIFO_RX7_8);
+  MAP_UARTFIFOLevelSet(base, UART_FIFO_TX1_8, UART_FIFO_RX6_8);
   MAP_UARTFIFOEnable(base);
   return true;
 }

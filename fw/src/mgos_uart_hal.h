@@ -18,6 +18,8 @@ struct mgos_uart_state {
   struct mbuf rx_buf;
   struct mbuf tx_buf;
   bool rx_enabled;
+  bool xoff_recd;
+  bool xoff_sent;
   struct mgos_uart_stats stats;
   mgos_uart_dispatcher_t dispatcher_cb;
   void *dispatcher_data;

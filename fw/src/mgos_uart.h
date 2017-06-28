@@ -35,6 +35,12 @@ struct mgos_uart_dev_config {};
 extern "C" {
 #endif /* __cplusplus */
 
+enum mgos_uart_fc_type {
+  MGOS_UART_FC_NONE = 0,
+  MGOS_UART_FC_HW = 1, /* CTS/RTS */
+  MGOS_UART_FC_SW = 2, /* XON/XOFF */
+};
+
 struct mgos_uart_config {
   /* Baud rate, default: 115200 */
   int baud_rate;
@@ -42,7 +48,7 @@ struct mgos_uart_config {
   /* Size of the Rx buffer, default: 256 */
   int rx_buf_size;
   /* Enable flow control for Rx (RTS pin), default: off */
-  bool rx_fc_ena;
+  enum mgos_uart_fc_type rx_fc_type;
   /*
    * Lingers for this many microseconds after RX fifo is empty in case more
    * data arrives. Default: 15.
@@ -52,11 +58,14 @@ struct mgos_uart_config {
   /* Size of the Tx buffer, default: 256 */
   int tx_buf_size;
   /* Enable flow control for Tx (CTS pin), default: off */
-  bool tx_fc_ena;
+  enum mgos_uart_fc_type tx_fc_type;
 
   /* Platform-specific configuration options. */
   struct mgos_uart_dev_config dev;
 };
+
+#define MGOS_UART_XON_CHAR 0x11
+#define MGOS_UART_XOFF_CHAR 0x13
 
 /*
  * Apply given UART configuration.
@@ -67,6 +76,12 @@ bool mgos_uart_configure(int uart_no, const struct mgos_uart_config *cfg);
  * Fill provided `cfg` structure with the default values.
  */
 void mgos_uart_config_set_defaults(int uart_no, struct mgos_uart_config *cfg);
+
+/*
+ * Fill provided `cfg` structure with the current UART config.
+ * Returns false if the specified UART has not bee configured yet.
+ */
+bool mgos_uart_config_get(int uart_no, struct mgos_uart_config *cfg);
 
 /*
  * UART dispatcher gets when there is data in the input buffer

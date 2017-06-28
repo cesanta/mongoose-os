@@ -56,12 +56,32 @@ IRAM void esp_uart_tx_byte(int uart_no, uint8_t byte) {
   WRITE_PERI_REG(UART_FIFO(uart_no), byte);
 }
 
+IRAM uint8_t get_rx_fifo_full_thresh(int uart_no) {
+  return READ_PERI_REG(UART_CONF1(uart_no)) & 0x7f;
+}
+
+IRAM bool adj_rx_fifo_full_thresh(struct mgos_uart_state *us) {
+  int uart_no = us->uart_no;
+  uint8_t thresh = us->cfg.dev.rx_fifo_full_thresh;
+  uint8_t rx_fifo_len = esp_uart_rx_fifo_len(uart_no);
+  if (rx_fifo_len >= thresh && us->cfg.rx_fc_type == MGOS_UART_FC_SW) {
+    thresh = us->cfg.dev.rx_fifo_fc_thresh;
+  }
+  if (get_rx_fifo_full_thresh(uart_no) != thresh) {
+    uint32_t conf1 = READ_PERI_REG(UART_CONF1(uart_no));
+    conf1 = (conf1 & ~0x7f) | thresh;
+    WRITE_PERI_REG(UART_CONF1(uart_no), conf1);
+  }
+  return (rx_fifo_len < thresh);
+}
+
 IRAM NOINSTR static void esp_handle_uart_int(struct mgos_uart_state *us) {
   if (us == NULL) return;
   const int uart_no = us->uart_no;
   /* Since both UARTs use the same int, we need to apply the mask manually. */
   const unsigned int int_st = READ_PERI_REG(UART_INT_ST(uart_no)) &
                               READ_PERI_REG(UART_INT_ENA(uart_no));
+  const struct mgos_uart_config *cfg = &us->cfg;
   if (int_st == 0) return;
   us->stats.ints++;
   if (int_st & UART_RXFIFO_OVF_INT_ST) us->stats.rx_overflows++;
@@ -71,11 +91,20 @@ IRAM NOINSTR static void esp_handle_uart_int(struct mgos_uart_state *us) {
     }
   }
   if (int_st & (UART_RX_INTS | UART_TX_INTS)) {
+    int int_ena = UART_INFO_INTS;
     if (int_st & UART_RX_INTS) us->stats.rx_ints++;
     if (int_st & UART_TX_INTS) us->stats.tx_ints++;
-    /* Wake up the processor and disable TX and RX ints until it runs. */
-    WRITE_PERI_REG(UART_INT_ENA(uart_no), UART_INFO_INTS);
-    mgos_uart_schedule_dispatcher(uart_no, true);
+    if (adj_rx_fifo_full_thresh(us)) {
+      int_ena |= UART_RXFIFO_FULL_INT_ENA;
+    } else if (cfg->rx_fc_type == MGOS_UART_FC_SW) {
+      /* Send XOFF and keep RX ints disabled */
+      while (esp_uart_tx_fifo_len(uart_no) >= 127) {
+      }
+      esp_uart_tx_byte(uart_no, MGOS_UART_XOFF_CHAR);
+      us->xoff_sent = true;
+    }
+    WRITE_PERI_REG(UART_INT_ENA(uart_no), int_ena);
+    mgos_uart_schedule_dispatcher(uart_no, true /* from_isr */);
   }
   WRITE_PERI_REG(UART_INT_CLR(uart_no), int_st);
 }
@@ -154,8 +183,13 @@ void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us) {
 void mgos_uart_hal_dispatch_bottom(struct mgos_uart_state *us) {
   uint32_t int_ena = UART_INFO_INTS;
   /* Determine which interrupts we want. */
-  if (us->rx_enabled && mgos_uart_rxb_free(us) > 0) {
-    int_ena |= UART_RX_INTS;
+  if (us->rx_enabled) {
+    if (mgos_uart_rxb_free(us) > 0) {
+      int_ena |= UART_RX_INTS;
+    }
+    if (adj_rx_fifo_full_thresh(us)) {
+      int_ena |= UART_RXFIFO_FULL_INT_ENA;
+    }
   }
   if (us->tx_buf.len > 0) int_ena |= UART_TX_INTS;
   WRITE_PERI_REG(UART_INT_ENA(us->uart_no), int_ena);
@@ -169,7 +203,7 @@ void mgos_uart_hal_flush_fifo(struct mgos_uart_state *us) {
 static bool esp_uart_validate_config(const struct mgos_uart_config *c) {
   if (c->baud_rate < 0 || c->baud_rate > 4000000 || c->rx_buf_size < 0 ||
       c->dev.rx_fifo_full_thresh < 1 ||
-      (c->rx_fc_ena &&
+      (c->rx_fc_type != MGOS_UART_FC_NONE &&
        (c->dev.rx_fifo_fc_thresh < c->dev.rx_fifo_full_thresh)) ||
       c->rx_linger_micros > 200 || c->dev.tx_fifo_empty_thresh < 0) {
     return false;
@@ -181,7 +215,7 @@ void mgos_uart_hal_config_set_defaults(int uart_no,
                                        struct mgos_uart_config *cfg) {
   cfg->dev.rx_fifo_alarm = 10;
   cfg->dev.rx_fifo_full_thresh = 40;
-  cfg->dev.rx_fifo_fc_thresh = 125;
+  cfg->dev.rx_fifo_fc_thresh = 100;
   cfg->dev.tx_fifo_empty_thresh = 10;
   cfg->dev.swap_rxcts_txrts = false;
   (void) uart_no;
@@ -237,7 +271,7 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
   }
 
   unsigned int conf0 = 0b011100; /* 8-N-1 */
-  if (cfg->tx_fc_ena) {
+  if (cfg->tx_fc_type == MGOS_UART_FC_HW) {
     conf0 |= UART_TX_FLOW_EN;
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTCK_U, FUNC_U0CTS);
   }
@@ -248,7 +282,7 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
   if (cfg->dev.rx_fifo_alarm >= 0) {
     conf1 |= UART_RX_TOUT_EN | ((cfg->dev.rx_fifo_alarm & 0x7f) << 24);
   }
-  if (cfg->rx_fc_ena && cfg->dev.rx_fifo_fc_thresh > 0) {
+  if (cfg->rx_fc_type == MGOS_UART_FC_HW && cfg->dev.rx_fifo_fc_thresh > 0) {
     /* UART_RX_FLOW_EN will be set in uart_start. */
     conf1 |= ((cfg->dev.rx_fifo_fc_thresh & 0x7f) << 16);
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U, FUNC_U0RTS);
@@ -267,12 +301,12 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
 void mgos_uart_hal_set_rx_enabled(struct mgos_uart_state *us, bool enabled) {
   int uart_no = us->uart_no;
   if (enabled) {
-    if (us->cfg.rx_fc_ena) {
+    if (us->cfg.rx_fc_type == MGOS_UART_FC_HW) {
       SET_PERI_REG_MASK(UART_CONF1(uart_no), UART_RX_FLOW_EN);
     }
     SET_PERI_REG_MASK(UART_INT_ENA(uart_no), UART_RX_INTS);
   } else {
-    if (us->cfg.rx_fc_ena) {
+    if (us->cfg.rx_fc_type == MGOS_UART_FC_HW) {
       /* With UART_SW_RTS = 0 in CONF0 this throttles RX (sets RTS = 1). */
       CLEAR_PERI_REG_MASK(UART_CONF1(uart_no), UART_RX_FLOW_EN);
     }
