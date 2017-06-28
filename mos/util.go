@@ -1,26 +1,26 @@
 package main
 
 import (
-	"bufio"
-	"fmt"
-	"os"
+	"io"
 	"os/exec"
-	"strings"
 	"time"
+
+	"cesanta.com/common/go/ourutil"
 
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 )
 
 func reportf(f string, args ...interface{}) {
-	fmt.Fprintf(os.Stderr, f+"\n", args...)
-	glog.Infof(f, args...)
+	ourutil.Reportf(f, args...)
+}
+
+func freportf(logFile io.Writer, f string, args ...interface{}) {
+	ourutil.Freportf(logFile, f, args...)
 }
 
 func prompt(text string) string {
-	fmt.Fprintf(os.Stderr, "%s ", text)
-	ans, _ := bufio.NewReader(os.Stdin).ReadString('\n')
-	return strings.TrimSpace(ans)
+	return ourutil.Prompt(text)
 }
 
 func getCommandOutput(command string, args ...string) (string, error) {

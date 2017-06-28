@@ -11,6 +11,7 @@ import (
 	"strings"
 	"time"
 
+	"cesanta.com/common/go/ourutil"
 	"cesanta.com/mos/build/gitutils"
 
 	"github.com/cesanta/errors"
@@ -83,7 +84,7 @@ func (m *SWModule) IsClean(libsDir string) (bool, error) {
 // empty string, then the default will depend on the kind of lib (e.g. for
 // git it's "master")
 func (m *SWModule) PrepareLocalDir(
-	libsDir string, logFile io.Writer, deleteIfFailed bool, defaultVersion string,
+	libsDir string, logWriter io.Writer, deleteIfFailed bool, defaultVersion string,
 	pullInterval time.Duration,
 ) (string, error) {
 	if m.localPath == "" {
@@ -96,7 +97,7 @@ func (m *SWModule) PrepareLocalDir(
 		switch m.GetType() {
 		case SWModuleTypeGit:
 			version := m.getVersionGit(defaultVersion)
-			if err := prepareLocalCopyGit(m.Origin, version, lp, logFile, deleteIfFailed, pullInterval); err != nil {
+			if err := prepareLocalCopyGit(m.Origin, version, lp, logWriter, deleteIfFailed, pullInterval); err != nil {
 				return "", errors.Trace(err)
 			}
 
@@ -225,7 +226,7 @@ func (m *SWModule) GetType() SWModuleType {
 
 func prepareLocalCopyGit(
 	origin, version, targetDir string,
-	logFile io.Writer, deleteIfFailed bool,
+	logWriter io.Writer, deleteIfFailed bool,
 	pullInterval time.Duration,
 ) error {
 	if version == "" {
@@ -264,7 +265,7 @@ func prepareLocalCopyGit(
 	}
 
 	if !repoExists {
-		fmt.Printf("Repository %q does not exist, cloning...", targetDir)
+		freportf(logWriter, "Repository %q does not exist, cloning...\n", targetDir)
 		err := gitutils.GitClone(origin, targetDir, "")
 		if err != nil {
 			return errors.Trace(err)
@@ -278,7 +279,7 @@ func prepareLocalCopyGit(
 		}
 
 		if !isClean {
-			fmt.Printf("Repository %q is dirty, leaving it intact", targetDir)
+			freportf(logWriter, "Repository %q is dirty, leaving it intact\n", targetDir)
 			return nil
 		}
 	}
@@ -315,7 +316,7 @@ func prepareLocalCopyGit(
 			}
 
 			glog.V(2).Infof("calling prepareLocalCopyGit() again")
-			return prepareLocalCopyGit(origin, version, targetDir, logFile, false, pullInterval)
+			return prepareLocalCopyGit(origin, version, targetDir, logWriter, false, pullInterval)
 		} else {
 			return errors.Trace(err)
 		}
@@ -394,7 +395,7 @@ func prepareLocalCopyGit(
 				return errors.Trace(err)
 			}
 		} else {
-			glog.Infof("Repository %q is updated recently enough, don't touch it", targetDir)
+			freportf(logWriter, "Repository %q is updated recently enough, don't touch it", targetDir)
 		}
 	}
 
@@ -416,4 +417,8 @@ func getGitDirName(name, repoVersion string) string {
 		return name
 	}
 	return fmt.Sprintf("%s-%s", name, repoVersion)
+}
+
+func freportf(logFile io.Writer, f string, args ...interface{}) {
+	ourutil.Freportf(logFile, f, args...)
 }

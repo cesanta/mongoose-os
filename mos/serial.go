@@ -1,6 +1,8 @@
 package main
 
-import "github.com/cesanta/errors"
+import (
+	"github.com/cesanta/errors"
+)
 
 var defaultPort string
 

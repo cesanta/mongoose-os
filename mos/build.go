@@ -59,6 +59,15 @@ var (
 	modulesDir = ""
 
 	varRegexp = regexp.MustCompile(`\$\{[^}]+\}`)
+
+	// In-memory buffer containing all the log messages
+	logBuf bytes.Buffer
+
+	// Log writer which always writes to the build.log file, os.Stdout and logBuf
+	logWriterStdout io.Writer
+
+	// The same as logWriterStdout, but skips os.Stdout unless --verbose is given
+	logWriter io.Writer
 )
 
 const (
@@ -66,6 +75,7 @@ const (
 	codeDir  = "."
 
 	buildLog           = "build.log"
+	buildLogLocal      = "build.local.log"
 	mosFinal           = "mos_final.yml"
 	depsInitCFileName  = "deps_init.c"
 	confSchemaFileName = "mos_conf_schema.yml"
@@ -153,6 +163,26 @@ func buildInit() error {
 		return errors.Trace(err)
 	}
 
+	if err := os.MkdirAll(buildDir, 0777); err != nil {
+		return errors.Trace(err)
+	}
+
+	blog := filepath.Join(buildDir, buildLog)
+	logFile, err := os.Create(blog)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	// Remove local log, ignore any errors
+	os.RemoveAll(filepath.Join(buildDir, buildLogLocal))
+
+	logWriterStdout = io.MultiWriter(logFile, &logBuf, os.Stdout)
+	logWriter = io.MultiWriter(logFile, &logBuf)
+
+	if *verbose {
+		logWriter = logWriterStdout
+	}
+
 	return nil
 }
 
@@ -195,11 +225,14 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 	fwFilename := filepath.Join(buildDir, build.FirmwareFileName)
 
 	fw, err := common.NewZipFirmwareBundle(fwFilename)
-	if err == nil {
-		reportf("Success, built %s/%s version %s (%s).", fw.Name, fw.Platform, fw.Version, fw.BuildID)
-	}
 
-	reportf("Firmware saved to %s", fwFilename)
+	if *local || !*verbose {
+		if err == nil {
+			freportf(logWriter, "Success, built %s/%s version %s (%s).", fw.Name, fw.Platform, fw.Version, fw.BuildID)
+		}
+
+		freportf(logWriterStdout, "Firmware saved to %s", fwFilename)
+	}
 
 	return err
 }
@@ -238,8 +271,9 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 
 	// Perform cleanup before the build {{{
 	if *cleanBuild {
-		err = os.RemoveAll(buildDir)
-		if err != nil {
+		// Cleanup build dir, but leave buildLog intact, because we're already
+		// writing to it.
+		if err := ourio.RemoveFromDir(buildDir, []string{buildLog}); err != nil {
 			return errors.Trace(err)
 		}
 	} else {
@@ -247,20 +281,6 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		// (ignoring any possible errors)
 		os.Remove(fwFilename)
 	}
-	// }}}
-
-	// Prepare build dir and log file {{{
-	err = os.MkdirAll(buildDir, 0777)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	blog := filepath.Join(buildDir, buildLog)
-	logFile, err := os.Create(blog)
-	if err != nil {
-		return errors.Trace(err)
-	}
-	defer logFile.Close()
 	// }}}
 
 	// Prepare gen dir
@@ -283,7 +303,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	}
 
 	manifest, mtime, err := readManifestWithLibs(
-		appDir, bParams, logFile, libsDir, mVars, false /* skip clean */, true, /* finalize */
+		appDir, bParams, logWriter, libsDir, mVars, false /* skip clean */, true, /* finalize */
 	)
 	if err != nil {
 		return errors.Trace(err)
@@ -323,15 +343,15 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		if !ok {
 			// Custom module location wasn't provided in command line, so, we'll
 			// use the module name and will clone/pull it if necessary
-			reportf("The flag --module is not given for the module %q, going to use the repository", name)
+			freportf(logWriter, "The flag --module is not given for the module %q, going to use the repository", name)
 
 			var err error
-			targetDir, err = m.PrepareLocalDir(modulesDir, logFile, true, manifest.ModulesVersion, *libsUpdateInterval)
+			targetDir, err = m.PrepareLocalDir(modulesDir, logWriter, true, manifest.ModulesVersion, *libsUpdateInterval)
 			if err != nil {
 				return errors.Trace(err)
 			}
 		} else {
-			reportf("Using module %q located at %q", name, targetDir)
+			freportf(logWriter, "Using module %q located at %q", name, targetDir)
 		}
 
 		setModuleVars(mVars, name, targetDir)
@@ -341,10 +361,10 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	// Determine mongoose-os dir (mosDirEffective) {{{
 	var mosDirEffective string
 	if *mosRepo != "" {
-		reportf("Using mongoose-os located at %q", *mosRepo)
+		freportf(logWriter, "Using mongoose-os located at %q", *mosRepo)
 		mosDirEffective = *mosRepo
 	} else {
-		reportf("The flag --repo is not given, going to use mongoose-os repository")
+		freportf(logWriter, "The flag --repo is not given, going to use mongoose-os repository")
 
 		m := build.SWModule{
 			Type: "git",
@@ -356,7 +376,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		}
 
 		var err error
-		mosDirEffective, err = m.PrepareLocalDir(modulesDir, logFile, true, "", *libsUpdateInterval)
+		mosDirEffective, err = m.PrepareLocalDir(modulesDir, logWriter, true, "", *libsUpdateInterval)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -452,9 +472,9 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		return errors.Trace(err)
 	}
 
-	reportf("Sources: %v", appSources)
+	freportf(logWriter, "Sources: %v", appSources)
 
-	reportf("Building...")
+	freportf(logWriter, "Building...")
 
 	appName, err := fixupAppName(manifest.Name)
 	if err != nil {
@@ -612,12 +632,10 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 			"/bin/bash", "-c", "nice make '"+strings.Join(makeArgs, "' '")+"'",
 		)
 
-		if *verbose {
-			reportf("Docker arguments: %s", strings.Join(dockerArgs, " "))
-		}
+		freportf(logWriter, "Docker arguments: %s", strings.Join(dockerArgs, " "))
 
 		cmd := exec.Command("docker", dockerArgs...)
-		err = runCmd(cmd, logFile)
+		err = runCmd(cmd, logWriter)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -628,12 +646,10 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 
 		makeArgs := getMakeArgs(appPath, manifest)
 
-		if *verbose {
-			reportf("Make arguments: %s", strings.Join(makeArgs, " "))
-		}
+		freportf(logWriter, "Make arguments: %s", strings.Join(makeArgs, " "))
 
 		cmd := exec.Command("make", makeArgs...)
-		err = runCmd(cmd, logFile)
+		err = runCmd(cmd, logWriter)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -664,12 +680,12 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 // manually, and prints a warning if so.
 func printConfSchemaWarn(manifest *build.FWAppManifest) {
 	if _, ok := manifest.BuildVars["APP_CONF_SCHEMA"]; ok {
-		reportf("===")
-		reportf("WARNING: Setting build variable %q in %q "+
+		freportf(logWriterStdout, "===")
+		freportf(logWriterStdout, "WARNING: Setting build variable %q in %q "+
 			"is deprecated, use \"config_schema\" property instead.",
 			"APP_CONF_SCHEMA", build.ManifestFileName,
 		)
-		reportf("===")
+		freportf(logWriterStdout, "===")
 	}
 }
 
@@ -778,26 +794,11 @@ func addBuildVar(manifest *build.FWAppManifest, name, value string) error {
 	return nil
 }
 
-// getCmdWriter returns a writer which includes at least the given logFile,
-// and if --verbose flag is set, then also stdout.
-func getCmdWriter(logFile io.Writer) io.Writer {
-	writers := []io.Writer{logFile}
-	if *verbose {
-		writers = append(writers, os.Stdout)
-	}
-	return io.MultiWriter(writers...)
-}
-
 // runCmd runs given command and redirects its output to the given log file.
 // if --verbose flag is set, then the output also goes to the stdout.
-func runCmd(cmd *exec.Cmd, logFile io.Writer) error {
-	writers := []io.Writer{logFile}
-	if *verbose {
-		writers = append(writers, os.Stdout)
-	}
-	out := getCmdWriter(logFile)
-	cmd.Stdout = out
-	cmd.Stderr = out
+func runCmd(cmd *exec.Cmd, logWriter io.Writer) error {
+	cmd.Stdout = logWriter
+	cmd.Stderr = logWriter
 	err := cmd.Run()
 	if err != nil {
 		return errors.Trace(err)
@@ -899,7 +900,7 @@ func readManifestFile(
 	if manifest.ManifestVersion == "" && manifest.SkeletonVersion != "" {
 		// TODO(dfrank): uncomment the warning below when our examples use
 		// manifest_version
-		//reportf("WARNING: skeleton_version is deprecated and will be removed eventually, please rename it to manifest_version")
+		//freportf(logWriterStdout, "WARNING: skeleton_version is deprecated and will be removed eventually, please rename it to manifest_version")
 		manifest.ManifestVersion = manifest.SkeletonVersion
 	}
 
@@ -991,7 +992,7 @@ func buildRemote(bParams *buildParams) error {
 
 	// Get manifest which includes stuff from all libs
 	manifest, _, err := readManifestWithLibs(
-		tmpCodeDir, bParams, os.Stdout, userLibsDir, mVars, true /* skip clean */, false, /* finalize */
+		tmpCodeDir, bParams, logWriter, userLibsDir, mVars, true /* skip clean */, false, /* finalize */
 	)
 	if err != nil {
 		return errors.Trace(err)
@@ -1089,12 +1090,12 @@ func buildRemote(bParams *buildParams) error {
 
 	buildUser := "test"
 	buildPass := "test"
-	reportf("Connecting to %s, user %s", server, buildUser)
+	freportf(logWriterStdout, "Connecting to %s, user %s", server, buildUser)
 
 	// invoke the fwbuild API
 	uri := fmt.Sprintf("%s/api/%s/firmware/build", server, buildUser)
 
-	reportf("Uploading sources (%d bytes)", len(body.Bytes()))
+	freportf(logWriterStdout, "Uploading sources (%d bytes)", len(body.Bytes()))
 	req, err := http.NewRequest("POST", uri, body)
 	req.Header.Set("Content-Type", mpw.FormDataContentType())
 	req.SetBasicAuth(buildUser, buildPass)
@@ -1117,6 +1118,9 @@ func buildRemote(bParams *buildParams) error {
 		r := bytes.NewReader(body.Bytes())
 		os.RemoveAll(buildDir)
 		archive.UnzipInto(r, r.Size(), ".", 0)
+
+		// Save local log
+		ioutil.WriteFile(path.Join(buildDir, buildLogLocal), logBuf.Bytes(), 0666)
 
 		// print log in verbose mode or when build fails
 		if *verbose || resp.StatusCode != http.StatusOK {
@@ -1294,7 +1298,7 @@ func identifierFromString(name string) string {
 // it's useful when crafting a manifest to send to the remote builder.
 func readManifestWithLibs(
 	dir string, bParams *buildParams,
-	logFile io.Writer, userLibsDir string, mVars *manifestVars,
+	logWriter io.Writer, userLibsDir string, mVars *manifestVars,
 	skipClean bool, finalize bool,
 ) (*build.FWAppManifest, time.Time, error) {
 	libsHandled := map[string]build.FWAppManifestLibHandled{}
@@ -1304,7 +1308,7 @@ func readManifestWithLibs(
 	deps.AddNode(depsApp)
 
 	manifest, mtime, err := readManifestWithLibs2(
-		dir, bParams, logFile, userLibsDir, skipClean, depsApp, deps, libsHandled, nil, mVars,
+		dir, bParams, logWriter, userLibsDir, skipClean, depsApp, deps, libsHandled, nil, mVars,
 	)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
@@ -1360,7 +1364,7 @@ func readManifestWithLibs(
 
 func readManifestWithLibs2(
 	dir string, bParams *buildParams,
-	logFile io.Writer, userLibsDir string, skipClean bool,
+	logWriter io.Writer, userLibsDir string, skipClean bool,
 	nodeName string, deps *Deps, libsHandled map[string]build.FWAppManifestLibHandled,
 	appManifest *build.FWAppManifest, mVars *manifestVars,
 ) (*build.FWAppManifest, time.Time, error) {
@@ -1408,19 +1412,19 @@ libs:
 			return nil, time.Time{}, errors.Trace(err)
 		}
 
-		reportf("Handling lib %q...", name)
+		freportf(logWriter, "Handling lib %q...", name)
 
 		deps.AddDep(nodeName, name)
 
 		if deps.NodeExists(name) {
-			reportf("Already handled, skipping")
+			freportf(logWriter, "Already handled, skipping")
 			continue libs
 		}
 
 		libDirAbs, ok := bParams.CustomLibLocations[name]
 
 		if !ok {
-			reportf("The --lib flag was not given for it, checking repository")
+			freportf(logWriter, "The --lib flag was not given for it, checking repository")
 
 			needPull := true
 
@@ -1431,7 +1435,7 @@ libs:
 				}
 
 				if _, err := os.Stat(localDir); err == nil {
-					reportf("--no-libs-update was given, and %q exists: skipping update", localDir)
+					freportf(logWriter, "--no-libs-update was given, and %q exists: skipping update", localDir)
 					libDirAbs = localDir
 					needPull = false
 				}
@@ -1445,23 +1449,23 @@ libs:
 					}
 
 					if isClean {
-						reportf("Clean, skipping (will be handled remotely)")
+						freportf(logWriter, "Clean, skipping (will be handled remotely)")
 						continue
 					}
 				}
 
 				// Note: we always call PrepareLocalDir for libsDir, but then,
 				// if userLibsDir is different, will need to copy it to the new location
-				libDirAbs, err = m.PrepareLocalDir(libsDir, os.Stdout, true, appManifest.LibsVersion, *libsUpdateInterval)
+				libDirAbs, err = m.PrepareLocalDir(libsDir, logWriter, true, appManifest.LibsVersion, *libsUpdateInterval)
 				if err != nil {
 					return nil, time.Time{}, errors.Trace(err)
 				}
 			}
 		} else {
-			reportf("Using the location %q as is (given as a --lib flag)", libDirAbs)
+			freportf(logWriter, "Using the location %q as is (given as a --lib flag)", libDirAbs)
 		}
 
-		reportf("Prepared local dir: %q", libDirAbs)
+		freportf(logWriter, "Prepared local dir: %q", libDirAbs)
 
 		libDirForManifest := libDirAbs
 
@@ -1499,7 +1503,7 @@ libs:
 		}
 
 		libManifest, libMtime, err := readManifestWithLibs2(
-			libDirAbs, &bParams2, logFile, userLibsDir, skipClean, name, deps, libsHandled,
+			libDirAbs, &bParams2, logWriter, userLibsDir, skipClean, name, deps, libsHandled,
 			appManifest, mVars,
 		)
 		if err != nil {
