@@ -163,26 +163,6 @@ func buildInit() error {
 		return errors.Trace(err)
 	}
 
-	if err := os.MkdirAll(buildDir, 0777); err != nil {
-		return errors.Trace(err)
-	}
-
-	blog := filepath.Join(buildDir, buildLog)
-	logFile, err := os.Create(blog)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	// Remove local log, ignore any errors
-	os.RemoveAll(filepath.Join(buildDir, buildLogLocal))
-
-	logWriterStdout = io.MultiWriter(logFile, &logBuf, os.Stdout)
-	logWriter = io.MultiWriter(logFile, &logBuf)
-
-	if *verbose {
-		logWriter = logWriterStdout
-	}
-
 	return nil
 }
 
@@ -207,6 +187,26 @@ func buildHandler(ctx context.Context, devConn *dev.DevConn) error {
 
 func doBuild(ctx context.Context, bParams *buildParams) error {
 	var err error
+
+	if err := os.MkdirAll(buildDir, 0777); err != nil {
+		return errors.Trace(err)
+	}
+
+	blog := filepath.Join(buildDir, buildLog)
+	logFile, err := os.Create(blog)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	// Remove local log, ignore any errors
+	os.RemoveAll(filepath.Join(buildDir, buildLogLocal))
+
+	logWriterStdout = io.MultiWriter(logFile, &logBuf, os.Stdout)
+	logWriter = io.MultiWriter(logFile, &logBuf)
+
+	if *verbose {
+		logWriter = logWriterStdout
+	}
 
 	// Fail fast if there is no manifest
 	if _, err := os.Stat(build.ManifestFileName); os.IsNotExist(err) {
