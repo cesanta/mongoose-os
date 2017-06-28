@@ -1017,6 +1017,16 @@ func buildRemote(bParams *buildParams) error {
 		return errors.Trace(err)
 	}
 
+	// For all handled libs, fixup paths if local separator is different from
+	// the Linux separator (because remote builder runs on linux)
+	if filepath.Separator != '/' {
+		for k, lh := range manifest.LibsHandled {
+			manifest.LibsHandled[k].Path = strings.Replace(
+				lh.Path, string(filepath.Separator), "/", -1,
+			)
+		}
+	}
+
 	// Write manifest yaml
 	manifestData, err := yaml.Marshal(&manifest)
 	if err != nil {
