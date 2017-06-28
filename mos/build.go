@@ -839,10 +839,6 @@ func readManifest(
 	}
 	manifest.Arch = strings.ToLower(manifest.Arch)
 
-	if manifest.Arch == "" {
-		return nil, time.Time{}, errors.Errorf("--arch must be specified or mos.yml should contain an arch key")
-	}
-
 	// If type is omitted, assume "app"
 	if manifest.Type == "" {
 		manifest.Type = build.AppTypeApp
@@ -1382,6 +1378,10 @@ func readManifestWithLibs2(
 	manifest, mtime, err := readManifest(dir, bParams, mVars)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
+	}
+
+	if manifest.Arch == "" {
+		return nil, time.Time{}, errors.Errorf("--arch must be specified or mos.yml should contain an arch key")
 	}
 
 	// If the given appManifest is nil, it means that we've just read one, so
