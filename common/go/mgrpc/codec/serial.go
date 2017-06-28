@@ -1,6 +1,7 @@
 package codec
 
 import (
+	"bytes"
 	"context"
 	"io"
 	"runtime"
@@ -14,6 +15,14 @@ import (
 
 const (
 	eofChar byte = 0x04
+
+	// XON/XOFF chars are used for software flow control.
+	// They cannot occur in valid JSON, so this is completely transparent to the protocol.
+	// We do it at the RPC layer since most development modules we work with do not have pins
+	// available for HW flow control and software flow control support is not reliable enough
+	// across different operating systems and drivers.
+	xonChar  = 0x11
+	xoffChar = 0x13
 
 	// Period for sending initial delimeter when opening a channel, until we
 	// receive the delimeter in response
@@ -44,6 +53,11 @@ type serialCodec struct {
 	// (Lock/Unlock).
 	closeLock sync.RWMutex
 	isClosed  bool
+
+	// The channel is closed when sending is allowed and not closed when it isn't.
+	// xonLock should only be acquired to obtain the channel, it should not be held while waiting.
+	xonChan chan interface{}
+	xonLock sync.Mutex
 }
 
 func Serial(ctx context.Context, portName string, opts *SerialCodecOptions) (Codec, error) {
@@ -72,12 +86,15 @@ func Serial(ctx context.Context, portName string, opts *SerialCodecOptions) (Cod
 	// Flush any data that might be not yet read
 	s.Flush()
 
-	return newStreamConn(&serialCodec{
+	sc := &serialCodec{
 		portName:    portName,
 		opts:        opts,
 		conn:        s,
 		handsShaken: false,
-	}, true /* addChecksum */, opts.JunkHandler), nil
+		xonChan:     make(chan interface{}),
+	}
+	close(sc.xonChan) // Sending is initially allowed
+	return newStreamConn(sc, true /* addChecksum */, opts.JunkHandler), nil
 }
 
 func (c *serialCodec) connRead(buf []byte) (read int, err error) {
@@ -85,10 +102,54 @@ func (c *serialCodec) connRead(buf []byte) (read int, err error) {
 	c.closeLock.RLock()
 	defer c.closeLock.RUnlock()
 	if !c.isClosed {
-		return c.conn.Read(buf)
+		read, err = c.conn.Read(buf)
+		if err == nil {
+			data := buf[0:read]
+			// Do a quick check first, most of the time there are not FC chars.
+			if bytes.ContainsAny(data, "\x11\x13") {
+				newData := make([]byte, 0, read)
+				for _, b := range data {
+					switch b {
+					case xoffChar:
+						glog.Infof("XOFF")
+						c.blockWrite()
+					case xonChar:
+						glog.Infof("XON")
+						c.unblockWrite()
+					default:
+						newData = append(newData, b)
+					}
+				}
+				data = newData
+				read = len(data)
+			}
+		}
+		return read, err
 	} else {
 		return 0, io.EOF
 	}
+}
+
+func (c *serialCodec) blockWrite() {
+	c.xonLock.Lock()
+	select {
+	case <-c.xonChan:
+		c.xonChan = make(chan interface{})
+	default:
+		// nothing - channel is open, sending is already blocked
+	}
+	c.xonLock.Unlock()
+}
+
+func (c *serialCodec) unblockWrite() {
+	c.xonLock.Lock()
+	select {
+	case <-c.xonChan:
+		// nothing - channel is closed, sending is already allowed
+	default:
+		close(c.xonChan)
+	}
+	c.xonLock.Unlock()
 }
 
 func (c *serialCodec) connWrite(buf []byte) (written int, err error) {
@@ -152,9 +213,21 @@ func (c *serialCodec) WriteWithContext(ctx context.Context, b []byte) (written i
 		}
 	}
 	// Device is ready, send data.
+	// We start with writes unblocked, since we just had a successful sync.
+	c.unblockWrite()
 	chunkSize := c.opts.SendChunkSize
 	if chunkSize > 0 {
 		for i := 0; i < len(b); i += chunkSize {
+			// Check SW flos control first
+			c.xonLock.Lock()
+			xonChan := c.xonChan
+			c.xonLock.Unlock()
+			select {
+			case <-xonChan:
+				// channel is closed, sending is allowed
+			case <-ctx.Done():
+				return written, ctx.Err()
+			}
 			n, err := c.connWrite(b[i:min(i+chunkSize, len(b))])
 			written += n
 			if err != nil {
