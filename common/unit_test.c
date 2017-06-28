@@ -79,9 +79,33 @@ static const char *test_cs_varint(void) {
   return NULL;
 }
 
+static const char *test_mg_match_prefix(void) {
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str(""), mg_mk_str("")), 0);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("|"), mg_mk_str("")), 0);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("xy|"), mg_mk_str("")), 0);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("xy|"), mg_mk_str("xy")), 2);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("*"), mg_mk_str("")), 0);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a"), mg_mk_str("a")), 1);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a"), mg_mk_str("xyz")), -1);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("abc"), mg_mk_str("abc")), 3);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("abc"), mg_mk_str("abcdef")), 3);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("abc*"), mg_mk_str("abcdef")), 6);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a*f"), mg_mk_str("abcdef")), 6);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a*f"), mg_mk_str("abcdefZZ")), 6);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a*f"), mg_mk_str("abcdeZZ")), -1);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a*f|de*"), mg_mk_str("abcdef")), 6);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a*f|de*|xy"), mg_mk_str("defgh")), 5);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a*f,de*"), mg_mk_str("abcdef")), 6);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a*f|de*,xy"), mg_mk_str("defgh")), 5);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a*f,de*,xy"), mg_mk_str("defgh")), 5);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("/a/b/*/d"), mg_mk_str("/a/b/c/d")), 8);
+  return NULL;
+}
+
 static const char *run_tests(const char *filter, double *total_elapsed) {
   RUN_TEST(test_c_snprintf);
   RUN_TEST(test_cs_varint);
+  RUN_TEST(test_mg_match_prefix);
   return NULL;
 }
 

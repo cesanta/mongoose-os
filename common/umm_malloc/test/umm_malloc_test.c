@@ -39,8 +39,7 @@ static void free_blocks_check(void) {
     size_t calculated = umm_stat.free_blocks_cnt;
     if (actual != calculated) {
       fprintf(stderr, "free blocks mismatch: actual=%d, calculated=%d\n",
-          actual, calculated
-          );
+              (int) actual, (int) calculated);
       exit(1);
     }
   }
@@ -50,8 +49,7 @@ static void free_blocks_check(void) {
     int calculated = umm_free_entries_cnt();
     if (actual != calculated) {
       fprintf(stderr, "free entries mismatch: actual=%d, calculated=%d\n",
-          actual, calculated
-          );
+              actual, calculated);
       exit(1);
     }
   }
@@ -60,7 +58,7 @@ static void free_blocks_check(void) {
 /*
  * Wrapper for `umm_malloc()` which performs additional checks
  */
-static void *wrap_malloc( size_t size ) {
+static void *wrap_malloc(size_t size) {
   free_blocks_check();
   void *ret = umm_malloc(size);
   free_blocks_check();
@@ -70,7 +68,7 @@ static void *wrap_malloc( size_t size ) {
 /*
  * Wrapper for `umm_calloc()` which performs additional checks
  */
-static void *wrap_calloc( size_t num, size_t size ) {
+static void *wrap_calloc(size_t num, size_t size) {
   free_blocks_check();
   void *ret = umm_calloc(num, size);
   free_blocks_check();
@@ -80,7 +78,7 @@ static void *wrap_calloc( size_t num, size_t size ) {
 /*
  * Wrapper for `umm_realloc()` which performs additional checks
  */
-static void *wrap_realloc( void *ptr, size_t size ) {
+static void *wrap_realloc(void *ptr, size_t size) {
   free_blocks_check();
   void *ret = umm_realloc(ptr, size);
   free_blocks_check();
@@ -90,7 +88,7 @@ static void *wrap_realloc( void *ptr, size_t size ) {
 /*
  * Wrapper for `umm_free()` which performs additional checks
  */
-static void wrap_free( void *ptr ) {
+static void wrap_free(void *ptr) {
   free_blocks_check();
   umm_free(ptr);
   free_blocks_check();
@@ -242,7 +240,6 @@ bool random_stress(void) {
       }
     }
 
-
     switch (rand() % 16) {
       case 0:
       case 1:
@@ -298,7 +295,6 @@ bool random_stress(void) {
         break;
       }
     }
-
   }
 
   return (corruption_cnt == 0);
