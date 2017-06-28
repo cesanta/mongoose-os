@@ -50,6 +50,11 @@ static void invoke_wifi_on_change_cb(void *arg) {
 static void invoke_scan_callbacks(struct wifi_scan_cb_info *cbs, int num_aps,
                                   wifi_ap_record_t *aps);
 
+static void wifi_reconnect_cb(void *arg) {
+  if (!s_sta_should_connect) return;
+  esp_wifi_connect();
+}
+
 /* Note: cannot acquire wifi lock in this handler because it gets syncronously
  * invoked from wifi task during mode changes. */
 esp_err_t esp32_wifi_ev(system_event_t *ev) {
@@ -78,7 +83,8 @@ esp_err_t esp32_wifi_ev(system_event_t *ev) {
       mg_ev = MGOS_WIFI_DISCONNECTED;
       if (s_sta_should_connect) {
         s_sta_state = "connecting";
-        esp_wifi_connect();
+        // https://github.com/espressif/esp-idf/issues/738#issuecomment-311626685
+        mgos_invoke_cb(wifi_reconnect_cb, NULL, false /* from_isr */);
       } else {
         s_sta_state = "idle";
       }
