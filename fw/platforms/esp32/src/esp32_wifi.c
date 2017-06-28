@@ -50,17 +50,10 @@ static void invoke_wifi_on_change_cb(void *arg) {
 static void invoke_scan_callbacks(struct wifi_scan_cb_info *cbs, int num_aps,
                                   wifi_ap_record_t *aps);
 
-static void wifi_reconnect_cb(void *arg) {
-  if (!s_sta_should_connect) return;
-  esp_wifi_connect();
-}
-
-/* Note: cannot acquire wifi lock in this handler because it gets syncronously
- * invoked from wifi task during mode changes. */
 esp_err_t esp32_wifi_ev(system_event_t *ev) {
   int mg_ev = -1;
-  bool pass_to_system = true;
   system_event_info_t *info = &ev->event_info;
+  esp32_wifi_lock();
   switch (ev->event_id) {
     case SYSTEM_EVENT_STA_START: {
       /* We only start the station if we are connecting. */
@@ -83,8 +76,7 @@ esp_err_t esp32_wifi_ev(system_event_t *ev) {
       mg_ev = MGOS_WIFI_DISCONNECTED;
       if (s_sta_should_connect) {
         s_sta_state = "connecting";
-        // https://github.com/espressif/esp-idf/issues/738#issuecomment-311626685
-        mgos_invoke_cb(wifi_reconnect_cb, NULL, false /* from_isr */);
+        esp_wifi_connect();
       } else {
         s_sta_state = "idle";
       }
@@ -94,13 +86,8 @@ esp_err_t esp32_wifi_ev(system_event_t *ev) {
       mg_ev = MGOS_WIFI_CONNECTED;
       break;
     case SYSTEM_EVENT_STA_GOT_IP:
-      /*
-       * This event is forwarded to us from system handler, don't pass it on.
-       * https://github.com/espressif/esp-idf/issues/161
-       */
       mg_ev = MGOS_WIFI_IP_ACQUIRED;
       s_sta_state = "got ip";
-      pass_to_system = false;
       break;
     case SYSTEM_EVENT_AP_STACONNECTED: {
       const uint8_t *mac = ev->event_info.sta_connected.mac;
@@ -139,13 +126,14 @@ esp_err_t esp32_wifi_ev(system_event_t *ev) {
     default:
       LOG(LL_INFO, ("WiFi event: %d", ev->event_id));
   }
+  esp32_wifi_unlock();
 
   if (mg_ev >= 0) {
     mgos_invoke_cb(invoke_wifi_on_change_cb, (void *) mg_ev,
                    false /* from_isr */);
   }
 
-  return (pass_to_system ? esp_event_send(ev) : ESP_OK);
+  return ESP_OK;
 }
 
 typedef esp_err_t (*wifi_func_t)(void *arg);
@@ -155,7 +143,6 @@ static esp_err_t wifi_ensure_init_and_start(wifi_func_t func, void *arg) {
   if (r == ESP_OK) goto out;
   if (r == ESP_ERR_WIFI_NOT_INIT) {
     wifi_init_config_t icfg = WIFI_INIT_CONFIG_DEFAULT();
-    icfg.event_handler = esp32_wifi_ev;
     r = esp_wifi_init(&icfg);
     if (r != ESP_OK) {
       LOG(LL_ERROR, ("Failed to init WiFi: %d", r));

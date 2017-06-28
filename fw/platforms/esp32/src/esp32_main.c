@@ -57,13 +57,15 @@ bool mgos_wifi_set_config(const struct sys_config_wifi *cfg);
 
 esp_err_t event_handler(void *ctx, system_event_t *event) {
   switch (event->event_id) {
+    case SYSTEM_EVENT_STA_START:
+    case SYSTEM_EVENT_STA_STOP:
     case SYSTEM_EVENT_STA_GOT_IP:
-      /* https://github.com/espressif/esp-idf/issues/161 */
-      return esp32_wifi_ev(event);
     case SYSTEM_EVENT_STA_CONNECTED:
     case SYSTEM_EVENT_STA_DISCONNECTED:
     case SYSTEM_EVENT_AP_STACONNECTED:
     case SYSTEM_EVENT_AP_STADISCONNECTED:
+    case SYSTEM_EVENT_SCAN_DONE:
+      return esp32_wifi_ev(event);
       break;
     default:
       LOG(LL_INFO, ("event: %d", event->event_id));
