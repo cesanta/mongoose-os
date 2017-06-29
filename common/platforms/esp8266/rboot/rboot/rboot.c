@@ -266,7 +266,7 @@ uint32 NOINLINE find_image(void) {
 #endif
 		) {
 		/* Modified by Cesanta */
-		ets_printf("Writing default boot config.\r\n");
+		ets_printf("Writing default boot config @ 0x%x.\r\n", BOOT_CONFIG_SECTOR * SECTOR_SIZE);
 		ets_memset(romconf, 0x00, sizeof(rboot_config));
 		romconf->magic = BOOT_CONFIG_MAGIC;
 		romconf->version = BOOT_CONFIG_VERSION;
@@ -366,7 +366,7 @@ uint32 NOINLINE find_image(void) {
 		SPIWrite(BOOT_CONFIG_SECTOR * SECTOR_SIZE, buffer, SECTOR_SIZE);
 	}
 
-	ets_printf("Booting rom %d.\r\n", romToBoot);
+	ets_printf("Booting rom %d (0x%x).\r\n", romToBoot, romconf->roms[romToBoot]);
 	// copy the loader to top of iram
 	ets_memcpy((void*)_text_addr, _text_data, _text_len);
 	// return address to load from

@@ -111,7 +111,7 @@ func Flash(ct esp.ChipType, fw *common.FirmwareBundle, opts *esp.FlashOpts) erro
 				}
 				data = newData
 			}
-			common.Reportf("  %6d @ 0x%x", len(data), im.addr)
+			common.Reportf("  %7d @ 0x%x", len(data), im.addr)
 			err = cfr.fc.Write(im.addr, data, true /* erase */)
 			if err != nil {
 				return errors.Annotatef(err, "%s: failed to write", im.part.Name)

@@ -119,6 +119,10 @@ int mgos_upd_begin(struct mgos_upd_hal_ctx *ctx, struct json_token *parts) {
   if (!mgos_upd_boot_get_state(&bs)) return -5;
   int inactive_slot = (bs.active_slot == 0 ? 1 : 0);
   get_slot_info(inactive_slot, &ctx->write_slot);
+  if (ctx->write_slot.fw_addr == 0) {
+    ctx->status_msg = "OTA is not supported in this build";
+    return -5;
+  }
   /* To allow changing flash layout via OTA, take {fw,fs}_addr from manifest. */
   ctx->write_slot.fw_addr =
       (ctx->write_slot.id * FW_SLOT_SIZE) + (fw_addr & (FW_SLOT_SIZE - 1));

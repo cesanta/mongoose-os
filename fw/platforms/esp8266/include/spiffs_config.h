@@ -6,6 +6,8 @@
 #ifndef CS_FW_PLATFORMS_ESP8266_INCLUDE_SPIFFS_CONFIG_H_
 #define CS_FW_PLATFORMS_ESP8266_INCLUDE_SPIFFS_CONFIG_H_
 
+#define CS_SPIFFS_ENABLE_METADATA 1
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
