@@ -12,6 +12,7 @@
 extern void xt_unhandled_exception(XtExcFrame *frame);
 
 void esp32_exception_handler(XtExcFrame *frame) {
+#ifdef CS_MMAP
   if ((void *) frame->excvaddr >= MMAP_BASE) {
     int off = esp_mmap_exception_handler(frame->excvaddr, (uint8_t *) frame->pc,
                                          (long *) &frame->a2);
@@ -20,7 +21,7 @@ void esp32_exception_handler(XtExcFrame *frame) {
       return;
     }
   }
-
+#endif
   xt_unhandled_exception(frame);
 }
 

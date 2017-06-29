@@ -99,8 +99,7 @@ C_CXX_CFLAGS += -DMGOS_APP=\"$(APP)\" -DFW_ARCHITECTURE=$(APP_PLATFORM) \
                 -DMG_SSL_IF_MBEDTLS_FREE_CERTS \
                 -DMG_ENABLE_DIRECTORY_LISTING \
                 -DCS_DISABLE_MD5 -DMG_EXT_MD5 \
-                -DCS_DISABLE_SHA1 -DMG_EXT_SHA1 \
-                -DCS_MMAP
+                -DCS_DISABLE_SHA1 -DMG_EXT_SHA1
 
 CFLAGS += $(C_CXX_CFLAGS) $(APP_CFLAGS)
 CXXFLAGS += -std=c++11 -fno-exceptions $(C_CXX_CFLAGS) $(APP_CXXFLAGS)

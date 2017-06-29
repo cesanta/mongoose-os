@@ -130,7 +130,9 @@ static enum mgos_init_result esp32_mgos_init() {
   }
 #endif
 
+#ifdef CS_MMAP
   esp_mmap_init();
+#endif
 
   esp32_exception_handler_init();
 
