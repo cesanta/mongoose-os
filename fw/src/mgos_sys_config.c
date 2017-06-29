@@ -220,6 +220,7 @@ enum mgos_init_result mgos_sys_config_init(void) {
   if (s_cfg.debug.level > _LL_MIN && s_cfg.debug.level < _LL_MAX) {
     cs_log_set_level((enum cs_log_level) s_cfg.debug.level);
   }
+  cs_log_set_filter(s_cfg.debug.filter);
 #if MG_SSL_IF == MG_SSL_IF_MBEDTLS
   mbedtls_debug_set_threshold(s_cfg.debug.mbedtls_level);
 #endif

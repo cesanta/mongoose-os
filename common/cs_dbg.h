@@ -36,36 +36,34 @@ enum cs_log_level {
   _LL_MAX = 5,
 };
 
+/* Set log level. */
 void cs_log_set_level(enum cs_log_level level);
+
+/* Set log filter. NULL (a default) logs everything. */
+void cs_log_set_filter(char *source_file_name);
+
+int cs_log_print_prefix(enum cs_log_level level, const char *func,
+                        const char *filename);
+
+extern enum cs_log_level cs_log_threshold;
 
 #if CS_ENABLE_STDIO
 
 void cs_log_set_file(FILE *file);
-extern enum cs_log_level cs_log_threshold;
-void cs_log_print_prefix(enum cs_log_level level, const char *func);
 void cs_log_printf(const char *fmt, ...)
 #ifdef __GNUC__
     __attribute__((format(printf, 1, 2)))
 #endif
     ;
 
-#define LOG(l, x)                       \
-  do {                                  \
-    if (cs_log_threshold >= l) {        \
-      cs_log_print_prefix(l, __func__); \
-      cs_log_printf x;                  \
-    }                                   \
+#define LOG(l, x)                                                    \
+  do {                                                               \
+    if (cs_log_print_prefix(l, __func__, __FILE__)) cs_log_printf x; \
   } while (0)
 
 #ifndef CS_NDEBUG
 
-#define DBG(x)                                         \
-  do {                                                 \
-    if (cs_log_threshold >= LL_VERBOSE_DEBUG) {        \
-      cs_log_print_prefix(LL_VERBOSE_DEBUG, __func__); \
-      cs_log_printf x;                                 \
-    }                                                  \
-  } while (0)
+#define DBG(x) LOG(LL_VERBOSE_DEBUG, x)
 
 #else /* NDEBUG */
 

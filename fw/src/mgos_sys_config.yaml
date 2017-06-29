@@ -16,6 +16,7 @@
       {value: 4, title: "VERBOSE_DEBUG"}
     ]
   }],
+  ["debug.filter", "s", {title: "Log filter against source file name or function name. Comma separated list of prefix match glob patterns, e.g. *mqtt*,mgos_wifi"}],
   ["debug.stdout_uart", "i", {title: "STDOUT UART (-1 to disable)"}],
   ["debug.stderr_uart", "i", {title: "STDERR UART (-1 to disable)"}],
   ["debug.factory_reset_gpio", "i", -1, {title: "Factory reset GPIO (low on boot)"}],

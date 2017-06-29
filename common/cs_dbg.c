@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include "common/cs_time.h"
+#include "common/str_util.h"
 
 enum cs_log_level cs_log_threshold WEAK =
 #if CS_ENABLE_DEBUG
@@ -17,6 +18,9 @@ enum cs_log_level cs_log_threshold WEAK =
 #else
     LL_ERROR;
 #endif
+
+static char *s_filter_pattern = NULL;
+static size_t s_filter_pattern_len;
 
 #if CS_ENABLE_STDIO
 
@@ -28,9 +32,30 @@ double cs_log_ts WEAK;
 
 enum cs_log_level cs_log_cur_msg_level WEAK = LL_NONE;
 
-void cs_log_print_prefix(enum cs_log_level level, const char *func) WEAK;
-void cs_log_print_prefix(enum cs_log_level level, const char *func) {
+void cs_log_set_filter(char *str) WEAK;
+void cs_log_set_filter(char *str) {
+  free(s_filter_pattern);
+  if (str != NULL) {
+    s_filter_pattern = strdup(str);
+    s_filter_pattern_len = strlen(str);
+  } else {
+    s_filter_pattern = NULL;
+    s_filter_pattern_len = 0;
+  }
+};
+
+int cs_log_print_prefix(enum cs_log_level, const char *, const char *) WEAK;
+int cs_log_print_prefix(enum cs_log_level level, const char *func,
+                        const char *filename) {
   char prefix[21];
+
+  if (level > cs_log_threshold) return 0;
+  if (s_filter_pattern != NULL &&
+      mg_match_prefix(s_filter_pattern, s_filter_pattern_len, func) < 0 &&
+      mg_match_prefix(s_filter_pattern, s_filter_pattern_len, filename) < 0) {
+    return 0;
+  }
+
   strncpy(prefix, func, 20);
   prefix[20] = '\0';
   if (cs_log_file == NULL) cs_log_file = stderr;
@@ -43,6 +68,7 @@ void cs_log_print_prefix(enum cs_log_level level, const char *func) {
     cs_log_ts = now;
   }
 #endif
+  return 1;
 }
 
 void cs_log_printf(const char *fmt, ...) WEAK;
