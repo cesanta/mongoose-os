@@ -101,8 +101,8 @@ C_CXX_CFLAGS += -DMGOS_APP=\"$(APP)\" -DFW_ARCHITECTURE=$(APP_PLATFORM) \
                 -DCS_DISABLE_MD5 -DMG_EXT_MD5 \
                 -DCS_DISABLE_SHA1 -DMG_EXT_SHA1
 
-CFLAGS += $(C_CXX_CFLAGS) $(APP_CFLAGS)
-CXXFLAGS += -std=c++11 -fno-exceptions $(C_CXX_CFLAGS) $(APP_CXXFLAGS)
+CFLAGS += $(C_CXX_CFLAGS)
+CXXFLAGS += -std=c++11 -fno-exceptions $(C_CXX_CFLAGS)
 COMPONENT_EXTRA_INCLUDES += $(IPATH)
 
 COMPONENT_ADD_LDFLAGS := -Wl,--whole-archive -lsrc -Wl,--no-whole-archive
