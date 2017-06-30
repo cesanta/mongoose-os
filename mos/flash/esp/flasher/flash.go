@@ -125,7 +125,7 @@ func Flash(ct esp.ChipType, fw *common.FirmwareBundle, opts *esp.FlashOpts) erro
 
 	common.Reportf("Verifying...")
 	for _, im := range images {
-		common.Reportf("  %6d @ 0x%x", len(im.data), im.addr)
+		common.Reportf("  %7d @ 0x%x", len(im.data), im.addr)
 		digest, err := cfr.fc.Digest(im.addr, uint32(len(im.data)), 0 /* blockSize */)
 		if err != nil {
 			return errors.Annotatef(err, "%s: failed to compute digest %d @ 0x%x", im.part.Name, len(im.data), im.addr)
@@ -256,7 +256,7 @@ func dedupImages(fc *FlasherClient, images []*image) ([]*image, error) {
 		// is substantial, don't bother.
 		if newTotalLen < len(im.data) && (newTotalLen < flashBlockSize || len(im.data)-newTotalLen >= flashBlockSize) {
 			dedupedImages = append(dedupedImages, newImages...)
-			common.Reportf("  %6d @ 0x%x -> %d", len(im.data), im.addr, newTotalLen)
+			common.Reportf("  %7d @ 0x%x -> %d", len(im.data), im.addr, newTotalLen)
 		} else {
 			dedupedImages = append(dedupedImages, im)
 		}
