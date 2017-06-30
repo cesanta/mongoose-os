@@ -1314,7 +1314,7 @@ func readManifestWithLibs(
 	deps.AddNode(depsApp)
 
 	manifest, mtime, err := readManifestWithLibs2(
-		dir, bParams, logWriter, userLibsDir, skipClean, depsApp, deps, libsHandled, nil, mVars,
+		dir, dir, bParams, logWriter, userLibsDir, skipClean, depsApp, deps, libsHandled, nil, mVars,
 	)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
@@ -1337,22 +1337,26 @@ func readManifestWithLibs(
 	topo = topo[0 : len(topo)-1]
 
 	// Create a LibsHandled slice in topological order computed above
-	manifest.LibsHandled = make([]build.FWAppManifestLibHandled, len(topo))
-	for i, v := range topo {
+	manifest.LibsHandled = make([]build.FWAppManifestLibHandled, 0, len(topo))
+	for _, v := range topo {
 		lh, ok := libsHandled[v]
 		if !ok {
-			return nil, time.Time{}, errors.Errorf("topo contains %q, but libsHandled doesn't. topo: %v, libsHandled: %v", v, topo, libsHandled)
+			// topo contains v, but libsHandled doesn't: it happens when we skip
+			// clean libs, it just means that the current lib v is not prepared,
+			// thus we don't add it to manifest.LibsHandled.
+			continue
 		}
-		manifest.LibsHandled[i] = lh
 
 		// Move all sublibs to the app's manifest libs. It might happen when
 		// we prepare the manifest to build remotely: some lib is not fetchable
 		// from the Internet, so we handle it, but it might have other libs,
 		// so they should be taken care of.
-		for _, subLib := range manifest.LibsHandled[i].Manifest.Libs {
+		for _, subLib := range lh.Manifest.Libs {
 			manifest.Libs = append(manifest.Libs, subLib)
 		}
-		manifest.LibsHandled[i].Manifest.Libs = nil
+		lh.Manifest.Libs = nil
+
+		manifest.LibsHandled = append(manifest.LibsHandled, lh)
 	}
 
 	if finalize {
@@ -1369,7 +1373,7 @@ func readManifestWithLibs(
 }
 
 func readManifestWithLibs2(
-	dir string, bParams *buildParams,
+	dir, rootAppDir string, bParams *buildParams,
 	logWriter io.Writer, userLibsDir string, skipClean bool,
 	nodeName string, deps *Deps, libsHandled map[string]build.FWAppManifestLibHandled,
 	appManifest *build.FWAppManifest, mVars *manifestVars,
@@ -1452,24 +1456,13 @@ libs:
 			}
 
 			if needPull {
-				if skipClean {
-					isClean, err := m.IsClean(libsDir)
-					if err != nil {
-						return nil, time.Time{}, errors.Trace(err)
-					}
-
-					if isClean {
-						freportf(logWriter, "Clean, skipping (will be handled remotely)")
-						continue
-					}
-				}
-
 				// Note: we always call PrepareLocalDir for libsDir, but then,
 				// if userLibsDir is different, will need to copy it to the new location
 				libDirAbs, err = m.PrepareLocalDir(libsDir, logWriter, true, appManifest.LibsVersion, *libsUpdateInterval)
 				if err != nil {
 					return nil, time.Time{}, errors.Trace(err)
 				}
+
 			}
 		} else {
 			freportf(logWriter, "Using the location %q as is (given as a --lib flag)", libDirAbs)
@@ -1479,10 +1472,20 @@ libs:
 
 		libDirForManifest := libDirAbs
 
+		skip := false
+		if skipClean {
+			isClean, err := m.IsClean(libsDir)
+			if err != nil {
+				return nil, time.Time{}, errors.Trace(err)
+			}
+
+			skip = isClean
+		}
+
 		// If libs should be placed in some specific dir, copy the current lib
 		// there (it will also affect the libs path used in resulting manifest)
-		if userLibsDir != libsDir {
-			userLibsDirRel, err := filepath.Rel(dir, userLibsDir)
+		if !skip && userLibsDir != libsDir {
+			userLibsDirRel, err := filepath.Rel(rootAppDir, userLibsDir)
 			if err != nil {
 				return nil, time.Time{}, errors.Trace(err)
 			}
@@ -1513,7 +1516,7 @@ libs:
 		}
 
 		libManifest, libMtime, err := readManifestWithLibs2(
-			libDirAbs, &bParams2, logWriter, userLibsDir, skipClean, name, deps, libsHandled,
+			libDirAbs, rootAppDir, &bParams2, logWriter, userLibsDir, skipClean, name, deps, libsHandled,
 			appManifest, mVars,
 		)
 		if err != nil {
@@ -1533,11 +1536,13 @@ libs:
 		manifest.BuildVars[haveName] = "1"
 		manifest.CDefs[haveName] = "1"
 
-		libsHandled[name] = build.FWAppManifestLibHandled{
-			Name:     name,
-			Path:     libDirForManifest,
-			Deps:     deps.GetDeps(name),
-			Manifest: libManifest,
+		if !skip {
+			libsHandled[name] = build.FWAppManifestLibHandled{
+				Name:     name,
+				Path:     libDirForManifest,
+				Deps:     deps.GetDeps(name),
+				Manifest: libManifest,
+			}
 		}
 
 		os.Chdir(curDir)
