@@ -21,6 +21,7 @@ import binascii
 import ctypes
 import json
 import os
+import re
 import struct
 import sys
 
@@ -126,7 +127,8 @@ class Core(object):
             print >>sys.stderr, "Found core at %d - %d" % (start_pos, end_pos)
             f.seek(start_pos)
             core_json = f.read(end_pos - start_pos)
-            return json.loads(core_json.replace('\n', '').replace('\r', ''))
+            stripped = re.sub(r'(?im)\s+(\[.{1,40}\])?\s*', '', core_json)
+            return json.loads(stripped)
 
     def _map_core(self, core):
         mem = []
