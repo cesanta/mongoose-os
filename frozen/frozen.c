@@ -752,7 +752,8 @@ int json_printf_array(struct json_out *out, va_list *ap) {
 }
 
 #ifdef _WIN32
-int cs_win_vsnprintf(char *str, size_t size, const char *format, va_list ap) WEAK;
+int cs_win_vsnprintf(char *str, size_t size, const char *format,
+                     va_list ap) WEAK;
 int cs_win_vsnprintf(char *str, size_t size, const char *format, va_list ap) {
   int res = _vsnprintf(str, size, format, ap);
   va_end(ap);
@@ -859,7 +860,7 @@ static void json_scanf_cb(void *callback_data, const char *name,
                           size_t name_len, const char *path,
                           const struct json_token *token) {
   struct json_scanf_info *info = (struct json_scanf_info *) callback_data;
-  char buf[32];  /* Must be enough to hold numbers */
+  char buf[32]; /* Must be enough to hold numbers */
 
   (void) name;
   (void) name_len;
@@ -880,7 +881,7 @@ static void json_scanf_cb(void *callback_data, const char *name,
   switch (info->type) {
     case 'B':
       info->num_conversions++;
-      switch (sizeof(bool)){
+      switch (sizeof(bool)) {
         case sizeof(char):
           *(char *) info->target = (token->type == JSON_TYPE_TRUE ? 1 : 0);
           break;
