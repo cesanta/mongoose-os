@@ -1313,9 +1313,22 @@ func readManifestWithLibs(
 	deps := NewDeps()
 	deps.AddNode(depsApp)
 
-	manifest, mtime, err := readManifestWithLibs2(
-		dir, dir, bParams, logWriter, userLibsDir, skipClean, depsApp, deps, libsHandled, nil, mVars,
-	)
+	manifest, mtime, err := readManifestWithLibs2(manifestParseContext{
+		dir:        dir,
+		rootAppDir: dir,
+
+		bParams:     bParams,
+		logWriter:   logWriter,
+		userLibsDir: userLibsDir,
+		skipClean:   skipClean,
+
+		nodeName:    depsApp,
+		deps:        deps,
+		libsHandled: libsHandled,
+
+		appManifest: nil,
+		mVars:       mVars,
+	})
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
 	}
@@ -1372,14 +1385,27 @@ func readManifestWithLibs(
 	return manifest, mtime, nil
 }
 
-func readManifestWithLibs2(
-	dir, rootAppDir string, bParams *buildParams,
-	logWriter io.Writer, userLibsDir string, skipClean bool,
-	nodeName string, deps *Deps, libsHandled map[string]build.FWAppManifestLibHandled,
-	appManifest *build.FWAppManifest, mVars *manifestVars,
-) (*build.FWAppManifest, time.Time, error) {
+type manifestParseContext struct {
+	// Manifest's directory
+	dir string
+	// Directory of the "root" app; for the app's manifest it's the same as dir
+	rootAppDir string
 
-	manifest, mtime, err := readManifest(dir, bParams, mVars)
+	bParams     *buildParams
+	logWriter   io.Writer
+	userLibsDir string
+	skipClean   bool
+
+	nodeName    string
+	deps        *Deps
+	libsHandled map[string]build.FWAppManifestLibHandled
+
+	appManifest *build.FWAppManifest
+	mVars       *manifestVars
+}
+
+func readManifestWithLibs2(pc manifestParseContext) (*build.FWAppManifest, time.Time, error) {
+	manifest, mtime, err := readManifest(pc.dir, pc.bParams, pc.mVars)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
 	}
@@ -1390,8 +1416,8 @@ func readManifestWithLibs2(
 
 	// If the given appManifest is nil, it means that we've just read one, so
 	// remember it as such
-	if appManifest == nil {
-		appManifest = manifest
+	if pc.appManifest == nil {
+		pc.appManifest = manifest
 	}
 
 	curDir, err := getCodeDir()
@@ -1407,14 +1433,14 @@ func readManifestWithLibs2(
 	}
 
 	// Take LibsHandled from manifest into account, add each lib to the current
-	// libsHandled map, and to deps.
+	// pc.libsHandled map, and to deps.
 	for _, lh := range manifest.LibsHandled {
-		libsHandled[lh.Name] = lh
+		pc.libsHandled[lh.Name] = lh
 
-		deps.AddDep(nodeName, lh.Name)
-		deps.AddNode(lh.Name)
+		pc.deps.AddDep(pc.nodeName, lh.Name)
+		pc.deps.AddNode(lh.Name)
 		for _, dep := range lh.Deps {
-			deps.AddDep(lh.Name, dep)
+			pc.deps.AddDep(lh.Name, dep)
 		}
 	}
 
@@ -1426,30 +1452,30 @@ libs:
 			return nil, time.Time{}, errors.Trace(err)
 		}
 
-		freportf(logWriter, "Handling lib %q...", name)
+		freportf(pc.logWriter, "Handling lib %q...", name)
 
-		deps.AddDep(nodeName, name)
+		pc.deps.AddDep(pc.nodeName, name)
 
-		if deps.NodeExists(name) {
-			freportf(logWriter, "Already handled, skipping")
+		if pc.deps.NodeExists(name) {
+			freportf(pc.logWriter, "Already handled, skipping")
 			continue libs
 		}
 
-		libDirAbs, ok := bParams.CustomLibLocations[name]
+		libDirAbs, ok := pc.bParams.CustomLibLocations[name]
 
 		if !ok {
-			freportf(logWriter, "The --lib flag was not given for it, checking repository")
+			freportf(pc.logWriter, "The --lib flag was not given for it, checking repository")
 
 			needPull := true
 
 			if *noLibsUpdate {
-				localDir, err := m.GetLocalDir(libsDir, appManifest.LibsVersion)
+				localDir, err := m.GetLocalDir(libsDir, pc.appManifest.LibsVersion)
 				if err != nil {
 					return nil, time.Time{}, errors.Trace(err)
 				}
 
 				if _, err := os.Stat(localDir); err == nil {
-					freportf(logWriter, "--no-libs-update was given, and %q exists: skipping update", localDir)
+					freportf(pc.logWriter, "--no-libs-update was given, and %q exists: skipping update", localDir)
 					libDirAbs = localDir
 					needPull = false
 				}
@@ -1457,23 +1483,23 @@ libs:
 
 			if needPull {
 				// Note: we always call PrepareLocalDir for libsDir, but then,
-				// if userLibsDir is different, will need to copy it to the new location
-				libDirAbs, err = m.PrepareLocalDir(libsDir, logWriter, true, appManifest.LibsVersion, *libsUpdateInterval)
+				// if pc.userLibsDir is different, will need to copy it to the new location
+				libDirAbs, err = m.PrepareLocalDir(libsDir, pc.logWriter, true, pc.appManifest.LibsVersion, *libsUpdateInterval)
 				if err != nil {
 					return nil, time.Time{}, errors.Trace(err)
 				}
 
 			}
 		} else {
-			freportf(logWriter, "Using the location %q as is (given as a --lib flag)", libDirAbs)
+			freportf(pc.logWriter, "Using the location %q as is (given as a --lib flag)", libDirAbs)
 		}
 
-		freportf(logWriter, "Prepared local dir: %q", libDirAbs)
+		freportf(pc.logWriter, "Prepared local dir: %q", libDirAbs)
 
 		libDirForManifest := libDirAbs
 
 		skip := false
-		if skipClean {
+		if pc.skipClean {
 			isClean, err := m.IsClean(libsDir)
 			if err != nil {
 				return nil, time.Time{}, errors.Trace(err)
@@ -1484,17 +1510,17 @@ libs:
 
 		// If libs should be placed in some specific dir, copy the current lib
 		// there (it will also affect the libs path used in resulting manifest)
-		if !skip && userLibsDir != libsDir {
-			userLibsDirRel, err := filepath.Rel(rootAppDir, userLibsDir)
+		if !skip && pc.userLibsDir != libsDir {
+			userLibsDirRel, err := filepath.Rel(pc.rootAppDir, pc.userLibsDir)
 			if err != nil {
 				return nil, time.Time{}, errors.Trace(err)
 			}
 
-			userLocalDir := filepath.Join(userLibsDir, filepath.Base(libDirAbs))
+			userLocalDir := filepath.Join(pc.userLibsDir, filepath.Base(libDirAbs))
 			if err := ourio.CopyDir(libDirAbs, userLocalDir, []string{".git"}); err != nil {
 				return nil, time.Time{}, errors.Trace(err)
 			}
-			libDirAbs = filepath.Join(userLibsDir, filepath.Base(libDirAbs))
+			libDirAbs = filepath.Join(pc.userLibsDir, filepath.Base(libDirAbs))
 			libDirForManifest = filepath.Join(userLibsDirRel, filepath.Base(libDirAbs))
 		}
 
@@ -1503,22 +1529,25 @@ libs:
 		}
 
 		// Now that we know we need to handle current lib, add a node for it
-		deps.AddNode(name)
+		pc.deps.AddNode(name)
 
 		os.Chdir(libDirAbs)
 
 		// We need to create a copy of build params, and if arch is empty there,
 		// set it from the outer manifest, because arch is used in libs to handle
 		// arch-dependent submanifests, like mos_esp8266.yml.
-		bParams2 := *bParams
+		bParams2 := *pc.bParams
 		if bParams2.Arch == "" {
 			bParams2.Arch = manifest.Arch
 		}
 
-		libManifest, libMtime, err := readManifestWithLibs2(
-			libDirAbs, rootAppDir, &bParams2, logWriter, userLibsDir, skipClean, name, deps, libsHandled,
-			appManifest, mVars,
-		)
+		pc2 := pc
+
+		pc2.dir = libDirAbs
+		pc2.bParams = &bParams2
+		pc2.nodeName = name
+
+		libManifest, libMtime, err := readManifestWithLibs2(pc2)
 		if err != nil {
 			return nil, time.Time{}, errors.Trace(err)
 		}
@@ -1537,10 +1566,10 @@ libs:
 		manifest.CDefs[haveName] = "1"
 
 		if !skip {
-			libsHandled[name] = build.FWAppManifestLibHandled{
+			pc.libsHandled[name] = build.FWAppManifestLibHandled{
 				Name:     name,
 				Path:     libDirForManifest,
-				Deps:     deps.GetDeps(name),
+				Deps:     pc.deps.GetDeps(name),
 				Manifest: libManifest,
 			}
 		}
@@ -1560,7 +1589,7 @@ libs:
 			return nil, time.Time{}, errors.Trace(err)
 		}
 
-		if _, ok := libsHandled[name]; !ok {
+		if _, ok := pc.libsHandled[name]; !ok {
 			if !l.Weak {
 				newLibs = append(newLibs, l)
 			}
