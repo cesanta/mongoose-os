@@ -6,11 +6,15 @@ import (
 
 type Deps struct {
 	m map[string][]string
+	// We need to use a separate map for existence, because m might contain
+	// optional dependencies
+	exists map[string]struct{}
 }
 
 func NewDeps() *Deps {
 	return &Deps{
-		m: make(map[string][]string),
+		m:      make(map[string][]string),
+		exists: make(map[string]struct{}),
 	}
 }
 
@@ -18,6 +22,7 @@ func (d *Deps) AddNode(node string) {
 	if _, ok := d.m[node]; !ok {
 		d.m[node] = []string{}
 	}
+	d.exists[node] = struct{}{}
 }
 
 func (d *Deps) AddDep(node string, dep string) {
@@ -36,7 +41,7 @@ func (d *Deps) GetDeps(node string) []string {
 }
 
 func (d *Deps) NodeExists(node string) bool {
-	_, ok := d.m[node]
+	_, ok := d.exists[node]
 	return ok
 }
 
@@ -77,7 +82,19 @@ func (d *Deps) Topological(skipOptDeps bool) (topo []string, cycle []string) {
 		}
 	}
 
-	return dfo.names, nil
+	ret := dfo.names
+
+	// Remove optional deps from the resulting slice
+	if skipOptDeps {
+		ret = []string{}
+		for _, n := range dfo.names {
+			if d.NodeExists(n) {
+				ret = append(ret, n)
+			}
+		}
+	}
+
+	return ret, nil
 }
 
 type depthFirstOrder struct {
@@ -92,11 +109,8 @@ func (dfo *depthFirstOrder) depthFirstSearch(d *Deps, name string, skipOptDeps b
 	defer func() { dfo.onStack[name] = false }()
 
 	dfo.marked[name] = true
+
 	for _, k := range d.m[name] {
-		// Skip deps which are not present as node (optional deps)
-		if skipOptDeps && !d.NodeExists(k) {
-			continue
-		}
 
 		if !dfo.marked[k] {
 			dfo.depthFirstSearch(d, k, skipOptDeps)
