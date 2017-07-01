@@ -42,7 +42,7 @@ void cs_log_set_filter(char *str) {
     s_filter_pattern = NULL;
     s_filter_pattern_len = 0;
   }
-};
+}
 
 int cs_log_print_prefix(enum cs_log_level, const char *, const char *) WEAK;
 int cs_log_print_prefix(enum cs_log_level level, const char *func,
