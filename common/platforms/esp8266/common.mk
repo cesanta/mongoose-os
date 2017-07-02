@@ -26,7 +26,7 @@ endef
 
 define compile_params
 $(vecho) "$5    $1 -> $2"
-$(Q) $(CC_WRAPPER) $3 -MD $(INCDIRS) $4 -c $1 -o $2
+$(Q) $(CC_WRAPPER) $3 -MD -MP $(INCDIRS) $4 -c $1 -o $2
 endef
 
 define compile
