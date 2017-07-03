@@ -3,9 +3,12 @@
  * All rights reserved
  */
 
+#include <string.h>
+
 #include "common/cs_varint.h"
-#include "common/test_util.h"
+#include "common/mg_str.h"
 #include "common/str_util.h"
+#include "common/test_util.h"
 
 int num_tests;
 
@@ -102,10 +105,75 @@ static const char *test_mg_match_prefix(void) {
   return NULL;
 }
 
+static const char *test_mg_mk_str(void) {
+  const char *foo = "foo";
+  struct mg_str s0 = MG_NULL_STR;
+  ASSERT_EQ(s0.len, 0);
+  ASSERT(s0.p == NULL);
+  struct mg_str s0a = mg_mk_str(NULL);
+  ASSERT_EQ(s0a.len, 0);
+  ASSERT(s0a.p == NULL);
+  struct mg_str s1 = MG_MK_STR("foo");
+  ASSERT_EQ(s1.len, 3);
+  ASSERT(s1.p == foo);
+  struct mg_str s2 = mg_mk_str("foo");
+  ASSERT_EQ(s2.len, 3);
+  ASSERT(s2.p == foo);
+  struct mg_str s3 = mg_mk_str_n("foo", 2);
+  ASSERT_EQ(s3.len, 2);
+  ASSERT(s3.p == foo);
+  struct mg_str s4 = mg_mk_str_n("foo", 0);
+  ASSERT_EQ(s4.len, 0);
+  ASSERT(s4.p == foo);
+  return NULL;
+}
+
+static const char *test_mg_strdup(void) {
+  struct mg_str s0 = MG_NULL_STR;
+  struct mg_str s1 = MG_MK_STR("foo");
+
+  struct mg_str s2 = mg_strdup(s1);
+  ASSERT_EQ(s1.len, s2.len);
+  ASSERT(s1.p != s2.p);
+  ASSERT_EQ(memcmp(s2.p, s1.p, s1.len), 0);
+
+  struct mg_str s3 = mg_strdup(s0);
+  ASSERT_EQ(s3.len, 0);
+  ASSERT(s3.p == NULL);
+
+  struct mg_str s4 = mg_mk_str_n("foo", 0);
+  struct mg_str s5 = mg_strdup(s4);
+  ASSERT_EQ(s5.len, 0);
+  ASSERT(s5.p == NULL);
+
+  free((void *) s2.p);
+  return NULL;
+}
+
+static const char *test_mg_strchr(void) {
+  struct mg_str s0 = MG_NULL_STR;
+  struct mg_str s1 = mg_mk_str_n("foox", 3);
+  struct mg_str s2 = mg_mk_str_n("foox\0yz", 7);
+
+  ASSERT(mg_strchr(s0, 'f') == NULL);
+
+  ASSERT(mg_strchr(s1, 'f') == s1.p);
+  ASSERT(mg_strchr(s1, 'o') == s1.p + 1);
+  ASSERT(mg_strchr(s1, 'x') == NULL);
+
+  ASSERT(mg_strchr(s2, 'y') == s2.p + 5);
+  ASSERT(mg_strchr(s2, 'z') == s2.p + 6);
+
+  return NULL;
+}
+
 static const char *run_tests(const char *filter, double *total_elapsed) {
   RUN_TEST(test_c_snprintf);
   RUN_TEST(test_cs_varint);
   RUN_TEST(test_mg_match_prefix);
+  RUN_TEST(test_mg_mk_str);
+  RUN_TEST(test_mg_strdup);
+  RUN_TEST(test_mg_strchr);
   return NULL;
 }
 
@@ -117,5 +185,10 @@ int main(int argc, char *argv[]) {
   fail_msg = run_tests(filter, &total_elapsed);
   printf("%s, tests run: %d\n", fail_msg ? "FAIL" : "PASS", num_tests);
 
-  return fail_msg == NULL ? EXIT_SUCCESS : EXIT_FAILURE;
+  if (fail_msg != NULL) {
+    /* Prevent leak analyzer from running: there will be "leaks" because of
+     * premature return from the test, and in this case we don't care. */
+    _exit(EXIT_FAILURE);
+  }
+  return EXIT_SUCCESS;
 }
