@@ -473,16 +473,14 @@ func awsIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 		}
 	}
 
-	// ca.pem has both roots in it, so, for platforms other than CC3200, we can just use that
-	// after a while (roots were added to ca.pem on 2017/06/20).
+	// ca.pem has both roots in it, so, for platforms other than CC3200, we can just use that.
 	// CC3200 does not support cert bundles and will always require specific CA cert.
-	caCertFile := ""
-	if useATCA {
-		caCertFile = ecCACert
-	} else {
+	caCertFile := "ca.pem"
+	uploadCACert := false
+	if strings.ToLower(*devInfo.Arch) == "cc3200" {
 		caCertFile = rsaCACert
+		uploadCACert = true
 	}
-	uploadCACert := true
 
 	if uploadCACert {
 		caCertData := MustAsset(caCertFile)
@@ -507,9 +505,8 @@ func awsIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 		"mqtt.ssl_ca_cert": filepath.Base(caCertFile),
 	}
 	if useATCA {
+		// ATECC508A makes ECDSA much faster than RSA.
 		settings["mqtt.ssl_cipher_suites"] = "TLS-ECDHE-ECDSA-WITH-AES-128-GCM-SHA256"
-	} else {
-		settings["mqtt.ssl_cipher_suites"] = "TLS-ECDHE-RSA-WITH-AES-128-GCM-SHA256"
 	}
 
 	// MQTT requires device.id to be set.
