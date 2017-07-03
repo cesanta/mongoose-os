@@ -1085,6 +1085,13 @@ func buildRemote(bParams *buildParams) error {
 		}
 	}
 
+	if data, err := ioutil.ReadFile(filepath.Join(buildDir, "gen", "build_ctx.txt")); err == nil {
+		// Successfully read build context name, transmit it to the remote builder
+		if err := mpw.WriteField("build_ctx", string(data)); err != nil {
+			return errors.Trace(err)
+		}
+	}
+
 	if err := mpw.Close(); err != nil {
 		return errors.Trace(err)
 	}
