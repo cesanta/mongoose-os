@@ -25,7 +25,6 @@ SYS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/sys_config_schema.json
 SYS_RO_VARS_C = $(GEN_DIR)/sys_ro_vars.c
 SYS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/sys_ro_vars_schema.json
 
-SYMBOLS_DUMP = $(GEN_DIR)/symbols_dump.txt
 FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
 FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.o
 
@@ -115,10 +114,6 @@ $(MG_BUILD_INFO_C): $(MGOS_OBJS)
 
 libsrc.a: $(GEN_DIR)/sys_config.o
 
-$(SYMBOLS_DUMP): $(MGOS_OBJS) $(APP_OBJS)
-	$(vecho) "GEN $@"
-	$(NM) --defined-only --print-file-name -g $^ > $@
-
 # In ffi exports file we use fake signatures: void func(void), and it conflicts
 # with the builtin functions like fopen, etc.
 $(FFI_EXPORTS_O): CFLAGS += -fno-builtin
@@ -127,8 +122,8 @@ $(FFI_EXPORTS_O): $(FFI_EXPORTS_C)
 	$(summary) "CC $@"
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
-$(FFI_EXPORTS_C): $(SYMBOLS_DUMP) $(FS_FILES)
-	$(call gen_ffi_exports,$<,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))
+$(FFI_EXPORTS_C): $(APP_FS_FILES)
+	$(call gen_ffi_exports,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))
 
 ./%.o: %.c $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 	$(summary) "CC $@"

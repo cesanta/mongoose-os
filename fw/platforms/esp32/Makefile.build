@@ -173,7 +173,7 @@ $(FW_MANIFEST): $(APP_BIN) $(BOOTLOADER_BIN) $(PARTITION_TABLE_BIN) $(FS_IMG)
 $(GEN_DIR)/sys_config_schema.json $(GEN_DIR)/sys_ro_vars_schema.json: all_binaries
 
 $(GEN_DIR)/conf0.json: all_binaries
-	$(Q) cp -f $(GEN_DIR)/sys_config_defaults.json $(GEN_DIR)/conf0.json
+	$(Q) rsync -mt $(GEN_DIR)/sys_config_defaults.json $(GEN_DIR)/conf0.json
 
 $(FS_IMG): $(MKSPIFFS) $(APP_FS_DIRS) $(COMMON_FS_PATH) $(FS_FILES)
 	$(call mkspiffs,$(FS_SIZE))

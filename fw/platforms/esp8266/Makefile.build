@@ -214,7 +214,6 @@ BUILD_INFO_O = $(BUILD_DIR)/build_info.c.o
 BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
 MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
 MG_BUILD_INFO_O = $(BUILD_DIR)/mg_build_info.c.o
-SYMBOLS_DUMP = $(GEN_DIR)/symbols_dump.txt
 FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
 FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.c.o
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
@@ -478,12 +477,8 @@ include $(MGOS_PATH)/fw/src/sys_config.mk
 
 SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp_sys_config.yaml
 
-$(SYMBOLS_DUMP): $(APP_OBJS) $(MGOS_OBJS)
-	$(vecho) "GEN   $@"
-	$(Q) $(NM) --defined-only --print-file-name -g $^ > $@
-
-$(FFI_EXPORTS_C): $(SYMBOLS_DUMP) $(FS_FILES)
-	$(call gen_ffi_exports,$<,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))
+$(FFI_EXPORTS_C): $(APP_FS_FILES)
+	$(call gen_ffi_exports,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))
 
 # In ffi exports file we use fake signatures: void func(void), and it conflicts
 # with the builtin functions like fopen, etc.

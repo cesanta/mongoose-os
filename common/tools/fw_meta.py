@@ -212,23 +212,6 @@ def cmd_gen_build_info(args):
 def cmd_gen_ffi_exports(args):
     patterns = args.patterns.split()
     symbols = []
-    with open(args.input) as f:
-        for line in f:
-            m = re.match(r"(\S+)\s+(?P<type>\w)\s+(?P<symbol_name>\w+)", line)
-            if m and m.group('type') == 'T':
-                symbol_name = m.group('symbol_name')
-
-                for p in patterns:
-                    if "*" in p and fnmatch.fnmatch(symbol_name, p):
-                        # A hack: since ffi exports generator doesn't know
-                        # signatures, it just declares all functions as
-                        # `void foo(void)`, but `mgos_dlsym()` is
-                        # declared in `mgos_dlsym.h`, which is included by the
-                        # generated file, so we have to never include it in
-                        # the output, in order to avoid conflicts.
-                        if symbol_name != "mgos_dlsym":
-                            symbols.append(FFISymbol(symbol_name, "", ""))
-                            break
 
     # Blindly append non-glob patterns
     for p in patterns:
@@ -462,7 +445,6 @@ if __name__ == '__main__':
 
     gfe_desc = "Generate FFI exports file"
     gfe_cmd = cmd.add_parser('gen_ffi_exports', help=gfe_desc, description=gfe_desc)
-    gfe_cmd.add_argument('--input')
     gfe_cmd.add_argument('--c_output')
     gfe_cmd.add_argument('--patterns')
     gfe_cmd.add_argument('js_files', nargs='*', default=[])
