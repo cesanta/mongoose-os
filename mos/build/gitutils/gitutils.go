@@ -129,11 +129,13 @@ func git(repo string, subcmd string, args ...string) (string, error) {
 	cmd := exec.Command("git", append([]string{subcmd}, args...)...)
 
 	var b bytes.Buffer
+	var berr bytes.Buffer
 	cmd.Dir = repo
 	cmd.Stdout = &b
+	cmd.Stderr = &berr
 	err := cmd.Run()
 	if err != nil {
-		return "", errors.Trace(err)
+		return "", errors.Annotate(err, berr.String())
 	}
 	resp := b.String()
 	return strings.TrimRight(resp, "\r\n"), nil
