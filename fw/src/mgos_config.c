@@ -34,21 +34,30 @@ struct parse_ctx {
   bool result;
 };
 
-const struct mgos_conf_entry *mgos_conf_find_schema_entry(
-    const char *path, const struct mgos_conf_entry *obj) {
-  const char *sep = strchr(path, '.');
-  int kl = (sep == 0 ? (int) strlen(path) : (sep - path));
+const struct mgos_conf_entry *mgos_conf_find_schema_entry_s(
+    const struct mg_str path, const struct mgos_conf_entry *obj) {
   int i;
+  const char *sep = mg_strchr(path, '.');
+  struct mg_str component =
+      mg_mk_str_n(path.p, (sep == NULL ? path.len : (size_t)(sep - path.p)));
   for (i = 1; i <= obj->num_desc; i++) {
     const struct mgos_conf_entry *e = obj + i;
-    if (strncmp(path, e->key, kl) == 0 && ((int) strlen(e->key) == kl)) {
-      if (path[kl] == '\0') return e;
+    if (mg_strcmp(component, mg_mk_str(e->key)) == 0) {
+      if (component.len == path.len) return e;
+      /* This is not the leaf component, so it must be an object. */
       if (e->type != CONF_TYPE_OBJECT) return NULL;
-      return mgos_conf_find_schema_entry(path + kl + 1, e);
+      return mgos_conf_find_schema_entry_s(
+          mg_mk_str_n(path.p + component.len + 1, path.len - component.len - 1),
+          e);
     }
     if (e->type == CONF_TYPE_OBJECT) i += e->num_desc;
   }
   return NULL;
+}
+
+const struct mgos_conf_entry *mgos_conf_find_schema_entry(
+    const char *path, const struct mgos_conf_entry *obj) {
+  return mgos_conf_find_schema_entry_s(mg_mk_str(path), obj);
 }
 
 void mgos_conf_parse_cb(void *data, const char *name, size_t name_len,

@@ -22,6 +22,7 @@
 #include <stdbool.h>
 
 #include "common/mbuf.h"
+#include "common/mg_str.h"
 #include "frozen/frozen.h"
 #include "mongoose/mongoose.h"
 
@@ -76,6 +77,9 @@ void mgos_conf_free(const struct mgos_conf_entry *schema, void *cfg);
 
 const struct mgos_conf_entry *mgos_conf_find_schema_entry(
     const char *path, const struct mgos_conf_entry *obj);
+
+const struct mgos_conf_entry *mgos_conf_find_schema_entry_s(
+    const struct mg_str path, const struct mgos_conf_entry *obj);
 
 void mgos_conf_set_str(char **vp, const char *v);
 
