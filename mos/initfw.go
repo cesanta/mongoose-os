@@ -11,6 +11,7 @@ import (
 
 	"cesanta.com/mos/build"
 	"cesanta.com/mos/build/archive"
+	moscommon "cesanta.com/mos/common"
 	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"
 	yaml "gopkg.in/yaml.v2"
@@ -61,7 +62,7 @@ func initFW(ctx context.Context, devConn *dev.DevConn) error {
 	// If arch was provided, update yaml
 	if *arch != "" {
 		fmt.Printf("Setting arch %q...\n", *arch)
-		manifestFilename := filepath.Join(".", build.ManifestFileName)
+		manifestFilename := moscommon.GetManifestFilePath(".")
 
 		manifestData, err := ioutil.ReadFile(manifestFilename)
 		if err != nil {

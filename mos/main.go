@@ -12,11 +12,10 @@ import (
 	"math/big"
 	mRand "math/rand"
 	"os"
-	"path/filepath"
 	"time"
 
 	"cesanta.com/common/go/pflagenv"
-	"cesanta.com/mos/build"
+	moscommon "cesanta.com/mos/common"
 	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
@@ -41,7 +40,7 @@ var (
 	deviceID   = flag.String("device-id", "", "Device ID")
 	devicePass = flag.String("device-pass", "", "Device pass/key")
 	dryRun     = flag.Bool("dry-run", true, "Do not apply changes, print what would be done")
-	firmware   = flag.String("firmware", filepath.Join(buildDir, build.FirmwareFileName), "Firmware .zip file location (file of HTTP URL)")
+	firmware   = flag.String("firmware", moscommon.GetFirmwareZipFilePath(moscommon.GetBuildDir("")), "Firmware .zip file location (file of HTTP URL)")
 	portFlag   = flag.String("port", "auto", "Serial port where the device is connected. "+
 		"If set to 'auto', ports on the system will be enumerated and the first will be used.")
 	timeout   = flag.Duration("timeout", 10*time.Second, "Timeout for the device connection and call operation")

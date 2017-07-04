@@ -26,6 +26,7 @@ import (
 	"cesanta.com/mos/build"
 	"cesanta.com/mos/build/archive"
 	"cesanta.com/mos/build/gitutils"
+	moscommon "cesanta.com/mos/common"
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/flash/common"
 	"github.com/cesanta/errors"
@@ -71,14 +72,7 @@ var (
 )
 
 const (
-	buildDir = "build"
-	codeDir  = "."
-
-	buildLog           = "build.log"
-	buildLogLocal      = "build.local.log"
-	mosFinal           = "mos_final.yml"
-	depsInitCFileName  = "deps_init.c"
-	confSchemaFileName = "mos_conf_schema.yml"
+	projectDir = "."
 
 	// Manifest version changes:
 	//
@@ -187,19 +181,20 @@ func buildHandler(ctx context.Context, devConn *dev.DevConn) error {
 
 func doBuild(ctx context.Context, bParams *buildParams) error {
 	var err error
+	buildDir := moscommon.GetBuildDir(projectDir)
 
 	if err := os.MkdirAll(buildDir, 0777); err != nil {
 		return errors.Trace(err)
 	}
 
-	blog := filepath.Join(buildDir, buildLog)
+	blog := moscommon.GetBuildLogFilePath(buildDir)
 	logFile, err := os.Create(blog)
 	if err != nil {
 		return errors.Trace(err)
 	}
 
 	// Remove local log, ignore any errors
-	os.RemoveAll(filepath.Join(buildDir, buildLogLocal))
+	os.RemoveAll(moscommon.GetBuildLogLocalFilePath(buildDir))
 
 	logWriterStdout = io.MultiWriter(logFile, &logBuf, os.Stdout)
 	logWriter = io.MultiWriter(logFile, &logBuf)
@@ -209,7 +204,7 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 	}
 
 	// Fail fast if there is no manifest
-	if _, err := os.Stat(build.ManifestFileName); os.IsNotExist(err) {
+	if _, err := os.Stat(moscommon.GetManifestFilePath(projectDir)); os.IsNotExist(err) {
 		return errors.Errorf("No mos.yml file")
 	}
 
@@ -222,7 +217,7 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 		return errors.Trace(err)
 	}
 
-	fwFilename := filepath.Join(buildDir, build.FirmwareFileName)
+	fwFilename := moscommon.GetFirmwareZipFilePath(buildDir)
 
 	fw, err := common.NewZipFirmwareBundle(fwFilename)
 
@@ -238,9 +233,11 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 }
 
 func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
+	buildDir := moscommon.GetBuildDir(projectDir)
+
 	defer func() {
 		if !*verbose && err != nil {
-			log, err := os.Open(path.Join(buildDir, buildLog))
+			log, err := os.Open(moscommon.GetBuildLogFilePath(buildDir))
 			if err != nil {
 				glog.Errorf("can't read build log: %s", err)
 				return
@@ -257,23 +254,23 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		return errors.Trace(err)
 	}
 
-	genDir := path.Join(buildDirAbs, "gen")
+	genDir := moscommon.GetGeneratedFilesDir(buildDirAbs)
 
-	fwDir := filepath.Join(buildDir, "fw")
-	fwDirDocker := path.Join(buildDir, "fw")
+	fwDir := moscommon.GetFirmwareDir(buildDir)
+	fwDirDocker := getPathForDocker(fwDir)
 
-	objsDir := filepath.Join(buildDir, "objs")
-	objsDirDocker := path.Join(buildDir, "objs")
+	objsDir := moscommon.GetObjectDir(buildDir)
+	objsDirDocker := getPathForDocker(objsDir)
 
-	fwFilename := filepath.Join(buildDir, build.FirmwareFileName)
+	fwFilename := moscommon.GetFirmwareZipFilePath(buildDir)
 
-	elfFilename := filepath.Join(objsDir, "fw.elf")
+	elfFilename := moscommon.GetFirmwareElfFilePath(buildDir)
 
 	// Perform cleanup before the build {{{
 	if *cleanBuild {
-		// Cleanup build dir, but leave buildLog intact, because we're already
+		// Cleanup build dir, but leave build log intact, because we're already
 		// writing to it.
-		if err := ourio.RemoveFromDir(buildDir, []string{buildLog}); err != nil {
+		if err := ourio.RemoveFromDir(buildDir, []string{moscommon.GetBuildLogFilePath("")}); err != nil {
 			return errors.Trace(err)
 		}
 	} else {
@@ -297,7 +294,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 
 	mVars := NewManifestVars()
 
-	appDir, err := getCodeDir()
+	appDir, err := getCodeDirAbs()
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -325,7 +322,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 			return errors.Trace(err)
 		}
 
-		ioutil.WriteFile(path.Join(genDir, mosFinal), d, 0666)
+		ioutil.WriteFile(moscommon.GetMosFinalFilePath(buildDirAbs), d, 0666)
 	}
 
 	// manifest.Arch is guaranteed to be non-empty now (checked in readManifest)
@@ -420,7 +417,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	}
 
 	if len(depsCCode) != 0 {
-		fname := filepath.Join(genDir, depsInitCFileName)
+		fname := moscommon.GetDepsInitCFilePath(buildDirAbs)
 
 		if err = ioutil.WriteFile(fname, depsCCode, 0666); err != nil {
 			return errors.Trace(err)
@@ -442,7 +439,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	// for `APP_CONF_SCHEMA`
 	if manifest.ConfigSchema != nil && len(manifest.ConfigSchema) > 0 {
 		var err error
-		curConfSchemaFName = filepath.Join(genDir, confSchemaFileName)
+		curConfSchemaFName = moscommon.GetConfSchemaFilePath(buildDirAbs)
 
 		confSchemaData, err := yaml.Marshal(manifest.ConfigSchema)
 		if err != nil {
@@ -488,7 +485,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		"BUILD_DIR":      objsDirDocker,
 		"FW_DIR":         fwDirDocker,
 		"GEN_DIR":        genDir,
-		"FS_STAGING_DIR": path.Join(buildDir, "fs"),
+		"FS_STAGING_DIR": getPathForDocker(moscommon.GetFilesystemStagingDir(buildDir)),
 		"APP":            appName,
 		"APP_VERSION":    manifest.Version,
 		"APP_SOURCES":    strings.Join(appSources, " "),
@@ -523,7 +520,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		manifest.BuildVars[parts[0]] = parts[1]
 	}
 
-	appPath, err := getCodeDir()
+	appPath, err := getCodeDirAbs()
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -683,7 +680,7 @@ func printConfSchemaWarn(manifest *build.FWAppManifest) {
 		freportf(logWriterStdout, "===")
 		freportf(logWriterStdout, "WARNING: Setting build variable %q in %q "+
 			"is deprecated, use \"config_schema\" property instead.",
-			"APP_CONF_SCHEMA", build.ManifestFileName,
+			"APP_CONF_SCHEMA", moscommon.GetManifestFilePath(""),
 		)
 		freportf(logWriterStdout, "===")
 	}
@@ -787,7 +784,7 @@ func addBuildVar(manifest *build.FWAppManifest, name, value string) error {
 		return errors.Errorf(
 			"Build variable %q should not be given in %q "+
 				"since it's set by the mos tool automatically",
-			name, build.ManifestFileName,
+			name, moscommon.GetManifestFilePath(""),
 		)
 	}
 	manifest.BuildVars[name] = value
@@ -806,8 +803,8 @@ func runCmd(cmd *exec.Cmd, logWriter io.Writer) error {
 	return nil
 }
 
-func getCodeDir() (string, error) {
-	absCodeDir, err := filepath.Abs(codeDir)
+func getCodeDirAbs() (string, error) {
+	absCodeDir, err := filepath.Abs(projectDir)
 	if err != nil {
 		return "", errors.Trace(err)
 	}
@@ -827,7 +824,7 @@ func getCodeDir() (string, error) {
 func readManifest(
 	appDir string, bParams *buildParams, mVars *manifestVars,
 ) (*build.FWAppManifest, time.Time, error) {
-	manifestFullName := filepath.Join(appDir, build.ManifestFileName)
+	manifestFullName := moscommon.GetManifestFilePath(appDir)
 	manifest, mtime, err := readManifestFile(manifestFullName, mVars, true)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
@@ -845,10 +842,7 @@ func readManifest(
 	}
 
 	if manifest.Arch != "" {
-		manifestArchFullName := filepath.Join(
-			appDir,
-			fmt.Sprintf(build.ManifestArchFileFmt, manifest.Arch),
-		)
+		manifestArchFullName := moscommon.GetManifestArchFilePath(appDir, manifest.Arch)
 		_, err := os.Stat(manifestArchFullName)
 		if err == nil {
 			// Arch-specific mos.yml does exist, so, handle it
@@ -952,10 +946,12 @@ func readManifestFile(
 }
 
 func buildRemote(bParams *buildParams) error {
-	appDir, err := getCodeDir()
+	appDir, err := getCodeDirAbs()
 	if err != nil {
 		return errors.Trace(err)
 	}
+
+	buildDir := moscommon.GetBuildDir(projectDir)
 
 	// We'll need to amend the sources significantly with all libs, so copy them
 	// to temporary dir first
@@ -1030,7 +1026,7 @@ func buildRemote(bParams *buildParams) error {
 	}
 
 	err = ioutil.WriteFile(
-		filepath.Join(tmpCodeDir, build.ManifestFileName),
+		moscommon.GetManifestFilePath(tmpCodeDir),
 		manifestData,
 		0666,
 	)
@@ -1040,9 +1036,9 @@ func buildRemote(bParams *buildParams) error {
 
 	// Craft file whitelist for zipping
 	whitelist := map[string]bool{
-		build.ManifestFileName: true,
-		localLibsDir:           true,
-		".":                    true,
+		moscommon.GetManifestFilePath(""): true,
+		localLibsDir:                      true,
+		".":                               true,
 	}
 	for _, v := range manifest.Sources {
 		whitelist[v] = true
@@ -1085,7 +1081,7 @@ func buildRemote(bParams *buildParams) error {
 		}
 	}
 
-	if data, err := ioutil.ReadFile(filepath.Join(buildDir, "gen", "build_ctx.txt")); err == nil {
+	if data, err := ioutil.ReadFile(moscommon.GetBuildCtxFilePath(buildDir)); err == nil {
 		// Successfully read build context name, transmit it to the remote builder
 		if err := mpw.WriteField("build_ctx", string(data)); err != nil {
 			return errors.Trace(err)
@@ -1133,11 +1129,11 @@ func buildRemote(bParams *buildParams) error {
 		archive.UnzipInto(r, r.Size(), ".", 0)
 
 		// Save local log
-		ioutil.WriteFile(path.Join(buildDir, buildLogLocal), logBuf.Bytes(), 0666)
+		ioutil.WriteFile(moscommon.GetBuildLogLocalFilePath(buildDir), logBuf.Bytes(), 0666)
 
 		// print log in verbose mode or when build fails
 		if *verbose || resp.StatusCode != http.StatusOK {
-			log, err := os.Open(path.Join(buildDir, buildLog))
+			log, err := os.Open(moscommon.GetBuildLogFilePath(buildDir))
 			if err != nil {
 				return errors.Trace(err)
 			}
@@ -1232,7 +1228,7 @@ func zipUp(
 
 func fixupAppName(appName string) (string, error) {
 	if appName == "" {
-		wd, err := getCodeDir()
+		wd, err := getCodeDirAbs()
 		if err != nil {
 			return "", errors.Trace(err)
 		}
@@ -1427,7 +1423,7 @@ func readManifestWithLibs2(pc manifestParseContext) (*build.FWAppManifest, time.
 		pc.appManifest = manifest
 	}
 
-	curDir, err := getCodeDir()
+	curDir, err := getCodeDirAbs()
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
 	}
@@ -1932,6 +1928,7 @@ type mountPoints map[string]string
 // something is already mounted to the given containerPath, then it's compared
 // to the new hostPath value; if they are not equal, an error is returned.
 func (mp mountPoints) addMountPoint(hostPath, containerPath string) error {
+	fmt.Printf("mount from %q to %q\n", hostPath, containerPath)
 	if v, ok := mp[containerPath]; ok {
 		if hostPath != v {
 			return errors.Errorf("adding mount point from %q to %q, but it already mounted from %q", hostPath, containerPath, v)
@@ -1942,4 +1939,9 @@ func (mp mountPoints) addMountPoint(hostPath, containerPath string) error {
 	mp[containerPath] = hostPath
 
 	return nil
+}
+
+// getPathForDocker replaces OS-dependent separators in a given path with "/"
+func getPathForDocker(p string) string {
+	return path.Join(filepath.SplitList(p)...)
 }
