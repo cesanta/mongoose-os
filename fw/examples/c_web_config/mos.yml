@@ -2,6 +2,10 @@ name: c_web_config
 # arch: PLATFORM
 version: 1.0
 skeleton_version: 2017-05-18
+
+libs_version: ${mos_version}
+mongoose_os_version: ${mos_version}
+
 sources:
   - src
 filesystem:
