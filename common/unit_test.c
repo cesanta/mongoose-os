@@ -167,6 +167,26 @@ static const char *test_mg_strchr(void) {
   return NULL;
 }
 
+static const char *test_mg_strstr(void) {
+  struct mg_str s0 = MG_NULL_STR;
+  struct mg_str s1 = MG_MK_STR("foobario");
+  struct mg_str s2 = s1;
+  s2.len -= 2;
+
+  ASSERT(mg_strstr(s0, s0) == NULL);
+  ASSERT(mg_strstr(s1, s0) == s1.p);
+  ASSERT(mg_strstr(s0, s1) == NULL);
+  ASSERT(mg_strstr(s1, s1) == s1.p);
+  ASSERT(mg_strstr(s1, mg_mk_str("foo")) == s1.p);
+  ASSERT(mg_strstr(s1, mg_mk_str("oo")) == s1.p + 1);
+  ASSERT(mg_strstr(s1, mg_mk_str("bar")) == s1.p + 3);
+  ASSERT(mg_strstr(s1, mg_mk_str("bario")) == s1.p + 3);
+  ASSERT(mg_strstr(s2, mg_mk_str("bar")) == s1.p + 3);
+  ASSERT(mg_strstr(s2, mg_mk_str("bario")) == NULL);
+
+  return NULL;
+}
+
 static const char *run_tests(const char *filter, double *total_elapsed) {
   RUN_TEST(test_c_snprintf);
   RUN_TEST(test_cs_varint);
@@ -174,6 +194,7 @@ static const char *run_tests(const char *filter, double *total_elapsed) {
   RUN_TEST(test_mg_mk_str);
   RUN_TEST(test_mg_strdup);
   RUN_TEST(test_mg_strchr);
+  RUN_TEST(test_mg_strstr);
   return NULL;
 }
 
