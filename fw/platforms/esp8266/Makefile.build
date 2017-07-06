@@ -308,8 +308,9 @@ endif
 IMAGE_HEADER_SIZE = 0x10
 
 # Flash layout configuration.
-BOOT_LOADER_ADDR = 0x0
-BOOT_CONFIG_ADDR = 0x7000
+BOOT_LOADER_ADDR ?= 0x0
+BOOT_CONFIG_ADDR ?= 0x7000
+BOOT_CONFIG_WRITE_ADDR ?= $(BOOT_CONFIG_ADDR)
 # Sys params must be at the end of flash, this is where SDK looks for (and writes!) them and it's not configurable.
 SYS_PARAMS_ADDR = $(shell printf "0x%05x" "$$(($(FLASH_SIZE) - $(SYS_PARAMS_SIZE)))")
 # RF calibration data sector location is configurable, but we also keep it at the end, just above sys params.
@@ -344,7 +345,7 @@ ifeq ("$(FLASH_SIZE)", "2097152")
 # 0x0fb000 - free (20K)   | 0x1fb000 - rf cal       |
 #                         | 0x1fc000 - sys params   |
 FS_SIZE ?= 131072
-ROM_SIZE = $(shell printf "0x%05x" "$$((0x100000 - $(APP0_ADDR) - $(FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAMS_SIZE) - $(IMAGE_HEADER_SIZE)))")
+ROM_SIZE = $(shell printf "0x%05x" "$$((0x100000 - ($(APP0_ADDR) % 0x100000) - $(FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAMS_SIZE) - $(IMAGE_HEADER_SIZE)))")
 APP0_ADDR = 0x8000
 FS0_ADDR  = $(shell printf "0x%05x" "$$((0x100000 - $(FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAMS_SIZE)))")
 APP1_ADDR = 0x108000
@@ -398,7 +399,7 @@ $(BUILD_DIR) $(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
 
 # Main output product: firmware files.
 FW_PARTS = boot:addr=$(BOOT_LOADER_ADDR),src=$(BOOT_LOADER_BIN) \
-           boot_cfg:addr=$(BOOT_CONFIG_ADDR),size=0x1000,fill=0xff \
+           boot_cfg:addr=$(BOOT_CONFIG_WRITE_ADDR),size=0x1000,fill=0xff \
            fw:addr=$(APP0_ADDR),src=$(APP_BIN) \
            fs:src=$(FS_IMG),type=fs,addr=$(FS0_ADDR),fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE) \
            rf_cal_data:addr=$(FW_RF_CAL_DATA_ADDR),size=$(RF_CAL_DATA_SIZE),fill=0xff \
