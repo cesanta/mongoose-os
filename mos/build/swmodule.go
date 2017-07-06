@@ -13,6 +13,7 @@ import (
 
 	"cesanta.com/common/go/ourutil"
 	"cesanta.com/mos/build/gitutils"
+	moscommon "cesanta.com/mos/common"
 
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
@@ -81,8 +82,8 @@ func (m *SWModule) IsClean(libsDir string) (bool, error) {
 
 // PrepareLocalDir prepares local directory, if that preparation is needed
 // in the first place, and returns the path to it. If defaultVersion is an
-// empty string, then the default will depend on the kind of lib (e.g. for
-// git it's "master")
+// empty string or "latest", then the default will depend on the kind of lib
+// (e.g. for git it's "master")
 func (m *SWModule) PrepareLocalDir(
 	libsDir string, logWriter io.Writer, deleteIfFailed bool, defaultVersion string,
 	pullInterval time.Duration,
@@ -117,7 +118,7 @@ func (m *SWModule) getVersionGit(defaultVersion string) string {
 	if version == "" {
 		version = defaultVersion
 	}
-	if version == "" {
+	if version == "" || version == "latest" {
 		version = "master"
 	}
 	return version
@@ -229,9 +230,7 @@ func prepareLocalCopyGit(
 	logWriter io.Writer, deleteIfFailed bool,
 	pullInterval time.Duration,
 ) error {
-	if version == "" {
-		version = "master"
-	}
+	// version is already converted from "" or "latest" to "master" here.
 
 	// Check if we should clone or pull git repo inside of targetDir.
 	// Valid cases are:
@@ -410,13 +409,10 @@ func prepareLocalCopyGit(
 	return nil
 }
 
-// getGitDirName returns given name if repoVersion is "master" or an empty
-// string, or "<name>-<repoVersion>" otherwise.
+// getGitDirName returns given name with the appropriate version suffix
+// (see moscommon.GetVersionSuffix(repoVersion))
 func getGitDirName(name, repoVersion string) string {
-	if repoVersion == "master" || repoVersion == "" {
-		return name
-	}
-	return fmt.Sprintf("%s-%s", name, repoVersion)
+	return fmt.Sprint(name, moscommon.GetVersionSuffix(repoVersion))
 }
 
 func freportf(logFile io.Writer, f string, args ...interface{}) {

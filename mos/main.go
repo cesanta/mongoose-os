@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"cesanta.com/common/go/pflagenv"
+	"cesanta.com/mos/cfgfile"
 	moscommon "cesanta.com/mos/common"
 	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"
@@ -175,7 +176,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := mosConfigInit(); err != nil {
+	if err := cfgfile.MosConfigInit(); err != nil {
 		log.Fatal(err)
 	}
 

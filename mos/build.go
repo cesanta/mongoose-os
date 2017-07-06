@@ -26,6 +26,7 @@ import (
 	"cesanta.com/mos/build"
 	"cesanta.com/mos/build/archive"
 	"cesanta.com/mos/build/gitutils"
+	"cesanta.com/mos/cfgfile"
 	moscommon "cesanta.com/mos/common"
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/flash/common"
@@ -1256,7 +1257,7 @@ func NewManifestVars() *manifestVars {
 	ret := &manifestVars{
 		subst: make(map[string]string),
 	}
-	ret.SetVar(mVarNameMosVersion, mosConfig.MosVersion)
+	ret.SetVar(mVarNameMosVersion, cfgfile.MosConfigCurrent.MosVersion)
 	return ret
 }
 

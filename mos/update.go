@@ -8,8 +8,10 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
+	"path"
 	"runtime"
 
+	"cesanta.com/mos/cfgfile"
 	"github.com/cesanta/errors"
 	"github.com/kardianos/osext"
 
@@ -22,17 +24,23 @@ type versionJson struct {
 	BuildVersion   string `json:"build_version"`
 }
 
-var mosUrls = map[string]string{
-	"windows": "https://mongoose-os.com/downloads/mos/win/mos.exe",
-	"linux":   "https://mongoose-os.com/downloads/mos/linux/mos",
-	"darwin":  "https://mongoose-os.com/downloads/mos/mac/mos",
+func getMosURL(p string) string {
+	return "https://" + path.Join(
+		fmt.Sprintf("mongoose-os.com/downloads/mos%s", cfgfile.GetMosVersionSuffix()),
+		p,
+	)
 }
 
 func getServerMosVersion() (*versionJson, error) {
-	resp, err := http.Get("https://mongoose-os.com/downloads/mos/version.json")
+	versionUrl := getMosURL("version.json")
+	resp, err := http.Get(versionUrl)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
+	if resp.StatusCode != http.StatusOK {
+		return nil, errors.Errorf("got %d when accessing %s", resp.StatusCode, versionUrl)
+	}
+
 	defer resp.Body.Close()
 
 	var serverVersion versionJson
@@ -44,6 +52,12 @@ func getServerMosVersion() (*versionJson, error) {
 }
 
 func update(ctx context.Context, devConn *dev.DevConn) error {
+	var mosUrls = map[string]string{
+		"windows": getMosURL("win/mos.exe"),
+		"linux":   getMosURL("linux/mos"),
+		"darwin":  getMosURL("mac/mos"),
+	}
+
 	// Check the available version on the server
 	serverVersion, err := getServerMosVersion()
 	if err != nil {
@@ -93,7 +107,7 @@ func update(ctx context.Context, devConn *dev.DevConn) error {
 		}
 		defer resp.Body.Close()
 
-		reportf("Downloading...")
+		reportf("Downloading from %s...", mosUrl)
 		n, err := io.Copy(tmpfile, resp.Body)
 		if err != nil {
 			return errors.Trace(err)
