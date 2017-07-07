@@ -14,6 +14,7 @@ import (
 	"cesanta.com/mos/cfgfile"
 	"github.com/cesanta/errors"
 	"github.com/kardianos/osext"
+	flag "github.com/spf13/pflag"
 
 	"cesanta.com/mos/dev"
 )
@@ -52,6 +53,23 @@ func getServerMosVersion() (*versionJson, error) {
 }
 
 func update(ctx context.Context, devConn *dev.DevConn) error {
+	args := flag.Args()
+	if len(args) >= 2 {
+		// mos_version is given: need to update config
+		newMosVersion := args[1]
+
+		if cfgfile.MosConfigCurrent.MosVersion != newMosVersion {
+			reportf("Changing update channel from %q to %q",
+				cfgfile.MosConfigCurrent.MosVersion, newMosVersion,
+			)
+
+			cfgfile.MosConfigCurrent.MosVersion = newMosVersion
+			if err := cfgfile.MosConfigSave(); err != nil {
+				return errors.Trace(err)
+			}
+		}
+	}
+
 	var mosUrls = map[string]string{
 		"windows": getMosURL("win/mos.exe"),
 		"linux":   getMosURL("linux/mos"),
