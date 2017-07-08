@@ -52,9 +52,9 @@ enum mgos_app_init_result mgos_app_init(void) {
    * 115200 8-N-1 is the default mode, but we set it anyway
    */
   ucfg.baud_rate = 115200;
-  ucfg.num_data_bits = 7;
-  ucfg.parity = MGOS_UART_PARITY_ODD;
-  ucfg.stop_bits = MGOS_UART_STOP_BITS_2;
+  ucfg.num_data_bits = 8;
+  ucfg.parity = MGOS_UART_PARITY_NONE;
+  ucfg.stop_bits = MGOS_UART_STOP_BITS_1;
   if (!mgos_uart_configure(UART_NO, &ucfg)) {
     return MGOS_APP_INIT_ERROR;
   }
