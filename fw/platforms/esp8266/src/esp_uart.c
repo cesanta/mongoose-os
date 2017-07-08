@@ -29,6 +29,8 @@
 #define PERI_IO_UART0_PIN_SWAP \
   (BIT(2)) /* swap uart0 pins (u0rxd <-> u0cts), (u0txd <-> u0rts) */
 
+#define UART_PARITY_ODD BIT(0)
+
 #define FUNC_U0CTS 4
 
 #define UART_RX_INTS (UART_RXFIFO_FULL_INT_ENA | UART_RXFIFO_TOUT_INT_ENA)
@@ -270,7 +272,47 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
     }
   }
 
-  unsigned int conf0 = 0b011100; /* 8-N-1 */
+  unsigned int conf0 = 0;
+
+  switch (cfg->num_data_bits) {
+    case 5:
+      break;
+    case 6:
+      conf0 |= 1 << UART_BIT_NUM_S;
+      break;
+    case 7:
+      conf0 |= 2 << UART_BIT_NUM_S;
+      break;
+    case 8:
+      conf0 |= 3 << UART_BIT_NUM_S;
+      break;
+    default:
+      return false;
+  }
+
+  switch (cfg->parity) {
+    case MGOS_UART_PARITY_NONE:
+      break;
+    case MGOS_UART_PARITY_EVEN:
+      conf0 |= UART_PARITY_EN;
+      break;
+    case MGOS_UART_PARITY_ODD:
+      conf0 |= (UART_PARITY_EN | UART_PARITY_ODD);
+      break;
+  }
+
+  switch (cfg->stop_bits) {
+    case MGOS_UART_STOP_BITS_1:
+      conf0 |= 1 << UART_STOP_BIT_NUM_S;
+      break;
+    case MGOS_UART_STOP_BITS_1_5:
+      conf0 |= 2 << UART_STOP_BIT_NUM_S;
+      break;
+    case MGOS_UART_STOP_BITS_2:
+      conf0 |= 3 << UART_STOP_BIT_NUM_S;
+      break;
+  }
+
   if (cfg->tx_fc_type == MGOS_UART_FC_HW) {
     conf0 |= UART_TX_FLOW_EN;
     PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTCK_U, FUNC_U0CTS);

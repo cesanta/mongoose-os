@@ -41,9 +41,23 @@ enum mgos_uart_fc_type {
   MGOS_UART_FC_SW = 2, /* XON/XOFF */
 };
 
+enum mgos_uart_parity {
+  MGOS_UART_PARITY_NONE = 0,
+  MGOS_UART_PARITY_EVEN = 1,
+  MGOS_UART_PARITY_ODD = 2,
+};
+
+enum mgos_uart_stop_bits {
+  MGOS_UART_STOP_BITS_1 = 1, /* So that 1 means 1 bit and 2 means 2. */
+  MGOS_UART_STOP_BITS_2 = 2,
+  MGOS_UART_STOP_BITS_1_5 = 3,
+};
+
 struct mgos_uart_config {
-  /* Baud rate, default: 115200 */
-  int baud_rate;
+  int baud_rate;                      /* Baud rate. Default: 115200 */
+  int num_data_bits;                  /* Number of data bits, 5-8. Default: 8 */
+  enum mgos_uart_parity parity;       /* Parity. Default: none */
+  enum mgos_uart_stop_bits stop_bits; /* Number of stop bits. Default: 1 */
 
   /* Size of the Rx buffer, default: 256 */
   int rx_buf_size;
@@ -157,8 +171,9 @@ struct mgos_uart_config *mgos_uart_config_get_default(int uart_no);
 /*
  * Set baud rate in the provided config structure.
  */
-void mgos_uart_config_set_baud_rate(struct mgos_uart_config *cfg,
-                                    int baud_rate);
+void mgos_uart_config_set_basic_params(struct mgos_uart_config *cfg,
+                                       int baud_rate, int num_data_bits,
+                                       int parity, int num_stop_bits);
 
 /*
  * Set Rx params in the provided config structure: buffer size `rx_buf_size`,

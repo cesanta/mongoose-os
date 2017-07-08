@@ -192,6 +192,9 @@ void mgos_uart_config_set_defaults(int uart_no, struct mgos_uart_config *cfg) {
   if (uart_no < 0 || uart_no >= MGOS_MAX_NUM_UARTS) return;
   memset(cfg, 0, sizeof(*cfg));
   cfg->baud_rate = 115200;
+  cfg->num_data_bits = 8;
+  cfg->parity = MGOS_UART_PARITY_NONE;
+  cfg->stop_bits = MGOS_UART_STOP_BITS_1;
   cfg->rx_buf_size = cfg->tx_buf_size = 256;
   cfg->rx_linger_micros = 15;
   mgos_uart_hal_config_set_defaults(uart_no, cfg);
@@ -203,9 +206,13 @@ struct mgos_uart_config *mgos_uart_config_get_default(int uart_no) {
   return ret;
 }
 
-void mgos_uart_config_set_baud_rate(struct mgos_uart_config *cfg,
-                                    int baud_rate) {
+void mgos_uart_config_set_basic_params(struct mgos_uart_config *cfg,
+                                       int baud_rate, int num_data_bits,
+                                       int parity, int stop_bits) {
   cfg->baud_rate = baud_rate;
+  cfg->num_data_bits = num_data_bits;
+  cfg->parity = (enum mgos_uart_parity) parity;
+  cfg->stop_bits = (enum mgos_uart_stop_bits) stop_bits;
 }
 
 void mgos_uart_config_set_rx_params(struct mgos_uart_config *cfg,

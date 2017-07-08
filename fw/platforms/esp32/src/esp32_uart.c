@@ -312,9 +312,47 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
     return false;
   }
 
-  uint32_t conf0 = UART_TICK_REF_ALWAYS_ON | (3 << UART_BIT_NUM_S) | /* 8 */
-                   (0 << UART_PARITY_EN_S) |                         /* N */
-                   (1 << UART_STOP_BIT_NUM_S);                       /* 1 */
+  uint32_t conf0 = UART_TICK_REF_ALWAYS_ON;
+
+  switch (cfg->num_data_bits) {
+    case 5:
+      break;
+    case 6:
+      conf0 |= 1 << UART_BIT_NUM_S;
+      break;
+    case 7:
+      conf0 |= 2 << UART_BIT_NUM_S;
+      break;
+    case 8:
+      conf0 |= 3 << UART_BIT_NUM_S;
+      break;
+    default:
+      return false;
+  }
+
+  switch (cfg->parity) {
+    case MGOS_UART_PARITY_NONE:
+      break;
+    case MGOS_UART_PARITY_EVEN:
+      conf0 |= UART_PARITY_EN;
+      break;
+    case MGOS_UART_PARITY_ODD:
+      conf0 |= (UART_PARITY_EN | UART_PARITY);
+      break;
+  }
+
+  switch (cfg->stop_bits) {
+    case MGOS_UART_STOP_BITS_1:
+      conf0 |= 1 << UART_STOP_BIT_NUM_S;
+      break;
+    case MGOS_UART_STOP_BITS_1_5:
+      conf0 |= 2 << UART_STOP_BIT_NUM_S;
+      break;
+    case MGOS_UART_STOP_BITS_2:
+      conf0 |= 3 << UART_STOP_BIT_NUM_S;
+      break;
+  }
+
   if (cfg->tx_fc_type == MGOS_UART_FC_HW) {
     conf0 |= UART_TX_FLOW_EN;
   }

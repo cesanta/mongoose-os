@@ -228,9 +228,50 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
   }
   MAP_UARTIntDisable(base, ~0);
   uint32_t periph = (us->uart_no == 0 ? PRCM_UARTA0 : PRCM_UARTA1);
-  MAP_UARTConfigSetExpClk(
-      base, MAP_PRCMPeripheralClockGet(periph), cfg->baud_rate,
-      (UART_CONFIG_WLEN_8 | UART_CONFIG_STOP_ONE | UART_CONFIG_PAR_NONE));
+  uint32_t data_cfg = 0;
+  switch (cfg->num_data_bits) {
+    case 5:
+      data_cfg |= UART_CONFIG_WLEN_5;
+      break;
+    case 6:
+      data_cfg |= UART_CONFIG_WLEN_6;
+      break;
+    case 7:
+      data_cfg |= UART_CONFIG_WLEN_7;
+      break;
+    case 8:
+      data_cfg |= UART_CONFIG_WLEN_8;
+      break;
+    default:
+      return false;
+  }
+
+  switch (cfg->parity) {
+    case MGOS_UART_PARITY_NONE:
+      data_cfg |= UART_CONFIG_PAR_NONE;
+      break;
+    case MGOS_UART_PARITY_EVEN:
+      data_cfg |= UART_CONFIG_PAR_EVEN;
+      break;
+    case MGOS_UART_PARITY_ODD:
+      data_cfg |= UART_CONFIG_PAR_ODD;
+      break;
+  }
+
+  switch (cfg->stop_bits) {
+    case MGOS_UART_STOP_BITS_1:
+      data_cfg |= UART_CONFIG_STOP_ONE;
+      break;
+    case MGOS_UART_STOP_BITS_1_5:
+      return false; /* Not supported */
+    case MGOS_UART_STOP_BITS_2:
+      data_cfg |= UART_CONFIG_STOP_TWO;
+      break;
+  }
+
+  MAP_UARTConfigSetExpClk(base, MAP_PRCMPeripheralClockGet(periph),
+                          cfg->baud_rate, data_cfg);
+
   if (cfg->tx_fc_type == MGOS_UART_FC_HW ||
       cfg->rx_fc_type == MGOS_UART_FC_HW) {
     /* Note: only UART1 */
