@@ -174,17 +174,14 @@ int mgos_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
 
   if (cfg->cert != NULL || cfg->user != NULL) {
     static char *s_ca_cert_pem = NULL, *s_cert_pem = NULL, *s_key_pem = NULL;
-/* WPA-enterprise mode */
-
-#if 0 /* Requires SDK 2.1.0, the default is anonymous@espressif.com */
+    /* WPA-enterprise mode */
     if (cfg->anon_identity != NULL) {
-      esp_wifi_sta_wpa2_ent_set_identity((unsigned char *) cfg->anon_identity,
-                                         strlen(cfg->anon_identity));
+      wifi_station_set_enterprise_identity((unsigned char *) cfg->anon_identity,
+                                           strlen(cfg->anon_identity));
     } else {
       /* By default, username is used. */
-      esp_wifi_sta_wpa2_ent_clear_identity();
+      wifi_station_clear_enterprise_identity();
     }
-#endif
 
     if (cfg->user != NULL) {
       wifi_station_set_enterprise_username((u8 *) cfg->user, strlen(cfg->user));

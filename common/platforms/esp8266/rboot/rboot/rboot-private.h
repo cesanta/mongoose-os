@@ -32,14 +32,10 @@ typedef unsigned char uint8;
 #define BUFFER_SIZE 0x100
 
 // esp8266 built in rom functions
-extern void ets_delay_us(unsigned);
-extern void ets_memcpy(void*, const void*, uint32);
-extern void ets_memset(void*, uint8, uint32);
 extern void ets_printf(const char*, ...);
 extern uint32 SPIRead(uint32 addr, void *outptr, uint32 len);
 extern uint32 SPIEraseSector(int);
 extern uint32 SPIWrite(uint32 addr, void *inptr, uint32 len);
-extern void uart_div_modify(int no, unsigned int freq);
 
 // functions we'll call by address
 typedef void stage2a(uint32);

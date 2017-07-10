@@ -15,8 +15,6 @@ void pp_soft_wdt_feed(void);
 void pp_soft_wdt_restart(void);
 void system_soft_wdt_stop(void); /* Alias for pp_soft_wdt_stop */
 
-void uart_div_modify(int no, unsigned int freq);
-
 void Cache_Read_Disable(void);
 void Cache_Read_Enable(uint32_t, uint32_t, uint32_t);
 void Cache_Read_Disable_2(void);
@@ -31,14 +29,8 @@ uint32_t SPIRead(uint32_t addr, void *dst, uint32_t size);
 #include <ets_sys.h>
 
 /* There are no declarations for these anywhere in the SDK (as of 1.2.0). */
-void ets_install_putc1(void *routine);
-void ets_isr_attach(int intr, void *handler, void *arg);
 void ets_isr_mask(unsigned intr);
 void ets_isr_unmask(unsigned intr);
-void ets_timer_arm_new(ETSTimer *a, int b, int c, int isMstimer);
-void ets_timer_disarm(ETSTimer *a);
-void ets_timer_setfn(ETSTimer *t, ETSTimerFunc *fn, void *parg);
-void ets_delay_us(unsigned us);
 void system_restart_local(void);
 int os_printf_plus(const char *format, ...);
 
