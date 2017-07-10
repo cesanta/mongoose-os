@@ -17,7 +17,7 @@ type MosConfig struct {
 }
 
 const (
-	defaultMosVersion = "master" // TODO(dfrank): "release"
+	defaultMosVersion = "release"
 )
 
 var (
