@@ -19,6 +19,10 @@ func (e *ExitError) Error() string {
 	return fmt.Sprintf("container exited with %d status code", e.code)
 }
 
+func (e *ExitError) Code() int {
+	return e.code
+}
+
 // RunOption is an optional argument to Run
 type RunOption func(*options) error
 

@@ -34,7 +34,7 @@ var (
 	arch       = flag.String("arch", "", "Hardware architecture. Possible values: cc3200, esp32, esp8266, stm32")
 	user       = flag.String("user", "", "Cloud username")
 	pass       = flag.String("pass", "", "Cloud password or token")
-	server     = flag.String("server", "http://mongoose.cloud", "Cloud server")
+	server     = flag.String("server", "https://mongoose.cloud", "FWBuild server")
 	local      = flag.Bool("local", false, "Local build.")
 	longFormat = flag.BoolP("long", "l", false, "Long output format.")
 	mosRepo    = flag.String("repo", "", "Path to the mongoose-os repository; if omitted, the mongoose-os repository will be cloned as ./mongoose-os")

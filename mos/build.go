@@ -1102,8 +1102,12 @@ func buildRemote(bParams *buildParams) error {
 	buildPass := "test"
 	freportf(logWriterStdout, "Connecting to %s, user %s", server, buildUser)
 
-	// invoke the fwbuild API
-	uri := fmt.Sprintf("%s/api/%s/firmware/build", server, buildUser)
+	// invoke the fwbuild API (replace "master" with "latest")
+	fwbuildVersion := cfgfile.MosConfigCurrent.MosVersion
+	if fwbuildVersion == "master" {
+		fwbuildVersion = "latest"
+	}
+	uri := fmt.Sprintf("%s/api/fwbuild/%s/build", server, fwbuildVersion)
 
 	freportf(logWriterStdout, "Uploading sources (%d bytes)", len(body.Bytes()))
 	req, err := http.NewRequest("POST", uri, body)
