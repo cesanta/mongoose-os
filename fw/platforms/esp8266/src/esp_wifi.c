@@ -11,9 +11,11 @@
 #include <esp_common.h>
 #else
 #include <user_interface.h>
+#include <wpa2_enterprise.h>
 #endif
 
 #include "common/cs_dbg.h"
+#include "common/cs_file.h"
 
 #include "fw/src/mgos_gpio.h"
 #include "fw/src/mgos_hal.h"
@@ -146,10 +148,6 @@ int mgos_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
   sta_cfg.bssid_set = 0;
   strncpy((char *) sta_cfg.ssid, cfg->ssid, sizeof(sta_cfg.ssid));
 
-  if (cfg->pass != NULL) {
-    strncpy((char *) sta_cfg.password, cfg->pass, sizeof(sta_cfg.password));
-  }
-
   if (cfg->ip != NULL && cfg->netmask != NULL) {
     struct ip_info info;
     memset(&info, 0, sizeof(info));
@@ -165,9 +163,77 @@ int mgos_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
                   (cfg->gw ? cfg->gw : "")));
   }
 
+  if (cfg->user == NULL /* Not using EAP */ && cfg->pass != NULL) {
+    strncpy((char *) sta_cfg.password, cfg->pass, sizeof(sta_cfg.password));
+  }
+
   if (!wifi_station_set_config_current(&sta_cfg)) {
     LOG(LL_ERROR, ("WiFi STA: Failed to set config"));
     return false;
+  }
+
+  if (cfg->cert != NULL || cfg->user != NULL) {
+    static char *s_ca_cert_pem = NULL, *s_cert_pem = NULL, *s_key_pem = NULL;
+/* WPA-enterprise mode */
+
+#if 0 /* Requires SDK 2.1.0, the default is anonymous@espressif.com */
+    if (cfg->anon_identity != NULL) {
+      esp_wifi_sta_wpa2_ent_set_identity((unsigned char *) cfg->anon_identity,
+                                         strlen(cfg->anon_identity));
+    } else {
+      /* By default, username is used. */
+      esp_wifi_sta_wpa2_ent_clear_identity();
+    }
+#endif
+
+    if (cfg->user != NULL) {
+      wifi_station_set_enterprise_username((u8 *) cfg->user, strlen(cfg->user));
+    } else {
+      wifi_station_clear_enterprise_username();
+    }
+    if (cfg->pass != NULL) {
+      wifi_station_set_enterprise_password((u8 *) cfg->pass, strlen(cfg->pass));
+    } else {
+      wifi_station_clear_enterprise_password();
+    }
+
+    if (cfg->ca_cert != NULL) {
+      free(s_ca_cert_pem);
+      size_t len;
+      s_ca_cert_pem = cs_read_file(cfg->ca_cert, &len);
+      if (s_ca_cert_pem == NULL) {
+        LOG(LL_ERROR, ("Failed to read %s", cfg->ca_cert));
+        return false;
+      }
+      wifi_station_set_enterprise_ca_cert((u8 *) s_ca_cert_pem, (int) len);
+    } else {
+      wifi_station_clear_enterprise_ca_cert();
+    }
+
+    if (cfg->cert != NULL && cfg->key != NULL) {
+      free(s_cert_pem);
+      free(s_key_pem);
+      size_t cert_len, key_len;
+      s_cert_pem = cs_read_file(cfg->cert, &cert_len);
+      if (s_cert_pem == NULL) {
+        LOG(LL_ERROR, ("Failed to read %s", cfg->cert));
+        return false;
+      }
+      s_key_pem = cs_read_file(cfg->key, &key_len);
+      if (s_key_pem == NULL) {
+        LOG(LL_ERROR, ("Failed to read %s", cfg->key));
+        return false;
+      }
+      wifi_station_set_enterprise_cert_key(
+          (u8 *) s_cert_pem, (int) cert_len, (u8 *) s_key_pem, (int) key_len,
+          NULL /* private_key_passwd */, 0 /* private_key_passwd_len */);
+    }
+
+    wifi_station_clear_enterprise_new_password();
+    wifi_station_set_enterprise_disable_time_check(true /* disable */);
+    wifi_station_set_wpa2_enterprise_auth(true /* enable */);
+  } else {
+    wifi_station_set_wpa2_enterprise_auth(false /* enable */);
   }
 
   char *host_name =

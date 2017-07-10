@@ -9,10 +9,12 @@
 #include "freertos/FreeRTOS.h"
 
 #include "esp_wifi.h"
+#include "esp_wpa2.h"
 #include "tcpip_adapter.h"
 #include "apps/dhcpserver.h"
 #include "lwip/ip_addr.h"
 
+#include "common/cs_file.h"
 #include "common/queue.h"
 
 #include "fw/src/mgos_hal.h"
@@ -282,8 +284,9 @@ int mgos_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
     goto out;
   }
 
+  s_sta_should_connect = false;
+
   if (!cfg->enable) {
-    s_sta_should_connect = false;
     result = (mgos_wifi_remove_mode(WIFI_MODE_STA) == ESP_OK);
     goto out;
   }
@@ -292,7 +295,7 @@ int mgos_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
   if (r != ESP_OK) goto out;
 
   strncpy((char *) stacfg->ssid, cfg->ssid, sizeof(stacfg->ssid));
-  if (cfg->pass != NULL) {
+  if (cfg->user == NULL /* Not using EAP */ && cfg->pass != NULL) {
     strncpy((char *) stacfg->password, cfg->pass, sizeof(stacfg->password));
   }
 
@@ -318,6 +321,72 @@ int mgos_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
   if (r != ESP_OK) {
     LOG(LL_ERROR, ("Failed to set STA config: %d", r));
     goto out;
+  }
+
+  if (cfg->cert != NULL || cfg->user != NULL) {
+    static char *s_ca_cert_pem = NULL, *s_cert_pem = NULL, *s_key_pem = NULL;
+    /* WPA-enterprise mode */
+    if (cfg->anon_identity != NULL) {
+      esp_wifi_sta_wpa2_ent_set_identity((unsigned char *) cfg->anon_identity,
+                                         strlen(cfg->anon_identity));
+    } else {
+      /* By default, username is used. */
+      esp_wifi_sta_wpa2_ent_clear_identity();
+    }
+    if (cfg->user != NULL) {
+      esp_wifi_sta_wpa2_ent_set_username((unsigned char *) cfg->user,
+                                         strlen(cfg->user));
+    } else {
+      esp_wifi_sta_wpa2_ent_clear_username();
+    }
+    if (cfg->pass != NULL) {
+      esp_wifi_sta_wpa2_ent_set_password((unsigned char *) cfg->pass,
+                                         strlen(cfg->pass));
+    } else {
+      esp_wifi_sta_wpa2_ent_clear_password();
+    }
+
+    if (cfg->ca_cert != NULL) {
+      free(s_ca_cert_pem);
+      size_t len;
+      s_ca_cert_pem = cs_read_file(cfg->ca_cert, &len);
+      if (s_ca_cert_pem == NULL) {
+        LOG(LL_ERROR, ("Failed to read %s", cfg->ca_cert));
+        goto out;
+      }
+      esp_wifi_sta_wpa2_ent_set_ca_cert((unsigned char *) s_ca_cert_pem,
+                                        (int) len);
+    } else {
+      esp_wifi_sta_wpa2_ent_clear_ca_cert();
+    }
+
+    if (cfg->cert != NULL && cfg->key != NULL) {
+      free(s_cert_pem);
+      free(s_key_pem);
+      size_t cert_len, key_len;
+      s_cert_pem = cs_read_file(cfg->cert, &cert_len);
+      if (s_cert_pem == NULL) {
+        LOG(LL_ERROR, ("Failed to read %s", cfg->cert));
+        goto out;
+      }
+      s_key_pem = cs_read_file(cfg->key, &key_len);
+      if (s_key_pem == NULL) {
+        LOG(LL_ERROR, ("Failed to read %s", cfg->key));
+        goto out;
+      }
+      esp_wifi_sta_wpa2_ent_set_cert_key(
+          (unsigned char *) s_cert_pem, (int) cert_len,
+          (unsigned char *) s_key_pem, (int) key_len,
+          NULL /* private_key_passwd */, 0 /* private_key_passwd_len */);
+    } else {
+      esp_wifi_sta_wpa2_ent_clear_cert_key();
+    }
+
+    esp_wifi_sta_wpa2_ent_clear_new_password();
+    esp_wifi_sta_wpa2_ent_set_disable_time_check(true /* disable */);
+    esp_wifi_sta_wpa2_ent_enable();
+  } else {
+    esp_wifi_sta_wpa2_ent_disable();
   }
 
   s_sta_should_connect = true;

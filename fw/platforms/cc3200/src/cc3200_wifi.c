@@ -27,6 +27,8 @@
 struct cc3200_wifi_config {
   char *ssid;
   char *pass;
+  char *user;
+  char *anon_identity;
   SlIpV4AcquiredAsync_t acquired_ip;
   SlNetCfgIpV4Args_t static_ip;
   unsigned int status : 4;
@@ -39,6 +41,8 @@ static int s_current_role = -1;
 static void free_wifi_config(void) {
   free(s_wifi_sta_config.ssid);
   free(s_wifi_sta_config.pass);
+  free(s_wifi_sta_config.user);
+  free(s_wifi_sta_config.anon_identity);
   memset(&s_wifi_sta_config, 0, sizeof(s_wifi_sta_config));
 }
 
@@ -136,9 +140,11 @@ int mgos_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
 
   free_wifi_config();
   s_wifi_sta_config.ssid = strdup(cfg->ssid);
-  if (cfg->pass != NULL) {
-    s_wifi_sta_config.pass = strdup(cfg->pass);
-  }
+  if (cfg->pass != NULL) s_wifi_sta_config.pass = strdup(cfg->pass);
+  if (cfg->user != NULL) s_wifi_sta_config.user = strdup(cfg->user);
+  if (cfg->anon_identity != NULL)
+    s_wifi_sta_config.anon_identity = strdup(cfg->anon_identity);
+
   memset(&s_wifi_sta_config.static_ip, 0, sizeof(s_wifi_sta_config.static_ip));
   if (cfg->ip != NULL && cfg->netmask != NULL) {
     SlNetCfgIpV4Args_t *ipcfg = &s_wifi_sta_config.static_ip;
@@ -242,6 +248,7 @@ int mgos_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
 int mgos_wifi_connect(void) {
   int ret;
   SlSecParams_t sp;
+  SlSecParamsExt_t spext;
 
   if (s_wifi_sta_config.static_ip.ipV4 != 0) {
     ret = sl_NetCfgSet(SL_IPV4_STA_P2P_CL_STATIC_ENABLE,
@@ -257,12 +264,32 @@ int mgos_wifi_connect(void) {
 
   if (!ensure_role_sta()) return 0;
 
-  sp.Key = (_i8 *) s_wifi_sta_config.pass;
-  sp.KeyLen = strlen(s_wifi_sta_config.pass);
-  sp.Type = sp.KeyLen ? SL_SEC_TYPE_WPA : SL_SEC_TYPE_OPEN;
+  memset(&sp, 0, sizeof(sp));
+  memset(&spext, 0, sizeof(spext));
+
+  if (s_wifi_sta_config.pass != NULL) {
+    sp.Key = (_i8 *) s_wifi_sta_config.pass;
+    sp.KeyLen = strlen(s_wifi_sta_config.pass);
+  }
+  if (s_wifi_sta_config.user != NULL && get_cfg()->wifi.sta.eap_method != 0) {
+    /* WPA-enterprise mode */
+    sp.Type = SL_SEC_TYPE_WPA_ENT;
+    spext.UserLen = strlen(s_wifi_sta_config.user);
+    spext.User = (_i8 *) s_wifi_sta_config.user;
+    if (s_wifi_sta_config.anon_identity != NULL) {
+      spext.AnonUserLen = strlen(s_wifi_sta_config.anon_identity);
+      spext.AnonUser = (_i8 *) s_wifi_sta_config.anon_identity;
+    }
+    spext.EapMethod = get_cfg()->wifi.sta.eap_method;
+    unsigned char v = 0;
+    sl_WlanSet(SL_WLAN_CFG_GENERAL_PARAM_ID, 19, 1, &v);
+  } else {
+    sp.Type = sp.KeyLen ? SL_SEC_TYPE_WPA_WPA2 : SL_SEC_TYPE_OPEN;
+  }
 
   ret = sl_WlanConnect((const _i8 *) s_wifi_sta_config.ssid,
-                       strlen(s_wifi_sta_config.ssid), 0, &sp, 0);
+                       strlen(s_wifi_sta_config.ssid), 0, &sp,
+                       (sp.Type == SL_SEC_TYPE_WPA_ENT ? &spext : NULL));
   if (ret != 0) return 0;
 
   sl_WlanRxStatStart();

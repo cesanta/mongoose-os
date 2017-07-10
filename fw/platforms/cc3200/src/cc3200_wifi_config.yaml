@@ -1,0 +1,3 @@
+[
+  ["wifi.sta.eap_method", "i", 404226112, {title: "SlSecParamsExt_t.EapMethod value, one of the SL_ENT_EAP_METHOD_* constant; default is SL_ENT_EAP_METHOD_PEAP1_MSCHAPv2"}],
+]
