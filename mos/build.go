@@ -938,6 +938,11 @@ func readManifestFile(
 		return nil, time.Time{}, errors.Trace(err)
 	}
 
+	manifest.ModulesVersion, err = mVars.ExpandVars(manifest.ModulesVersion)
+	if err != nil {
+		return nil, time.Time{}, errors.Trace(err)
+	}
+
 	stat, err := os.Stat(manifestFullName)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
