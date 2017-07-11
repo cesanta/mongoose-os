@@ -123,6 +123,7 @@ func usage() {
 	} else {
 		printFlag(w, "Optional", "verbose")
 		printFlag(w, "Optional", "logtostderr")
+		printFlag(w, "Optional", "helpfull")
 	}
 
 	w.Flush()
