@@ -1093,7 +1093,7 @@ func buildRemote(bParams *buildParams) error {
 	// prepare multipart body
 	body := &bytes.Buffer{}
 	mpw := multipart.NewWriter(body)
-	part, err := mpw.CreateFormFile("file", "source.zip")
+	part, err := mpw.CreateFormFile(moscommon.FormSourcesZipName, "source.zip")
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -1103,21 +1103,21 @@ func buildRemote(bParams *buildParams) error {
 	}
 
 	if *cleanBuild {
-		if err := mpw.WriteField("clean", "1"); err != nil {
+		if err := mpw.WriteField(moscommon.FormCleanName, "1"); err != nil {
 			return errors.Trace(err)
 		}
 	}
 
 	if data, err := ioutil.ReadFile(moscommon.GetBuildCtxFilePath(buildDir)); err == nil {
 		// Successfully read build context name, transmit it to the remote builder
-		if err := mpw.WriteField("build_ctx", string(data)); err != nil {
+		if err := mpw.WriteField(moscommon.FormBuildCtxName, string(data)); err != nil {
 			return errors.Trace(err)
 		}
 	}
 
 	if data, err := ioutil.ReadFile(moscommon.GetBuildStatFilePath(buildDir)); err == nil {
 		// Successfully read build stat, transmit it to the remote builder
-		if err := mpw.WriteField("build_stat", string(data)); err != nil {
+		if err := mpw.WriteField(moscommon.FormBuildStatName, string(data)); err != nil {
 			return errors.Trace(err)
 		}
 	}
