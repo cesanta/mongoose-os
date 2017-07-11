@@ -28,7 +28,7 @@ downloads: generate
 deploy:
 	cd ../prod && \
     ansible-playbook website.yml -e build=yes -t build_mos,mos && \
-    ansible-playbook toy.yml -e build=yes -t build_cloud-mos,cloud-mos
+    ansible-playbook fwbuild.yml -e build=yes -t cloud-mos,fwbuild-instance
 
 
 clean:
