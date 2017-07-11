@@ -37,6 +37,10 @@ func GetBuildCtxFilePath(buildDir string) string {
 	return filepath.Join(GetGeneratedFilesDir(buildDir), "build_ctx.txt")
 }
 
+func GetBuildStatFilePath(buildDir string) string {
+	return filepath.Join(GetGeneratedFilesDir(buildDir), "build_stat.json")
+}
+
 func GetFirmwareElfFilePath(buildDir string) string {
 	return filepath.Join(GetObjectDir(buildDir), "fw.elf")
 }

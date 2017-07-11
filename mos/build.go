@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -50,6 +51,7 @@ var (
 
 	buildDockerExtra = flag.StringSlice("build-docker-extra", []string{}, "extra docker flags, added before image name. Can be used multiple times: e.g. --build-docker-extra -v --build-docker-extra /foo:/bar.")
 	buildCmdExtra    = flag.StringSlice("build-cmd-extra", []string{}, "extra make flags, added at the end of the make command. Can be used multiple times.")
+	saveBuildStat    = flag.Bool("save-build-stat", true, "save build statistics")
 
 	buildVarsSlice []string
 
@@ -184,6 +186,8 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 	var err error
 	buildDir := moscommon.GetBuildDir(projectDir)
 
+	start := time.Now()
+
 	if err := os.MkdirAll(buildDir, 0777); err != nil {
 		return errors.Trace(err)
 	}
@@ -221,6 +225,23 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 	fwFilename := moscommon.GetFirmwareZipFilePath(buildDir)
 
 	fw, err := common.NewZipFirmwareBundle(fwFilename)
+
+	end := time.Now()
+
+	if *saveBuildStat {
+		bstat := moscommon.BuildStat{
+			Arch:        fw.Platform,
+			AppName:     fw.Name,
+			BuildTimeMS: int(end.Sub(start) / time.Millisecond),
+		}
+
+		data, err := json.MarshalIndent(&bstat, "", "  ")
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		ioutil.WriteFile(moscommon.GetBuildStatFilePath(buildDir), data, 0666)
+	}
 
 	if *local || !*verbose {
 		if err == nil {
@@ -1090,6 +1111,13 @@ func buildRemote(bParams *buildParams) error {
 	if data, err := ioutil.ReadFile(moscommon.GetBuildCtxFilePath(buildDir)); err == nil {
 		// Successfully read build context name, transmit it to the remote builder
 		if err := mpw.WriteField("build_ctx", string(data)); err != nil {
+			return errors.Trace(err)
+		}
+	}
+
+	if data, err := ioutil.ReadFile(moscommon.GetBuildStatFilePath(buildDir)); err == nil {
+		// Successfully read build stat, transmit it to the remote builder
+		if err := mpw.WriteField("build_stat", string(data)); err != nil {
 			return errors.Trace(err)
 		}
 	}
