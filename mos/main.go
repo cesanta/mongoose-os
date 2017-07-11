@@ -188,6 +188,7 @@ func main() {
 	if *helpFull {
 		unhideFlags()
 		usage()
+		return
 	} else if *versionFlag {
 		fmt.Printf(
 			"%s\nVersion: %s\nBuild ID: %s\n",
