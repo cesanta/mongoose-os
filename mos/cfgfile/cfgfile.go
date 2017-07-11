@@ -16,17 +16,15 @@ type MosConfig struct {
 	MosVersion string `yaml:"mos_version"`
 }
 
-const (
-	defaultMosVersion = "release"
-)
-
 var (
-	MosConfigCurrent MosConfig
-	mosConfigFile    = ""
+	MosConfigCurrent  MosConfig
+	defaultMosVersion = "release"
+	mosConfigFile     = ""
 )
 
 func init() {
 	flag.StringVar(&mosConfigFile, "config-file", "~/.mos/config.yml", "Mos tool configuration file")
+	flag.StringVar(&defaultMosVersion, "default-mos-version", "release", "Default mos version")
 }
 
 func MosConfigInit() error {
