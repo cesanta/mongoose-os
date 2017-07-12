@@ -27,7 +27,6 @@ import (
 	"cesanta.com/mos/build"
 	"cesanta.com/mos/build/archive"
 	"cesanta.com/mos/build/gitutils"
-	"cesanta.com/mos/cfgfile"
 	moscommon "cesanta.com/mos/common"
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/flash/common"
@@ -225,6 +224,9 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 	fwFilename := moscommon.GetFirmwareZipFilePath(buildDir)
 
 	fw, err := common.NewZipFirmwareBundle(fwFilename)
+	if err != nil {
+		return errors.Trace(err)
+	}
 
 	end := time.Now()
 
@@ -1136,10 +1138,12 @@ func buildRemote(bParams *buildParams) error {
 	freportf(logWriterStdout, "Connecting to %s, user %s", server, buildUser)
 
 	// invoke the fwbuild API (replace "master" with "latest")
-	fwbuildVersion := cfgfile.MosConfigCurrent.MosVersion
+	fwbuildVersion := getMosVersion()
+
 	if fwbuildVersion == "master" {
 		fwbuildVersion = "latest"
 	}
+
 	uri := fmt.Sprintf("%s/api/fwbuild/%s/build", server, fwbuildVersion)
 
 	freportf(logWriterStdout, "Uploading sources (%d bytes)", len(body.Bytes()))
@@ -1294,7 +1298,8 @@ func NewManifestVars() *manifestVars {
 	ret := &manifestVars{
 		subst: make(map[string]string),
 	}
-	ret.SetVar(mVarNameMosVersion, cfgfile.MosConfigCurrent.MosVersion)
+
+	ret.SetVar(mVarNameMosVersion, getMosVersion())
 	return ret
 }
 

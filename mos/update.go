@@ -9,14 +9,22 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"regexp"
 	"runtime"
 
-	"cesanta.com/mos/cfgfile"
+	moscommon "cesanta.com/mos/common"
 	"github.com/cesanta/errors"
 	"github.com/kardianos/osext"
 	flag "github.com/spf13/pflag"
 
 	"cesanta.com/mos/dev"
+)
+
+var (
+	regexpVersionNumber = regexp.MustCompile(`^\d[0-9.]*$`)
+	regexpBuildId       = regexp.MustCompile(
+		`^(?P<datetime>[^/]+)\/(?P<symbolic>[^@]+)\@(?P<hash>.+)$`,
+	)
 )
 
 type versionJson struct {
@@ -25,15 +33,19 @@ type versionJson struct {
 	BuildVersion   string `json:"build_version"`
 }
 
-func getMosURL(p string) string {
+// mosVersion can be either exact mos version like "1.6", or update channel
+// like "latest" or "release".
+func getMosURL(p, mosVersion string) string {
 	return "https://" + path.Join(
-		fmt.Sprintf("mongoose-os.com/downloads/mos%s", cfgfile.GetMosVersionSuffix()),
+		fmt.Sprintf("mongoose-os.com/downloads/mos%s", moscommon.GetVersionSuffix(mosVersion)),
 		p,
 	)
 }
 
-func getServerMosVersion() (*versionJson, error) {
-	versionUrl := getMosURL("version.json")
+// mosVersion can be either exact mos version like "1.6", or update channel
+// like "latest" or "release".
+func getServerMosVersion(mosVersion string) (*versionJson, error) {
+	versionUrl := getMosURL("version.json", mosVersion)
 	resp, err := http.Get(versionUrl)
 	if err != nil {
 		return nil, errors.Trace(err)
@@ -54,30 +66,36 @@ func getServerMosVersion() (*versionJson, error) {
 
 func update(ctx context.Context, devConn *dev.DevConn) error {
 	args := flag.Args()
+
+	// updChannel and newUpdChannel are needed for the logging, so that it's
+	// clear for the user which update channel is used
+	updChannel := getUpdateChannel()
+	newUpdChannel := updChannel
+
+	// newMosVersion is the version which will be fetched from the server;
+	// by default it's equal to the current update channel.
+	newMosVersion := updChannel
+
 	if len(args) >= 2 {
-		// mos_version is given: need to update config
-		newMosVersion := args[1]
+		// Desired mos version is given
+		newMosVersion = args[1]
+		newUpdChannel = getUpdateChannelByMosVersion(newMosVersion)
+	}
 
-		if cfgfile.MosConfigCurrent.MosVersion != newMosVersion {
-			reportf("Changing update channel from %q to %q",
-				cfgfile.MosConfigCurrent.MosVersion, newMosVersion,
-			)
-
-			cfgfile.MosConfigCurrent.MosVersion = newMosVersion
-			if err := cfgfile.MosConfigSave(); err != nil {
-				return errors.Trace(err)
-			}
-		}
+	if updChannel != newUpdChannel {
+		reportf("Changing update channel from %q to %q", updChannel, newUpdChannel)
+	} else {
+		reportf("Update channel: %s", updChannel)
 	}
 
 	var mosUrls = map[string]string{
-		"windows": getMosURL("win/mos.exe"),
-		"linux":   getMosURL("linux/mos"),
-		"darwin":  getMosURL("mac/mos"),
+		"windows": getMosURL("win/mos.exe", newMosVersion),
+		"linux":   getMosURL("linux/mos", newMosVersion),
+		"darwin":  getMosURL("mac/mos", newMosVersion),
 	}
 
 	// Check the available version on the server
-	serverVersion, err := getServerMosVersion()
+	serverVersion, err := getServerMosVersion(newMosVersion)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -168,4 +186,49 @@ func update(ctx context.Context, devConn *dev.DevConn) error {
 	}
 
 	return nil
+}
+
+// getMosVersion checks symbolic part of the build id, and if it looks like a
+// version number (i.e. starts with a digit and contains only digits and dots),
+// then returns it; otherwise returns "latest".
+func getMosVersion() string {
+	matches := regexpBuildId.FindStringSubmatch(BuildId)
+	if matches == nil {
+		panic(fmt.Sprintf("bad build id: %q", BuildId))
+	}
+
+	symbolic := matches[2]
+
+	if regexpVersionNumber.MatchString(symbolic) {
+		return symbolic
+	}
+
+	return "latest"
+}
+
+// getMosVersionSuffix returns an empty string if mos version is "latest";
+// otherwise returns the mos version prepended with a dash, like "-1.6".
+func getMosVersionSuffix() string {
+	return moscommon.GetVersionSuffix(getMosVersion())
+}
+
+// getUpdateChannel returns update channel (either "latest" or "release")
+// depending on current mos version.
+func getUpdateChannel() string {
+	return getUpdateChannelByMosVersion(getMosVersion())
+}
+
+// getUpdateChannelByMosVersion returns update channel (either "latest" or
+// "release") depending on the given mos version.
+func getUpdateChannelByMosVersion(mosVersion string) string {
+	if mosVersion == "master" || mosVersion == "latest" {
+		return "latest"
+	}
+	return "release"
+}
+
+// getUpdateChannelSuffix returns an empty string if update channel is
+// "latest"; otherwise returns "-release".
+func getUpdateChannelSuffix() string {
+	return moscommon.GetVersionSuffix(getUpdateChannel())
 }

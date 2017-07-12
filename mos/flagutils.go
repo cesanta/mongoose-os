@@ -92,10 +92,10 @@ func usage() {
 	}
 
 	fmt.Fprintf(w, "The Mongoose OS command line tool, v. %s.\n", BuildId)
-	fmt.Fprintf(w, "Checking updates... ")
+	fmt.Fprintf(w, "Update channel: %q. Checking updates... ", getUpdateChannel())
 	w.Flush()
 
-	serverVersion, err := getServerMosVersion()
+	serverVersion, err := getServerMosVersion(getUpdateChannel())
 	if err != nil {
 		color.New(color.FgRed).Fprintf(w, "Failed to check server version: %s\n", err)
 	} else {

@@ -11,7 +11,6 @@ import (
 	"path"
 	"strings"
 
-	"cesanta.com/mos/cfgfile"
 	"github.com/cesanta/errors"
 )
 
@@ -28,7 +27,7 @@ func NewZipFirmwareBundle(fname string) (*FirmwareBundle, error) {
 	_, err2 := os.Stat(fname)
 	if fname != "" && !strings.HasSuffix(fname, ".zip") && os.IsNotExist(err2) {
 		fname = fmt.Sprintf(
-			"https://mongoose-os.com/downloads/%s%s.zip", fname, cfgfile.GetMosVersionSuffix(),
+			"https://mongoose-os.com/downloads/%s.zip", fname,
 		)
 	}
 

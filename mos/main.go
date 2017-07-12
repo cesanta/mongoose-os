@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"cesanta.com/common/go/pflagenv"
-	"cesanta.com/mos/cfgfile"
 	moscommon "cesanta.com/mos/common"
 	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"
@@ -176,10 +175,6 @@ func main() {
 		log.Fatal(err)
 	}
 
-	if err := cfgfile.MosConfigInit(); err != nil {
-		log.Fatal(err)
-	}
-
 	if len(flag.Args()) == 0 || flag.Arg(0) == "ui" {
 		isUI = true
 		*reconnect = true
@@ -191,8 +186,8 @@ func main() {
 		return
 	} else if *versionFlag {
 		fmt.Printf(
-			"%s\nVersion: %s\nBuild ID: %s\n",
-			"The Mongoose OS command line tool", Version, BuildId,
+			"%s\nVersion: %s\nBuild ID: %s\nUpdate channel: %s\n",
+			"The Mongoose OS command line tool", getMosVersion(), BuildId, getUpdateChannel(),
 		)
 		return
 	}

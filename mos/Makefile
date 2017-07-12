@@ -1,5 +1,7 @@
 .PHONY: generate
 
+TAG ?= latest
+
 all: generate
 
 generate version.go version.json:
@@ -27,8 +29,8 @@ downloads: generate
 
 deploy:
 	cd ../prod && \
-    ansible-playbook website.yml -e build=yes -t build_mos,mos && \
-    ansible-playbook fwbuild.yml -e build=yes -t cloud-mos,fwbuild-instance
+    ansible-playbook website.yml -e build=yes -e mos_version_tag='$(TAG)' -t build_mos,mos && \
+    ansible-playbook fwbuild.yml -e build=yes -e mos_version_tag='$(TAG)' -t cloud-mos,fwbuild-instance
 
 
 clean:

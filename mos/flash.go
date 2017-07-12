@@ -84,7 +84,8 @@ func flash(ctx context.Context, devConn *dev.DevConn) error {
 	if len(args) == 2 {
 		fwname = args[1]
 	}
-	fw, err := common.NewZipFirmwareBundle(fwname)
+
+	fw, err := common.NewZipFirmwareBundle(fmt.Sprint(fwname, getMosVersionSuffix()))
 	if err != nil {
 		return errors.Trace(err)
 	}
