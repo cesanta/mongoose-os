@@ -201,24 +201,28 @@ uint32 NOINLINE find_image(void) {
 	} else if (flag == 2) {
 		ets_printf("8 Mbit\r\n");
 		flashsize = 0x100000;
-	} else if (flag == 3) {
-		ets_printf("16 Mbit\r\n");
-#ifdef BOOT_BIG_FLASH
-		flashsize = 0x200000;
-#else
-		flashsize = 0x100000; // limit to 8Mbit
-#endif
-	} else if (flag == 4) {
-		ets_printf("32 Mbit\r\n");
-#ifdef BOOT_BIG_FLASH
-		flashsize = 0x400000;
-#else
-		flashsize = 0x100000; // limit to 8Mbit
-#endif
 	} else {
-		ets_printf("unknown\r\n");
-		// assume at least 4mbit
-		flashsize = 0x80000;
+#ifdef BOOT_BIG_FLASH
+		if (flag == 3) {
+			ets_printf("16 Mbit\r\n");
+			flashsize = 0x200000;
+		} else if (flag == 4) {
+			ets_printf("32 Mbit\r\n");
+			flashsize = 0x400000;
+		} else if (flag == 8) {
+			ets_printf("64 Mbit\r\n");
+			flashsize = 0x800000;
+		} else if (flag == 9) {
+			ets_printf("128 Mbit\r\n");
+			flashsize = 0x1000000;
+		} else {
+			ets_printf("unknown\r\n");
+			flashsize = 0x100000;  // assume 8Mbit
+		}
+#else
+		ets_printf("8 Mbit\r\n");
+		flashsize = 0x100000; // limit to 8Mbit
+#endif
 	}
 
 	// print spi mode

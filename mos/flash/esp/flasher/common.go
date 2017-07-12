@@ -69,10 +69,6 @@ func ConnectToFlasherClient(ct esp.ChipType, opts *esp.FlashOpts) (*cfResult, er
 		if err != nil {
 			return nil, errors.Annotatef(err, "flash size is not specified and could not be detected")
 		}
-		if ct == esp.ChipESP8266 && flashSize > 4194304 {
-			// Clamp to 32m for now. TODO(rojer); Test with larger flash sizes.
-			flashSize = 4194304
-		}
 		if err = r.flashParams.SetSize(flashSize); err != nil {
 			return nil, errors.Annotatef(err, "invalid flash size detected")
 		}

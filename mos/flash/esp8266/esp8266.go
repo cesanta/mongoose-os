@@ -3,11 +3,13 @@ package esp8266
 var (
 	FlashSizeToId = map[string]int{
 		// +1, to distinguish from null-value
-		"4m":  1,
-		"2m":  2,
-		"8m":  3,
-		"16m": 4,
-		"32m": 5,
+		"4m":   1,
+		"2m":   2,
+		"8m":   3,
+		"16m":  4,
+		"32m":  5,
+		"64m":  9,
+		"128m": 10,
 	}
 
 	FlashSizes = map[int]int{
@@ -16,5 +18,7 @@ var (
 		2: 1048576,
 		3: 2097152,
 		4: 4194304,
+		8: 8388608,
+		9: 16777216,
 	}
 )
