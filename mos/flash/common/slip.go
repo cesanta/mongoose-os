@@ -1,7 +1,6 @@
 package common
 
 import (
-	"encoding/hex"
 	"io"
 
 	"github.com/cesanta/errors"
@@ -44,7 +43,7 @@ func (srw *SLIPReaderWriter) Read(buf []byte) (int, error) {
 		if !esc {
 			switch b[0] {
 			case slipFrameDelimiter:
-				glog.V(4).Infof("<= (%d) %s", n, hex.EncodeToString(buf[:n]))
+				glog.V(4).Infof("<= (%d) %s", n, LimitStr(buf[:n], 32))
 				return n, nil
 			case slipEscape:
 				esc = true
@@ -88,6 +87,6 @@ func (srw *SLIPReaderWriter) Write(data []byte) (int, error) {
 		}
 	}
 	frame = append(frame, slipFrameDelimiter)
-	glog.V(4).Infof("=> (%d) %s", len(data), hex.EncodeToString(data))
+	glog.V(4).Infof("=> (%d) %s", len(data), LimitStr(data, 32))
 	return srw.rw.Write(frame)
 }

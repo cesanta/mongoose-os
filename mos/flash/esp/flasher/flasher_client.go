@@ -6,8 +6,10 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 	"fmt"
+	"math/rand"
 	"strings"
 	"time"
+	"unsafe"
 
 	"cesanta.com/mos/flash/common"
 	"cesanta.com/mos/flash/esp"
@@ -28,7 +30,6 @@ const (
 )
 
 const (
-	flasherGreeting   = "OHAI"
 	chipEraseTimeout  = 25 * time.Second
 	blockEraseTimeout = 5 * time.Second
 	// This is made small to workaround slow Mac driver
@@ -45,6 +46,7 @@ const (
 	cmdFlashReadChipID            = 0x04
 	cmdFlashEraseChip             = 0x05
 	cmdFlashBootFW                = 0x06
+	cmdEcho                       = 0x08
 )
 
 type FlasherClient struct {
@@ -88,13 +90,8 @@ func (fc *FlasherClient) connect(baudRate uint) error {
 			return errors.Annotatef(err, "failed to set serial speed to %d", baudRate)
 		}
 	}
-	hello := make([]byte, 4)
-	n, err := fc.srw.Read(hello)
-	if err != nil {
-		return errors.Annotatef(err, "failed to read greeting")
-	}
-	if n != 4 || string(hello) != flasherGreeting {
-		return errors.Errorf("invalid greeting: %q", hello[:n])
+	if err = fc.Sync(); err != nil {
+		return errors.Annotatef(err, "failed to talk to flasher")
 	}
 	common.Reportf("  Flasher is running")
 	fc.connected = true
@@ -102,9 +99,6 @@ func (fc *FlasherClient) connect(baudRate uint) error {
 }
 
 func (fc *FlasherClient) sendCommand(cmd flasherCmd, args []uint32) error {
-	if !fc.connected {
-		return errors.New("not connected")
-	}
 	glog.V(2).Infof("%s %+v", cmd, args)
 	buf := bytes.NewBuffer([]byte{byte(cmd)})
 	_, err := fc.srw.Write(buf.Bytes())
@@ -191,6 +185,12 @@ func (fc *FlasherClient) EraseChip() error {
 	return err
 }
 
+type writeProgress struct {
+	numWritten uint32
+	bufLevel   uint32
+	digest     [md5.Size]byte
+}
+
 type writeResult struct {
 	waitTime  uint32
 	writeTime uint32
@@ -199,9 +199,37 @@ type writeResult struct {
 	digest    [md5.Size]byte
 }
 
-func (fc *FlasherClient) Write(addr uint32, data []byte, erase bool) error {
+func (fc *FlasherClient) Sync() error {
+	fc.s.SetReadTimeout(50 * time.Millisecond)
+sync:
+	for i := 0; i < 5; i++ {
+		cookie := rand.Uint32()
+		fc.srw.Write(nil) // Send an empty packet to abort write, if any.
+		if err := fc.sendCommand(cmdEcho, []uint32{cookie}); err != nil {
+			return errors.Trace(err)
+		}
+		for {
+			buf := make([]byte, 1024)
+			n, err := fc.s.Read(buf)
+			if err != nil {
+				continue sync
+			}
+			glog.V(3).Infof("<= %s", hex.EncodeToString(buf[:n]))
+			echoData := bytes.NewBuffer(nil)
+			binary.Write(echoData, binary.LittleEndian, cookie)
+			if bytes.Contains(buf, echoData.Bytes()) {
+				glog.Infof("re-synced")
+				return nil
+			}
+		}
+	}
+	return errors.Errorf("flasher did not respond")
+}
+
+func (fc *FlasherClient) Write(addr uint32, data []byte, erase bool) (int, error) {
+	var numSent, numWritten int
 	if !fc.connected {
-		return errors.New("not connected")
+		return numWritten, errors.New("not connected")
 	}
 	eraseFlag := uint32(0)
 	if erase {
@@ -210,48 +238,63 @@ func (fc *FlasherClient) Write(addr uint32, data []byte, erase bool) error {
 	fc.s.SetReadTimeout(blockEraseTimeout)
 	err := fc.sendCommand(cmdFlashWrite, []uint32{addr, uint32(len(data)), eraseFlag})
 	if err != nil {
-		return errors.Trace(err)
+		return numWritten, errors.Trace(err)
 	}
-	var numSent, numWritten uint32
-	for numWritten < uint32(len(data)) {
-		buf := make([]byte, 16)
+	digest := md5.New()
+	for numWritten < len(data) {
+		var progress writeProgress
+		buf := make([]byte, unsafe.Sizeof(progress))
 		n, err := fc.srw.Read(buf)
 		if err != nil {
-			return errors.Annotatef(err, "flash write failed @ %d/%d", numWritten, numSent)
+			return numWritten, errors.Annotatef(err, "flash write failed @ %d/%d", numWritten, numSent)
 		}
-		if n != 8 {
-			return errors.Errorf("unexpected result packet %q", buf[:n])
+		if n < len(buf) {
+			return numWritten, errors.Errorf("invalid write progress packet %q", hex.EncodeToString(buf[:n]))
 		}
-		var bufLevel uint32
 		bb := bytes.NewBuffer(buf)
-		binary.Read(bb, binary.LittleEndian, &numWritten)
-		binary.Read(bb, binary.LittleEndian, &bufLevel)
-		glog.V(3).Infof("<= %d %d; %d", numWritten, bufLevel, numSent-numWritten)
-		for numSent < uint32(len(data)) {
+		binary.Read(bb, binary.LittleEndian, &progress.numWritten)
+		binary.Read(bb, binary.LittleEndian, &progress.bufLevel)
+		bb.Read(progress.digest[:])
+		newNumWritten := int(progress.numWritten)
+		if newNumWritten < numWritten || newNumWritten > len(data) {
+			return numWritten, errors.Errorf("bad write progress packet %q", hex.EncodeToString(buf[:n]))
+		}
+		if newNumWritten != numWritten {
+			digest.Write(data[numWritten:newNumWritten])
+		}
+		expectedDigest := digest.Sum(nil)
+		expectedDigestHex := strings.ToLower(hex.EncodeToString(expectedDigest[:]))
+		digestHex := strings.ToLower(hex.EncodeToString(progress.digest[:]))
+		glog.V(3).Infof("<= %d %d; %d %s/%s", numWritten, progress.bufLevel, numSent-numWritten, digestHex, expectedDigestHex)
+		if numWritten > 0 && digestHex != expectedDigestHex {
+			return numWritten, errors.Errorf("digest mismatch @ %d: expected %s, got %s", numWritten, expectedDigestHex, digestHex)
+		}
+		numWritten = newNumWritten
+		for numSent < len(data) {
 			inFlight := numSent - numWritten
 			canSend := int(UART_BUF_SIZE - FLASH_WRITE_SIZE - inFlight)
 			if canSend <= 0 {
 				break
 			}
-			numToSend := len(data) - int(numSent)
+			numToSend := len(data) - numSent
 			if numToSend > canSend {
 				numToSend = canSend
 			}
-			toSend := data[numSent : int(numSent)+numToSend]
-			ns, err := fc.s.Write(toSend)
+			toSend := data[numSent : numSent+numToSend]
+			ns, err := fc.srw.Write(toSend)
 			if err != nil {
-				return errors.Annotatef(err, "flash write failed @ %d/%d", numWritten, numSent)
+				return numWritten, errors.Annotatef(err, "flash write failed @ %d/%d", numWritten, numSent)
 			}
-			numSent += uint32(ns)
+			numSent += len(toSend)
 			glog.V(3).Infof("=> %d; %d/%d/%d", ns, numWritten, numSent, len(data))
 		}
 	}
 	tail, err := fc.recvResponse()
 	if err != nil {
-		return errors.Annotatef(err, "failed to read digest and stats")
+		return numWritten, errors.Annotatef(err, "failed to read digest and stats")
 	}
 	if len(tail) != 1 || len(tail[0]) != 4*4+md5.Size {
-		return errors.Errorf("unexpected digest packet %+v", tail)
+		return numWritten, errors.Errorf("unexpected digest packet %+v", tail)
 	}
 	sdb := bytes.NewBuffer(tail[0])
 	var result writeResult
@@ -264,7 +307,7 @@ func (fc *FlasherClient) Write(addr uint32, data []byte, erase bool) error {
 	expectedDigestHex := strings.ToLower(hex.EncodeToString(expectedDigest[:]))
 	digestHex := strings.ToLower(hex.EncodeToString(result.digest[:]))
 	if digestHex != expectedDigestHex {
-		return errors.Errorf("digest mismatch: expected %s, got %s", expectedDigestHex, digestHex)
+		return numWritten, errors.Errorf("final digest mismatch: expected %s, got %s", expectedDigestHex, digestHex)
 	}
 	miscTime := result.totalTime - result.waitTime - result.eraseTime - result.writeTime
 	glog.Infof("Write stats: waitTime:%.2f writeTime:%.2f eraseTime:%.2f miscTime:%.2f totalTime:%d",
@@ -274,7 +317,7 @@ func (fc *FlasherClient) Write(addr uint32, data []byte, erase bool) error {
 		float64(miscTime)/float64(result.totalTime),
 		result.totalTime,
 	)
-	return nil
+	return numWritten, nil
 }
 
 func (fc *FlasherClient) Read(addr uint32, data []byte) error {
@@ -365,6 +408,8 @@ func (cmd flasherCmd) String() string {
 		return fmt.Sprintf("FlashEraseChip(%d)", cmd)
 	case cmdFlashBootFW:
 		return fmt.Sprintf("FlashBootFW(%d)", cmd)
+	case cmdEcho:
+		return fmt.Sprintf("Echo(%d)", cmd)
 	default:
 		return fmt.Sprintf("?(%d)", cmd)
 	}

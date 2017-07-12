@@ -87,10 +87,19 @@ int do_flash_erase(uint32_t addr, uint32_t len) {
   return 0;
 }
 
+enum read_state {
+  READ_WAIT_START = 0,
+  READ_DATA = 1,
+  READ_UNESCAPE = 2,
+  READ_ERROR = 3,
+};
+
 struct uart_buf {
+  enum read_state state;
   uint8_t data[UART_BUF_SIZE];
   uint32_t nr;
   uint8_t *pr, *pw, *pe;
+  uint32_t ps;
 };
 
 uint32_t ccount(void) {
@@ -102,6 +111,7 @@ uint32_t ccount(void) {
 struct write_progress {
   uint32_t num_written;
   uint32_t buf_level;
+  uint8_t digest[16];
 };
 
 struct write_result {
@@ -116,26 +126,71 @@ static struct uart_buf ub;
 
 void uart_isr(void *arg) {
   uint32_t int_st = READ_PERI_REG(UART_INT_ST_REG(0));
-  uint8_t fifo_len, nr, i;
-  // led_on(22);
+  uint8_t fifo_len, nb, i;
   while ((fifo_len = READ_PERI_REG(UART_STATUS_REG(0))) > 0 &&
          ub.nr < UART_BUF_SIZE) {
-    nr = fifo_len;
-    if (ub.nr + nr > UART_BUF_SIZE) nr = UART_BUF_SIZE - ub.nr;
-    if (nr > ub.pe - ub.pw) nr = ub.pe - ub.pw;
-    for (i = 0; i < nr; i++) {
+    nb = fifo_len;
+    if (ub.nr + nb > UART_BUF_SIZE) nb = UART_BUF_SIZE - ub.nr;
+    if (nb > ub.pe - ub.pw) nb = ub.pe - ub.pw;
+    for (i = 0; i < nb; i++) {
       uint8_t byte = READ_PERI_REG(UART_FIFO_REG(0));
-      *ub.pw++ = byte;
+      switch (ub.state) {
+        case READ_WAIT_START: {
+          if (byte == 0xc0) {
+            ub.state = READ_DATA;
+            ub.ps = 0;
+          }
+          break;
+        }
+        case READ_DATA: {
+          if (byte == 0xdb) {
+            ub.state = READ_UNESCAPE;
+          } else if (byte == 0xc0) {
+            if (ub.ps == 0) {
+              /* Empty packet, sender is done. */
+              ub.state = READ_ERROR;
+              SET_PERI_REG_MASK(UART_INT_ENA_REG(0), 0);
+              goto out;
+            } else {
+              ub.state = READ_WAIT_START;
+            }
+          } else {
+            *ub.pw++ = byte;
+            ub.nr++;
+            ub.ps++;
+          }
+          break;
+        }
+        case READ_UNESCAPE: {
+          if (byte == 0xdc) {
+            byte = 0xc0;
+          } else if (byte == 0xdd) {
+            byte = 0xdb;
+          } else {
+            ub.state = READ_ERROR;
+            SET_PERI_REG_MASK(UART_INT_ENA_REG(0), 0);
+            goto out;
+          }
+          *ub.pw++ = byte;
+          ub.nr++;
+          ub.ps++;
+          ub.state = READ_DATA;
+          break;
+        }
+        case READ_ERROR: {
+          goto out;
+        }
+      }
     }
     if (ub.pw == ub.pe) ub.pw = ub.data;
-    ub.nr += nr;
   }
-  // led_off(22);
+out:
   WRITE_PERI_REG(UART_INT_CLR_REG(0), int_st);
   (void) arg;
 }
 
 int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
+  int ret = 0;
   uint32_t num_erased = 0;
   struct MD5Context ctx;
   MD5Init(&ctx);
@@ -144,6 +199,7 @@ int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
   if (len % FLASH_SECTOR_SIZE != 0) return 0x33;
   if (esp_rom_spiflash_unlock() != 0) return 0x34;
 
+  ub.state = READ_WAIT_START;
   ub.nr = 0;
   ub.pr = ub.pw = ub.data;
   ub.pe = ub.data + UART_BUF_SIZE;
@@ -169,13 +225,17 @@ int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
     while (erase && num_erased < wp.num_written + FLASH_WRITE_SIZE) {
       const uint32_t num_left = (len - num_erased);
       if (num_left >= FLASH_BLOCK_SIZE && addr % FLASH_BLOCK_SIZE == 0) {
-        if (esp_rom_spiflash_erase_block(addr / FLASH_BLOCK_SIZE) != 0)
-          return 0x35;
+        if (esp_rom_spiflash_erase_block(addr / FLASH_BLOCK_SIZE) != 0) {
+          ret = 0x35;
+          goto out;
+        }
         num_erased += FLASH_BLOCK_SIZE;
       } else {
         /* len % FLASH_SECTOR_SIZE == 0 is enforced, no further checks needed */
-        if (esp_rom_spiflash_erase_sector(addr / FLASH_SECTOR_SIZE) != 0)
-          return 0x36;
+        if (esp_rom_spiflash_erase_sector(addr / FLASH_SECTOR_SIZE) != 0) {
+          ret = 0x36;
+          goto out;
+        }
         num_erased += FLASH_SECTOR_SIZE;
       }
     }
@@ -183,20 +243,21 @@ int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
     start_count = ccount();
     /* Wait for data to arrive. */
     wp.buf_level = *nr;
-    // led_on(16);
-    while (*nr < FLASH_WRITE_SIZE) {
+    while (*nr < FLASH_WRITE_SIZE && ub.state != READ_ERROR) {
     }
-    // led_off(16);
+    if (ub.state == READ_ERROR) {
+      ret = 0x37;
+      goto out;
+    }
     wr.wait_time += ccount() - start_count;
     MD5Update(&ctx, ub.pr, FLASH_WRITE_SIZE);
-    // led_on(2);
     start_count = ccount();
     if (esp_rom_spiflash_write(addr, (uint32_t *) ub.pr, FLASH_WRITE_SIZE) !=
         0) {
-      return 0x37;
+      ret = 0x38;
+      goto out;
     }
     wr.write_time += ccount() - start_count;
-    // led_off(2);
     ets_intr_lock();
     *nr -= FLASH_WRITE_SIZE;
     ets_intr_unlock();
@@ -204,17 +265,21 @@ int do_flash_write(uint32_t addr, uint32_t len, uint32_t erase) {
     ub.pr += FLASH_WRITE_SIZE;
     if (ub.pr >= ub.data + UART_BUF_SIZE) ub.pr = ub.data;
     wp.num_written += FLASH_WRITE_SIZE;
+    struct MD5Context ctx2;
+    memcpy(&ctx2, &ctx, sizeof(ctx));
+    MD5Final(wp.digest, &ctx2);
     SLIP_send(&wp, sizeof(wp));
   }
 
-  ets_isr_mask(1 << ETS_UART0_INUM);
-  WRITE_PERI_REG(UART_CONF1_REG(0), saved_conf1);
   MD5Final(wr.digest, &ctx);
 
   wr.total_time = ccount() - wr.total_time;
   SLIP_send(&wr, sizeof(wr));
 
-  return 0;
+out:
+  WRITE_PERI_REG(UART_CONF1_REG(0), saved_conf1);
+  ets_isr_mask(1 << ETS_UART0_INUM);
+  return ret;
 }
 
 int do_flash_read(uint32_t addr, uint32_t len, uint32_t block_size,
@@ -286,6 +351,9 @@ int do_flash_read_chip_id(void) {
 uint8_t cmd_loop(void) {
   uint8_t cmd;
   do {
+    /* Reset FIFO to re-sync */
+    SET_PERI_REG_MASK(UART_CONF0_REG(0), UART_RXFIFO_RST);
+    CLEAR_PERI_REG_MASK(UART_CONF0_REG(0), UART_RXFIFO_RST);
     uint32_t args[4];
     uint32_t len = SLIP_recv(&cmd, 1);
     if (len != 1) {
@@ -347,6 +415,12 @@ uint8_t cmd_loop(void) {
         SLIP_send(&resp, 1);
         return cmd;
       }
+      case CMD_ECHO: {
+        len = SLIP_recv(args, sizeof(args));
+        SLIP_send(args, len);
+        resp = 0;
+        break;
+      }
     }
     SLIP_send(&resp, 1);
   } while (cmd != CMD_BOOT_FW && cmd != CMD_REBOOT);
@@ -386,7 +460,13 @@ void stub_main(void) {
   /* Give host time to get ready too. */
   ets_delay_us(50000);
 
+#ifdef BAUD_TEST
+  while (1) {
+    WRITE_PERI_REG(UART_FIFO_REG(0), 0x55);
+  }
+#else
   SLIP_send(&greeting, 4);
+#endif
 
   // led_setup(22);
   // led_setup(16);

@@ -99,9 +99,12 @@ func Flash(ct esp.ChipType, fw *common.FirmwareBundle, opts *esp.FlashOpts) erro
 	if len(imagesToWrite) > 0 {
 		common.Reportf("Writing...")
 		start := time.Now()
-		bytesWritten := 0
+		totalBytesWritten := 0
 		for _, im := range imagesToWrite {
 			data := im.data
+			numAttempts := 3
+			imageBytesWritten := 0
+			addr := im.addr
 			if len(data)%flashSectorSize != 0 {
 				newData := make([]byte, len(data))
 				copy(newData, data)
@@ -111,16 +114,34 @@ func Flash(ct esp.ChipType, fw *common.FirmwareBundle, opts *esp.FlashOpts) erro
 				}
 				data = newData
 			}
-			common.Reportf("  %7d @ 0x%x", len(data), im.addr)
-			err = cfr.fc.Write(im.addr, data, true /* erase */)
-			if err != nil {
-				return errors.Annotatef(err, "%s: failed to write", im.part.Name)
+			for i := 1; imageBytesWritten < len(im.data); i++ {
+				common.Reportf("  %7d @ 0x%x", len(data), addr)
+				bytesWritten, err := cfr.fc.Write(addr, data, true /* erase */)
+				if err != nil {
+					if bytesWritten >= flashSectorSize {
+						// We made progress, restart the retry counter.
+						i = 1
+					}
+					err = errors.Annotatef(err, "write error (attempt %d/%d)", i, numAttempts)
+					if i >= numAttempts {
+						return errors.Annotatef(err, "%s: failed to write", im.part.Name)
+					}
+					glog.Warningf("%s", err)
+					if err := cfr.fc.Sync(); err != nil {
+						return errors.Annotatef(err, "lost connection with the flasher")
+					}
+					// Round down to sector boundary
+					bytesWritten = bytesWritten - (bytesWritten % flashSectorSize)
+					data = data[bytesWritten:]
+				}
+				imageBytesWritten += bytesWritten
+				addr += uint32(bytesWritten)
 			}
-			bytesWritten += len(data)
+			totalBytesWritten += len(im.data)
 		}
 		seconds := time.Since(start).Seconds()
-		bytesPerSecond := float64(bytesWritten) / seconds
-		common.Reportf("Wrote %d bytes in %.2f seconds (%.2f KBit/sec)", bytesWritten, seconds, bytesPerSecond*8/1024)
+		bytesPerSecond := float64(totalBytesWritten) / seconds
+		common.Reportf("Wrote %d bytes in %.2f seconds (%.2f KBit/sec)", totalBytesWritten, seconds, bytesPerSecond*8/1024)
 	}
 
 	common.Reportf("Verifying...")

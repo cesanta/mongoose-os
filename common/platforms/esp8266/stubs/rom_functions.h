@@ -51,8 +51,7 @@ void ets_delay_us(uint32_t delay_micros);
 void ets_isr_mask(uint32_t ints);
 void ets_isr_unmask(uint32_t ints);
 typedef void (*int_handler_t)(void *arg);
-int_handler_t ets_isr_attach(uint32_t int_num, int_handler_t handler,
-                             void *arg);
+
 void ets_intr_lock();
 void ets_intr_unlock();
 void ets_set_user_start(void (*user_start_fn)());
