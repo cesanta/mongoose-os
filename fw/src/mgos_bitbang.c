@@ -24,14 +24,14 @@ IRAM static void mgos_bitbang_write_bits2(int gpio,
     uint8_t b = *data++;
     for (int i = 0; i < 8; i++) {
       if (b & 0x80) {
-        mgos_gpio_write(gpio, 1);
+        mgos_gpio_write(gpio, t1h);
         delay_fn(t1h);
-        mgos_gpio_write(gpio, 0);
+        mgos_gpio_write(gpio, !t1l);
         delay_fn(t1l);
       } else {
-        mgos_gpio_write(gpio, 1);
+		    mgos_gpio_write(gpio, t0h);
         delay_fn(t0h);
-        mgos_gpio_write(gpio, 0);
+		    mgos_gpio_write(gpio, !t0l);
         delay_fn(t0l);
       }
       b <<= 1;
