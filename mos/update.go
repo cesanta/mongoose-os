@@ -192,18 +192,27 @@ func update(ctx context.Context, devConn *dev.DevConn) error {
 // version number (i.e. starts with a digit and contains only digits and dots),
 // then returns it; otherwise returns "latest".
 func getMosVersion() string {
-	matches := regexpBuildId.FindStringSubmatch(BuildId)
+	ver, err := getMosVersionByBuildId(BuildId)
+	if err != nil {
+		panic(err.Error())
+	}
+
+	return ver
+}
+
+func getMosVersionByBuildId(buildId string) (string, error) {
+	matches := regexpBuildId.FindStringSubmatch(buildId)
 	if matches == nil {
-		panic(fmt.Sprintf("bad build id: %q", BuildId))
+		return "", errors.Errorf("bad build id: %q", buildId)
 	}
 
 	symbolic := matches[2]
 
 	if regexpVersionNumber.MatchString(symbolic) {
-		return symbolic
+		return symbolic, nil
 	}
 
-	return "latest"
+	return "latest", nil
 }
 
 // getMosVersionSuffix returns an empty string if mos version is "latest";

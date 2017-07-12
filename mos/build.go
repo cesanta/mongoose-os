@@ -187,6 +187,16 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 
 	start := time.Now()
 
+	// Request server version in parallel
+	serverVersionCh := make(chan *versionJson, 1)
+	if !*local {
+		go func() {
+			// Ignore error, it's not really important
+			v, _ := getServerMosVersion(getUpdateChannel())
+			serverVersionCh <- v
+		}()
+	}
+
 	if err := os.MkdirAll(buildDir, 0777); err != nil {
 		return errors.Trace(err)
 	}
@@ -251,6 +261,19 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 		}
 
 		freportf(logWriterStdout, "Firmware saved to %s", fwFilename)
+	}
+
+	// If received server version, compare it with the local one and notify the
+	// user about the update (if available)
+	select {
+	case v := <-serverVersionCh:
+		serverVer, _ := getMosVersionByBuildId(v.BuildId)
+		localVer := getMosVersion()
+
+		if serverVer != localVer {
+			freportf(logWriterStdout, "By the way, there is a newer version available: %q (you use %q). Please consider upgrading.", serverVer, localVer)
+		}
+	default:
 	}
 
 	return err
