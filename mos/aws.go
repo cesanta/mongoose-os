@@ -451,10 +451,9 @@ func awsIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	reportf("Current MQTT config: %+v", mqttConf)
 
 	awsGGConf, err := devConf.Get("aws.greengrass")
-	if err != nil {
-		return errors.Annotatef(err, "failed to get AWS Greengrass config")
+	if err == nil {
+		reportf("Current AWS Greengrass config: %+v", awsGGConf)
 	}
-	reportf("Current AWS Greengrass config: %+v", awsGGConf)
 
 	if certCN == "" {
 		certCN = devID
@@ -522,11 +521,10 @@ func awsIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 		settings["device.id"] = certCN
 	}
 
-	if awsGGEnable {
+	if awsGGEnable && awsGGConf != "" {
 		settings["aws.greengrass.enable"] = "true"
 		settings["mqtt.enable"] = "false"
 	} else {
-		settings["aws.greengrass.enable"] = "false"
 		settings["mqtt.enable"] = "true"
 	}
 
@@ -537,7 +535,7 @@ func awsIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	}
 
 	mqttConf, _ = devConf.Get("mqtt")
-	reportf("New config: %+v", mqttConf)
+	reportf("New MQTT config: %+v", mqttConf)
 
 	err = configSetAndSave(ctx, devConn, devConf)
 	if err != nil {
