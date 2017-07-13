@@ -27,10 +27,15 @@ downloads: generate
 	GOOS=windows GOARCH=386 go build -o downloads/mos/win/mos.exe
 	cp version.json downloads/mos/
 
-deploy:
+deploy: deploy-fwbuild deploy-mos-binary
+
+deploy-fwbuild:
 	cd ../prod && \
-    ansible-playbook website.yml -e build=yes -e mos_version_tag='$(TAG)' -t build_mos,mos && \
     ansible-playbook fwbuild.yml -e build=yes -e mos_version_tag='$(TAG)' -t cloud-mos,fwbuild-instance
+
+deploy-mos-binary:
+	cd ../prod && \
+    ansible-playbook website.yml -e build=yes -e mos_version_tag='$(TAG)' -t build_mos,mos
 
 
 clean:
