@@ -110,7 +110,12 @@ IRAM bool mgos_gpio_read(int pin) {
 }
 
 IRAM void mgos_gpio_write(int pin, bool level) {
-  gpio_set_level(pin, level);
+  uint32_t reg = (level ? GPIO_OUT_W1TS_REG : GPIO_OUT_W1TC_REG);
+  if (pin > 32) {
+    pin -= 32;
+    reg += 6; /* GPIO_OUT -> GPIO_OUT1 */
+  }
+  WRITE_PERI_REG(reg, (1 << pin));
 }
 
 bool mgos_gpio_toggle(int pin) {
@@ -186,7 +191,7 @@ enum mgos_init_result mgos_gpio_hal_init() {
   mgos_bitbang_n100_cal = 2;
 #elif CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ == 160
   mgos_nsleep100 = &esp32_nsleep100_160;
-  mgos_bitbang_n100_cal = 3;
+  mgos_bitbang_n100_cal = 4;
 #elif CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ == 80
   mgos_nsleep100 = &esp32_nsleep100_80;
   mgos_bitbang_n100_cal = 6;

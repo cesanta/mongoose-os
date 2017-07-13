@@ -25,19 +25,23 @@ enum mgos_delay_unit {
 };
 
 /*
- * Bit bang GPIO pin `gpio`.
+ * Bit bang GPIO pin `gpio`. `len` bytes from `data` are sent to the specified
+ * pin bit by bit. Sending each bit consists of a "high" and "low" phases,
+ * length of which is determined by the specified timing parameters.
+ *  _____
+ * |     |
+ * |     |
+ * |     |_________
  *
- * `t0h` and `t0l` specify time pattern for zero bit. `t0h` is the number of
- * `delay_unit` to hold `gpio` high. `t0l` is the number of `delay_unit`
- * to hold `gpio` low.
+ *   tXh     tXl
  *
- * Subsequently, `t1h` and `t1l` specify time pattern for bit 1.
- *
- * Finally, `data` and `len` contain bit sequence.
+ * `t0h` and `t0l` specify timings if the bit being transmitted is 0,
+ * `t1h` and `t1l` specify the same for the case where the bit is 1.
+ * If any of these is < 0, the corresponding phase is skipped.
  */
-void mgos_bitbang_write_bits(int gpio, enum mgos_delay_unit delay_unit,
-                             uint32_t t0h, uint32_t t0l, uint32_t t1h,
-                             uint32_t t1l, const uint8_t *data, size_t len);
+void mgos_bitbang_write_bits(int gpio, enum mgos_delay_unit delay_unit, int t0h,
+                             int t0l, int t1h, int t1l, const uint8_t *data,
+                             size_t len);
 
 /*
  * This function is a wrapper for `mgos_bitbang_write_bits()`.

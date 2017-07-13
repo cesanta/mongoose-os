@@ -15,24 +15,31 @@
 #endif
 
 IRAM static void mgos_bitbang_write_bits2(int gpio,
-                                          void (*delay_fn)(uint32_t n),
-                                          uint32_t t0h, uint32_t t0l,
-                                          uint32_t t1h, uint32_t t1l,
+                                          void (*delay_fn)(uint32_t n), int t0h,
+                                          int t0l, int t1h, int t1l,
                                           const uint8_t *data, size_t len) {
   mgos_ints_disable();
   while (len-- > 0) {
     uint8_t b = *data++;
     for (int i = 0; i < 8; i++) {
       if (b & 0x80) {
-        mgos_gpio_write(gpio, 1);
-        delay_fn(t1h);
-        mgos_gpio_write(gpio, 0);
-        delay_fn(t1l);
+        if (t1h >= 0) {
+          mgos_gpio_write(gpio, 1);
+          delay_fn(t1h);
+        }
+        if (t1l >= 0) {
+          mgos_gpio_write(gpio, 0);
+          delay_fn(t1l);
+        }
       } else {
-        mgos_gpio_write(gpio, 1);
-        delay_fn(t0h);
-        mgos_gpio_write(gpio, 0);
-        delay_fn(t0l);
+        if (t0h >= 0) {
+          mgos_gpio_write(gpio, 1);
+          delay_fn(t0h);
+        }
+        if (t0l >= 0) {
+          mgos_gpio_write(gpio, 0);
+          delay_fn(t0l);
+        }
       }
       b <<= 1;
     }
@@ -46,9 +53,9 @@ IRAM static void mgos_bitbang_write_bits2(int gpio,
  * legs.length);
  */
 
-void mgos_bitbang_write_bits(int gpio, enum mgos_delay_unit delay_unit,
-                             uint32_t t0h, uint32_t t0l, uint32_t t1h,
-                             uint32_t t1l, const uint8_t *data, size_t len) {
+void mgos_bitbang_write_bits(int gpio, enum mgos_delay_unit delay_unit, int t0h,
+                             int t0l, int t1h, int t1l, const uint8_t *data,
+                             size_t len) {
   void (*delay_fn)(uint32_t n);
   switch (delay_unit) {
     case MGOS_DELAY_MSEC:
@@ -59,14 +66,14 @@ void mgos_bitbang_write_bits(int gpio, enum mgos_delay_unit delay_unit,
       break;
     case MGOS_DELAY_100NSEC:
       delay_fn = *mgos_nsleep100;
-      if (t0h < mgos_bitbang_n100_cal) t0h = mgos_bitbang_n100_cal;
       t0h -= mgos_bitbang_n100_cal;
-      if (t0l < mgos_bitbang_n100_cal) t0l = mgos_bitbang_n100_cal;
+      if (t0h < 0) t0h = 0;
       t0l -= mgos_bitbang_n100_cal;
-      if (t1h < mgos_bitbang_n100_cal) t1h = mgos_bitbang_n100_cal;
+      if (t0l < 0) t0l = 0;
       t1h -= mgos_bitbang_n100_cal;
-      if (t1l < mgos_bitbang_n100_cal) t1l = mgos_bitbang_n100_cal;
+      if (t1h < 0) t1h = 0;
       t1l -= mgos_bitbang_n100_cal;
+      if (t1l < 0) t1l = 0;
       break;
     default:
       return;
