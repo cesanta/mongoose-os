@@ -564,12 +564,12 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 	})
 
 	if wwwRoot != "" {
-		http.HandleFunc("/", addExpiresHeader(0, http.FileServer(http.Dir(wwwRoot))))
+		http.HandleFunc("/", addNoCacheHeader(http.FileServer(http.Dir(wwwRoot))))
 	} else {
 		assetInfo := func(path string) (os.FileInfo, error) {
 			return os.Stat(path)
 		}
-		http.Handle("/", addExpiresHeader(expireTime, http.FileServer(&assetfs.AssetFS{Asset: Asset,
+		http.Handle("/", addNoCacheHeader(http.FileServer(&assetfs.AssetFS{Asset: Asset,
 			AssetDir: AssetDir, AssetInfo: assetInfo, Prefix: "web_root"})))
 	}
 	addr := fmt.Sprintf("127.0.0.1:%d", httpPort)
@@ -592,10 +592,9 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 	return nil
 }
 
-func addExpiresHeader(d time.Duration, handler http.Handler) http.HandlerFunc {
+func addNoCacheHeader(handler http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		const layout = "Mon, 02 Jan 2006 15:04:05 GMT"
-		w.Header().Set("Expires", time.Now().UTC().Add(d).Format(layout))
+		w.Header().Set("Cache-Control", "no-cache")
 		handler.ServeHTTP(w, r)
 	}
 }
