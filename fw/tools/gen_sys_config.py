@@ -27,14 +27,16 @@
 #
 # $ gen_sys_config.py --c_name=foo_config example.yaml
 # $ cat foo_config.h
-# struct foo_config {
-#   struct foo_config_foo {
+#     struct foo_config_foo_bar {
+# struct foo_config_foo {
 #     struct foo_config_foo_bar {
 #       char *name;
 #       int num_quux;
 #     } bar;
 #     int frombulate;
-#   } foo;
+#   }
+# struct foo_config {
+#   struct foo_config_foo foo;
 # };
 #
 # If default value is not specified when an entry is defined, a zero-value
@@ -224,35 +226,44 @@ class HWriter(object):
     def __init__(self, struct_name, const_char):
         self._struct_name = struct_name
         self._const_char = const_char
-        self._lines = []
-        self._indent = 2
-
-    def _Indent(self):
-        return " " * self._indent
+        self._obj_type = "struct %s" % struct_name
+        self._objs = []
+        self._fields = []
+        self._stack = []
 
     def ObjectStart(self, e):
-        self._lines.append(
-            (" " * self._indent) +
-            ("struct %s_%s {" % (self._struct_name, e.path.replace(".", "_"))))
-        self._indent += 2
+        new_obj_type = "struct %s_%s" % (self._struct_name, e.path.replace(".", "_"))
+        self._fields.append("%s %s" % (new_obj_type, e.key))
+        self._stack.append((self._obj_type, self._fields))
+        self._obj_type, self._fields = new_obj_type, []
 
     def Value(self, e):
         key = e.key
         if e.vtype in (SchemaEntry.V_BOOL, SchemaEntry.V_INT):
-            self._lines.append(self._Indent() + ("int %s;" % key))
+            decl = "int %s" % key
         elif e.vtype == SchemaEntry.V_DOUBLE:
-            self._lines.append(self._Indent() + ("double %s;" % key))
+            decl = "double %s" % key
         elif e.vtype == SchemaEntry.V_STRING:
             if self._const_char:
-                self._lines.append(self._Indent() + ("const char *%s;" % key))
+                decl = "const char *%s" % key
             else:
-                self._lines.append(self._Indent() + ("char *%s;" % key))
+                decl = "char *%s" % key
+        self._fields.append(decl)
 
     def ObjectEnd(self, e):
-        self._indent -= 2
-        self._lines.append(self._Indent() + ("} %s;" % e.key))
+        self._objs.append((len(self._stack), self._obj_type, self._fields))
+        self._obj_type, self._fields = self._stack.pop()
 
     def __str__(self):
+        self._objs.append((len(self._stack), self._obj_type, self._fields))
+        lines = []
+        for _, obj_type, fields in self._objs:
+            lines.append("%s {" % obj_type)
+            for f in fields:
+                lines.append("  %s;" % f)
+            lines.append("};")
+            lines.append("")
+
         return """\
 /* Generated file - do not edit. */
 
@@ -261,16 +272,22 @@ class HWriter(object):
 
 #include "fw/src/mgos_config.h"
 
-struct {name} {{
+#ifdef __cplusplus
+extern "C" {{
+#endif /* __cplusplus */
+
 {lines}
-}};
 
 const struct mgos_conf_entry *{name}_schema();
+
+#ifdef __cplusplus
+}}
+#endif /* __cplusplus */
 
 #endif /* {name_uc}_H_ */
 """.format(name=self._struct_name,
            name_uc=self._struct_name.upper(),
-           lines="\n".join(self._lines))
+           lines="\n".join(lines))
 
 
 # Writes C source file with schema definition.
