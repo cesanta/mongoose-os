@@ -11,16 +11,16 @@ checklib() {
   if ! test -f "$1" ; then
     echo "Installing `basename $1` ..."
     mkdir -p `dirname $1`
-    curl -fsSL https://mongoose-os.com/downloads/mos/`basename $1` -o "$1"
+    curl -fsSL https://mongoose-os.com/downloads/mos-release/`basename $1` -o "$1"
   fi
 }
 
 test -d $DESTDIR || mkdir -p $DESTDIR
 
 if test "$OS" = Linux ; then
-  MOS_URL=https://mongoose-os.com/downloads/mos/linux/mos
+  MOS_URL=https://mongoose-os.com/downloads/mos-release/linux/mos
 elif test "$OS" = Darwin ; then
-  MOS_URL=https://mongoose-os.com/downloads/mos/mac/mos
+  MOS_URL=https://mongoose-os.com/downloads/mos-release/mac/mos
   checklib /usr/local/opt/libftdi/lib/libftdi1.2.dylib
   checklib /usr/local/opt/libusb/lib/libusb-1.0.0.dylib
 else
