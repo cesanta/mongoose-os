@@ -69,9 +69,9 @@ $(document).on('click', '#version-update', function(ev) {
 $.ajax({url: '/version'}).done(function(json) {
   if (!json.result) return;
   $('#version').text(json.result);
-  $.get('https://mongoose-os.com/downloads/mos/version.json', function(data) {
-    if (!data.build_id) return;
-    if (data.build_id != json.result) {
+  $.ajax({url: '/server-version'}).done(function(jsonServer) {
+    if (!jsonServer.result) return;
+    if (jsonServer.result != json.result) {
       $('#version-update').removeClass('hidden');
     }
   });

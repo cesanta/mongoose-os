@@ -329,6 +329,17 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		httpReply(w, BuildId, nil)
 	})
 
+	http.HandleFunc("/server-version", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		v, err := getServerMosVersion(getUpdateChannel())
+		if err != nil {
+			httpReply(w, false, err)
+			return
+		}
+
+		httpReply(w, v.BuildId, nil)
+	})
+
 	http.HandleFunc("/put", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
