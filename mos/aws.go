@@ -49,6 +49,7 @@ const (
 )
 
 var (
+	awsGGEnable  = false
 	awsRegion    = ""
 	awsIoTPolicy = ""
 	awsIoTThing  = ""
@@ -61,6 +62,7 @@ var (
 )
 
 func init() {
+	flag.BoolVar(&awsGGEnable, "aws-enable-greengrass", false, "Enable AWS Greengrass support")
 	flag.StringVar(&awsRegion, "aws-region", "", "AWS region to use. If not specified, uses the default")
 	flag.BoolVar(&useATCA, "use-atca", false, "Use ATCA (AECC508A) to store private key.")
 	flag.IntVar(&atcaSlot, "atca-slot", 0, "When using ATCA, use this slot for key storage.")
@@ -448,6 +450,12 @@ func awsIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	}
 	reportf("Current MQTT config: %+v", mqttConf)
 
+	awsGGConf, err := devConf.Get("aws.greengrass")
+	if err != nil {
+		return errors.Annotatef(err, "failed to get AWS Greengrass config")
+	}
+	reportf("Current AWS Greengrass config: %+v", awsGGConf)
+
 	if certCN == "" {
 		certCN = devID
 	}
@@ -498,7 +506,6 @@ func awsIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	}
 
 	settings := map[string]string{
-		"mqtt.enable":      "true",
 		"mqtt.server":      fmt.Sprintf("%s:8883", *de.EndpointAddress),
 		"mqtt.ssl_cert":    filepath.Base(certFile),
 		"mqtt.ssl_key":     filepath.Base(keyFile),
@@ -513,6 +520,14 @@ func awsIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	devId, err := devConf.Get("device.id")
 	if devId == "" {
 		settings["device.id"] = certCN
+	}
+
+	if awsGGEnable {
+		settings["aws.greengrass.enable"] = "true"
+		settings["mqtt.enable"] = "false"
+	} else {
+		settings["aws.greengrass.enable"] = "false"
+		settings["mqtt.enable"] = "true"
 	}
 
 	for k, v := range settings {
