@@ -11,6 +11,10 @@
 #include "common/platform.h"
 #include "frozen/frozen.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 int mg_json_printer_mbuf(struct json_out *, const char *, size_t);
 
 /* Add quoted string into mbuf */
@@ -27,5 +31,9 @@ void mg_json_emit_str(struct mbuf *b, const struct mg_str s, int quote);
       { (char *) mbuf_addr, 0, 0 } \
     }                              \
   }
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif /* CS_COMMON_JSON_UTILS_H_ */
