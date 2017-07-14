@@ -18,7 +18,7 @@ const (
 	manifestFileName = "manifest.json"
 )
 
-func NewZipFirmwareBundle(fname string) (*FirmwareBundle, error) {
+func NewZipFirmwareBundle(fname, versionSuffix string) (*FirmwareBundle, error) {
 	var r *zip.Reader
 	var err error
 
@@ -27,7 +27,7 @@ func NewZipFirmwareBundle(fname string) (*FirmwareBundle, error) {
 	_, err2 := os.Stat(fname)
 	if fname != "" && !strings.HasSuffix(fname, ".zip") && os.IsNotExist(err2) {
 		fname = fmt.Sprintf(
-			"https://mongoose-os.com/downloads/%s.zip", fname,
+			"https://mongoose-os.com/downloads/%s%s.zip", fname, versionSuffix,
 		)
 	}
 
