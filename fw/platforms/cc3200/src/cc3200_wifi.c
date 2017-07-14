@@ -88,7 +88,8 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *e) {
 }
 
 void sl_net_app_eh(SlNetAppEvent_t *e) {
-  if (e->Event == SL_NETAPP_IPV4_IPACQUIRED_EVENT) {
+  if (e->Event == SL_NETAPP_IPV4_IPACQUIRED_EVENT &&
+      s_current_role == ROLE_STA) {
     SlIpV4AcquiredAsync_t *ed = &e->EventData.ipAcquiredV4;
     memcpy(&s_wifi_sta_config.acquired_ip, ed, sizeof(*ed));
     mgos_wifi_dev_on_change_cb(MGOS_WIFI_IP_ACQUIRED);

@@ -184,7 +184,6 @@ bool mgos_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   wifi_lock();
   bool ret = mgos_wifi_dev_ap_setup(cfg);
   wifi_unlock();
-  LOG(LL_INFO, ("ap exit"));
   return ret;
 }
 
