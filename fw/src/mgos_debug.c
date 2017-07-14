@@ -52,8 +52,8 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
     mgos_uart_flush(uart_no);
   }
   const struct sys_config *cfg = get_cfg();
-  /* Only send LL_DEBUG messages and below, to avoid loops. */
-  if (cfg == NULL || cs_log_cur_msg_level > LL_DEBUG) {
+  /* Only send LL_INFO messages and below, to avoid loops. */
+  if (cfg == NULL || cs_log_cur_msg_level > LL_INFO) {
     s_in_debug = false;
     mgos_unlock();
     return;
