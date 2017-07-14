@@ -49,20 +49,22 @@ const (
 )
 
 var (
-	awsGGEnable  = false
-	awsRegion    = ""
-	awsIoTPolicy = ""
-	awsIoTThing  = ""
-	useATCA      = false
-	atcaSlot     = 0
-	certCN       = ""
-	certType     = ""
-	certFile     = ""
-	keyFile      = ""
+	awsGGEnable   = false
+	awsMQTTServer = ""
+	awsRegion     = ""
+	awsIoTPolicy  = ""
+	awsIoTThing   = ""
+	useATCA       = false
+	atcaSlot      = 0
+	certCN        = ""
+	certType      = ""
+	certFile      = ""
+	keyFile       = ""
 )
 
 func init() {
 	flag.BoolVar(&awsGGEnable, "aws-enable-greengrass", false, "Enable AWS Greengrass support")
+	flag.StringVar(&awsMQTTServer, "aws-mqtt-server", "", "If not specified, calls DescribeEndpoint to get it from AWS")
 	flag.StringVar(&awsRegion, "aws-region", "", "AWS region to use. If not specified, uses the default")
 	flag.BoolVar(&useATCA, "use-atca", false, "Use ATCA (AECC508A) to store private key.")
 	flag.IntVar(&atcaSlot, "atca-slot", 0, "When using ATCA, use this slot for key storage.")
@@ -498,18 +500,23 @@ func awsIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 		}
 	}
 
-	// Get the value of mqtt.server from aws
-	de, err := iotSvc.DescribeEndpoint(&iot.DescribeEndpointInput{})
-	if err != nil {
-		return errors.Annotatef(err, "aws iot describe-endpoint failed!")
-	}
-
 	settings := map[string]string{
-		"mqtt.server":      fmt.Sprintf("%s:8883", *de.EndpointAddress),
 		"mqtt.ssl_cert":    filepath.Base(certFile),
 		"mqtt.ssl_key":     filepath.Base(keyFile),
 		"mqtt.ssl_ca_cert": filepath.Base(caCertFile),
 	}
+
+	if awsMQTTServer == "" {
+		// Get the value of mqtt.server from aws
+		de, err := iotSvc.DescribeEndpoint(&iot.DescribeEndpointInput{})
+		if err != nil {
+			return errors.Annotatef(err, "aws iot describe-endpoint failed!")
+		}
+		settings["mqtt.server"] = fmt.Sprintf("%s:8883", *de.EndpointAddress)
+	} else {
+		settings["mqtt.server"] = awsMQTTServer
+	}
+
 	if useATCA {
 		// ATECC508A makes ECDSA much faster than RSA.
 		settings["mqtt.ssl_cipher_suites"] = "TLS-ECDHE-ECDSA-WITH-AES-128-GCM-SHA256"
