@@ -22,6 +22,7 @@
 
 #include "fw/src/mgos_debug.h"
 #include "fw/src/mgos_hal.h"
+#include "fw/src/mgos_vfs.h"
 
 #include "fw/platforms/esp8266/src/esp_coredump.h"
 #include "fw/platforms/esp8266/src/esp_fs.h"
@@ -31,6 +32,7 @@
 
 extern void esp_system_restart_low_level(void);
 
+bool s_rebooting = false;
 struct regfile g_exc_regs;
 
 void esp_exc_putc(char c) {
@@ -94,6 +96,10 @@ NOINSTR __attribute__((noreturn)) void esp_exc_common(uint32_t cause,
   /* Set up 1-stage HW WDT to give us a kick if we are not done in ~27 secs. */
   esp_hw_wdt_setup(ESP_HW_WDT_26_8_SEC, ESP_HW_WDT_DISABLE);
   esp_hw_wdt_enable();
+  if (s_rebooting) {
+    /* We are rebooting anyway, don't raise any noise. */
+    esp_system_restart_low_level();
+  }
   esp_print_exc_info(cause, regs);
   esp_dump_core(cause, regs);
 #ifdef MGOS_STOP_ON_EXCEPTION
@@ -148,6 +154,19 @@ IRAM NOINSTR void abort(void) {
       : "a2");
   esp_exc_common(EXCCAUSE_ABORT, &regs);
   /* esp_exc_common does not return. */
+}
+
+void mgos_system_restart(int exit_code) {
+  (void) exit_code;
+  mgos_vfs_umount_all();
+  LOG(LL_INFO, ("Restarting"));
+  mgos_debug_flush();
+  /*
+   * system_restart sometimes thorws an exception.
+   * Since we are rebooting anyway, we don't want to dump core.
+   */
+  s_rebooting = true;
+  system_restart();
 }
 
 void esp_print_reset_info(void) {

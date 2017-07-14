@@ -24,7 +24,6 @@
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_mongoose.h"
 #include "fw/src/mgos_timers.h"
-#include "fw/src/mgos_vfs.h"
 
 #include "fw/platforms/esp8266/src/esp_fs.h"
 #include "fw/platforms/esp8266/src/esp_hw_wdt.h"
@@ -55,14 +54,6 @@ void mgos_wdt_feed(void) {
 
 void mgos_wdt_set_timeout(int secs) {
   esp_hw_wdt_setup(esp_hw_wdt_secs_to_timeout(secs), ESP_HW_WDT_1_68_SEC);
-}
-
-void mgos_system_restart(int exit_code) {
-  (void) exit_code;
-  mgos_vfs_umount_all();
-  LOG(LL_INFO, ("Restarting"));
-  mgos_debug_flush();
-  system_restart();
 }
 
 void mgos_msleep(uint32_t msecs) {
