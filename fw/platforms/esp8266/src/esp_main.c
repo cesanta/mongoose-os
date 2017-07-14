@@ -23,6 +23,7 @@
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_init.h"
 #include "fw/src/mgos_mongoose.h"
+#include "fw/src/mgos_uart.h"
 #include "fw/src/mgos_updater_common.h"
 #include "fw/src/mgos_updater_hal.h"
 #include "common/platforms/esp/src/esp_mmap.h"
@@ -241,6 +242,8 @@ void sdk_init_done_cb(void) {
 void user_init(void) {
   uart_div_modify(0, UART_CLK_FREQ / MGOS_DEBUG_UART_BAUD_RATE);
   esp_adc_init();
+  mgos_uart_init();
+  mgos_debug_init();
   srand(system_get_time() ^ system_get_rtc_time() ^ esp_adc_value_at_boot());
   os_timer_disarm(&s_mg_poll_tmr);
   os_timer_setfn(&s_mg_poll_tmr, (void (*) (void *)) mongoose_schedule_poll,

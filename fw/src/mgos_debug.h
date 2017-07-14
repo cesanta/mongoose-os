@@ -28,6 +28,7 @@ struct mgos_debug_hook_arg {
   size_t len;
 };
 
+enum mgos_init_result mgos_debug_init(void);
 enum mgos_init_result mgos_debug_uart_init(void);
 void mgos_debug_write(int fd, const void *buf, size_t len);
 void mgos_debug_flush(void);

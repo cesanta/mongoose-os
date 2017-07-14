@@ -160,6 +160,8 @@ struct mgos_uart_stats {
 
 const struct mgos_uart_stats *mgos_uart_get_stats(int uart_no);
 
+enum mgos_init_result mgos_uart_init(void);
+
 /* FFI-targeted API {{{ */
 
 /*

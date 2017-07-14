@@ -21,15 +21,10 @@
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_wifi.h"
+#include "fw/src/mgos_wifi_hal.h"
 #include "lwip/dns.h"
 
-static mgos_wifi_scan_cb_t s_wifi_scan_cb;
-static void *s_wifi_scan_cb_arg;
 static uint8_t s_cur_mode = NULL_MODE;
-
-static void invoke_wifi_on_change_cb(void *arg) {
-  mgos_wifi_on_change_cb((enum mgos_wifi_status)(int) arg);
-}
 
 void wifi_changed_cb(System_Event_t *evt) {
   int mg_ev = -1;
@@ -55,13 +50,14 @@ void wifi_changed_cb(System_Event_t *evt) {
 #ifdef RTOS_SDK
     case EVENT_STAMODE_SCAN_DONE:
 #endif
-    case EVENT_MAX:
+    case EVENT_MAX: {
+      LOG(LL_DEBUG, ("WiFi event: %d", evt->event));
       break;
+    }
   }
 
   if (mg_ev >= 0) {
-    mgos_invoke_cb(invoke_wifi_on_change_cb, (void *) mg_ev,
-                   false /* from_isr */);
+    mgos_wifi_dev_on_change_cb((enum mgos_wifi_status) mg_ev);
   }
 }
 
@@ -126,16 +122,9 @@ static bool mgos_wifi_remove_mode(uint8_t mode) {
   return mgos_wifi_set_mode(mode);
 }
 
-int mgos_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
+bool mgos_wifi_dev_sta_setup(const struct sys_config_wifi_sta *cfg) {
   struct station_config sta_cfg;
   memset(&sta_cfg, 0, sizeof(sta_cfg));
-
-  char *err_msg = NULL;
-  if (!mgos_wifi_validate_sta_cfg(cfg, &err_msg)) {
-    LOG(LL_ERROR, ("WiFi STA: %s", err_msg));
-    free(err_msg);
-    return false;
-  }
 
   if (!cfg->enable) {
     return mgos_wifi_remove_mode(STATION_MODE);
@@ -240,26 +229,12 @@ int mgos_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
     return false;
   }
 
-  if (!wifi_station_connect()) {
-    LOG(LL_ERROR, ("WiFi STA: Connect failed"));
-    return false;
-  }
-
-  LOG(LL_INFO, ("WiFi STA: Connecting to %s", sta_cfg.ssid));
-
   return true;
 }
 
-int mgos_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
+bool mgos_wifi_dev_ap_setup(const struct sys_config_wifi_ap *cfg) {
   struct softap_config ap_cfg;
   memset(&ap_cfg, 0, sizeof(ap_cfg));
-
-  char *err_msg = NULL;
-  if (!mgos_wifi_validate_ap_cfg(cfg, &err_msg)) {
-    LOG(LL_ERROR, ("WiFi AP: %s", err_msg));
-    free(err_msg);
-    return false;
-  }
 
   if (!cfg->enable) {
     return mgos_wifi_remove_mode(SOFTAP_MODE);
@@ -330,50 +305,12 @@ int mgos_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
   return true;
 }
 
-int mgos_wifi_connect(void) {
+bool mgos_wifi_dev_sta_connect(void) {
   return wifi_station_connect();
 }
 
-int mgos_wifi_disconnect(void) {
-  /* disable any AP mode */
-  wifi_set_opmode_current(STATION_MODE);
+bool mgos_wifi_dev_sta_disconnect(void) {
   return wifi_station_disconnect();
-}
-
-enum mgos_wifi_status mgos_wifi_get_status(void) {
-  if (wifi_station_get_connect_status() == STATION_GOT_IP) {
-    return MGOS_WIFI_IP_ACQUIRED;
-  } else {
-    return MGOS_WIFI_DISCONNECTED;
-  }
-}
-
-char *mgos_wifi_get_status_str(void) {
-  uint8 st = wifi_station_get_connect_status();
-  const char *msg = NULL;
-
-  switch (st) {
-    case STATION_IDLE:
-      msg = "idle";
-      break;
-    case STATION_CONNECTING:
-      msg = "connecting";
-      break;
-    case STATION_WRONG_PASSWORD:
-      msg = "bad pass";
-      break;
-    case STATION_NO_AP_FOUND:
-      msg = "no ap";
-      break;
-    case STATION_CONNECT_FAIL:
-      msg = "connect failed";
-      break;
-    case STATION_GOT_IP:
-      msg = "got ip";
-      break;
-  }
-  if (msg != NULL) return strdup(msg);
-  return NULL;
 }
 
 char *mgos_wifi_get_connected_ssid(void) {
@@ -401,14 +338,8 @@ char *mgos_wifi_get_sta_ip(void) {
 }
 
 void wifi_scan_done(void *arg, STATUS status) {
-  mgos_wifi_scan_cb_t cb = s_wifi_scan_cb;
-  void *cb_arg = s_wifi_scan_cb_arg;
-  s_wifi_scan_cb = NULL;
-  s_wifi_scan_cb_arg = NULL;
-  if (cb == NULL) return;
   if (status != OK) {
-    LOG(LL_ERROR, ("wifi scan failed: %d", status));
-    cb(-1, NULL, cb_arg);
+    mgos_wifi_dev_scan_cb(-1, NULL);
     return;
   }
   STAILQ_HEAD(, bss_info) *info = arg;
@@ -419,7 +350,7 @@ void wifi_scan_done(void *arg, STATUS status) {
   res = calloc(n, sizeof(*res));
   if (res == NULL) {
     LOG(LL_ERROR, ("Out of memory"));
-    cb(-1, NULL, cb_arg);
+    mgos_wifi_dev_scan_cb(-1, NULL);
     return;
   }
   struct mgos_wifi_scan_result *r = res;
@@ -450,22 +381,15 @@ void wifi_scan_done(void *arg, STATUS status) {
     }
     r++;
   }
-  cb(n, res, cb_arg);
-  free(res);
+  mgos_wifi_dev_scan_cb(n, res);
 }
 
-void mgos_wifi_scan(mgos_wifi_scan_cb_t cb, void *arg) {
+bool mgos_wifi_dev_start_scan(void) {
   /* Scanning requires station. If in AP-only mode, switch to AP+STA. */
   if (wifi_get_opmode() == SOFTAP_MODE) {
     wifi_set_opmode_current(STATIONAP_MODE);
   }
-  s_wifi_scan_cb = cb;
-  s_wifi_scan_cb_arg = arg;
-  if (!wifi_station_scan(NULL, wifi_scan_done)) {
-    cb(-1, NULL, arg);
-    s_wifi_scan_cb = NULL;
-    s_wifi_scan_cb_arg = NULL;
-  }
+  return wifi_station_scan(NULL, wifi_scan_done);
 }
 
 bool mgos_wifi_set_config(const struct sys_config_wifi *cfg) {
@@ -493,7 +417,7 @@ bool mgos_wifi_set_config(const struct sys_config_wifi *cfg) {
   return result;
 }
 
-void mgos_wifi_hal_init(void) {
+void mgos_wifi_dev_init(void) {
   wifi_set_opmode_current(NULL_MODE);
   wifi_set_event_handler_cb(wifi_changed_cb);
 }

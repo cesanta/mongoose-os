@@ -84,14 +84,24 @@ void mgos_wdt_set_timeout(int secs) {
 
 SemaphoreHandle_t s_mgos_mux = NULL;
 
-inline void mgos_lock() {
-  while (!xSemaphoreTakeRecursive(s_mgos_mux, 10)) {
-  }
+IRAM void mgos_lock() {
+  xSemaphoreTakeRecursive(s_mgos_mux, portMAX_DELAY);
 }
 
-inline void mgos_unlock() {
-  while (!xSemaphoreGiveRecursive(s_mgos_mux)) {
-  }
+IRAM void mgos_unlock() {
+  xSemaphoreGiveRecursive(s_mgos_mux);
+}
+
+struct mgos_rlock_type *mgos_new_rlock(void) {
+  return (struct mgos_rlock_type *) xSemaphoreCreateRecursiveMutex();
+}
+
+IRAM void mgos_rlock(struct mgos_rlock_type *l) {
+  xSemaphoreTakeRecursive((SemaphoreHandle_t) l, portMAX_DELAY);
+}
+
+IRAM void mgos_runlock(struct mgos_rlock_type *l) {
+  xSemaphoreGiveRecursive((SemaphoreHandle_t) l);
 }
 
 IRAM_ATTR void mgos_ints_disable(void) {

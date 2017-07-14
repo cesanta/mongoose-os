@@ -29,6 +29,7 @@
 #include "fw/src/mgos_init.h"
 #include "fw/src/mgos_mongoose.h"
 #include "fw/src/mgos_sys_config.h"
+#include "fw/src/mgos_uart.h"
 #include "fw/src/mgos_updater_common.h"
 
 #include "fw/platforms/esp32/src/esp32_debug.h"
@@ -274,6 +275,8 @@ static int sdk_debug_vprintf(const char *fmt, va_list ap) {
 void app_main(void) {
   nvs_flash_init();
   tcpip_adapter_init();
+  mgos_uart_init();
+  mgos_debug_init();
   ets_install_putc1(sdk_putc);
   ets_install_putc2(NULL);
   esp_log_set_vprintf(sdk_debug_vprintf);

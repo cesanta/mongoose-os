@@ -18,6 +18,7 @@
 #include "fw/src/mgos_mongoose.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_wifi.h"
+#include "fw/src/mgos_wifi_hal.h"
 
 #include "config.h"
 #include "sys_config.h"
@@ -31,8 +32,6 @@ struct cc3200_wifi_config {
   char *anon_identity;
   SlIpV4AcquiredAsync_t acquired_ip;
   SlNetCfgIpV4Args_t static_ip;
-  unsigned int status : 4;
-  unsigned int reconnect : 1;
 };
 
 static struct cc3200_wifi_config s_wifi_sta_config;
@@ -46,16 +45,7 @@ static void free_wifi_config(void) {
   memset(&s_wifi_sta_config, 0, sizeof(s_wifi_sta_config));
 }
 
-void invoke_wifi_on_change_cb(void *arg) {
-  mgos_wifi_on_change_cb((enum mgos_wifi_status)(int) arg);
-  if (s_current_role == ROLE_STA &&
-      s_wifi_sta_config.status == MGOS_WIFI_DISCONNECTED &&
-      s_wifi_sta_config.reconnect) {
-    mgos_wifi_connect();
-  }
-}
-
-static int restart_nwp(void) {
+static bool restart_nwp(void) {
   /*
    * Properly close FS container if it's open for writing.
    * Suspend FS I/O while NWP is being restarted.
@@ -72,42 +62,36 @@ static int restart_nwp(void) {
   return (s_current_role >= 0);
 }
 
-static int ensure_role_sta(void) {
-  if (s_current_role == ROLE_STA) return 1;
-  if (sl_WlanSetMode(ROLE_STA) != 0) return 0;
-  if (!restart_nwp()) return 0;
+static bool ensure_role_sta(void) {
+  if (s_current_role == ROLE_STA) return true;
+  if (sl_WlanSetMode(ROLE_STA) != 0) return false;
+  if (!restart_nwp()) return false;
   _u32 scan_interval = WIFI_SCAN_INTERVAL_SECONDS;
   sl_WlanPolicySet(SL_POLICY_SCAN, 1 /* enable */, (_u8 *) &scan_interval,
                    sizeof(scan_interval));
-  return 1;
+  return true;
 }
 
 void SimpleLinkWlanEventHandler(SlWlanEvent_t *e) {
   switch (e->Event) {
     case SL_WLAN_CONNECT_EVENT: {
-      s_wifi_sta_config.status = MGOS_WIFI_CONNECTED;
+      mgos_wifi_dev_on_change_cb(MGOS_WIFI_CONNECTED);
       break;
     }
     case SL_WLAN_DISCONNECT_EVENT: {
-      s_wifi_sta_config.status = MGOS_WIFI_DISCONNECTED;
+      mgos_wifi_dev_on_change_cb(MGOS_WIFI_DISCONNECTED);
       break;
     }
     default:
       return;
   }
-  mgos_invoke_cb(invoke_wifi_on_change_cb,
-                 (void *) (intptr_t) s_wifi_sta_config.status,
-                 false /* from_isr */);
 }
 
 void sl_net_app_eh(SlNetAppEvent_t *e) {
   if (e->Event == SL_NETAPP_IPV4_IPACQUIRED_EVENT) {
     SlIpV4AcquiredAsync_t *ed = &e->EventData.ipAcquiredV4;
     memcpy(&s_wifi_sta_config.acquired_ip, ed, sizeof(*ed));
-    s_wifi_sta_config.status = MGOS_WIFI_IP_ACQUIRED;
-    mgos_invoke_cb(invoke_wifi_on_change_cb,
-                   (void *) (int) s_wifi_sta_config.status,
-                   false /* from_isr */);
+    mgos_wifi_dev_on_change_cb(MGOS_WIFI_IP_ACQUIRED);
   } else if (e->Event == SL_NETAPP_IP_LEASED_EVENT) {
     SlIpLeasedAsync_t *ed = &e->EventData.ipLeased;
     LOG(LL_INFO,
@@ -130,14 +114,7 @@ void SimpleLinkHttpServerCallback(SlHttpServerEvent_t *e,
                                   SlHttpServerResponse_t *resp) {
 }
 
-int mgos_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
-  char *err_msg = NULL;
-  if (!mgos_wifi_validate_sta_cfg(cfg, &err_msg)) {
-    LOG(LL_ERROR, ("WiFi STA: %s", err_msg));
-    free(err_msg);
-    return false;
-  }
-
+bool mgos_wifi_dev_sta_setup(const struct sys_config_wifi_sta *cfg) {
   free_wifi_config();
   s_wifi_sta_config.ssid = strdup(cfg->ssid);
   if (cfg->pass != NULL) s_wifi_sta_config.pass = strdup(cfg->pass);
@@ -152,60 +129,53 @@ int mgos_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
         !inet_pton(AF_INET, cfg->netmask, &ipcfg->ipV4Mask) ||
         (cfg->ip != NULL &&
          !inet_pton(AF_INET, cfg->gw, &ipcfg->ipV4Gateway))) {
-      return 0;
+      return false;
     }
   }
 
-  return mgos_wifi_connect();
+  return true;
 }
 
-int mgos_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
+bool mgos_wifi_dev_ap_setup(const struct sys_config_wifi_ap *cfg) {
   int ret;
   uint8_t v;
   SlNetCfgIpV4Args_t ipcfg;
   SlNetAppDhcpServerBasicOpt_t dhcpcfg;
   char ssid[64];
 
-  char *err_msg = NULL;
-  if (!mgos_wifi_validate_ap_cfg(cfg, &err_msg)) {
-    LOG(LL_ERROR, ("WiFi AP: %s", err_msg));
-    free(err_msg);
-    return false;
-  }
-
   if ((ret = sl_WlanSetMode(ROLE_AP)) != 0) {
-    return 0;
+    return false;
   }
 
   strncpy(ssid, cfg->ssid, sizeof(ssid));
   mgos_expand_mac_address_placeholders(ssid);
   if ((ret = sl_WlanSet(SL_WLAN_CFG_AP_ID, WLAN_AP_OPT_SSID, strlen(ssid),
                         (const uint8_t *) ssid)) != 0) {
-    return 0;
+    return false;
   }
 
   v = (cfg->pass != NULL && strlen(cfg->pass) > 0) ? SL_SEC_TYPE_WPA
                                                    : SL_SEC_TYPE_OPEN;
   if ((ret = sl_WlanSet(SL_WLAN_CFG_AP_ID, WLAN_AP_OPT_SECURITY_TYPE, 1, &v)) !=
       0) {
-    return 0;
+    return false;
   }
   if (v == SL_SEC_TYPE_WPA &&
       (ret = sl_WlanSet(SL_WLAN_CFG_AP_ID, WLAN_AP_OPT_PASSWORD,
                         strlen(cfg->pass), (const uint8_t *) cfg->pass)) != 0) {
-    return 0;
+    return false;
   }
 
   v = cfg->channel;
   if ((ret = sl_WlanSet(SL_WLAN_CFG_AP_ID, WLAN_AP_OPT_CHANNEL, 1,
                         (uint8_t *) &v)) != 0) {
-    return 0;
+    return false;
   }
 
   v = cfg->hidden;
   if ((ret = sl_WlanSet(SL_WLAN_CFG_AP_ID, WLAN_AP_OPT_HIDDEN_SSID, 1,
                         (uint8_t *) &v)) != 0) {
-    return 0;
+    return false;
   }
 
   sl_NetAppStop(SL_NET_APP_DHCP_SERVER_ID);
@@ -218,7 +188,7 @@ int mgos_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
       (ret = sl_NetCfgSet(SL_IPV4_AP_P2P_GO_STATIC_ENABLE,
                           IPCONFIG_MODE_ENABLE_IPV4, sizeof(ipcfg),
                           (uint8_t *) &ipcfg)) != 0) {
-    return 0;
+    return false;
   }
 
   memset(&dhcpcfg, 0, sizeof(dhcpcfg));
@@ -228,11 +198,11 @@ int mgos_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
       (ret = sl_NetAppSet(SL_NET_APP_DHCP_SERVER_ID,
                           NETAPP_SET_DHCP_SRV_BASIC_OPT, sizeof(dhcpcfg),
                           (uint8_t *) &dhcpcfg)) != 0) {
-    return 0;
+    return false;
   }
 
   /* Turning the device off and on for the change to take effect. */
-  if (!restart_nwp()) return 0;
+  if (!restart_nwp()) return false;
 
   if ((ret = sl_NetAppStart(SL_NET_APP_DHCP_SERVER_ID)) != 0) {
     LOG(LL_ERROR, ("DHCP server failed to start: %d", ret));
@@ -242,10 +212,10 @@ int mgos_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
 
   LOG(LL_INFO, ("AP %s configured", ssid));
 
-  return 1;
+  return true;
 }
 
-int mgos_wifi_connect(void) {
+bool mgos_wifi_dev_sta_connect(void) {
   int ret;
   SlSecParams_t sp;
   SlSecParamsExt_t spext;
@@ -260,9 +230,9 @@ int mgos_wifi_connect(void) {
     ret = sl_NetCfgSet(SL_IPV4_STA_P2P_CL_DHCP_ENABLE,
                        IPCONFIG_MODE_ENABLE_IPV4, sizeof(val), &val);
   }
-  if (ret != 0) return 0;
+  if (ret != 0) return false;
 
-  if (!ensure_role_sta()) return 0;
+  if (!ensure_role_sta()) return false;
 
   memset(&sp, 0, sizeof(sp));
   memset(&spext, 0, sizeof(spext));
@@ -294,47 +264,16 @@ int mgos_wifi_connect(void) {
 
   sl_WlanRxStatStart();
 
-  LOG(LL_INFO, ("Connecting to %s", s_wifi_sta_config.ssid));
-
-  s_wifi_sta_config.reconnect = 1;
-
-  return 1;
+  return true;
 }
 
-int mgos_wifi_disconnect(void) {
+bool mgos_wifi_dev_disconnect(void) {
   free_wifi_config();
   return (sl_WlanDisconnect() == 0);
 }
 
-enum mgos_wifi_status mgos_wifi_get_status(void) {
-  return (enum mgos_wifi_status) s_wifi_sta_config.status;
-}
-
-char *mgos_wifi_get_status_str(void) {
-  const char *st = NULL;
-  switch (s_wifi_sta_config.status) {
-    case MGOS_WIFI_DISCONNECTED:
-      st = "disconnected";
-      break;
-    case MGOS_WIFI_CONNECTED:
-      st = "connected";
-      break;
-    case MGOS_WIFI_IP_ACQUIRED:
-      st = "got ip";
-      break;
-  }
-  if (st != NULL) return strdup(st);
-  return NULL;
-}
-
 char *mgos_wifi_get_connected_ssid(void) {
-  switch (s_wifi_sta_config.status) {
-    case MGOS_WIFI_DISCONNECTED:
-      break;
-    case MGOS_WIFI_CONNECTED:
-    case MGOS_WIFI_IP_ACQUIRED:
-      return strdup(s_wifi_sta_config.ssid);
-  }
+  if (s_wifi_sta_config.ssid != NULL) return strdup(s_wifi_sta_config.ssid);
   return NULL;
 }
 
@@ -346,24 +285,21 @@ static char *ip2str(uint32_t ip) {
 }
 
 char *mgos_wifi_get_sta_ip(void) {
-  if (s_wifi_sta_config.status != MGOS_WIFI_IP_ACQUIRED ||
-      s_wifi_sta_config.acquired_ip.ip == 0) {
+  if (s_wifi_sta_config.acquired_ip.ip == 0) {
     return NULL;
   }
   return ip2str(s_wifi_sta_config.acquired_ip.ip);
 }
 
 char *mgos_wifi_get_sta_default_gw() {
-  if (s_wifi_sta_config.status != MGOS_WIFI_IP_ACQUIRED ||
-      s_wifi_sta_config.acquired_ip.gateway == 0) {
+  if (s_wifi_sta_config.acquired_ip.gateway == 0) {
     return NULL;
   }
   return ip2str(s_wifi_sta_config.acquired_ip.gateway);
 }
 
 char *mgos_wifi_get_sta_default_dns(void) {
-  if (s_wifi_sta_config.status != MGOS_WIFI_IP_ACQUIRED ||
-      s_wifi_sta_config.acquired_ip.dns == 0) {
+  if (s_wifi_sta_config.acquired_ip.dns == 0) {
     return NULL;
   }
   return ip2str(s_wifi_sta_config.acquired_ip.dns);
@@ -374,54 +310,60 @@ char *mgos_wifi_get_ap_ip(void) {
   return NULL;
 }
 
-void mgos_wifi_scan(mgos_wifi_scan_cb_t cb, void *arg) {
-  int i, j, n = -1;
+bool mgos_wifi_dev_start_scan(void) {
+  bool ret = false;
+  int n = -1, num_res = 0;
   struct mgos_wifi_scan_result *res = NULL;
-  Sl_WlanNetworkEntry_t info[20];
+  Sl_WlanNetworkEntry_t info[2];
 
   if (!ensure_role_sta()) goto out;
 
-  n = sl_WlanGetNetworkList(0, 20, info);
-  if (n < 0) goto out;
-  res = (struct mgos_wifi_scan_result *) calloc(n, sizeof(*res));
-  if (res == NULL) {
-    n = -1;
-    goto out;
-  }
-
-  for (i = 0, j = 0; i < n; i++) {
-    Sl_WlanNetworkEntry_t *e = &info[i];
-    struct mgos_wifi_scan_result *r = &res[j];
-    strncpy(r->ssid, (const char *) e->ssid, sizeof(r->ssid));
-    memcpy(r->bssid, e->bssid, sizeof(r->bssid));
-    r->ssid[sizeof(r->ssid) - 1] = '\0';
-    r->channel = 0; /* n/a */
-    switch (e->sec_type) {
-      case SL_SCAN_SEC_TYPE_OPEN:
-        r->auth_mode = MGOS_WIFI_AUTH_MODE_OPEN;
-        break;
-      case SL_SCAN_SEC_TYPE_WEP:
-        r->auth_mode = MGOS_WIFI_AUTH_MODE_WEP;
-        break;
-      case SL_SCAN_SEC_TYPE_WPA:
-        r->auth_mode = MGOS_WIFI_AUTH_MODE_WPA_PSK;
-        break;
-      case SL_SCAN_SEC_TYPE_WPA2:
-        r->auth_mode = MGOS_WIFI_AUTH_MODE_WPA2_PSK;
-        break;
-      default:
-
-        continue;
+  while ((n = sl_WlanGetNetworkList(num_res, 2, info)) > 0) {
+    int i, j;
+    res = (struct mgos_wifi_scan_result *) realloc(
+        res, (num_res + n) * sizeof(*res));
+    if (res == NULL) {
+      goto out;
     }
-    r->rssi = e->rssi;
-    j++;
+    for (i = 0, j = num_res; i < n; i++) {
+      Sl_WlanNetworkEntry_t *e = &info[i];
+      struct mgos_wifi_scan_result *r = &res[j];
+      strncpy(r->ssid, (const char *) e->ssid, sizeof(r->ssid));
+      memcpy(r->bssid, e->bssid, sizeof(r->bssid));
+      r->ssid[sizeof(r->ssid) - 1] = '\0';
+      r->channel = 0; /* n/a */
+      switch (e->sec_type) {
+        case SL_SCAN_SEC_TYPE_OPEN:
+          r->auth_mode = MGOS_WIFI_AUTH_MODE_OPEN;
+          break;
+        case SL_SCAN_SEC_TYPE_WEP:
+          r->auth_mode = MGOS_WIFI_AUTH_MODE_WEP;
+          break;
+        case SL_SCAN_SEC_TYPE_WPA:
+          r->auth_mode = MGOS_WIFI_AUTH_MODE_WPA_PSK;
+          break;
+        case SL_SCAN_SEC_TYPE_WPA2:
+          r->auth_mode = MGOS_WIFI_AUTH_MODE_WPA2_PSK;
+          break;
+        default:
+
+          continue;
+      }
+      r->rssi = e->rssi;
+      num_res++;
+      j++;
+    }
   }
-  n = j;
+  ret = (n == 0); /* Reached the end of the list */
 
 out:
-  cb(n, res, arg);
-  free(res);
+  if (ret) {
+    mgos_wifi_dev_scan_cb(num_res, res);
+  } else {
+    free(res);
+  }
+  return ret;
 }
 
-void mgos_wifi_hal_init(void) {
+void mgos_wifi_dev_init(void) {
 }

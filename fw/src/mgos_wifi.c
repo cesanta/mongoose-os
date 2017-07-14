@@ -4,6 +4,7 @@
  */
 
 #include "fw/src/mgos_wifi.h"
+#include "fw/src/mgos_wifi_hal.h"
 
 #include <stdbool.h>
 #include <stdlib.h>
@@ -11,32 +12,58 @@
 #include "common/cs_dbg.h"
 #include "common/queue.h"
 
+#include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_mongoose.h"
 #include "fw/src/mgos_sys_config.h"
 
 #include "mongoose/mongoose.h"
 
-struct wifi_cb {
-  SLIST_ENTRY(wifi_cb) entries;
-  mgos_wifi_changed_t cb;
+struct cb_info {
+  void *cb;
   void *arg;
+  SLIST_ENTRY(cb_info) next;
 };
+static SLIST_HEAD(s_wifi_cbs, cb_info) s_wifi_cbs;
+static SLIST_HEAD(s_scan_cbs, cb_info) s_scan_cbs;
+static bool s_scan_in_progress = false;
 
-SLIST_HEAD(wifi_cbs, wifi_cb) s_wifi_cbs;
+enum mgos_wifi_status s_sta_status = MGOS_WIFI_DISCONNECTED;
+static bool s_sta_should_reconnect = false;
 
-void mgos_wifi_on_change_cb(enum mgos_wifi_status event) {
-  switch (event) {
-    case MGOS_WIFI_DISCONNECTED:
-      LOG(LL_INFO, ("Wifi: disconnected"));
+struct mgos_rlock_type *s_wifi_lock = NULL;
+
+static inline void wifi_lock(void) {
+  mgos_rlock(s_wifi_lock);
+}
+
+static inline void wifi_unlock(void) {
+  mgos_runlock(s_wifi_lock);
+}
+
+static void mgos_wifi_on_change_cb(void *arg) {
+  enum mgos_wifi_status ev = (enum mgos_wifi_status)(intptr_t) arg;
+  switch (ev) {
+    case MGOS_WIFI_DISCONNECTED: {
+      LOG(LL_INFO, ("WiFi STA: disconnected"));
+      if (s_sta_should_reconnect) mgos_wifi_connect();
       break;
-    case MGOS_WIFI_CONNECTED:
-      LOG(LL_INFO, ("Wifi: connected"));
+    }
+    case MGOS_WIFI_CONNECTING: {
+      s_sta_status = MGOS_WIFI_CONNECTING;
+      LOG(LL_INFO, ("WiFi STA: connecting"));
       break;
+    }
+    case MGOS_WIFI_CONNECTED: {
+      s_sta_status = MGOS_WIFI_CONNECTED;
+      LOG(LL_INFO, ("WiFi STA: connected"));
+      break;
+    }
     case MGOS_WIFI_IP_ACQUIRED: {
+      s_sta_status = MGOS_WIFI_IP_ACQUIRED;
       char *ip = mgos_wifi_get_sta_ip();
       if (ip != NULL) {
         char *nameserver = mgos_get_nameserver();
-        LOG(LL_INFO, ("WiFi: ready, IP %s, DNS %s", ip,
+        LOG(LL_INFO, ("WiFi STA: ready, IP %s, DNS %s", ip,
                       nameserver ? nameserver : "default"));
         mg_set_nameserver(mgos_get_mgr(), nameserver);
         free(nameserver);
@@ -46,25 +73,29 @@ void mgos_wifi_on_change_cb(enum mgos_wifi_status event) {
     }
   }
 
-  struct wifi_cb *e, *te;
-  SLIST_FOREACH_SAFE(e, &s_wifi_cbs, entries, te) {
-    e->cb(event, e->arg);
+  struct cb_info *e, *te;
+  SLIST_FOREACH_SAFE(e, &s_wifi_cbs, next, te) {
+    ((mgos_wifi_changed_t) e->cb)(ev, e->arg);
   }
 }
 
+void mgos_wifi_dev_on_change_cb(enum mgos_wifi_status ev) {
+  mgos_invoke_cb(mgos_wifi_on_change_cb, (void *) ev, false /* from_isr */);
+}
+
 void mgos_wifi_add_on_change_cb(mgos_wifi_changed_t cb, void *arg) {
-  struct wifi_cb *e = calloc(1, sizeof(*e));
+  struct cb_info *e = (struct cb_info *) calloc(1, sizeof(*e));
   if (e == NULL) return;
   e->cb = cb;
   e->arg = arg;
-  SLIST_INSERT_HEAD(&s_wifi_cbs, e, entries);
+  SLIST_INSERT_HEAD(&s_wifi_cbs, e, next);
 }
 
 void mgos_wifi_remove_on_change_cb(mgos_wifi_changed_t cb, void *arg) {
-  struct wifi_cb *e;
-  SLIST_FOREACH(e, &s_wifi_cbs, entries) {
+  struct cb_info *e;
+  SLIST_FOREACH(e, &s_wifi_cbs, next) {
     if (e->cb == cb && e->arg == arg) {
-      SLIST_REMOVE(&s_wifi_cbs, e, wifi_cb, entries);
+      SLIST_REMOVE(&s_wifi_cbs, e, cb_info, next);
       return;
     }
   }
@@ -126,8 +157,126 @@ static bool validate_wifi_cfg(const struct sys_config *cfg, char **msg) {
           mgos_wifi_validate_sta_cfg(&cfg->wifi.sta, msg));
 }
 
+bool mgos_wifi_setup_sta(const struct sys_config_wifi_sta *cfg) {
+  char *err_msg = NULL;
+  if (!mgos_wifi_validate_sta_cfg(cfg, &err_msg)) {
+    LOG(LL_ERROR, ("WiFi STA: %s", err_msg));
+    free(err_msg);
+    return false;
+  }
+  wifi_lock();
+  bool ret = mgos_wifi_dev_sta_setup(cfg);
+  if (ret && cfg->enable) {
+    LOG(LL_INFO, ("WiFi STA: Connecting to %s", cfg->ssid));
+    ret = mgos_wifi_connect();
+  }
+  wifi_unlock();
+  return ret;
+}
+
+bool mgos_wifi_setup_ap(const struct sys_config_wifi_ap *cfg) {
+  char *err_msg = NULL;
+  if (!mgos_wifi_validate_ap_cfg(cfg, &err_msg)) {
+    LOG(LL_ERROR, ("WiFi AP: %s", err_msg));
+    free(err_msg);
+    return false;
+  }
+  wifi_lock();
+  bool ret = mgos_wifi_dev_ap_setup(cfg);
+  wifi_unlock();
+  LOG(LL_INFO, ("ap exit"));
+  return ret;
+}
+
+bool mgos_wifi_connect(void) {
+  wifi_lock();
+  bool ret = mgos_wifi_dev_sta_connect();
+  s_sta_should_reconnect = ret;
+  if (ret) {
+    mgos_wifi_dev_on_change_cb(MGOS_WIFI_CONNECTING);
+  }
+  wifi_unlock();
+  return ret;
+}
+
+bool mgos_wifi_disconnect(void) {
+  wifi_lock();
+  s_sta_should_reconnect = false;
+  bool ret = mgos_wifi_dev_sta_disconnect();
+  wifi_unlock();
+  return ret;
+}
+
+char *mgos_wifi_get_status_str(void) {
+  const char *s = NULL;
+  switch (s_sta_status) {
+    case MGOS_WIFI_DISCONNECTED:
+      s = "disconnected";
+      break;
+    case MGOS_WIFI_CONNECTING:
+      s = "connecting";
+      break;
+    case MGOS_WIFI_CONNECTED:
+      s = "connected";
+      break;
+    case MGOS_WIFI_IP_ACQUIRED:
+      s = "got ip";
+      break;
+  }
+  return (s != NULL ? strdup(s) : NULL);
+}
+
+struct scan_result_info {
+  int num_res;
+  struct mgos_wifi_scan_result *res;
+};
+
+static void scan_cb_cb(void *arg) {
+  struct scan_result_info *ri = (struct scan_result_info *) arg;
+  wifi_lock();
+  SLIST_HEAD(scan_cbs, cb_info) scan_cbs;
+  memcpy(&scan_cbs, &s_scan_cbs, sizeof(scan_cbs));
+  memset(&s_scan_cbs, 0, sizeof(s_scan_cbs));
+  struct cb_info *cbi, *cbit;
+  SLIST_FOREACH_SAFE(cbi, &scan_cbs, next, cbit) {
+    ((mgos_wifi_scan_cb_t) cbi->cb)(ri->num_res, ri->res, cbi->arg);
+    free(cbi);
+  }
+  wifi_unlock();
+  free(ri->res);
+  free(ri);
+}
+
+void mgos_wifi_dev_scan_cb(int num_res, struct mgos_wifi_scan_result *res) {
+  if (!s_scan_in_progress) return;
+  LOG(LL_INFO, ("WiFi scan done, num_res %d", num_res));
+  struct scan_result_info *ri =
+      (struct scan_result_info *) calloc(1, sizeof(*ri));
+  ri->num_res = num_res;
+  ri->res = res;
+  s_scan_in_progress = false;
+  mgos_invoke_cb(scan_cb_cb, ri, false /* from_isr */);
+}
+
+void mgos_wifi_scan(mgos_wifi_scan_cb_t cb, void *arg) {
+  struct cb_info *cbi = (struct cb_info *) calloc(1, sizeof(*cbi));
+  if (cbi == NULL) return;
+  cbi->cb = cb;
+  cbi->arg = arg;
+  wifi_lock();
+  SLIST_INSERT_HEAD(&s_scan_cbs, cbi, next);
+  if (!s_scan_in_progress) {
+    s_scan_in_progress = true;
+    if (!mgos_wifi_dev_start_scan()) {
+      mgos_wifi_dev_scan_cb(-1, NULL);
+    }
+  }
+  wifi_unlock();
+}
+
 enum mgos_init_result mgos_wifi_init(void) {
+  s_wifi_lock = mgos_new_rlock();
   mgos_register_config_validator(validate_wifi_cfg);
-  mgos_wifi_hal_init();
+  mgos_wifi_dev_init();
   return MGOS_INIT_OK;
 }

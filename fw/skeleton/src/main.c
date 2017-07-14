@@ -6,6 +6,8 @@ static void on_wifi_event(enum mgos_wifi_status event, void *data) {
   switch (event) {
     case MGOS_WIFI_IP_ACQUIRED:
       break;
+    case MGOS_WIFI_CONNECTING:
+      break;
     case MGOS_WIFI_CONNECTED:
       break;
     case MGOS_WIFI_DISCONNECTED:

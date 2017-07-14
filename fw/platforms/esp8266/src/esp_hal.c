@@ -96,21 +96,42 @@ IRAM void mgos_ints_enable(void) {
 extern xSemaphoreHandle s_mtx;
 
 IRAM void mgos_lock(void) {
-  while (!xSemaphoreTakeRecursive(s_mtx, 10)) {
-  }
+  xSemaphoreTakeRecursive(s_mtx, portMAX_DELAY);
 }
 
 IRAM void mgos_unlock(void) {
-  while (!xSemaphoreGiveRecursive(s_mtx)) {
-  }
+  xSemaphoreGiveRecursive(s_mtx);
 }
 
+struct mgos_rlock_type *mgos_new_rlock(void) {
+  return (struct mgos_rlock_type *) xSemaphoreCreateRecursiveMutex();
+}
+
+IRAM void mgos_rlock(struct mgos_rlock_type *l) {
+  xSemaphoreTakeRecursive((xSemaphoreHandle) l, portMAX_DELAY);
+}
+
+IRAM void mgos_runlock(struct mgos_rlock_type *l) {
+  xSemaphoreGiveRecursive((xSemaphoreHandle) l);
+}
 #else /* !RTOS_SDK */
 
 IRAM void mgos_lock(void) {
 }
 
 IRAM void mgos_unlock(void) {
+}
+
+struct mgos_rlock_type *mgos_new_rlock(void) {
+  return NULL;
+}
+
+IRAM void mgos_rlock(struct mgos_rlock_type *l) {
+  (void) l;
+}
+
+IRAM void mgos_runlock(struct mgos_rlock_type *l) {
+  (void) l;
 }
 
 #endif

@@ -163,6 +163,8 @@ void cc3200_main_task(void *arg) {
   struct mgos_event e;
   osi_MsgQCreate(&s_main_queue, "main", sizeof(e), 32 /* len */);
   mgos_lock_init();
+  mgos_uart_init();
+  mgos_debug_init();
 
   enum cc3200_init_result r = cc3200_init(NULL);
   bool success = (r == CC3200_INIT_OK);

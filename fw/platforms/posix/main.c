@@ -94,9 +94,3 @@ void mgos_uart_hal_set_rx_enabled(struct mgos_uart_state *us, bool enabled) {
 void mgos_uart_hal_flush_fifo(struct mgos_uart_state *us) {
   (void) us;
 }
-
-void mgos_lock(void) {
-}
-
-void mgos_unlock(void) {
-}

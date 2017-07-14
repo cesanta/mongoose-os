@@ -23,10 +23,19 @@
 #define IRAM
 #endif
 
-static int8_t s_stdout_uart = MGOS_DEBUG_UART;
-static int8_t s_stderr_uart = MGOS_DEBUG_UART;
+static struct mgos_rlock_type *s_debug_lock = NULL;
+static int8_t s_stdout_uart = -1;
+static int8_t s_stderr_uart = -1;
 static int8_t s_uart_suspended = 0;
 static int8_t s_in_debug = 0;
+
+static inline void debug_lock(void) {
+  mgos_rlock(s_debug_lock);
+}
+
+static inline void debug_unlock(void) {
+  mgos_runlock(s_debug_lock);
+}
 
 /* From cs_dbg.c */
 extern enum cs_log_level cs_log_cur_msg_level;
@@ -34,9 +43,9 @@ extern enum cs_log_level cs_log_cur_msg_level;
 void mgos_debug_write(int fd, const void *data, size_t len) {
   char buf[MGOS_DEBUG_TMP_BUF_SIZE];
   int uart_no = -1;
-  mgos_lock();
+  debug_lock();
   if (s_in_debug) {
-    mgos_unlock();
+    debug_unlock();
     return;
   }
   s_in_debug = true;
@@ -55,7 +64,7 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
   /* Only send LL_INFO messages and below, to avoid loops. */
   if (cfg == NULL || cs_log_cur_msg_level > LL_INFO) {
     s_in_debug = false;
-    mgos_unlock();
+    debug_unlock();
     return;
   }
 #if MGOS_ENABLE_DEBUG_UDP
@@ -81,7 +90,7 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
   }
 
   s_in_debug = false;
-  mgos_unlock();
+  debug_unlock();
 }
 
 void mgos_debug_flush(void) {
@@ -138,6 +147,16 @@ IRAM bool mgos_debug_uart_is_suspended(void) {
   return (s_uart_suspended > 0);
 }
 
+enum mgos_init_result mgos_debug_init(void) {
+  s_debug_lock = mgos_new_rlock();
+  return MGOS_INIT_OK;
+}
+
 enum mgos_init_result mgos_debug_uart_init(void) {
-  return mgos_init_debug_uart(MGOS_DEBUG_UART);
+  enum mgos_init_result res = mgos_init_debug_uart(MGOS_DEBUG_UART);
+  if (res == MGOS_INIT_OK) {
+    s_stdout_uart = MGOS_DEBUG_UART;
+    s_stderr_uart = MGOS_DEBUG_UART;
+  }
+  return res;
 }

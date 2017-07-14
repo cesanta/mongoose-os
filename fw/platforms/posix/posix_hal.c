@@ -122,3 +122,21 @@ bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
   cb(arg);
   return true;
 }
+
+void mgos_lock(void) {
+}
+
+void mgos_unlock(void) {
+}
+
+struct mgos_rlock_type *mgos_new_rlock(void) {
+  return NULL;
+}
+
+void mgos_rlock(struct mgos_rlock_type *l) {
+  (void) l;
+}
+
+void mgos_runlock(struct mgos_rlock_type *l) {
+  (void) l;
+}

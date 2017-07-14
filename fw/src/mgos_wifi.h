@@ -12,16 +12,25 @@
 
 #include <stdbool.h>
 #include "fw/src/mgos_init.h"
-#include "sys_config.h"
+#include "fw/src/mgos_sys_config.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
+bool mgos_wifi_setup_sta(const struct sys_config_wifi_sta *cfg);
+
+bool mgos_wifi_setup_ap(const struct sys_config_wifi_ap *cfg);
+
+bool mgos_wifi_connect(void); /* To the previously _setup network. */
+
+bool mgos_wifi_disconnect(void);
+
 enum mgos_wifi_status {
   MGOS_WIFI_DISCONNECTED = 0,
-  MGOS_WIFI_CONNECTED = 1,
-  MGOS_WIFI_IP_ACQUIRED = 2,
+  MGOS_WIFI_CONNECTING = 1,
+  MGOS_WIFI_CONNECTED = 2,
+  MGOS_WIFI_IP_ACQUIRED = 3,
 };
 
 typedef void (*mgos_wifi_changed_t)(enum mgos_wifi_status event, void *arg);
@@ -35,14 +44,7 @@ bool mgos_wifi_validate_ap_cfg(const struct sys_config_wifi_ap *cfg,
 bool mgos_wifi_validate_sta_cfg(const struct sys_config_wifi_sta *cfg,
                                 char **msg);
 
-/* HAL interface, to be implemented by ports. */
-int mgos_wifi_setup_sta(const struct sys_config_wifi_sta *cfg);
-
-int mgos_wifi_setup_ap(const struct sys_config_wifi_ap *cfg);
-
-int mgos_wifi_connect(void); /* To previously _setup network. */
-int mgos_wifi_disconnect(void);
-
+enum mgos_wifi_status mgos_wifi_dev_get_status(void);
 /* These return allocated strings which will be free'd. */
 char *mgos_wifi_get_status_str(void);
 char *mgos_wifi_get_connected_ssid(void);
@@ -78,13 +80,6 @@ typedef void (*mgos_wifi_scan_cb_t)(int num_res,
                                     struct mgos_wifi_scan_result *res,
                                     void *arg);
 void mgos_wifi_scan(mgos_wifi_scan_cb_t cb, void *arg);
-
-/* Invoke this when Wifi connection state changes. */
-void mgos_wifi_on_change_cb(enum mgos_wifi_status event);
-
-enum mgos_wifi_status mgos_wifi_get_status(void);
-
-void mgos_wifi_hal_init(void);
 
 enum mgos_init_result mgos_wifi_init(void);
 
