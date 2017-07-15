@@ -195,6 +195,12 @@
 			"revisionTime": "2017-02-27T21:27:28Z"
 		},
 		{
+			"checksumSHA1": "CaThXbumVxZtNlItiXma5B78PwQ=",
+			"path": "github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs",
+			"revision": "30f82fa23fd844bd5bb1e5f216db87fd77b5eb43",
+			"revisionTime": "2017-02-27T21:27:28Z"
+		},
+		{
 			"checksumSHA1": "AANTVr9CVVyzsgviODY6Wi2thuM=",
 			"path": "github.com/fatih/color",
 			"revision": "62e9147c64a1ed519147b62a56a14e83e2be02c1",
@@ -217,6 +223,18 @@
 			"path": "github.com/jmespath/go-jmespath",
 			"revision": "bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d",
 			"revisionTime": "2016-08-03T19:07:31Z"
+		},
+		{
+			"checksumSHA1": "LAqhkCywKqkTvAu+MbIRnpeFnZA=",
+			"path": "github.com/jteeuwen/go-bindata",
+			"revision": "a0ff2567cfb70903282db057e799fd826784d41d",
+			"revisionTime": "2015-10-23T09:11:02Z"
+		},
+		{
+			"checksumSHA1": "1E4XSPmZqO/s20/WWJKXsyGTfm4=",
+			"path": "github.com/jteeuwen/go-bindata/go-bindata",
+			"revision": "a0ff2567cfb70903282db057e799fd826784d41d",
+			"revisionTime": "2015-10-23T09:11:02Z"
 		},
 		{
 			"checksumSHA1": "eWtEV0iBNTL6DRJVqEeniS+thHA=",
