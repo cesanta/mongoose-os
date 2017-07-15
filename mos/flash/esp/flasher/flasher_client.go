@@ -208,13 +208,18 @@ sync:
 		if err := fc.sendCommand(cmdEcho, []uint32{cookie}); err != nil {
 			return errors.Trace(err)
 		}
+		buf := make([]byte, 1024)
+		n := 0
 		for {
-			buf := make([]byte, 1024)
-			n, err := fc.s.Read(buf)
+			if n >= len(buf) {
+				n = 0
+			}
+			nr, err := fc.s.Read(buf[n:])
 			if err != nil {
 				continue sync
 			}
-			glog.V(3).Infof("<= %s", hex.EncodeToString(buf[:n]))
+			glog.V(3).Infof("<= %s", hex.EncodeToString(buf[n:n+nr]))
+			n += nr
 			echoData := bytes.NewBuffer(nil)
 			binary.Write(echoData, binary.LittleEndian, cookie)
 			if bytes.Contains(buf, echoData.Bytes()) {
