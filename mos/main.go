@@ -6,6 +6,7 @@ package main
 
 import (
 	cRand "crypto/rand"
+	goflag "flag"
 	"fmt"
 	"golang.org/x/net/context"
 	"log"
@@ -169,6 +170,7 @@ func main() {
 	}
 	initFlags()
 	flag.Parse()
+	goflag.Parse() // Workaround for noise in golang/glog
 	pflagenv.Parse(envPrefix)
 
 	if err := buildInit(); err != nil {
