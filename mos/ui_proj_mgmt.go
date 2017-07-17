@@ -1,9 +1,9 @@
 package main
 
 import (
-	"context"
 	"encoding/base64"
 	"github.com/cesanta/errors"
+	"golang.org/x/net/context"
 	"io/ioutil"
 	"net/http"
 	"os"

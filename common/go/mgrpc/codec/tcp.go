@@ -1,7 +1,7 @@
 package codec
 
 import (
-	"context"
+	"golang.org/x/net/context"
 	"net"
 
 	"github.com/cesanta/errors"

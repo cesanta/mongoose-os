@@ -1,8 +1,8 @@
 package codec
 
 import (
-	"context"
 	"crypto/x509"
+	"golang.org/x/net/context"
 	"io"
 	"runtime"
 	"strings"

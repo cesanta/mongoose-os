@@ -1,7 +1,7 @@
 package ourtrace
 
 import (
-	"context"
+	"golang.org/x/net/context"
 	"testing"
 
 	"golang.org/x/net/trace"

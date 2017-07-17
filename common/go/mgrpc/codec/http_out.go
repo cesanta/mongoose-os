@@ -2,10 +2,10 @@ package codec
 
 import (
 	"bytes"
-	"context"
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"golang.org/x/net/context"
 	"io"
 	"net/http"
 	"sync"

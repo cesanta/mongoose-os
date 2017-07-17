@@ -2,9 +2,9 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
+	"golang.org/x/net/context"
 	"io"
 	"net"
 	"net/http"

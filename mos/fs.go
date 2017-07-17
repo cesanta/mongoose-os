@@ -1,9 +1,9 @@
 package main
 
 import (
-	"context"
 	"encoding/base64"
 	"fmt"
+	"golang.org/x/net/context"
 	"io"
 	"os"
 	"path"
@@ -45,6 +45,12 @@ func listFiles(ctx context.Context, devConn *dev.DevConn, path string) (res []fw
 	return res, err
 }
 
+type byName []fwfs.ListExtResult
+
+func (a byName) Len() int           { return len(a) }
+func (a byName) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
+func (a byName) Less(i, j int) bool { return strings.Compare(*a[i].Name, *a[j].Name) < 0 }
+
 func fsLs(ctx context.Context, devConn *dev.DevConn) error {
 	args := flag.Args()
 	path := "/"
@@ -55,7 +61,7 @@ func fsLs(ctx context.Context, devConn *dev.DevConn) error {
 	if err != nil {
 		return errors.Trace(err)
 	}
-	sort.Slice(files, func(i, j int) bool { return strings.Compare(*files[i].Name, *files[j].Name) < 0 })
+	sort.Sort(byName(files))
 	for _, file := range files {
 		fmt.Printf("%s", *file.Name)
 		if file.Size != nil {

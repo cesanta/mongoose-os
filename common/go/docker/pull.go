@@ -1,7 +1,7 @@
 package docker
 
 import (
-	"context"
+	"golang.org/x/net/context"
 	"strings"
 
 	"github.com/cesanta/errors"

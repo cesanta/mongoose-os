@@ -1,8 +1,8 @@
 package dev
 
 import (
-	"context"
 	"crypto/tls"
+	"golang.org/x/net/context"
 	"time"
 
 	"cesanta.com/common/go/mgrpc"

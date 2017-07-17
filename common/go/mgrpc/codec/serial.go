@@ -2,7 +2,7 @@ package codec
 
 import (
 	"bytes"
-	"context"
+	"golang.org/x/net/context"
 	"io"
 	"runtime"
 	"sync"
@@ -106,7 +106,7 @@ func (c *serialCodec) connRead(buf []byte) (read int, err error) {
 		if err == nil {
 			data := buf[0:read]
 			// Do a quick check first, most of the time there are not FC chars.
-			if bytes.ContainsAny(data, "\x11\x13") {
+			if bytes.Contains(data, []byte{0x11}) || bytes.Contains(data, []byte{0x13}) {
 				newData := make([]byte, 0, read)
 				for _, b := range data {
 					switch b {

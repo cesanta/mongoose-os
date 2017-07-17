@@ -142,12 +142,18 @@ type delayMarshaling struct {
 func MarshalJSONNoHTMLEscape(v interface{}) ([]byte, error) {
 	w := bytes.NewBuffer(nil)
 	e := json.NewEncoder(w)
-	e.SetEscapeHTML(false) // Avoid escaping &
+	// With Go 1.7+ we can do this:
+	// e.SetEscapeHTML(false)
 	err := e.Encode(v)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
-	return w.Bytes(), nil
+	// However, Ubuntu 16.04 comes with Go 1.6, so instead we do this:
+	res := w.Bytes()
+	res = bytes.Replace(res, []byte(`\u003c`), []byte(`<`), -1)
+	res = bytes.Replace(res, []byte(`\u003e`), []byte(`>`), -1)
+	res = bytes.Replace(res, []byte(`\u0026`), []byte(`&`), -1)
+	return res, nil
 }
 
 func (m delayMarshaling) MarshalJSON() ([]byte, error) {

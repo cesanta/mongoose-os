@@ -1,9 +1,9 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
+	"golang.org/x/net/context"
 
 	"cesanta.com/common/go/mgrpc/frame"
 	"cesanta.com/common/go/ourjson"

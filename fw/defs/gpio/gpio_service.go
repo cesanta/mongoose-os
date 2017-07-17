@@ -6,7 +6,6 @@ package gpio
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
 
@@ -15,6 +14,7 @@ import (
 	"cesanta.com/common/go/ourjson"
 	"cesanta.com/common/go/ourtrace"
 	"github.com/cesanta/errors"
+	"golang.org/x/net/context"
 	"golang.org/x/net/trace"
 )
 

@@ -1,8 +1,8 @@
 package main
 
 import (
-	"context"
 	"fmt"
+	"golang.org/x/net/context"
 	"strings"
 	"time"
 

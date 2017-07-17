@@ -1,11 +1,11 @@
 package atca
 
 import (
-	"context"
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"golang.org/x/net/context"
 	"os"
 	"regexp"
 	"strings"

@@ -1,8 +1,8 @@
 package codec
 
 import (
-	"context"
 	"fmt"
+	"golang.org/x/net/context"
 	"sync"
 	"time"
 

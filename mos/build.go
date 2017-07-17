@@ -3,10 +3,10 @@ package main
 import (
 	"archive/zip"
 	"bytes"
-	"context"
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"golang.org/x/net/context"
 	"io"
 	"io/ioutil"
 	"mime/multipart"

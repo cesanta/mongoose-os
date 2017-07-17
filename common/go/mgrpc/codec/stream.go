@@ -2,9 +2,9 @@ package codec
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
+	"golang.org/x/net/context"
 	"hash/crc32"
 	"io"
 	"strconv"

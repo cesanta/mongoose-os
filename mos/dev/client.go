@@ -1,8 +1,8 @@
 package dev
 
 import (
-	"context"
 	"flag"
+	"golang.org/x/net/context"
 	"time"
 
 	"github.com/cesanta/errors"

@@ -2,8 +2,8 @@ package main
 
 import (
 	"bytes"
-	"context"
 	"fmt"
+	"golang.org/x/net/context"
 	"io/ioutil"
 	"net/http"
 	"os"

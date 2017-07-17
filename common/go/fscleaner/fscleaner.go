@@ -1,7 +1,7 @@
 package fscleaner
 
 import (
-	"context"
+	"golang.org/x/net/context"
 	"os"
 	"path/filepath"
 	"time"
