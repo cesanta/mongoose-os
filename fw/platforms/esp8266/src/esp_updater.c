@@ -123,11 +123,6 @@ int mgos_upd_begin(struct mgos_upd_hal_ctx *ctx, struct json_token *parts) {
     ctx->status_msg = "OTA is not supported in this build";
     return -5;
   }
-  /* To allow changing flash layout via OTA, take {fw,fs}_addr from manifest. */
-  ctx->write_slot.fw_addr =
-      (ctx->write_slot.id * FW_SLOT_SIZE) + (fw_addr & (FW_SLOT_SIZE - 1));
-  ctx->write_slot.fs_addr =
-      (ctx->write_slot.id * FW_SLOT_SIZE) + (fs_addr & (FW_SLOT_SIZE - 1));
 
   LOG(LL_INFO,
       ("Slot %d, FW: %.*s -> 0x%x, FS %.*s -> 0x%x", ctx->write_slot.id,
