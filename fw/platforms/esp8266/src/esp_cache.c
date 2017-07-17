@@ -10,7 +10,7 @@
 #include "common/platforms/esp8266/rboot/rboot/appcode/rboot-api.h"
 
 IRAM NOINSTR void Cache_Read_Enable_New(void) {
-  static uint8_t m1 = 0xff, m2;
+  static uint8_t m1 = 0xff, m2 = 0xff;
   if (m1 == 0xff) {
     uint32_t addr;
     rboot_config conf;
