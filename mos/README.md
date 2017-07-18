@@ -8,25 +8,45 @@ The Mongoose OS command line tool
 
 ## Building
 
-In order to build `mos` tool, the following tools are needed:
+Minimal required Go version is 1.6.
 
-- [Go](https://golang.org/) v1.8+
-- `govendor` tool (install with `go get github.com/kardianos/govendor`)
+Go and other required tools can be installed on Ubuntu 16.10 as follows:
 
-Make sure you have `GOPATH` set. The `mongoose-os` repository has to be cloned
-as `$GOPATH/src/cesanta.com`.
-
-Then, from the repository, invoke:
-
-```
-$ govendor sync
+```bash
+sudo apt install golang-go build-essential python python-git libftdi-dev
 ```
 
-That will fetch all vendored packages and save them under
-`$GOPATH/src/cesanta.com/vendor`.
+Make sure you have `GOPATH` set, and `PATH` should contain `$GOPATH/bin`.
+It can be done by adding this to your `~/.bashrc`:
+
+```bash
+export GOPATH="$HOME/go"
+export PATH="$PATH:$GOPATH/bin"
+```
+
+Install govendor:
+
+```bash
+go get github.com/kardianos/govendor
+```
+
+Now clone the `mongoose-os` repository into the proper location and `cd` to it
+
+```bash
+git clone https://github.com/cesanta/mongoose-os $GOPATH/src/cesanta.com
+cd $GOPATH/src/cesanta.com
+```
+
+Fetch all vendored packages and save them under the `vendor` dir:
+
+```
+$ govendor sync -v
+```
 
 Now, `mos` tool can be built:
 
 ```
-$ go build
+make -C mos install
 ```
+
+It will produce the binary `$GOPATH/bin/mos`.
