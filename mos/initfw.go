@@ -36,6 +36,10 @@ func initFW(ctx context.Context, devConn *dev.DevConn) error {
 
 	url := fmt.Sprintf("https://github.com/mongoose-os-apps/empty/archive/master.zip")
 	resp, err := http.Get(url)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
 	if resp.StatusCode != http.StatusOK {
 		return errors.Errorf("bad response %d on %q", resp.StatusCode, url)
 	}
