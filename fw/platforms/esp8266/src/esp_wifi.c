@@ -162,21 +162,20 @@ bool mgos_wifi_dev_sta_setup(const struct sys_config_wifi_sta *cfg) {
   }
 
   if (cfg->cert != NULL || cfg->user != NULL) {
-    static char *s_ca_cert_pem = NULL, *s_cert_pem = NULL, *s_key_pem = NULL;
     /* WPA-enterprise mode */
+    static char *s_ca_cert_pem = NULL, *s_cert_pem = NULL, *s_key_pem = NULL;
+
+    wifi_station_set_enterprise_username((u8 *) cfg->user, strlen(cfg->user));
+
     if (cfg->anon_identity != NULL) {
       wifi_station_set_enterprise_identity((unsigned char *) cfg->anon_identity,
                                            strlen(cfg->anon_identity));
     } else {
       /* By default, username is used. */
-      wifi_station_clear_enterprise_identity();
+      wifi_station_set_enterprise_identity((unsigned char *) cfg->user,
+                                           strlen(cfg->user));
     }
 
-    if (cfg->user != NULL) {
-      wifi_station_set_enterprise_username((u8 *) cfg->user, strlen(cfg->user));
-    } else {
-      wifi_station_clear_enterprise_username();
-    }
     if (cfg->pass != NULL) {
       wifi_station_set_enterprise_password((u8 *) cfg->pass, strlen(cfg->pass));
     } else {

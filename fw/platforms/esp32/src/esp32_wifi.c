@@ -260,20 +260,19 @@ bool mgos_wifi_dev_sta_setup(const struct sys_config_wifi_sta *cfg) {
   }
 
   if (cfg->cert != NULL || cfg->user != NULL) {
-    static char *s_ca_cert_pem = NULL, *s_cert_pem = NULL, *s_key_pem = NULL;
     /* WPA-enterprise mode */
+    static char *s_ca_cert_pem = NULL, *s_cert_pem = NULL, *s_key_pem = NULL;
+
+    esp_wifi_sta_wpa2_ent_set_username((unsigned char *) cfg->user,
+                                       strlen(cfg->user));
+
     if (cfg->anon_identity != NULL) {
       esp_wifi_sta_wpa2_ent_set_identity((unsigned char *) cfg->anon_identity,
                                          strlen(cfg->anon_identity));
     } else {
       /* By default, username is used. */
-      esp_wifi_sta_wpa2_ent_clear_identity();
-    }
-    if (cfg->user != NULL) {
-      esp_wifi_sta_wpa2_ent_set_username((unsigned char *) cfg->user,
+      esp_wifi_sta_wpa2_ent_set_identity((unsigned char *) cfg->user,
                                          strlen(cfg->user));
-    } else {
-      esp_wifi_sta_wpa2_ent_clear_username();
     }
     if (cfg->pass != NULL) {
       esp_wifi_sta_wpa2_ent_set_password((unsigned char *) cfg->pass,
