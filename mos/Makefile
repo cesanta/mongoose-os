@@ -21,6 +21,7 @@ downloads: generate
     -v $$(pwd):/out \
     -v $$(pwd)/gobuild-cache:/go/pkg \
     docker.cesanta.com/gobuild32 \
+    -tags 'netgo' \
     -o /out/downloads/mos/linux/mos --ldflags '-extldflags "-static"' \
     cesanta.com/mos
 	GOOS=darwin go build -o downloads/mos/mac/mos
