@@ -22,7 +22,6 @@
 #include "rom/ets_sys.h"
 
 #include "common/cs_dbg.h"
-#include "common/platforms/esp/src/esp_mmap.h"
 #include "fw/src/mgos_app.h"
 #include "fw/src/mgos_debug.h"
 #include "fw/src/mgos_hal.h"
@@ -31,6 +30,7 @@
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_uart.h"
 #include "fw/src/mgos_updater_common.h"
+#include "fw/src/mgos_vfs.h"
 
 #include "fw/platforms/esp32/src/esp32_debug.h"
 #include "fw/platforms/esp32/src/esp32_exc.h"
@@ -132,7 +132,7 @@ static enum mgos_init_result esp32_mgos_init() {
 #endif
 
 #ifdef CS_MMAP
-  esp_mmap_init();
+  mgos_vfs_mmap_init();
 #endif
 
   esp32_exception_handler_init();

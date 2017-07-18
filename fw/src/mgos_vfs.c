@@ -18,9 +18,12 @@
 #include "fw/src/mgos_debug.h"
 #include "fw/src/mgos_hal.h"
 
+#ifdef CS_MMAP
+#include <sys/mman.h>
+#endif /* CS_MMAP */
+
 #define MAKE_VFD(mount_id, fs_fd) (((mount_id) << 8) | ((fs_fd) &0xff))
 #define MOUNT_ID_FROM_VFD(fd) (((fd) >> 8) & 0xff)
-#define FS_FD_FROM_VFD(vfd) ((vfd) &0xff)
 
 struct mgos_vfs_fs_entry {
   const char *type;
@@ -311,7 +314,7 @@ int _open_r(struct _reent *r, const char *filename, int flags, int mode) {
 #endif
 
 int mgos_vfs_close(int vfd) {
-  int ret = -1, fs_fd = FS_FD_FROM_VFD(vfd);
+  int ret = -1, fs_fd = MGOS_VFS_VFD_TO_FS_FD(vfd);
   struct mgos_vfs_mount_entry *me = find_mount_by_vfd(vfd);
   struct mgos_vfs_fs *fs = NULL;
   mgos_vfs_lock();
@@ -343,7 +346,7 @@ int _close_r(struct _reent *r, int vfd) {
 #endif
 
 ssize_t mgos_vfs_read(int vfd, void *dst, size_t len) {
-  int ret = -1, fs_fd = FS_FD_FROM_VFD(vfd);
+  int ret = -1, fs_fd = MGOS_VFS_VFD_TO_FS_FD(vfd);
   struct mgos_vfs_mount_entry *me = find_mount_by_vfd(vfd);
   struct mgos_vfs_fs *fs = NULL;
   if (me == NULL) {
@@ -370,7 +373,7 @@ ssize_t _read_r(struct _reent *r, int vfd, void *dst, size_t len) {
 
 ssize_t mgos_vfs_write(int vfd, const void *src, size_t len) {
   ssize_t ret = -1;
-  int fs_fd = FS_FD_FROM_VFD(vfd);
+  int fs_fd = MGOS_VFS_VFD_TO_FS_FD(vfd);
   int mid = MOUNT_ID_FROM_VFD(vfd);
   struct mgos_vfs_mount_entry *me = NULL;
   struct mgos_vfs_fs *fs = NULL;
@@ -440,7 +443,7 @@ int _stat_r(struct _reent *r, const char *path, struct stat *st) {
 #endif
 
 int mgos_vfs_fstat(int vfd, struct stat *st) {
-  int ret = -1, fs_fd = FS_FD_FROM_VFD(vfd);
+  int ret = -1, fs_fd = MGOS_VFS_VFD_TO_FS_FD(vfd);
   struct mgos_vfs_mount_entry *me = find_mount_by_vfd(vfd);
   struct mgos_vfs_fs *fs = NULL;
   if (me == NULL) {
@@ -468,7 +471,7 @@ int _fstat_r(struct _reent *r, int vfd, struct stat *st) {
 
 off_t mgos_vfs_lseek(int vfd, off_t offset, int whence) {
   off_t ret = -1;
-  int fs_fd = FS_FD_FROM_VFD(vfd);
+  int fs_fd = MGOS_VFS_VFD_TO_FS_FD(vfd);
   struct mgos_vfs_mount_entry *me = find_mount_by_vfd(vfd);
   struct mgos_vfs_fs *fs = NULL;
   if (me == NULL) {
@@ -684,6 +687,175 @@ int _closedir_r(struct _reent *r, DIR *pdir) {
 #endif
 
 #endif /* MG_ENABLE_DIRECTORY_LISTING */
+
+#ifdef CS_MMAP
+#define MMAP_DESCS_ADD_SIZE 4
+
+static struct mbuf mgos_vfs_mmap_descs_mbuf;
+
+struct mgos_vfs_mmap_desc *mgos_vfs_mmap_descs = NULL;
+
+/*
+ * The memory returned by alloc_mmap_desc is zeroed out. NULL can only be
+ * returned if there's no memory to grow descriptors mbuf.
+ */
+static struct mgos_vfs_mmap_desc *alloc_mmap_desc(void) {
+  size_t i;
+  size_t descs_cnt = mgos_vfs_mmap_descs_cnt();
+  for (i = 0; i < descs_cnt; i++) {
+    if (mgos_vfs_mmap_descs[i].base == NULL) {
+      return &mgos_vfs_mmap_descs[i];
+    }
+  }
+
+  /* Failed to find an empty descriptor, need to grow mbuf */
+  int old_len = mgos_vfs_mmap_descs_mbuf.len;
+  if (mbuf_append(&mgos_vfs_mmap_descs_mbuf, NULL,
+                  MMAP_DESCS_ADD_SIZE * sizeof(struct mgos_vfs_mmap_desc)) ==
+      0) {
+    /* Out of memory */
+    return NULL;
+  }
+  mgos_vfs_mmap_descs =
+      (struct mgos_vfs_mmap_desc *) mgos_vfs_mmap_descs_mbuf.buf;
+  memset(mgos_vfs_mmap_descs_mbuf.buf + old_len, 0,
+         mgos_vfs_mmap_descs_mbuf.len - old_len);
+
+  /* Call this function again; this time it should succeed */
+  return alloc_mmap_desc();
+}
+
+static void free_mmap_desc(struct mgos_vfs_mmap_desc *desc) {
+  if (desc->fs != NULL) {
+    desc->fs->ops->munmap(desc);
+    desc->fs->refs--;
+    desc->fs = NULL;
+  }
+  memset(desc, 0, sizeof(*desc));
+}
+
+void *mgos_vfs_mmap(void *addr, size_t len, int prot, int flags, int vfd,
+                    off_t offset) {
+  bool ok = true;
+
+  if (len == 0) {
+    return NULL;
+  }
+
+  mgos_vfs_lock();
+
+  struct mgos_vfs_mmap_desc *desc = alloc_mmap_desc();
+  if (desc == NULL) {
+    LOG(LL_ERROR, ("cannot allocate mmap desc"));
+    ok = false;
+    goto clean;
+  }
+
+  struct mgos_vfs_mount_entry *me = find_mount_by_vfd(vfd);
+  if (me == NULL) {
+    LOG(LL_ERROR, ("can't find mount entry by vfd %d", vfd));
+    ok = false;
+    goto clean;
+  }
+
+  /*
+   * fs->refs was incremented by find_mount_by_vfd, it'll be decremented back
+   * in free_mmap_desc.
+   */
+
+  desc->fs = me->fs;
+
+  if (desc->fs->ops->read_mmapped_byte == NULL) {
+    LOG(LL_ERROR, ("filesystem doesn't support mmapping"));
+    ok = false;
+    goto clean;
+  }
+
+  if (desc->fs->ops->mmap(vfd, len, desc) == -1) {
+    LOG(LL_ERROR, ("fs-specific mmap failure"));
+    ok = false;
+    goto clean;
+  }
+
+  desc->base = MMAP_BASE_FROM_DESC(desc);
+
+  /*
+   * Close the file descriptor. This breaks the posix-like mmap abstraction but
+   * file descriptors are a scarse resource here.
+   */
+  int t = mgos_vfs_close(vfd);
+  if (t != 0) {
+    LOG(LL_ERROR, ("failed to close descr after mmapping: %d", t));
+    return NULL;
+  }
+
+clean:
+  mgos_vfs_unlock();
+
+  if (!ok) {
+    if (desc != NULL) {
+      free_mmap_desc(desc);
+      desc = NULL;
+    }
+    return MAP_FAILED;
+  }
+
+  (void) addr;
+  (void) prot;
+  (void) flags;
+  (void) offset;
+
+  return desc->base;
+}
+
+int mgos_vfs_munmap(void *addr, size_t len) {
+  mgos_vfs_lock();
+
+  int ret = -1;
+  size_t descs_cnt = mgos_vfs_mmap_descs_cnt();
+
+  if (addr != NULL) {
+    size_t i;
+    for (i = 0; i < descs_cnt; i++) {
+      if (mgos_vfs_mmap_descs[i].base == addr) {
+        free_mmap_desc(&mgos_vfs_mmap_descs[i]);
+        ret = 0;
+        goto clean;
+      }
+    }
+  }
+
+  /* didn't find the mapping with the given addr */
+  LOG(LL_ERROR, ("Didn't find the mapping for the addr %p", addr));
+
+clean:
+  mgos_vfs_unlock();
+  (void) len;
+  return ret;
+}
+
+void mgos_vfs_mmap_init(void) {
+  mbuf_init(&mgos_vfs_mmap_descs_mbuf, 0);
+}
+
+int mgos_vfs_mmap_descs_cnt(void) {
+  return mgos_vfs_mmap_descs_mbuf.len / sizeof(struct mgos_vfs_mmap_desc);
+}
+
+struct mgos_vfs_mmap_desc *mgos_vfs_mmap_desc_get(int idx) {
+  return &mgos_vfs_mmap_descs[idx];
+}
+
+#if MGOS_VFS_DEFINE_LIBC_MMAP_API
+void *mmap(void *addr, size_t len, int prot, int flags, int vfd, off_t offset) {
+  return mgos_vfs_mmap(addr, len, prot, flags, ARCH_FD_TO_VFS_FD(vfd), offset);
+}
+
+int munmap(void *addr, size_t len) {
+  return mgos_vfs_munmap(addr, len);
+}
+#endif /* MGOS_VFS_DEFINE_LIBC_MMAP_API */
+#endif /* CS_MMAP */
 
 size_t mgos_get_fs_size(void) {
   size_t res;

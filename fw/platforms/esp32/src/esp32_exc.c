@@ -7,7 +7,7 @@
 #include <freertos/xtensa_api.h>
 #include <xtensa/corebits.h>
 
-#include "common/platforms/esp/src/esp_mmap.h"
+#include "fw/src/mgos_mmap_esp.h"
 
 extern void xt_unhandled_exception(XtExcFrame *frame);
 

@@ -17,8 +17,22 @@
 #include <stdint.h>
 
 #include "common/platform.h"
+#include "common/queue.h"
 
 #include "fw/src/mgos_vfs_dev.h"
+
+#ifdef CS_MMAP
+#if CS_PLATFORM == CS_P_ESP32
+#include "fw/platforms/esp32/src/esp32_fs.h"
+#include "fw/platforms/esp32/src/esp32_mmap.h"
+#elif CS_PLATFORM == CS_P_ESP8266
+#include "fw/platforms/esp8266/src/esp_fs.h"
+#include "fw/platforms/esp8266/src/esp8266_mmap.h"
+#endif
+#endif /* CS_MMAP */
+
+/* Convert virtual fd to filesystem-specific fd */
+#define MGOS_VFS_VFD_TO_FS_FD(vfd) ((vfd) &0xff)
 
 #ifdef __cplusplus
 extern "C" {
@@ -31,6 +45,66 @@ struct mgos_vfs_fs {
   struct mgos_vfs_dev *dev;
   void *fs_data;
 };
+
+#ifdef CS_MMAP
+/*
+ * Platform-dependent header should define the following macros:
+ *
+ * - MMAP_BASE: base address for mmapped points; e.g. ((void *) 0x10000000)
+ * - MMAP_END:  end address for mmapped points; e.g. ((void *) 0x20000000)
+ *
+ * So with the example values given above, the range 0x10000000 - 0x20000000 is
+ * used for all mmapped areas. We need to partition it further, by choosing the
+ * optimal tradeoff between the max number of mmapped areas and the max size
+ * of the mmapped area. Within the example range, we have 28 bits, and we
+ * need to define two more macros which will define how these bits are used:
+ *
+ * - MMAP_ADDR_BITS: how many bits are used for the address within each
+ *   mmapped area;
+ * - MMAP_NUM_BITS: how many bits are used for the number of mmapped area.
+ */
+
+#define MMAP_NUM_MASK ((1 << MMAP_NUM_BITS) - 1)
+#define MMAP_ADDR_MASK ((1 << MMAP_ADDR_BITS) - 1)
+
+/*
+ * We need to declare mgos_vfs_mmap_descs in order for MMAP_DESC_FROM_ADDR()
+ * and friends to work. We could use a function instead of that, but it's
+ * used on a critical path (reading each mmapped byte), so let it be.
+ */
+extern struct mgos_vfs_mmap_desc *mgos_vfs_mmap_descs;
+
+#define MMAP_DESC_FROM_ADDR(addr)                                 \
+  (&mgos_vfs_mmap_descs[(((uintptr_t)(addr)) >> MMAP_ADDR_BITS) & \
+                        MMAP_NUM_MASK])
+#define MMAP_ADDR_FROM_ADDR(addr) (((uintptr_t)(addr)) & MMAP_ADDR_MASK)
+
+#define MMAP_BASE_FROM_DESC(desc)    \
+  ((void *) ((uintptr_t) MMAP_BASE | \
+             (((desc) -mgos_vfs_mmap_descs) << MMAP_ADDR_BITS)))
+
+struct mgos_vfs_mmap_desc {
+  struct mgos_vfs_fs *fs;
+  /* Address at which mmapped data is available */
+  void *base;
+
+  /* FS-specific data */
+  void *fs_data;
+};
+
+void mgos_vfs_mmap_init(void);
+
+/*
+ * Returns total number of allocated mmap descriptors (not all of them might be
+ * used at the moment)
+ */
+int mgos_vfs_mmap_descs_cnt(void);
+
+/*
+ * Returns mmap descriptor at the given index
+ */
+struct mgos_vfs_mmap_desc *mgos_vfs_mmap_desc_get(int idx);
+#endif /* CS_MMAP */
 
 /* Define DIR and struct dirent. */
 #ifndef MGOS_VFS_DEFINE_DIRENT
@@ -86,6 +160,13 @@ struct mgos_vfs_fs_ops {
   struct dirent *(*readdir)(struct mgos_vfs_fs *fs, DIR *pdir);
   int (*closedir)(struct mgos_vfs_fs *fs, DIR *pdir);
 #endif
+
+#ifdef CS_MMAP
+  int (*mmap)(int vfd, size_t len, struct mgos_vfs_mmap_desc *desc);
+  void (*munmap)(struct mgos_vfs_mmap_desc *desc);
+  uint8_t (*read_mmapped_byte)(struct mgos_vfs_mmap_desc *desc, uint32_t addr);
+#endif /* CS_MMAP */
+
 #if 0 /* These parts of the libc API are not supported for now. */
   int (*link)(struct mgos_vfs_fs *fs, const char *n1, const char *n2);
   long (*telldir)(struct mgos_vfs_fs *fs, DIR *pdir);
@@ -184,6 +265,15 @@ int mgos_vfs_closedir(DIR *pdir);
 /* Define the _r variants of the open/read/closedir API. */
 #ifndef MGOS_VFS_DEFINE_LIBC_REENT_DIR_API
 #define MGOS_VFS_DEFINE_LIBC_REENT_DIR_API 0
+#endif
+
+/* Define mmap, munmap. */
+#ifndef MGOS_VFS_DEFINE_LIBC_MMAP_API
+#if defined(CS_MMAP)
+#define MGOS_VFS_DEFINE_LIBC_MMAP_API 1
+#else /* CS_MMAP */
+#define MGOS_VFS_DEFINE_LIBC_MMAP_API 0
+#endif /* CS_MMAP */
 #endif
 
 #ifdef __cplusplus

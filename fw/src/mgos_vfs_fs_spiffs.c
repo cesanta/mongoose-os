@@ -13,18 +13,17 @@
 
 #include "common/base64.h"
 #include "common/cs_dbg.h"
+#include "common/mbuf.h"
 
 #include "frozen/frozen.h"
 
 #include "fw/src/mgos_vfs.h"
 
-#ifdef CS_MMAP
-#include "common/platforms/esp/src/esp_mmap.h"
-#endif
-
 #if CS_SPIFFS_ENABLE_ENCRYPTION
 #include "esp_flash_encrypt.h"
 #endif
+
+static const struct mgos_vfs_fs_ops mgos_vfs_fs_spiffs_ops;
 
 struct mgos_vfs_fs_spiffs_data {
   spiffs fs;
@@ -33,13 +32,49 @@ struct mgos_vfs_fs_spiffs_data {
   bool encrypt;
 };
 
-/* XXX: a kludge to keep mmap working for now. */
-static spiffs *s_root_fs = NULL;
+#ifdef CS_MMAP
+#define SPIFFS_PAGE_HEADER_SIZE (sizeof(spiffs_page_header))
+#define LOG_PAGE_SIZE 256
+#define SPIFFS_PAGE_DATA_SIZE ((LOG_PAGE_SIZE) - (SPIFFS_PAGE_HEADER_SIZE))
+
+/*
+ * New mapping descriptor, used by mgos_vfs_fs_spiffs_mmap and
+ * mgos_vfs_mmap_spiffs_dummy_read
+ */
+static struct mgos_vfs_mmap_desc *s_cur_mmap_desc;
+
+struct mgos_vfs_mmap_spiffs_data {
+  /* Number of spiffs pages in the mmapped area */
+  uint32_t pages_cnt;
+
+  /* Page addresses */
+  uint32_t *page_addrs;
+};
+
+static int mgos_vfs_mmap_spiffs_dummy_read(spiffs *fs, u32_t addr, u32_t size,
+                                           u8_t *dst) {
+  (void) size;
+
+  if (s_cur_mmap_desc != NULL && dst >= DUMMY_MMAP_BUFFER_START &&
+      dst < DUMMY_MMAP_BUFFER_END) {
+    struct mgos_vfs_mmap_spiffs_data *mydata =
+        (struct mgos_vfs_mmap_spiffs_data *) s_cur_mmap_desc->fs_data;
+
+    if ((addr - SPIFFS_PAGE_HEADER_SIZE) % SPIFFS_CFG_LOG_PAGE_SZ(fs) == 0) {
+      addr &= MMAP_ADDR_MASK;
+      mydata->page_addrs[mydata->pages_cnt++] = addr;
+    }
+    return 1;
+  }
+
+  return 0;
+}
+#endif
 
 static s32_t mgos_spiffs_read(spiffs *spfs, u32_t addr, u32_t size, u8_t *dst) {
   struct mgos_vfs_fs *fs = (struct mgos_vfs_fs *) spfs->user_data;
 #ifdef CS_MMAP
-  if (esp_spiffs_dummy_read(spfs, addr, size, dst)) {
+  if (mgos_vfs_mmap_spiffs_dummy_read(spfs, addr, size, dst)) {
     return SPIFFS_OK;
   }
 #endif
@@ -152,9 +187,6 @@ static bool mgos_vfs_fs_spiffs_mount(struct mgos_vfs_fs *fs, const char *opts) {
       ret = false;
     }
 #endif
-    if (ret && s_root_fs == NULL) {
-      s_root_fs = spfs;
-    }
   }
   if (!ret) {
     LOG(LL_ERROR, ("SPIFFS mount failed"));
@@ -906,18 +938,137 @@ out:
 }
 #endif /* CS_SPIFFS_ENABLE_ENCRYPTION */
 
-/*
- * Translates VFS file descriptor from vfs to a spiffs file descriptor; also
- * returns an instance of spiffs through the pointer.
- *
- * This is only used by mmap and only because mmap has not been properly
- * VFS-ized.
- * TODO(rojer|dfrank): Generalize mmap, make it VFS-friendly.
- */
-int esp_translate_fd(int fd, spiffs **pfs) {
-  *pfs = s_root_fs;
-  return (fd & 0xff);
+#ifdef CS_MMAP
+static void free_mmap_spiffs_data(struct mgos_vfs_mmap_spiffs_data *mydata) {
+  if (mydata->page_addrs != NULL) {
+    free(mydata->page_addrs);
+    mydata->page_addrs = NULL;
+  }
 }
+
+static int mgos_vfs_fs_spiffs_mmap(int vfd, size_t len,
+                                   struct mgos_vfs_mmap_desc *desc) {
+  int ret = 0;
+  int pages_cnt = (len + SPIFFS_PAGE_DATA_SIZE - 1) / SPIFFS_PAGE_DATA_SIZE;
+
+  struct mgos_vfs_mmap_spiffs_data *mydata = NULL;
+  spiffs *spfs = &((struct mgos_vfs_fs_spiffs_data *) desc->fs->fs_data)->fs;
+
+  /* Allocate SPIFFS-specific data for the mapping */
+  mydata = (struct mgos_vfs_mmap_spiffs_data *) calloc(sizeof(*mydata), 1);
+  if (mydata == NULL) {
+    ret = -1;
+    goto clean;
+  }
+
+  desc->fs_data = mydata;
+
+  /*
+   * Initialize SPIFFS-specific data; pages_cnt will be incremented gradually
+   * by mgos_vfs_mmap_spiffs_dummy_read
+   */
+  mydata->pages_cnt = 0;
+  mydata->page_addrs = (uint32_t *) calloc(sizeof(uint32_t), pages_cnt);
+  if (mydata->page_addrs == NULL) {
+    ret = -1;
+    goto clean;
+  }
+
+  /*
+   * Set s_cur_mmap_desc and invoke dummy read, so that we collect all page
+   * addresses involved in the new mapping
+   *
+   * NOTE that the lock is already acquired by mgos_vfs_mmap()
+   */
+  s_cur_mmap_desc = desc;
+
+  int32_t t = SPIFFS_read(spfs, MGOS_VFS_VFD_TO_FS_FD(vfd),
+                          DUMMY_MMAP_BUFFER_START, len);
+  if (t != (int32_t) len) {
+    LOG(LL_ERROR,
+        ("mmap dummy read failed: expected len: %d, actual: %d", len, t));
+    ret = -1;
+    goto clean;
+  }
+
+clean:
+  s_cur_mmap_desc = NULL;
+  if (ret == -1) {
+    if (mydata != NULL) {
+      free_mmap_spiffs_data(mydata);
+      free(mydata);
+      mydata = NULL;
+    }
+  }
+
+  return ret;
+}
+
+static void mgos_vfs_fs_spiffs_munmap(struct mgos_vfs_mmap_desc *desc) {
+  if (desc->fs_data != NULL) {
+    free_mmap_spiffs_data((struct mgos_vfs_mmap_spiffs_data *) desc->fs_data);
+    free(desc->fs_data);
+    desc->fs_data = NULL;
+  }
+}
+
+uint8_t mgos_vfs_fs_spiffs_read_mmapped_byte(struct mgos_vfs_mmap_desc *desc,
+                                             uint32_t addr) {
+  struct mgos_vfs_mmap_spiffs_data *mydata =
+      (struct mgos_vfs_mmap_spiffs_data *) desc->fs_data;
+  int page_num = addr / SPIFFS_PAGE_DATA_SIZE;
+  int offset = addr % SPIFFS_PAGE_DATA_SIZE;
+  size_t dev_offset = mydata->page_addrs[page_num] + offset;
+  uint8_t ret;
+
+  struct mgos_vfs_dev *dev = desc->fs->dev;
+  dev->ops->read(dev, dev_offset, 1, &ret);
+  return ret;
+}
+
+/*
+ * Relocate mmapped pages.
+ *
+ * TODO(dfrank): refactor it to use linked list,
+ * see https://cesanta.slack.com/archives/C02NAP6QS/p1500387721632874
+ */
+void mgos_vfs_mmap_spiffs_on_page_move_hook(spiffs *fs, spiffs_file fh,
+                                            spiffs_page_ix src_pix,
+                                            spiffs_page_ix dst_pix) {
+  size_t i, j;
+  (void) fh;
+  size_t descs_cnt = mgos_vfs_mmap_descs_cnt();
+  for (i = 0; i < descs_cnt; i++) {
+    struct mgos_vfs_mmap_desc *desc = mgos_vfs_mmap_desc_get(i);
+
+    /*
+     * Check if descriptor is in use and its filesystem is SPIFFS
+     */
+    if (desc->fs != NULL && desc->fs->ops == &mgos_vfs_fs_spiffs_ops) {
+      /* Make sure it's the same SPIFFS instance */
+      struct mgos_vfs_fs_spiffs_data *fsd =
+          (struct mgos_vfs_fs_spiffs_data *) desc->fs->fs_data;
+      if (&fsd->fs == fs) {
+        struct mgos_vfs_mmap_spiffs_data *mydata =
+            (struct mgos_vfs_mmap_spiffs_data *) desc->fs_data;
+        for (j = 0; j < mydata->pages_cnt; j++) {
+          uint32_t addr = mydata->page_addrs[j];
+          uint32_t page_num = SPIFFS_PADDR_TO_PAGE(fs, addr);
+          if (page_num == src_pix) {
+            /*
+             * Found mmapped page which was just moved, so adjust mmapped page
+             * address.
+             */
+            int delta = (int) dst_pix - (int) src_pix;
+            mydata->page_addrs[j] += delta * LOG_PAGE_SIZE;
+          }
+        }
+      }
+    }
+  }
+}
+
+#endif /* CS_MMAP */
 
 static const struct mgos_vfs_fs_ops mgos_vfs_fs_spiffs_ops = {
     .mkfs = mgos_vfs_fs_spiffs_mkfs,
@@ -940,6 +1091,11 @@ static const struct mgos_vfs_fs_ops mgos_vfs_fs_spiffs_ops = {
     .opendir = mgos_vfs_fs_spiffs_opendir,
     .readdir = mgos_vfs_fs_spiffs_readdir,
     .closedir = mgos_vfs_fs_spiffs_closedir,
+#endif
+#ifdef CS_MMAP
+    .mmap = mgos_vfs_fs_spiffs_mmap,
+    .munmap = mgos_vfs_fs_spiffs_munmap,
+    .read_mmapped_byte = mgos_vfs_fs_spiffs_read_mmapped_byte,
 #endif
 };
 

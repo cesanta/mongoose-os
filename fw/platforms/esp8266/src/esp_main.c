@@ -26,7 +26,6 @@
 #include "fw/src/mgos_uart.h"
 #include "fw/src/mgos_updater_common.h"
 #include "fw/src/mgos_updater_hal.h"
-#include "common/platforms/esp/src/esp_mmap.h"
 #include "common/platforms/esp8266/esp_umm_malloc.h"
 
 #include "fw/platforms/esp8266/src/esp_adc.h"
@@ -109,7 +108,7 @@ IRAM void sdk_putc(char c) {
 
 enum mgos_init_result esp_mgos_init2(rboot_config *bcfg) {
 #ifdef CS_MMAP
-  esp_mmap_init();
+  mgos_vfs_mmap_init();
 #endif
   mongoose_init();
   enum mgos_init_result ir = mgos_debug_uart_init();

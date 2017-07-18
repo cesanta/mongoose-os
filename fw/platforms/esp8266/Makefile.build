@@ -106,6 +106,7 @@ MGOS_SRCS = cs_file.c cs_rbuf.c \
             mgos_init.c \
             mgos_timers_mongoose.c \
             mgos_wifi.c \
+            mgos_mmap_esp.c \
             mgos_mongoose.c \
             mgos_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
             mgos_uart.c \
@@ -134,7 +135,6 @@ MGOS_SRCS += esp_adc.c \
              esp_libc.c \
              esp_main.c \
              esp_mdns.c \
-             esp_mmap.c \
              esp_periph.c \
              esp_pwm.c \
              esp_uart.c \
@@ -240,7 +240,8 @@ ifeq "$(MGOS_ESP8266_RTOS)" "1"
 else
   SDK_PATH = /opt/Espressif/ESP8266_NONOS_SDK
   MGOS_SRCS += esp_exc_non_os.c
-  MGOS_CFLAGS += -DLWIP_OPEN_SRC
+  MGOS_CFLAGS += -DLWIP_OPEN_SRC \
+                 -DCS_MMAP -DSPIFFS_ON_PAGE_MOVE_HOOK=mgos_vfs_mmap_spiffs_on_page_move_hook
   LWIP_LIB = $(LWIP_BUILD_DIR)/liblwip_cs.a
   LWIP_PATH = $(COMMON_ESP8266_PATH)/lwip
   SDK_LIBS += m
