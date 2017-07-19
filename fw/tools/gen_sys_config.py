@@ -265,7 +265,10 @@ class HWriter(object):
             lines.append("")
 
         return """\
-/* Generated file - do not edit. */
+/*
+ * Generated file - do not edit.
+ * Command: {cmd}
+ */
 
 #ifndef {name_uc}_H_
 #define {name_uc}_H_
@@ -285,7 +288,8 @@ const struct mgos_conf_entry *{name}_schema();
 #endif /* __cplusplus */
 
 #endif /* {name_uc}_H_ */
-""".format(name=self._struct_name,
+""".format(cmd=' '.join(sys.argv),
+           name=self._struct_name,
            name_uc=self._struct_name.upper(),
            lines="\n".join(lines))
 

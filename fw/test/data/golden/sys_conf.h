@@ -1,4 +1,7 @@
-/* Generated file - do not edit. */
+/*
+ * Generated file - do not edit.
+ * Command: ../../fw/tools/gen_sys_config.py --c_name=sys_conf --dest_dir=.build data/sys_conf_wifi.yaml data/sys_conf_http.yaml data/sys_conf_debug.yaml
+ */
 
 #ifndef SYS_CONF_H_
 #define SYS_CONF_H_
