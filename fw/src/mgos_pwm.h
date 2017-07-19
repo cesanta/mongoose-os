@@ -5,8 +5,8 @@
 
 /*
  * See on GitHub:
- * [mgos_pwm.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_pwm.h),
- * [mgos_pwm.c](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_pwm.c)
+ * [mgos_pwm.h](https://github.com/cesanta/mongoose-os/blob/master/mgos_pwm.h),
+ * [mgos_pwm.c](https://github.com/cesanta/mongoose-os/blob/master/mgos_pwm.c)
  */
 
 #ifndef CS_FW_SRC_MGOS_PWM_H_

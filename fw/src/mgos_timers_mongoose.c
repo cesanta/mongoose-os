@@ -3,14 +3,14 @@
  * All rights reserved
  */
 
-#include <fw/src/mgos_timers.h>
+#include <mgos_timers.h>
 
 #include "common/queue.h"
 
-#include <fw/src/mgos_features.h>
-#include <fw/src/mgos_hal.h>
-#include <fw/src/mgos_mongoose.h>
-#include <fw/src/mgos_sntp.h>
+#include <mgos_features.h>
+#include <mgos_hal.h>
+#include <mgos_mongoose.h>
+#include <mgos_sntp.h>
 
 struct timer_info {
   int interval_ms;

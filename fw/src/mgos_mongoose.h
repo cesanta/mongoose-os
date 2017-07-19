@@ -5,8 +5,8 @@
 
 /*
  * See on GitHub:
- * [mgos_mongoose.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_mongoose.h),
- * [mgos_mongoose.c](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_mongoose.c)
+ * [mgos_mongoose.h](https://github.com/cesanta/mongoose-os/blob/master/mgos_mongoose.h),
+ * [mgos_mongoose.c](https://github.com/cesanta/mongoose-os/blob/master/mgos_mongoose.c)
  */
 
 #ifndef CS_FW_SRC_MGOS_MONGOOSE_H_
@@ -16,7 +16,7 @@
 
 #include "mongoose/mongoose.h"
 
-#include "fw/src/mgos_init.h"
+#include "mgos_init.h"
 
 #ifdef __cplusplus
 extern "C" {

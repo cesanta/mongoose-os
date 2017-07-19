@@ -6,8 +6,8 @@
 #include <stm32_sdk_hal.h>
 #include <stdio.h>
 #include <stdarg.h>
-#include "fw/src/mgos_uart_hal.h"
-#include "fw/src/mgos_utils.h"
+#include "mgos_uart_hal.h"
+#include "mgos_utils.h"
 #include "common/cs_dbg.h"
 #include "common/cs_rbuf.h"
 

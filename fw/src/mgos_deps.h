@@ -6,7 +6,7 @@
 #ifndef CS_FW_SRC_MGOS_DEPS_H_
 #define CS_FW_SRC_MGOS_DEPS_H_
 
-#include "fw/src/mgos_features.h"
+#include "mgos_features.h"
 
 #ifdef __cplusplus
 extern "C" {

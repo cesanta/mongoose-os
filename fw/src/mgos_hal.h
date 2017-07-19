@@ -5,7 +5,7 @@
 
 /*
  * See on GitHub:
- * [mgos_hal.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_hal.h)
+ * [mgos_hal.h](https://github.com/cesanta/mongoose-os/blob/master/mgos_hal.h)
  *
  * These interfaces need to be implemented for each hardware platform.
  */

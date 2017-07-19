@@ -18,11 +18,11 @@
 #include "fw/platforms/cc3200/src/cc3200_main_task.h"
 #include "fw/platforms/cc3200/src/cc3200_vfs_dev_slfs_container.h"
 #include "fw/platforms/cc3200/src/cc3200_vfs_dev_slfs_container_meta.h"
-#include "fw/src/mgos_hal.h"
-#include "fw/src/mgos_sys_config.h"
-#include "fw/src/mgos_updater_hal.h"
-#include "fw/src/mgos_updater_util.h"
-#include "fw/src/mgos_utils.h"
+#include "mgos_hal.h"
+#include "mgos_sys_config.h"
+#include "mgos_updater_hal.h"
+#include "mgos_updater_util.h"
+#include "mgos_utils.h"
 
 #if MGOS_ENABLE_UPDATER
 

@@ -29,9 +29,9 @@ typedef unsigned short u_short;
 #endif
 
 #include "mongoose/mongoose.h"
-#include "fw/src/mgos_hal.h"
-#include "fw/src/mgos_mongoose.h"
-#include "fw/src/mgos_net_hal.h"
+#include "mgos_hal.h"
+#include "mgos_mongoose.h"
+#include "mgos_net_hal.h"
 
 extern int mgos_please_quit;
 

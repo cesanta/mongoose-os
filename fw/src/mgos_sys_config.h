@@ -10,7 +10,7 @@
 
 #include "sys_config.h"
 #include "sys_ro_vars.h"
-#include "fw/src/mgos_init.h"
+#include "mgos_init.h"
 #include "common/cs_dbg.h"
 
 #include "mongoose/mongoose.h"

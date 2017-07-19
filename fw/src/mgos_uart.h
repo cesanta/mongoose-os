@@ -5,8 +5,8 @@
 
 /*
  * See on GitHub:
- * [mgos_uart.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_uart.h),
- * [mgos_uart.c](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_uart.c)
+ * [mgos_uart.h](https://github.com/cesanta/mongoose-os/blob/master/mgos_uart.h),
+ * [mgos_uart.c](https://github.com/cesanta/mongoose-os/blob/master/mgos_uart.c)
  */
 
 #ifndef CS_FW_SRC_MGOS_UART_H_
@@ -19,7 +19,7 @@
 #include "common/mbuf.h"
 #include "common/platform.h"
 
-#include "fw/src/mgos_init.h"
+#include "mgos_init.h"
 
 #if CS_PLATFORM == CS_P_CC3200
 #include "fw/platforms/cc3200/src/cc3200_uart.h"

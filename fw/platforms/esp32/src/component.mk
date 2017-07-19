@@ -30,8 +30,8 @@ FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.o
 
 NM = xtensa-esp32-elf-nm
 
-COMPONENT_EXTRA_INCLUDES = $(MGOS_PATH) $(MGOS_ESP_PATH)/include $(SPIFFS_PATH) \
-                           $(GEN_DIR) $(APP_SOURCE_DIRS)
+COMPONENT_EXTRA_INCLUDES = $(MGOS_PATH) $(MGOS_SRC_PATH) $(MGOS_ESP_PATH)/include \
+                           $(SPIFFS_PATH) $(GEN_DIR) $(APP_SOURCE_DIRS)
 
 MGOS_SRCS += mgos_config.c mgos_gpio.c mgos_hooks.c mgos_init.c mgos_mmap_esp.c \
              mgos_mongoose.c \

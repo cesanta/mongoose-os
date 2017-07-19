@@ -20,9 +20,9 @@
 #include "common/cs_dbg.h"
 #include "common/platforms/esp8266/esp_missing_includes.h"
 
-#include "fw/src/mgos_debug.h"
-#include "fw/src/mgos_hal.h"
-#include "fw/src/mgos_vfs.h"
+#include "mgos_debug.h"
+#include "mgos_hal.h"
+#include "mgos_vfs.h"
 
 #include "fw/platforms/esp8266/src/esp_coredump.h"
 #include "fw/platforms/esp8266/src/esp_fs.h"

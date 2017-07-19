@@ -22,9 +22,9 @@
 
 #include "frozen/frozen.h"
 
-#include "fw/src/mgos_hal.h"
-#include "fw/src/mgos_vfs.h"
-#include "fw/src/mgos_vfs_fs_spiffs.h"
+#include "mgos_hal.h"
+#include "mgos_vfs.h"
+#include "mgos_vfs_fs_spiffs.h"
 
 #include "fw/platforms/esp32/src/esp32_vfs_dev_partition.h"
 

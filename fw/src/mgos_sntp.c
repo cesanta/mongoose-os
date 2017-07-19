@@ -3,16 +3,16 @@
  * All rights reserved
  */
 
-#include "fw/src/mgos_sntp.h"
+#include "mgos_sntp.h"
 
 #include <stdbool.h>
 #include <stdlib.h>
 
-#include "fw/src/mgos_mongoose.h"
-#include "fw/src/mgos_net.h"
-#include "fw/src/mgos_sys_config.h"
-#include "fw/src/mgos_timers.h"
-#include "fw/src/mgos_utils.h"
+#include "mgos_mongoose.h"
+#include "mgos_net.h"
+#include "mgos_sys_config.h"
+#include "mgos_timers.h"
+#include "mgos_utils.h"
 
 struct time_change_cb {
   mgos_sntp_time_change_cb cb;

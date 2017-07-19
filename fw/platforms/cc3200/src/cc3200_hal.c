@@ -27,8 +27,8 @@
 #include "FreeRTOS.h"
 #include "semphr.h"
 
-#include "fw/src/mgos_hal.h"
-#include "fw/src/mgos_vfs.h"
+#include "mgos_hal.h"
+#include "mgos_vfs.h"
 
 #include "fw/platforms/cc3200/src/config.h"
 #include "fw/platforms/cc3200/src/cc3200_fs.h"

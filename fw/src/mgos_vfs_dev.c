@@ -5,7 +5,7 @@
 
 #include <string.h>
 
-#include "fw/src/mgos_vfs_dev.h"
+#include "mgos_vfs_dev.h"
 
 #include "common/cs_dbg.h"
 #include "common/queue.h"

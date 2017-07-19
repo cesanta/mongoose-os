@@ -10,7 +10,7 @@
 
 #include "fw/platforms/cc3200/src/cc3200_uart.h"
 #include "fw/platforms/cc3200/src/config.h"
-#include "fw/src/mgos_sys_config.h"
+#include "mgos_sys_config.h"
 
 #define ARM_PERIPH_BASE 0xE000E000
 

@@ -18,8 +18,8 @@
 #include "common/cs_dbg.h"
 #include "common/platform.h"
 #include "frozen/frozen.h"
-#include "fw/src/mgos_app.h"
-#include "fw/src/mgos_gpio.h"
+#include "mgos_app.h"
+#include "mgos_gpio.h"
 
 #include "mgos_aws_shadow.h"
 

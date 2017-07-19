@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include "fw/src/mgos_uart.h"
+#include "mgos_uart.h"
 
 #include <xc.h>
 

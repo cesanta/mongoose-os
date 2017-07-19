@@ -10,7 +10,7 @@
 
 #include "mongoose/mongoose.h"
 
-#include "fw/src/mgos_init.h"
+#include "mgos_init.h"
 #include "sys_config.h"
 
 #ifdef __cplusplus

@@ -12,8 +12,8 @@
 
 #include <stdbool.h>
 
-#include "fw/src/mgos_debug.h"
-#include "fw/src/mgos_sys_config.h"
+#include "mgos_debug.h"
+#include "mgos_sys_config.h"
 
 #ifdef __cplusplus
 extern "C" {

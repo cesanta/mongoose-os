@@ -5,13 +5,13 @@
 
 /*
  * View this file on GitHub:
- * [mgos_bitbang.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_bitbang.h)
+ * [mgos_bitbang.h](https://github.com/cesanta/mongoose-os/blob/master/mgos_bitbang.h)
  */
 
 #ifndef CS_FW_SRC_MGOS_BITBANG_H_
 #define CS_FW_SRC_MGOS_BITBANG_H_
 
-#include "fw/src/mgos_features.h"
+#include "mgos_features.h"
 
 #if MGOS_ENABLE_BITBANG
 

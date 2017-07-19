@@ -1,6 +1,6 @@
 #include <stm32_sdk_hal.h>
 #include <stdlib.h>
-#include "fw/src/mgos_gpio_hal.h"
+#include "mgos_gpio_hal.h"
 #include "common/queue.h"
 
 static void stm32_preinit_pin(struct stm32_gpio_def *def) {

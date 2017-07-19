@@ -5,7 +5,7 @@
 
 /*
  * View this file on GitHub:
- * [mgos_timers.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_timers.h)
+ * [mgos_timers.h](https://github.com/cesanta/mongoose-os/blob/master/mgos_timers.h)
  */
 
 #ifndef CS_FW_SRC_MGOS_TIMERS_H_
@@ -13,7 +13,7 @@
 
 #include <stdint.h>
 
-#include "fw/src/mgos_init.h"
+#include "mgos_init.h"
 
 #ifdef __cplusplus
 extern "C" {

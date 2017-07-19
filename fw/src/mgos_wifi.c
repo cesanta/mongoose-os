@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#include "fw/src/mgos_wifi.h"
-#include "fw/src/mgos_wifi_hal.h"
+#include "mgos_wifi.h"
+#include "mgos_wifi_hal.h"
 
 #include <stdbool.h>
 #include <stdlib.h>
@@ -12,10 +12,10 @@
 #include "common/cs_dbg.h"
 #include "common/queue.h"
 
-#include "fw/src/mgos_hal.h"
-#include "fw/src/mgos_net_hal.h"
-#include "fw/src/mgos_mongoose.h"
-#include "fw/src/mgos_sys_config.h"
+#include "mgos_hal.h"
+#include "mgos_net_hal.h"
+#include "mgos_mongoose.h"
+#include "mgos_sys_config.h"
 
 #include "mongoose/mongoose.h"
 

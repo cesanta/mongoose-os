@@ -2,7 +2,7 @@
  * Copyright (c) 2014-2016 Cesanta Software Limited
  * All rights reserved
  */
-#include "fw/src/mgos_sys_config.h"
+#include "mgos_sys_config.h"
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -12,15 +12,15 @@
 #include "common/cs_file.h"
 #include "common/json_utils.h"
 #include "common/str_util.h"
-#include "fw/src/mgos_config.h"
-#include "fw/src/mgos_debug.h"
-#include "fw/src/mgos_debug_hal.h"
-#include "fw/src/mgos_gpio.h"
-#include "fw/src/mgos_hal.h"
-#include "fw/src/mgos_init.h"
-#include "fw/src/mgos_mongoose.h"
-#include "fw/src/mgos_updater_common.h"
-#include "fw/src/mgos_utils.h"
+#include "mgos_config.h"
+#include "mgos_debug.h"
+#include "mgos_debug_hal.h"
+#include "mgos_gpio.h"
+#include "mgos_hal.h"
+#include "mgos_init.h"
+#include "mgos_mongoose.h"
+#include "mgos_updater_common.h"
+#include "mgos_utils.h"
 
 #define PLACEHOLDER_CHAR '?'
 

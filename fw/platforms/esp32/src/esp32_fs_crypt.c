@@ -14,7 +14,7 @@
 
 #include "common/cs_dbg.h"
 #include "common/spiffs/spiffs_vfs.h"
-#include "fw/src/mgos_hal.h"
+#include "mgos_hal.h"
 
 /*
  * ESP32 contains a hardware-accelerated flash encryption module. It uses a key

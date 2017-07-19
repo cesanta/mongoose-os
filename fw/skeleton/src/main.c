@@ -1,5 +1,5 @@
-#include "fw/src/mgos_app.h"
-#include "fw/src/mgos_net.h"
+#include "mgos_app.h"
+#include "mgos_net.h"
 
 static void on_net_event(enum mgos_net_event ev, const struct mgos_net_event_data *ev_data, void *arg) {
   switch (ev) {

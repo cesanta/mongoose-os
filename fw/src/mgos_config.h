@@ -5,8 +5,8 @@
 
 /*
  * See on GitHub:
- * [mgos_config.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_config.h),
- * [mgos_config.c](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_config.c)
+ * [mgos_config.h](https://github.com/cesanta/mongoose-os/blob/master/mgos_config.h),
+ * [mgos_config.c](https://github.com/cesanta/mongoose-os/blob/master/mgos_config.c)
  *
  * The usage pattern is this:
  * 1. Create an empty config struct at the beginning.

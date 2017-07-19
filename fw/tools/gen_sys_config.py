@@ -273,7 +273,7 @@ class HWriter(object):
 #ifndef {name_uc}_H_
 #define {name_uc}_H_
 
-#include "fw/src/mgos_config.h"
+#include "mgos_config.h"
 
 #ifdef __cplusplus
 extern "C" {{

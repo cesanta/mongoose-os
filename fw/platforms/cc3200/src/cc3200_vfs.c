@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include "fw/src/mgos_vfs.h"
+#include "mgos_vfs.h"
 
 /* libc interfaces are defined slightly differently for Newlib (when compiling
  * with GCC) and TI's libc (when compiling with TICC). */

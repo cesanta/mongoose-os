@@ -17,8 +17,8 @@
 
 #include "umm_malloc_cfg.h"
 
-#include "fw/src/mgos_debug.h"
-#include "fw/src/mgos_uart.h"
+#include "mgos_debug.h"
+#include "mgos_uart.h"
 
 #include "fw/platforms/esp8266/src/esp_exc.h"
 

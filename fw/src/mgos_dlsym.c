@@ -5,7 +5,7 @@
 
 #include <string.h>
 
-#include "fw/src/mgos_dlsym.h"
+#include "mgos_dlsym.h"
 
 extern struct mgos_ffi_export ffi_exports[];
 extern int ffi_exports_cnt;

@@ -6,8 +6,8 @@
 #ifndef CS_FW_SRC_MGOS_GPIO_HAL_H_
 #define CS_FW_SRC_MGOS_GPIO_HAL_H_
 
-#include "fw/src/mgos_gpio.h"
-#include "fw/src/mgos_init.h"
+#include "mgos_gpio.h"
+#include "mgos_init.h"
 
 #ifdef __cplusplus
 extern "C" {

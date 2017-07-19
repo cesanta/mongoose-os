@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include "fw/src/mgos_gpio_hal.h"
+#include "mgos_gpio_hal.h"
 
 /* TODO(dfrank) */
 

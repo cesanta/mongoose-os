@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include "fw/src/mgos_vfs.h"
+#include "mgos_vfs.h"
 
 #include <string.h>
 #if MGOS_VFS_DEFINE_LIBC_REENT_API
@@ -15,8 +15,8 @@
 #include "common/cs_dbg.h"
 #include "common/queue.h"
 
-#include "fw/src/mgos_debug.h"
-#include "fw/src/mgos_hal.h"
+#include "mgos_debug.h"
+#include "mgos_hal.h"
 
 #ifdef CS_MMAP
 #include <sys/mman.h>

@@ -17,7 +17,7 @@
 #include "user_interface.h"
 #endif
 
-#include "fw/src/mgos_hal.h"
+#include "mgos_hal.h"
 #include "fw/platforms/esp8266/src/esp_features.h"
 
 #if MGOS_ENABLE_HEAP_LOG

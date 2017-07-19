@@ -245,7 +245,7 @@ def cmd_gen_ffi_exports(args):
         print >>out, " *  ", p
     print >>out, " */\n"
     print >>out, "#include <stdbool.h>\n"
-    print >>out, "#include \"fw/src/mgos_dlsym.h\"\n"
+    print >>out, "#include \"mgos_dlsym.h\"\n"
 
     # Emit forward declarations of all symbols to be exported
     print >>out, "/* NOTE: signatures are fake */"

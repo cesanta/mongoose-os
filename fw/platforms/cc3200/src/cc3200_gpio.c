@@ -6,8 +6,8 @@
  * Documentation: TRM (swru367), Chapter 5.
  */
 
-#include "fw/src/mgos_gpio.h"
-#include "fw/src/mgos_gpio_hal.h"
+#include "mgos_gpio.h"
+#include "mgos_gpio_hal.h"
 
 #include <inttypes.h>
 #include <stdio.h>
@@ -25,7 +25,7 @@
 #include "oslib/osi.h"
 
 #include "common/cs_dbg.h"
-#include "fw/src/mgos_hal.h"
+#include "mgos_hal.h"
 
 /*
  * pin is a literal pin number, as that seems to be the custom in TI land.

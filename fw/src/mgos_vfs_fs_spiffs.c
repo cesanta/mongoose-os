@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include "fw/src/mgos_vfs_fs_spiffs.h"
+#include "mgos_vfs_fs_spiffs.h"
 
 #include <errno.h>
 #include <stdio.h>
@@ -17,7 +17,7 @@
 
 #include "frozen/frozen.h"
 
-#include "fw/src/mgos_vfs.h"
+#include "mgos_vfs.h"
 
 #if CS_SPIFFS_ENABLE_ENCRYPTION
 #include "esp_flash_encrypt.h"

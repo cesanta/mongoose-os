@@ -5,8 +5,8 @@
 
 /*
  * See on GitHub:
- * [mgos_gpio.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_gpio.h),
- * [mgos_gpio.c](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_gpio.c)
+ * [mgos_gpio.h](https://github.com/cesanta/mongoose-os/blob/master/mgos_gpio.h),
+ * [mgos_gpio.c](https://github.com/cesanta/mongoose-os/blob/master/mgos_gpio.c)
  */
 
 #ifndef CS_FW_SRC_MGOS_GPIO_H_
@@ -14,7 +14,7 @@
 
 #include <stdbool.h>
 
-#include "fw/src/mgos_init.h"
+#include "mgos_init.h"
 
 #ifdef __cplusplus
 extern "C" {

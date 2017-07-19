@@ -6,7 +6,7 @@
 #include <stdbool.h>
 #include "common/platform.h"
 #include "driver/adc.h"
-#include "fw/src/mgos_adc.h"
+#include "mgos_adc.h"
 
 static int esp32_get_channel(int pin) {
   static int pins[] = {36, 37, 38, 39, 32, 33, 34, 35};

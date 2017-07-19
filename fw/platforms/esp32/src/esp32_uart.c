@@ -17,7 +17,7 @@
 
 #include "common/cs_dbg.h"
 #include "common/cs_rbuf.h"
-#include "fw/src/mgos_uart_hal.h"
+#include "mgos_uart_hal.h"
 
 #define UART_RX_INTS (UART_RXFIFO_FULL_INT_ENA | UART_RXFIFO_TOUT_INT_ENA)
 #define UART_TX_INTS (UART_TXFIFO_EMPTY_INT_ENA)

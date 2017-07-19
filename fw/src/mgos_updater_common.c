@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include "fw/src/mgos_updater_common.h"
+#include "mgos_updater_common.h"
 
 #include <stdio.h>
 #include <strings.h>
@@ -12,10 +12,10 @@
 #include "common/cs_file.h"
 #include "common/str_util.h"
 
-#include "fw/src/mgos_hal.h"
-#include "fw/src/mgos_sys_config.h"
-#include "fw/src/mgos_timers.h"
-#include "fw/src/mgos_updater_hal.h"
+#include "mgos_hal.h"
+#include "mgos_sys_config.h"
+#include "mgos_timers.h"
+#include "mgos_updater_hal.h"
 
 /*
  * Using static variable (not only c->user_data), it allows to check if update

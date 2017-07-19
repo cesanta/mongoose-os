@@ -5,7 +5,7 @@
 
 #include <stdbool.h>
 #include "common/cs_dbg.h"
-#include "fw/src/mgos_pwm.h"
+#include "mgos_pwm.h"
 
 /* TODO(lsm): implement */
 bool mgos_pwm_set(int pin, int freq, int duty) {

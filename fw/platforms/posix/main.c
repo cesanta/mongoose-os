@@ -11,10 +11,10 @@
 
 #include "common/cs_dbg.h"
 
-#include "fw/src/mgos_init.h"
-#include "fw/src/mgos_mongoose.h"
-#include "fw/src/mgos_sys_config.h"
-#include "fw/src/mgos_uart_hal.h"
+#include "mgos_init.h"
+#include "mgos_mongoose.h"
+#include "mgos_sys_config.h"
+#include "mgos_uart_hal.h"
 
 #include "fw.h"
 

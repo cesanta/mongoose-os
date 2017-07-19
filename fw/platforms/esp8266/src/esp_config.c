@@ -12,9 +12,9 @@
 #endif
 
 #include "mongoose/mongoose.h"
-#include "fw/src/mgos_mongoose.h"
-#include "fw/src/mgos_wifi.h"
-#include "fw/src/mgos_sys_config.h"
+#include "mgos_mongoose.h"
+#include "mgos_wifi.h"
+#include "mgos_sys_config.h"
 #include "common/cs_file.h"
 #include "common/cs_dbg.h"
 

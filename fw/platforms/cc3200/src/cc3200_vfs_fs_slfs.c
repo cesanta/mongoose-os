@@ -11,7 +11,7 @@
 #include "common/platform.h"
 #include "common/platforms/simplelink/sl_fs_slfs.h"
 
-#include "fw/src/mgos_vfs.h"
+#include "mgos_vfs.h"
 
 bool s_slfs_mounted = false;
 

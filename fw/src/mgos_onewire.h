@@ -6,7 +6,7 @@
 #ifndef CS_FW_SRC_MGOS_ONEWIRE_H_
 #define CS_FW_SRC_MGOS_ONEWIRE_H_
 
-#include "fw/src/mgos_features.h"
+#include "mgos_features.h"
 
 #if MGOS_ENABLE_ONEWIRE
 

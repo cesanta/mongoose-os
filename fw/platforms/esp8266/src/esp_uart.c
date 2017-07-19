@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "fw/src/mgos_uart_hal.h"
+#include "mgos_uart_hal.h"
 
 #ifdef RTOS_SDK
 #include <esp_common.h>
@@ -19,7 +19,7 @@
 #include "common/cs_rbuf.h"
 #include "common/platforms/esp8266/esp_missing_includes.h"
 #include "common/platforms/esp8266/uart_register.h"
-#include "fw/src/mgos_utils.h"
+#include "mgos_utils.h"
 
 #ifndef HOST_INF_SEL
 #define HOST_INF_SEL (0x28)

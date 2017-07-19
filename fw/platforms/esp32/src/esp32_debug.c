@@ -21,11 +21,11 @@
 
 #include "common/cs_dbg.h"
 #include "common/mbuf.h"
-#include "fw/src/mgos_debug.h"
-#include "fw/src/mgos_debug_hal.h"
-#include "fw/src/mgos_features.h"
-#include "fw/src/mgos_hal.h"
-#include "fw/src/mgos_init.h"
+#include "mgos_debug.h"
+#include "mgos_debug_hal.h"
+#include "mgos_features.h"
+#include "mgos_hal.h"
+#include "mgos_init.h"
 
 static int debug_open(const char *path, int flags, int mode) {
   (void) path;

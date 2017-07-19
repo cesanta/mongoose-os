@@ -3,16 +3,16 @@
  * All rights reserved
  */
 
-#include "fw/src/mgos_uart.h"
+#include "mgos_uart.h"
 
 #include <stdlib.h>
 
 #include "common/cs_dbg.h"
 
-#include "fw/src/mgos_hal.h"
-#include "fw/src/mgos_mongoose.h"
-#include "fw/src/mgos_uart_hal.h"
-#include "fw/src/mgos_utils.h"
+#include "mgos_hal.h"
+#include "mgos_mongoose.h"
+#include "mgos_uart_hal.h"
+#include "mgos_utils.h"
 
 #ifndef IRAM
 #define IRAM

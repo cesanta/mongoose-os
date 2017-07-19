@@ -9,7 +9,7 @@
 #include "common/cs_dbg.h"
 #include "common/queue.h"
 
-#include "fw/src/mgos_hooks.h"
+#include "mgos_hooks.h"
 
 struct hook_entry {
   SLIST_ENTRY(hook_entry) entries;

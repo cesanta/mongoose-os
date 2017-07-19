@@ -1,9 +1,9 @@
 #include "stm32_lwip.h"
-#include "fw/src/mgos_wifi.h"
+#include "mgos_wifi.h"
 #include "common/platform.h"
 #include "common/cs_dbg.h"
 #include "mongoose/mongoose.h"
-#include "fw/src/mgos_wifi.h"
+#include "mgos_wifi.h"
 #include <lwip/igmp.h>
 #include <lwip/inet.h>
 #include <lwip/netif.h>

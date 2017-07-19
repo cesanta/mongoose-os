@@ -19,7 +19,7 @@
 #include "common/platform.h"
 #include "common/queue.h"
 
-#include "fw/src/mgos_vfs_dev.h"
+#include "mgos_vfs_dev.h"
 
 #ifdef CS_MMAP
 #if CS_PLATFORM == CS_P_ESP32

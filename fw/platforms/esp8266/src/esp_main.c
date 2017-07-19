@@ -18,14 +18,14 @@
 #endif
 
 #include "common/cs_dbg.h"
-#include "fw/src/mgos_app.h"
-#include "fw/src/mgos_debug.h"
-#include "fw/src/mgos_hal.h"
-#include "fw/src/mgos_init.h"
-#include "fw/src/mgos_mongoose.h"
-#include "fw/src/mgos_uart.h"
-#include "fw/src/mgos_updater_common.h"
-#include "fw/src/mgos_updater_hal.h"
+#include "mgos_app.h"
+#include "mgos_debug.h"
+#include "mgos_hal.h"
+#include "mgos_init.h"
+#include "mgos_mongoose.h"
+#include "mgos_uart.h"
+#include "mgos_updater_common.h"
+#include "mgos_updater_hal.h"
 #include "common/platforms/esp8266/esp_umm_malloc.h"
 
 #include "fw/platforms/esp8266/src/esp_adc.h"

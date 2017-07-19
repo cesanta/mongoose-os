@@ -3,12 +3,12 @@
  * All rights reserved
  */
 
-#include "fw/src/mgos_bitbang.h"
+#include "mgos_bitbang.h"
 
 #include "common/cs_dbg.h"
 
-#include "fw/src/mgos_gpio.h"
-#include "fw/src/mgos_hal.h"
+#include "mgos_gpio.h"
+#include "mgos_hal.h"
 
 #ifndef IRAM
 #define IRAM

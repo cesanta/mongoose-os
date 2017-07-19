@@ -62,7 +62,7 @@
 #include "freertos/FreeRTOS.h"
 #include "freertos/portmacro.h"
 #else
-#include "fw/src/mgos_hal.h"
+#include "mgos_hal.h"
 #endif
 
 /* Defined in linker script. */

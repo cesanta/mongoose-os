@@ -6,13 +6,13 @@
 #ifndef CS_FW_SRC_MGOS_WIFI_H_
 #define CS_FW_SRC_MGOS_WIFI_H_
 
-#include "fw/src/mgos_features.h"
+#include "mgos_features.h"
 
 #if MGOS_ENABLE_WIFI
 
 #include <stdbool.h>
-#include "fw/src/mgos_init.h"
-#include "fw/src/mgos_sys_config.h"
+#include "mgos_init.h"
+#include "mgos_sys_config.h"
 
 #ifdef __cplusplus
 extern "C" {

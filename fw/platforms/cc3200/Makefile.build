@@ -99,7 +99,7 @@ include $(MGOS_PATH)/fw/common.mk
 VPATH = $(APP_SOURCE_DIRS) $(MGOS_CC3200_SRC_PATH) \
         $(BOOT_PATH)/lib $(BUILD_DIR) \
         $(MONGOOSE_PATH) $(FROZEN_PATH)
-IPATH = $(APP_SOURCE_DIRS) $(MGOS_CC3200_SRC_PATH) $(BOOT_PATH)/lib $(GEN_DIR) $(MGOS_PATH)
+IPATH = $(APP_SOURCE_DIRS) $(MGOS_PATH) $(MGOS_SRC_PATH) $(MGOS_CC3200_SRC_PATH) $(BOOT_PATH)/lib $(GEN_DIR)
 
 # Note: CC3200 has only 32 GPIO but our port uses pin-based numbering
 # and those go from 1 to 64.

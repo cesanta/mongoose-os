@@ -2,12 +2,12 @@
 
 #include "common/platform.h"
 #include "common/cs_file.h"
-#include "fw/src/mgos_app.h"
-#include "fw/src/mgos_gpio.h"
-#include "fw/src/mgos_sys_config.h"
-#include "fw/src/mgos_timers.h"
-#include "fw/src/mgos_hal.h"
-#include "fw/src/mgos_dlsym.h"
+#include "mgos_app.h"
+#include "mgos_gpio.h"
+#include "mgos_sys_config.h"
+#include "mgos_timers.h"
+#include "mgos_hal.h"
+#include "mgos_dlsym.h"
 #include "mjs.h"
 
 #if CS_PLATFORM == CS_P_ESP8266

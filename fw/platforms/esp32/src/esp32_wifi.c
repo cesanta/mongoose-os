@@ -15,10 +15,10 @@
 #include "common/cs_file.h"
 #include "common/queue.h"
 
-#include "fw/src/mgos_hal.h"
-#include "fw/src/mgos_net_hal.h"
-#include "fw/src/mgos_sys_config.h"
-#include "fw/src/mgos_wifi_hal.h"
+#include "mgos_hal.h"
+#include "mgos_net_hal.h"
+#include "mgos_sys_config.h"
+#include "mgos_wifi_hal.h"
 
 static wifi_mode_t s_cur_mode = WIFI_MODE_NULL;
 

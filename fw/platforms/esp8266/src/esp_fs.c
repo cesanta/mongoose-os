@@ -7,8 +7,8 @@
 
 #include "frozen/frozen.h"
 
-#include "fw/src/mgos_vfs.h"
-#include "fw/src/mgos_vfs_fs_spiffs.h"
+#include "mgos_vfs.h"
+#include "mgos_vfs_fs_spiffs.h"
 
 #include "fw/platforms/esp8266/src/esp_vfs_dev_sysflash.h"
 

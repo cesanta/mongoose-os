@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include "fw/src/mgos_uart_hal.h"
+#include "mgos_uart_hal.h"
 
 #include <stdlib.h>
 
@@ -24,7 +24,7 @@
 #include "oslib/osi.h"
 
 #include "common/cs_rbuf.h"
-#include "fw/src/mgos_utils.h"
+#include "mgos_utils.h"
 
 #define UART_RX_INTS (UART_INT_RX | UART_INT_RT)
 #define UART_TX_INTS (UART_INT_TX)

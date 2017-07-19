@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include "fw/src/mgos.h"
+#include "mgos.h"
 
 enum mgos_init_result mgos_init(void) {
   enum mgos_init_result r;

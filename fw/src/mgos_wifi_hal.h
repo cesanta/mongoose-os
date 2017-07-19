@@ -6,8 +6,8 @@
 #ifndef CS_FW_SRC_MGOS_WIFI_HAL_H_
 #define CS_FW_SRC_MGOS_WIFI_HAL_H_
 
-#include "fw/src/mgos_net.h"
-#include "fw/src/mgos_wifi.h"
+#include "mgos_net.h"
+#include "mgos_wifi.h"
 
 #if MGOS_ENABLE_WIFI
 

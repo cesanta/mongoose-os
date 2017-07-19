@@ -14,8 +14,8 @@
 #include <unistd.h>
 #include <poll.h>
 
-#include "fw/src/mgos_gpio.h"
-#include "fw/src/mgos_gpio_hal.h"
+#include "mgos_gpio.h"
+#include "mgos_gpio_hal.h"
 
 int gpio_export(int gpio_no) {
   char buf[50];

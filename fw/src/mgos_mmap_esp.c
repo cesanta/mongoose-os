@@ -7,8 +7,8 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-#include "fw/src/mgos_mmap_esp.h"
-#include "fw/src/mgos_vfs.h"
+#include "mgos_mmap_esp.h"
+#include "mgos_vfs.h"
 
 #include "common/cs_dbg.h"
 #include "common/mbuf.h"

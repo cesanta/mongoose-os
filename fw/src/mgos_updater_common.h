@@ -14,9 +14,9 @@
 
 #include "frozen/frozen.h"
 #include "mongoose/mongoose.h"
-#include "fw/src/mgos_timers.h"
-#include "fw/src/mgos_updater.h"
-#include "fw/src/mgos_updater_hal.h"
+#include "mgos_timers.h"
+#include "mgos_updater.h"
+#include "mgos_updater_hal.h"
 
 #ifdef __cplusplus
 extern "C" {

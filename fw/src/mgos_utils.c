@@ -6,8 +6,8 @@
 #include <stdlib.h>
 
 #include "common/cs_dbg.h"
-#include "fw/src/mgos_hal.h"
-#include "fw/src/mgos_timers.h"
+#include "mgos_hal.h"
+#include "mgos_timers.h"
 
 extern enum cs_log_level cs_log_threshold;
 extern FILE *cs_log_file;

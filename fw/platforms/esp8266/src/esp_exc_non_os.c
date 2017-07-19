@@ -12,7 +12,7 @@
 
 #include <xtensa/corebits.h>
 
-#include "fw/src/mgos_mmap_esp.h"
+#include "mgos_mmap_esp.h"
 
 #include "common/platforms/esp8266/esp_missing_includes.h"
 #include "fw/platforms/esp8266/src/esp_exc.h"

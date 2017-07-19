@@ -14,7 +14,7 @@
 #include "common/mg_str.h"
 #include "frozen/frozen.h"
 
-#include "fw/src/mgos_updater.h"
+#include "mgos_updater.h"
 
 #ifdef __cplusplus
 extern "C" {

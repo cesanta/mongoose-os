@@ -6,7 +6,7 @@
 #ifndef CS_FW_SRC_MGOS_FFI_H_
 #define CS_FW_SRC_MGOS_FFI_H_
 
-#include "fw/src/mgos_features.h"
+#include "mgos_features.h"
 
 struct mgos_ffi_export {
   const char *name;

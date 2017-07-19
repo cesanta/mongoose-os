@@ -1,4 +1,4 @@
-#include "fw/src/mgos_wifi.h"
+#include "mgos_wifi.h"
 #include "stm32_lwip.h"
 
 void mgos_wifi_hal_init(void) {

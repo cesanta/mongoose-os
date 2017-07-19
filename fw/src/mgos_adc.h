@@ -5,8 +5,8 @@
 
 /*
  * See on GitHub:
- * [mgos_adc.h](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_adc.h),
- * [mgos_adc.c](https://github.com/cesanta/mongoose-os/blob/master/fw/src/mgos_adc.c)
+ * [mgos_adc.h](https://github.com/cesanta/mongoose-os/blob/master/mgos_adc.h),
+ * [mgos_adc.c](https://github.com/cesanta/mongoose-os/blob/master/mgos_adc.c)
  */
 
 #ifndef CS_FW_SRC_MGOS_ADC_H_

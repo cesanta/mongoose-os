@@ -12,10 +12,10 @@
 #include "frozen/frozen.h"
 #include "mongoose/mongoose.h"
 
-#include "fw/src/mgos_hal.h"
-#include "fw/src/mgos_timers.h"
-#include "fw/src/mgos_vfs_dev.h"
-#include "fw/src/mgos_vfs_fs_spiffs.h"
+#include "mgos_hal.h"
+#include "mgos_timers.h"
+#include "mgos_vfs_dev.h"
+#include "mgos_vfs_fs_spiffs.h"
 
 #include "fw/platforms/cc3200/boot/lib/boot.h"
 #include "fw/platforms/cc3200/src/cc3200_vfs_dev_slfs_container_meta.h"

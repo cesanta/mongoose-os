@@ -10,11 +10,11 @@
 #include "soc/timer_group_struct.h"
 #include "soc/timer_group_reg.h"
 
-#include "fw/src/mgos_debug.h"
-#include "fw/src/mgos_hal.h"
-#include "fw/src/mgos_sys_config.h"
-#include "fw/src/mgos_vfs.h"
-#include "fw/src/mgos_wifi.h"
+#include "mgos_debug.h"
+#include "mgos_hal.h"
+#include "mgos_sys_config.h"
+#include "mgos_vfs.h"
+#include "mgos_wifi.h"
 #include "fw/platforms/esp32/src/esp32_fs.h"
 
 size_t mgos_get_heap_size(void) {

@@ -33,8 +33,8 @@
 #include "FreeRTOS.h"
 #include "semphr.h"
 
-#include "fw/src/mgos_app.h"
-#include "fw/src/mgos_hal.h"
+#include "mgos_app.h"
+#include "mgos_hal.h"
 
 #include "fw/platforms/cc3200/src/config.h"
 #include "fw/platforms/cc3200/src/cc3200_exc.h"

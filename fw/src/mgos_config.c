@@ -8,7 +8,7 @@
 #include "common/json_utils.h"
 #include "common/mbuf.h"
 #include "common/cs_dbg.h"
-#include "fw/src/mgos_config.h"
+#include "mgos_config.h"
 
 bool mgos_conf_check_access(const struct mg_str key, const char *acl) {
   struct mg_str entry;

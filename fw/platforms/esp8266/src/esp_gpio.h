@@ -9,7 +9,7 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "fw/src/mgos_gpio.h"
+#include "mgos_gpio.h"
 
 #define ENTER_CRITICAL(type) ETS_INTR_DISABLE(type)
 #define EXIT_CRITICAL(type) ETS_INTR_ENABLE(type)

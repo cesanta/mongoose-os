@@ -3,15 +3,15 @@
  * All rights reserved
  */
 
-#include "fw/src/mgos_net.h"
-#include "fw/src/mgos_net_hal.h"
+#include "mgos_net.h"
+#include "mgos_net_hal.h"
 
 #include "common/cs_dbg.h"
 #include "common/queue.h"
 
-#include "fw/src/mgos_hal.h"
-#include "fw/src/mgos_mongoose.h"
-#include "fw/src/mgos_wifi_hal.h"
+#include "mgos_hal.h"
+#include "mgos_mongoose.h"
+#include "mgos_wifi_hal.h"
 
 struct cb_info {
   mgos_net_event_handler_t cb;

@@ -6,7 +6,7 @@
 #ifndef SYS_CONF_H_
 #define SYS_CONF_H_
 
-#include "fw/src/mgos_config.h"
+#include "mgos_config.h"
 
 #ifdef __cplusplus
 extern "C" {

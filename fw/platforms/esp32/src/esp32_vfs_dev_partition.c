@@ -16,9 +16,9 @@
 
 #include "frozen/frozen.h"
 
-#include "fw/src/mgos_hal.h"
-#include "fw/src/mgos_vfs.h"
-#include "fw/src/mgos_vfs_dev.h"
+#include "mgos_hal.h"
+#include "mgos_vfs.h"
+#include "mgos_vfs_dev.h"
 
 static bool esp32_vfs_dev_partition_open(struct mgos_vfs_dev *dev,
                                          const char *opts) {

@@ -7,7 +7,7 @@
 
 #include "common/cs_dbg.h"
 #include "driver/ledc.h"
-#include "fw/src/mgos_pwm.h"
+#include "mgos_pwm.h"
 
 #define LEDC_MODE LEDC_HIGH_SPEED_MODE
 #define LEDC_DEPTH LEDC_TIMER_10_BIT

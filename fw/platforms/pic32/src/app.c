@@ -10,9 +10,9 @@
 #include "pic32_uart.h"
 #include "pic32_ethernet.h"
 #include "common/cs_dbg.h"
-#include "fw/src/mgos_init.h"
-#include "fw/src/mgos_mongoose.h"
-#include "fw/src/mgos_sys_config.h"
+#include "mgos_init.h"
+#include "mgos_mongoose.h"
+#include "mgos_sys_config.h"
 
 void APP_Initialize(void) {
   pic32_ethernet_init();

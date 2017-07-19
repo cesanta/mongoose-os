@@ -10,10 +10,10 @@
 #include "esp_intr.h"
 #include "sdkconfig.h"
 
-#include "fw/src/mgos_bitbang.h"
-#include "fw/src/mgos_gpio.h"
-#include "fw/src/mgos_gpio_hal.h"
-#include "fw/src/mgos_hal.h"
+#include "mgos_bitbang.h"
+#include "mgos_gpio.h"
+#include "mgos_gpio_hal.h"
+#include "mgos_hal.h"
 
 #include "soc/gpio_struct.h"
 #include "driver/gpio.h"

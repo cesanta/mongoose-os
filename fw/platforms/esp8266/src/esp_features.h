@@ -6,7 +6,7 @@
 #ifndef CS_FW_PLATFORMS_ESP8266_SRC_ESP_FEATURES_H_
 #define CS_FW_PLATFORMS_ESP8266_SRC_ESP_FEATURES_H_
 
-#include "fw/src/mgos_features.h"
+#include "mgos_features.h"
 
 #ifndef ESP_ENABLE_HW_WATCHDOG
 #define ESP_ENABLE_HW_WATCHDOG 0

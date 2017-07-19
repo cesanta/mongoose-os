@@ -1,9 +1,9 @@
 #include <stm32_sdk_hal.h>
-#include "fw/src/mgos_hal.h"
-#include "fw/src/mgos_sys_config.h"
-#include "fw/src/mgos_mongoose.h"
-#include "fw/src/mgos_wifi.h"
-#include "fw/src/mgos_timers.h"
+#include "mgos_hal.h"
+#include "mgos_sys_config.h"
+#include "mgos_mongoose.h"
+#include "mgos_wifi.h"
+#include "mgos_timers.h"
 
 static int s_mongoose_poll_scheduled;
 

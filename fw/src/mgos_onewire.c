@@ -3,11 +3,11 @@
  * All rights reserved
 */
 
-#include "fw/src/mgos_onewire.h"
+#include "mgos_onewire.h"
 
 #include <string.h>
-#include "fw/src/mgos_gpio.h"
-#include "fw/src/mgos_hal.h"
+#include "mgos_gpio.h"
+#include "mgos_hal.h"
 
 #define HIGH 0x1
 #define LOW 0x0
