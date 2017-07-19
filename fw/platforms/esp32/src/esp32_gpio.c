@@ -120,9 +120,9 @@ IRAM void mgos_gpio_write(int pin, bool level) {
 
 bool mgos_gpio_toggle(int pin) {
   uint32_t cur_out;
-  if (pin > 0 && pin < 32) {
+  if (pin >= 0 && pin < 32) {
     cur_out = (GPIO.out & (1U << pin));
-  } else if (pin > 32 && pin < MGOS_NUM_GPIO) {
+  } else if (pin == 32 || pin == 33) { /* 34 - 39 are input-only. */
     cur_out = (GPIO.out1.val & (1U << (pin - 32)));
   } else {
     return false;
