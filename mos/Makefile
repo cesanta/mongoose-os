@@ -1,8 +1,8 @@
-.PHONY: generate
+.PHONY: build clean deploy deploy-fwbuild deploy-mos-binary downloads generate install
 
 TAG ?= latest
 
-all: generate
+all: build
 
 generate version.go version.json:
 	@go install cesanta.com/vendor/github.com/jteeuwen/go-bindata/go-bindata
@@ -11,6 +11,9 @@ generate version.go version.json:
 	@gofmt -w bindata_assetfs.go
 	@cat version.json
 	@echo
+
+build: generate
+	go build -v -i
 
 install: generate
 	go install

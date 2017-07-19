@@ -1,4 +1,4 @@
-# git-build-recipe format 0.4 deb-version {latest-tag}-{revtime}+{git-commit}
+# git-build-recipe format 0.4 deb-version {revtime}+{git-commit}
 
 # Build from the current master.
 https://github.com/cesanta/mongoose-os.git master
