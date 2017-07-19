@@ -6,6 +6,7 @@
 #ifndef CS_FW_SRC_MGOS_WIFI_HAL_H_
 #define CS_FW_SRC_MGOS_WIFI_HAL_H_
 
+#include "fw/src/mgos_net.h"
 #include "fw/src/mgos_wifi.h"
 
 #if MGOS_ENABLE_WIFI
@@ -23,8 +24,11 @@ bool mgos_wifi_dev_sta_connect(void); /* To the previously _setup network. */
 bool mgos_wifi_dev_sta_disconnect(void);
 enum mgos_wifi_status mgos_wifi_dev_sta_get_status(void);
 
+bool mgos_wifi_dev_get_ip_info(int if_instance,
+                               struct mgos_net_ip_info *ip_info);
+
 /* Invoke this when Wifi connection state changes. */
-void mgos_wifi_dev_on_change_cb(enum mgos_wifi_status ev);
+void mgos_wifi_dev_on_change_cb(enum mgos_net_event ev);
 
 bool mgos_wifi_dev_start_scan(void);
 /*

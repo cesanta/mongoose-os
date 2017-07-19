@@ -16,8 +16,8 @@
 #include "common/platform.h"
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_mongoose.h"
+#include "fw/src/mgos_net_hal.h"
 #include "fw/src/mgos_sys_config.h"
-#include "fw/src/mgos_wifi.h"
 #include "fw/src/mgos_wifi_hal.h"
 
 #include "config.h"
@@ -30,7 +30,6 @@ struct cc3200_wifi_config {
   char *pass;
   char *user;
   char *anon_identity;
-  SlIpV4AcquiredAsync_t acquired_ip;
   SlNetCfgIpV4Args_t static_ip;
 };
 
@@ -75,11 +74,11 @@ static bool ensure_role_sta(void) {
 void SimpleLinkWlanEventHandler(SlWlanEvent_t *e) {
   switch (e->Event) {
     case SL_WLAN_CONNECT_EVENT: {
-      mgos_wifi_dev_on_change_cb(MGOS_WIFI_CONNECTED);
+      mgos_wifi_dev_on_change_cb(MGOS_NET_EV_CONNECTED);
       break;
     }
     case SL_WLAN_DISCONNECT_EVENT: {
-      mgos_wifi_dev_on_change_cb(MGOS_WIFI_DISCONNECTED);
+      mgos_wifi_dev_on_change_cb(MGOS_NET_EV_DISCONNECTED);
       break;
     }
     default:
@@ -90,9 +89,7 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *e) {
 void sl_net_app_eh(SlNetAppEvent_t *e) {
   if (e->Event == SL_NETAPP_IPV4_IPACQUIRED_EVENT &&
       s_current_role == ROLE_STA) {
-    SlIpV4AcquiredAsync_t *ed = &e->EventData.ipAcquiredV4;
-    memcpy(&s_wifi_sta_config.acquired_ip, ed, sizeof(*ed));
-    mgos_wifi_dev_on_change_cb(MGOS_WIFI_IP_ACQUIRED);
+    mgos_wifi_dev_on_change_cb(MGOS_NET_EV_IP_ACQUIRED);
   } else if (e->Event == SL_NETAPP_IP_LEASED_EVENT) {
     SlIpLeasedAsync_t *ed = &e->EventData.ipLeased;
     LOG(LL_INFO,
@@ -278,6 +275,29 @@ char *mgos_wifi_get_connected_ssid(void) {
   return NULL;
 }
 
+bool mgos_wifi_dev_get_ip_info(int if_instance,
+                               struct mgos_net_ip_info *ip_info) {
+  switch (if_instance) {
+    case MGOS_NET_IF_WIFI_STA: {
+      SlNetCfgIpV4Args_t info = {0};
+      _u8 len = sizeof(info);
+      _u8 dhcp_is_on = 0;
+      if (s_current_role != ROLE_STA) return false;
+      sl_NetCfgGet(SL_IPV4_STA_P2P_CL_GET_INFO, &dhcp_is_on, &len,
+                   (_u8 *) &info);
+      ip_info->ip.sin_addr.s_addr = ntohl(info.ipV4);
+      ip_info->netmask.sin_addr.s_addr = ntohl(info.ipV4Mask);
+      ip_info->gw.sin_addr.s_addr = ntohl(info.ipV4Gateway);
+      return true;
+    }
+    case MGOS_NET_IF_WIFI_AP: {
+      /* TODO(rojer) */
+      return false;
+    }
+  }
+  return false;
+}
+
 static char *ip2str(uint32_t ip) {
   char *ipstr = NULL;
   asprintf(&ipstr, "%lu.%lu.%lu.%lu", SL_IPV4_BYTE(ip, 3), SL_IPV4_BYTE(ip, 2),
@@ -285,30 +305,12 @@ static char *ip2str(uint32_t ip) {
   return ipstr;
 }
 
-char *mgos_wifi_get_sta_ip(void) {
-  if (s_wifi_sta_config.acquired_ip.ip == 0) {
-    return NULL;
-  }
-  return ip2str(s_wifi_sta_config.acquired_ip.ip);
-}
-
-char *mgos_wifi_get_sta_default_gw() {
-  if (s_wifi_sta_config.acquired_ip.gateway == 0) {
-    return NULL;
-  }
-  return ip2str(s_wifi_sta_config.acquired_ip.gateway);
-}
-
 char *mgos_wifi_get_sta_default_dns(void) {
-  if (s_wifi_sta_config.acquired_ip.dns == 0) {
-    return NULL;
-  }
-  return ip2str(s_wifi_sta_config.acquired_ip.dns);
-}
-
-char *mgos_wifi_get_ap_ip(void) {
-  /* TODO(rojer?) : implement if applicable */
-  return NULL;
+  SlNetCfgIpV4Args_t info = {0};
+  _u8 len = sizeof(info);
+  _u8 dhcp_is_on = 0;
+  sl_NetCfgGet(SL_IPV4_STA_P2P_CL_GET_INFO, &dhcp_is_on, &len, (_u8 *) &info);
+  return (info.ipV4DnsServer != 0 ? ip2str(info.ipV4DnsServer) : NULL);
 }
 
 bool mgos_wifi_dev_start_scan(void) {

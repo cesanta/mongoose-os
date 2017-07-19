@@ -9,10 +9,10 @@
 #include <stdlib.h>
 
 #include "fw/src/mgos_mongoose.h"
+#include "fw/src/mgos_net.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_timers.h"
 #include "fw/src/mgos_utils.h"
-#include "fw/src/mgos_wifi.h"
 
 struct time_change_cb {
   mgos_sntp_time_change_cb cb;
@@ -147,14 +147,14 @@ static void mgos_time_change_cb(void *arg, double delta) {
   }
 }
 
-#if MGOS_ENABLE_WIFI
-static void mgos_sntp_wifi_ready(enum mgos_wifi_status event, void *arg) {
-  if (event != MGOS_WIFI_IP_ACQUIRED) return;
-
+static void mgos_sntp_net_ev(enum mgos_net_event ev,
+                             const struct mgos_net_event_data *ev_data,
+                             void *arg) {
+  if (ev != MGOS_NET_EV_IP_ACQUIRED) return;
   mgos_sntp_retry();
+  (void) ev_data;
   (void) arg;
 }
-#endif
 
 enum mgos_init_result mgos_sntp_init(void) {
   struct sys_config_sntp *scfg = &get_cfg()->sntp;
@@ -164,10 +164,6 @@ enum mgos_init_result mgos_sntp_init(void) {
     return MGOS_INIT_SNTP_INIT_FAILED;
   }
   mgos_sntp_add_time_change_cb(mgos_time_change_cb, mgos_get_mgr());
-#if MGOS_ENABLE_WIFI
-  mgos_wifi_add_on_change_cb(mgos_sntp_wifi_ready, NULL);
-#else
-  mgos_sntp_retry();
-#endif
+  mgos_net_add_event_handler(mgos_sntp_net_ev, NULL);
   return MGOS_INIT_OK;
 }

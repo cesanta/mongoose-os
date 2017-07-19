@@ -26,6 +26,14 @@ bool mgos_wifi_connect(void); /* To the previously _setup network. */
 
 bool mgos_wifi_disconnect(void);
 
+#define MGOS_NET_IF_WIFI_STA 0
+#define MGOS_NET_IF_WIFI_AP 1
+
+/*
+ * DEPRECATED: API below is deprecated in favor of mgos_net_* API.
+ * Check for events with if_type == MGOS_NET_IF_TYPE_WIFI
+ * and if_instance == MGOS_NET_IF_WIFI_STA or MGOS_NET_IF_WIFI_AP
+ */
 enum mgos_wifi_status {
   MGOS_WIFI_DISCONNECTED = 0,
   MGOS_WIFI_CONNECTING = 1,
@@ -48,9 +56,6 @@ enum mgos_wifi_status mgos_wifi_dev_get_status(void);
 /* These return allocated strings which will be free'd. */
 char *mgos_wifi_get_status_str(void);
 char *mgos_wifi_get_connected_ssid(void);
-char *mgos_wifi_get_sta_ip(void);
-char *mgos_wifi_get_sta_default_gw(void);
-char *mgos_wifi_get_ap_ip(void);
 char *mgos_wifi_get_sta_default_dns(void);
 
 /*

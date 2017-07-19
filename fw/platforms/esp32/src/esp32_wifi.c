@@ -16,13 +16,15 @@
 #include "common/queue.h"
 
 #include "fw/src/mgos_hal.h"
+#include "fw/src/mgos_net_hal.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_wifi_hal.h"
 
 static wifi_mode_t s_cur_mode = WIFI_MODE_NULL;
 
 esp_err_t esp32_wifi_ev(system_event_t *ev) {
-  int mg_ev = -1;
+  bool send_ev = false;
+  enum mgos_net_event mg_ev;
   system_event_info_t *info = &ev->event_info;
   switch (ev->event_id) {
     case SYSTEM_EVENT_STA_START: {
@@ -32,13 +34,16 @@ esp_err_t esp32_wifi_ev(system_event_t *ev) {
       mgos_wifi_dev_scan_cb(-2, NULL);
       break;
     case SYSTEM_EVENT_STA_DISCONNECTED:
-      mg_ev = MGOS_WIFI_DISCONNECTED;
+      mg_ev = MGOS_NET_EV_DISCONNECTED;
+      send_ev = true;
       break;
     case SYSTEM_EVENT_STA_CONNECTED:
-      mg_ev = MGOS_WIFI_CONNECTED;
+      mg_ev = MGOS_NET_EV_CONNECTED;
+      send_ev = true;
       break;
     case SYSTEM_EVENT_STA_GOT_IP:
-      mg_ev = MGOS_WIFI_IP_ACQUIRED;
+      mg_ev = MGOS_NET_EV_IP_ACQUIRED;
+      send_ev = true;
       break;
     case SYSTEM_EVENT_AP_STACONNECTED: {
       const uint8_t *mac = ev->event_info.sta_connected.mac;
@@ -86,8 +91,8 @@ esp_err_t esp32_wifi_ev(system_event_t *ev) {
     default: { LOG(LL_DEBUG, ("WiFi event: %d", ev->event_id)); }
   }
 
-  if (mg_ev >= 0) {
-    mgos_wifi_dev_on_change_cb((enum mgos_wifi_status) mg_ev);
+  if (send_ev) {
+    mgos_wifi_dev_on_change_cb(mg_ev);
   }
 
   return ESP_OK;
@@ -430,19 +435,6 @@ bool mgos_wifi_dev_sta_disconnect(void) {
   return (esp_wifi_disconnect() == ESP_OK);
 }
 
-static char *mgos_wifi_get_ip(tcpip_adapter_if_t if_no) {
-  tcpip_adapter_ip_info_t info;
-  char *ip;
-  if ((tcpip_adapter_get_ip_info(if_no, &info) != ESP_OK) ||
-      info.ip.addr == 0) {
-    return NULL;
-  }
-  if (asprintf(&ip, IPSTR, IP2STR(&info.ip)) < 0) {
-    return NULL;
-  }
-  return ip;
-}
-
 char *mgos_wifi_get_connected_ssid(void) {
   wifi_ap_record_t ap_info;
   if (esp_wifi_sta_get_ap_info(&ap_info) != ESP_OK) {
@@ -451,12 +443,19 @@ char *mgos_wifi_get_connected_ssid(void) {
   return strdup((char *) ap_info.ssid);
 }
 
-char *mgos_wifi_get_ap_ip(void) {
-  return mgos_wifi_get_ip(TCPIP_ADAPTER_IF_AP);
-}
-
-char *mgos_wifi_get_sta_ip(void) {
-  return mgos_wifi_get_ip(TCPIP_ADAPTER_IF_STA);
+bool mgos_wifi_dev_get_ip_info(int if_instance,
+                               struct mgos_net_ip_info *ip_info) {
+  tcpip_adapter_ip_info_t info;
+  if ((tcpip_adapter_get_ip_info(
+           (if_instance == 0 ? TCPIP_ADAPTER_IF_STA : TCPIP_ADAPTER_IF_AP),
+           &info) != ESP_OK) ||
+      info.ip.addr == 0) {
+    return false;
+  }
+  ip_info->ip.sin_addr.s_addr = info.ip.addr;
+  ip_info->netmask.sin_addr.s_addr = info.netmask.addr;
+  ip_info->gw.sin_addr.s_addr = info.gw.addr;
+  return true;
 }
 
 bool mgos_wifi_set_config(const struct sys_config_wifi *cfg) {
@@ -477,19 +476,6 @@ bool mgos_wifi_set_config(const struct sys_config_wifi *cfg) {
 }
 
 void mgos_wifi_dev_init(void) {
-}
-
-char *mgos_wifi_get_sta_default_gw() {
-  tcpip_adapter_ip_info_t info;
-  char *ip;
-  if ((tcpip_adapter_get_ip_info(TCPIP_ADAPTER_IF_STA, &info) != ESP_OK) ||
-      info.gw.addr == 0) {
-    return NULL;
-  }
-  if (asprintf(&ip, IPSTR, IP2STR(&info.gw)) < 0) {
-    return NULL;
-  }
-  return ip;
 }
 
 char *mgos_wifi_get_sta_default_dns() {

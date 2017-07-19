@@ -31,6 +31,7 @@ typedef unsigned short u_short;
 #include "mongoose/mongoose.h"
 #include "fw/src/mgos_hal.h"
 #include "fw/src/mgos_mongoose.h"
+#include "fw/src/mgos_net_hal.h"
 
 extern int mgos_please_quit;
 
@@ -139,4 +140,10 @@ void mgos_rlock(struct mgos_rlock_type *l) {
 
 void mgos_runlock(struct mgos_rlock_type *l) {
   (void) l;
+}
+
+bool mgos_eth_dev_get_ip_info(int if_instance, struct mgos_net_ip_info *ip_info) {
+  (void) if_instance;
+  (void) ip_info;
+  return false;
 }

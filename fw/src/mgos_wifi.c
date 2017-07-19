@@ -13,6 +13,7 @@
 #include "common/queue.h"
 
 #include "fw/src/mgos_hal.h"
+#include "fw/src/mgos_net_hal.h"
 #include "fw/src/mgos_mongoose.h"
 #include "fw/src/mgos_sys_config.h"
 
@@ -41,45 +42,44 @@ static inline void wifi_unlock(void) {
 }
 
 static void mgos_wifi_on_change_cb(void *arg) {
-  enum mgos_wifi_status ev = (enum mgos_wifi_status)(intptr_t) arg;
+  enum mgos_net_event ev = (enum mgos_net_event)(intptr_t) arg;
+  enum mgos_wifi_status ws = MGOS_WIFI_DISCONNECTED;
   switch (ev) {
-    case MGOS_WIFI_DISCONNECTED: {
-      LOG(LL_INFO, ("WiFi STA: disconnected"));
+    case MGOS_NET_EV_DISCONNECTED: {
+      ws = MGOS_WIFI_DISCONNECTED;
       if (s_sta_should_reconnect) mgos_wifi_connect();
       break;
     }
-    case MGOS_WIFI_CONNECTING: {
+    case MGOS_NET_EV_CONNECTING: {
       s_sta_status = MGOS_WIFI_CONNECTING;
-      LOG(LL_INFO, ("WiFi STA: connecting"));
+      ws = MGOS_WIFI_CONNECTING;
       break;
     }
-    case MGOS_WIFI_CONNECTED: {
+    case MGOS_NET_EV_CONNECTED: {
       s_sta_status = MGOS_WIFI_CONNECTED;
-      LOG(LL_INFO, ("WiFi STA: connected"));
+      ws = MGOS_WIFI_CONNECTED;
       break;
     }
-    case MGOS_WIFI_IP_ACQUIRED: {
+    case MGOS_NET_EV_IP_ACQUIRED: {
       s_sta_status = MGOS_WIFI_IP_ACQUIRED;
-      char *ip = mgos_wifi_get_sta_ip();
-      if (ip != NULL) {
-        char *nameserver = mgos_get_nameserver();
-        LOG(LL_INFO, ("WiFi STA: ready, IP %s, DNS %s", ip,
-                      nameserver ? nameserver : "default"));
-        mg_set_nameserver(mgos_get_mgr(), nameserver);
-        free(nameserver);
-        free(ip);
-      }
+      ws = MGOS_WIFI_IP_ACQUIRED;
       break;
     }
   }
+
+  mgos_net_dev_event_cb(MGOS_NET_IF_TYPE_WIFI, MGOS_NET_IF_WIFI_STA, ev);
 
   struct cb_info *e, *te;
+  wifi_lock();
   SLIST_FOREACH_SAFE(e, &s_wifi_cbs, next, te) {
-    ((mgos_wifi_changed_t) e->cb)(ev, e->arg);
+    wifi_unlock();
+    ((mgos_wifi_changed_t) e->cb)(ws, e->arg);
+    wifi_lock();
   }
+  wifi_unlock();
 }
 
-void mgos_wifi_dev_on_change_cb(enum mgos_wifi_status ev) {
+void mgos_wifi_dev_on_change_cb(enum mgos_net_event ev) {
   mgos_invoke_cb(mgos_wifi_on_change_cb, (void *) ev, false /* from_isr */);
 }
 
@@ -192,7 +192,7 @@ bool mgos_wifi_connect(void) {
   bool ret = mgos_wifi_dev_sta_connect();
   s_sta_should_reconnect = ret;
   if (ret) {
-    mgos_wifi_dev_on_change_cb(MGOS_WIFI_CONNECTING);
+    mgos_wifi_dev_on_change_cb(MGOS_NET_EV_CONNECTING);
   }
   wifi_unlock();
   return ret;

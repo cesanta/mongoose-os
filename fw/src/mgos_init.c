@@ -10,6 +10,9 @@ enum mgos_init_result mgos_init(void) {
 
   mgos_uptime_init();
 
+  r = mgos_net_init();
+  if (r != MGOS_INIT_OK) return r;
+
   r = mgos_gpio_init();
   if (r != MGOS_INIT_OK) return r;
 

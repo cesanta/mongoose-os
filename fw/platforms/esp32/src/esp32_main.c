@@ -25,6 +25,7 @@
 #include "fw/src/mgos_app.h"
 #include "fw/src/mgos_debug.h"
 #include "fw/src/mgos_hal.h"
+#include "fw/src/mgos_net_hal.h"
 #include "fw/src/mgos_init.h"
 #include "fw/src/mgos_mongoose.h"
 #include "fw/src/mgos_sys_config.h"
@@ -68,6 +69,26 @@ esp_err_t event_handler(void *ctx, system_event_t *event) {
     case SYSTEM_EVENT_SCAN_DONE:
       return esp32_wifi_ev(event);
       break;
+#ifdef MGOS_HAVE_ETHERNET
+    case SYSTEM_EVENT_ETH_START:
+    case SYSTEM_EVENT_ETH_STOP:
+      break;
+    case SYSTEM_EVENT_ETH_CONNECTED: {
+      mgos_net_dev_event_cb(MGOS_NET_IF_TYPE_ETHERNET, 0,
+                            MGOS_NET_EV_CONNECTED);
+      break;
+    }
+    case SYSTEM_EVENT_ETH_DISCONNECTED: {
+      mgos_net_dev_event_cb(MGOS_NET_IF_TYPE_ETHERNET, 0,
+                            MGOS_NET_EV_DISCONNECTED);
+      break;
+    }
+    case SYSTEM_EVENT_ETH_GOT_IP: {
+      mgos_net_dev_event_cb(MGOS_NET_IF_TYPE_ETHERNET, 0,
+                            MGOS_NET_EV_IP_ACQUIRED);
+      break;
+    }
+#endif
     default:
       LOG(LL_INFO, ("event: %d", event->event_id));
   }

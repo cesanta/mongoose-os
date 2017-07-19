@@ -19,6 +19,7 @@
 
 #include "fw/src/mgos_gpio.h"
 #include "fw/src/mgos_hal.h"
+#include "fw/src/mgos_net_hal.h"
 #include "fw/src/mgos_sys_config.h"
 #include "fw/src/mgos_wifi.h"
 #include "fw/src/mgos_wifi_hal.h"
@@ -27,20 +28,24 @@
 static uint8_t s_cur_mode = NULL_MODE;
 
 void wifi_changed_cb(System_Event_t *evt) {
-  int mg_ev = -1;
+  bool send_ev = false;
+  enum mgos_net_event mg_ev;
 #ifdef RTOS_SDK
   switch (evt->event_id) {
 #else
   switch (evt->event) {
 #endif
     case EVENT_STAMODE_DISCONNECTED:
-      mg_ev = MGOS_WIFI_DISCONNECTED;
+      mg_ev = MGOS_NET_EV_DISCONNECTED;
+      send_ev = true;
       break;
     case EVENT_STAMODE_CONNECTED:
-      mg_ev = MGOS_WIFI_CONNECTED;
+      mg_ev = MGOS_NET_EV_CONNECTED;
+      send_ev = true;
       break;
     case EVENT_STAMODE_GOT_IP:
-      mg_ev = MGOS_WIFI_IP_ACQUIRED;
+      mg_ev = MGOS_NET_EV_IP_ACQUIRED;
+      send_ev = true;
       break;
     case EVENT_SOFTAPMODE_STACONNECTED:
     case EVENT_SOFTAPMODE_STADISCONNECTED:
@@ -56,8 +61,8 @@ void wifi_changed_cb(System_Event_t *evt) {
     }
   }
 
-  if (mg_ev >= 0) {
-    mgos_wifi_dev_on_change_cb((enum mgos_wifi_status) mg_ev);
+  if (send_ev) {
+    mgos_wifi_dev_on_change_cb(mg_ev);
   }
 }
 
@@ -318,22 +323,17 @@ char *mgos_wifi_get_connected_ssid(void) {
   return strdup((const char *) conf.ssid);
 }
 
-static char *mgos_wifi_get_ip(int if_no) {
+bool mgos_wifi_dev_get_ip_info(int if_instance,
+                               struct mgos_net_ip_info *ip_info) {
   struct ip_info info;
-  char *ip;
-  if (!wifi_get_ip_info(if_no, &info) || info.ip.addr == 0) return NULL;
-  if (asprintf(&ip, IPSTR, IP2STR(&info.ip)) < 0) {
-    return NULL;
+  if (!wifi_get_ip_info((if_instance == 0 ? STATION_IF : SOFTAP_IF), &info) ||
+      info.ip.addr == 0) {
+    return false;
   }
-  return ip;
-}
-
-char *mgos_wifi_get_ap_ip(void) {
-  return mgos_wifi_get_ip(1);
-}
-
-char *mgos_wifi_get_sta_ip(void) {
-  return mgos_wifi_get_ip(0);
+  ip_info->ip.sin_addr.s_addr = info.ip.addr;
+  ip_info->netmask.sin_addr.s_addr = info.netmask.addr;
+  ip_info->gw.sin_addr.s_addr = info.gw.addr;
+  return true;
 }
 
 void wifi_scan_done(void *arg, STATUS status) {
@@ -419,16 +419,6 @@ bool mgos_wifi_set_config(const struct sys_config_wifi *cfg) {
 void mgos_wifi_dev_init(void) {
   wifi_set_opmode_current(NULL_MODE);
   wifi_set_event_handler_cb(wifi_changed_cb);
-}
-
-char *mgos_wifi_get_sta_default_gw() {
-  struct ip_info info;
-  char *ip;
-  if (!wifi_get_ip_info(0, &info) || info.gw.addr == 0) return NULL;
-  if (asprintf(&ip, IPSTR, IP2STR(&info.gw)) < 0) {
-    return NULL;
-  }
-  return ip;
 }
 
 char *mgos_wifi_get_sta_default_dns() {
