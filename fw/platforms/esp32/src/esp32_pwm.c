@@ -151,7 +151,7 @@ static bool esp32_pwm_remove(int ch) {
   return true;
 }
 
-bool mgos_pwm_set(int pin, int freq, int duty) {
+bool mgos_pwm_set(int pin, int freq, float duty) {
   int i, d, ch, timer = -1;
   bool ret = false;
 
@@ -162,7 +162,7 @@ bool mgos_pwm_set(int pin, int freq, int duty) {
   if (freq == 0) {
     ret = esp32_pwm_remove(ch);
   } else {
-    d = roundf((float) duty * (float) ((1 << LEDC_DEPTH) - 1) / 100.0);
+    d = roundf(duty * (float) ((1 << LEDC_DEPTH) - 1) / 100.0);
 
     for (i = 0; i < LEDC_NUM_CHANS; i++) {
       if (s_ledc_ch[i].timer != -1 &&

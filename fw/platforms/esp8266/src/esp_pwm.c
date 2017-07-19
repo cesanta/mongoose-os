@@ -31,15 +31,15 @@
  * + No interrupts in idle mode (no pins configured or duty = 0 for all).
  */
 
-#define PWM_BASE_RATE_US 50
-/* The following constants are used to get the base 10 KHz freq (100 uS period)
+#define PWM_BASE_RATE_US 5
+/* The following constants are used to get the base 100 KHz freq (10 uS period)
  * used to drive PWM. */
 #define TMR_PRESCALER_16 4 /* 16x prescaler */
 /* At 80 MHZ timer clock source is 26 MHz and each unit of this adds 0.2 uS. */
-#define TMR_RELOAD_VALUE_80 (250 - 8)
+#define TMR_RELOAD_VALUE_80 (25 - 8)
 /* At 160, the frequency is the same but the constant fraction that accounts for
  * interrupt handling code running before reload needs to be adjusted. */
-#define TMR_RELOAD_VALUE_160 (250 - 4)
+#define TMR_RELOAD_VALUE_160 (25 - 4)
 
 /* #define ESP_PWM_DEBUG */
 
@@ -128,7 +128,7 @@ static void pwm_configure_timer(void) {
   ETS_FRC1_INTR_ENABLE();
 }
 
-bool mgos_pwm_set(int pin, int freq, int duty) {
+bool mgos_pwm_set(int pin, int freq, float duty) {
   struct pwm_info *p;
   int period = freq > 0 ? roundf(1000000.0 / freq) : 0;
   int d = roundf(period * duty / 100.0);

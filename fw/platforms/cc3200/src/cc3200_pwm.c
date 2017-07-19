@@ -8,7 +8,7 @@
 #include "mgos_pwm.h"
 
 /* TODO(lsm): implement */
-bool mgos_pwm_set(int pin, int freq, int duty) {
+bool mgos_pwm_set(int pin, int freq, float duty) {
   LOG(LL_ERROR, ("PWM is not implemented"));
   return false;
 }

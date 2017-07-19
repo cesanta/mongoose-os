@@ -94,7 +94,7 @@ export SPIFFS_PATH
 
 export BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
 
-MGOS_SRCS =
+MGOS_SRCS = mgos_pwm.c
 MGOS_FEATURES =
 SYS_CONF_SCHEMA =
 FS_FILES =
