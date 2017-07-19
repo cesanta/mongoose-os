@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -39,6 +40,7 @@ const (
 )
 
 var (
+	httpAddr     = "127.0.0.1"
 	httpPort     = 1992
 	udpAddr      = ":1993"
 	wsClients    = make(map[*websocket.Conn]int)
@@ -572,18 +574,27 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		http.Handle("/", addNoCacheHeader(http.FileServer(&assetfs.AssetFS{Asset: Asset,
 			AssetDir: AssetDir, AssetInfo: assetInfo, Prefix: "web_root"})))
 	}
-	addr := fmt.Sprintf("127.0.0.1:%d", httpPort)
-	url := fmt.Sprintf("http://%s", addr)
+
+	addr := os.Getenv("MOS_LISTEN_ADDR")
+	if len(addr) == 0 {
+		addr = fmt.Sprintf("%s:%d", httpAddr, httpPort)
+	}
 
 	fmt.Printf("To get a list of available commands, start with --help\n")
-	fmt.Printf("Starting Web UI. If the browser does not start, navigate to %s\n", url)
 	listener, err := net.Listen("tcp", addr)
 	if err != nil {
 		os.Stdout = origStdout
 		os.Stderr = origStderr
 		return errors.Trace(err)
 	}
+	if strings.Index(addr, "0.0.0.0:") == 0 {
+		// We're listening on all interfaces (probably Dockerised)
+		fmt.Printf("UI is listenting on [%s].", addr)
+		startBrowser = false;
+	}
 	if startBrowser {
+		url := fmt.Sprintf("http://%s", addr)
+		fmt.Printf("Starting Web UI. If the browser does not start, navigate to %s\n", url)
 		open.Start(url)
 	}
 	http.Serve(listener, nil)

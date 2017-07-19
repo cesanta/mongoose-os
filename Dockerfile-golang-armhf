@@ -1,0 +1,31 @@
+#!./tools/docker-build-wrapper -t golang-armhf
+#
+# Construct a workalike of the official Docker 'golang' container
+# that is suitable for ARM Linux (Raspberry Pi, Orange Pi, Nano Pi etc.)
+#
+#
+
+FROM armhf/ubuntu
+
+#
+# Install compilers and tools neeeded to build Go libraries
+#
+#	apt-get install -y --no-install-recommends apt-utils && \
+RUN apt-get update && \
+	apt-get install -y --no-install-recommends g++ gcc libc6-dev make pkg-config curl ca-certificates && \
+	apt-get clean && \
+	rm -rf /var/lib/apt/lists/*
+
+#
+# Install the official Go environment from golang.org
+#
+RUN curl -fsSL https://golang.org/dl/go1.8.linux-armv6l.tar.gz | tar -C /usr/local -zxf -
+
+#
+# Set up the work environment in /go
+#
+ENV GOROOT /usr/local/go
+ENV GOPATH /go
+ENV PATH $GOPATH/bin:/usr/local/go/bin:$PATH
+RUN mkdir -p "$GOPATH/src" "$GOPATH/bin" && chmod -R 777 "$GOPATH"
+WORKDIR $GOPATH
