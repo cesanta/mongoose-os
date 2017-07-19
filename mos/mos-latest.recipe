@@ -1,9 +1,5 @@
 # git-build-recipe format 0.4 deb-version {revtime}+{git-commit}
 
-# Build from the current master.
-https://github.com/cesanta/mongoose-os.git master
-merge deb-latest https://github.com/cesanta/mongoose-os.git deb-latest
-
-# For testing, use this to build from local repo (volume-mount the repo to /src)
-#/src master
-#merge deb-latest /src deb-latest
+# Build from local repo (volume-mount a clone of https://github.com/cesanta/mongoose-os.git to /src):
+/src master
+merge deb-latest /src deb-latest
