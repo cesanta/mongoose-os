@@ -86,14 +86,12 @@ static void mgos_net_on_change_cb(void *arg) {
     }
     case MGOS_NET_EV_IP_ACQUIRED: {
       if (mgos_net_get_ip_info(ei->if_type, ei->if_instance, &evd.ip_info)) {
-        char ip[52], gw[52];
+        char ip[16], gw[16];
         char *nameserver = mgos_get_nameserver();
         memset(ip, 0, sizeof(ip));
         memset(gw, 0, sizeof(gw));
-        mg_sock_addr_to_str((const union socket_address *) &evd.ip_info.ip, ip,
-                            sizeof(ip), MG_SOCK_STRINGIFY_IP);
-        mg_sock_addr_to_str((const union socket_address *) &evd.ip_info.gw, gw,
-                            sizeof(gw), MG_SOCK_STRINGIFY_IP);
+        mgos_net_ip_to_str(&evd.ip_info.ip, ip);
+        mgos_net_ip_to_str(&evd.ip_info.gw, gw);
         LOG(LL_INFO, ("%s: ready, IP %s, GW %s, DNS %s", if_name, ip, gw,
                       nameserver ? nameserver : "default"));
         mg_set_nameserver(mgos_get_mgr(), nameserver);
@@ -148,6 +146,13 @@ bool mgos_net_get_ip_info(enum mgos_net_if_type if_type, int if_instance,
 #endif
   }
   return false;
+}
+
+void mgos_net_ip_to_str(const struct sockaddr_in *sin, char *out) {
+  union socket_address sa;
+  sa.sa.sa_family = AF_INET;
+  memcpy(&sa.sin, sin, sizeof(sa.sin));
+  mg_sock_addr_to_str(&sa, out, 16, MG_SOCK_STRINGIFY_IP);
 }
 
 enum mgos_init_result mgos_net_init(void) {

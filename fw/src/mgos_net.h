@@ -56,6 +56,12 @@ void mgos_net_remove_event_handler(mgos_net_event_handler_t eh, void *arg);
 bool mgos_net_get_ip_info(enum mgos_net_if_type if_type, int if_instance,
                           struct mgos_net_ip_info *ip_info);
 
+/*
+ * Converts address to dotted-quad NUL-terminated string.
+ * out must be at least 16 bytes long.
+ */
+void mgos_net_ip_to_str(const struct sockaddr_in *sin, char *out);
+
 enum mgos_init_result mgos_net_init(void);
 
 #ifdef __cplusplus
