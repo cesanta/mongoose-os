@@ -39,7 +39,7 @@ const (
 )
 
 var (
-	httpPort     = 1992
+	httpAddr     = "127.0.0.1:1992"
 	udpAddr      = ":1993"
 	wsClients    = make(map[*websocket.Conn]int)
 	wsClientsMtx = sync.Mutex{}
@@ -138,8 +138,8 @@ func init() {
 	flag.StringVar(&wwwRoot, "web-root", "", "UI Web root to use instead of built-in")
 	hiddenFlags = append(hiddenFlags, "web-root")
 
-	flag.IntVar(&httpPort, "http-port", 1992, "Web UI HTTP port")
-	hiddenFlags = append(hiddenFlags, "http-port")
+	flag.StringVar(&httpAddr, "http-addr", "127.0.0.1:1992", "Web UI HTTP address")
+	hiddenFlags = append(hiddenFlags, "http-addr")
 
 	flag.BoolVar(&startBrowser, "start-browser", true, "Automatically start browser")
 	hiddenFlags = append(hiddenFlags, "start-browser")
@@ -572,12 +572,11 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		http.Handle("/", addNoCacheHeader(http.FileServer(&assetfs.AssetFS{Asset: Asset,
 			AssetDir: AssetDir, AssetInfo: assetInfo, Prefix: "web_root"})))
 	}
-	addr := fmt.Sprintf("127.0.0.1:%d", httpPort)
-	url := fmt.Sprintf("http://%s", addr)
+	url := fmt.Sprintf("http://%s", httpAddr)
 
 	fmt.Printf("To get a list of available commands, start with --help\n")
 	fmt.Printf("Starting Web UI. If the browser does not start, navigate to %s\n", url)
-	listener, err := net.Listen("tcp", addr)
+	listener, err := net.Listen("tcp", httpAddr)
 	if err != nil {
 		os.Stdout = origStdout
 		os.Stderr = origStderr
