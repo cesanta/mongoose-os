@@ -1,4 +1,4 @@
-//go:generate ../common/tools/fw_meta.py gen_build_info --go_output=./version.go  --json_output=./version.json
+//go:generate sh -c "../common/tools/fw_meta.py gen_build_info --version=`[ -f version ] && cat version` --id=`[ -f build_id ] && cat build_id` --go_output=./version.go  --json_output=./version.json"
 //go:generate go-bindata -pkg main -nocompress -modtime 1 -mode 420 data/
 //go:generate go-bindata-assetfs -pkg main -nocompress -modtime 1 -mode 420 data/ web_root/...
 
