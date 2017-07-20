@@ -206,9 +206,14 @@ bool mgos_wifi_disconnect(void) {
   return ret;
 }
 
+enum mgos_wifi_status mgos_wifi_get_status(void) {
+  return s_sta_status;
+}
+
 char *mgos_wifi_get_status_str(void) {
   const char *s = NULL;
-  switch (s_sta_status) {
+  enum mgos_wifi_status st = mgos_wifi_get_status();
+  switch (st) {
     case MGOS_WIFI_DISCONNECTED:
       s = "disconnected";
       break;

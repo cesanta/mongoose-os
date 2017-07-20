@@ -52,7 +52,7 @@ bool mgos_wifi_validate_ap_cfg(const struct sys_config_wifi_ap *cfg,
 bool mgos_wifi_validate_sta_cfg(const struct sys_config_wifi_sta *cfg,
                                 char **msg);
 
-enum mgos_wifi_status mgos_wifi_dev_get_status(void);
+enum mgos_wifi_status mgos_wifi_get_status(void);
 /* These return allocated strings which will be free'd. */
 char *mgos_wifi_get_status_str(void);
 char *mgos_wifi_get_connected_ssid(void);
