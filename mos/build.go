@@ -6,7 +6,6 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"golang.org/x/net/context"
 	"io"
 	"io/ioutil"
 	"mime/multipart"
@@ -21,6 +20,8 @@ import (
 	"text/template"
 	"time"
 	"unicode"
+
+	"golang.org/x/net/context"
 
 	"cesanta.com/common/go/multierror"
 	"cesanta.com/common/go/ourfilepath"
@@ -1043,6 +1044,16 @@ func buildRemote(bParams *buildParams) error {
 		return errors.Trace(err)
 	}
 
+	// Copy all external code (which is outside of the appDir) under tmpCodeDir {{{
+	if err := copyExternalCodeAll(&manifest.Sources, appDir, tmpCodeDir); err != nil {
+		return errors.Trace(err)
+	}
+
+	if err := copyExternalCodeAll(&manifest.Filesystem, appDir, tmpCodeDir); err != nil {
+		return errors.Trace(err)
+	}
+	// }}}
+
 	// Print a warning if APP_CONF_SCHEMA is set in manifest manually
 	printConfSchemaWarn(manifest)
 
@@ -2011,4 +2022,78 @@ func (mp mountPoints) addMountPoint(hostPath, containerPath string) error {
 // getPathForDocker replaces OS-dependent separators in a given path with "/"
 func getPathForDocker(p string) string {
 	return path.Join(filepath.SplitList(p)...)
+}
+
+// copyExternalCode checks whether given path p is outside of appDir, and if
+// so, copies its contents as a new directory under tmpCodeDir, and returns
+// its name. If nothing was copied, returns an empty string.
+func copyExternalCode(p, appDir, tmpCodeDir string) (string, error) {
+	// Ensure we have relative path curPathRel which should start with ".." if
+	// it's outside of the tmpCodeDir
+	curPathAbs := p
+	if !filepath.IsAbs(curPathAbs) {
+		curPathAbs = filepath.Join(appDir, curPathAbs)
+	}
+
+	curPathAbs = filepath.Clean(curPathAbs)
+
+	curPathRel, err := filepath.Rel(appDir, curPathAbs)
+	if err != nil {
+		return "", errors.Trace(err)
+	}
+
+	if len(curPathRel) > 0 && curPathRel[0] == '.' {
+		// The path is outside of tmpCodeDir, so we should copy its contents
+		// under tmpCodeDir
+
+		// The path could end with a glob, so we need to get existing and
+		// non-existing parts of the path
+		//
+		// TODO(dfrank): we should actually handle all the globs here in mos,
+		// not in makefile.
+		actualPart := curPathAbs
+		globPart := ""
+
+		if _, err := os.Stat(actualPart); err != nil {
+			actualPart, globPart = filepath.Split(actualPart)
+		}
+
+		// Create a new directory named as a "blueprint" of the source directory:
+		// full path with all separators replaced with "_".
+		curTmpPathRel := strings.Replace(actualPart, string(filepath.Separator), "_", -1)
+
+		curTmpPathAbs := filepath.Join(tmpCodeDir, curTmpPathRel)
+		if err := os.MkdirAll(curTmpPathAbs, 0755); err != nil {
+			return "", errors.Trace(err)
+		}
+
+		// Copy source files to that new dir
+		// TODO(dfrank): ensure we don't copy too much
+		freportf(logWriter, "Copying %q as %q", actualPart, curTmpPathAbs)
+		err = ourio.CopyDir(actualPart, curTmpPathAbs, nil)
+		if err != nil {
+			return "", errors.Trace(err)
+		}
+
+		return filepath.Join(curTmpPathRel, globPart), nil
+	}
+
+	return "", nil
+}
+
+// copyExternalCodeAll calls copyExternalCode for each element of the paths
+// slice, and for each affected path updates the item in the slice.
+func copyExternalCodeAll(paths *[]string, appDir, tmpCodeDir string) error {
+	for i, curPath := range *paths {
+		newPath, err := copyExternalCode(curPath, appDir, tmpCodeDir)
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		if newPath != "" {
+			(*paths)[i] = newPath
+		}
+	}
+
+	return nil
 }
