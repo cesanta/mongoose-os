@@ -203,7 +203,10 @@ func getMosVersion() string {
 func getMosVersionByBuildId(buildId string) (string, error) {
 	matches := regexpBuildId.FindStringSubmatch(buildId)
 	if matches == nil {
-		return "", errors.Errorf("bad build id: %q", buildId)
+		// We failed to parse build id; it typically happens when it looks like
+		// "20170721-002340/???". For now, assume latest
+		// TODO(dfrank): use Version for that
+		return "latest", nil
 	}
 
 	symbolic := matches[2]
