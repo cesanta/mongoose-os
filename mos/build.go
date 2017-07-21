@@ -23,6 +23,7 @@ import (
 	"unicode"
 
 	"cesanta.com/common/go/multierror"
+	"cesanta.com/common/go/ourfilepath"
 	"cesanta.com/common/go/ourio"
 	"cesanta.com/mos/build"
 	"cesanta.com/mos/build/archive"
@@ -1093,13 +1094,13 @@ func buildRemote(bParams *buildParams) error {
 		".":                               true,
 	}
 	for _, v := range manifest.Sources {
-		whitelist[v] = true
+		whitelist[ourfilepath.GetFirstPathComponent(v)] = true
 	}
 	for _, v := range manifest.Filesystem {
-		whitelist[v] = true
+		whitelist[ourfilepath.GetFirstPathComponent(v)] = true
 	}
 	for _, v := range manifest.ExtraFiles {
-		whitelist[v] = true
+		whitelist[ourfilepath.GetFirstPathComponent(v)] = true
 	}
 
 	transformers := make(map[string]fileTransformer)
