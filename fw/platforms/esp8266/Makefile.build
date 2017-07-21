@@ -73,6 +73,7 @@ RF_CAL_DATA_SIZE = 0x1000
 SYS_PARAMS_SIZE = 0x4000
 
 BUILD_DIR ?= $(CURDIR)/.build
+RBOOT_BUILD_DIR ?= $(BUILD_DIR)/rboot
 FW_STAGING_DIR ?= $(BUILD_DIR)/fw_temp
 FW_DIR ?= $(CURDIR)/firmware
 GEN_DIR ?= $(BUILD_DIR)/gen
@@ -288,7 +289,7 @@ MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o)) \
             $(BUILD_DIR)/esp_nsleep100.S.o
 APP_OBJS = $(addprefix $(BUILD_DIR)/,$(APP_SRCS:=.o))
 
-BOOT_LOADER_BIN = $(BUILD_DIR)/rboot.bin
+BOOT_LOADER_BIN = $(RBOOT_BUILD_DIR)/rboot.bin
 APP_BIN = $(BUILD_DIR)/$(APP).bin
 APP_ELF = $(BUILD_DIR)/$(APP).elf
 LD_SCRIPT = $(GEN_DIR)/$(APP0_ADDR).ld
@@ -509,9 +510,10 @@ $(FS_IMG): $(APP_FS_DIRS) $(COMMON_FS_PATH) $(FS_FILES) $(SYS_CONFIG_C) $(SYS_RO
 $(ESPTOOL2):
 	$(Q) $(MAKE) --no-print-directory -C $(BOOTLOADER_PATH)/esptool2 BUILD_DIR=$(abspath $(BUILD_DIR))
 
-$(BOOT_LOADER_BIN): $(ESPTOOL2)
+$(BOOT_LOADER_BIN): $(ESPTOOL2) $(GENFILES_LIST)
+	$(Q) rm -rf $(RBOOT_BUILD_DIR) && mkdir -p $(RBOOT_BUILD_DIR)
 	$(Q) $(MAKE) --no-print-directory -C $(BOOTLOADER_PATH)/rboot -f rboot.mk \
-		RBOOT_BUILD_BASE=$(abspath $(BUILD_DIR)) \
+		RBOOT_BUILD_BASE=$(abspath $(RBOOT_BUILD_DIR)) \
 		RBOOT_GEN_BASE=$(abspath $(GEN_DIR)) \
 		ESPTOOL2=$(abspath $(ESPTOOL2)) SDK_BASE=$(SDK_PATH) \
 		RBOOT_BIG_FLASH=1 CFLAGS_EXTRA="$(BOOTLOADER_FLAGS)"
