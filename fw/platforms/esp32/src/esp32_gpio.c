@@ -111,9 +111,9 @@ IRAM bool mgos_gpio_read(int pin) {
 
 IRAM void mgos_gpio_write(int pin, bool level) {
   uint32_t reg = (level ? GPIO_OUT_W1TS_REG : GPIO_OUT_W1TC_REG);
-  if (pin > 32) {
+  if (pin >= 32) {
     pin -= 32;
-    reg += 6; /* GPIO_OUT -> GPIO_OUT1 */
+    reg += 12; /* GPIO_OUT -> GPIO_OUT1 */
   }
   WRITE_PERI_REG(reg, (1 << pin));
 }
