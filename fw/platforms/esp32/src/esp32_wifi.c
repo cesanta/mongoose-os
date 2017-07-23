@@ -34,6 +34,9 @@ esp_err_t esp32_wifi_ev(system_event_t *ev) {
       mgos_wifi_dev_scan_cb(-2, NULL);
       break;
     case SYSTEM_EVENT_STA_DISCONNECTED:
+      LOG(LL_INFO, ("Disconnected from %.*s, reason: %d",
+                    (int) info->disconnected.ssid_len, info->disconnected.ssid,
+                    info->disconnected.reason));
       mg_ev = MGOS_NET_EV_DISCONNECTED;
       send_ev = true;
       break;
@@ -460,7 +463,6 @@ bool mgos_wifi_dev_get_ip_info(int if_instance,
 
 bool mgos_wifi_set_config(const struct sys_config_wifi *cfg) {
   bool result = false;
-  LOG(LL_INFO, ("enter"));
   if (cfg->ap.enable && !cfg->sta.enable) {
     result = mgos_wifi_setup_ap(&cfg->ap);
   } else if (cfg->ap.enable && cfg->sta.enable && cfg->ap.keep_enabled) {
@@ -471,7 +473,6 @@ bool mgos_wifi_set_config(const struct sys_config_wifi *cfg) {
   } else {
     result = (esp32_wifi_set_mode(WIFI_MODE_NULL) == ESP_OK);
   }
-  LOG(LL_INFO, ("exit"));
   return result;
 }
 
