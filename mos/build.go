@@ -466,6 +466,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 
 	appSourceDirs := []string{}
 	appFSDirs := []string{}
+	appBinLibsDirs := []string{}
 
 	// Generate deps_init C code, and if it's not empty, write it to the temp
 	// file and add to sources
@@ -527,7 +528,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		return errors.Trace(err)
 	}
 
-	appBinLibs, appFSDirs, err = globify(appBinLibs, []string{"*.a"})
+	appBinLibs, appBinLibsDirs, err = globify(appBinLibs, []string{"*.a"})
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -635,6 +636,11 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 
 		// Mount all dirs with filesystem files
 		for _, d := range appFSDirs {
+			mp.addMountPoint(d, d)
+		}
+
+		// Mount all dirs with binary libs
+		for _, d := range appBinLibsDirs {
 			mp.addMountPoint(d, d)
 		}
 
