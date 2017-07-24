@@ -14,6 +14,8 @@ FFI_SYMBOLS ?=
 APP_SOURCES ?=
 # List of app files to put into the device's filesystem, globs are supported
 APP_FS_FILES ?=
+# List of static libs (.a) which are parts of the app
+APP_BIN_LIBS ?=
 
 # NOTE: those two are deprecated. Use APP_SOURCES and APP_FS_FILES instead.
 APP_MODULES ?=
@@ -61,6 +63,7 @@ BREAKDOWN_FILE = $(BUILD_DIR)/breakdown.txt
 # Absolutize all paths which can be given by the caller
 override APP_SOURCES := $(abspath $(APP_SOURCES))
 override APP_FS_FILES := $(abspath $(APP_FS_FILES))
+override APP_BIN_LIBS := $(abspath $(APP_BIN_LIBS))
 override APP_CONF_SCHEMA := $(abspath $(APP_CONF_SCHEMA))
 override APP_EXTRA_SRCS := $(abspath $(APP_EXTRA_SRCS))
 override BUILD_DIR := $(abspath $(BUILD_DIR))
@@ -78,6 +81,7 @@ export APP_CXXFLAGS
 export _APP_CONF_SCHEMA = $(APP_CONF_SCHEMA)
 export _APP_EXTRA_SRCS = $(APP_EXTRA_SRCS)
 export _APP_FS_FILES = $(APP_FS_FILES)
+export _APP_BIN_LIBS = $(APP_BIN_LIBS)
 export APP_PLATFORM
 export _APP_SOURCES = $(APP_SOURCES)
 export APP_VERSION

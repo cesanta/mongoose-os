@@ -18,6 +18,8 @@ FFI_SYMBOLS ?=
 APP_SOURCES ?=
 # List of app files to put into the device's filesystem, globs are supported
 APP_FS_FILES ?=
+# List of static libs (.a) which are parts of the app
+APP_BIN_LIBS ?=
 
 # NOTE: those two are deprecated. Use APP_SOURCES and APP_FS_FILES instead.
 APP_MODULES ?=
@@ -189,6 +191,7 @@ SDK_CFLAGS = -DTARGET_IS_CC3200 -DUSE_FREERTOS -DSL_PLATFORM_MULTI_THREADED
 
 MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3200_SRC_PATH)/*.c))
 APP_SRCS = $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
+APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
 
 MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" -DCS_PLATFORM=CS_P_CC3200 \
               -DMGOS_MAX_NUM_UARTS=2 \
@@ -331,8 +334,8 @@ $(APP_BIN): $(APP_ELF)
 	$(Q) $(OBJCOPY) -O binary $< $@
 	$(Q) echo "     Code size: $$(ls -l $@ | awk '{print $$5}')"
 
-$(APP_ELF): $(APP_OBJS) $(MGOS_LIB) $(ATCA_LIB) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O)
-	$(call link,$(APP_LD_SCRIPT),$(APP_LD_FLAGS),$(APP_OBJS) $(MGOS_LIB) $(ATCA_LIB) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O))
+$(APP_ELF): $(APP_OBJS) $(MGOS_LIB) $(ATCA_LIB) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES)
+	$(call link,$(APP_LD_SCRIPT),$(APP_LD_FLAGS),$(APP_OBJS) $(MGOS_LIB) $(ATCA_LIB) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES))
 
 $(MGOS_LIB): $(MGOS_OBJS) $(SDK_OBJS)
 	$(call ar,$^)

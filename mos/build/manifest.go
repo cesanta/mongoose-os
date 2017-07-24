@@ -50,6 +50,7 @@ type FWAppManifest struct {
 	MongooseOsVersion string             `yaml:"mongoose_os_version" json:"mongoose_os_version,omitempty"`
 	Sources           []string           `yaml:"sources" json:"sources,omitempty"`
 	Filesystem        []string           `yaml:"filesystem" json:"filesystem,omitempty"`
+	BinaryLibs        []string           `yaml:"binary_libs" json:"binary_libs,omitempty"`
 	ExtraFiles        []string           `yaml:"extra_files" json:"extra_files,omitempty"`
 	EnableJavascript  bool               `yaml:"enable_javascript,omitempty" json:"enable_javascript,omitempty"`
 	FFISymbols        []string           `yaml:"ffi_symbols" json:"ffi_symbols,omitempty"`

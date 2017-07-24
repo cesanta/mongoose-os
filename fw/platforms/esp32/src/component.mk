@@ -5,6 +5,7 @@
 override APP_CONF_SCHEMA = $(_APP_CONF_SCHEMA)
 override APP_EXTRA_SRCS = $(_APP_EXTRA_SRCS)
 override APP_FS_FILES = $(_APP_FS_FILES)
+override APP_BIN_LIBS = $(_APP_BIN_LIBS)
 override FS_FILES = $(_FS_FILES)
 override APP_SOURCES = $(_APP_SOURCES)
 override BUILD_DIR = $(_BUILD_DIR)
@@ -77,6 +78,7 @@ VPATH += $(GEN_DIR)
 VPATH += $(APP_SOURCE_DIRS)
 
 APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
+APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
 
 MGOS_OBJS = $(addsuffix .o,$(basename $(MGOS_SRCS))) esp32_nsleep100.o
 APP_OBJS = $(addsuffix .o,$(basename $(APP_SRCS)))
@@ -101,7 +103,7 @@ CFLAGS += $(C_CXX_CFLAGS)
 CXXFLAGS += -std=c++11 -fno-exceptions $(C_CXX_CFLAGS)
 COMPONENT_EXTRA_INCLUDES += $(IPATH)
 
-COMPONENT_ADD_LDFLAGS := -Wl,--whole-archive -lsrc -Wl,--no-whole-archive
+COMPONENT_ADD_LDFLAGS := $(APP_BIN_LIB_FILES) -Wl,--whole-archive -lsrc -Wl,--no-whole-archive
 
 $(BUILD_INFO_C): $(MGOS_OBJS) $(APP_OBJS)
 	$(call gen_build_info,$@,,$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))

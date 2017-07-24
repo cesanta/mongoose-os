@@ -22,6 +22,8 @@ FFI_SYMBOLS ?=
 APP_SOURCES ?=
 # List of app files to put into the device's filesystem, globs are supported
 APP_FS_FILES ?=
+# List of static libs (.a) which are parts of the app
+APP_BIN_LIBS ?=
 
 # NOTE: those two are deprecated. Use APP_SOURCES and APP_FS_FILES instead.
 APP_MODULES ?=
@@ -144,6 +146,7 @@ MGOS_SRCS += esp_adc.c \
 
 MGOS_SRCS += $(notdir $(foreach m,$(SPIFFS_PATH) $(COMMON_ESP8266_PATH),$(wildcard $(m)/*.c)))
 APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
+APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
 
 MGOS_FEATURES ?=
 
@@ -419,7 +422,7 @@ $(BREAKDOWN_FILE): $(APP_ELF)
 # -- Linking.
 
 # Link the main ELF output file.
-BIN_PARTS = $(BUILD_DIR)/esp_cache.c.o $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(ATCA_LIB) $(LWIP_LIB) $(SSL_LIBS)
+BIN_PARTS = $(BUILD_DIR)/esp_cache.c.o $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(ATCA_LIB) $(LWIP_LIB) $(SSL_LIBS) $(APP_BIN_LIB_FILES)
 $(APP_ELF): $(BIN_PARTS) $(LD_SCRIPT)
 ifeq "$(MGOS_ESP8266_RTOS)" "1"
 	$(OBJCOPY) --weaken-symbol printf --weaken-symbol puts /opt/Espressif/esp-open-sdk/xtensa-lx106-elf/xtensa-lx106-elf/lib/libc.a

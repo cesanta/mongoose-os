@@ -453,6 +453,15 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		}
 		appFSFiles = append(appFSFiles, s)
 	}
+
+	appBinLibs := []string{}
+	for _, s := range manifest.BinaryLibs {
+		s, err = mVars.ExpandVars(s)
+		if err != nil {
+			return errors.Trace(err)
+		}
+		appBinLibs = append(appBinLibs, s)
+	}
 	// }}}
 
 	appSourceDirs := []string{}
@@ -518,7 +527,15 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		return errors.Trace(err)
 	}
 
+	appBinLibs, appFSDirs, err = globify(appBinLibs, []string{"*.a"})
+	if err != nil {
+		return errors.Trace(err)
+	}
+
 	freportf(logWriter, "Sources: %v", appSources)
+	if len(appBinLibs) > 0 {
+		freportf(logWriter, "Binary libs: %v", appBinLibs)
+	}
 
 	freportf(logWriter, "Building...")
 
@@ -539,6 +556,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		"APP_VERSION":    manifest.Version,
 		"APP_SOURCES":    strings.Join(appSources, " "),
 		"APP_FS_FILES":   strings.Join(appFSFiles, " "),
+		"APP_BIN_LIBS":   strings.Join(appBinLibs, " "),
 		"FFI_SYMBOLS":    strings.Join(ffiSymbols, " "),
 		"APP_CFLAGS":     generateCflags(manifest.CFlags, manifest.CDefs),
 		"APP_CXXFLAGS":   generateCflags(manifest.CXXFlags, manifest.CDefs),
@@ -1050,6 +1068,10 @@ func buildRemote(bParams *buildParams) error {
 	}
 
 	if err := copyExternalCodeAll(&manifest.Filesystem, appDir, tmpCodeDir); err != nil {
+		return errors.Trace(err)
+	}
+
+	if err := copyExternalCodeAll(&manifest.BinaryLibs, appDir, tmpCodeDir); err != nil {
 		return errors.Trace(err)
 	}
 	// }}}
@@ -1845,6 +1867,11 @@ func extendManifest(mMain, m1, m2 *build.FWAppManifest, m1Dir, m2Dir string) err
 		prependPaths(m1.Filesystem, m1Dir),
 		prependPaths(m2.Filesystem, m2Dir)...,
 	)
+	// Extend binary libs
+	mMain.BinaryLibs = append(
+		prependPaths(m1.BinaryLibs, m1Dir),
+		prependPaths(m2.BinaryLibs, m2Dir)...,
+	)
 
 	// Add modules and libs from lib
 	mMain.Modules = append(m1.Modules, m2.Modules...)
@@ -1888,6 +1915,7 @@ func prependCondPaths(conds []build.ManifestCond, dir string) []build.ManifestCo
 			subManifest := *c.Apply
 			subManifest.Sources = prependPaths(subManifest.Sources, dir)
 			subManifest.Filesystem = prependPaths(subManifest.Filesystem, dir)
+			subManifest.BinaryLibs = prependPaths(subManifest.BinaryLibs, dir)
 			c.Apply = &subManifest
 		}
 		ret = append(ret, c)
@@ -1972,6 +2000,11 @@ func expandManifestAllLibsPaths(manifest *build.FWAppManifest) error {
 	}
 
 	manifest.Filesystem, err = expandAllLibsPaths(manifest.Filesystem, manifest.LibsHandled)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	manifest.BinaryLibs, err = expandAllLibsPaths(manifest.BinaryLibs, manifest.LibsHandled)
 	if err != nil {
 		return errors.Trace(err)
 	}
