@@ -12,10 +12,12 @@ const (
 type FlashOpts struct {
 	ControlPort            string
 	DataPort               string
-	BaudRate               uint
+	ROMBaudRate            uint
+	FlasherBaudRate        uint
 	InvertedControlLines   bool
 	FlashParams            string
 	EraseChip              bool
+	EnableCompression      bool
 	MinimizeWrites         bool
 	BootFirmware           bool
 	ESP32EncryptionKeyFile string

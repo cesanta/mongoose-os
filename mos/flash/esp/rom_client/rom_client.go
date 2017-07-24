@@ -67,7 +67,7 @@ type romResponse struct {
 
 func ConnectToROM(ct esp.ChipType, opts *esp.FlashOpts) (*ROMClient, error) {
 	commonOpts := serial.OpenOptions{
-		BaudRate:              115200,
+		BaudRate:              opts.ROMBaudRate,
 		DataBits:              8,
 		ParityMode:            serial.PARITY_NONE,
 		StopBits:              1,
@@ -75,7 +75,7 @@ func ConnectToROM(ct esp.ChipType, opts *esp.FlashOpts) (*ROMClient, error) {
 	}
 	scOpts := commonOpts
 	scOpts.PortName = opts.ControlPort
-	common.Reportf("Opening %s...", scOpts.PortName)
+	common.Reportf("Opening %s @ %d...", scOpts.PortName, opts.ROMBaudRate)
 	sc, err := serial.Open(scOpts)
 	if err != nil {
 		return nil, errors.Annotate(err, "failed to open control port")

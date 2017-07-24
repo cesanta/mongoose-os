@@ -3,6 +3,9 @@
 
 #include <inttypes.h>
 
+#include "/opt/Espressif/ESP8266_NONOS_SDK/include/c_types.h"
+#include "/opt/Espressif/ESP8266_NONOS_SDK/include/spi_flash.h"
+
 int uart_rx_one_char(uint8_t *ch);
 uint8_t uart_rx_one_char_block();
 int uart_tx_one_char(char ch);
@@ -24,8 +27,13 @@ uint32_t SPIWrite(uint32_t addr, const uint32_t *src, uint32_t size);
 uint32_t SPIEraseChip();
 uint32_t SPIEraseBlock(uint32_t block_num);
 uint32_t SPIEraseSector(uint32_t sector_num);
-uint32_t SPI_read_status();
-uint32_t Wait_SPI_Idle();
+
+extern SpiFlashChip *flashchip;
+uint32_t Wait_SPI_Idle(SpiFlashChip *spi);
+uint32_t SPI_chip_erase(SpiFlashChip *spi);
+uint32_t SPI_read_status(SpiFlashChip *spi);
+uint32_t SPI_write_enable(SpiFlashChip *spi);
+
 void spi_flash_attach();
 
 /* ESP32 API compatibility */

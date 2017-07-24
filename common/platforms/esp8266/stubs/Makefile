@@ -6,6 +6,7 @@
 STUB = stub_hello.c
 LIBS =
 PARAMS =
+CFLAGS =
 PORT = /dev/ttyUSB0
 
 BUILD_DIR = .build
@@ -29,7 +30,7 @@ $(STUB_ELF): $(STUB) $(LIBS)
          -I. -I/src/common/platforms/esp \
          -I/opt/Espressif/ESP8266_SDK \
          -Wl,-static -ffunction-sections -Wl,--gc-sections \
-         -Tstub.ld -o $@ $^"
+         -Tstub.ld $(CFLAGS) -o $@ $^"
 
 wrap: $(STUB_JSON)
 

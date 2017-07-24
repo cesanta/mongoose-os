@@ -116,7 +116,7 @@ func Flash(ct esp.ChipType, fw *common.FirmwareBundle, opts *esp.FlashOpts) erro
 			}
 			for i := 1; imageBytesWritten < len(im.data); i++ {
 				common.Reportf("  %7d @ 0x%x", len(data), addr)
-				bytesWritten, err := cfr.fc.Write(addr, data, true /* erase */)
+				bytesWritten, err := cfr.fc.Write(addr, data, true /* erase */, opts.EnableCompression)
 				if err != nil {
 					if bytesWritten >= flashSectorSize {
 						// We made progress, restart the retry counter.

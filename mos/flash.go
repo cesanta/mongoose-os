@@ -32,7 +32,9 @@ func init() {
 		"Format SLFS for this flash size (bytes)")
 
 	// ESP8266, ESP32
-	flag.UintVar(&espFlashOpts.BaudRate, "esp-baud-rate", 460800,
+	flag.UintVar(&espFlashOpts.ROMBaudRate, "esp-rom-baud-rate", 115200,
+		"Data port speed when talking to ROM loader")
+	flag.UintVar(&espFlashOpts.FlasherBaudRate, "esp-baud-rate", 460800,
 		"Data port speed during flashing")
 	flag.StringVar(&espFlashOpts.DataPort, "esp-data-port", "",
 		"If specified, this port will be used to send data during flashing. "+
@@ -47,6 +49,8 @@ func init() {
 			"and can be one of 20m, 26m, 40m, 80m")
 	flag.BoolVar(&espFlashOpts.EraseChip, "esp-erase-chip", false,
 		"Erase entire chip before flashing")
+	flag.BoolVar(&espFlashOpts.EnableCompression, "esp-enable-compression", true,
+		"Compress data while writing to flash. Usually makes flashing faster.")
 	flag.BoolVar(&espFlashOpts.MinimizeWrites, "esp-minimize-writes", true,
 		"Minimize the number of blocks to write by comparing current contents "+
 			"with the images being written")
@@ -57,9 +61,6 @@ func init() {
 			"Encryption is only applied to parts with encrypt=true.")
 	flag.Uint32Var(&espFlashOpts.ESP32FlashCryptConf, "esp32-flash-crypt-conf", 0xf,
 		"Value of the FLASH_CRYPT_CONF eFuse setting, affecting how key is tweaked.")
-	// For backward compatibility. The rest of the flags are obscure.
-	flag.UintVar(&espFlashOpts.BaudRate, "esp8266-baud-rate", 460800,
-		"Data port speed during flashing")
 
 	// STM32
 	if runtime.GOOS == "windows" {

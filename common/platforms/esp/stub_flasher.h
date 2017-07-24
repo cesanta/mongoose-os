@@ -3,15 +3,6 @@
 
 enum stub_cmd {
   /*
-   * Erase a region of SPI flash.
-   *
-   * Args: addr, len; must be FLASH_SECTOR_SIZE-aligned.
-   * Input: None.
-   * Output: None.
-   */
-  CMD_FLASH_ERASE = 0,
-
-  /*
    * Write to the SPI flash.
    *
    * Args: addr, len, erase; addr and len must be SECTOR_SIZE-aligned.

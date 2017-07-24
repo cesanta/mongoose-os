@@ -25,8 +25,8 @@ func ConnectToFlasherClient(ct esp.ChipType, opts *esp.FlashOpts) (*cfResult, er
 	var err error
 	r := &cfResult{}
 
-	if opts.BaudRate < 0 || opts.BaudRate > 4000000 {
-		return nil, errors.Errorf("invalid flashing baud rate (%d)", opts.BaudRate)
+	if opts.FlasherBaudRate < 0 || opts.FlasherBaudRate > 4000000 {
+		return nil, errors.Errorf("invalid flashing baud rate (%d)", opts.FlasherBaudRate)
 	}
 
 	if err = r.flashParams.ParseString(ct, opts.FlashParams); err != nil {
@@ -60,7 +60,7 @@ func ConnectToFlasherClient(ct esp.ChipType, opts *esp.FlashOpts) (*cfResult, er
 		}
 	}()
 
-	r.fc, err = NewFlasherClient(ct, r.rc, opts.BaudRate)
+	r.fc, err = NewFlasherClient(ct, r.rc, opts.FlasherBaudRate)
 	if err != nil {
 		return nil, errors.Annotatef(err, "failed to run flasher")
 	}

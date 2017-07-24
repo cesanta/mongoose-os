@@ -5,7 +5,7 @@
 
 MEMORY {
   iram : org = 0x40100000, len = 0x8000
-  dram : org = 0x3FFE8000, len = 0x18000
+  dram : org = 0x3FFE8000, len = 0x14000
 }
 
 ENTRY(stub_main)
@@ -39,3 +39,5 @@ SECTIONS {
 INCLUDE "eagle.rom.addr.v6.ld"
 
 PROVIDE(SPIFlashModeConfig = 0x40004568);
+PROVIDE(SPI_erase_sector = 0x400040c0);
+PROVIDE(SPI_erase_block = 0x40004120);

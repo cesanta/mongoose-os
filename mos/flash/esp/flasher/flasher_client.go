@@ -2,6 +2,7 @@ package flasher
 
 import (
 	"bytes"
+	"compress/zlib"
 	"crypto/md5"
 	"encoding/binary"
 	"encoding/hex"
@@ -25,8 +26,8 @@ const (
 	FLASH_BLOCK_SIZE  = 65536
 	FLASH_SECTOR_SIZE = 4096
 	// These consts should be in sync with stub_flasher.c
-	UART_BUF_SIZE    = 8 * FLASH_SECTOR_SIZE
-	FLASH_WRITE_SIZE = FLASH_SECTOR_SIZE
+	BUF_SIZE      = 4096
+	UART_BUF_SIZE = 4 * BUF_SIZE
 )
 
 const (
@@ -192,11 +193,12 @@ type writeProgress struct {
 }
 
 type writeResult struct {
-	waitTime  uint32
-	writeTime uint32
-	eraseTime uint32
-	totalTime uint32
-	digest    [md5.Size]byte
+	waitTime   uint32
+	decompTime uint32
+	writeTime  uint32
+	eraseTime  uint32
+	totalTime  uint32
+	digest     [md5.Size]byte
 }
 
 func (fc *FlasherClient) Sync() error {
@@ -231,8 +233,8 @@ sync:
 	return errors.Errorf("flasher did not respond")
 }
 
-func (fc *FlasherClient) Write(addr uint32, data []byte, erase bool) (int, error) {
-	var numSent, numWritten int
+func (fc *FlasherClient) Write(addr uint32, data []byte, erase bool, compress bool) (int, error) {
+	var numSent, numWritten, numBytesOnTheWire int
 	if !fc.connected {
 		return numWritten, errors.New("not connected")
 	}
@@ -270,27 +272,46 @@ func (fc *FlasherClient) Write(addr uint32, data []byte, erase bool) (int, error
 		expectedDigest := digest.Sum(nil)
 		expectedDigestHex := strings.ToLower(hex.EncodeToString(expectedDigest[:]))
 		digestHex := strings.ToLower(hex.EncodeToString(progress.digest[:]))
-		glog.V(3).Infof("<= %d %d; %d %s/%s", numWritten, progress.bufLevel, numSent-numWritten, digestHex, expectedDigestHex)
 		if numWritten > 0 && digestHex != expectedDigestHex {
 			return numWritten, errors.Errorf("digest mismatch @ %d: expected %s, got %s", numWritten, expectedDigestHex, digestHex)
 		}
 		numWritten = newNumWritten
-		for numSent < len(data) {
-			inFlight := numSent - numWritten
-			canSend := int(UART_BUF_SIZE - FLASH_WRITE_SIZE - inFlight)
-			if canSend <= 0 {
-				break
-			}
+		inFlight := numSent - numWritten
+		canSend := int(UART_BUF_SIZE - BUF_SIZE - inFlight)
+		glog.V(3).Infof("<= %d %d; %d/%d/%d; %s", numWritten, progress.bufLevel, numSent, inFlight, canSend, digestHex)
+		for numSent < len(data) && canSend > 0 {
 			numToSend := len(data) - numSent
 			if numToSend > canSend {
 				numToSend = canSend
 			}
+			if numToSend > BUF_SIZE {
+				numToSend = BUF_SIZE
+			}
 			toSend := data[numSent : numSent+numToSend]
+			var compressed bytes.Buffer
+			if compress {
+				// Try compressing, see if it gets smaller
+				w, _ := zlib.NewWriterLevel(&compressed, zlib.BestCompression)
+				w.Write(toSend)
+				w.Close()
+				glog.V(4).Infof("%d -> %d", len(toSend), compressed.Len())
+			}
+			if compress && compressed.Len() < len(toSend) {
+				toSend2 := make([]byte, 0, compressed.Len()+1)
+				toSend2 = append(toSend2, 0x01)
+				toSend = append(toSend2, compressed.Bytes()...)
+			} else {
+				toSend2 := make([]byte, 0, len(toSend)+1)
+				toSend2 = append(toSend2, 0x00)
+				toSend = append(toSend2, toSend...)
+			}
 			ns, err := fc.srw.Write(toSend)
 			if err != nil {
 				return numWritten, errors.Annotatef(err, "flash write failed @ %d/%d", numWritten, numSent)
 			}
-			numSent += len(toSend)
+			numSent += numToSend
+			canSend -= numToSend
+			numBytesOnTheWire += ns
 			glog.V(3).Infof("=> %d; %d/%d/%d", ns, numWritten, numSent, len(data))
 		}
 	}
@@ -298,12 +319,13 @@ func (fc *FlasherClient) Write(addr uint32, data []byte, erase bool) (int, error
 	if err != nil {
 		return numWritten, errors.Annotatef(err, "failed to read digest and stats")
 	}
-	if len(tail) != 1 || len(tail[0]) != 4*4+md5.Size {
+	if len(tail) != 1 || len(tail[0]) != 5*4+md5.Size {
 		return numWritten, errors.Errorf("unexpected digest packet %+v", tail)
 	}
 	sdb := bytes.NewBuffer(tail[0])
 	var result writeResult
 	binary.Read(sdb, binary.LittleEndian, &result.waitTime)
+	binary.Read(sdb, binary.LittleEndian, &result.decompTime)
 	binary.Read(sdb, binary.LittleEndian, &result.writeTime)
 	binary.Read(sdb, binary.LittleEndian, &result.eraseTime)
 	binary.Read(sdb, binary.LittleEndian, &result.totalTime)
@@ -314,13 +336,15 @@ func (fc *FlasherClient) Write(addr uint32, data []byte, erase bool) (int, error
 	if digestHex != expectedDigestHex {
 		return numWritten, errors.Errorf("final digest mismatch: expected %s, got %s", expectedDigestHex, digestHex)
 	}
-	miscTime := result.totalTime - result.waitTime - result.eraseTime - result.writeTime
-	glog.Infof("Write stats: waitTime:%.2f writeTime:%.2f eraseTime:%.2f miscTime:%.2f totalTime:%d",
+	miscTime := result.totalTime - result.waitTime - result.decompTime - result.eraseTime - result.writeTime
+	glog.Infof("Write stats: waitTime:%.2f decompTime:%.2f writeTime:%.2f eraseTime:%.2f miscTime:%.2f totalTime:%d compFactor:%.2f",
 		float64(result.waitTime)/float64(result.totalTime),
+		float64(result.decompTime)/float64(result.totalTime),
 		float64(result.writeTime)/float64(result.totalTime),
 		float64(result.eraseTime)/float64(result.totalTime),
 		float64(miscTime)/float64(result.totalTime),
 		result.totalTime,
+		float64(numBytesOnTheWire)/float64(numWritten),
 	)
 	return numWritten, nil
 }
