@@ -315,15 +315,15 @@ func (fc *FlasherClient) Write(addr uint32, data []byte, erase bool, compress bo
 			glog.V(3).Infof("=> %d; %d/%d/%d", ns, numWritten, numSent, len(data))
 		}
 	}
+	var result writeResult
 	tail, err := fc.recvResponse()
 	if err != nil {
 		return numWritten, errors.Annotatef(err, "failed to read digest and stats")
 	}
-	if len(tail) != 1 || len(tail[0]) != 5*4+md5.Size {
+	if len(tail) != 1 || len(tail[0]) != int(unsafe.Sizeof(result)) {
 		return numWritten, errors.Errorf("unexpected digest packet %+v", tail)
 	}
 	sdb := bytes.NewBuffer(tail[0])
-	var result writeResult
 	binary.Read(sdb, binary.LittleEndian, &result.waitTime)
 	binary.Read(sdb, binary.LittleEndian, &result.decompTime)
 	binary.Read(sdb, binary.LittleEndian, &result.writeTime)
