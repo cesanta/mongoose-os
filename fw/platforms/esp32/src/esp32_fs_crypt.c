@@ -13,7 +13,6 @@
 #include "mbedtls/aes.h"
 
 #include "common/cs_dbg.h"
-#include "common/spiffs/spiffs_vfs.h"
 #include "mgos_hal.h"
 
 /*

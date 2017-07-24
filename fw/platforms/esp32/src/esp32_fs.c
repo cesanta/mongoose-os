@@ -18,7 +18,6 @@
 
 #include "common/cs_dbg.h"
 #include "common/cs_file.h"
-#include "common/spiffs/spiffs_vfs.h"
 
 #include "frozen/frozen.h"
 
