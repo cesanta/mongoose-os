@@ -3,18 +3,17 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"golang.org/x/net/context"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path/filepath"
 
-	"cesanta.com/mos/build"
+	"golang.org/x/net/context"
+
 	"cesanta.com/mos/build/archive"
 	moscommon "cesanta.com/mos/common"
 	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"
-	yaml "gopkg.in/yaml.v2"
 )
 
 func initFW(ctx context.Context, devConn *dev.DevConn) error {
@@ -63,7 +62,10 @@ func initFW(ctx context.Context, devConn *dev.DevConn) error {
 	// Remove LICENSE file, ignore any errors
 	os.RemoveAll(filepath.Join(".", "LICENSE"))
 
-	// If arch was provided, update yaml
+	// If arch was provided, update yaml.
+	// Note that we shouldn't unmarshal yaml, set arch and marshal it back,
+	// because it strips all comments and uglifies mos.yml in other ways.
+	// Instead, we just insert "arch: foo" as a first line.
 	if *arch != "" {
 		fmt.Printf("Setting arch %q...\n", *arch)
 		manifestFilename := moscommon.GetManifestFilePath(".")
@@ -73,19 +75,9 @@ func initFW(ctx context.Context, devConn *dev.DevConn) error {
 			return errors.Trace(err)
 		}
 
-		var manifest build.FWAppManifest
-		if err := yaml.Unmarshal(manifestData, &manifest); err != nil {
-			return errors.Trace(err)
-		}
+		manifestString := fmt.Sprintf("arch: %s\n%s", *arch, string(manifestData))
 
-		manifest.Arch = *arch
-
-		manifestData, err = yaml.Marshal(&manifest)
-		if err != nil {
-			return errors.Trace(err)
-		}
-
-		err = ioutil.WriteFile(manifestFilename, manifestData, 0644)
+		err = ioutil.WriteFile(manifestFilename, []byte(manifestString), 0644)
 		if err != nil {
 			return errors.Trace(err)
 		}
