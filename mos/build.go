@@ -1132,6 +1132,9 @@ func buildRemote(bParams *buildParams) error {
 	for _, v := range manifest.Filesystem {
 		whitelist[ourfilepath.GetFirstPathComponent(v)] = true
 	}
+	for _, v := range manifest.BinaryLibs {
+		whitelist[ourfilepath.GetFirstPathComponent(v)] = true
+	}
 	for _, v := range manifest.ExtraFiles {
 		whitelist[ourfilepath.GetFirstPathComponent(v)] = true
 	}
