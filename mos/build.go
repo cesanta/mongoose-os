@@ -950,12 +950,12 @@ func readManifestFile(
 ) (*build.FWAppManifest, time.Time, error) {
 	manifestSrc, err := ioutil.ReadFile(manifestFullName)
 	if err != nil {
-		return nil, time.Time{}, errors.Trace(err)
+		return nil, time.Time{}, errors.Annotatef(err, "reading manifest %q", manifestFullName)
 	}
 
 	var manifest build.FWAppManifest
 	if err := yaml.Unmarshal(manifestSrc, &manifest); err != nil {
-		return nil, time.Time{}, errors.Trace(err)
+		return nil, time.Time{}, errors.Annotatef(err, "parsing manifest %q", manifestFullName)
 	}
 
 	// If SkeletonVersion is specified, but ManifestVersion is not, then use the
