@@ -79,7 +79,6 @@ void device_get_mac_address(uint8_t mac[6]);
 void mgos_expand_mac_address_placeholders(char *str);
 
 enum mgos_init_result mgos_sys_config_init(void);
-enum mgos_init_result mgos_sys_config_init_platform(struct sys_config *cfg);
 
 #ifdef __cplusplus
 }

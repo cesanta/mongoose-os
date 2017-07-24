@@ -32,6 +32,9 @@
 #include "mgos_uart.h"
 #include "mgos_updater_common.h"
 #include "mgos_vfs.h"
+#ifdef MGOS_HAVE_WIFI
+#include "esp32_wifi.h"
+#endif
 
 #include "fw/platforms/esp32/src/esp32_debug.h"
 #include "fw/platforms/esp32/src/esp32_exc.h"
@@ -53,12 +56,11 @@
 extern const char *build_version, *build_id;
 extern const char *mg_build_version, *mg_build_id;
 
-/* From esp32_wifi.c */
 esp_err_t esp32_wifi_ev(system_event_t *event);
-bool mgos_wifi_set_config(const struct sys_config_wifi *cfg);
 
 esp_err_t event_handler(void *ctx, system_event_t *event) {
   switch (event->event_id) {
+#ifdef MGOS_HAVE_WIFI
     case SYSTEM_EVENT_STA_START:
     case SYSTEM_EVENT_STA_STOP:
     case SYSTEM_EVENT_STA_GOT_IP:
@@ -69,6 +71,7 @@ esp_err_t event_handler(void *ctx, system_event_t *event) {
     case SYSTEM_EVENT_SCAN_DONE:
       return esp32_wifi_ev(event);
       break;
+#endif
 #ifdef MGOS_HAVE_ETHERNET
     case SYSTEM_EVENT_ETH_START:
     case SYSTEM_EVENT_ETH_STOP:
@@ -93,11 +96,6 @@ esp_err_t event_handler(void *ctx, system_event_t *event) {
       LOG(LL_INFO, ("event: %d", event->event_id));
   }
   return ESP_OK;
-}
-
-enum mgos_init_result mgos_sys_config_init_platform(struct sys_config *cfg) {
-  return mgos_wifi_set_config(&cfg->wifi) ? MGOS_INIT_OK
-                                          : MGOS_INIT_CONFIG_WIFI_INIT_FAILED;
 }
 
 struct mgos_event {

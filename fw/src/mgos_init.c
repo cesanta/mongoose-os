@@ -19,15 +19,6 @@ enum mgos_init_result mgos_init(void) {
   r = mgos_sys_config_init();
   if (r != MGOS_INIT_OK) return r;
 
-#if MGOS_ENABLE_WIFI
-  r = mgos_wifi_init();
-  if (r != MGOS_INIT_OK) return r;
-#endif
-
-  /* Before mgos_sys_config_init_http */
-  r = mgos_sys_config_init_platform(get_cfg());
-  if (r != MGOS_INIT_OK) return r;
-
 #if MGOS_ENABLE_MDNS
   r = mgos_mdns_init(); /* Before dns_sd init, after
                            mgos_sys_config_init_platform */

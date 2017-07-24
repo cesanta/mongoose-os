@@ -1,0 +1,14 @@
+name: c_no_libs
+# arch: PLATFORM
+version: 1.0
+skeleton_version: 2017-06-16
+
+libs_version: ${mos_version}
+modules_version: ${mos_version}
+mongoose_os_version: ${mos_version}
+
+sources:
+  - src
+
+# This example uses no libs, has no networking or RPC support at all.
+# It is here mainly for use in tests to make sure this is possible.

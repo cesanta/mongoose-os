@@ -34,10 +34,6 @@
 #define MGOS_ENABLE_UPDATER 0
 #endif
 
-#ifndef MGOS_ENABLE_WIFI
-#define MGOS_ENABLE_WIFI 0
-#endif
-
 #ifndef MGOS_PROMPT_DISABLE_ECHO
 #define MGOS_PROMPT_DISABLE_ECHO 0
 #endif

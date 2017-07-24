@@ -4,9 +4,9 @@ REPO_ROOT = $(abspath ../..)
 MJS_PATH = $(REPO_ROOT)/mjs
 LIBS_PATH = $(REPO_ROOT)/mos_libs
 
-EXAMPLES_cc3200 = c_aws_shadow c_hello c_network c_mqtt
-EXAMPLES_esp32 =  c_aws_shadow c_hello c_mqtt
-EXAMPLES_esp8266 = c_aws_shadow c_heater c_hello c_mqtt c_network
+EXAMPLES_cc3200 = c_aws_shadow c_hello c_mqtt c_network c_no_libs
+EXAMPLES_esp32 =  c_aws_shadow c_hello c_mqtt c_network c_no_libs
+EXAMPLES_esp8266 = c_aws_shadow c_heater c_hello c_mqtt c_network c_no_libs
 EXAMPLES_pic32 =
 EXAMPLES_stm32 =
 

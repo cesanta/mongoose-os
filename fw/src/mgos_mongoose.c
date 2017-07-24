@@ -12,7 +12,9 @@
 #include "mgos_sys_config.h"
 #include "mgos_timers.h"
 #include "mgos_utils.h"
+#ifdef MGOS_HAVE_WIFI
 #include "mgos_wifi.h"
+#endif
 
 #ifndef IRAM
 #define IRAM
@@ -237,7 +239,7 @@ bool mgos_is_inbound(struct mg_connection *c) {
 }
 
 char *mgos_get_nameserver() {
-#if MGOS_ENABLE_WIFI
+#ifdef MGOS_HAVE_WIFI
   char *dns = NULL;
   if (get_cfg()->wifi.sta.nameserver != NULL) {
     dns = strdup(get_cfg()->wifi.sta.nameserver);

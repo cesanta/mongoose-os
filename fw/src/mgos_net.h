@@ -25,12 +25,14 @@ enum mgos_net_event {
 };
 
 enum mgos_net_if_type {
-#if MGOS_ENABLE_WIFI
+#ifdef MGOS_HAVE_WIFI
   MGOS_NET_IF_TYPE_WIFI,
 #endif
 #ifdef MGOS_HAVE_ETHERNET
   MGOS_NET_IF_TYPE_ETHERNET,
 #endif
+  /* This is a sentinel in case all networking interface types are disabled. */
+  MGOS_NET_IF_MAX,
 };
 
 struct mgos_net_ip_info {

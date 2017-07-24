@@ -11,7 +11,9 @@
 
 #include "mgos_hal.h"
 #include "mgos_mongoose.h"
+#ifdef MGOS_HAVE_WIFI
 #include "mgos_wifi_hal.h"
+#endif
 
 struct cb_info {
   mgos_net_event_handler_t cb;
@@ -39,7 +41,7 @@ static inline void net_unlock(void) {
 static const char *get_if_name(enum mgos_net_if_type if_type, int if_instance) {
   const char *name = "";
   switch (if_type) {
-#if MGOS_ENABLE_WIFI
+#ifdef MGOS_HAVE_WIFI
     case MGOS_NET_IF_TYPE_WIFI: {
       switch (if_instance) {
         case 0: {
@@ -60,6 +62,9 @@ static const char *get_if_name(enum mgos_net_if_type if_type, int if_instance) {
       break;
     }
 #endif
+    case MGOS_NET_IF_MAX: {
+      break;
+    }
   }
   (void) if_instance;
   return name;
@@ -134,7 +139,7 @@ void mgos_net_add_event_handler(mgos_net_event_handler_t eh, void *arg) {
 bool mgos_net_get_ip_info(enum mgos_net_if_type if_type, int if_instance,
                           struct mgos_net_ip_info *ip_info) {
   switch (if_type) {
-#if MGOS_ENABLE_WIFI
+#ifdef MGOS_HAVE_WIFI
     case MGOS_NET_IF_TYPE_WIFI: {
       return mgos_wifi_dev_get_ip_info(if_instance, ip_info);
     }
@@ -144,6 +149,12 @@ bool mgos_net_get_ip_info(enum mgos_net_if_type if_type, int if_instance,
       return mgos_eth_dev_get_ip_info(if_instance, ip_info);
     }
 #endif
+    case MGOS_NET_IF_MAX: {
+      (void) if_type;
+      (void) if_instance;
+      (void) ip_info;
+      break;
+    }
   }
   return false;
 }

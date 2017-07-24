@@ -13,7 +13,9 @@
 
 #include "mgos_mongoose.h"
 #include "mgos_sys_config.h"
+#ifdef MGOS_HAVE_WIFI
 #include "mgos_wifi.h"
+#endif
 
 #if MGOS_ENABLE_MDNS
 

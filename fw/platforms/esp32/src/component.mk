@@ -52,10 +52,6 @@ SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_config.yaml
 ifeq "$(MGOS_ENABLE_UPDATER)" "1"
   MGOS_SRCS += esp32_updater.c
 endif
-ifeq "$(MGOS_ENABLE_WIFI)" "1"
-  MGOS_SRCS += esp32_wifi.c
-  SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_wifi_config.yaml
-endif
 
 include $(MGOS_PATH)/common/scripts/build_info.mk
 

@@ -106,7 +106,6 @@ MGOS_SRCS = cs_file.c cs_rbuf.c \
             mgos_hooks.c \
             mgos_init.c \
             mgos_timers_mongoose.c \
-            mgos_wifi.c \
             mgos_mmap_esp.c \
             mgos_mongoose.c \
             mgos_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
@@ -141,8 +140,7 @@ MGOS_SRCS += esp_adc.c \
              esp_pwm.c \
              esp_uart.c \
              esp_updater.c \
-             esp_vfs_dev_sysflash.c \
-             esp_wifi.c
+             esp_vfs_dev_sysflash.c
 
 MGOS_SRCS += $(notdir $(foreach m,$(SPIFFS_PATH) $(COMMON_ESP8266_PATH),$(wildcard $(m)/*.c)))
 APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
@@ -162,10 +160,6 @@ IPATH = $(APP_SOURCE_DIRS) $(MGOS_PATH) $(MGOS_SRC_PATH) $(MGOS_ESP8266_PATH)/in
 LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip $(MGOS_ESP_SRC_PATH)
 
 include $(MGOS_PATH)/fw/src/mgos_features.mk
-
-ifeq "$(MGOS_ENABLE_WIFI)" "1"
-  SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp_wifi_config.yaml
-endif
 
 # libraries used in this project, mainly provided by the SDK
 SDK_LIBS = c crypto espnow gcc hal main net80211 pp phy stdc++ wpa wpa2

@@ -177,3 +177,22 @@ void mgos_rlock(struct mgos_rlock_type *l) {
 void mgos_runlock(struct mgos_rlock_type *l) {
   xSemaphoreGiveRecursive((SemaphoreHandle_t) l);
 }
+
+#ifndef MGOS_HAVE_WIFI
+void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *e) {
+  (void) e;
+}
+void SimpleLinkWlanEventHandler(SlWlanEvent_t *e) {
+  (void) e;
+}
+#endif
+
+void SimpleLinkSockEventHandler(SlSockEvent_t *e) {
+  (void) e;
+}
+
+void SimpleLinkHttpServerCallback(SlHttpServerEvent_t *e,
+                                  SlHttpServerResponse_t *resp) {
+  (void) e;
+  (void) resp;
+}

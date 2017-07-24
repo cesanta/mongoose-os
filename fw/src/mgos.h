@@ -42,6 +42,8 @@
 #include "mgos_updater_hal.h"
 #include "mgos_updater_util.h"
 #include "mgos_utils.h"
+#ifdef MGOS_HAVE_WIFI
 #include "mgos_wifi.h"
+#endif
 
 #endif
