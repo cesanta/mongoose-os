@@ -394,7 +394,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 			var err error
 			targetDir, err = m.PrepareLocalDir(modulesDir, logWriter, true, manifest.ModulesVersion, *libsUpdateInterval)
 			if err != nil {
-				return errors.Trace(err)
+				return errors.Annotatef(err, "preparing local copy of the module %q", name)
 			}
 		} else {
 			freportf(logWriter, "Using module %q located at %q", name, targetDir)
@@ -424,7 +424,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		var err error
 		mosDirEffective, err = m.PrepareLocalDir(modulesDir, logWriter, true, "", *libsUpdateInterval)
 		if err != nil {
-			return errors.Trace(err)
+			return errors.Annotatef(err, "preparing local copy of the mongoose-os repo")
 		}
 	}
 	setModuleVars(mVars, "mongoose-os", mosDirEffective)
@@ -1598,7 +1598,7 @@ libs:
 				// if pc.userLibsDir is different, will need to copy it to the new location
 				libDirAbs, err = m.PrepareLocalDir(libsDir, pc.logWriter, true, pc.appManifest.LibsVersion, *libsUpdateInterval)
 				if err != nil {
-					return nil, time.Time{}, errors.Trace(err)
+					return nil, time.Time{}, errors.Annotatef(err, "preparing local copy of the lib %q", name)
 				}
 
 			}
