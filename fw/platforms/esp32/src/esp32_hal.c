@@ -107,11 +107,11 @@ IRAM void mgos_runlock(struct mgos_rlock_type *l) {
   xSemaphoreGiveRecursive((SemaphoreHandle_t) l);
 }
 
-IRAM_ATTR void mgos_ints_disable(void) {
+IRAM void mgos_ints_disable(void) {
   __asm volatile("rsil a2, 3" : : : "a2");
 }
 
-IRAM_ATTR void mgos_ints_enable(void) {
+IRAM void mgos_ints_enable(void) {
   __asm volatile("rsil a2, 0" : : : "a2");
 }
 
