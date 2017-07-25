@@ -9,6 +9,7 @@
 
 #include "soc/timer_group_struct.h"
 #include "soc/timer_group_reg.h"
+#include "soc/rtc.h"
 
 #include "mgos_debug.h"
 #include "mgos_hal.h"
@@ -124,4 +125,8 @@ int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {
   }
   (void) ctx;
   return 0;
+}
+
+uint32_t mgos_get_cpu_freq(void) {
+  return rtc_clk_cpu_freq_value(rtc_clk_cpu_freq_get());
 }

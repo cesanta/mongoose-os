@@ -132,3 +132,8 @@ void mgos_unlock(void) {
 void mgos_bitbang_write_bits_js(void) {
   /* TODO */
 }
+
+uint32_t mgos_get_cpu_freq(void) {
+  /* TODO */
+  return 0;
+}

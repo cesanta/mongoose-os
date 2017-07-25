@@ -125,4 +125,8 @@ IRAM void mgos_runlock(struct mgos_rlock_type *l) {
   (void) l;
 }
 
-#endif
+#endif /* !RTOS_SDK */
+
+uint32_t mgos_get_cpu_freq(void) {
+  return system_get_cpu_freq() * 1000000;
+}

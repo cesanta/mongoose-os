@@ -40,3 +40,8 @@ void mgos_lock(void) {
 void mgos_unlock(void) {
   /* TODO(dfrank) */
 }
+
+uint32_t mgos_get_cpu_freq(void) {
+  /* TODO */
+  return 0;
+}

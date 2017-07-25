@@ -196,3 +196,7 @@ void SimpleLinkHttpServerCallback(SlHttpServerEvent_t *e,
   (void) e;
   (void) resp;
 }
+
+uint32_t mgos_get_cpu_freq(void) {
+  return 80000000;
+}

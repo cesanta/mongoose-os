@@ -79,6 +79,9 @@ struct mgos_rlock_type *mgos_new_rlock(void);
 void mgos_rlock(struct mgos_rlock_type *l);
 void mgos_runlock(struct mgos_rlock_type *l);
 
+/* Get the CPU frequency in Hz */
+uint32_t mgos_get_cpu_freq(void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
