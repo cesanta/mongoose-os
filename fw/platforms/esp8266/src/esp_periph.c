@@ -40,7 +40,7 @@ const struct gpio_info gpio_map[] = {
     {15, PERIPHS_IO_MUX_MTDO_U, FUNC_GPIO15},
 };
 
-const struct gpio_info *get_gpio_info(uint8_t gpio_no) {
+IRAM const struct gpio_info *get_gpio_info(uint8_t gpio_no) {
   const struct gpio_info *ret_val;
 
   if (gpio_no >= sizeof(gpio_map) / sizeof(gpio_map[0])) {

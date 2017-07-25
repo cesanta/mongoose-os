@@ -74,7 +74,7 @@ uint8_t gpio16_input_get(void) {
   return (uint8_t)(READ_PERI_REG(RTC_GPIO_IN_DATA) & 1);
 }
 
-bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
+IRAM bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
   if (pin == 16) {
     if (mode == MGOS_GPIO_MODE_INPUT) {
       gpio16_input_conf();
@@ -126,14 +126,14 @@ bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
   return true;
 }
 
-void gpio_pin_intr_state_set(uint32 i, GPIO_INT_TYPE intr_state) {
+IRAM void gpio_pin_intr_state_set(uint32 i, GPIO_INT_TYPE intr_state) {
   uint32 pin_reg = GPIO_REG_READ(GPIO_PIN_ADDR(i));
   pin_reg &= (~GPIO_PIN_INT_TYPE_MASK);
   pin_reg |= (intr_state << GPIO_PIN_INT_TYPE_LSB);
   GPIO_REG_WRITE(GPIO_PIN_ADDR(i), pin_reg);
 }
 
-bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
+IRAM bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
   const struct gpio_info *gi = get_gpio_info(pin);
   if (gi == NULL) return false;
 
@@ -173,7 +173,7 @@ IRAM void mgos_gpio_write(int pin, bool level) {
   }
 }
 
-bool mgos_gpio_read(int pin) {
+IRAM bool mgos_gpio_read(int pin) {
   if (pin == 16) {
     return 0x1 & gpio16_input_get();
   }
