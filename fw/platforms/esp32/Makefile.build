@@ -16,6 +16,9 @@ APP_SOURCES ?=
 APP_FS_FILES ?=
 # List of static libs (.a) which are parts of the app
 APP_BIN_LIBS ?=
+# Override some settings in SDKCONFIG, e.g. to disable FOO and enable BAR:
+# ESP_IDF_SDKCONFIG_OPTS = "CONFIG_FOO= CONFIG_BAR=y"
+ESP_IDF_SDKCONFIG_OPTS ?=
 
 # NOTE: those two are deprecated. Use APP_SOURCES and APP_FS_FILES instead.
 APP_MODULES ?=
@@ -138,12 +141,25 @@ ESPFLASHMODE = qio
 ESPFLASHSIZE = 4MB
 ESPBAUD = 1500000
 
-SDKCONFIG = $(MGOS_ESP_PATH)/sdkconfig
+SDKCONFIG = $(GEN_DIR)/sdkconfig
+SDKCONFIG_DEFAULTS = $(GEN_DIR)/sdkconfig.defaults
 
 PARTITION_TABLE_CSV_PATH = $(MGOS_ESP_PATH)/src/partitions_mgos.csv
 MKSPIFFS = /usr/local/bin/mkspiffs8
 
 include $(IDF_PATH)/make/project.mk
+
+# TODO(dfrank): Add dep on mos.yml here.
+$(SDKCONFIG_DEFAULTS):
+	mkdir -p $(dir $@)
+	cp $(MGOS_ESP_PATH)/sdkconfig $@
+	for kv in $(ESP_IDF_SDKCONFIG_OPTS); do echo $$kv >> $@; done
+
+defconfig: $(SDKCONFIG_DEFAULTS)
+
+# Override menuconfig, it's not working properly in our environment anyway.
+menuconfig:
+	true
 
 LDFLAGS += -L$(BUILD_DIR)/src
 
