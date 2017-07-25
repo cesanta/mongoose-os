@@ -19,6 +19,12 @@ APP_BIN_LIBS ?=
 # Override some settings in SDKCONFIG, e.g. to disable FOO and enable BAR:
 # ESP_IDF_SDKCONFIG_OPTS = "CONFIG_FOO= CONFIG_BAR=y"
 ESP_IDF_SDKCONFIG_OPTS ?=
+# Extra components of ESP-IDF to enable during build
+ESP_IDF_EXTRA_COMPONENTS ?=
+# Extra flash partition definition.
+# ESP_IDF_EXTRA_PARTITION="fs_ext,data,spiffs,,256K"
+# Partition will be placed after all other mOS partitions.
+ESP_IDF_EXTRA_PARTITION ?=
 
 # NOTE: those two are deprecated. Use APP_SOURCES and APP_FS_FILES instead.
 APP_MODULES ?=
@@ -51,6 +57,7 @@ GEN_DIR ?= $(BUILD_DIR)/gen
 
 export APP_SLOT_SIZE ?= 0x180000
 FS_IMG = $(FW_STAGING_DIR)/fs.img
+export ESP_IDF_EXTRA_PARTITION
 export FS_ADDR ?= 0x190000
 export FS_SIZE ?= 262144
 FS_BLOCK_SIZE = 4096
@@ -135,7 +142,7 @@ SDK_COMPONENTS = app_update bootloader bootloader_support bt driver esp32 esptoo
                  ethernet expat freertos log lwip micro-ecc newlib \
                  nvs_flash partition_table soc spi_flash tcpip_adapter vfs \
                  wpa_supplicant xtensa-debug-module
-COMPONENTS = $(SDK_COMPONENTS) cryptoauthlib cs_mbedtls spiffs
+COMPONENTS = $(SDK_COMPONENTS) cryptoauthlib cs_mbedtls spiffs $(ESP_IDF_EXTRA_COMPONENTS)
 
 ESPFLASHMODE = qio
 ESPFLASHSIZE = 4MB

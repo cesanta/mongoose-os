@@ -13,3 +13,4 @@ app_0,    app,  ota_0,   $CONFIG_APP_OFFSET, $APP_SLOT_SIZE
 fs_0,     data, spiffs,  $FS_ADDR,           $FS_SIZE
 app_1,    app,  ota_1,   ,                   $APP_SLOT_SIZE
 fs_1,     data, spiffs,  ,                   $FS_SIZE
+$ESP_IDF_EXTRA_PARTITION
