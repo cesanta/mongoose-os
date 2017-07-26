@@ -21,6 +21,7 @@
 #include "mgos_mongoose.h"
 #include "mgos_updater_common.h"
 #include "mgos_utils.h"
+#include "mgos_vfs.h"
 
 #define PLACEHOLDER_CHAR '?'
 
@@ -246,6 +247,14 @@ enum mgos_init_result mgos_sys_config_init(void) {
   mgos_wdt_set_feed_on_poll(true);
 
   mgos_get_mgr()->hexdump_file = s_cfg.debug.mg_mgr_hexdump_file;
+
+  if (s_cfg.sys.mount.path != NULL) {
+    const struct sys_config_sys_mount *mcfg = &s_cfg.sys.mount;
+    if (!mgos_vfs_mount(mcfg->path, mcfg->dev_type, mcfg->dev_opts,
+                        mcfg->fs_type, mcfg->fs_opts)) {
+      return MGOS_INIT_MOUNT_FAILED;
+    }
+  }
 
   return MGOS_INIT_OK;
 }

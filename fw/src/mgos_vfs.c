@@ -124,8 +124,9 @@ bool mgos_vfs_mount(const char *path, const char *dev_type,
                     fs_opts, fs));
       if (fs->ops->mount(fs, fs_opts)) {
         LOG(LL_INFO, ("%s: size %u, used: %u, free: %u", path,
-                      fs->ops->get_space_total(fs), fs->ops->get_space_used(fs),
-                      fs->ops->get_space_free(fs)));
+                      (unsigned int) fs->ops->get_space_total(fs),
+                      (unsigned int) fs->ops->get_space_used(fs),
+                      (unsigned int) fs->ops->get_space_free(fs)));
         mgos_vfs_hal_mount(path, fs);
         return true;
       } else {
@@ -214,7 +215,8 @@ static struct mgos_vfs_mount_entry *find_mount_by_path(const char *path,
   mgos_vfs_unlock();
 out:
   LOG(LL_DEBUG, ("%s -> %s pl %u -> %d %p", path, (real_path ? real_path : ""),
-                 prefix_len, (me ? me->mount_id : -1), (me ? me->fs : NULL)));
+                 (unsigned int) prefix_len, (me ? me->mount_id : -1),
+                 (me ? me->fs : NULL)));
   if (me != NULL && fs_path != NULL) {
     *fs_path = real_path;
     p = real_path + prefix_len;
@@ -356,7 +358,8 @@ ssize_t mgos_vfs_read(int vfd, void *dst, size_t len) {
   fs = me->fs;
   ret = fs->ops->read(fs, fs_fd, dst, len);
 out:
-  LOG(LL_DEBUG, ("%d %u => %p:%d => %d", vfd, len, fs, fs_fd, ret));
+  LOG(LL_DEBUG,
+      ("%d %u => %p:%d => %d", vfd, (unsigned int) len, fs, fs_fd, ret));
   return ret;
 }
 #if MGOS_VFS_DEFINE_LIBC_API
@@ -394,7 +397,8 @@ ssize_t mgos_vfs_write(int vfd, const void *src, size_t len) {
   fs = me->fs;
   ret = fs->ops->write(fs, fs_fd, src, len);
 out:
-  LOG(LL_DEBUG, ("%d %u => %p:%d => %d", vfd, len, fs, fs_fd, ret));
+  LOG(LL_DEBUG,
+      ("%d %u => %p:%d => %d", vfd, (unsigned int) len, fs, fs_fd, (int) ret));
   return ret;
 }
 #if MGOS_VFS_DEFINE_LIBC_API
@@ -569,7 +573,13 @@ int _rename_r(struct _reent *r, const char *src, const char *dst) {
 #if MG_ENABLE_DIRECTORY_LISTING
 
 struct mgos_vfs_DIR {
+/*
+ * On ESP32 we must embed the DIR at the top of the struct to pass through
+ * the IDF's own VFS layer.
+ */
+#ifdef ESP_PLATFORM
   DIR x;
+#endif
   struct mgos_vfs_mount_entry *me;
   DIR *fs_dir;
 };

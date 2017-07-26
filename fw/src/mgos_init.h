@@ -42,6 +42,7 @@ enum mgos_init_result {
   MGOS_INIT_GCP_INIT_FAILED = -30,
   MGOS_INIT_GCP_INIT_FAILED_INVALID_KEY = -31,
   MGOS_INIT_DEPS_FAILED = -32,
+  MGOS_INIT_MOUNT_FAILED = -33,
 };
 
 enum mgos_init_result mgos_init(void);

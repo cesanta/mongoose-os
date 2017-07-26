@@ -23,6 +23,12 @@
   ["debug.mg_mgr_hexdump_file", "s", {title: "File name to hexdump network traffic to. Use '-' for stdout, '--' for stderr."}],
 
   ["sys", "o", {title: "System settings"}],
+  ["sys.mount", "o", {title: "Extra filesystem to mount"}],
+  ["sys.mount.path", "s", "", {title: "Mount point"}],
+  ["sys.mount.dev_type", "s", "", {title: "Storage device type"}],
+  ["sys.mount.dev_opts", "s", "", {title: "Storage device options"}],
+  ["sys.mount.fs_type", "s", "", {title: "Filesystem type"}],
+  ["sys.mount.fs_opts", "s", "", {title: "Filesystem options"}],
   ["sys.wdt_timeout", "i", 30, {title: "Watchdog timeout (seconds)"}],
 
   ["conf_acl", "s", "*", {title: "Conf ACL"}],
