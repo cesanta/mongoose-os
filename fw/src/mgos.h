@@ -8,6 +8,7 @@
 
 #include <stdbool.h>
 
+#include "common/json_utils.h"
 #include "common/platform.h"
 
 #include "common/cs_dbg.h"
