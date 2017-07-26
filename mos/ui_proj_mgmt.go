@@ -2,8 +2,6 @@ package main
 
 import (
 	"encoding/base64"
-	"github.com/cesanta/errors"
-	"golang.org/x/net/context"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -12,8 +10,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/cesanta/errors"
+	"golang.org/x/net/context"
+
 	"cesanta.com/common/go/ourio"
 	"cesanta.com/mos/build"
+	"cesanta.com/mos/interpreter"
 )
 
 // So far, building is only possible from the current directory,
@@ -132,11 +134,11 @@ func initProjectManagementEndpoints() {
 			return
 		}
 
-		mVars := NewManifestVars()
+		interp := interpreter.NewInterpreter(newMosVars())
 
 		for _, f := range files {
 			name := f.Name()
-			manifest, _, err := readManifest(filepath.Join(dirPath, name), nil, mVars)
+			manifest, _, err := readManifest(filepath.Join(dirPath, name), nil, interp)
 			if err == nil {
 				ret[name] = manifest
 			}

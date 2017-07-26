@@ -3,7 +3,6 @@ package build
 import (
 	"bytes"
 	"encoding/json"
-	"regexp"
 
 	"github.com/cesanta/errors"
 )
@@ -152,35 +151,4 @@ func (c ConfigSchemaItem) MarshalJSON() ([]byte, error) {
 	}
 
 	return data.Bytes(), nil
-}
-
-// EvaluateExprBool can evaluate expressions of the following form:
-//
-//   build_vars.FOO == "bar"
-//   build_vars.FOO != "bar"
-//
-// In the future it will be refactored into a proper expression parsing and
-// evaluation, but so far it's a quick hack which solves the problem at hand.
-func (m *FWAppManifest) EvaluateExprBool(expr string) (bool, error) {
-	re := regexp.MustCompile(
-		`^\s*build_vars\.(?P<name>[a-zA-Z0-9_]+)\s*(?P<op>\S+)\s*\"(?P<value>[^"]*)\"`,
-	)
-
-	matches := re.FindStringSubmatch(expr)
-	if matches == nil {
-		return false, errors.Errorf("%q is not a valid expression", expr)
-	}
-
-	name := matches[1]
-	op := matches[2]
-	val := matches[3]
-
-	switch op {
-	case "==":
-		return m.BuildVars[name] == val, nil
-	case "!=":
-		return m.BuildVars[name] != val, nil
-	default:
-		return false, errors.Errorf("%q is not a valid operation", op)
-	}
 }

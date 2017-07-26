@@ -32,6 +32,7 @@ import (
 	moscommon "cesanta.com/mos/common"
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/flash/common"
+	"cesanta.com/mos/interpreter"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 	flag "github.com/spf13/pflag"
@@ -63,8 +64,6 @@ var (
 	appsDir    = ""
 	modulesDir = ""
 
-	varRegexp = regexp.MustCompile(`\$\{[^}]+\}`)
-
 	// In-memory buffer containing all the log messages
 	logBuf bytes.Buffer
 
@@ -73,6 +72,10 @@ var (
 
 	// The same as logWriterStdout, but skips os.Stdout unless --verbose is given
 	logWriter io.Writer
+
+	// Note: we opted to use ${foo} instead of {{foo}}, because {{foo}} needs to
+	// be quoted in yaml, whereas ${foo} does not.
+	varRegexp = regexp.MustCompile(`\$\{[^}]+\}`)
 )
 
 const (
@@ -91,8 +94,6 @@ const (
 	allLibsKeyword = "@all_libs"
 
 	depsApp = "app"
-
-	mVarNameMosVersion = "mos_version"
 )
 
 func init() {
@@ -341,7 +342,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		customModuleLocations[parts[0]] = parts[1]
 	}
 
-	mVars := NewManifestVars()
+	interp := interpreter.NewInterpreter(newMosVars())
 
 	appDir, err := getCodeDirAbs()
 	if err != nil {
@@ -349,7 +350,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	}
 
 	manifest, mtime, err := readManifestWithLibs(
-		appDir, bParams, logWriter, libsDir, mVars, false /* skip clean */, true, /* finalize */
+		appDir, bParams, logWriter, libsDir, interp, false /* skip clean */, true, /* finalize */
 	)
 	if err != nil {
 		return errors.Trace(err)
@@ -374,9 +375,9 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		ioutil.WriteFile(moscommon.GetMosFinalFilePath(buildDirAbs), d, 0666)
 	}
 
-	// manifest.Arch is guaranteed to be non-empty now (checked in readManifest)
-
-	mVars.SetVar("arch", manifest.Arch)
+	if err := interpreter.SetManifestVars(interp.MVars, manifest); err != nil {
+		return errors.Trace(err)
+	}
 
 	// Prepare local copies of all sw modules {{{
 	for _, m := range manifest.Modules {
@@ -400,7 +401,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 			freportf(logWriter, "Using module %q located at %q", name, targetDir)
 		}
 
-		setModuleVars(mVars, name, targetDir)
+		interpreter.SetModuleVars(interp.MVars, name, targetDir)
 	}
 	// }}}
 
@@ -427,7 +428,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 			return errors.Annotatef(err, "preparing local copy of the mongoose-os repo")
 		}
 	}
-	setModuleVars(mVars, "mongoose-os", mosDirEffective)
+	interpreter.SetModuleVars(interp.MVars, "mongoose-os", mosDirEffective)
 
 	mosDirEffectiveAbs, err := filepath.Abs(mosDirEffective)
 	if err != nil {
@@ -438,7 +439,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	// Get sources and filesystem files from the manifest, expanding placeholders {{{
 	appSources := []string{}
 	for _, s := range manifest.Sources {
-		s, err = mVars.ExpandVars(s)
+		s, err = expandVars(interp, s)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -447,7 +448,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 
 	appFSFiles := []string{}
 	for _, s := range manifest.Filesystem {
-		s, err = mVars.ExpandVars(s)
+		s, err = expandVars(interp, s)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -456,7 +457,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 
 	appBinLibs := []string{}
 	for _, s := range manifest.BinaryLibs {
-		s, err = mVars.ExpandVars(s)
+		s, err = expandVars(interp, s)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -895,10 +896,10 @@ func getCodeDirAbs() (string, error) {
 // manifest or given buildParams have arch specified, then the returned
 // manifest will contain all arch-specific adjustments (if any)
 func readManifest(
-	appDir string, bParams *buildParams, mVars *manifestVars,
+	appDir string, bParams *buildParams, interp *interpreter.MosInterpreter,
 ) (*build.FWAppManifest, time.Time, error) {
 	manifestFullName := moscommon.GetManifestFilePath(appDir)
-	manifest, mtime, err := readManifestFile(manifestFullName, mVars, true)
+	manifest, mtime, err := readManifestFile(manifestFullName, interp, true)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
 	}
@@ -919,7 +920,7 @@ func readManifest(
 		_, err := os.Stat(manifestArchFullName)
 		if err == nil {
 			// Arch-specific mos.yml does exist, so, handle it
-			archManifest, archMtime, err := readManifestFile(manifestArchFullName, mVars, false)
+			archManifest, archMtime, err := readManifestFile(manifestArchFullName, interp, false)
 			if err != nil {
 				return nil, time.Time{}, errors.Trace(err)
 			}
@@ -946,7 +947,7 @@ func readManifest(
 // readManifestFile reads single manifest file (which can be either "main" app
 // or lib manifest, or some arch-specific adjustment manifest)
 func readManifestFile(
-	manifestFullName string, mVars *manifestVars, manifestVersionMandatory bool,
+	manifestFullName string, interp *interpreter.MosInterpreter, manifestVersionMandatory bool,
 ) (*build.FWAppManifest, time.Time, error) {
 	manifestSrc, err := ioutil.ReadFile(manifestFullName)
 	if err != nil {
@@ -1000,17 +1001,17 @@ func readManifestFile(
 		manifest.MongooseOsVersion = "master"
 	}
 
-	manifest.MongooseOsVersion, err = mVars.ExpandVars(manifest.MongooseOsVersion)
+	manifest.MongooseOsVersion, err = expandVars(interp, manifest.MongooseOsVersion)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
 	}
 
-	manifest.LibsVersion, err = mVars.ExpandVars(manifest.LibsVersion)
+	manifest.LibsVersion, err = expandVars(interp, manifest.LibsVersion)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
 	}
 
-	manifest.ModulesVersion, err = mVars.ExpandVars(manifest.ModulesVersion)
+	manifest.ModulesVersion, err = expandVars(interp, manifest.ModulesVersion)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
 	}
@@ -1058,11 +1059,11 @@ func buildRemote(bParams *buildParams) error {
 		return errors.Trace(err)
 	}
 
-	mVars := NewManifestVars()
+	interp := interpreter.NewInterpreter(newMosVars())
 
 	// Get manifest which includes stuff from all libs
 	manifest, _, err := readManifestWithLibs(
-		tmpCodeDir, bParams, logWriter, userLibsDir, mVars, true /* skip clean */, false, /* finalize */
+		tmpCodeDir, bParams, logWriter, userLibsDir, interp, true /* skip clean */, false, /* finalize */
 	)
 	if err != nil {
 		return errors.Trace(err)
@@ -1356,53 +1357,6 @@ func identityTransformer(r io.ReadCloser) (io.ReadCloser, error) {
 	return r, nil
 }
 
-type manifestVars struct {
-	subst map[string]string
-}
-
-func NewManifestVars() *manifestVars {
-	ret := &manifestVars{
-		subst: make(map[string]string),
-	}
-
-	ret.SetVar(mVarNameMosVersion, getMosVersion())
-	return ret
-}
-
-func (mv *manifestVars) SetVar(name, value string) {
-	// Note: we opted to use ${foo} instead of {{foo}}, because {{foo}} needs to
-	// be quoted in yaml, whereas ${foo} does not.
-	glog.Infof("Set '%s'='%s'", name, value)
-	mv.subst[fmt.Sprintf("${%s}", name)] = value
-}
-
-func (mv *manifestVars) ExpandVars(s string) (string, error) {
-	var err error
-	result := varRegexp.ReplaceAllStringFunc(s, func(v string) string {
-		val, found := mv.subst[v]
-		if !found {
-			err = errors.Errorf("Unknown var '%s'", v)
-		}
-		return val
-	})
-	return result, err
-}
-
-func setModuleVars(mVars *manifestVars, moduleName, path string) {
-	mVars.SetVar(fmt.Sprintf("%s_path", identifierFromString(moduleName)), path)
-}
-
-func identifierFromString(name string) string {
-	ret := ""
-	for _, c := range name {
-		if !(unicode.IsLetter(c) || unicode.IsDigit(c)) {
-			c = '_'
-		}
-		ret += string(c)
-	}
-	return ret
-}
-
 // readManifestWithLibs reads manifest from the provided dir, "expands" all
 // libs (so that the returned manifest does not really contain any libs),
 // and also returns the most recent modification time of all encountered
@@ -1416,7 +1370,7 @@ func identifierFromString(name string) string {
 // it's useful when crafting a manifest to send to the remote builder.
 func readManifestWithLibs(
 	dir string, bParams *buildParams,
-	logWriter io.Writer, userLibsDir string, mVars *manifestVars,
+	logWriter io.Writer, userLibsDir string, interp *interpreter.MosInterpreter,
 	skipClean bool, finalize bool,
 ) (*build.FWAppManifest, time.Time, error) {
 	libsHandled := map[string]build.FWAppManifestLibHandled{}
@@ -1439,7 +1393,7 @@ func readManifestWithLibs(
 		libsHandled: libsHandled,
 
 		appManifest: nil,
-		mVars:       mVars,
+		interp:      interp,
 	})
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
@@ -1485,7 +1439,7 @@ func readManifestWithLibs(
 	}
 
 	if finalize {
-		if err := expandManifestLibsAndConds(manifest); err != nil {
+		if err := expandManifestLibsAndConds(manifest, interp); err != nil {
 			return nil, time.Time{}, errors.Trace(err)
 		}
 
@@ -1513,11 +1467,11 @@ type manifestParseContext struct {
 	libsHandled map[string]build.FWAppManifestLibHandled
 
 	appManifest *build.FWAppManifest
-	mVars       *manifestVars
+	interp      *interpreter.MosInterpreter
 }
 
 func readManifestWithLibs2(pc manifestParseContext) (*build.FWAppManifest, time.Time, error) {
-	manifest, mtime, err := readManifest(pc.dir, pc.bParams, pc.mVars)
+	manifest, mtime, err := readManifest(pc.dir, pc.bParams, pc.interp)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
 	}
@@ -1672,7 +1626,7 @@ libs:
 
 		// Add a build var and C macro MGOS_HAVE_<lib_name>
 		haveName := fmt.Sprintf(
-			"MGOS_HAVE_%s", strings.ToUpper(identifierFromString(name)),
+			"MGOS_HAVE_%s", strings.ToUpper(moscommon.IdentifierFromString(name)),
 		)
 		manifest.BuildVars[haveName] = "1"
 		manifest.CDefs[haveName] = "1"
@@ -1724,7 +1678,9 @@ libs:
 //   a. For each of the manifests (app and all libs), expand conds, but
 //      evaluate cond expressions against the commonManifest
 //   b. Go to step 1
-func expandManifestLibsAndConds(manifest *build.FWAppManifest) error {
+func expandManifestLibsAndConds(
+	manifest *build.FWAppManifest, interp *interpreter.MosInterpreter,
+) error {
 
 	for {
 		commonManifest := *manifest
@@ -1771,13 +1727,15 @@ func expandManifestLibsAndConds(manifest *build.FWAppManifest) error {
 		// When it's done, we'll expand all libs manifests again, etc, until there
 		// are no conds left.
 
-		if err := expandManifestConds(manifest, &commonManifest); err != nil {
+		if err := expandManifestConds(manifest, &commonManifest, interp); err != nil {
 			return errors.Trace(err)
 		}
 
 		for k := range manifest.LibsHandled {
 			if manifest.LibsHandled[k].Manifest != nil {
-				if err := expandManifestConds(manifest.LibsHandled[k].Manifest, &commonManifest); err != nil {
+				if err := expandManifestConds(
+					manifest.LibsHandled[k].Manifest, &commonManifest, interp,
+				); err != nil {
 					return errors.Trace(err)
 				}
 			}
@@ -1819,7 +1777,7 @@ func getDepsInitCCode(manifest *build.FWAppManifest) ([]byte, error) {
 	tplData := libsInitData{}
 	for _, v := range manifest.LibsHandled {
 		tplData.Libs = append(tplData.Libs, libsInitDataItem{
-			Name: identifierFromString(v.Name),
+			Name: moscommon.IdentifierFromString(v.Name),
 			Deps: v.Deps,
 		})
 	}
@@ -1960,7 +1918,9 @@ func mergeMapsString(m1, m2 map[string]string) map[string]string {
 // not expanded: if there are some new conds left, a new refManifest should
 // be computed by the caller, and expandManifestConds should be called again
 // for each lib's manifest and for app's manifest.
-func expandManifestConds(dstManifest, refManifest *build.FWAppManifest) error {
+func expandManifestConds(
+	dstManifest, refManifest *build.FWAppManifest, interp *interpreter.MosInterpreter,
+) error {
 
 	// As we're expanding conds, we need to remove the conds themselves. But
 	// extending manifest could cause new conds to be added, so we just save
@@ -1970,8 +1930,12 @@ func expandManifestConds(dstManifest, refManifest *build.FWAppManifest) error {
 	conds := dstManifest.Conds
 	dstManifest.Conds = nil
 
+	if err := interpreter.SetManifestVars(interp.MVars, refManifest); err != nil {
+		return errors.Trace(err)
+	}
+
 	for _, cond := range conds {
-		res, err := refManifest.EvaluateExprBool(cond.When)
+		res, err := interp.EvaluateExprBool(cond.When)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -2048,7 +2012,7 @@ type mountPoints map[string]string
 // something is already mounted to the given containerPath, then it's compared
 // to the new hostPath value; if they are not equal, an error is returned.
 func (mp mountPoints) addMountPoint(hostPath, containerPath string) error {
-	fmt.Printf("mount from %q to %q\n", hostPath, containerPath)
+	freportf(logWriter, "mount from %q to %q\n", hostPath, containerPath)
 	if v, ok := mp[containerPath]; ok {
 		if hostPath != v {
 			return errors.Errorf("adding mount point from %q to %q, but it already mounted from %q", hostPath, containerPath, v)
@@ -2138,4 +2102,23 @@ func copyExternalCodeAll(paths *[]string, appDir, tmpCodeDir string) error {
 	}
 
 	return nil
+}
+
+func expandVars(interp *interpreter.MosInterpreter, s string) (string, error) {
+	var errRet error
+	result := varRegexp.ReplaceAllStringFunc(s, func(v string) string {
+		expr := v[2 : len(v)-1]
+		val, err := interp.EvaluateExprString(expr)
+		if err != nil {
+			errRet = errors.Trace(err)
+		}
+		return val
+	})
+	return result, errRet
+}
+
+func newMosVars() *interpreter.MosVars {
+	ret := interpreter.NewMosVars()
+	ret.SetVar(interpreter.GetMVarNameMosVersion(), getMosVersion())
+	return ret
 }
