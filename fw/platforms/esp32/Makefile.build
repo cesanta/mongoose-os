@@ -156,7 +156,7 @@ MKSPIFFS = /usr/local/bin/mkspiffs8
 
 include $(IDF_PATH)/make/project.mk
 
-# TODO(dfrank): Add dep on mos.yml here.
+# TODO(rojer): Add dep on mos.yml here.
 $(SDKCONFIG_DEFAULTS):
 	mkdir -p $(dir $@)
 	cp $(MGOS_ESP_PATH)/sdkconfig $@

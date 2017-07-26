@@ -372,7 +372,9 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 			return errors.Trace(err)
 		}
 
-		ioutil.WriteFile(moscommon.GetMosFinalFilePath(buildDirAbs), d, 0666)
+		if err := ourio.WriteFileIfDiffers(moscommon.GetMosFinalFilePath(buildDirAbs), d, 0666); err != nil {
+			return errors.Trace(err)
+		}
 	}
 
 	if err := interpreter.SetManifestVars(interp.MVars, manifest); err != nil {
@@ -562,6 +564,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		"FFI_SYMBOLS":    strings.Join(ffiSymbols, " "),
 		"APP_CFLAGS":     generateCflags(manifest.CFlags, manifest.CDefs),
 		"APP_CXXFLAGS":   generateCflags(manifest.CXXFlags, manifest.CDefs),
+		"MANIFEST_FINAL": moscommon.GetMosFinalFilePath(buildDirAbs),
 	} {
 		err := addBuildVar(manifest, k, v)
 		if err != nil {
