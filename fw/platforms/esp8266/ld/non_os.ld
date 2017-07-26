@@ -139,3 +139,5 @@ SECTIONS
 
 /* get ROM code address */
 INCLUDE "../ld/eagle.rom.addr.v6.ld"
+
+PROVIDE ( mgos_usleep = 0x40002ecc );  /* AKA ets_delay_us */

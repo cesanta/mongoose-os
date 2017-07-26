@@ -4712,8 +4712,11 @@ Disassembly of section .text:
 40002ebf:	0108      	l32i.n	a0, a1, 0
 40002ec1:	10c112        	addi	a1, a1, 16
 40002ec4:	f00d      	ret.n
-40002ec6:	040000        	extui	a0, a0, 0, 1
-40002ec9:	3fffc7        	bbsi	a15, 28, 40002f0c <ets_get_cpu_frequency>
+	...
+
+40002ec8 <_p_cpu_freq>:
+40002ec8:	ffc704        	excw
+40002ecb:	3f          	.byte 0x3f
 
 40002ecc <ets_delay_us>:
 40002ecc:	f0c112        	addi	a1, a1, -16
@@ -4722,7 +4725,7 @@ Disassembly of section .text:
 40002ed4:	0109      	s32i.n	a0, a1, 0
 40002ed6:	02cd      	mov.n	a12, a2
 40002ed8:	0ae5c5        	call0	4000dd38 <xthal_get_ccount>
-40002edb:	fffb01        	l32r	a0, 40002ec8 <ets_timer_init+0x60>
+40002edb:	fffb01        	l32r	a0, 40002ec8 <_p_cpu_freq>
 40002ede:	0008      	l32i.n	a0, a0, 0
 40002ee0:	02dd      	mov.n	a13, a2
 40002ee2:	82c0c0        	mull	a12, a0, a12
@@ -4740,13 +4743,13 @@ Disassembly of section .text:
 	...
 
 40002f04 <ets_update_cpu_frequency>:
-40002f04:	fff131        	l32r	a3, 40002ec8 <ets_timer_init+0x60>
+40002f04:	fff131        	l32r	a3, 40002ec8 <_p_cpu_freq>
 40002f07:	0329      	s32i.n	a2, a3, 0
 40002f09:	f00d      	ret.n
 	...
 
 40002f0c <ets_get_cpu_frequency>:
-40002f0c:	ffef21        	l32r	a2, 40002ec8 <ets_timer_init+0x60>
+40002f0c:	ffef21        	l32r	a2, 40002ec8 <_p_cpu_freq>
 40002f0f:	0228      	l32i.n	a2, a2, 0
 40002f11:	f00d      	ret.n
 	...

@@ -56,6 +56,7 @@ PROVIDE(_c_0xffdfffff, 0x400025dc)
 PROVIDE(_l_rr_not_dsleep, 0x40002624)
 PROVIDE(_c_100000, 0x40002664)
 PROVIDE(_c_0x3feffe00, 0x40002e5c)
+PROVIDE(_p_cpu_freq, 0x40002ec8)
 PROVIDE(_x_wdt_interval, 0x40002f14)  // arg: 3 -> 11, 6 -> 12, 12 -> 13
 PROVIDE(_p_wdt_cfg, 0x40002f30)
 PROVIDE(_wdt_soft_timer_fn2, 0x40002f3c)
