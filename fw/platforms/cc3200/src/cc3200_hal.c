@@ -130,11 +130,11 @@ void cc3200_nsleep100(uint32_t n) {
 }
 
 void mgos_ints_disable(void) {
-  MAP_IntMasterDisable();
+  portENTER_CRITICAL();
 }
 
 void mgos_ints_enable(void) {
-  MAP_IntMasterEnable();
+  portEXIT_CRITICAL();
 }
 
 void mongoose_poll_cb(void *arg);

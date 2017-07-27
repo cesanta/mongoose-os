@@ -107,12 +107,14 @@ IRAM void mgos_runlock(struct mgos_rlock_type *l) {
   xSemaphoreGiveRecursive((SemaphoreHandle_t) l);
 }
 
+static portMUX_TYPE s_int_spinlock = portMUX_INITIALIZER_UNLOCKED;
+
 IRAM void mgos_ints_disable(void) {
-  __asm volatile("rsil a2, 3" : : : "a2");
+  portENTER_CRITICAL(&s_int_spinlock);
 }
 
 IRAM void mgos_ints_enable(void) {
-  __asm volatile("rsil a2, 0" : : : "a2");
+  portEXIT_CRITICAL(&s_int_spinlock);
 }
 
 int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {
