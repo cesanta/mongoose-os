@@ -102,7 +102,7 @@ static s32_t mgos_spiffs_erase(spiffs *spfs, u32_t addr, u32_t size) {
 }
 
 static bool mgos_vfs_fs_spiffs_mount_common(struct mgos_vfs_fs *fs,
-                                            const char *opts) {
+                                            const char *opts, bool *check) {
   s32_t r = -1;
   unsigned int num_fds;
   spiffs_config cfg;
@@ -117,11 +117,12 @@ static bool mgos_vfs_fs_spiffs_mount_common(struct mgos_vfs_fs *fs,
   cfg.phys_erase_block = MGOS_SPIFFS_DEFAULT_ERASE_SIZE;
   num_fds = MGOS_SPIFFS_DEFAULT_MAX_OPEN_FILES;
   if (opts != NULL) {
-    json_scanf(
-        opts, strlen(opts),
-        "{addr: %u, size: %u, bs: %u, ps: %u, es: %u, nfd: %u, encr: %B}",
-        &cfg.phys_addr, &cfg.phys_size, &cfg.log_block_size, &cfg.log_page_size,
-        &cfg.phys_erase_block, &num_fds, &fsd->encrypt);
+    json_scanf(opts, strlen(opts),
+               "{addr: %u, size: %u, bs: %u, ps: %u, es: %u, nfd: %u, "
+               "check: %B, encr: %B}",
+               &cfg.phys_addr, &cfg.phys_size, &cfg.log_block_size,
+               &cfg.log_page_size, &cfg.phys_erase_block, &num_fds, check,
+               &fsd->encrypt);
   }
   fsd->fds = (u8_t *) calloc(num_fds, sizeof(spiffs_fd));
   fsd->work = (u8_t *) calloc(2, cfg.log_page_size);
@@ -146,7 +147,8 @@ out:
 
 static bool mgos_vfs_fs_spiffs_mkfs(struct mgos_vfs_fs *fs, const char *opts) {
   /* SPIFFS requires MKFS before formatting. We don't expect it to succeed. */
-  bool ret = mgos_vfs_fs_spiffs_mount_common(fs, opts);
+  bool unused_check;
+  bool ret = mgos_vfs_fs_spiffs_mount_common(fs, opts, &unused_check);
   struct mgos_vfs_fs_spiffs_data *fsd =
       (struct mgos_vfs_fs_spiffs_data *) fs->fs_data;
   if (fsd == NULL) return false;
@@ -172,14 +174,16 @@ out:
 }
 
 static bool mgos_vfs_fs_spiffs_mount(struct mgos_vfs_fs *fs, const char *opts) {
-  bool ret = mgos_vfs_fs_spiffs_mount_common(fs, opts);
+  /* Run check by default, see
+   * https://github.com/pellepl/spiffs/issues/137#issuecomment-287192259 */
+  bool check = true;
+  bool ret = mgos_vfs_fs_spiffs_mount_common(fs, opts, &check);
   struct mgos_vfs_fs_spiffs_data *fsd =
       (struct mgos_vfs_fs_spiffs_data *) fs->fs_data;
   spiffs *spfs = NULL;
   if (ret) {
     spfs = &fsd->fs;
-    /* https://github.com/pellepl/spiffs/issues/137#issuecomment-287192259 */
-    if (SPIFFS_check(spfs) != SPIFFS_OK) {
+    if (check && SPIFFS_check(spfs) != SPIFFS_OK) {
       LOG(LL_ERROR, ("Filesystem is corrupted, continuing anyway"));
     }
 #if CS_SPIFFS_ENABLE_ENCRYPTION

@@ -144,6 +144,7 @@ enum mgos_init_result esp_mgos_init2(rboot_config *bcfg) {
   }
 #endif
 
+  system_soft_wdt_stop();
   ir = mgos_init();
   if (ir != MGOS_INIT_OK) {
     LOG(LL_ERROR, ("%s init error: %d", "MG", ir));
