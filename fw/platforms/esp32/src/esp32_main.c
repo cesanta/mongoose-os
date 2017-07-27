@@ -20,6 +20,7 @@
 #include "esp_task_wdt.h"
 #include "nvs_flash.h"
 #include "rom/ets_sys.h"
+#include "rom/spi_flash.h"
 
 #include "common/cs_dbg.h"
 #include "mgos_app.h"
@@ -124,7 +125,7 @@ static enum mgos_init_result esp32_mgos_init() {
   if (strcmp(MGOS_APP, "mongoose-os") != 0) {
     LOG(LL_INFO, ("%s %s (%s)", MGOS_APP, build_version, build_id));
   }
-  LOG(LL_INFO, ("Mongoose OS Firmware %s (%s)%s", mg_build_version, mg_build_id,
+  LOG(LL_INFO, ("Mongoose OS %s (%s)%s", mg_build_version, mg_build_id,
 #if MGOS_ENABLE_UPDATER
                 (esp32_is_first_boot() ? ", first boot" : "")
 #else
@@ -133,8 +134,8 @@ static enum mgos_init_result esp32_mgos_init() {
                     ));
   LOG(LL_INFO, ("ESP-IDF %s", esp_get_idf_version()));
   LOG(LL_INFO,
-      ("Boot partition: %s, Task ID: %p, RAM: %u total, %u free",
-       esp_ota_get_boot_partition()->label, xTaskGetCurrentTaskHandle(),
+      ("Boot partition: %s; flash: %uM; RAM: %u total, %u free",
+       esp_ota_get_boot_partition()->label, g_rom_flashchip.chip_size / 1048576,
        mgos_get_heap_size(), mgos_get_free_heap_size()));
 
   if (!esp32_fs_init()) {

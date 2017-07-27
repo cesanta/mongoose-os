@@ -104,10 +104,11 @@ out:
   return ret;
 }
 
-static size_t esp_vfs_dev_sysflash_get_size(struct mgos_vfs_dev *dev) {
-  /* Not implemented */
+extern SpiFlashChip *flashchip;
+
+size_t esp_vfs_dev_sysflash_get_size(struct mgos_vfs_dev *dev) {
   (void) dev;
-  return 0;
+  return flashchip->chip_size;
 }
 
 static bool esp_vfs_dev_sysflash_close(struct mgos_vfs_dev *dev) {

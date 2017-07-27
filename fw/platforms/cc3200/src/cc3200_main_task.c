@@ -87,7 +87,7 @@ static enum cc3200_init_result cc3200_init(void *arg) {
   if (strcmp(MGOS_APP, "mongoose-os") != 0) {
     LOG(LL_INFO, ("%s %s (%s)", MGOS_APP, build_version, build_id));
   }
-  LOG(LL_INFO, ("Mongoose OS Firmware %s (%s)", mg_build_version, mg_build_id));
+  LOG(LL_INFO, ("Mongoose OS %s (%s)", mg_build_version, mg_build_id));
   LOG(LL_INFO, ("RAM: %d total, %d free", mgos_get_heap_size(),
                 mgos_get_free_heap_size()));
 

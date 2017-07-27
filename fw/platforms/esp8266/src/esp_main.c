@@ -35,6 +35,7 @@
 #include "fw/platforms/esp8266/src/esp_hw_wdt.h"
 #include "fw/platforms/esp8266/src/esp_features.h"
 #include "fw/platforms/esp8266/src/esp_updater.h"
+#include "fw/platforms/esp8266/src/esp_vfs_dev_sysflash.h"
 
 #ifdef RTOS_SDK
 
@@ -124,9 +125,11 @@ enum mgos_init_result esp_mgos_init2(rboot_config *bcfg) {
   if (strcmp(MGOS_APP, "mongoose-os") != 0) {
     LOG(LL_INFO, ("%s %s (%s)", MGOS_APP, build_version, build_id));
   }
-  LOG(LL_INFO, ("Mongoose OS Firmware %s (%s)", mg_build_version, mg_build_id));
-  LOG(LL_INFO, ("SDK %s, RAM: %d total, %d free", system_get_sdk_version(),
-                mgos_get_heap_size(), mgos_get_free_heap_size()));
+  LOG(LL_INFO, ("Mongoose OS %s (%s)", mg_build_version, mg_build_id));
+  LOG(LL_INFO,
+      ("SDK %s; flash: %uM; RAM: %d total, %d free", system_get_sdk_version(),
+       esp_vfs_dev_sysflash_get_size(NULL) / 1048576, mgos_get_heap_size(),
+       mgos_get_free_heap_size()));
   esp_print_reset_info();
 
   if (!esp_fs_init(bcfg->fs_addresses[bcfg->current_rom],
