@@ -45,6 +45,7 @@ var (
 	wsClientsMtx = sync.Mutex{}
 	wwwRoot      = ""
 	startBrowser = true
+	inLogLine    = map[string]bool{}
 
 	origStdout = os.Stdout
 	origStderr = os.Stderr
@@ -64,6 +65,15 @@ type saveAppLibFileParams struct {
 }
 
 func wsSend(ws *websocket.Conn, m wsmessage) {
+	message := ""
+	for i, b := range m.Data {
+		if !inLogLine[m.Cmd] {
+			message += FormatTimestampNow()
+		}
+		message += string(m.Data[i : i+1])
+		inLogLine[m.Cmd] = (b != '\n')
+	}
+	m.Data = message
 	t, _ := json.Marshal(m)
 	websocket.Message.Send(ws, string(t))
 }

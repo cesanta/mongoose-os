@@ -173,6 +173,7 @@ func main() {
 	goflag.CommandLine.Parse([]string{}) // Workaround for noise in golang/glog
 	pflagenv.Parse(envPrefix)
 
+	consoleInit()
 	if err := buildInit(); err != nil {
 		log.Fatal(err)
 	}

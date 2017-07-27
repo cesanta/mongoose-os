@@ -45,16 +45,24 @@ func init() {
 	for _, f := range []string{"no-input", "timestamp"} {
 		hiddenFlags = append(hiddenFlags, f)
 	}
+}
 
+func consoleInit() {
+	if tsfSpec != "" {
+		tsFormat = timestamp.ParseTimeStampFormatSpec(tsfSpec)
+	}
+}
+
+func FormatTimestampNow() string {
+	ts := ""
+	if tsFormat != "" {
+		ts = fmt.Sprintf("[%s] ", timestamp.FormatTimestamp(time.Now(), tsFormat))
+	}
+	return ts
 }
 
 func console(ctx context.Context, devConn *dev.DevConn) error {
 	in, out := os.Stdin, os.Stdout
-
-	if tsfSpec != "" {
-		tsFormat = timestamp.ParseTimeStampFormatSpec(tsfSpec)
-	}
-
 	port, err := getPort()
 	if err != nil {
 		return errors.Trace(err)
@@ -89,10 +97,9 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 			if n > 0 {
 				removeNonText(buf[:n])
 				if tsfSpec != "" {
-					ts := time.Now()
 					for i, b := range buf[:n] {
-						if lineStart && tsFormat != "" {
-							fmt.Printf("[%s] ", timestamp.FormatTimestamp(ts, tsFormat))
+						if lineStart {
+							fmt.Printf("%s", FormatTimestampNow())
 						}
 						out.Write(buf[i : i+1])
 						lineStart = (b == '\n')
