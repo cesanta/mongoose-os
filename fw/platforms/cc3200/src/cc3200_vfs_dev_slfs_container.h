@@ -9,6 +9,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define MGOS_DEV_TYPE_SLFS_CONTAINER "slfs_container"
 
 /* TI recommends rounding to nearest multiple of 4K - 512 bytes.
@@ -32,5 +36,9 @@ void cc3200_vfs_dev_slfs_container_delete_container(const char *cpfx, int cidx);
 void cc3200_vfs_dev_slfs_container_delete_inactive_container(const char *cpfx);
 
 void cc3200_vfs_dev_slfs_container_flush_all(void);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CS_FW_PLATFORMS_CC3200_SRC_CC3200_VFS_DEV_SLFS_CONTAINER_H_ */

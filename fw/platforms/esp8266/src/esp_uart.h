@@ -8,6 +8,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct mgos_uart_dev_config {
   int8_t rx_fifo_full_thresh;
   int8_t rx_fifo_fc_thresh;
@@ -25,5 +29,9 @@ int esp_uart_tx_fifo_len(int uart_no);
 bool esp_uart_cts(int uart_no);
 uint32_t esp_uart_raw_ints(int uart_no);
 uint32_t esp_uart_int_mask(int uart_no);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CS_FW_PLATFORMS_ESP8266_SRC_ESP_UART_H_ */

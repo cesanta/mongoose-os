@@ -8,4 +8,6 @@
 
 #include "mgos_vfs.h"
 
+/* no_extern_c_check */
+
 #endif /* CS_FW_PLATFORMS_ESP8266_INCLUDE_DIRENT_H_ */

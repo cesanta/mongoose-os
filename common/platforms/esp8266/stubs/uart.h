@@ -10,7 +10,7 @@
 
 void set_baud_rate(uint32_t uart_no, uint32_t baud_rate);
 
-#define REG_UART_BASE(i) (0x60000000 + (i) * 0xf00)
+#define REG_UART_BASE(i) (0x60000000 + (i) *0xf00)
 #define UART_FIFO_REG(i) (REG_UART_BASE(i) + 0x0)
 #define UART_CONF1_REG(i) (REG_UART_BASE(i) + 0x24)
 #define UART_RX_TOUT_EN (BIT(31))

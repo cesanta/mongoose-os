@@ -42,6 +42,7 @@
 IRAM NOINSTR int esp_mmap_exception_handler(uint32_t vaddr, uint8_t *pc,
                                             long *pa2);
 
+/* no_extern_c_check */
 #endif /* CS_PLATFORM == CS_P_ESP32 || CS_PLATFORM == CS_P_ESP8266 */
 #endif /* CS_MMAP */
 #endif /* CS_FW_SRC_MGOS_MMAP_ESP_H_ */

@@ -23,6 +23,10 @@
 
 #include "common/cs_time.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern int num_tests;
 
 #ifdef MG_TEST_ABORT_ON_FAIL
@@ -169,6 +173,10 @@ int c_int_ne(void *a, void *b);
 int c_int_eq(void *a, void *b);
 void poll_until(struct mg_mgr *mgr, double timeout, int (*cond)(void *, void *),
                 void *cond_arg1, void *cond_arg2);
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif /* CS_COMMON_TEST_UTIL_H_ */

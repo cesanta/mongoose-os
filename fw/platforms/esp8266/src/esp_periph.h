@@ -8,6 +8,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct gpio_info {
   uint8_t pin;
   uint32_t periph;
@@ -15,5 +19,9 @@ struct gpio_info {
 };
 
 const struct gpio_info *get_gpio_info(uint8_t gpio_no);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CS_FW_PLATFORMS_ESP8266_SRC_ESP_PERIPH_H_ */

@@ -47,4 +47,6 @@
 #include "mgos_wifi.h"
 #endif
 
+/* no_extern_c_check */
+
 #endif

@@ -28,13 +28,13 @@ static const char *test_config(void) {
   ASSERT(conf.wifi.sta.ssid == NULL);
   ASSERT(conf.wifi.sta.pass == NULL);
   ASSERT(conf.debug.level == 2);
-  ASSERT_EQ(conf.http.port, 80);   /* integer */
-  ASSERT_EQ(conf.http.enable, 1);  /* boolean */
+  ASSERT_EQ(conf.http.port, 80);  /* integer */
+  ASSERT_EQ(conf.http.enable, 1); /* boolean */
   ASSERT_STREQ(conf.wifi.ap.dhcp_end, "192.168.4.200");
 
   /* Apply overrides */
   ASSERT_EQ(mgos_conf_parse(mg_mk_str(json2), "*", schema, &conf), true);
-  ASSERT_STREQ(conf.wifi.sta.ssid, "cookadoodadoo");   /* Set string */
+  ASSERT_STREQ(conf.wifi.sta.ssid, "cookadoodadoo"); /* Set string */
   ASSERT_STREQ(conf.wifi.sta.pass, "try less cork");
   ASSERT_EQ(conf.debug.level, 1);    /* Override integer */
   ASSERT(conf.wifi.ap.pass == NULL); /* Reset string - set to NULL */
@@ -55,7 +55,7 @@ static const char *test_json_scanf(void) {
   ASSERT(a == 2);
   ASSERT(b == true);
   if (sizeof(bool) == 1)
-    ASSERT((char)c == false);
+    ASSERT((char) c == false);
   else
     ASSERT(c == false);
 
@@ -81,4 +81,3 @@ int __cdecl main(int argc, char *argv[]) {
          total_elapsed);
   return fail_msg == NULL ? EXIT_SUCCESS : EXIT_FAILURE;
 }
-

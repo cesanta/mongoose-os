@@ -8,6 +8,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct mgos_uart_dev_config {
   /*
    * A number of bytes in the hardware Rx fifo, should be between 1 and 127.
@@ -57,5 +61,9 @@ int esp32_uart_tx_fifo_len(int uart_no);
 bool esp32_uart_cts(int uart_no);
 uint32_t esp32_uart_raw_ints(int uart_no);
 uint32_t esp32_uart_int_mask(int uart_no);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CS_FW_PLATFORMS_ESP32_SRC_ESP32_UART_H_ */

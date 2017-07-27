@@ -6,6 +6,10 @@
 #ifndef CS_COMMON_CS_ENDIAN_H_
 #define CS_COMMON_CS_ENDIAN_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * clang with std=-c99 uses __LITTLE_ENDIAN, by default
  * while for ex, RTOS gcc - LITTLE_ENDIAN, by default
@@ -20,5 +24,9 @@
 #define BIG_ENDIAN __LITTLE_ENDIAN
 #endif /* BIG_ENDIAN */
 #endif /* BYTE_ORDER */
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CS_COMMON_CS_ENDIAN_H_ */

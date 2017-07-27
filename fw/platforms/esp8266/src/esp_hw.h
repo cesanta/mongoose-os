@@ -17,4 +17,6 @@
     r;                                                  \
   })
 
+/* no_extern_c_check */
+
 #endif /* CS_FW_PLATFORMS_ESP8266_SRC_ESP_HW_H_ */

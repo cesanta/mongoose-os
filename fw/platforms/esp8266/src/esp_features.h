@@ -16,4 +16,6 @@
 #define MGOS_ENABLE_HEAP_LOG 0
 #endif
 
+/* no_extern_c_check */
+
 #endif /* CS_FW_PLATFORMS_ESP8266_SRC_ESP_FEATURES_H_ */

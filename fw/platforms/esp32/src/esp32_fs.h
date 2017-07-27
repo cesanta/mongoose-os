@@ -11,6 +11,10 @@
 
 #include "esp_partition.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 const esp_partition_t *esp32_find_fs_for_app_slot(int app_slot);
 
 bool esp32_fs_crypt_init(void);
@@ -29,5 +33,9 @@ int esp32_get_boot_slot();
  * by mgos_vfs_*
  */
 #define ARCH_FD_TO_VFS_FD(fd) esp_vfs_translate_fd(fd, NULL)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CS_FW_PLATFORMS_ESP32_SRC_ESP32_FS_H_ */

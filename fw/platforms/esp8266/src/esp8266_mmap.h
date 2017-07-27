@@ -10,6 +10,10 @@
 
 #ifdef CS_MMAP
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * See common/platforms/esp/src/esp_mmap.h for details of these values
  */
@@ -26,6 +30,10 @@
 #define FLASH_READ_BYTE(addr) (*(addr))
 
 #define FLASH_BASE(fs) 0x40200000
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CS_MMAP */
 #endif /* CS_FW_PLATFORMS_ESP8266_SRC_ESP8266_MMAP_H_ */

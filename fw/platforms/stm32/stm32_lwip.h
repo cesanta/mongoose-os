@@ -8,8 +8,16 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 int stm32_have_ip_address();
 char *stm32_get_ip_address();
 void stm32_finish_net_init();
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CS_FW_PLATFORMS_STM32_STM32_LWIP_H_ */

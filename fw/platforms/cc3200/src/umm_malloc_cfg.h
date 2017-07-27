@@ -13,6 +13,10 @@
 #include <stdlib.h>
 #include "FreeRTOS.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Defined in linker script. */
 extern unsigned int _heap_start;
 extern unsigned int _heap_end;
@@ -100,5 +104,9 @@ void umm_oom_cb(size_t size, unsigned short int blocks_cnt);
 #define UMM_POISON_SIZE_BEFORE 2
 #define UMM_POISON_SIZE_AFTER 2
 #define UMM_POISONED_BLOCK_LEN_TYPE short
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CS_FW_PLATFORMS_CC3200_SRC_UMM_MALLOC_CFG_H_ */

@@ -29,15 +29,15 @@ typedef struct stat cs_stat_t;
 #define __cdecl
 
 #ifndef MG_NET_IF
-#  include <lwip/opt.h>
-#  if LWIP_SOCKET
-#    define MG_NET_IF MG_NET_IF_SOCKET
-#  else
-#    define MG_NET_IF MG_NET_IF_LWIP_LOW_LEVEL
-#  endif
-#  define MG_LWIP 1
+#include <lwip/opt.h>
+#if LWIP_SOCKET
+#define MG_NET_IF MG_NET_IF_SOCKET
+#else
+#define MG_NET_IF MG_NET_IF_LWIP_LOW_LEVEL
+#endif
+#define MG_LWIP 1
 #elif MG_NET_IF == MG_NET_IF_SIMPLELINK
-#  include "common/platforms/simplelink/cs_simplelink.h"
+#include "common/platforms/simplelink/cs_simplelink.h"
 #endif
 
 #ifndef CS_ENABLE_STDIO

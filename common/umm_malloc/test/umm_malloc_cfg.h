@@ -56,6 +56,10 @@
  * ----------------------------------------------------------------------------
  */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern char test_umm_heap[];
 extern void umm_corruption(void);
 
@@ -136,5 +140,9 @@ extern void umm_corruption(void);
 #define UMM_POISON_SIZE_BEFORE 4
 #define UMM_POISON_SIZE_AFTER 4
 #define UMM_POISONED_BLOCK_LEN_TYPE short
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CS_COMMON_UMM_MALLOC_TEST_UMM_MALLOC_CFG_H_ */

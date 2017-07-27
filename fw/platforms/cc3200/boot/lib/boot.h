@@ -8,6 +8,10 @@
 
 #include "boot_cfg.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * Returns index of the currently active boot config.
  * Returns negative value if there isn't one or an error occurs.
@@ -31,5 +35,9 @@ int read_boot_cfg(int idx, struct boot_cfg *cfg);
  * Returns negative value on error.
  */
 int write_boot_cfg(const struct boot_cfg *cfg, int idx);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CS_FW_PLATFORMS_CC3200_BOOT_LIB_BOOT_H_ */

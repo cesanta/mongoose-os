@@ -16,6 +16,10 @@
 #include "common/mbuf.h"
 #include "common/platform.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* user-defined union, this module only operates on the pointer */
 union user_arg_ret;
 
@@ -580,5 +584,9 @@ void cr_context_init(struct cr_ctx *p_ctx, union user_arg_ret *p_arg_retval,
  * free resources occupied by context (at least, "stack" arrays)
  */
 void cr_context_free(struct cr_ctx *p_ctx);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CS_COMMON_COROUTINE_H_ */

@@ -65,6 +65,10 @@
 #include "mgos_hal.h"
 #endif
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* Defined in linker script. */
 extern unsigned int _heap_start;
 
@@ -166,5 +170,9 @@ extern unsigned int _heap_start;
 #define UMM_POISON_SIZE_BEFORE 2
 #define UMM_POISON_SIZE_AFTER 2
 #define UMM_POISONED_BLOCK_LEN_TYPE short
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CS_FW_PLATFORMS_ESP8266_INCLUDE_UMM_MALLOC_CFG_H_ */

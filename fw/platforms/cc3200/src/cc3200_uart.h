@@ -9,6 +9,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct mgos_uart_dev_config {
 /* TODO(rojer) */
 #if 0
@@ -23,5 +27,9 @@ uint32_t cc3200_uart_get_base(int uart_no);
 bool cc3200_uart_cts(int uart_no);
 uint32_t cc3200_uart_raw_ints(int uart_no);
 uint32_t cc3200_uart_int_mask(int uart_no);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CS_FW_PLATFORMS_CC3200_SRC_CC3200_UART_H_ */

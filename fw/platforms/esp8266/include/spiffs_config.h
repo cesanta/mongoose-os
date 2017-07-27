@@ -23,4 +23,6 @@ typedef uint8_t u8_t;
 
 #include "spiffs_config_common.h"
 
+/* no_extern_c_check */
+
 #endif /* CS_FW_PLATFORMS_ESP8266_INCLUDE_SPIFFS_CONFIG_H_ */

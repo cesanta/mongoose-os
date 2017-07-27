@@ -1,7 +1,8 @@
 #include "mgos_app.h"
 #include "mgos_net.h"
 
-static void on_net_event(enum mgos_net_event ev, const struct mgos_net_event_data *ev_data, void *arg) {
+static void on_net_event(enum mgos_net_event ev,
+                         const struct mgos_net_event_data *ev_data, void *arg) {
   switch (ev) {
     case MGOS_NET_EV_IP_ACQUIRED:
       break;

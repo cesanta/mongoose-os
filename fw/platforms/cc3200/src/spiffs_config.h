@@ -3,18 +3,13 @@
  * All rights reserved
  */
 
-/*
- * spiffs_config.h
- *
- *  Created on: Jul 3, 2013
- *      Author: petera
- */
-
 #ifndef CS_FW_PLATFORMS_CC3200_SRC_SPIFFS_CONFIG_H_
 #define CS_FW_PLATFORMS_CC3200_SRC_SPIFFS_CONFIG_H_
 
 #include <stdint.h>
 #include <string.h>
+
+/* no_extern_c_check */
 
 typedef int32_t s32_t;
 typedef uint32_t u32_t;

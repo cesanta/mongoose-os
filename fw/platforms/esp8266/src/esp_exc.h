@@ -9,6 +9,10 @@
 #include <stdint.h>
 #include <xtensa/xtruntime-frames.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * Register file in the format lx106 gdb port expects it.
  *
@@ -43,5 +47,9 @@ void esp_exc_common(uint32_t cause, struct regfile *regs);
  * NMI exception handler will store registers in this struct.
  */
 extern struct regfile g_exc_regs;
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CS_FW_PLATFORMS_ESP8266_SRC_ESP_EXC_H_ */

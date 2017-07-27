@@ -11,6 +11,10 @@
 
 #include "common/mg_str.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct esp_flash_write_ctx {
   uint32_t addr;
   uint32_t max_size;
@@ -21,5 +25,9 @@ struct esp_flash_write_ctx {
 bool esp_init_flash_write_ctx(struct esp_flash_write_ctx *wctx, uint32_t addr,
                               uint32_t max_size);
 int esp_flash_write(struct esp_flash_write_ctx *wctx, const struct mg_str data);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CS_FW_PLATFORMS_ESP8266_SRC_ESP_FLASH_WRITER_H_ */

@@ -23,6 +23,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /* SegStack options */
 struct segstack_opt {
   /* Size of a single cell, in bytes. */
@@ -123,5 +127,9 @@ void segstack_push(struct segstack *ss, const void *cellp);
  * returned by `segstack_tos()` and `segstack_at()`.
  */
 void segstack_pop(struct segstack *ss, void *cellp);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CS_COMMON_SEGSTACK_SEGSTACK_H_ */

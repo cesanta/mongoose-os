@@ -14,4 +14,6 @@
 #define MG_UART_CHAR_PUT(fd, c) pic32_console_putc(fd, c)
 #endif
 
+/* no_extern_c_check */
+
 #endif /* CS_FW_PLATFORMS_PIC32_SRC_MGOS_LOCALS_H_ */

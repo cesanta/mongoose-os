@@ -9,6 +9,10 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define FLASH_SECTOR_SIZE 0x1000
 #define FLASH_ERASE_BLOCK_SIZE 0x10000
 
@@ -20,5 +24,9 @@ bool esp_fs_mount(const char *path, uint32_t addr, uint32_t size);
  * by mgos_vfs_*
  */
 #define ARCH_FD_TO_VFS_FD(fd) (fd)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CS_FW_PLATFORMS_ESP8266_SRC_ESP_FS_H_ */

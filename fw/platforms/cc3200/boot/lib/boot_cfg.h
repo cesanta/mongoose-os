@@ -8,6 +8,10 @@
 
 #include <inttypes.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /*
  * Boot loader configuration struct, to be stored in BOOT_CFG_{0,1}.
  * Little-endian.
@@ -30,5 +34,9 @@ struct boot_cfg {
 #define BOOT_F_FIRST_BOOT (1UL << 0)
 #define BOOT_F_MERGE_SPIFFS (1UL << 1)
 #define BOOT_F_INVALID (1UL << 31)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CS_FW_PLATFORMS_CC3200_BOOT_LIB_BOOT_CFG_H_ */

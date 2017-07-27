@@ -8,6 +8,8 @@
 
 #include <iostream>
 
+// no_extern_c_check
+
 namespace util {
 
 class LogMessageAndDie;

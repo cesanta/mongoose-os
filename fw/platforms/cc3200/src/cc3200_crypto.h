@@ -10,6 +10,10 @@
 
 #include <inttypes.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum cc3200_hash_algo {
   CC3200_HASH_ALGO_MD5 = 0,
   CC3200_HASH_ALGO_SHA1 = 2,
@@ -32,5 +36,9 @@ void cc3200_hash_init(struct cc3200_hash_ctx *ctx, enum cc3200_hash_algo algo);
 void cc3200_hash_update(struct cc3200_hash_ctx *ctx, const uint8_t *data,
                         uint32_t len);
 void cc3200_hash_final(struct cc3200_hash_ctx *ctx, uint8_t *digest);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CS_FW_PLATFORMS_CC3200_SRC_CC3200_CRYPTO_H_ */

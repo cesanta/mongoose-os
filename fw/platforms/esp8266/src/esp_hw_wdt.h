@@ -8,6 +8,10 @@
 
 #include <stdint.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum esp_hw_wdt_timeout {
   ESP_HW_WDT_DISABLE = 0,
   ESP_HW_WDT_0_84_SEC = 10,
@@ -24,5 +28,9 @@ enum esp_hw_wdt_timeout esp_hw_wdt_secs_to_timeout(int secs);
 void esp_hw_wdt_enable();
 void esp_hw_wdt_disable();
 void esp_hw_wdt_feed();
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CS_FW_PLATFORMS_ESP8266_SRC_ESP_HW_WDT_H_ */

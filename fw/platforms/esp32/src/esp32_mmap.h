@@ -20,6 +20,10 @@
  * See common/platforms/esp/src/esp_mmap.h for details of these values
  */
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #define MMAP_BASE ((void *) 0x10000000)
 #define MMAP_END ((void *) 0x20000000)
 
@@ -47,6 +51,10 @@
 #define ESP32PART_DATA_FROM_VFS(vfs) ((esp_partition_t *) (vfs)->dev->dev_data)
 #define FLASH_BASE(fs) \
   ESP32PART_DATA_FROM_VFS((struct mgos_vfs_fs *)(fs)->user_data)->address
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* CS_MMAP */
 #endif /* CS_FW_PLATFORMS_ESP32_SRC_ESP32_MMAP_H_ */

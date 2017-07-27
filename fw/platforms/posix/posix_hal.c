@@ -142,7 +142,8 @@ void mgos_runlock(struct mgos_rlock_type *l) {
   (void) l;
 }
 
-bool mgos_eth_dev_get_ip_info(int if_instance, struct mgos_net_ip_info *ip_info) {
+bool mgos_eth_dev_get_ip_info(int if_instance,
+                              struct mgos_net_ip_info *ip_info) {
   (void) if_instance;
   (void) ip_info;
   return false;
