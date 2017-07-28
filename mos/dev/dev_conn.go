@@ -87,7 +87,7 @@ func (dc *DevConn) GetConfig(ctx context.Context) (*DevConf, error) {
 
 	var devConf DevConf
 
-	err = devConfRaw.UnmarshalInto(&devConf.data)
+	err = devConfRaw.UnmarshalIntoUseNumber(&devConf.data)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}

@@ -9,7 +9,6 @@ import (
 
 	"cesanta.com/common/go/limitedwriter"
 	"github.com/cesanta/errors"
-	"github.com/cesanta/ubjson"
 )
 
 // RawMessage must be a slice in order for `omitempty` flag to work properly.
@@ -18,8 +17,8 @@ type RawMessage []rawMessage
 
 type rawMessage interface {
 	MarshalJSON() ([]byte, error)
-	MarshalUBJSON() ([]byte, error)
 	UnmarshalInto(interface{}) error
+	UnmarshalIntoUseNumber(interface{}) error
 	String() string
 }
 
@@ -40,24 +39,18 @@ func (m *RawMessage) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (m RawMessage) MarshalUBJSON() ([]byte, error) {
-	if !m.IsInitialized() {
-		return nil, errors.New("not initialized")
-	}
-	b, err := m[0].MarshalUBJSON()
-	return b, errors.Trace(err)
-}
-
-func (m *RawMessage) UnmarshalUBJSON(data []byte) error {
-	*m = []rawMessage{ubjsonRawMessage(data)}
-	return nil
-}
-
 func (m RawMessage) UnmarshalInto(v interface{}) error {
 	if !m.IsInitialized() {
 		return errors.New("not initialized")
 	}
 	return errors.Trace(m[0].UnmarshalInto(v))
+}
+
+func (m RawMessage) UnmarshalIntoUseNumber(v interface{}) error {
+	if !m.IsInitialized() {
+		return errors.New("not initialized")
+	}
+	return errors.Trace(m[0].UnmarshalIntoUseNumber(v))
 }
 
 func (m RawMessage) String() string {
@@ -69,10 +62,6 @@ func (m RawMessage) String() string {
 
 func RawJSON(data []byte) RawMessage {
 	return RawMessage{jsonRawMessage(data)}
-}
-
-func RawUBJSON(data []byte) RawMessage {
-	return RawMessage{ubjsonRawMessage(data)}
 }
 
 func DelayMarshaling(v interface{}) RawMessage {
@@ -87,14 +76,14 @@ func (m jsonRawMessage) MarshalJSON() ([]byte, error) {
 	return m, nil
 }
 
-func (m jsonRawMessage) MarshalUBJSON() ([]byte, error) {
-	t := json.RawMessage(m)
-	b, err := ubjson.Marshal(&t)
-	return b, errors.Trace(err)
-}
-
 func (m jsonRawMessage) UnmarshalInto(v interface{}) error {
 	return json.Unmarshal(m, v)
+}
+
+func (m jsonRawMessage) UnmarshalIntoUseNumber(v interface{}) error {
+	dec := json.NewDecoder(bytes.NewBuffer(m))
+	dec.UseNumber()
+	return dec.Decode(v)
 }
 
 func (m jsonRawMessage) String() string {
@@ -102,35 +91,6 @@ func (m jsonRawMessage) String() string {
 		return fmt.Sprintf("JSON: %#v... (%d)", string(m[:128]), len(m))
 	}
 	return fmt.Sprintf("JSON: %#v", string(m))
-}
-
-/// UBJSON
-
-type ubjsonRawMessage []byte
-
-func (m ubjsonRawMessage) MarshalJSON() ([]byte, error) {
-	// TODO(imax): translate UBJSON into JSON directly, without full deserialization.
-	var v interface{}
-	if err := ubjson.Unmarshal(m, &v); err != nil {
-		return nil, errors.Annotatef(err, "UBJSON unmarshaling")
-	}
-	b, err := json.Marshal(v)
-	return b, errors.Trace(err)
-}
-
-func (m ubjsonRawMessage) MarshalUBJSON() ([]byte, error) {
-	return m, nil
-}
-
-func (m ubjsonRawMessage) UnmarshalInto(v interface{}) error {
-	return ubjson.Unmarshal(m, v)
-}
-
-func (m ubjsonRawMessage) String() string {
-	if len(m) > 128 {
-		return fmt.Sprintf("UBJSON: %#v... (%d)", string(m[:128]), len(m))
-	}
-	return fmt.Sprintf("UBJSON: %#v", string(m))
 }
 
 /// Delayed marshaling
@@ -167,10 +127,6 @@ func (m delayMarshaling) MarshalJSON() ([]byte, error) {
 	return MarshalJSONNoHTMLEscape(m.val)
 }
 
-func (m delayMarshaling) MarshalUBJSON() ([]byte, error) {
-	return ubjson.Marshal(m.val)
-}
-
 func (m delayMarshaling) UnmarshalInto(v interface{}) error {
 	rv := reflect.ValueOf(v)
 	rval := reflect.ValueOf(m.val)
@@ -192,6 +148,10 @@ func (m delayMarshaling) UnmarshalInto(v interface{}) error {
 
 	el.Set(rval)
 	return nil
+}
+
+func (m delayMarshaling) UnmarshalIntoUseNumber(v interface{}) error {
+	return m.UnmarshalInto(v)
 }
 
 func (m delayMarshaling) String() string {

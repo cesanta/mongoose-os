@@ -111,10 +111,10 @@ func (c *serialCodec) connRead(buf []byte) (read int, err error) {
 				for _, b := range data {
 					switch b {
 					case xoffChar:
-						glog.Infof("XOFF")
+						glog.V(3).Infof("XOFF")
 						c.blockWrite()
 					case xonChar:
-						glog.Infof("XON")
+						glog.V(3).Infof("XON")
 						c.unblockWrite()
 					default:
 						newData = append(newData, b)

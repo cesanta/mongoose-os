@@ -33,6 +33,8 @@ func (c *DevConf) Get(path string) (string, error) {
 		return v.(string), nil
 	case float64:
 		return strconv.FormatFloat(v.(float64), 'f', -1, 64), nil
+	case json.Number:
+		return v.(json.Number).String(), nil
 	case bool:
 		if v.(bool) {
 			return "true", nil
@@ -66,6 +68,12 @@ func (c *DevConf) Set(path, value string) error {
 			return errors.Trace(err)
 		}
 		m[key] = valueFloat
+	case json.Number:
+		_, err := strconv.ParseFloat(value, 64)
+		if err != nil {
+			return errors.Trace(err)
+		}
+		m[key] = json.Number(value)
 	case bool:
 		if value == "true" {
 			m[key] = true
