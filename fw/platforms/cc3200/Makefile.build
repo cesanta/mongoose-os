@@ -250,7 +250,6 @@ include $(MGOS_PATH)/common/scripts/ffi_exports.mk
 include $(MGOS_PATH)/fw/src/sys_config.mk
 
 SYS_CONF_SCHEMA += $(MGOS_CC3200_SRC_PATH)/cc3200_sys_config.yaml
-SYS_CONF_SCHEMA += $(MGOS_CC3200_SRC_PATH)/cc3200_wifi_config.yaml
 
 $(BUILD_DIR)/miniz.o: CFLAGS += -DMINIZ_NO_STDIO
 
