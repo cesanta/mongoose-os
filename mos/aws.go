@@ -241,9 +241,12 @@ func genCert(ctx context.Context, iotSvc *iot.IoT, devConn *dev.DevConn, devConf
 			reportf("invalid device configuration: %s", err)
 		}
 
-		cl, _, _, err := atca.Connect(ctx, devConn)
+		cl, _, atcaCfg, err := atca.Connect(ctx, devConn)
 		if err != nil {
 			return "", "", errors.Annotatef(err, "failed to connect to the crypto device")
+		}
+		if atcaCfg.LockConfig != atca.LockModeLocked || atcaCfg.LockValue != atca.LockModeLocked {
+			return "", "", errors.Errorf("crypto chip is not fully configured; see step 2 here: https://mongoose-os.com/docs/overview/security.html#setup-guide")
 		}
 		if keyFile == "" {
 			reportf("Generating new private key in slot %d", atcaSlot)

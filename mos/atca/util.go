@@ -6,10 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"golang.org/x/net/context"
-	"os"
 	"regexp"
 	"strings"
 
+	"cesanta.com/common/go/ourutil"
 	atcaService "cesanta.com/fw/defs/atca"
 	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"
@@ -44,9 +44,14 @@ func Connect(ctx context.Context, dc *dev.DevConn) (atcaService.Service, []byte,
 		return nil, nil, nil, errors.Annotatef(err, "ParseBinaryConfig")
 	}
 
-	fmt.Fprintf(os.Stderr, "\nAECC508A rev 0x%x S/N 0x%s, config is %s, data is %s\n\n",
+	ourutil.Reportf("\nATECC508A rev 0x%x S/N 0x%s, config is %s, data is %s",
 		cfg.Revision, hex.EncodeToString(cfg.SerialNum), strings.ToLower(string(cfg.LockConfig)),
 		strings.ToLower(string(cfg.LockValue)))
+
+	if cfg.LockConfig != LockModeLocked || cfg.LockValue != LockModeLocked {
+		ourutil.Reportf("WARNING: Either config or data zone are not locked, chip is not fully configured")
+	}
+	ourutil.Reportf("")
 
 	return cl, confData, cfg, nil
 }
