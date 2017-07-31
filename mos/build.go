@@ -699,16 +699,15 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 			dockerArgs = append(dockerArgs, (*buildDockerExtra)...)
 		}
 
-		// Get build image name and tag
-		sdkVersionBytes, err := ioutil.ReadFile(
-			filepath.Join(mosDirEffective, "fw/platforms", manifest.Arch, "sdk.version"),
-		)
-		if err != nil {
-			return errors.Annotatef(err, "failed to read sdk version file")
-		}
-		// Drop trailing newline
-		sdkVersion := string(sdkVersionBytes[:len(sdkVersionBytes)-1])
+		sdkVersionFile := filepath.Join(mosDirEffective, "fw/platforms", manifest.Arch, "sdk.version")
 
+		// Get build image name and tag
+		sdkVersionBytes, err := ioutil.ReadFile(sdkVersionFile)
+		if err != nil {
+			return errors.Annotatef(err, "failed to read sdk version file %q", sdkVersionFile)
+		}
+
+		sdkVersion := strings.TrimSpace(string(sdkVersionBytes))
 		dockerArgs = append(dockerArgs, sdkVersion)
 
 		makeArgs := getMakeArgs(
