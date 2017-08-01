@@ -5,7 +5,7 @@
 
 #ifndef RTOS_SDK
 
-#include <stdio.h>
+#include <stdbool.h>
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
@@ -14,7 +14,9 @@
 
 #include <user_interface.h>
 
+#include "common/cs_dbg.h"
 #include "mgos_gpio.h"
+#include "mgos_utils.h"
 #include "fw/platforms/esp8266/src/esp_gpio.h"
 #include "fw/platforms/esp8266/src/esp_periph.h"
 
@@ -25,39 +27,34 @@
  *
  * + Arbitrary number of pins can be configured for PWM simultaneously, pins
  *   can be added and removed at any time.
- *   Note: GPIO 16 is not currently supported.
  * + Period can be different for different pins.
- * + Up to 5 KHz frequency can be generated.
+ * + Up to 10 KHz frequency can be generated.
  * + No interrupts in idle mode (no pins configured or duty = 0 for all).
+ *
+ * Best results are achieved when all PWM frequencies are factors of each other,
+ * in this case output is exact. If they are different, small amount of jitter
+ * should be expected.
  */
 
-#define PWM_BASE_RATE_US 5
-/* The following constants are used to get the base 100 KHz freq (10 uS period)
- * used to drive PWM. */
-#define TMR_PRESCALER_16 4 /* 16x prescaler */
-/* At 80 MHZ timer clock source is 26 MHz and each unit of this adds 0.2 uS. */
-#define TMR_RELOAD_VALUE_80 (25 - 8)
-/* At 160, the frequency is the same but the constant fraction that accounts for
- * interrupt handling code running before reload needs to be adjusted. */
-#define TMR_RELOAD_VALUE_160 (25 - 4)
-
-/* #define ESP_PWM_DEBUG */
+#define TMR_PRESCALER_1 0 /* No prescaler */
+#define TMR_FREQ 80000000
+#define TMR_MIN_LOAD 500
+#define TMR_MAX_LOAD 8000000
 
 struct pwm_info {
-  unsigned int pin : 8;
-  unsigned int val : 1;
-  uint32_t cnt;
-  uint32_t period;
-  uint32_t duty;
+  int pin;
+  int th;  /* Number of ticks spent in the "high" state. */
+  int tl;  /* Number of ticks spent in the "low" state. */
+  int val; /* Current value of the pin, 1 or 0. */
+  int cnt; /* Countdown timer for the current state of the pin. */
 };
 
 static int s_num_pwms;
 static struct pwm_info *s_pwms;
-static uint32_t s_pwm_timer_reload_value = TMR_RELOAD_VALUE_80;
 
-void pwm_timer_int_cb(void *arg);
+static void pwm_timer_isr(void);
 
-static struct pwm_info *find_or_create_pwm_info(uint8_t pin, int create) {
+static struct pwm_info *find_or_create_pwm_info(uint8_t pin, bool create) {
   int i;
   struct pwm_info *p = NULL;
   for (i = 0; i < s_num_pwms; i++) {
@@ -73,8 +70,8 @@ static struct pwm_info *find_or_create_pwm_info(uint8_t pin, int create) {
     s_pwms = p;
     p = s_pwms + s_num_pwms;
     s_num_pwms++;
+    memset(p, 0, sizeof(*p));
     p->pin = pin;
-    p->cnt = p->duty = 0;
   }
   ETS_FRC1_INTR_ENABLE();
   return p;
@@ -85,147 +82,141 @@ static void remove_pwm_info(struct pwm_info *p) {
   ETS_FRC1_INTR_DISABLE();
   memmove(p, p + 1, (s_num_pwms - 1 - i) * sizeof(*p));
   s_num_pwms--;
-  /* Reduces size, must succeed. Reallocing to 0 should be legal, but stupid ESP
-   * realloc complains. */
-  if (s_num_pwms > 0) {
-    s_pwms = realloc(s_pwms, sizeof(*p) * s_num_pwms);
-  } else {
-    free(s_pwms);
-    s_pwms = 0;
-  }
+  s_pwms = realloc(s_pwms, sizeof(*p) * s_num_pwms);
   ETS_FRC1_INTR_ENABLE();
 }
 
-#define FRC1_ENABLE_TIMER BIT7
+#define TM_ENABLE BIT(7)
+#define TM_AUTO_RELOAD BIT(6)
 #define TM_INT_EDGE 0
 
 static void pwm_configure_timer(void) {
-  int i, enable = 0;
-  for (i = 0; i < s_num_pwms; i++) {
+  bool enable = false;
+  for (int i = 0; i < s_num_pwms; i++) {
     struct pwm_info *p = s_pwms + i;
-    if (p->period > 0 && p->duty > 0 && p->period != p->duty) {
-      enable = 1;
+    if (p->th > 0 || p->tl > 0) {
+      enable = true;
       break;
     }
   }
   if (!enable) {
-    RTC_CLR_REG_MASK(FRC1_CTRL_ADDRESS, FRC1_ENABLE_TIMER);
+    RTC_CLR_REG_MASK(FRC1_CTRL_ADDRESS, TM_ENABLE);
     return;
   }
 
-  if (system_get_cpu_freq() == SYS_CPU_80MHZ) {
-    s_pwm_timer_reload_value = TMR_RELOAD_VALUE_80;
-  } else {
-    s_pwm_timer_reload_value = TMR_RELOAD_VALUE_160;
+  if (RTC_REG_READ(FRC1_CTRL_ADDRESS) & TM_ENABLE) {
+    /* Already running, don't disrupt */
+    return;
   }
-
-  ETS_FRC_TIMER1_INTR_ATTACH(pwm_timer_int_cb, NULL);
   RTC_CLR_REG_MASK(FRC1_INT_ADDRESS, FRC1_INT_CLR_MASK);
-  RTC_REG_WRITE(FRC1_LOAD_ADDRESS, s_pwm_timer_reload_value);
+  ETS_FRC_TIMER1_NMI_INTR_ATTACH(pwm_timer_isr);
+  RTC_REG_WRITE(FRC1_LOAD_ADDRESS, TMR_MIN_LOAD); /* Run soon */
   RTC_REG_WRITE(FRC1_CTRL_ADDRESS,
-                TMR_PRESCALER_16 | FRC1_ENABLE_TIMER | TM_INT_EDGE);
+                TMR_PRESCALER_1 | TM_ENABLE | TM_INT_EDGE | TM_AUTO_RELOAD);
   TM1_EDGE_INT_ENABLE();
   ETS_FRC1_INTR_ENABLE();
 }
 
 bool mgos_pwm_set(int pin, int freq, float duty) {
   struct pwm_info *p;
-  int period = freq > 0 ? roundf(1000000.0 / freq) : 0;
-  int d = roundf(period * duty / 100.0);
 
   if (pin != 16 && get_gpio_info(pin) == NULL) {
-    fprintf(stderr, "Invalid pin number\n");
     return false;
   }
 
-  if (period != 0 &&
-      (period < PWM_BASE_RATE_US * 2 || duty < 0 || d > period)) {
-    fprintf(stderr, "Invalid period / duty value\n");
-    return false;
-  }
+  /*
+   * Load value is a 23-bit field, with no prescaler maximum divider is 8388608.
+   * Getting lower frequencies would require prescaler, which seems like
+   * unnecessary complexity.
+   * 10K upper limit is due to TMR_MIN_LOAD: setting timer load value to less
+   * than ~500 (@ 80 MHz CPU clk) results in lockup (continuous NMI state).
+   * So we clamp duty at 500 on both sides, which is ok for 10 KHz or less, but
+   * becomes noticeable for higher freqs.
+   */
+  if (freq < 10 || freq > 10000) return false;
 
-  period /= PWM_BASE_RATE_US;
-  d /= PWM_BASE_RATE_US;
-
-  p = find_or_create_pwm_info(pin, (period > 0 && d >= 0));
+  p = find_or_create_pwm_info(pin, (freq > 0));
   if (p == NULL) {
     return false;
   }
 
-  if (period == 0) {
-    if (p != NULL) {
-      remove_pwm_info(p);
-      pwm_configure_timer();
-      mgos_gpio_write(pin, 0);
-    }
+  if (freq <= 0) {
+    remove_pwm_info(p);
+    pwm_configure_timer();
+    mgos_gpio_write(pin, 0);
     return true;
   }
 
-  if (p->period == (uint32_t) period && p->duty == (uint32_t) d) {
+  int period = roundf((float) TMR_FREQ / freq);
+  int th = MIN(MAX(roundf(period * (duty / 100.0)), TMR_MIN_LOAD),
+               period - TMR_MIN_LOAD);
+  int tl = period - th;
+  LOG(LL_DEBUG, ("%d %d %f => %d %d %d", pin, freq, duty, period, th, tl));
+
+  if (p->th == th && p->tl == tl) {
     return true;
   }
 
   mgos_gpio_set_mode(pin, MGOS_GPIO_MODE_OUTPUT);
 
   ETS_FRC1_INTR_DISABLE();
-  p->period = period;
-  p->duty = d;
-  if (p->cnt == 0 || p->cnt > (uint32_t) period) {
-    p->val = 1;
-    p->cnt = p->duty;
-    mgos_gpio_write(pin, p->val);
-  }
-  ETS_FRC1_INTR_ENABLE();
-
-  if (d == 0 || period == d) {
-    mgos_gpio_write(pin, (period == d));
+  p->th = th;
+  p->tl = tl;
+  if (th == 0 || tl == 0) {
+    mgos_gpio_write(pin, (tl == 0));
+  } else {
+    mgos_gpio_write(pin, 0);
+    p->val = 0;
+    p->cnt = tl;
   }
 
   pwm_configure_timer();
   return true;
 }
 
-IRAM NOINSTR void pwm_timer_int_cb(void *arg) {
-  /* Reloading at the very start is crucial for correct timing.
-   * Reload first, then do whatever you want. */
-  RTC_REG_WRITE(FRC1_LOAD_ADDRESS, s_pwm_timer_reload_value);
-  int i;
-  uint32_t v, set = 0, clear = 0;
-  (void) arg;
-#ifdef ESP_PWM_DEBUG
-  {
-    v = GPIO_REG_READ(GPIO_OUT_ADDRESS);
-    v ^= 1 << 10; /* GPIO 10 */
-    GPIO_REG_WRITE(GPIO_OUT_ADDRESS, v);
-  }
-#endif
-  for (i = 0; i < s_num_pwms; i++) {
+#define RTC_SET_REG_MASK(reg, mask) \
+  SET_PERI_REG_MASK(PERIPHS_TIMER_BASEDDR + reg, mask)
+
+/* This is NMI ISR, extreme care must be taken with things done here. */
+IRAM NOINSTR void pwm_timer_isr(void) {
+  uint32_t set = 0, clear = 0;
+  int prev_load = (int) RTC_REG_READ(FRC1_LOAD_ADDRESS);
+  int next_load = TMR_MAX_LOAD;
+  for (int i = 0; i < s_num_pwms; i++) {
     struct pwm_info *p = s_pwms + i;
-    if (--(p->cnt) > 0) continue;
-    /* Edge cases were handled during setup. */
-    if (p->duty == 0 || p->duty == p->period) continue;
-    if (p->pin != 16) { /* GPIO 16 is controlled via a different register */
-      uint32_t bit = ((uint32_t) 1) << p->pin;
+    if (p->th == 0 || p->tl == 0) continue;
+    /* Note: cnt can go negative here, that's why we use signed ints. */
+    p->cnt -= prev_load;
+    if (p->cnt <= TMR_MIN_LOAD) {
+      uint32_t bit = (1 << p->pin);
       if (p->val) {
         clear |= bit;
+        p->cnt = p->tl;
+        p->val = 0;
       } else {
         set |= bit;
+        p->cnt = p->th;
+        p->val = 1;
       }
-    } else {
-      uint32_t v = READ_PERI_REG(RTC_GPIO_OUT) & 0xfffffffe;
-      v |= ~p->val;
-      WRITE_PERI_REG(RTC_GPIO_OUT, v);
     }
-    p->val ^= 1;
-    p->cnt = (p->val ? p->duty : (p->period - p->duty));
+    if (p->cnt < next_load) next_load = p->cnt;
   }
-  if (set || clear) {
-    v = GPIO_REG_READ(GPIO_OUT_ADDRESS);
-    v |= set;
-    v &= ~clear;
-    GPIO_REG_WRITE(GPIO_OUT_ADDRESS, v);
+  /* Changes to timer config introduce jitter, don't touch unless we have to. */
+  if (next_load != prev_load) {
+    RTC_REG_WRITE(FRC1_LOAD_ADDRESS, next_load);
+    RTC_SET_REG_MASK(FRC1_CTRL_ADDRESS, TM_ENABLE); /* Restarts timer */
   }
-  RTC_CLR_REG_MASK(FRC1_INT_ADDRESS, FRC1_INT_CLR_MASK);
+  /*
+   * Apply the changes.
+   * Bit 16 may be set here, but it's unused in the W1TC/S registers, it's fine.
+   */
+  GPIO_REG_WRITE(GPIO_OUT_W1TS_ADDRESS, set);
+  GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, clear);
+  if ((set | clear) & BIT(16)) {
+    /* RTC_GPIO_OUT has only one functional bit - bit 0 */
+    WRITE_PERI_REG(RTC_GPIO_OUT, ((set & BIT(16)) != 0));
+  }
+  RTC_REG_WRITE(FRC1_INT_ADDRESS, FRC1_INT_CLR_MASK);
 }
 
 #endif
