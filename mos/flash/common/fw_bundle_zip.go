@@ -27,7 +27,7 @@ func NewZipFirmwareBundle(fname, versionSuffix string) (*FirmwareBundle, error) 
 	_, err2 := os.Stat(fname)
 	if fname != "" && !strings.HasSuffix(fname, ".zip") && os.IsNotExist(err2) {
 		fname = fmt.Sprintf(
-			"https://mongoose-os.com/downloads/%s%s.zip", fname, versionSuffix,
+			"https://mongoose-os.com/downloads/mos-%s%s.zip", fname, versionSuffix,
 		)
 	}
 
