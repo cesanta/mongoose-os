@@ -165,7 +165,7 @@ LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip $(MGOS_ESP_SRC_PATH)
 include $(MGOS_PATH)/fw/src/mgos_features.mk
 
 # libraries used in this project, mainly provided by the SDK
-SDK_LIBS = c crypto espnow gcc hal main net80211 pp phy stdc++ wpa wpa2
+SDK_LIBS = c crypto espnow gcc main net80211 pp phy stdc++ wpa wpa2
 LIBS = $(addprefix -l,$(SDK_LIBS))
 
 SHIMS = -DNDEBUG
