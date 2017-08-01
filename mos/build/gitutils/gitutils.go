@@ -79,15 +79,56 @@ func GitFetch(repo string) error {
 	return nil
 }
 
-func IsClean(repo string) (bool, error) {
-	resp, err := git(repo, "diff", "--shortstat")
-
+// IsClean returns true if there are no modified, deleted or untracked files,
+// and no non-pushed commits since the given version.
+func IsClean(repo, version string) (bool, error) {
+	// First, check if there are modified, deleted or untracked files
+	resp, err := git(repo, "ls-files", "--exclude-standard", "--modified", "--others", "--deleted")
 	if err != nil {
-		return false, errors.Annotatef(err, "failed to git diff --shortstat")
+		return false, errors.Annotatef(err, "failed to git ls-files")
 	}
 
 	if resp != "" {
 		// Working dir is dirty
+		return false, nil
+	}
+
+	// Unfortunately, git ls-files is unable to show staged and uncommitted files.
+	// So, specifically for these files, we'll have to run git diff --cached:
+
+	resp, err = git(repo, "diff", "--cached", "--name-only")
+	if err != nil {
+		return false, errors.Annotatef(err, "failed to git diff --cached")
+	}
+
+	if resp != "" {
+		// Working dir is dirty
+		return false, nil
+	}
+
+	// Working directory is clean, now we need to check if there are some
+	// non-pushed commits. Unfortunately there is no way (that I know of) which
+	// would work with both branches and tags. So, we do this:
+	//
+	// Invoke "git cherry". If the repo is on a branch, this command will print
+	// list of commits to be pushed to upstream. If, however, the repo is not on
+	// a branch (e.g. it's often on a tag), then this command will fail, and in
+	// that case we invoke it again, but with the version specified:
+	// "git cherry <version>". In either case, non-empty output means the
+	// precense of some commits which would not be fetched by the remote builder,
+	// so the repo is dirty.
+
+	resp, err = git(repo, "cherry")
+	if err != nil {
+		// Apparently the repo is not on a branch, retry with the version
+		resp, err = git(repo, "cherry", version)
+		if err != nil {
+			return false, errors.Annotatef(err, "failed to git cherry %s", version)
+		}
+	}
+
+	if resp != "" {
+		// Some commits need to be pushed to upstream
 		return false, nil
 	}
 

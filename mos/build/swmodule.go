@@ -65,7 +65,7 @@ func (m *SWModule) IsClean(libsDir string) (bool, error) {
 		}
 
 		// Dir exists, check if it's clean
-		isClean, err := gitutils.IsClean(lp)
+		isClean, err := gitutils.IsClean(lp, m.Version)
 		if err != nil {
 			return false, errors.Trace(err)
 		}
@@ -272,7 +272,7 @@ func prepareLocalCopyGit(
 	} else {
 		// Repo exists, let's check if the working dir is clean. If not, we'll
 		// not do anything.
-		isClean, err := gitutils.IsClean(targetDir)
+		isClean, err := gitutils.IsClean(targetDir, version)
 		if err != nil {
 			return errors.Trace(err)
 		}
