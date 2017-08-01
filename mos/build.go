@@ -59,19 +59,6 @@ var (
 
 	noLibsUpdate = flag.Bool("no-libs-update", false, "if true, never try to pull existing libs (treat existing default locations as if they were given in --lib)")
 
-	// Where to mount host filesystem during the local build (useful only for
-	// debugging)
-	//
-	// Prepending paths with hostFSMountPoint is needed only to ensure that all
-	// docker paths have been handled with getPathForDocker(): even though it's
-	// not strictly necessary for linux (because host and docker paths can be
-	// identical), it is necessary on Windows (where a path like "C:\foo\bar"
-	// needs to become "C/foo/bar")
-	//
-	// So, by setting this flag to something like "/host_fs", we can ensure that
-	// getPathForDocker is used for all docker paths.
-	hostFSMountPoint = flag.String("host-fs-mount-point", "/", "where to mount host filesystem during the local build (useful only for debugging)")
-
 	tmpDir     = ""
 	libsDir    = ""
 	appsDir    = ""
@@ -296,6 +283,10 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 }
 
 func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
+	if isInDockerToolbox() {
+		freportf(logWriterStdout, "Docker Toolbox detected")
+	}
+
 	buildDir := moscommon.GetBuildDir(projectDir)
 
 	defer func() {
@@ -2027,6 +2018,12 @@ type mountPoints map[string]string
 // something is already mounted to the given containerPath, then it's compared
 // to the new hostPath value; if they are not equal, an error is returned.
 func (mp mountPoints) addMountPoint(hostPath, containerPath string) error {
+	// Docker Toolbox hack: in docker toolbox on windows, the actual host paths
+	// like C:\foo\bar don't work, this path becomes /c/foo/bar.
+	if isInDockerToolbox() {
+		hostPath = getPathForDocker(hostPath)
+	}
+
 	freportf(logWriter, "mount from %q to %q\n", hostPath, containerPath)
 	if v, ok := mp[containerPath]; ok {
 		if hostPath != v {
@@ -2040,16 +2037,17 @@ func (mp mountPoints) addMountPoint(hostPath, containerPath string) error {
 	return nil
 }
 
-// getPathForDocker replaces OS-dependent separators in a given path with "/",
-// and prepends it with hostFSMountPoint (which is a root dir by default).
+// getPathForDocker replaces OS-dependent separators in a given path with "/"
 func getPathForDocker(p string) string {
 	ret := path.Join(strings.Split(p, string(filepath.Separator))...)
 	if filepath.IsAbs(p) {
 		if runtime.GOOS == "windows" && ret[1] == ':' {
-			// Remove the colon after drive letter
-			ret = fmt.Sprint(ret[:1], ret[2:])
+			// Remove the colon after drive letter, also lowercase the drive letter
+			// (the lowercasing part is important for docker toolbox: there, host
+			// paths like C:\foo\bar don't work, this path becomse /c/foo/bar)
+			ret = fmt.Sprint(strings.ToLower(ret[:1]), ret[2:])
 		}
-		ret = path.Join(*hostFSMountPoint, ret)
+		ret = path.Join("/", ret)
 	}
 	return ret
 }
@@ -2155,4 +2153,8 @@ func newMosVars() *interpreter.MosVars {
 	ret := interpreter.NewMosVars()
 	ret.SetVar(interpreter.GetMVarNameMosVersion(), getMosVersion())
 	return ret
+}
+
+func isInDockerToolbox() bool {
+	return os.Getenv("DOCKER_HOST") != ""
 }
