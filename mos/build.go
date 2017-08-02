@@ -442,7 +442,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	}
 	// }}}
 
-	// Get sources and filesystem files from the manifest, expanding placeholders {{{
+	// Get sources and filesystem files from the manifest, expanding expressions {{{
 	appSources := []string{}
 	for _, s := range manifest.Sources {
 		s, err = expandVars(interp, s)
@@ -938,7 +938,7 @@ func readManifest(
 			}
 
 			// Extend common app manifest with arch-specific things.
-			if err := extendManifest(manifest, manifest, archManifest, "", ""); err != nil {
+			if err := extendManifest(manifest, manifest, archManifest, "", "", interp); err != nil {
 				return nil, time.Time{}, errors.Trace(err)
 			}
 		} else if !os.IsNotExist(err) {
@@ -1689,27 +1689,48 @@ func expandManifestLibsAndConds(
 ) error {
 
 	for {
-		commonManifest := *manifest
+		// First, we build a chain of all manifests we have:
+		//
+		// - Dummy empty manifest (needed so that extendManifest() will be called
+		//   with the actual first manifest as "m2", and thus will expand
+		//   expressions in its BuildVars and CDefs)
+		// - All libs (if any), starting from the one without any deps
+		// - App
+		allManifests := []build.FWAppManifestLibHandled{}
+		allManifests = append(allManifests, build.FWAppManifestLibHandled{
+			Name:     "dummy_empty_manifest",
+			Path:     "",
+			Manifest: &build.FWAppManifest{},
+		})
+		allManifests = append(allManifests, manifest.LibsHandled...)
+		allManifests = append(allManifests, build.FWAppManifestLibHandled{
+			Name:     "app",
+			Path:     "",
+			Manifest: manifest,
+		})
 
-		// Note that we need to iterate LibsHandled in reverse order.
-		// extendManifest takes two manifests: m1 and m2; m1 goes first, m2 goes
-		// second and overrides m1. So, m1 in this case is a library, m2 is an app.
-		// But after the app is extended with the first library, that library becomes
-		// a part of an app, so if we need to expand multiple libraries, we need to
-		// start from those which depend on others, and finish with those which
-		// don't depend on anything (e.g. in reverse topological order).
-		for k := len(commonManifest.LibsHandled) - 1; k >= 0; k-- {
-			lh := commonManifest.LibsHandled[k]
-			// if lh.Manifest is nil, it means that it's already expanded.
-			// We can only encounter nil here if the client mos is old and does not
-			// support it. (probably after a while we should emit an error if we
-			// encounter nil here; today is 2017/06/20)
-			if lh.Manifest != nil {
-				if err := extendManifest(&commonManifest, lh.Manifest, &commonManifest, lh.Path, ""); err != nil {
-					return errors.Trace(err)
-				}
+		// Set commonManifest to the first manifest in the deps chain, which is
+		// a dummy empty manifest.
+		commonManifest := allManifests[0].Manifest
+
+		// Iterate all the rest of the manifests, at every step extending the
+		// current one with all previous manifests accumulated so far.
+		for k := 1; k < len(allManifests); k++ {
+			lprev := allManifests[k-1]
+			lcur := allManifests[k]
+
+			curManifest := *lcur.Manifest
+
+			if err := extendManifest(
+				&curManifest, commonManifest, &curManifest, lprev.Path, lcur.Path, interp,
+			); err != nil {
+				return errors.Trace(err)
 			}
+
+			commonManifest = &curManifest
 		}
+
+		// Now, commonManifest contains app's manifest with all libs expanded.
 
 		if len(commonManifest.Conds) == 0 {
 			// No more conds in the common manifest, so cleanup all libs manifests,
@@ -1718,7 +1739,7 @@ func expandManifestLibsAndConds(
 			for k, _ := range commonManifest.LibsHandled {
 				commonManifest.LibsHandled[k].Manifest = nil
 			}
-			*manifest = commonManifest
+			*manifest = *commonManifest
 
 			return nil
 		}
@@ -1733,14 +1754,14 @@ func expandManifestLibsAndConds(
 		// When it's done, we'll expand all libs manifests again, etc, until there
 		// are no conds left.
 
-		if err := expandManifestConds(manifest, &commonManifest, interp); err != nil {
+		if err := expandManifestConds(manifest, commonManifest, interp); err != nil {
 			return errors.Trace(err)
 		}
 
 		for k := range manifest.LibsHandled {
 			if manifest.LibsHandled[k].Manifest != nil {
 				if err := expandManifestConds(
-					manifest.LibsHandled[k].Manifest, &commonManifest, interp,
+					manifest.LibsHandled[k].Manifest, commonManifest, interp,
 				); err != nil {
 					return errors.Trace(err)
 				}
@@ -1828,7 +1849,11 @@ func getDepsInitCCode(manifest *build.FWAppManifest) ([]byte, error) {
 // If the dir is not empty, then it gets prepended to each source and
 // filesystem entry (except entries with absolute paths or paths starting with
 // a variable)
-func extendManifest(mMain, m1, m2 *build.FWAppManifest, m1Dir, m2Dir string) error {
+func extendManifest(
+	mMain, m1, m2 *build.FWAppManifest, m1Dir, m2Dir string,
+	interp *interpreter.MosInterpreter,
+) error {
+	var err error
 
 	// Extend sources
 	mMain.Sources = append(
@@ -1853,8 +1878,21 @@ func extendManifest(mMain, m1, m2 *build.FWAppManifest, m1Dir, m2Dir string) err
 	mMain.CFlags = append(m1.CFlags, m2.CFlags...)
 	mMain.CXXFlags = append(m1.CXXFlags, m2.CXXFlags...)
 
-	mMain.BuildVars = mergeMapsString(m1.BuildVars, m2.BuildVars)
-	mMain.CDefs = mergeMapsString(m1.CDefs, m2.CDefs)
+	// m2.BuildVars and m2.CDefs can contain expressions which should be expanded
+	// against manifest m1.
+	if err := interpreter.SetManifestVars(interp.MVars, m1); err != nil {
+		return errors.Trace(err)
+	}
+
+	mMain.BuildVars, err = mergeMapsString(m1.BuildVars, m2.BuildVars, interp)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	mMain.CDefs, err = mergeMapsString(m1.CDefs, m2.CDefs, interp)
+	if err != nil {
+		return errors.Trace(err)
+	}
 
 	// Extend conds
 	mMain.Conds = append(
@@ -1905,18 +1943,25 @@ func generateCflags(cflags []string, cdefs map[string]string) string {
 }
 
 // mergeMapsString merges two map[string]string into a new one; m2 takes
-// precedence over m1
-func mergeMapsString(m1, m2 map[string]string) map[string]string {
+// precedence over m1. Values of m2 can contain expressions which are expanded
+// against the given interp.
+func mergeMapsString(
+	m1, m2 map[string]string, interp *interpreter.MosInterpreter,
+) (map[string]string, error) {
 	bv := make(map[string]string)
 
 	for k, v := range m1 {
 		bv[k] = v
 	}
 	for k, v := range m2 {
-		bv[k] = v
+		var err error
+		bv[k], err = expandVars(interp, v)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
 	}
 
-	return bv
+	return bv, nil
 }
 
 // expandManifestConds expands all "conds" in the dstManifest, but all cond
@@ -1959,7 +2004,7 @@ func expandManifestConds(
 
 		// Apply submanifest if present
 		if cond.Apply != nil {
-			if err := extendManifest(dstManifest, dstManifest, cond.Apply, "", ""); err != nil {
+			if err := extendManifest(dstManifest, dstManifest, cond.Apply, "", "", interp); err != nil {
 				return errors.Trace(err)
 			}
 		}
