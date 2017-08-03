@@ -194,8 +194,11 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 	serverVersionCh := make(chan *versionJson, 1)
 	if !*local {
 		go func() {
-			// Ignore error, it's not really important
-			v, _ := getServerMosVersion(getUpdateChannel())
+			v, err := getServerMosVersion(getUpdateChannel())
+			if err != nil {
+				// Ignore error, it's not really important
+				return
+			}
 			serverVersionCh <- v
 		}()
 	}
