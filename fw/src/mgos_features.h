@@ -22,10 +22,6 @@
 #define MGOS_ENABLE_MDNS 0
 #endif
 
-#ifndef MGOS_ENABLE_ONEWIRE
-#define MGOS_ENABLE_ONEWIRE 0
-#endif
-
 #ifndef MGOS_ENABLE_SNTP
 #define MGOS_ENABLE_SNTP 0
 #endif

@@ -31,7 +31,6 @@
 #include "mgos_mdns.h"
 #include "mgos_mongoose.h"
 #include "mgos_net.h"
-#include "mgos_onewire.h"
 #include "mgos_pwm.h"
 #include "mgos_sntp.h"
 #include "mgos_sys_config.h"
