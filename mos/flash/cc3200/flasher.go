@@ -80,12 +80,19 @@ func Flash(fw *common.FirmwareBundle, opts *FlashOpts) error {
 		common.Reportf(
 			"Failed to open device control interface (%s). "+
 				"Make sure that device is in the boot loader mode (SOP2 = 1).", err)
+	} else {
+		defer dc.Close()
 	}
 
 	rc, err := cc32xx.NewROMClient(s, dc)
 	if err != nil {
-		return errors.Annotatef(err, "failed to run flasher")
+		return errors.Annotatef(err, "failed to connect to boot loader")
 	}
+
+	if err := rc.SwitchToNWPLoader(); err != nil {
+		return errors.Annotatef(err, "failed to connect to switch to NWP boot loader")
+	}
+
 	if opts.FormatSLFSSize > 0 {
 		common.Reportf("Formatting SFLASH file system (%d)...", opts.FormatSLFSSize)
 		err = rc.FormatSLFS(opts.FormatSLFSSize)

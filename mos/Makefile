@@ -18,7 +18,7 @@ build: generate
 install: generate
 	go install
 
-downloads: generate
+linux: generate
 	docker run -i --rm \
     -v $${GOPATH%%:*}/src:/go/src \
     -v $$(pwd):/out \
@@ -27,8 +27,14 @@ downloads: generate
     -tags 'netgo' \
     -o /out/downloads/mos/linux/mos --ldflags '-extldflags "-static"' \
     cesanta.com/mos
+
+mac: generate
 	GOOS=darwin go build -o downloads/mos/mac/mos
+
+win: generate
 	GOOS=windows GOARCH=386 go build -o downloads/mos/win/mos.exe
+
+downloads: linux mac win
 	cp version.json downloads/mos/
 
 deploy: deploy-fwbuild deploy-mos-binary

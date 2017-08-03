@@ -13,7 +13,8 @@ import (
 type ftdxxAPI struct {
 	Open,
 	SetBitMode,
-	Write uintptr
+	Write,
+	Close uintptr
 }
 
 var ftdapi *ftdxxAPI
@@ -67,6 +68,7 @@ func getAPI() (*ftdxxAPI, error) {
 		Open:       getProcAddr(dll, "FT_Open"),
 		SetBitMode: getProcAddr(dll, "FT_SetBitMode"),
 		Write:      getProcAddr(dll, "FT_Write"),
+		Close:      getProcAddr(dll, "FT_Close"),
 	}, nil
 }
 
@@ -120,4 +122,8 @@ func (f *ftd2xx) WriteByte(data byte) error {
 		return errors.Errorf("expected to write 1 byte, wrote %d", n)
 	}
 	return nil
+}
+
+func (f *ftd2xx) Close() {
+	syscall.Syscall(ftdapi.Close, 1, uintptr(f.h), 0, 0)
 }

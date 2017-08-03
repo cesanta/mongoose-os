@@ -12,6 +12,7 @@ import (
 type FTDI interface {
 	SetBitBangMode(mask byte) error
 	WriteByte(data byte) error
+	Close()
 }
 
 type launchXLDeviceControl struct {
@@ -30,7 +31,9 @@ const (
 )
 
 func NewCC3200DeviceControl(port string) (cc32xx.DeviceControl, error) {
-	ftdi, err := openFTDI(port, vendorTI, productLaunchXL)
+	// Try to get serial number of this device but proceed without it in case of failure.
+	sn, _ := cc32xx.GetUSBSerialNumberForPort(port)
+	ftdi, err := openFTDI(vendorTI, productLaunchXL, sn)
 	if err != nil {
 		return nil, errors.Annotatef(err, "failed to open FTDI")
 	}
@@ -54,8 +57,6 @@ func (dc *launchXLDeviceControl) EnterBootLoader() error {
 	if err := dc.ftdi.WriteByte(resetBit | sop2Bit); err != nil {
 		return errors.Annotatef(err, "failed to leave reset state")
 	}
-	// Let boot loader start.
-	time.Sleep(1000 * time.Millisecond)
 	return nil
 }
 
@@ -70,4 +71,8 @@ func (dc *launchXLDeviceControl) BootFirmware() error {
 		return errors.Annotatef(err, "failed to set bitbang mode")
 	}
 	return nil
+}
+
+func (dc *launchXLDeviceControl) Close() {
+	dc.ftdi.Close()
 }

@@ -34,7 +34,6 @@ func openFTDI(port string, vendor, product int) (FTDI, error) {
 		return nil, err
 	}
 	f := &ftdiLibWrapper{ctx: ctx}
-	runtime.SetFinalizer(f, (*ftdiLibWrapper).close)
 	if e := C.ftdi_set_interface(ctx, C.enum_ftdi_interface(channelA)); e < 0 {
 		return nil, errors.Errorf("failed to set interface: %d", e)
 	}
@@ -63,7 +62,7 @@ func (f *ftdiLibWrapper) WriteByte(data byte) error {
 	return nil
 }
 
-func (f *ftdiLibWrapper) close() {
+func (f *ftdiLibWrapper) Close() {
 	if f.ctx != nil {
 		if f.open {
 			C.ftdi_usb_close(f.ctx)

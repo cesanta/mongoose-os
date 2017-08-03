@@ -5,6 +5,7 @@ import (
 )
 
 func enumerateSerialPorts() []string {
-	list, _ := filepath.Glob("/dev/ttyUSB*")
-	return list
+	list1, _ := filepath.Glob("/dev/ttyUSB*")
+	list2, _ := filepath.Glob("/dev/ttyACM*")
+	return append(list1, list2...)
 }

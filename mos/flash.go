@@ -11,6 +11,7 @@ import (
 
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/flash/cc3200"
+	"cesanta.com/mos/flash/cc3220"
 	"cesanta.com/mos/flash/common"
 	"cesanta.com/mos/flash/esp"
 	espFlasher "cesanta.com/mos/flash/esp/flasher"
@@ -21,6 +22,7 @@ import (
 
 var (
 	cc3200FlashOpts cc3200.FlashOpts
+	cc3220FlashOpts cc3220.FlashOpts
 	espFlashOpts    esp.FlashOpts
 	stm32FlashOpts  stm32.FlashOpts
 )
@@ -88,7 +90,7 @@ func flash(ctx context.Context, devConn *dev.DevConn) error {
 
 	fw, err := common.NewZipFirmwareBundle(fwname, getMosVersionSuffix())
 	if err != nil {
-		return errors.Trace(err)
+		return errors.Annotatef(err, "failed to load %s", fwname)
 	}
 
 	fmt.Printf("Loaded %s/%s version %s (%s)\n", fw.Name, fw.Platform, fw.Version, fw.BuildID)
@@ -109,6 +111,9 @@ func flash(ctx context.Context, devConn *dev.DevConn) error {
 	case "cc3200":
 		cc3200FlashOpts.Port = port
 		err = cc3200.Flash(fw, &cc3200FlashOpts)
+	case "cc3220":
+		cc3220FlashOpts.Port = port
+		err = cc3220.Flash(fw, &cc3220FlashOpts)
 	case "esp32":
 		espFlashOpts.ControlPort = port
 		err = espFlasher.Flash(esp.ChipESP32, fw, &espFlashOpts)

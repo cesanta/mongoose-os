@@ -16,6 +16,7 @@ import (
 type loaderCmd uint8
 
 // Some of these are documented in the SimpleLink CC3100/CC3200 Embedded Programming Application Note
+// and CC3120 and CC3220 SimpleLink Wi-Fi Embedded Programming User Guide (SWPA230)
 // http://www.ti.com/tool/embedded-programming
 const (
 	cmdStartUpload  loaderCmd = 0x21
@@ -29,15 +30,29 @@ const (
 	cmdEraseFile      = 0x2e
 	cmdGetVersionInfo = 0x2f
 
+	cmdGetStorageInfo      = 0x31
+	cmdExecuteFromRAM      = 0x32
 	cmdSwitchUARTtoAppsMCU = 0x33
+
+	cmdGetDeviceInfo = 0x37
+
+	cmdGetMACAddress = 0x3a
 )
 
 const (
-	ChipTypeCC3200      = 0x10
 	fsBlockSize         = 0x1000
 	uartSwitchDelay     = 26666667 // 1 second
 	FileSignatureLength = 0x100
 	fileUploadBlockSize = 0x1000
+)
+
+type ChipType int
+
+const (
+	ChipCC3200 ChipType = iota
+	ChipCC3220
+	ChipCC3220S
+	ChipCC3220SF
 )
 
 type fileOpenMode uint32
@@ -67,7 +82,8 @@ const (
 )
 
 type ROMClient struct {
-	s serial.Serial
+	s  serial.Serial
+	ct ChipType
 }
 
 func NewROMClient(s serial.Serial, dc DeviceControl) (*ROMClient, error) {
@@ -85,35 +101,37 @@ func NewROMClient(s serial.Serial, dc DeviceControl) (*ROMClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	// CC3100 built into CC3200 reports chiptype 0x10 but boot loader bersion 2.0.4.0.
-	// So, if the version we get is 2.0.4.0, it means we're already talking to the NWP.
-	if vi.ChipType&ChipTypeCC3200 != 0 && vi.BootLoaderVersion != 0x02000400 {
-		common.Reportf("  Main boot loader v%s", vi.BootLoaderVersionString())
-		common.Reportf("Switching to NWP...")
-		switch {
-		case vi.BootLoaderVersion < 0x02010300:
-			return nil, errors.Errorf("unsupported boot loader version (%s)", vi.BootLoaderVersionString())
-		case vi.BootLoaderVersion == 0x02010300:
-			return nil, errors.Errorf("unsupported boot loader version (%s)", vi.BootLoaderVersionString())
-		case vi.BootLoaderVersion >= 0x02010400:
-			if err = rc.SwitchUARTtoAppsMCU(); err != nil {
-				return nil, errors.Annotatef(err, "failed to switch to apps mode")
-			}
-			vi, err = rc.GetVersionInfo()
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
 	sb, err := rc.GetStorageList()
 	if err != nil {
 		return nil, errors.Annotatef(err, "failed to get storage list")
 	}
+	common.Reportf("  %s boot loader v%s, storage 0x%02x",
+		vi.ChipTypeString(), vi.BootLoaderVersionString(), sb)
+	if vi.BootLoaderVersion < 0x02010400 {
+		// These are early pre-production devices that require loading code stubs, etc.
+		return nil, errors.Errorf("unsupported boot loader version (%s)", vi.BootLoaderVersionString())
+	}
+	return rc, nil
+}
+
+func (rc *ROMClient) SwitchToNWPLoader() error {
+	common.Reportf("Switching to NWP...")
+	if err := rc.SwitchUARTtoAppsMCU(); err != nil {
+		return errors.Annotatef(err, "failed to switch to apps mode")
+	}
+	vi, err := rc.GetVersionInfo()
+	if err != nil {
+		return err
+	}
+	sb, err := rc.GetStorageList()
+	if err != nil {
+		return errors.Annotatef(err, "failed to get storage list")
+	}
 	if sb&StorageSFlash == 0 || sb&StorageRAM == 0 {
-		return nil, errors.Errorf("invalid storage type: 0x%02x", sb)
+		return errors.Errorf("invalid storage type: 0x%02x", sb)
 	}
 	common.Reportf("  NWP boot loader v%s, storage 0x%02x", vi.BootLoaderVersionString(), sb)
-	return rc, nil
+	return nil
 }
 
 func checksum(data []byte) (result uint8) {
@@ -128,7 +146,7 @@ func (rc *ROMClient) sendPacket(payload []byte) error {
 	binary.Write(buf, binary.BigEndian, uint16(len(payload)+2))
 	binary.Write(buf, binary.BigEndian, checksum(payload))
 	buf.Write(payload)
-	glog.V(4).Infof("=> (%d) %s", len(buf.Bytes()), common.LimitStr(buf.Bytes(), 32))
+	glog.V(4).Infof("=> (%d) %s", len(buf.Bytes()), common.LimitStr(buf.Bytes(), 64))
 	n, err := rc.s.Write(buf.Bytes())
 	if err != nil || n != len(buf.Bytes()) {
 		return errors.Annotatef(err, "failed to write command packet")
@@ -149,7 +167,7 @@ func (rc *ROMClient) readN(toRead int) ([]byte, error) {
 		}
 		nr += n
 	}
-	glog.V(4).Infof("<= (%d) %s", toRead, common.LimitStr(buf, 32))
+	glog.V(4).Infof("<= (%d) %s", toRead, common.LimitStr(buf, 64))
 	return buf, nil
 }
 
@@ -202,21 +220,23 @@ func (rc *ROMClient) sendCommand(cmd loaderCmd, args []byte) error {
 }
 
 func (rc *ROMClient) connect(dc DeviceControl) error {
-	rc.s.SetReadTimeout(200 * time.Millisecond)
+	rc.s.SetReadTimeout(1000 * time.Millisecond)
 	for i := 1; i <= 5; i++ {
 		glog.V(3).Infof("Connect attempt #%d...", i)
 		if err := rc.s.SetBreak(true); err != nil {
 			return errors.Annotatef(err, "failed to set break")
 		}
+		rc.s.Flush()
 		if dc != nil {
 			dc.EnterBootLoader()
+			time.Sleep(200 * time.Millisecond)
 		}
-		rc.s.Flush()
-		time.Sleep(200 * time.Millisecond)
 		err := rc.recvACK()
 		rc.s.SetBreak(false)
 		if err == nil {
 			return nil
+		} else {
+			glog.Infof("%s", err)
 		}
 	}
 	return errors.Errorf("failed to communicate to boot loader")
@@ -227,11 +247,45 @@ type VersionInfo struct {
 	NWPVersion        uint32
 	MACVersion        uint32
 	PHYVersion        uint32
-	ChipType          uint32
+	ChipTypeV         uint32
 }
 
 func (vi *VersionInfo) BootLoaderVersionString() string {
 	return fmt.Sprintf("%d.%d.%d.%d", vi.BootLoaderVersion>>24, (vi.BootLoaderVersion>>16)&0xff, (vi.BootLoaderVersion>>8)&0xff, vi.BootLoaderVersion&0xff)
+}
+
+func (vi *VersionInfo) ChipType() (ChipType, error) {
+	switch vi.ChipTypeV & 0xff {
+	case 0x10:
+		if vi.BootLoaderVersion > 0x03000000 {
+			return ChipCC3220, nil
+		} else {
+			return ChipCC3200, nil
+		}
+	case 0x18:
+		return ChipCC3220S, nil
+	case 0x19:
+		return ChipCC3220SF, nil
+	}
+	return 0, errors.Errorf("unknown chip")
+}
+
+func (vi *VersionInfo) ChipTypeString() string {
+	ct, err := vi.ChipType()
+	if err != nil {
+		return err.Error()
+	}
+	switch ct {
+	case ChipCC3200:
+		return "CC3200"
+	case ChipCC3220:
+		return "CC3220"
+	case ChipCC3220S:
+		return "CC3220S"
+	case ChipCC3220SF:
+		return "CC3220SF"
+	}
+	return "???"
 }
 
 func (rc *ROMClient) GetStatus() (romStatus, error) {
@@ -274,7 +328,7 @@ func (rc *ROMClient) GetVersionInfo() (*VersionInfo, error) {
 	binary.Read(rb, binary.LittleEndian, &vi.NWPVersion)
 	binary.Read(rb, binary.LittleEndian, &vi.MACVersion)
 	binary.Read(rb, binary.LittleEndian, &vi.PHYVersion)
-	binary.Read(rb, binary.LittleEndian, &vi.ChipType)
+	binary.Read(rb, binary.LittleEndian, &vi.ChipTypeV)
 	glog.V(3).Infof("VersionInfo: %+v", *vi)
 	return vi, nil
 }
@@ -300,6 +354,30 @@ func (rc *ROMClient) GetStorageList() (StorageBitmap, error) {
 	return StorageBitmap(sb[0]), nil
 }
 
+type StorageInfo struct {
+	BlockSize uint16
+	NumBlocks uint16
+	Reserved  uint32
+}
+
+func (rc *ROMClient) GetStorageInfo(storageId uint32) (*StorageInfo, error) {
+	buf := bytes.NewBuffer(nil)
+	binary.Write(buf, binary.BigEndian, uint32(storageId))
+	if err := rc.sendCommand(cmdGetStorageInfo, buf.Bytes()); err != nil {
+		return nil, errors.Annotatef(err, "GetStorageInfo")
+	}
+	rb, err := rc.recvPacket()
+	if err != nil {
+		return nil, errors.Annotatef(err, "GetStorageInfo")
+	}
+	si := &StorageInfo{}
+	binary.Read(rb, binary.BigEndian, &si.BlockSize)
+	binary.Read(rb, binary.BigEndian, &si.NumBlocks)
+	binary.Read(rb, binary.BigEndian, &si.Reserved)
+	glog.V(3).Infof("StorageInfo %d: %+v", storageId, *si)
+	return si, nil
+}
+
 func (rc *ROMClient) SwitchUARTtoAppsMCU() error {
 	delay := uartSwitchDelay
 	buf := bytes.NewBuffer(nil)
@@ -309,6 +387,68 @@ func (rc *ROMClient) SwitchUARTtoAppsMCU() error {
 	}
 	time.Sleep(1200 * time.Millisecond)
 	return rc.connect(nil)
+}
+
+type DeviceInfo struct {
+	FSBlockSize         uint16
+	FSNumBlocks         uint16
+	Unknown04           uint16
+	Unknown06           uint16
+	Unknown08           uint16
+	FSUnknownFreeSize0A uint16
+	FSFreeBlocks        uint16
+	// ???
+}
+
+// 100004000178000b0016025402670000f00100ff33030b00000000000000000f00120000
+// |||| - block size
+//     |||| - num blocks
+//                         |||| - free blocks
+// 100002000178000b0016005400670000f00100ff33030b00000000000000000f00120000
+
+func (rc *ROMClient) GetDeviceInfo() (*DeviceInfo, error) {
+	err := rc.sendCommand(cmdGetDeviceInfo, nil)
+	if err != nil {
+		return nil, errors.Annotatef(err, "GetDeviceInfo")
+	}
+	rb, err := rc.recvPacket()
+	if err != nil {
+		return nil, errors.Annotatef(err, "GetDeviceInfo")
+	}
+	di := &DeviceInfo{}
+	binary.Read(rb, binary.BigEndian, &di.FSBlockSize)
+	binary.Read(rb, binary.BigEndian, &di.FSNumBlocks)
+	binary.Read(rb, binary.BigEndian, &di.Unknown04)
+	binary.Read(rb, binary.BigEndian, &di.Unknown06)
+	binary.Read(rb, binary.BigEndian, &di.Unknown08)
+	binary.Read(rb, binary.BigEndian, &di.FSUnknownFreeSize0A)
+	binary.Read(rb, binary.BigEndian, &di.FSFreeBlocks)
+	glog.V(3).Infof("DeviceInfo: %+v", *di)
+	return di, nil
+}
+
+type MACAddress [6]byte
+
+func (mac MACAddress) String() string {
+	return fmt.Sprintf(
+		"%02x:%02x:%02x:%02x:%02x:%02x",
+		mac[0], mac[1], mac[2], mac[3], mac[4], mac[5])
+}
+
+func (rc *ROMClient) GetMACAddress() (MACAddress, error) {
+	var mac MACAddress
+	buf := bytes.NewBuffer(nil)
+	binary.Write(buf, binary.BigEndian, uint32(0)) // ? mystery argument
+	err := rc.sendCommand(cmdGetMACAddress, buf.Bytes())
+	if err != nil {
+		return mac, errors.Annotatef(err, "GetMACAddress")
+	}
+	rb, err := rc.recvPacket()
+	if err != nil {
+		return mac, errors.Annotatef(err, "GetMACAddress")
+	}
+	copy(mac[:], rb.Bytes())
+	return mac, nil
 }
 
 func (rc *ROMClient) FormatSLFS(size int) error {
@@ -426,8 +566,14 @@ func (cmd loaderCmd) String() string {
 		return fmt.Sprintf("EraseFile(0x%x)", uint8(cmd))
 	case cmdGetVersionInfo:
 		return fmt.Sprintf("GetVersionInfo(0x%x)", uint8(cmd))
+	case cmdGetStorageInfo:
+		return fmt.Sprintf("GetStorageInfo(0x%x)", uint8(cmd))
 	case cmdSwitchUARTtoAppsMCU:
 		return fmt.Sprintf("SwitchUARTtoAppsMCU(0x%x)", uint8(cmd))
+	case cmdGetDeviceInfo:
+		return fmt.Sprintf("GetDeviceInfo(0x%x)", uint8(cmd))
+	case cmdGetMACAddress:
+		return fmt.Sprintf("GetMACAddress(0x%x)", uint8(cmd))
 	default:
 		return fmt.Sprintf("?(0x%x)", uint8(cmd))
 	}
