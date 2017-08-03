@@ -121,8 +121,7 @@ MGOS_SRCS = cs_file.c cs_rbuf.c \
             rboot-bigflash.c rboot-api.c \
             json_utils.c \
             umm_malloc.c \
-            mongoose.c frozen.c \
-            mgos_pwm.c
+            mongoose.c frozen.c
 
 MGOS_SRCS += esp_adc.c \
              esp_config.c \
@@ -139,7 +138,6 @@ MGOS_SRCS += esp_adc.c \
              esp_main.c \
              esp_mdns.c \
              esp_periph.c \
-             esp_pwm.c \
              esp_uart.c \
              esp_updater.c \
              esp_vfs_dev_sysflash.c

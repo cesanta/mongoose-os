@@ -161,8 +161,7 @@ MGOS_SRCS = mgos_gpio.c \
             cs_crc32.c cs_file.c \
             cs_frbuf.c mgos_utils.c \
             cs_rbuf.c mgos_uart.c \
-            boot.c mongoose.c frozen.c json_utils.c \
-            mgos_pwm.c
+            boot.c mongoose.c frozen.c json_utils.c
 
 VPATH += $(MGOS_PATH)/fw/src $(COMMON_PATH) $(COMMON_PATH)/mg_rpc
 IPATH += $(COMMON_PATH)/mg_rpc
