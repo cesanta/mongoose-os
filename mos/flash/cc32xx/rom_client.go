@@ -1,4 +1,4 @@
-package cc3200
+package cc32xx
 
 import (
 	"bytes"
@@ -47,7 +47,14 @@ const (
 	openModeSecure                        = 0x20000
 )
 
-type fileSignature []byte
+type FileSignature []byte
+
+type SLFSFileInfo struct {
+	Name      string
+	Data      []byte
+	AllocSize uint32
+	Signature FileSignature
+}
 
 type romStatus byte
 
@@ -198,13 +205,13 @@ func (rc *ROMClient) connect(dc DeviceControl) error {
 	rc.s.SetReadTimeout(200 * time.Millisecond)
 	for i := 1; i <= 5; i++ {
 		glog.V(3).Infof("Connect attempt #%d...", i)
+		if err := rc.s.SetBreak(true); err != nil {
+			return errors.Annotatef(err, "failed to set break")
+		}
 		if dc != nil {
 			dc.EnterBootLoader()
 		}
 		rc.s.Flush()
-		if err := rc.s.SetBreak(true); err != nil {
-			return errors.Annotatef(err, "failed to set break")
-		}
 		time.Sleep(200 * time.Millisecond)
 		err := rc.recvACK()
 		rc.s.SetBreak(false)
@@ -322,13 +329,6 @@ func (rc *ROMClient) EraseFile(fname string) error {
 	binary.Write(buf, binary.BigEndian, uint8(0))
 	rc.s.SetReadTimeout(1 * time.Second)
 	return rc.commandWithStatus(cmdEraseFile, buf.Bytes())
-}
-
-type SLFSFileInfo struct {
-	Name      string
-	Data      []byte
-	AllocSize uint32
-	Signature fileSignature
 }
 
 func (rc *ROMClient) UploadFile(fi *SLFSFileInfo) error {

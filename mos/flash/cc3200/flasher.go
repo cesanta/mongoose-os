@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 
+	"cesanta.com/mos/flash/cc32xx"
 	"cesanta.com/mos/flash/common"
 	"github.com/cesanta/errors"
 	"github.com/cesanta/go-serial/serial"
@@ -21,7 +22,7 @@ const (
 )
 
 type fileInfo struct {
-	SLFSFileInfo
+	cc32xx.SLFSFileInfo
 
 	part *common.FirmwarePart
 }
@@ -33,7 +34,7 @@ func Flash(fw *common.FirmwareBundle, opts *FlashOpts) error {
 			continue
 		}
 		fi := &fileInfo{
-			SLFSFileInfo: SLFSFileInfo{
+			SLFSFileInfo: cc32xx.SLFSFileInfo{
 				Name:      p.Name,
 				AllocSize: p.CC3200FileAllocSize,
 			},
@@ -50,10 +51,10 @@ func Flash(fw *common.FirmwareBundle, opts *FlashOpts) error {
 				if err != nil {
 					return errors.Annotatef(err, "%s: failed to get signature data (%s)", p.Name, p.CC3200FileSignature)
 				}
-				if len(fs) != FileSignatureLength {
+				if len(fs) != cc32xx.FileSignatureLength {
 					return errors.Errorf("%s: invalid signature length (%d)", p.Name, len(fi.Signature))
 				}
-				fi.Signature = fileSignature(fs)
+				fi.Signature = cc32xx.FileSignature(fs)
 			}
 		}
 		files = append(files, fi)
@@ -81,7 +82,7 @@ func Flash(fw *common.FirmwareBundle, opts *FlashOpts) error {
 				"Make sure that device is in the boot loader mode (SOP2 = 1).", err)
 	}
 
-	rc, err := NewROMClient(s, dc)
+	rc, err := cc32xx.NewROMClient(s, dc)
 	if err != nil {
 		return errors.Annotatef(err, "failed to run flasher")
 	}

@@ -1,4 +1,4 @@
-package cc3200
+package cc32xx
 
 type DeviceControl interface {
 	EnterBootLoader() error

@@ -5,6 +5,7 @@ package cc3200
 import (
 	"time"
 
+	"cesanta.com/mos/flash/cc32xx"
 	"github.com/cesanta/errors"
 )
 
@@ -28,7 +29,7 @@ const (
 	sop2Bit       = 0x01 // TCK jump-wired to SOP2; 0 - SOP2 low, 1 - SOP2 high
 )
 
-func NewCC3200DeviceControl(port string) (DeviceControl, error) {
+func NewCC3200DeviceControl(port string) (cc32xx.DeviceControl, error) {
 	ftdi, err := openFTDI(port, vendorTI, productLaunchXL)
 	if err != nil {
 		return nil, errors.Annotatef(err, "failed to open FTDI")
