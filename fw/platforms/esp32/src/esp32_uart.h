@@ -46,8 +46,8 @@ struct mgos_uart_dev_config {
    * GPIO pin numbers, default values depend on UART number.
    *
    * UART 0: Rx: 3, Tx: 1, CTS: 19, RTS: 22
-   * UART 1: Rx: 13, Tx: 14, CTS: 15, RTS: 16
-   * UART 2: Rx: 17, Tx: 25, CTS: 26, RTS: 27
+   * UART 1: Rx: 25, Tx: 26, CTS: 27, RTS: 13
+   * UART 2: Rx: 16, Tx: 17, CTS: 14, RTS: 15
    */
 
   int8_t rx_gpio;
