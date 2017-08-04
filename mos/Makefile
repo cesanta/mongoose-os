@@ -49,4 +49,4 @@ deploy-mos-binary:
 
 
 clean:
-	rm -rf mos_* mos.exe mos gobuild-cache downloads/mos/{mac,linux,win} version*
+	rm -rf mos_* mos.exe mos gobuild-cache downloads/mos/{mac,linux,win} version/version.*

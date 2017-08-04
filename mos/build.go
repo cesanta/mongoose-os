@@ -56,6 +56,7 @@ var (
 
 	buildDockerExtra = flag.StringSlice("build-docker-extra", []string{}, "extra docker flags, added before image name. Can be used multiple times: e.g. --build-docker-extra -v --build-docker-extra /foo:/bar.")
 	buildCmdExtra    = flag.StringSlice("build-cmd-extra", []string{}, "extra make flags, added at the end of the make command. Can be used multiple times.")
+	buildParalellism = flag.Int("build-parallelism", 0, "build parallelism. default is to use number of CPUs.")
 	saveBuildStat    = flag.Bool("save-build-stat", true, "save build statistics")
 
 	buildVarsSlice []string
@@ -708,8 +709,12 @@ func printConfSchemaWarn(manifest *build.FWAppManifest) {
 }
 
 func getMakeArgs(dir string, manifest *build.FWAppManifest) []string {
+	j := *buildParalellism
+	if j == 0 {
+		j = runtime.NumCPU()
+	}
 	makeArgs := []string{
-		"-j", fmt.Sprintf("%d", runtime.NumCPU()),
+		"-j", fmt.Sprintf("%d", j),
 		"-C", dir,
 		// NOTE that we use path instead of filepath, because it'll run in a docker
 		// container, and thus will use Linux path separator
