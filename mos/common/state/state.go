@@ -1,8 +1,10 @@
-package main
+package state
 
 import (
 	"encoding/json"
 	"io/ioutil"
+
+	"cesanta.com/mos/common/paths"
 
 	"github.com/cesanta/errors"
 )
@@ -15,40 +17,44 @@ type StateVersion struct {
 }
 
 var (
-	state State
+	mosState State
 )
 
-func stateInit() error {
+func Init() error {
 	// Try to read state from file, and if it succeeds, unmarshal json from it;
 	// otherwise just leave state empty
-	if data, err := ioutil.ReadFile(stateFilepath); err == nil {
-		if err := json.Unmarshal(data, &state); err != nil {
+	if data, err := ioutil.ReadFile(paths.StateFilepath); err == nil {
+		if err := json.Unmarshal(data, &mosState); err != nil {
 			return errors.Trace(err)
 		}
 	}
 
-	if state.Versions == nil {
-		state.Versions = make(map[string]*StateVersion)
+	if mosState.Versions == nil {
+		mosState.Versions = make(map[string]*StateVersion)
 	}
 
 	return nil
 }
 
+func GetState() *State {
+	return &mosState
+}
+
 func GetStateForVersion(version string) *StateVersion {
-	return state.Versions[version]
+	return mosState.Versions[version]
 }
 
 func SetStateForVersion(version string, stateVer *StateVersion) {
-	state.Versions[version] = stateVer
+	mosState.Versions[version] = stateVer
 }
 
 func SaveState() error {
-	data, err := json.MarshalIndent(&state, "", "  ")
+	data, err := json.MarshalIndent(&mosState, "", "  ")
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	if err := ioutil.WriteFile(stateFilepath, data, 0644); err != nil {
+	if err := ioutil.WriteFile(paths.StateFilepath, data, 0644); err != nil {
 		return errors.Trace(err)
 	}
 

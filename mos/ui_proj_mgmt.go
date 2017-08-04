@@ -15,7 +15,9 @@ import (
 
 	"cesanta.com/common/go/ourio"
 	"cesanta.com/mos/build"
+	"cesanta.com/mos/common/paths"
 	"cesanta.com/mos/interpreter"
+	"cesanta.com/mos/version"
 )
 
 // So far, building is only possible from the current directory,
@@ -26,9 +28,9 @@ var buildMtx sync.Mutex
 func getRootByProjectType(pt projectType) (string, error) {
 	switch pt {
 	case projectTypeApp:
-		return appsDir, nil
+		return paths.AppsDir, nil
 	case projectTypeLib:
-		return libsDir, nil
+		return paths.LibsDir, nil
 	}
 	return "", errors.Errorf("invalid project type: %q", pt)
 }
@@ -39,9 +41,9 @@ func getProjectRootPath(r *http.Request) (string, error) {
 	if pt == "" {
 		return "", errors.Errorf("type is required")
 	} else if pt == "app" {
-		rootDir = appsDir
+		rootDir = paths.AppsDir
 	} else if pt == "lib" {
-		rootDir = libsDir
+		rootDir = paths.LibsDir
 	} else {
 		return "", errors.Errorf("type must be either app or lib")
 	}
@@ -182,7 +184,7 @@ func initProjectManagementEndpoints() {
 
 		swmod := build.SWModule{
 			Origin:  url,
-			Version: getMosVersion(),
+			Version: version.GetMosVersion(),
 		}
 		target_name := r.FormValue("target_name")
 		if target_name != "" {
@@ -341,7 +343,7 @@ func initProjectManagementEndpoints() {
 		}()
 
 		// Get app directory and chdir there
-		appDir := filepath.Join(appsDir, pname)
+		appDir := filepath.Join(paths.AppsDir, pname)
 
 		if err := os.Chdir(appDir); err != nil {
 			err = errors.Trace(err)

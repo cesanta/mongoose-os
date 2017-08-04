@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"golang.org/x/net/context"
 	"io"
 	"net"
 	"net/http"
@@ -15,8 +14,12 @@ import (
 	"sync"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"cesanta.com/mos/build"
 	"cesanta.com/mos/dev"
+	"cesanta.com/mos/update"
+	"cesanta.com/mos/version"
 	"github.com/cesanta/errors"
 	"github.com/elazarl/go-bindata-assetfs"
 	"github.com/golang/glog"
@@ -336,12 +339,12 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 	http.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		httpReply(w, BuildId, nil)
+		httpReply(w, version.BuildId, nil)
 	})
 
 	http.HandleFunc("/server-version", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		v, err := getServerMosVersion(getUpdateChannel())
+		v, err := update.GetServerMosVersion(update.GetUpdateChannel())
 		if err != nil {
 			httpReply(w, false, err)
 			return
@@ -564,7 +567,7 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 		result := true
 
-		err := update(ctx, devConn)
+		err := update.Update(ctx, devConn)
 		if err != nil {
 			err = errors.Trace(err)
 			result = false

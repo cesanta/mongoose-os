@@ -30,9 +30,12 @@ import (
 	"cesanta.com/mos/build/archive"
 	"cesanta.com/mos/build/gitutils"
 	moscommon "cesanta.com/mos/common"
+	"cesanta.com/mos/common/paths"
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/flash/common"
 	"cesanta.com/mos/interpreter"
+	"cesanta.com/mos/update"
+	"cesanta.com/mos/version"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 	flag "github.com/spf13/pflag"
@@ -126,10 +129,10 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 	start := time.Now()
 
 	// Request server version in parallel
-	serverVersionCh := make(chan *versionJson, 1)
+	serverVersionCh := make(chan *version.VersionJson, 1)
 	if !*local {
 		go func() {
-			v, err := getServerMosVersion(getUpdateChannel())
+			v, err := update.GetServerMosVersion(update.GetUpdateChannel())
 			if err != nil {
 				// Ignore error, it's not really important
 				return
@@ -208,8 +211,8 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 	// user about the update (if available)
 	select {
 	case v := <-serverVersionCh:
-		serverVer, _ := getMosVersionByBuildId(v.BuildId)
-		localVer := getMosVersion()
+		serverVer, _ := version.GetMosVersionByBuildId(v.BuildId)
+		localVer := version.GetMosVersion()
 
 		if serverVer != localVer {
 			freportf(logWriterStdout, "By the way, there is a newer version available: %q (you use %q). Please consider upgrading.", serverVer, localVer)
@@ -292,7 +295,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	}
 
 	manifest, mtime, err := readManifestWithLibs(
-		appDir, bParams, logWriter, libsDir, interp, false /* skip clean */, true, /* finalize */
+		appDir, bParams, logWriter, paths.LibsDir, interp, false /* skip clean */, true, /* finalize */
 	)
 	if err != nil {
 		return errors.Trace(err)
@@ -337,7 +340,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 			freportf(logWriter, "The flag --module is not given for the module %q, going to use the repository", name)
 
 			var err error
-			targetDir, err = m.PrepareLocalDir(modulesDir, logWriter, true, manifest.ModulesVersion, *libsUpdateInterval)
+			targetDir, err = m.PrepareLocalDir(paths.ModulesDir, logWriter, true, manifest.ModulesVersion, *libsUpdateInterval)
 			if err != nil {
 				return errors.Annotatef(err, "preparing local copy of the module %q", name)
 			}
@@ -367,7 +370,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		}
 
 		var err error
-		mosDirEffective, err = m.PrepareLocalDir(modulesDir, logWriter, true, "", *libsUpdateInterval)
+		mosDirEffective, err = m.PrepareLocalDir(paths.ModulesDir, logWriter, true, "", *libsUpdateInterval)
 		if err != nil {
 			return errors.Annotatef(err, "preparing local copy of the mongoose-os repo")
 		}
@@ -978,7 +981,7 @@ func buildRemote(bParams *buildParams) error {
 
 	// We'll need to amend the sources significantly with all libs, so copy them
 	// to temporary dir first
-	tmpCodeDir, err := ioutil.TempDir(tmpDir, "tmp_mos_src_")
+	tmpCodeDir, err := ioutil.TempDir(paths.TmpDir, "tmp_mos_src_")
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -1149,7 +1152,7 @@ func buildRemote(bParams *buildParams) error {
 	freportf(logWriterStdout, "Connecting to %s, user %s", server, buildUser)
 
 	// invoke the fwbuild API (replace "master" with "latest")
-	fwbuildVersion := getMosVersion()
+	fwbuildVersion := version.GetMosVersion()
 
 	if fwbuildVersion == "master" {
 		fwbuildVersion = "latest"
@@ -1479,7 +1482,7 @@ libs:
 			needPull := true
 
 			if *noLibsUpdate {
-				localDir, err := m.GetLocalDir(libsDir, pc.appManifest.LibsVersion)
+				localDir, err := m.GetLocalDir(paths.LibsDir, pc.appManifest.LibsVersion)
 				if err != nil {
 					return nil, time.Time{}, errors.Trace(err)
 				}
@@ -1494,7 +1497,7 @@ libs:
 			if needPull {
 				// Note: we always call PrepareLocalDir for libsDir, but then,
 				// if pc.userLibsDir is different, will need to copy it to the new location
-				libDirAbs, err = m.PrepareLocalDir(libsDir, pc.logWriter, true, pc.appManifest.LibsVersion, *libsUpdateInterval)
+				libDirAbs, err = m.PrepareLocalDir(paths.LibsDir, pc.logWriter, true, pc.appManifest.LibsVersion, *libsUpdateInterval)
 				if err != nil {
 					return nil, time.Time{}, errors.Annotatef(err, "preparing local copy of the lib %q", name)
 				}
@@ -1510,7 +1513,7 @@ libs:
 
 		skip := false
 		if pc.skipClean {
-			isClean, err := m.IsClean(libsDir)
+			isClean, err := m.IsClean(paths.LibsDir)
 			if err != nil {
 				return nil, time.Time{}, errors.Trace(err)
 			}
@@ -1520,7 +1523,7 @@ libs:
 
 		// If libs should be placed in some specific dir, copy the current lib
 		// there (it will also affect the libs path used in resulting manifest)
-		if !skip && pc.userLibsDir != libsDir {
+		if !skip && pc.userLibsDir != paths.LibsDir {
 			userLibsDirRel, err := filepath.Rel(pc.rootAppDir, pc.userLibsDir)
 			if err != nil {
 				return nil, time.Time{}, errors.Trace(err)
@@ -2134,7 +2137,7 @@ func expandVars(interp *interpreter.MosInterpreter, s string) (string, error) {
 
 func newMosVars() *interpreter.MosVars {
 	ret := interpreter.NewMosVars()
-	ret.SetVar(interpreter.GetMVarNameMosVersion(), getMosVersion())
+	ret.SetVar(interpreter.GetMVarNameMosVersion(), version.GetMosVersion())
 	return ret
 }
 

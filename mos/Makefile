@@ -4,12 +4,12 @@ TAG ?= latest
 
 all: build
 
-generate version.go version.json:
+generate version/version.go version/version.json:
 	@go install cesanta.com/vendor/github.com/jteeuwen/go-bindata/go-bindata
 	@go install cesanta.com/vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
 	@go generate
 	@gofmt -w bindata_assetfs.go
-	@cat version.json
+	@cat version/version.json
 	@echo
 
 build: generate
@@ -35,7 +35,7 @@ win: generate
 	GOOS=windows GOARCH=386 go build -o downloads/mos/win/mos.exe
 
 downloads: linux mac win
-	cp version.json downloads/mos/
+	cp version/version.json downloads/mos/
 
 deploy: deploy-fwbuild deploy-mos-binary
 

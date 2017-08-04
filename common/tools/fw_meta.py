@@ -140,7 +140,7 @@ const char *%(var_prefix)sbuild_version = "%(build_version)s";\
         out = file_or_stdout(args.go_output)
         print >>out, """\
 /* Auto-generated, do not edit. */
-package main
+package version
 
 const (
 	%(var_prefix)sVersion = "%(build_version)s"

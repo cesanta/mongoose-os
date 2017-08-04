@@ -4,10 +4,11 @@ package main
 
 import (
 	"fmt"
-	"golang.org/x/net/context"
 	"runtime"
 	"strings"
 	"time"
+
+	"golang.org/x/net/context"
 
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/flash/cc3200"
@@ -16,6 +17,7 @@ import (
 	"cesanta.com/mos/flash/esp"
 	espFlasher "cesanta.com/mos/flash/esp/flasher"
 	"cesanta.com/mos/flash/stm32"
+	"cesanta.com/mos/version"
 	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 )
@@ -88,7 +90,7 @@ func flash(ctx context.Context, devConn *dev.DevConn) error {
 		fwname = args[1]
 	}
 
-	fw, err := common.NewZipFirmwareBundle(fwname, getMosVersionSuffix())
+	fw, err := common.NewZipFirmwareBundle(fwname, version.GetMosVersionSuffix())
 	if err != nil {
 		return errors.Annotatef(err, "failed to load %s", fwname)
 	}

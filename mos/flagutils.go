@@ -8,6 +8,8 @@ import (
 	"text/tabwriter"
 
 	"cesanta.com/common/go/multierror"
+	"cesanta.com/mos/update"
+	"cesanta.com/mos/version"
 
 	"github.com/cesanta/errors"
 	"github.com/fatih/color"
@@ -91,15 +93,15 @@ func usage() {
 		}
 	}
 
-	fmt.Fprintf(w, "The Mongoose OS command line tool, v. %s.\n", BuildId)
-	fmt.Fprintf(w, "Update channel: %q. Checking updates... ", getUpdateChannel())
+	fmt.Fprintf(w, "The Mongoose OS command line tool, v. %s.\n", version.BuildId)
+	fmt.Fprintf(w, "Update channel: %q. Checking updates... ", update.GetUpdateChannel())
 	w.Flush()
 
-	serverVersion, err := getServerMosVersion(getUpdateChannel())
+	serverVersion, err := update.GetServerMosVersion(update.GetUpdateChannel())
 	if err != nil {
 		color.New(color.FgRed).Fprintf(w, "Failed to check server version: %s\n", err)
 	} else {
-		if serverVersion.BuildId != BuildId {
+		if serverVersion.BuildId != version.BuildId {
 			color.New(color.FgRed).Fprintf(
 				w, "\nOut of date: new version available: %s\nPlease run \"mos update\"\n",
 				serverVersion.BuildId,

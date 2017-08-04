@@ -1,4 +1,4 @@
-//go:generate sh -c "../common/tools/fw_meta.py gen_build_info --version=`[ -f version ] && cat version` --id=`[ -f build_id ] && cat build_id` --go_output=./version.go  --json_output=./version.json"
+//go:generate sh -c "../common/tools/fw_meta.py gen_build_info --version=`[ -f version ] && cat version` --id=`[ -f build_id ] && cat build_id` --go_output=./version/version.go  --json_output=./version/version.json"
 //go:generate go-bindata -pkg main -nocompress -modtime 1 -mode 420 data/
 //go:generate go-bindata-assetfs -pkg main -nocompress -modtime 1 -mode 420 data/ web_root/...
 
@@ -8,16 +8,21 @@ import (
 	cRand "crypto/rand"
 	goflag "flag"
 	"fmt"
-	"golang.org/x/net/context"
 	"log"
 	"math/big"
 	mRand "math/rand"
 	"os"
 	"time"
 
+	"golang.org/x/net/context"
+
 	"cesanta.com/common/go/pflagenv"
 	moscommon "cesanta.com/mos/common"
+	"cesanta.com/mos/common/paths"
+	"cesanta.com/mos/common/state"
 	"cesanta.com/mos/dev"
+	"cesanta.com/mos/update"
+	"cesanta.com/mos/version"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 	flag "github.com/spf13/pflag"
@@ -109,7 +114,7 @@ func init() {
 		{"config-set", configSet, `Set config value at the locally attached device`, nil, []string{"port"}, true},
 		{"call", call, `Perform a device API call. "mos call RPC.List" shows available methods`, nil, []string{"port"}, true},
 		{"aws-iot-setup", awsIoTSetup, `Provision the device for AWS IoT cloud`, nil, []string{"atca-slot", "aws-region", "port", "use-atca"}, true},
-		{"update", update, `Self-update mos tool; optionally update channel can be given (e.g. "latest", "release", or some exact version)`, nil, nil, false},
+		{"update", update.Update, `Self-update mos tool; optionally update channel can be given (e.g. "latest", "release", or some exact version)`, nil, nil, false},
 		{"wifi", wifi, `Setup WiFi - shortcut to config-set wifi...`, nil, nil, true},
 	}
 }
@@ -173,15 +178,15 @@ func main() {
 	goflag.CommandLine.Parse([]string{}) // Workaround for noise in golang/glog
 	pflagenv.Parse(envPrefix)
 
-	if err := pathsInit(); err != nil {
+	if err := paths.Init(); err != nil {
 		log.Fatal(err)
 	}
 
-	if err := stateInit(); err != nil {
+	if err := state.Init(); err != nil {
 		log.Fatal(err)
 	}
 
-	if err := updaterInit(); err != nil {
+	if err := update.Init(); err != nil {
 		log.Fatal(err)
 	}
 
@@ -199,7 +204,7 @@ func main() {
 	} else if *versionFlag {
 		fmt.Printf(
 			"%s\nVersion: %s\nBuild ID: %s\nUpdate channel: %s\n",
-			"The Mongoose OS command line tool", getMosVersion(), BuildId, getUpdateChannel(),
+			"The Mongoose OS command line tool", version.GetMosVersion(), version.BuildId, update.GetUpdateChannel(),
 		)
 		return
 	}

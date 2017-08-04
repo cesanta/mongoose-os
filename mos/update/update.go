@@ -1,4 +1,4 @@
-package main
+package update
 
 import (
 	"bytes"
@@ -10,7 +10,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strings"
 	"sync"
@@ -19,9 +18,13 @@ import (
 	"golang.org/x/net/context"
 
 	"cesanta.com/common/go/ourio"
+	"cesanta.com/common/go/ourutil"
 	"cesanta.com/mos/build"
 	"cesanta.com/mos/build/gitutils"
 	moscommon "cesanta.com/mos/common"
+	"cesanta.com/mos/common/paths"
+	"cesanta.com/mos/common/state"
+	"cesanta.com/mos/version"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 	"github.com/kardianos/osext"
@@ -30,19 +33,6 @@ import (
 
 	"cesanta.com/mos/dev"
 )
-
-var (
-	regexpVersionNumber = regexp.MustCompile(`^\d+\.[0-9.]*$`)
-	regexpBuildId       = regexp.MustCompile(
-		`^(?P<datetime>[^/]+)\/(?P<symbolic>[^@]+)\@(?P<hash>.+)$`,
-	)
-)
-
-type versionJson struct {
-	BuildId        string `json:"build_id"`
-	BuildTimestamp string `json:"build_timestamp"`
-	BuildVersion   string `json:"build_version"`
-}
 
 // mosVersion can be either exact mos version like "1.6", or update channel
 // like "latest" or "release".
@@ -55,7 +45,7 @@ func getMosURL(p, mosVersion string) string {
 
 // mosVersion can be either exact mos version like "1.6", or update channel
 // like "latest" or "release".
-func getServerMosVersion(mosVersion string) (*versionJson, error) {
+func GetServerMosVersion(mosVersion string) (*version.VersionJson, error) {
 	versionUrl := getMosURL("version.json", mosVersion)
 	resp, err := http.Get(versionUrl)
 	if err != nil {
@@ -67,7 +57,7 @@ func getServerMosVersion(mosVersion string) (*versionJson, error) {
 
 	defer resp.Body.Close()
 
-	var serverVersion versionJson
+	var serverVersion version.VersionJson
 
 	decoder := json.NewDecoder(resp.Body)
 	decoder.Decode(&serverVersion)
@@ -75,12 +65,12 @@ func getServerMosVersion(mosVersion string) (*versionJson, error) {
 	return &serverVersion, nil
 }
 
-func update(ctx context.Context, devConn *dev.DevConn) error {
+func Update(ctx context.Context, devConn *dev.DevConn) error {
 	args := flag.Args()
 
 	// updChannel and newUpdChannel are needed for the logging, so that it's
 	// clear for the user which update channel is used
-	updChannel := getUpdateChannel()
+	updChannel := GetUpdateChannel()
 	newUpdChannel := updChannel
 
 	// newMosVersion is the version which will be fetched from the server;
@@ -94,9 +84,9 @@ func update(ctx context.Context, devConn *dev.DevConn) error {
 	}
 
 	if updChannel != newUpdChannel {
-		reportf("Changing update channel from %q to %q", updChannel, newUpdChannel)
+		ourutil.Reportf("Changing update channel from %q to %q", updChannel, newUpdChannel)
 	} else {
-		reportf("Update channel: %s", updChannel)
+		ourutil.Reportf("Update channel: %s", updChannel)
 	}
 
 	var mosUrls = map[string]string{
@@ -106,15 +96,15 @@ func update(ctx context.Context, devConn *dev.DevConn) error {
 	}
 
 	// Check the available version on the server
-	serverVersion, err := getServerMosVersion(newMosVersion)
+	serverVersion, err := GetServerMosVersion(newMosVersion)
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	if serverVersion.BuildId != BuildId {
+	if serverVersion.BuildId != version.BuildId {
 		// Versions are different, perform update
-		reportf("Current version: %s, available version: %s.",
-			BuildId, serverVersion.BuildId,
+		ourutil.Reportf("Current version: %s, available version: %s.",
+			version.BuildId, serverVersion.BuildId,
 		)
 
 		// Determine the right URL for the current platform
@@ -154,7 +144,7 @@ func update(ctx context.Context, devConn *dev.DevConn) error {
 		}
 		defer resp.Body.Close()
 
-		reportf("Downloading from %s...", mosUrl)
+		ourutil.Reportf("Downloading from %s...", mosUrl)
 		n, err := io.Copy(tmpfile, resp.Body)
 		if err != nil {
 			return errors.Trace(err)
@@ -176,12 +166,12 @@ func update(ctx context.Context, devConn *dev.DevConn) error {
 
 		bak := fmt.Sprintf("%s.bak", executable)
 
-		reportf("Renaming old binary as %s...", bak)
+		ourutil.Reportf("Renaming old binary as %s...", bak)
 		if err := os.Rename(executable, bak); err != nil {
 			return errors.Trace(err)
 		}
 
-		reportf("Saving new binary as %s...", executable)
+		ourutil.Reportf("Saving new binary as %s...", executable)
 		if err := os.Rename(tmpfile.Name(), executable); err != nil {
 			return errors.Trace(err)
 		}
@@ -191,54 +181,18 @@ func update(ctx context.Context, devConn *dev.DevConn) error {
 			return errors.Trace(err)
 		}
 
-		reportf("Done.")
+		ourutil.Reportf("Done.")
 	} else {
-		reportf("Up to date.")
+		ourutil.Reportf("Up to date.")
 	}
 
 	return nil
 }
 
-// getMosVersion checks symbolic part of the build id, and if it looks like a
-// version number (i.e. starts with a digit and contains only digits and dots),
-// then returns it; otherwise returns "latest".
-func getMosVersion() string {
-	ver, err := getMosVersionByBuildId(BuildId)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	return ver
-}
-
-func getMosVersionByBuildId(buildId string) (string, error) {
-	matches := regexpBuildId.FindStringSubmatch(buildId)
-	if matches == nil {
-		// We failed to parse build id; it typically happens when it looks like
-		// "20170721-002340/???". For now, assume latest
-		// TODO(dfrank): use Version for that
-		return "latest", nil
-	}
-
-	symbolic := matches[2]
-
-	if regexpVersionNumber.MatchString(symbolic) {
-		return symbolic, nil
-	}
-
-	return "latest", nil
-}
-
-// getMosVersionSuffix returns an empty string if mos version is "latest";
-// otherwise returns the mos version prepended with a dash, like "-1.6".
-func getMosVersionSuffix() string {
-	return moscommon.GetVersionSuffix(getMosVersion())
-}
-
-// getUpdateChannel returns update channel (either "latest" or "release")
+// GetUpdateChannel returns update channel (either "latest" or "release")
 // depending on current mos version.
-func getUpdateChannel() string {
-	return getUpdateChannelByMosVersion(getMosVersion())
+func GetUpdateChannel() string {
+	return getUpdateChannelByMosVersion(version.GetMosVersion())
 }
 
 // getUpdateChannelByMosVersion returns update channel (either "latest" or
@@ -250,7 +204,7 @@ func getUpdateChannelByMosVersion(mosVersion string) string {
 	return "release"
 }
 
-func updaterInit() error {
+func Init() error {
 	if err := migrateData(); err != nil {
 		// Just print the error
 		fmt.Println(err.Error())
@@ -264,7 +218,7 @@ func updaterInit() error {
 // version already has imported libs from previous version. If not, then
 // performs the import.
 func migrateData() error {
-	mosVersion := getMosVersion()
+	mosVersion := version.GetMosVersion()
 
 	// If old libs/apps/modules dirs exist, convert them to a new form
 	var err error
@@ -272,17 +226,17 @@ func migrateData() error {
 	convertedVersions := []string{}
 
 	var curVersions []string
-	if curVersions, err = convertOldDir(libsDirOld, libsDirTpl); err != nil {
+	if curVersions, err = convertOldDir(paths.LibsDirOld, paths.LibsDirTpl); err != nil {
 		return errors.Trace(err)
 	}
 	convertedVersions = append(convertedVersions, curVersions...)
 
-	if curVersions, err = convertOldDir(appsDirOld, appsDirTpl); err != nil {
+	if curVersions, err = convertOldDir(paths.AppsDirOld, paths.AppsDirTpl); err != nil {
 		return errors.Trace(err)
 	}
 	convertedVersions = append(convertedVersions, curVersions...)
 
-	if curVersions, err = convertOldDir(modulesDirOld, modulesDirTpl); err != nil {
+	if curVersions, err = convertOldDir(paths.ModulesDirOld, paths.ModulesDirTpl); err != nil {
 		return errors.Trace(err)
 	}
 	convertedVersions = append(convertedVersions, curVersions...)
@@ -294,9 +248,9 @@ func migrateData() error {
 		goversion.Sort(convertedVersions)
 		latestConverted := convertedVersions[len(convertedVersions)-1]
 
-		if GetStateForVersion(latestConverted) == nil {
-			SetStateForVersion(latestConverted, &StateVersion{})
-			if err := SaveState(); err != nil {
+		if state.GetStateForVersion(latestConverted) == nil {
+			state.SetStateForVersion(latestConverted, &state.StateVersion{})
+			if err := state.SaveState(); err != nil {
 				return errors.Trace(err)
 			}
 		}
@@ -307,7 +261,7 @@ func migrateData() error {
 		return nil
 	}
 
-	stateVer := GetStateForVersion(mosVersion)
+	stateVer := state.GetStateForVersion(mosVersion)
 	if stateVer == nil {
 		// Need to initialize current version
 
@@ -315,7 +269,7 @@ func migrateData() error {
 
 		// Get sorted list of all versions available
 		versions := []string{}
-		for k, _ := range state.Versions {
+		for k, _ := range state.GetState().Versions {
 			versions = append(versions, k)
 		}
 		goversion.Sort(versions)
@@ -325,25 +279,25 @@ func migrateData() error {
 			// and copy data from it to the current version
 			latestVersion := versions[len(versions)-1]
 
-			if err := migrateProjects(libsDirTpl, latestVersion, mosVersion); err != nil {
+			if err := migrateProjects(paths.LibsDirTpl, latestVersion, mosVersion); err != nil {
 				return errors.Trace(err)
 			}
 
-			if err := migrateProjects(appsDirTpl, latestVersion, mosVersion); err != nil {
+			if err := migrateProjects(paths.AppsDirTpl, latestVersion, mosVersion); err != nil {
 				return errors.Trace(err)
 			}
 
-			if err := migrateProjects(modulesDirTpl, latestVersion, mosVersion); err != nil {
+			if err := migrateProjects(paths.ModulesDirTpl, latestVersion, mosVersion); err != nil {
 				return errors.Trace(err)
 			}
 		} else {
 			// No other versions available, so nothing to do
 		}
 
-		stateVer = &StateVersion{}
-		SetStateForVersion(mosVersion, stateVer)
+		stateVer = &state.StateVersion{}
+		state.SetStateForVersion(mosVersion, stateVer)
 
-		if err := SaveState(); err != nil {
+		if err := state.SaveState(); err != nil {
 			return errors.Trace(err)
 		}
 
@@ -385,7 +339,7 @@ func convertOldDir(oldDir, newTpl string) ([]string, error) {
 
 		basename, projectVersion, dirVersion := parseProjectDirname(oldEntryDir)
 
-		newDir, err := normalizePath(newTpl, dirVersion)
+		newDir, err := paths.NormalizePath(newTpl, dirVersion)
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
@@ -423,12 +377,12 @@ func convertOldDir(oldDir, newTpl string) ([]string, error) {
 // in the directory determined by the given template dirTpl (like ~/.mos/libs-${mos.version})
 // All projects are migrated in parallel
 func migrateProjects(dirTpl, oldVer, newVer string) error {
-	oldDir, err := normalizePath(dirTpl, oldVer)
+	oldDir, err := paths.NormalizePath(dirTpl, oldVer)
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	newDir, err := normalizePath(dirTpl, newVer)
+	newDir, err := paths.NormalizePath(dirTpl, newVer)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -486,7 +440,7 @@ func migrateProj(oldDir, newDir, oldVer string, wg *sync.WaitGroup) {
 		oldNewDir := newDir
 		newDir = filepath.Join(
 			projDir,
-			fmt.Sprint(basename, moscommon.GetVersionSuffix(getMosVersion())),
+			fmt.Sprint(basename, moscommon.GetVersionSuffix(version.GetMosVersion())),
 		)
 		os.Rename(oldNewDir, newDir)
 
@@ -494,10 +448,10 @@ func migrateProj(oldDir, newDir, oldVer string, wg *sync.WaitGroup) {
 
 		swmod := build.SWModule{
 			Origin:  originURL,
-			Version: getMosVersion(),
+			Version: version.GetMosVersion(),
 		}
 
-		glog.Infof("Checking out %s at the version %s...", basename, getMosVersion())
+		glog.Infof("Checking out %s at the version %s...", basename, version.GetMosVersion())
 		_, err = swmod.PrepareLocalDir(filepath.Dir(newDir), &logWriter, true, "", time.Duration(0))
 		if err != nil {
 			fmt.Printf("Error preparing local dir for %s: %s\n", newDir, err)
@@ -536,7 +490,7 @@ func parseProjectDirname(projectDir string) (basename, projectVersion, dirVersio
 		dirVersion = projectVersion
 		basename = strings.Join(parts[:len(parts)-1], "-")
 
-		if !regexpVersionNumber.MatchString(projectVersion) && projectVersion != "latest" && projectVersion != "release" {
+		if !version.LooksLikeVersionNumber(projectVersion) && projectVersion != "latest" && projectVersion != "release" {
 			// Suffix does not look like a version, but let's check if it's a SHA
 			sha, err := gitutils.GitGetCurrentHash(projectDir)
 			if err == nil {
