@@ -1,27 +1,38 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
-	"golang.org/x/net/context"
 	"io"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"runtime"
+	"strings"
+	"sync"
+	"time"
 
+	"golang.org/x/net/context"
+
+	"cesanta.com/common/go/ourio"
+	"cesanta.com/mos/build"
+	"cesanta.com/mos/build/gitutils"
 	moscommon "cesanta.com/mos/common"
 	"github.com/cesanta/errors"
+	"github.com/golang/glog"
 	"github.com/kardianos/osext"
+	goversion "github.com/mcuadros/go-version"
 	flag "github.com/spf13/pflag"
 
 	"cesanta.com/mos/dev"
 )
 
 var (
-	regexpVersionNumber = regexp.MustCompile(`^\d[0-9.]*$`)
+	regexpVersionNumber = regexp.MustCompile(`^\d+\.[0-9.]*$`)
 	regexpBuildId       = regexp.MustCompile(
 		`^(?P<datetime>[^/]+)\/(?P<symbolic>[^@]+)\@(?P<hash>.+)$`,
 	)
@@ -239,8 +250,313 @@ func getUpdateChannelByMosVersion(mosVersion string) string {
 	return "release"
 }
 
-// getUpdateChannelSuffix returns an empty string if update channel is
-// "latest"; otherwise returns "-release".
-func getUpdateChannelSuffix() string {
-	return moscommon.GetVersionSuffix(getUpdateChannel())
+func updaterInit() error {
+	if err := migrateData(); err != nil {
+		// Just print the error
+		fmt.Println(err.Error())
+	}
+
+	return nil
+}
+
+// migrateData converts old single libs/apps/modules dirs (if they are present)
+// to the new per-version shape, and then checks in state.json whether current
+// version already has imported libs from previous version. If not, then
+// performs the import.
+func migrateData() error {
+	mosVersion := getMosVersion()
+
+	// If old libs/apps/modules dirs exist, convert them to a new form
+	var err error
+
+	convertedVersions := []string{}
+
+	var curVersions []string
+	if curVersions, err = convertOldDir(libsDirOld, libsDirTpl); err != nil {
+		return errors.Trace(err)
+	}
+	convertedVersions = append(convertedVersions, curVersions...)
+
+	if curVersions, err = convertOldDir(appsDirOld, appsDirTpl); err != nil {
+		return errors.Trace(err)
+	}
+	convertedVersions = append(convertedVersions, curVersions...)
+
+	if curVersions, err = convertOldDir(modulesDirOld, modulesDirTpl); err != nil {
+		return errors.Trace(err)
+	}
+	convertedVersions = append(convertedVersions, curVersions...)
+
+	if len(convertedVersions) > 0 {
+		// We've converted some old dir(s) into the new versioned shape, let's
+		// write the latest version as the "initialized" one, so we could
+		// copy state from it
+		goversion.Sort(convertedVersions)
+		latestConverted := convertedVersions[len(convertedVersions)-1]
+
+		if GetStateForVersion(latestConverted) == nil {
+			SetStateForVersion(latestConverted, &StateVersion{})
+			if err := SaveState(); err != nil {
+				return errors.Trace(err)
+			}
+		}
+	}
+
+	// Latest version is special, it doesn't import libs from other versions
+	if mosVersion == "latest" {
+		return nil
+	}
+
+	stateVer := GetStateForVersion(mosVersion)
+	if stateVer == nil {
+		// Need to initialize current version
+
+		fmt.Printf("First run of the version %s, initializing...\n", mosVersion)
+
+		// Get sorted list of all versions available
+		versions := []string{}
+		for k, _ := range state.Versions {
+			versions = append(versions, k)
+		}
+		goversion.Sort(versions)
+
+		if len(versions) > 0 {
+			// There are some versions available, so we'll pick the latest one
+			// and copy data from it to the current version
+			latestVersion := versions[len(versions)-1]
+
+			if err := migrateProjects(libsDirTpl, latestVersion, mosVersion); err != nil {
+				return errors.Trace(err)
+			}
+
+			if err := migrateProjects(appsDirTpl, latestVersion, mosVersion); err != nil {
+				return errors.Trace(err)
+			}
+
+			if err := migrateProjects(modulesDirTpl, latestVersion, mosVersion); err != nil {
+				return errors.Trace(err)
+			}
+		} else {
+			// No other versions available, so nothing to do
+		}
+
+		stateVer = &StateVersion{}
+		SetStateForVersion(mosVersion, stateVer)
+
+		if err := SaveState(); err != nil {
+			return errors.Trace(err)
+		}
+
+		fmt.Printf("Init done.\n")
+	}
+
+	return nil
+}
+
+func convertOldDir(oldDir, newTpl string) ([]string, error) {
+	retVersions := []string{}
+
+	si, err := os.Stat(oldDir)
+	if err != nil {
+		// No old dir is present, nothing to do
+		return retVersions, nil
+	}
+
+	if !si.IsDir() {
+		// oldDir is not a directory, weird but we won't do anything
+		return retVersions, nil
+	}
+
+	fmt.Printf("Converting old directory %s into new versioned shape...\n", oldDir)
+
+	entries, err := ioutil.ReadDir(oldDir)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			// We expect only dirs here, but encountered non-dir; skip it
+			fmt.Printf("Skipping %s\n", entry.Name())
+			continue
+		}
+
+		oldEntryDir := filepath.Join(oldDir, entry.Name())
+
+		basename, projectVersion, dirVersion := parseProjectDirname(oldEntryDir)
+
+		newDir, err := normalizePath(newTpl, dirVersion)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+
+		if err := os.MkdirAll(newDir, 0755); err != nil {
+			return nil, errors.Trace(err)
+		}
+
+		newEntryDir := filepath.Join(
+			newDir, fmt.Sprint(basename, moscommon.GetVersionSuffix(projectVersion)),
+		)
+
+		if _, err := os.Stat(newEntryDir); err != nil {
+			// Target directory does not exist, so, move the old one as a target
+			if err := os.Rename(oldEntryDir, newEntryDir); err != nil {
+				fmt.Printf("Failed to rename %s to %s: %s\n", oldEntryDir, newEntryDir, err)
+			}
+		} else {
+			// Target directory already exists, do nothing
+			fmt.Printf("%s already exists, leaving %s intact\n", newEntryDir, oldEntryDir)
+		}
+
+		retVersions = append(retVersions, dirVersion)
+	}
+
+	// Try to remove old dir, ignoring any errors: like, if we skipped some
+	// items, directory will be non-empty and the deletion will fails, that's
+	// just what we want.
+	os.Remove(oldDir)
+
+	return retVersions, nil
+}
+
+// migrateProjects migrates all projects from the given oldVer to newVer,
+// in the directory determined by the given template dirTpl (like ~/.mos/libs-${mos.version})
+// All projects are migrated in parallel
+func migrateProjects(dirTpl, oldVer, newVer string) error {
+	oldDir, err := normalizePath(dirTpl, oldVer)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	newDir, err := normalizePath(dirTpl, newVer)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	if _, err := os.Stat(newDir); err == nil {
+		// Target dir already exists, do nothing
+		return nil
+	}
+
+	entries, err := ioutil.ReadDir(oldDir)
+	if err != nil {
+		// Ignore errors; the dir might just not exist, and we don't care much
+		return nil
+	}
+
+	// We migrate all dirs in parallel, and we just print errors, because we
+	// don't care much about them
+	wg := &sync.WaitGroup{}
+	for _, entry := range entries {
+		wg.Add(1)
+		go migrateProj(
+			filepath.Join(oldDir, entry.Name()),
+			filepath.Join(newDir, entry.Name()),
+			oldVer,
+			wg,
+		)
+	}
+	wg.Wait()
+
+	return nil
+}
+
+// migrateProj migrates a single project from oldDir to newDir; from the
+// given version oldVer to the current mos version.
+func migrateProj(oldDir, newDir, oldVer string, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	glog.Infof("Copying %s as %s...", oldDir, newDir)
+	if err := ourio.CopyDir(oldDir, newDir, nil); err != nil {
+		fmt.Printf("Error copying %s as %s: %s\n", oldDir, newDir, err)
+	}
+
+	projBase := filepath.Base(newDir)
+	projDir := filepath.Dir(newDir)
+
+	basename, projectVersion, _ := parseProjectDirname(projBase)
+
+	if projectVersion == oldVer {
+		originURL, err := gitutils.GitGetOriginUrl(newDir)
+		if err != nil {
+			fmt.Printf("Failed to get git origin for %s", newDir)
+			return
+		}
+
+		oldNewDir := newDir
+		newDir = filepath.Join(
+			projDir,
+			fmt.Sprint(basename, moscommon.GetVersionSuffix(getMosVersion())),
+		)
+		os.Rename(oldNewDir, newDir)
+
+		logWriter := bytes.Buffer{}
+
+		swmod := build.SWModule{
+			Origin:  originURL,
+			Version: getMosVersion(),
+		}
+
+		glog.Infof("Checking out %s at the version %s...", basename, getMosVersion())
+		_, err = swmod.PrepareLocalDir(filepath.Dir(newDir), &logWriter, true, "", time.Duration(0))
+		if err != nil {
+			fmt.Printf("Error preparing local dir for %s: %s\n", newDir, err)
+		}
+
+		fmt.Printf("Imported %s\n", projBase)
+
+	} else {
+		glog.Infof("Leaving %s intact because the version %s is not equal to %s", basename, projectVersion, oldVer)
+	}
+}
+
+// parseProjectDirname takes the dir name like "foo-bar-1.12" and tries to
+// guess the actual project name, corresponding mos version and library
+// version. E.g. for "foo-bar-1.12" it will return "foo-bar", "1.12", "1.12".
+//
+// It checks the suffix and figures whether it looks like a version name or not.
+// Valid versions are strings like "1.12", "latest", "release", and git SHA
+// if it matches the actual current SHA.
+//
+// dirVersion might differ from projectVersion if only the suffix is a valid
+// git SHA, in which case dirVersion will be "latest".
+func parseProjectDirname(projectDir string) (basename, projectVersion, dirVersion string) {
+	projectDirBase := filepath.Base(projectDir)
+	parts := strings.Split(projectDirBase, "-")
+
+	if len(parts) == 1 {
+		// No suffix, assume "latest"
+		basename = parts[0]
+		projectVersion = "latest"
+		dirVersion = projectVersion
+	} else {
+		// Initially assume the last part is the version; we'll check below if
+		// it's really the case
+		projectVersion = parts[len(parts)-1]
+		dirVersion = projectVersion
+		basename = strings.Join(parts[:len(parts)-1], "-")
+
+		if !regexpVersionNumber.MatchString(projectVersion) && projectVersion != "latest" && projectVersion != "release" {
+			// Suffix does not look like a version, but let's check if it's a SHA
+			sha, err := gitutils.GitGetCurrentHash(projectDir)
+			if err == nil {
+				if gitutils.HashesEqual(projectVersion, sha) {
+					// Yes it's a SHA. We don't really know in which dir to put it,
+					// so we'll put in latest
+					dirVersion = "latest"
+				} else {
+					// No, it's not a SHA either, so assume "latest"
+					basename = projectDirBase
+					projectVersion = "latest"
+					dirVersion = projectVersion
+				}
+			} else {
+				basename = projectDirBase
+				projectVersion = "latest"
+				dirVersion = projectVersion
+			}
+		}
+	}
+
+	return
 }

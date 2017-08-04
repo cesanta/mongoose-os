@@ -173,10 +173,19 @@ func main() {
 	goflag.CommandLine.Parse([]string{}) // Workaround for noise in golang/glog
 	pflagenv.Parse(envPrefix)
 
-	consoleInit()
-	if err := buildInit(); err != nil {
+	if err := pathsInit(); err != nil {
 		log.Fatal(err)
 	}
+
+	if err := stateInit(); err != nil {
+		log.Fatal(err)
+	}
+
+	if err := updaterInit(); err != nil {
+		log.Fatal(err)
+	}
+
+	consoleInit()
 
 	if len(flag.Args()) == 0 || flag.Arg(0) == "ui" {
 		isUI = true

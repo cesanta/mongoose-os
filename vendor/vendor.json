@@ -307,6 +307,12 @@
 			"path": "gopkg.in/yaml.v2",
 			"revision": "cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b",
 			"revisionTime": "2017-04-07T17:21:22Z"
+		},
+		{
+			"checksumSHA1": "AaoLHneeweH6/lDOizQdQykyzCI=",
+			"path": "github.com/mcuadros/go-version",
+			"revision": "257f7b9a7d87427c8d7f89469a5958d57f8abd7c",
+			"revisionTime": "2016-11-05T18:36:18Z"
 		}
 	],
 	"rootPath": "cesanta.com"

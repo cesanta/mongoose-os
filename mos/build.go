@@ -59,11 +59,6 @@ var (
 
 	noLibsUpdate = flag.Bool("no-libs-update", false, "if true, never try to pull existing libs (treat existing default locations as if they were given in --lib)")
 
-	tmpDir     = ""
-	libsDir    = ""
-	appsDir    = ""
-	modulesDir = ""
-
 	// In-memory buffer containing all the log messages
 	logBuf bytes.Buffer
 
@@ -103,66 +98,6 @@ func init() {
 
 	// deprecated since 2017/05/11
 	flag.StringSliceVar(&buildVarsSlice, "build_var", []string{}, "deprecated, use --build-var")
-
-	flag.StringVar(&tmpDir, "temp-dir", "~/.mos/tmp", "Directory to store temporary files")
-	flag.StringVar(&libsDir, "libs-dir", "~/.mos/libs", "Directory to store libraries into")
-	flag.StringVar(&appsDir, "apps-dir", "~/.mos/apps", "Directory to store apps into")
-	flag.StringVar(&modulesDir, "modules-dir", "~/.mos/modules", "Directory to store modules into")
-
-}
-
-// buildInit() should be called after all flags are parsed
-func buildInit() error {
-	// Unfortunately user.Current() doesn't play nicely with static build, so
-	// we have to get home directory from the environment
-
-	homeEnvName := "HOME"
-	if runtime.GOOS == "windows" {
-		homeEnvName = "USERPROFILE"
-	}
-
-	homeDir := os.Getenv(homeEnvName)
-	// Replace tilda with the actual path to home directory
-	if len(tmpDir) > 0 && tmpDir[0] == '~' {
-		tmpDir = homeDir + tmpDir[1:]
-	}
-	if len(libsDir) > 0 && libsDir[0] == '~' {
-		libsDir = homeDir + libsDir[1:]
-	}
-	if len(appsDir) > 0 && appsDir[0] == '~' {
-		appsDir = homeDir + appsDir[1:]
-	}
-	if len(modulesDir) > 0 && modulesDir[0] == '~' {
-		modulesDir = homeDir + modulesDir[1:]
-	}
-
-	// Absolutize all given paths
-	var err error
-	tmpDir, err = filepath.Abs(tmpDir)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	libsDir, err = filepath.Abs(libsDir)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	appsDir, err = filepath.Abs(appsDir)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	modulesDir, err = filepath.Abs(modulesDir)
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	if err := os.MkdirAll(tmpDir, 0777); err != nil {
-		return errors.Trace(err)
-	}
-
-	return nil
 }
 
 type buildParams struct {

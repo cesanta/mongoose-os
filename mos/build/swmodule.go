@@ -1,6 +1,7 @@
 package build
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -19,14 +20,18 @@ import (
 	"github.com/golang/glog"
 )
 
+var (
+	swmodSuffixTpl = flag.String("swmodule-suffix", "-${version}", "")
+)
+
 type SWModule struct {
 	Type    string `yaml:"type,omitempty" json:"type,omitempty"`
 	Origin  string `yaml:"origin,omitempty" json:"origin,omitempty"`
 	Version string `yaml:"version,omitempty" json:"version,omitempty"`
 	Name    string `yaml:"name,omitempty" json:"name,omitempty"`
 
-	// Weak is relevant if only SWModule represents a lib (as opposed to a
-	// module).
+	// Weak is relevant if only SWModule represents a lib (as opposed to an
+	// app or a module).
 	Weak bool `yaml:"weak,omitempty" json:"weak,omitempty"`
 
 	localPath string
@@ -412,7 +417,7 @@ func prepareLocalCopyGit(
 // getGitDirName returns given name with the appropriate version suffix
 // (see moscommon.GetVersionSuffix(repoVersion))
 func getGitDirName(name, repoVersion string) string {
-	return fmt.Sprint(name, moscommon.GetVersionSuffix(repoVersion))
+	return fmt.Sprint(name, moscommon.GetVersionSuffixTpl(repoVersion, *swmodSuffixTpl))
 }
 
 func freportf(logFile io.Writer, f string, args ...interface{}) {

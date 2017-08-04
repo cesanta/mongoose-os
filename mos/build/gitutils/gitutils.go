@@ -123,7 +123,9 @@ func IsClean(repo, version string) (bool, error) {
 		// Apparently the repo is not on a branch, retry with the version
 		resp, err = git(repo, "cherry", version)
 		if err != nil {
-			return false, errors.Annotatef(err, "failed to git cherry %s", version)
+			// We can get an error at this point if given version does not exist
+			// in the repository; in this case assume the repo is clean
+			return true, nil
 		}
 	}
 
@@ -150,6 +152,17 @@ func GitClone(srcURL, targetDir, referenceDir string) error {
 	}
 
 	return nil
+}
+
+func GitGetOriginUrl(repo string) (string, error) {
+	resp, err := git(repo, "remote", "get-url", "origin")
+	if err != nil {
+		return "", errors.Annotatef(err, "failed to get origin URL")
+	}
+	if len(resp) == 0 {
+		return "", errors.Errorf("failed to get origin URL")
+	}
+	return resp, nil
 }
 
 func HashesEqual(hash1, hash2 string) bool {

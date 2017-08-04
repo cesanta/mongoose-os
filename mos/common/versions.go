@@ -1,14 +1,19 @@
 package moscommon
 
-import "fmt"
+import "strings"
 
-// GetMosVersionSuffix returns an appropriate suffix depending on the given
-// version string: for "latest" or "master" or "" it returns an empty string;
-// for any other version it returns the version prepended with a dash, e.g.
-// "-1.5".
+// GetVersionSuffix returns suffix like "-1.5" or "-latest". See
+// GetVersionSuffixTpl.
 func GetVersionSuffix(version string) string {
-	if version == "master" || version == "latest" || version == "" {
-		return ""
+	return GetVersionSuffixTpl(version, "-${version}")
+}
+
+// GetVersionSuffixTpl returns given template with "${version}" placeholder
+// replaced with the actual given version. If given version is "master" or
+// an empty string, "latest" is used instead.
+func GetVersionSuffixTpl(version, template string) string {
+	if version == "master" || version == "" {
+		version = "latest"
 	}
-	return fmt.Sprintf("-%s", version)
+	return strings.Replace(template, "${version}", version, -1)
 }
