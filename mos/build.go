@@ -544,7 +544,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	}
 
 	// Invoke actual build (docker or make) {{{
-	if os.Getenv("MGOS_SDK_REVISION") == "" {
+	if os.Getenv("MGOS_SDK_REVISION") == "" && os.Getenv("MIOT_SDK_REVISION") == "" {
 		// We're outside of the docker container, so invoke docker
 
 		dockerArgs := []string{"run", "--rm", "-i"}
