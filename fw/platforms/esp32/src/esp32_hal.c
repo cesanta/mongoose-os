@@ -4,6 +4,7 @@
  */
 
 #include "esp_attr.h"
+#include "esp_heap_caps.h"
 #include "esp_system.h"
 #include "esp_task_wdt.h"
 
@@ -21,7 +22,9 @@
 #include "fw/platforms/esp32/src/esp32_fs.h"
 
 size_t mgos_get_heap_size(void) {
-  return xPortGetHeapSize();
+  multi_heap_info_t info;
+  heap_caps_get_info(&info, MALLOC_CAP_8BIT);
+  return info.total_free_bytes + info.total_allocated_bytes;
 }
 
 size_t mgos_get_free_heap_size(void) {

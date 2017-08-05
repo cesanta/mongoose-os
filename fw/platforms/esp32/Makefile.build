@@ -135,14 +135,17 @@ CXXFLAGS += $(APP_CXXFLAGS)
 PROJECT_NAME = $(APP)
 BUILD_DIR_BASE = $(BUILD_DIR)
 
-SRCDIRS = $(MGOS_ESP_PATH)/src
-# Explicitly specify SDK components to build. Notably, we do not build BT.
-COMPONENT_DIRS = $(COMMON_PATH) $(MGOS_PATH)/third_party /opt $(MGOS_ESP_PATH) $(IDF_PATH)/components
-SDK_COMPONENTS = app_update bootloader bootloader_support bt driver esp32 esptool_py \
-                 ethernet expat freertos log lwip micro-ecc newlib \
+COMPONENT_DIRS = $(IDF_PATH)/components/ \
+                 $(MGOS_ESP_PATH) \
+                 $(MGOS_PATH)/third_party \
+                 $(COMMON_PATH) \
+                 /opt
+# Explicitly specify SDK components to build.
+SDK_COMPONENTS = app_trace app_update bootloader bootloader_support bt driver esp32 esptool_py \
+                 ethernet expat freertos heap log lwip micro-ecc newlib \
                  nvs_flash partition_table soc spi_flash tcpip_adapter vfs \
                  wpa_supplicant xtensa-debug-module
-COMPONENTS = $(SDK_COMPONENTS) cryptoauthlib cs_mbedtls spiffs $(ESP_IDF_EXTRA_COMPONENTS)
+COMPONENTS = $(SDK_COMPONENTS) src spiffs cryptoauthlib cs_mbedtls $(ESP_IDF_EXTRA_COMPONENTS)
 
 ESPFLASHMODE = qio
 ESPFLASHSIZE = 4MB
