@@ -341,6 +341,7 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
       break;
   }
 
+  WRITE_PERI_REG(UART_RS485_CONF_REG(uart_no), 0);
   switch (cfg->stop_bits) {
     case MGOS_UART_STOP_BITS_1:
       conf0 |= 1 << UART_STOP_BIT_NUM_S;
@@ -349,7 +350,11 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
       conf0 |= 2 << UART_STOP_BIT_NUM_S;
       break;
     case MGOS_UART_STOP_BITS_2:
-      conf0 |= 3 << UART_STOP_BIT_NUM_S;
+      /* Workaround for hardware bug: receiver does not implement 2 stop bits
+       * correctly, so instead RS485 feature of delaying stop bits is used:
+       * 1 stop bit + 1 bit delay. */
+      conf0 |= 1 << UART_STOP_BIT_NUM_S;
+      SET_PERI_REG_MASK(UART_RS485_CONF_REG(uart_no), UART_DL1_EN);
       break;
   }
 
