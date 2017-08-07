@@ -1,5 +1,7 @@
 package version
 
+//go:generate sh -c "../../common/tools/fw_meta.py gen_build_info --version=`[ -f version ] && cat version` --tag_as_version=true --id=`[ -f build_id ] && cat build_id` --go_output=version.go  --json_output=version.json"
+
 import (
 	"regexp"
 
@@ -19,34 +21,21 @@ var (
 	)
 )
 
-// GetMosVersion checks symbolic part of the build id, and if it looks like a
-// version number (i.e. starts with a digit and contains only digits and dots),
-// then returns it; otherwise returns "latest".
+// GetMosVersion returns this binary's version, or "latest" if it's not a release build.
 func GetMosVersion() string {
-	ver, err := GetMosVersionByBuildId(BuildId)
-	if err != nil {
-		panic(err.Error())
+	if LooksLikeVersionNumber(Version) {
+		return Version
 	}
-
-	return ver
+	return GetMosVersionFromBuildId(BuildId)
 }
 
-func GetMosVersionByBuildId(buildId string) (string, error) {
+func GetMosVersionFromBuildId(buildId string) string {
+	// E.g.: 20170804-194202/1.234@e1eb86a3 => 1.234
 	matches := regexpBuildId.FindStringSubmatch(buildId)
-	if matches == nil {
-		// We failed to parse build id; it typically happens when it looks like
-		// "20170721-002340/???". For now, assume latest
-		// TODO(dfrank): use Version for that
-		return "latest", nil
+	if matches != nil && LooksLikeVersionNumber(matches[2]) {
+		return matches[2]
 	}
-
-	symbolic := matches[2]
-
-	if LooksLikeVersionNumber(symbolic) {
-		return symbolic, nil
-	}
-
-	return "latest", nil
+	return "latest"
 }
 
 // GetMosVersionSuffix returns an empty string if mos version is "latest";

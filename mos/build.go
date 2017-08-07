@@ -212,7 +212,7 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 	// user about the update (if available)
 	select {
 	case v := <-serverVersionCh:
-		serverVer, _ := version.GetMosVersionByBuildId(v.BuildId)
+		serverVer := version.GetMosVersionFromBuildId(v.BuildId)
 		localVer := version.GetMosVersion()
 
 		if serverVer != localVer {
