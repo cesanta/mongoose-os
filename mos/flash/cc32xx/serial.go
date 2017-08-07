@@ -2,7 +2,9 @@
 
 package cc32xx
 
-func GetUSBSerialNumberForPort(port string) {
+import "github.com/cesanta/errors"
+
+func GetUSBSerialNumberForPort(port string) (string, error) {
 	// Not supported
-	return ""
+	return "", errors.NotImplementedf("")
 }
