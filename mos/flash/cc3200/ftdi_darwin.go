@@ -13,8 +13,6 @@ package cc3200
 import "C"
 
 import (
-	"runtime"
-
 	"github.com/cesanta/errors"
 )
 
@@ -28,7 +26,7 @@ const (
 	modeAsyncBitBang = 0x01
 )
 
-func openFTDI(port string, vendor, product int) (FTDI, error) {
+func openFTDI(vendor, product int, serial string) (FTDI, error) {
 	ctx, err := C.ftdi_new()
 	if ctx == nil {
 		return nil, err

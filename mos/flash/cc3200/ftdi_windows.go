@@ -38,7 +38,7 @@ type ftd2xx struct {
 	h ftHandle
 }
 
-func openFTDI(port string, vendor, product int) (FTDI, error) {
+func openFTDI(vendor, product int, serial string) (FTDI, error) {
 	if ftdapi == nil {
 		api, err := getAPI()
 		if err != nil {
