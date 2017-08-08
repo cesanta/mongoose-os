@@ -66,10 +66,10 @@ var (
 	// In-memory buffer containing all the log messages
 	logBuf bytes.Buffer
 
-	// Log writer which always writes to the build.log file, os.Stdout and logBuf
-	logWriterStdout io.Writer
+	// Log writer which always writes to the build.log file, os.Stderr and logBuf
+	logWriterStderr io.Writer
 
-	// The same as logWriterStdout, but skips os.Stdout unless --verbose is given
+	// The same as logWriterStderr, but skips os.Stderr unless --verbose is given
 	logWriter io.Writer
 
 	// Note: we opted to use ${foo} instead of {{foo}}, because {{foo}} needs to
@@ -155,11 +155,11 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 	// Remove local log, ignore any errors
 	os.RemoveAll(moscommon.GetBuildLogLocalFilePath(buildDir))
 
-	logWriterStdout = io.MultiWriter(logFile, &logBuf, os.Stdout)
+	logWriterStderr = io.MultiWriter(logFile, &logBuf, os.Stderr)
 	logWriter = io.MultiWriter(logFile, &logBuf)
 
 	if *verbose {
-		logWriter = logWriterStdout
+		logWriter = logWriterStderr
 	}
 
 	// Fail fast if there is no manifest
@@ -205,7 +205,7 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 			freportf(logWriter, "Success, built %s/%s version %s (%s).", fw.Name, fw.Platform, fw.Version, fw.BuildID)
 		}
 
-		freportf(logWriterStdout, "Firmware saved to %s", fwFilename)
+		freportf(logWriterStderr, "Firmware saved to %s", fwFilename)
 	}
 
 	// If received server version, compare it with the local one and notify the
@@ -216,7 +216,7 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 		localVer := version.GetMosVersion()
 
 		if serverVer != localVer {
-			freportf(logWriterStdout, "By the way, there is a newer version available: %q (you use %q). Please consider upgrading.", serverVer, localVer)
+			freportf(logWriterStderr, "By the way, there is a newer version available: %q (you use %q). Please consider upgrading.", serverVer, localVer)
 		}
 	default:
 	}
@@ -226,7 +226,7 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 
 func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	if isInDockerToolbox() {
-		freportf(logWriterStdout, "Docker Toolbox detected")
+		freportf(logWriterStderr, "Docker Toolbox detected")
 	}
 
 	buildDir := moscommon.GetBuildDir(projectDir)
@@ -699,12 +699,12 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 // manually, and prints a warning if so.
 func printConfSchemaWarn(manifest *build.FWAppManifest) {
 	if _, ok := manifest.BuildVars["APP_CONF_SCHEMA"]; ok {
-		freportf(logWriterStdout, "===")
-		freportf(logWriterStdout, "WARNING: Setting build variable %q in %q "+
+		freportf(logWriterStderr, "===")
+		freportf(logWriterStderr, "WARNING: Setting build variable %q in %q "+
 			"is deprecated, use \"config_schema\" property instead.",
 			"APP_CONF_SCHEMA", moscommon.GetManifestFilePath(""),
 		)
-		freportf(logWriterStdout, "===")
+		freportf(logWriterStderr, "===")
 	}
 }
 
@@ -916,7 +916,7 @@ func readManifestFile(
 	if manifest.ManifestVersion == "" && manifest.SkeletonVersion != "" {
 		// TODO(dfrank): uncomment the warning below when our examples use
 		// manifest_version
-		//freportf(logWriterStdout, "WARNING: skeleton_version is deprecated and will be removed eventually, please rename it to manifest_version")
+		//freportf(logWriterStderr, "WARNING: skeleton_version is deprecated and will be removed eventually, please rename it to manifest_version")
 		manifest.ManifestVersion = manifest.SkeletonVersion
 	}
 
@@ -1154,7 +1154,7 @@ func buildRemote(bParams *buildParams) error {
 
 	buildUser := "test"
 	buildPass := "test"
-	freportf(logWriterStdout, "Connecting to %s, user %s", server, buildUser)
+	freportf(logWriterStderr, "Connecting to %s, user %s", server, buildUser)
 
 	// invoke the fwbuild API (replace "master" with "latest")
 	fwbuildVersion := version.GetMosVersion()
@@ -1165,7 +1165,7 @@ func buildRemote(bParams *buildParams) error {
 
 	uri := fmt.Sprintf("%s/api/fwbuild/%s/build", server, fwbuildVersion)
 
-	freportf(logWriterStdout, "Uploading sources (%d bytes)", len(body.Bytes()))
+	freportf(logWriterStderr, "Uploading sources (%d bytes)", len(body.Bytes()))
 	req, err := http.NewRequest("POST", uri, body)
 	req.Header.Set("Content-Type", mpw.FormDataContentType())
 	req.SetBasicAuth(buildUser, buildPass)
