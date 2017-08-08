@@ -7,10 +7,13 @@ DISTR=$2
 
 set -x -e
 
+IMAGE=docker.cesanta.com/ubuntu-golang:${DISTR}
+
+docker pull ${IMAGE}
 docker run -i -t --rm \
     -v $PWD:/src \
     -v /tmp/out-${DISTR}:/tmp/work \
-    docker.cesanta.com/ubuntu-golang:${DISTR} \
+    ${IMAGE} \
     /bin/bash -l -c "\
         cd /src && rm -rf /tmp/work/* && \
         git-build-recipe --allow-fallback-to-native --package ${PACKAGE} --distribution ${DISTR} \
