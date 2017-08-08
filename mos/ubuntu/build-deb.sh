@@ -7,6 +7,12 @@ DISTR=$2
 
 set -x -e
 
+# Make sure the script is called from the mongoose-os repo
+ORIGIN="$(git --work-tree $(dirname 0) remote get-url origin)"
+if ! [[ "${ORIGIN}" =~ mongoose-os$ ]]; then
+  echo "You should run this script from mongoose-os repository, not from ${ORIGIN}"; exit 1;
+fi
+
 IMAGE=docker.cesanta.com/ubuntu-golang:${DISTR}
 
 docker pull ${IMAGE}
