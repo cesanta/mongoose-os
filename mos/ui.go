@@ -16,6 +16,7 @@ import (
 
 	"golang.org/x/net/context"
 
+	"cesanta.com/common/go/ourutil"
 	"cesanta.com/mos/build"
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/update"
@@ -587,8 +588,8 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 	}
 	url := fmt.Sprintf("http://%s", httpAddr)
 
-	fmt.Printf("To get a list of available commands, start with --help\n")
-	fmt.Printf("Starting Web UI. If the browser does not start, navigate to %s\n", url)
+	ourutil.Reportf("To get a list of available commands, start with --help\n")
+	ourutil.Reportf("Starting Web UI. If the browser does not start, navigate to %s\n", url)
 	listener, err := net.Listen("tcp", httpAddr)
 	if err != nil {
 		os.Stdout = origStdout

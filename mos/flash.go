@@ -3,13 +3,13 @@
 package main
 
 import (
-	"fmt"
 	"runtime"
 	"strings"
 	"time"
 
 	"golang.org/x/net/context"
 
+	"cesanta.com/common/go/ourutil"
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/flash/cc3200"
 	"cesanta.com/mos/flash/cc3220"
@@ -95,7 +95,7 @@ func flash(ctx context.Context, devConn *dev.DevConn) error {
 		return errors.Annotatef(err, "failed to load %s", fwname)
 	}
 
-	fmt.Printf("Loaded %s/%s version %s (%s)\n", fw.Name, fw.Platform, fw.Version, fw.BuildID)
+	ourutil.Reportf("Loaded %s/%s version %s (%s)\n", fw.Name, fw.Platform, fw.Version, fw.BuildID)
 
 	// if given devConn is not nill, we should disconnect it while flashing is
 	// in progress
@@ -130,7 +130,7 @@ func flash(ctx context.Context, devConn *dev.DevConn) error {
 	}
 
 	if err == nil {
-		fmt.Printf("All done!\n")
+		ourutil.Reportf("All done!\n")
 	}
 
 	return errors.Trace(err)

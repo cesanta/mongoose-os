@@ -10,6 +10,7 @@ import (
 
 	"golang.org/x/net/context"
 
+	"cesanta.com/common/go/ourutil"
 	"cesanta.com/mos/build/archive"
 	moscommon "cesanta.com/mos/common"
 	"cesanta.com/mos/dev"
@@ -67,7 +68,7 @@ func initFW(ctx context.Context, devConn *dev.DevConn) error {
 	// because it strips all comments and uglifies mos.yml in other ways.
 	// Instead, we just insert "arch: foo" as a first line.
 	if *arch != "" {
-		fmt.Printf("Setting arch %q...\n", *arch)
+		ourutil.Reportf("Setting arch %q...\n", *arch)
 		manifestFilename := moscommon.GetManifestFilePath(".")
 
 		manifestData, err := ioutil.ReadFile(manifestFilename)
