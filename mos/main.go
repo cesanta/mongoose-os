@@ -15,7 +15,6 @@ import (
 
 	"golang.org/x/net/context"
 
-	"cesanta.com/common/go/ourutil"
 	"cesanta.com/common/go/pflagenv"
 	moscommon "cesanta.com/mos/common"
 	"cesanta.com/mos/common/paths"
@@ -202,7 +201,7 @@ func main() {
 		usage()
 		return
 	} else if *versionFlag {
-		ourutil.Reportf(
+		fmt.Printf(
 			"%s\nVersion: %s\nBuild ID: %s\nUpdate channel: %s\n",
 			"The Mongoose OS command line tool", version.GetMosVersion(), version.BuildId, update.GetUpdateChannel(),
 		)

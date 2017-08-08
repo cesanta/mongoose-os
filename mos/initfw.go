@@ -68,7 +68,7 @@ func initFW(ctx context.Context, devConn *dev.DevConn) error {
 	// because it strips all comments and uglifies mos.yml in other ways.
 	// Instead, we just insert "arch: foo" as a first line.
 	if *arch != "" {
-		ourutil.Reportf("Setting arch %q...\n", *arch)
+		ourutil.Reportf("Setting arch %q...", *arch)
 		manifestFilename := moscommon.GetManifestFilePath(".")
 
 		manifestData, err := ioutil.ReadFile(manifestFilename)

@@ -95,7 +95,7 @@ func flash(ctx context.Context, devConn *dev.DevConn) error {
 		return errors.Annotatef(err, "failed to load %s", fwname)
 	}
 
-	ourutil.Reportf("Loaded %s/%s version %s (%s)\n", fw.Name, fw.Platform, fw.Version, fw.BuildID)
+	ourutil.Reportf("Loaded %s/%s version %s (%s)", fw.Name, fw.Platform, fw.Version, fw.BuildID)
 
 	// if given devConn is not nill, we should disconnect it while flashing is
 	// in progress
@@ -130,7 +130,7 @@ func flash(ctx context.Context, devConn *dev.DevConn) error {
 	}
 
 	if err == nil {
-		ourutil.Reportf("All done!\n")
+		ourutil.Reportf("All done!")
 	}
 
 	return errors.Trace(err)

@@ -265,7 +265,7 @@ func migrateData() error {
 	if stateVer == nil {
 		// Need to initialize current version
 
-		ourutil.Reportf("First run of the version %s, initializing...\n", mosVersion)
+		ourutil.Reportf("First run of the version %s, initializing...", mosVersion)
 
 		// Get sorted list of all versions available
 		versions := []string{}
@@ -301,7 +301,7 @@ func migrateData() error {
 			return errors.Trace(err)
 		}
 
-		ourutil.Reportf("Init done.\n")
+		ourutil.Reportf("Init done.")
 	}
 
 	return nil
@@ -321,7 +321,7 @@ func convertOldDir(oldDir, newTpl string) ([]string, error) {
 		return retVersions, nil
 	}
 
-	ourutil.Reportf("Converting old directory %s into new versioned shape...\n", oldDir)
+	ourutil.Reportf("Converting old directory %s into new versioned shape...", oldDir)
 
 	entries, err := ioutil.ReadDir(oldDir)
 	if err != nil {
@@ -331,7 +331,7 @@ func convertOldDir(oldDir, newTpl string) ([]string, error) {
 	for _, entry := range entries {
 		if !entry.IsDir() {
 			// We expect only dirs here, but encountered non-dir; skip it
-			ourutil.Reportf("Skipping %s\n", entry.Name())
+			ourutil.Reportf("Skipping %s", entry.Name())
 			continue
 		}
 
@@ -355,11 +355,11 @@ func convertOldDir(oldDir, newTpl string) ([]string, error) {
 		if _, err := os.Stat(newEntryDir); err != nil {
 			// Target directory does not exist, so, move the old one as a target
 			if err := os.Rename(oldEntryDir, newEntryDir); err != nil {
-				ourutil.Reportf("Failed to rename %s to %s: %s\n", oldEntryDir, newEntryDir, err)
+				ourutil.Reportf("Failed to rename %s to %s: %s", oldEntryDir, newEntryDir, err)
 			}
 		} else {
 			// Target directory already exists, do nothing
-			ourutil.Reportf("%s already exists, leaving %s intact\n", newEntryDir, oldEntryDir)
+			ourutil.Reportf("%s already exists, leaving %s intact", newEntryDir, oldEntryDir)
 		}
 
 		retVersions = append(retVersions, dirVersion)
@@ -422,7 +422,7 @@ func migrateProj(oldDir, newDir, oldVer string, wg *sync.WaitGroup) {
 
 	glog.Infof("Copying %s as %s...", oldDir, newDir)
 	if err := ourio.CopyDir(oldDir, newDir, nil); err != nil {
-		ourutil.Reportf("Error copying %s as %s: %s\n", oldDir, newDir, err)
+		ourutil.Reportf("Error copying %s as %s: %s", oldDir, newDir, err)
 	}
 
 	projBase := filepath.Base(newDir)
@@ -454,10 +454,10 @@ func migrateProj(oldDir, newDir, oldVer string, wg *sync.WaitGroup) {
 		glog.Infof("Checking out %s at the version %s...", basename, version.GetMosVersion())
 		_, err = swmod.PrepareLocalDir(filepath.Dir(newDir), &logWriter, true, "", time.Duration(0))
 		if err != nil {
-			ourutil.Reportf("Error preparing local dir for %s: %s\n", newDir, err)
+			ourutil.Reportf("Error preparing local dir for %s: %s", newDir, err)
 		}
 
-		ourutil.Reportf("Imported %s\n", projBase)
+		ourutil.Reportf("Imported %s", projBase)
 
 	} else {
 		glog.Infof("Leaving %s intact because the version %s is not equal to %s", basename, projectVersion, oldVer)
