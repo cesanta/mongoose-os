@@ -19,6 +19,9 @@ var (
 	regexpBuildId       = regexp.MustCompile(
 		`^(?P<datetime>[^/]+)\/(?P<symbolic>[^@]+)\@(?P<hash>.+)$`,
 	)
+	regexpBuildIdDebian = regexp.MustCompile(
+		`^(?P<version>[^+]+)\+(?P<hash>[^~]+)\~(?P<distr>.+)$`,
+	)
 )
 
 // GetMosVersion returns this binary's version, or "latest" if it's not a release build.
@@ -46,4 +49,25 @@ func GetMosVersionSuffix() string {
 
 func LooksLikeVersionNumber(s string) bool {
 	return regexpVersionNumber.MatchString(s)
+}
+
+func LooksLikeDebianBuildId(s string) bool {
+	return GetDebianPackageName(s) != ""
+}
+
+// GetDebianPackageName parses given build id string, and if it looks like a
+// debian build id, returns either "mos-latest" or "mos". Otherwise, returns
+// an empty string.
+func GetDebianPackageName(buildId string) string {
+	matches := regexpBuildIdDebian.FindStringSubmatch(buildId)
+	if matches != nil {
+		if LooksLikeVersionNumber(matches[1]) {
+			return "mos"
+		} else {
+			return "mos-latest"
+		}
+	} else {
+		// Doesn't look like debian build id
+		return ""
+	}
 }

@@ -94,20 +94,23 @@ func usage() {
 	}
 
 	fmt.Fprintf(w, "The Mongoose OS command line tool, v. %s.\n", version.BuildId)
-	fmt.Fprintf(w, "Update channel: %q. Checking updates... ", update.GetUpdateChannel())
-	w.Flush()
 
-	serverVersion, err := update.GetServerMosVersion(update.GetUpdateChannel())
-	if err != nil {
-		color.New(color.FgRed).Fprintf(w, "Failed to check server version: %s\n", err)
-	} else {
-		if serverVersion.BuildId != version.BuildId {
-			color.New(color.FgRed).Fprintf(
-				w, "\nOut of date: new version available: %s\nPlease run \"mos update\"\n",
-				serverVersion.BuildId,
-			)
+	if !version.LooksLikeDebianBuildId(version.BuildId) {
+		fmt.Fprintf(w, "Update channel: %q. Checking updates... ", update.GetUpdateChannel())
+		w.Flush()
+
+		serverVersion, err := update.GetServerMosVersion(update.GetUpdateChannel())
+		if err != nil {
+			color.New(color.FgRed).Fprintf(w, "Failed to check server version: %s\n", err)
 		} else {
-			color.New(color.FgGreen).Fprintf(w, "Up to date.\n")
+			if serverVersion.BuildId != version.BuildId {
+				color.New(color.FgRed).Fprintf(
+					w, "\nOut of date: new version available: %s\nPlease run \"mos update\"\n",
+					serverVersion.BuildId,
+				)
+			} else {
+				color.New(color.FgGreen).Fprintf(w, "Up to date.\n")
+			}
 		}
 	}
 
