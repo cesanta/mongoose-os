@@ -25,9 +25,14 @@ func NewZipFirmwareBundle(fname, versionSuffix string) (*FirmwareBundle, error) 
 	// If firmware name is given but does not end up with .zip, this is
 	// a shortcut for `mos flash esp32`. Transform that into the canonical URL
 	_, err2 := os.Stat(fname)
-	if fname != "" && !strings.HasSuffix(fname, ".zip") && os.IsNotExist(err2) {
+	if fname != "" && !strings.HasSuffix(fname, ".zip") && os.IsNotExist(err2) && !strings.Contains(fname, "/") {
+		switch fname {
+		case "esp8266", "esp32", "cc3200":
+			fname = fmt.Sprint("mos-", fname, versionSuffix)
+		}
+
 		fname = fmt.Sprintf(
-			"https://mongoose-os.com/downloads/mos-%s%s.zip", fname, versionSuffix,
+			"https://mongoose-os.com/downloads/%s.zip", fname,
 		)
 	}
 
