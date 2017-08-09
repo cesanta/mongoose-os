@@ -1,6 +1,6 @@
 # git-build-recipe format 0.4 deb-version {latest-tag}+{git-commit}~xenial0
 
 # Build from local repo (volume-mount a clone of https://github.com/cesanta/mongoose-os.git to /src):
-/src 1.11
+/src 1.11_CHANGE_ME
 merge deb-release https://github.com/cesanta/mongoose-os.git deb-release
 run export GOPATH=$PWD && cd cesanta.com/mos && govendor sync -v
