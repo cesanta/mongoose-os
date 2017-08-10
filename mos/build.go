@@ -1660,15 +1660,15 @@ func expandManifestLibsAndConds(
 		commonManifest := allManifests[0].Manifest
 
 		// Iterate all the rest of the manifests, at every step extending the
-		// current one with all previous manifests accumulated so far.
+		// current one with all previous manifests accumulated so far, and the
+		// current one takes precedence.
 		for k := 1; k < len(allManifests); k++ {
-			lprev := allManifests[k-1]
 			lcur := allManifests[k]
 
 			curManifest := *lcur.Manifest
 
 			if err := extendManifest(
-				&curManifest, commonManifest, &curManifest, lprev.Path, lcur.Path, interp,
+				&curManifest, commonManifest, &curManifest, "", lcur.Path, interp,
 			); err != nil {
 				return errors.Trace(err)
 			}
