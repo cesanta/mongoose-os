@@ -1518,7 +1518,7 @@ libs:
 
 		skip := false
 		if pc.skipClean {
-			isClean, err := m.IsClean(paths.LibsDir)
+			isClean, err := m.IsClean(paths.LibsDir, pc.appManifest.LibsVersion)
 			if err != nil {
 				return nil, time.Time{}, errors.Trace(err)
 			}
