@@ -24,7 +24,7 @@ $(EXAMPLES): $(MJS_PATH)/mjs.c $(MJS_PATH)/mjs.h
 	@echo "=== Building $@ / $(PLATFORM)"
 	@cd $@ && $(MOS) build --local --clean --arch $(PLATFORM) \
 		--repo $(REPO_ROOT) \
-		--libs-dir $(LIBS_PATH) --no-libs-update \
+		--libs-dir $(LIBS_PATH) --no-libs-update --swmodule-suffix= \
 		--module mjs:$(MJS_PATH) \
 
 $(MJS_PATH)/mjs.c $(MJS_PATH)/mjs.h:
