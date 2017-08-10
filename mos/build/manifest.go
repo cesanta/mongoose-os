@@ -27,58 +27,58 @@ type ManifestCond struct {
 
 // AppManifest contains the common app manifest fields
 type AppManifest struct {
-	Name    string `yaml:"name,omitempty" json:"name,omitempty"`
-	Type    string `yaml:"type,omitempty" json:"type,omitempty"`
-	Version string `yaml:"version,omitempty" json:"version,omitempty"`
-	Summary string `yaml:"summary,omitempty" json:"summary,omitempty"`
+	Name    string `yaml:"name,omitempty" json:"name"`
+	Type    string `yaml:"type,omitempty" json:"type"`
+	Version string `yaml:"version,omitempty" json:"version"`
+	Summary string `yaml:"summary,omitempty" json:"summary"`
 }
 
 type FWAppManifestLibHandled struct {
-	Name     string         `yaml:"name" json:"name,omitempty"`
-	Path     string         `yaml:"path" json:"path,omitempty"`
+	Name     string         `yaml:"name" json:"name"`
+	Path     string         `yaml:"path" json:"path"`
 	Deps     []string       `yaml:"deps" json:"deps"`
-	Manifest *FWAppManifest `yaml:"manifest,omitempty", json:"manifest,omitempty"`
+	Manifest *FWAppManifest `yaml:"manifest,omitempty", json:"manifest"`
 }
 
 // FWAppManifest is the app manifest for firmware apps
 type FWAppManifest struct {
 	AppManifest       `yaml:",inline"`
-	Arch              string             `yaml:"arch" json:"arch,omitempty"`
-	Author            string             `yaml:"author" json:"author,omitempty"`
-	Description       string             `yaml:"description" json:"description,omitempty"`
-	MongooseOsVersion string             `yaml:"mongoose_os_version" json:"mongoose_os_version,omitempty"`
-	Sources           []string           `yaml:"sources" json:"sources,omitempty"`
-	Filesystem        []string           `yaml:"filesystem" json:"filesystem,omitempty"`
-	BinaryLibs        []string           `yaml:"binary_libs" json:"binary_libs,omitempty"`
-	ExtraFiles        []string           `yaml:"extra_files" json:"extra_files,omitempty"`
-	EnableJavascript  bool               `yaml:"enable_javascript,omitempty" json:"enable_javascript,omitempty"`
-	FFISymbols        []string           `yaml:"ffi_symbols" json:"ffi_symbols,omitempty"`
-	Modules           []SWModule         `yaml:"modules,omitempty" json:"modules,omitempty"`
-	Libs              []SWModule         `yaml:"libs,omitempty" json:"libs,omitempty"`
-	ConfigSchema      []ConfigSchemaItem `yaml:"config_schema" json:"config_schema,omitempty"`
-	BuildVars         map[string]string  `yaml:"build_vars" json:"build_vars,omitempty"`
-	CFlags            []string           `yaml:"cflags" json:"cflags,omitempty"`
-	CXXFlags          []string           `yaml:"cxxflags" json:"cxxflags,omitempty"`
-	CDefs             map[string]string  `yaml:"cdefs" json:"cdefs,omitempty"`
-	Tags              []string           `yaml:"tags" json:"tags,omitempty"`
+	Arch              string             `yaml:"arch" json:"arch"`
+	Author            string             `yaml:"author" json:"author"`
+	Description       string             `yaml:"description" json:"description"`
+	MongooseOsVersion string             `yaml:"mongoose_os_version" json:"mongoose_os_version"`
+	Sources           []string           `yaml:"sources" json:"sources"`
+	Filesystem        []string           `yaml:"filesystem" json:"filesystem"`
+	BinaryLibs        []string           `yaml:"binary_libs" json:"binary_libs"`
+	ExtraFiles        []string           `yaml:"extra_files" json:"extra_files"`
+	EnableJavascript  bool               `yaml:"enable_javascript" json:"enable_javascript"`
+	FFISymbols        []string           `yaml:"ffi_symbols" json:"ffi_symbols"`
+	Modules           []SWModule         `yaml:"modules,omitempty" json:"modules"`
+	Libs              []SWModule         `yaml:"libs,omitempty" json:"libs"`
+	ConfigSchema      []ConfigSchemaItem `yaml:"config_schema" json:"config_schema"`
+	BuildVars         map[string]string  `yaml:"build_vars" json:"build_vars"`
+	CFlags            []string           `yaml:"cflags" json:"cflags"`
+	CXXFlags          []string           `yaml:"cxxflags" json:"cxxflags"`
+	CDefs             map[string]string  `yaml:"cdefs" json:"cdefs"`
+	Tags              []string           `yaml:"tags" json:"tags"`
 
-	LibsVersion    string `yaml:"libs_version" json:"libs_version,omitempty"`
-	ModulesVersion string `yaml:"modules_version" json:"modules_version,omitempty"`
+	LibsVersion    string `yaml:"libs_version" json:"libs_version"`
+	ModulesVersion string `yaml:"modules_version" json:"modules_version"`
 
-	Conds []ManifestCond `yaml:"conds" json:"conds,omitempty"`
+	Conds []ManifestCond `yaml:"conds" json:"conds"`
 
-	ManifestVersion string `yaml:"manifest_version" json:"manifest_version,omitempty"`
+	ManifestVersion string `yaml:"manifest_version" json:"manifest_version"`
 	// SkeletonVersion is deprecated since 05.06.2017
-	SkeletonVersion string `yaml:"skeleton_version" json:"skeleton_version,omitempty"`
+	SkeletonVersion string `yaml:"skeleton_version" json:"skeleton_version"`
 
 	// Old form of LibsHandled, deprecated since 03.06.2017
 	// TODO: remove
-	Deps []string `yaml:"deps" json:"deps,omitempty"`
+	Deps []string `yaml:"deps" json:"deps"`
 
 	// are names of the libraries which need to be initialized before the
 	// application. The user doesn't have to set this field manually, it's set
 	// automatically during libs "expansion" (see Libs above)
-	LibsHandled []FWAppManifestLibHandled `yaml:"libs_handled" json:"libs_handled,omitempty"`
+	LibsHandled []FWAppManifestLibHandled `yaml:"libs_handled" json:"libs_handled"`
 }
 
 // ConfigSchemaItem represents a single config schema item, like this:
