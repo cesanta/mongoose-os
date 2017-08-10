@@ -22,7 +22,7 @@ import (
 )
 
 const (
-	resetMarker = "\nhlog_param:{"
+	resetMarker = "hlog_param:{"
 )
 
 var (
@@ -142,6 +142,12 @@ func logHandler(ws *websocket.Conn) {
 	for {
 		l, err := br.ReadBytes('\n')
 		if err == nil {
+			// Strip timestamps
+			if len(l) > 0 && l[0] == '[' {
+				if si := bytes.Index(l, []byte("] ")); si > 0 {
+					l = l[si+2:]
+				}
+			}
 			_, err = ws.Write(l)
 			n++
 			if n%10000 == 0 {
