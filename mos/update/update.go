@@ -34,6 +34,10 @@ import (
 	"cesanta.com/mos/dev"
 )
 
+var (
+	migrateFlag = flag.Bool("migrate", true, "Migrate data from the previous version if needed")
+)
+
 // mosVersion can be either exact mos version like "1.6", or update channel
 // like "latest" or "release".
 func getMosURL(p, mosVersion string) string {
@@ -218,9 +222,11 @@ func getUpdateChannelByMosVersion(mosVersion string) string {
 }
 
 func Init() error {
-	if err := migrateData(); err != nil {
-		// Just print the error
-		fmt.Println(err.Error())
+	if *migrateFlag {
+		if err := migrateData(); err != nil {
+			// Just print the error
+			fmt.Println(err.Error())
+		}
 	}
 
 	return nil
