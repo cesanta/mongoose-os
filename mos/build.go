@@ -296,7 +296,8 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	}
 
 	manifest, mtime, err := readManifestWithLibs(
-		appDir, bParams, logWriter, paths.LibsDir, interp, false /* skip clean */, true, /* finalize */
+		appDir, bParams, logWriter, paths.LibsDir, interp,
+		true /* require arch */, false /* skip clean */, true, /* finalize */
 	)
 	if err != nil {
 		return errors.Trace(err)
@@ -1015,7 +1016,8 @@ func buildRemote(bParams *buildParams) error {
 
 	// Get manifest which includes stuff from all libs
 	manifest, _, err := readManifestWithLibs(
-		tmpCodeDir, bParams, logWriter, userLibsDir, interp, true /* skip clean */, false, /* finalize */
+		tmpCodeDir, bParams, logWriter, userLibsDir, interp,
+		true /* require arch */, true /* skip clean */, false, /* finalize */
 	)
 	if err != nil {
 		return errors.Trace(err)
@@ -1323,7 +1325,7 @@ func identityTransformer(r io.ReadCloser) (io.ReadCloser, error) {
 func readManifestWithLibs(
 	dir string, bParams *buildParams,
 	logWriter io.Writer, userLibsDir string, interp *interpreter.MosInterpreter,
-	skipClean bool, finalize bool,
+	requireArch, skipClean, finalize bool,
 ) (*build.FWAppManifest, time.Time, error) {
 	libsHandled := map[string]build.FWAppManifestLibHandled{}
 
@@ -1346,6 +1348,8 @@ func readManifestWithLibs(
 
 		appManifest: nil,
 		interp:      interp,
+
+		requireArch: requireArch,
 	})
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
@@ -1420,6 +1424,8 @@ type manifestParseContext struct {
 
 	appManifest *build.FWAppManifest
 	interp      *interpreter.MosInterpreter
+
+	requireArch bool
 }
 
 func readManifestWithLibs2(pc manifestParseContext) (*build.FWAppManifest, time.Time, error) {
@@ -1428,7 +1434,7 @@ func readManifestWithLibs2(pc manifestParseContext) (*build.FWAppManifest, time.
 		return nil, time.Time{}, errors.Trace(err)
 	}
 
-	if manifest.Arch == "" {
+	if pc.requireArch && manifest.Arch == "" {
 		return nil, time.Time{}, errors.Errorf("--arch must be specified or mos.yml should contain an arch key")
 	}
 

@@ -75,6 +75,7 @@ var (
 		{"esp32-efuse-set", esp32EFuseSet, `Set ESP32 eFuses`, nil, nil, false},
 		{"esp32-encrypt-image", esp32EncryptImage, `Encrypt a ESP32 firmware image`, []string{"esp32-encryption-key-file", "esp32-flash-address"}, nil, false},
 		{"esp32-gen-key", esp32GenKey, `Generate and program an encryption key`, nil, nil, false},
+		{"eval-manifest-expr", evalManifestExpr, `Evaluate the expression against the final manifest`, nil, nil, false},
 	}
 )
 
