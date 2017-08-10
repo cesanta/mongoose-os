@@ -216,7 +216,7 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 		localVer := version.GetMosVersion()
 
 		if serverVer != localVer {
-			freportf(logWriterStderr, "By the way, there is a newer version available: %q (you use %q). Please consider upgrading.", serverVer, localVer)
+			freportf(logWriterStderr, "By the way, there is a newer version available: %q (you use %q). Run \"mos update\" to upgrade.", serverVer, localVer)
 		}
 	default:
 	}
