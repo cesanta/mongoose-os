@@ -324,6 +324,21 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		}
 	}
 
+	// Check if the app supports the given arch
+	if len(manifest.Platforms) > 0 {
+		found := false
+		for _, v := range manifest.Platforms {
+			if v == manifest.Arch {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			return errors.Errorf("can't build for the platform %s; only those platforms are supported: %v", manifest.Arch, manifest.Platforms)
+		}
+	}
+
 	if err := interpreter.SetManifestVars(interp.MVars, manifest); err != nil {
 		return errors.Trace(err)
 	}
@@ -892,6 +907,10 @@ func readManifest(
 			// Some error other than non-existing mos_<arch>.yml; complain.
 			return nil, time.Time{}, errors.Trace(err)
 		}
+	}
+
+	if manifest.Platforms == nil {
+		manifest.Platforms = []string{}
 	}
 
 	return manifest, mtime, nil
@@ -1846,6 +1865,8 @@ func extendManifest(
 		return errors.Trace(err)
 	}
 
+	mMain.Platforms = mergeSupportedPlatforms(m1.Platforms, m2.Platforms)
+
 	// Extend conds
 	mMain.Conds = append(
 		prependCondPaths(m1.Conds, m1Dir),
@@ -1914,6 +1935,31 @@ func mergeMapsString(
 	}
 
 	return bv, nil
+}
+
+// mergeSupportedPlatforms returns a slice of all strings which are contained
+// in both p1 and p2, or if one of slices is empty, returns another one.
+func mergeSupportedPlatforms(p1, p2 []string) []string {
+	if len(p1) == 0 {
+		return p2
+	} else if len(p2) == 0 {
+		return p1
+	} else {
+		m := map[string]struct{}{}
+		for _, v := range p1 {
+			m[v] = struct{}{}
+		}
+
+		ret := []string{}
+
+		for _, v := range p2 {
+			if _, ok := m[v]; ok {
+				ret = append(ret, v)
+			}
+		}
+
+		return ret
+	}
 }
 
 // expandManifestConds expands all "conds" in the dstManifest, but all cond

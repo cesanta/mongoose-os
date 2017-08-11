@@ -44,6 +44,7 @@ type FWAppManifestLibHandled struct {
 type FWAppManifest struct {
 	AppManifest       `yaml:",inline"`
 	Arch              string             `yaml:"arch" json:"arch"`
+	Platforms         []string           `yaml:"platforms" json:"platforms"`
 	Author            string             `yaml:"author" json:"author"`
 	Description       string             `yaml:"description" json:"description"`
 	MongooseOsVersion string             `yaml:"mongoose_os_version" json:"mongoose_os_version"`
