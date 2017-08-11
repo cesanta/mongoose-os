@@ -244,21 +244,28 @@ func migrateData() error {
 
 	convertedVersions := []string{}
 
-	var curVersions []string
-	if curVersions, err = convertOldDir(paths.LibsDirOld, paths.LibsDirTpl); err != nil {
-		return errors.Trace(err)
-	}
-	convertedVersions = append(convertedVersions, curVersions...)
+	if !state.GetState().OldDirsConverted {
+		var curVersions []string
+		if curVersions, err = convertOldDir(paths.LibsDirOld, paths.LibsDirTpl); err != nil {
+			return errors.Trace(err)
+		}
+		convertedVersions = append(convertedVersions, curVersions...)
 
-	if curVersions, err = convertOldDir(paths.AppsDirOld, paths.AppsDirTpl); err != nil {
-		return errors.Trace(err)
-	}
-	convertedVersions = append(convertedVersions, curVersions...)
+		if curVersions, err = convertOldDir(paths.AppsDirOld, paths.AppsDirTpl); err != nil {
+			return errors.Trace(err)
+		}
+		convertedVersions = append(convertedVersions, curVersions...)
 
-	if curVersions, err = convertOldDir(paths.ModulesDirOld, paths.ModulesDirTpl); err != nil {
-		return errors.Trace(err)
+		if curVersions, err = convertOldDir(paths.ModulesDirOld, paths.ModulesDirTpl); err != nil {
+			return errors.Trace(err)
+		}
+		convertedVersions = append(convertedVersions, curVersions...)
+
+		state.GetState().OldDirsConverted = true
+		if err := state.SaveState(); err != nil {
+			return errors.Trace(err)
+		}
 	}
-	convertedVersions = append(convertedVersions, curVersions...)
 
 	if len(convertedVersions) > 0 {
 		// We've converted some old dir(s) into the new versioned shape, let's

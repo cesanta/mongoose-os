@@ -10,7 +10,8 @@ import (
 )
 
 type State struct {
-	Versions map[string]*StateVersion `json:"versions"`
+	Versions         map[string]*StateVersion `json:"versions"`
+	OldDirsConverted bool                     `json:"old_dirs_converted"`
 }
 
 type StateVersion struct {
