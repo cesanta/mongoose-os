@@ -41,7 +41,7 @@ func callDeviceService(
 	}
 
 	if resp.Status != 0 {
-		return "", errors.Errorf("remote error: %s", resp.StatusMsg)
+		return "", errors.Errorf("remote error %d: %s", resp.Status, resp.StatusMsg)
 	}
 
 	// TODO(dfrank): instead of that, we should probably add a separate function
