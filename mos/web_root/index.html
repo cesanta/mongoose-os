@@ -174,20 +174,26 @@
                   <center class="done hidden"><i class="fa fa-check"></i> done!</center></a>
                 </div>
                 <div class="block_content">
-                  <h2 class="title"><a>Select device architecture, click Flash</a></h2>
-                  <div class="byline"></div>
+                  <h2 class="title"><a>Select firmware, click Flash</a></h2>
 
-                  <div class="btn-group" data-toggle="buttons">
-                    <label class="btn btn-default active">
-                      <input type="radio" name="options" value="esp8266" checked> esp8266
-                    </label>
-                    <label class="btn btn-default">
-                      <input type="radio" name="options" value="esp32"> esp32
-                    </label>
-                    <label class="btn btn-default">
-                      <input type="radio" name="options" value="cc3200"> cc3200
-                    </label>
+                  <div class="form form-inline">
+                    <div class="input-group">
+                      <span class="input-group-btn">
+                        <div class="btn-group dropdown">
+                          <button type="button" class="btn btn-default dropdown-toggle"
+                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <span class="caret"></span>
+                            <span class="sr-only">Toggle Dropdown</span>
+                          </button>
+                          <ul class="dropdown-menu dropdown-builds">
+                            <li class="dropdown-header avail">Available firmwares:</li>
+                          </ul>
+                        </div>
+                      </span>
+                      <input type="text" class="form-control builds-input" style="min-width: 17em;" placeholder="e.g. esp8266">
+                    </div>
                   </div>
+
                   <button class="btn btn-default btn-mos pull-right" id="flash-button">
                     <i class="fa fa-download"></i> Flash
                   </button>

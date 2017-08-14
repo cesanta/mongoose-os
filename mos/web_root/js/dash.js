@@ -358,8 +358,7 @@ $(document).on('click', '.connect-button', function() {
 
 $(document).on('click', '#flash-button', function() {
   var btn = $(this);
-  var arch = btn.closest('.block_content').find('[name="options"]:checked').val();
-  console.log(arch, btn.closest('.block_content'));
+  var arch = $('.builds-input').val();
   spin(btn);
   $.ajax({url: '/flash', global: false, data: {firmware: arch}}).always(function() {
     setTimeout(function() {
@@ -443,4 +442,21 @@ $.ajax({url: '/getports'}).then(function(data) {
   } else {
     checkPorts();
   }
+});
+
+$.ajax({url: '/version-tag'}).then(function(resp) {
+  var version_tag = resp.result;
+  var url = 'https://mongoose-os.com/downloads/builds-' + version_tag + '.json';
+  $.ajax({method: 'GET', url: url}).then(function(json) {
+    alert(JSON.stringify(json));
+    $('.avail-build').remove();
+    var builds = json.builds || [];
+    if (builds.length > 0) {
+      $.each(builds, function(i, v) {
+        $('<li class="avail-build"><a href="#">' + v + '</a></li>').insertAfter('.dropdown-builds .avail');
+      });
+    }
+  }).catch(function(e) {
+    console.log('hey', e);
+  });
 });

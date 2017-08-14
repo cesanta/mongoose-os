@@ -338,6 +338,11 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		httpReply(w, true, err)
 	})
 
+	http.HandleFunc("/version-tag", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		httpReply(w, version.GetMosVersion(), nil)
+	})
+
 	http.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		httpReply(w, version.BuildId, nil)
