@@ -3,9 +3,9 @@ name: c_http
 version: 1.0
 skeleton_version: 2017-05-18
 
-libs_version: ${mos_version}
-modules_version: ${mos_version}
-mongoose_os_version: ${mos_version}
+libs_version: ${mos.version}
+modules_version: ${mos.version}
+mongoose_os_version: ${mos.version}
 
 sources:
   - src

@@ -9,12 +9,12 @@ mongoose_os_version: ${mos_version}
 
 sources:
   - src
-  - ${mjs_path}/mjs.c
+  - ${mos.modules.mjs.path}/mjs.c
 filesystem:
   - fs
-  - ${mjs_path}/mjs/lib/api_*.js
-  - ${mongoose_os_path}/fw/mjs_api/api_*.js
-  - ${mongoose_os_path}/fw/platforms/${arch}/mjs_api/api_*.js
+  - ${mos.modules.mjs.path}/mjs/lib/api_*.js
+  - ${mos.modules.mongoose_os.path}/fw/mjs_api/api_*.js
+  - ${mos.modules.mongoose_os.path}/fw/platforms/${arch}/mjs_api/api_*.js
 modules:
   - origin: https://github.com/cesanta/mjs
 config_schema:
