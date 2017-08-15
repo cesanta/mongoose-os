@@ -1,4 +1,4 @@
-// +build !linux
+// +build !linux no_libudev
 
 package cc3220
 

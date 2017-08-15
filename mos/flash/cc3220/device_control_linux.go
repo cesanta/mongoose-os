@@ -1,3 +1,5 @@
+// +build !no_libudev
+
 package cc3220
 
 import (
