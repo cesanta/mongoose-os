@@ -448,7 +448,6 @@ $.ajax({url: '/version-tag'}).then(function(resp) {
   var version_tag = resp.result;
   var url = 'https://mongoose-os.com/downloads/builds-' + version_tag + '.json';
   $.ajax({method: 'GET', url: url}).then(function(json) {
-    alert(JSON.stringify(json));
     $('.avail-build').remove();
     var builds = json.builds || [];
     if (builds.length > 0) {
