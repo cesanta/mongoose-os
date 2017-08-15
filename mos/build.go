@@ -105,7 +105,7 @@ func init() {
 }
 
 type buildParams struct {
-	Arch               string
+	Platform           string
 	CustomLibLocations map[string]string
 }
 
@@ -116,7 +116,7 @@ func buildHandler(ctx context.Context, devConn *dev.DevConn) error {
 	}
 
 	bParams := buildParams{
-		Arch:               *arch,
+		Platform:           *platform,
 		CustomLibLocations: cll,
 	}
 
@@ -187,7 +187,8 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 
 	if *saveBuildStat {
 		bstat := moscommon.BuildStat{
-			Arch:        fw.Platform,
+			ArchOld:     fw.Platform,
+			Platform:    fw.Platform,
 			AppName:     fw.Name,
 			BuildTimeMS: int(end.Sub(start) / time.Millisecond),
 		}
@@ -328,14 +329,14 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	if len(manifest.Platforms) > 0 {
 		found := false
 		for _, v := range manifest.Platforms {
-			if v == manifest.Arch {
+			if v == manifest.Platform {
 				found = true
 				break
 			}
 		}
 
 		if !found {
-			return errors.Errorf("can't build for the platform %s; only those platforms are supported: %v", manifest.Arch, manifest.Platforms)
+			return errors.Errorf("can't build for the platform %s; only those platforms are supported: %v", manifest.Platform, manifest.Platforms)
 		}
 	}
 
@@ -513,7 +514,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	var errs error
 	for k, v := range map[string]string{
 		"MGOS_PATH":      dockerMgosPath,
-		"PLATFORM":       manifest.Arch,
+		"PLATFORM":       manifest.Platform,
 		"BUILD_DIR":      objsDirDocker,
 		"FW_DIR":         fwDirDocker,
 		"GEN_DIR":        getPathForDocker(genDir),
@@ -648,7 +649,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 			dockerArgs = append(dockerArgs, (*buildDockerExtra)...)
 		}
 
-		sdkVersionFile := filepath.Join(mosDirEffective, "fw/platforms", manifest.Arch, "sdk.version")
+		sdkVersionFile := filepath.Join(mosDirEffective, "fw/platforms", manifest.Platform, "sdk.version")
 
 		// Get build image name and tag
 		sdkVersionBytes, err := ioutil.ReadFile(sdkVersionFile)
@@ -693,7 +694,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 
 	// Copy firmware to build/fw.zip
 	err = ourio.LinkOrCopyFile(
-		filepath.Join(fwDir, fmt.Sprintf("%s-%s-last.zip", appName, manifest.Arch)),
+		filepath.Join(fwDir, fmt.Sprintf("%s-%s-last.zip", appName, manifest.Platform)),
 		fwFilename,
 	)
 	if err != nil {
@@ -873,18 +874,18 @@ func readManifest(
 	}
 
 	// Override arch with the value given in command line
-	if bParams != nil && bParams.Arch != "" {
-		manifest.Arch = bParams.Arch
+	if bParams != nil && bParams.Platform != "" {
+		manifest.Platform = bParams.Platform
 	}
-	manifest.Arch = strings.ToLower(manifest.Arch)
+	manifest.Platform = strings.ToLower(manifest.Platform)
 
 	// If type is omitted, assume "app"
 	if manifest.Type == "" {
 		manifest.Type = build.AppTypeApp
 	}
 
-	if manifest.Arch != "" {
-		manifestArchFullName := moscommon.GetManifestArchFilePath(appDir, manifest.Arch)
+	if manifest.Platform != "" {
+		manifestArchFullName := moscommon.GetManifestArchFilePath(appDir, manifest.Platform)
 		_, err := os.Stat(manifestArchFullName)
 		if err == nil {
 			// Arch-specific mos.yml does exist, so, handle it
@@ -971,6 +972,10 @@ func readManifestFile(
 
 	if manifest.MongooseOsVersion == "" {
 		manifest.MongooseOsVersion = "master"
+	}
+
+	if manifest.Platform == "" && manifest.ArchOld != "" {
+		manifest.Platform = manifest.ArchOld
 	}
 
 	manifest.MongooseOsVersion, err = expandVars(interp, manifest.MongooseOsVersion)
@@ -1453,8 +1458,8 @@ func readManifestWithLibs2(pc manifestParseContext) (*build.FWAppManifest, time.
 		return nil, time.Time{}, errors.Trace(err)
 	}
 
-	if pc.requireArch && manifest.Arch == "" {
-		return nil, time.Time{}, errors.Errorf("--arch must be specified or mos.yml should contain an arch key")
+	if pc.requireArch && manifest.Platform == "" {
+		return nil, time.Time{}, errors.Errorf("--platform must be specified or mos.yml should contain a platform key")
 	}
 
 	// If the given appManifest is nil, it means that we've just read one, so
@@ -1580,8 +1585,8 @@ libs:
 		// set it from the outer manifest, because arch is used in libs to handle
 		// arch-dependent submanifests, like mos_esp8266.yml.
 		bParams2 := *pc.bParams
-		if bParams2.Arch == "" {
-			bParams2.Arch = manifest.Arch
+		if bParams2.Platform == "" {
+			bParams2.Platform = manifest.Platform
 		}
 
 		pc2 := pc

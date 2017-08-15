@@ -63,12 +63,12 @@ func initFW(ctx context.Context, devConn *dev.DevConn) error {
 	// Remove LICENSE file, ignore any errors
 	os.RemoveAll(filepath.Join(".", "LICENSE"))
 
-	// If arch was provided, update yaml.
-	// Note that we shouldn't unmarshal yaml, set arch and marshal it back,
+	// If platform was provided, update yaml.
+	// Note that we shouldn't unmarshal yaml, set platform and marshal it back,
 	// because it strips all comments and uglifies mos.yml in other ways.
-	// Instead, we just insert "arch: foo" as a first line.
-	if *arch != "" {
-		ourutil.Reportf("Setting arch %q...", *arch)
+	// Instead, we just insert "platform: foo" as a first line.
+	if *platform != "" {
+		ourutil.Reportf("Setting platform %q...", *platform)
 		manifestFilename := moscommon.GetManifestFilePath(".")
 
 		manifestData, err := ioutil.ReadFile(manifestFilename)
@@ -76,7 +76,7 @@ func initFW(ctx context.Context, devConn *dev.DevConn) error {
 			return errors.Trace(err)
 		}
 
-		manifestString := fmt.Sprintf("arch: %s\n%s", *arch, string(manifestData))
+		manifestString := fmt.Sprintf("platform: %s\n%s", *platform, string(manifestData))
 
 		err = ioutil.WriteFile(manifestFilename, []byte(manifestString), 0644)
 		if err != nil {

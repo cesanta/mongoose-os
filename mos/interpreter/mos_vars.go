@@ -95,6 +95,11 @@ func getFailHandler(dm *datamap.DataMap, name string) (interface{}, bool) {
 		}
 	}
 
+	// Make "arch" and "manifest.arch" to be aliases of "manifest.platform"
+	if name == "arch" || name == GetMVarName(GetMVarNameManifest(), "arch") {
+		return dm.Get(GetMVarName(GetMVarNameManifest(), "platform"))
+	}
+
 	// Make everything under "manifest" also available at the top level
 	if !strings.HasPrefix(name, fmt.Sprint(GetMVarNameManifest(), ".")) {
 		if val, ok := dm.Get(GetMVarName(GetMVarNameManifest(), name)); ok {

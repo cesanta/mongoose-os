@@ -31,7 +31,7 @@ func evalManifestExpr(ctx context.Context, devConn *dev.DevConn) error {
 	expr := args[0]
 
 	bParams := &buildParams{
-		Arch:               *arch,
+		Platform:           *platform,
 		CustomLibLocations: cll,
 	}
 

@@ -325,7 +325,7 @@ func initProjectManagementEndpoints() {
 		}
 
 		bParams := buildParams{
-			Arch: r.FormValue("arch"),
+			Platform: r.FormValue("arch"),
 		}
 
 		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)

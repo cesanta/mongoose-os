@@ -35,7 +35,9 @@ const (
 // Each command can also register more flags but they should be hidden by default so the tool doesn't seem complex.
 // Full help can be shown with --helpfull anyway.
 var (
-	arch       = flag.String("arch", "", "Hardware architecture. Possible values: cc3200, esp32, esp8266, stm32")
+	// --arch was deprecated at 2017/08/15 and should eventually be removed.
+	archOld    = flag.String("arch", "", "Deprecated, please use --platform instead")
+	platform   = flag.String("platform", "", "Hardware platform. Possible values: cc3200, esp32, esp8266, stm32")
 	user       = flag.String("user", "", "Cloud username")
 	pass       = flag.String("pass", "", "Cloud password or token")
 	server     = flag.String("server", "https://mongoose.cloud", "FWBuild server")
@@ -101,10 +103,10 @@ func unimplemented() error {
 func init() {
 	commands = []command{
 		{"ui", startUI, `Start GUI`, nil, nil, false},
-		{"init", initFW, `Initialise firmware directory structure in the current directory`, nil, []string{"arch", "force"}, false},
-		{"build", buildHandler, `Build a firmware from the sources located in the current directory`, nil, []string{"arch", "local", "repo", "clean", "server"}, false},
+		{"init", initFW, `Initialise firmware directory structure in the current directory`, nil, []string{"arch", "platform", "force"}, false},
+		{"build", buildHandler, `Build a firmware from the sources located in the current directory`, nil, []string{"arch", "platform", "local", "repo", "clean", "server"}, false},
 		{"flash", flash, `Flash firmware to the device`, nil, []string{"port", "firmware"}, false},
-		{"flash-read", flashRead, `Read a region of flash`, []string{"arch"}, []string{"port"}, false},
+		{"flash-read", flashRead, `Read a region of flash`, []string{"platform"}, []string{"port"}, false},
 		{"console", console, `Simple serial port console`, nil, []string{"port"}, false}, //TODO: needDevConn
 		{"ls", fsLs, `List files at the local device's filesystem`, nil, []string{"port"}, true},
 		{"get", fsGet, `Read file from the local device's filesystem and print to stdout`, nil, []string{"port"}, true},
@@ -188,6 +190,10 @@ func main() {
 
 	if err := update.Init(); err != nil {
 		log.Fatal(err)
+	}
+
+	if *platform == "" && *archOld != "" {
+		*platform = *archOld
 	}
 
 	consoleInit()

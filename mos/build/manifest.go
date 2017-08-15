@@ -42,8 +42,10 @@ type FWAppManifestLibHandled struct {
 
 // FWAppManifest is the app manifest for firmware apps
 type FWAppManifest struct {
-	AppManifest       `yaml:",inline"`
-	Arch              string             `yaml:"arch" json:"arch"`
+	AppManifest `yaml:",inline"`
+	// arch was deprecated at 2017/08/15 and should eventually be removed.
+	ArchOld           string             `yaml:"arch" json:"arch"`
+	Platform          string             `yaml:"platform" json:"platform"`
 	Platforms         []string           `yaml:"platforms" json:"platforms"`
 	Author            string             `yaml:"author" json:"author"`
 	Description       string             `yaml:"description" json:"description"`

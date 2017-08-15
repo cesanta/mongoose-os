@@ -50,9 +50,9 @@ func flashRead(ctx context.Context, devConn *dev.DevConn) error {
 	}
 
 	var data []byte
-	switch *arch {
+	switch *platform {
 	case "cc3200":
-		err = errors.NotImplementedf("flash reading for %s", *arch)
+		err = errors.NotImplementedf("flash reading for %s", *platform)
 	case "esp32":
 		espFlashOpts.ControlPort = port
 		data, err = espFlasher.ReadFlash(esp.ChipESP32, uint32(addr), int(length), &espFlashOpts)
@@ -60,9 +60,9 @@ func flashRead(ctx context.Context, devConn *dev.DevConn) error {
 		espFlashOpts.ControlPort = port
 		data, err = espFlasher.ReadFlash(esp.ChipESP8266, uint32(addr), int(length), &espFlashOpts)
 	case "stm32":
-		err = errors.NotImplementedf("flash reading for %s", *arch)
+		err = errors.NotImplementedf("flash reading for %s", *platform)
 	default:
-		err = errors.Errorf("unsupported platform '%s'", *arch)
+		err = errors.Errorf("unsupported platform '%s'", *platform)
 	}
 
 	if err == nil {

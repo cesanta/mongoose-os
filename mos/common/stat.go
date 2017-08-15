@@ -1,7 +1,8 @@
 package moscommon
 
 type BuildStat struct {
-	Arch        string `json:"arch"`
+	ArchOld     string `json:"arch"`
+	Platform    string `json:"platform"`
 	AppName     string `json:"app_name"`
 	BuildTimeMS int    `json:"build_time_ms"`
 }
