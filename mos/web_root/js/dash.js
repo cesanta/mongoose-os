@@ -330,7 +330,7 @@ var checkPorts = function() {
       updateDeviceStatus();
     }
     if (ports.length > 0) {
-      $.each(ports, function(i, v) {
+      $.each(ports.reverse(), function(i, v) {
         $('<li class="device-address"><a href="#">' + v + '</a></li>').insertAfter('.dropdown-ports .serial');
       });
       $('#noports-warning').hide();
@@ -406,7 +406,7 @@ function b64enc(str) {
 
 var initRecentlyUsedDeviceAddresses = function() {
   var list = getCookie(ui.recentDevicesCookieName).split(',');
-  $.each(list, function(i, v) {
+  $.each(list.reverse(), function(i, v) {
     $('<li><a href="#">' + v + '</a></li>').insertAfter('.dropdown-ports .recent');
   });
 };
@@ -451,7 +451,7 @@ $.ajax({url: '/version-tag'}).then(function(resp) {
     $('.avail-build').remove();
     var builds = json.builds || [];
     if (builds.length > 0) {
-      $.each(builds, function(i, v) {
+      $.each(builds.reverse(), function(i, v) {
         $('<li class="avail-build"><a href="#">' + v + '</a></li>').insertAfter('.dropdown-builds .avail');
       });
     }
