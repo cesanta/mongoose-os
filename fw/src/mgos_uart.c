@@ -48,7 +48,9 @@ void mgos_uart_dispatcher(void *arg) {
   if (us->rx_enabled) mgos_uart_hal_dispatch_rx_top(us);
   if (!us->xoff_recd) mgos_uart_hal_dispatch_tx_top(us);
   if (us->dispatcher_cb != NULL) {
+    uart_unlock();
     us->dispatcher_cb(uart_no, us->dispatcher_data);
+    uart_lock();
   }
   mgos_uart_hal_dispatch_bottom(us);
   if (us->xoff_sent && us->rx_enabled && mgos_uart_rxb_free(us) > 0) {
