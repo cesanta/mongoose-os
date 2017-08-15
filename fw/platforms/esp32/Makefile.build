@@ -152,23 +152,20 @@ ESPFLASHSIZE = 4MB
 ESPBAUD = 1500000
 
 SDKCONFIG = $(GEN_DIR)/sdkconfig
-SDKCONFIG_DEFAULTS = $(GEN_DIR)/sdkconfig.defaults
+BATCH_BUILD = 1
 
 PARTITION_TABLE_CSV_PATH = $(MGOS_ESP_PATH)/src/partitions_mgos.csv
 MKSPIFFS = /usr/local/bin/mkspiffs8
 
 include $(IDF_PATH)/make/project.mk
 
-# TODO(rojer): Add dep on mos.yml here.
-$(SDKCONFIG_DEFAULTS):
+$(SDKCONFIG): $(MGOS_ESP_PATH)/sdkconfig $(MANIFEST_FINAL)
 	mkdir -p $(dir $@)
 	cp $(MGOS_ESP_PATH)/sdkconfig $@
 	for kv in $(ESP_IDF_SDKCONFIG_OPTS); do echo $$kv >> $@; done
 
-defconfig: $(SDKCONFIG_DEFAULTS)
-
-# Override menuconfig, it's not working properly in our environment anyway.
-menuconfig:
+# Override defconfig and menuconfig, they don't work properly in our environment.
+defconfig menuconfig:
 	true
 
 LDFLAGS += -L$(BUILD_DIR)/src
