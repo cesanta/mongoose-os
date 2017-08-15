@@ -95,9 +95,9 @@ func getFailHandler(dm *datamap.DataMap, name string) (interface{}, bool) {
 		}
 	}
 
-	// Make "arch" and "manifest.arch" to be aliases of "manifest.platform"
-	if name == "arch" || name == GetMVarName(GetMVarNameManifest(), "arch") {
-		return dm.Get(GetMVarName(GetMVarNameManifest(), "platform"))
+	// Make "arch" and "mos.arch" and "platform" to be aliases of "mos.platform"
+	if name == "arch" || name == GetMVarName(GetMVarNameMos(), "arch") || name == "platform" {
+		return dm.Get(GetMVarNameMosPlatform())
 	}
 
 	// Make everything under "manifest" also available at the top level
@@ -142,4 +142,9 @@ func GetMVarNameModulePath(moduleName string) string {
 // GetMVarNameMosVersion returns "mos.version"
 func GetMVarNameMosVersion() string {
 	return GetMVarName(GetMVarNameMos(), "version")
+}
+
+// GetMVarNameMosPlatform returns "mos.platform"
+func GetMVarNameMosPlatform() string {
+	return GetMVarName(GetMVarNameMos(), "platform")
 }

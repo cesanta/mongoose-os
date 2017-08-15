@@ -93,6 +93,9 @@ const (
 	allLibsKeyword = "@all_libs"
 
 	depsApp = "app"
+
+	assetPrefix           = "asset://"
+	rootManifestAssetName = "data/root_manifest.yml"
 )
 
 func init() {
@@ -867,6 +870,14 @@ func getCodeDirAbs() (string, error) {
 func readManifest(
 	appDir string, bParams *buildParams, interp *interpreter.MosInterpreter,
 ) (*build.FWAppManifest, time.Time, error) {
+	// Read root manifest from the asset
+	rootManifest, _, err := readManifestFile(
+		fmt.Sprint(assetPrefix, rootManifestAssetName), interp, true,
+	)
+	if err != nil {
+		return nil, time.Time{}, errors.Trace(err)
+	}
+
 	manifestFullName := moscommon.GetManifestFilePath(appDir)
 	manifest, mtime, err := readManifestFile(manifestFullName, interp, true)
 	if err != nil {
@@ -879,9 +890,27 @@ func readManifest(
 	}
 	manifest.Platform = strings.ToLower(manifest.Platform)
 
+	// Set the mos.platform variable
+	interp.MVars.SetVar(interpreter.GetMVarNameMosPlatform(), manifest.Platform)
+
 	// If type is omitted, assume "app"
 	if manifest.Type == "" {
 		manifest.Type = build.AppTypeApp
+	}
+
+	// We need everything under root manifest's conds to be already available,
+	// so expand all conds there. It means that the conds in root manifest
+	// should only depend on the stuff already defined (basically, only "mos.platform").
+	//
+	// TODO(dfrank): probably make it so that if conds expression fails to
+	// evaluate, keep it unexpanded for now.
+	if err := expandManifestLibsAndConds(rootManifest, interp); err != nil {
+		return nil, time.Time{}, errors.Trace(err)
+	}
+
+	// Extend app manifest with the root manifest
+	if err := extendManifest(manifest, rootManifest, manifest, "", "", interp); err != nil {
+		return nil, time.Time{}, errors.Trace(err)
 	}
 
 	if manifest.Platform != "" {
@@ -922,7 +951,17 @@ func readManifest(
 func readManifestFile(
 	manifestFullName string, interp *interpreter.MosInterpreter, manifestVersionMandatory bool,
 ) (*build.FWAppManifest, time.Time, error) {
-	manifestSrc, err := ioutil.ReadFile(manifestFullName)
+	var manifestSrc []byte
+	var err error
+
+	if !strings.HasPrefix(manifestFullName, assetPrefix) {
+		// Reading regular file from the host filesystem
+		manifestSrc, err = ioutil.ReadFile(manifestFullName)
+	} else {
+		// Reading the asset
+		assetName := manifestFullName[len(assetPrefix):]
+		manifestSrc, err = Asset(assetName)
+	}
 	if err != nil {
 		return nil, time.Time{}, errors.Annotatef(err, "reading manifest %q", manifestFullName)
 	}
@@ -993,12 +1032,18 @@ func readManifestFile(
 		return nil, time.Time{}, errors.Trace(err)
 	}
 
-	stat, err := os.Stat(manifestFullName)
-	if err != nil {
-		return nil, time.Time{}, errors.Trace(err)
+	var modTime time.Time
+
+	if !strings.HasPrefix(manifestFullName, assetPrefix) {
+		stat, err := os.Stat(manifestFullName)
+		if err != nil {
+			return nil, time.Time{}, errors.Trace(err)
+		}
+
+		modTime = stat.ModTime()
 	}
 
-	return &manifest, stat.ModTime(), nil
+	return &manifest, modTime, nil
 }
 
 func buildRemote(bParams *buildParams) error {

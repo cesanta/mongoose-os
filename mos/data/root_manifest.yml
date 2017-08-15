@@ -1,0 +1,9 @@
+
+skeleton_version: 2017-06-16
+
+conds:
+  - when: mos.platform == "esp32"
+    apply:
+      build_vars:
+        ESP_IDF_EXTRA_COMPONENTS:
+        ESP_IDF_SDKCONFIG_OPTS:
