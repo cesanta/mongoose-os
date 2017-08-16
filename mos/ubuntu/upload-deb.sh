@@ -8,7 +8,7 @@ DISTR=$2
 [ -z "${GNUPGHOME}" ] && GNUPGHOME=$HOME/.gnupg-cesantabot
 [ -d "${GNUPGHOME}" ] || { echo "${GNUPGHOME} does not exist"; exit 1; }
 
-OUTDIR="/tmp/out-${DISTR}"
+OUTDIR="$HOME/tmp/out-${DISTR}"
 
 set -x -e
 

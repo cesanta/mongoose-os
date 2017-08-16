@@ -34,10 +34,12 @@ fi
 
 IMAGE=docker.cesanta.com/ubuntu-golang:${DISTR}
 
+mkdir -p $HOME/tmp
+
 docker pull ${IMAGE}
 docker run -i -t --rm \
     -v $PWD:/src \
-    -v /tmp/out-${DISTR}:/tmp/work \
+    -v $HOME/tmp/out-${DISTR}:/tmp/work \
     ${RECIPE_MOUNT} \
     ${IMAGE} \
     /bin/bash -l -c "\
