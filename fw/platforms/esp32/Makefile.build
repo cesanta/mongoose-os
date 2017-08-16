@@ -47,7 +47,6 @@ SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
 MGOS_ESP_PATH ?= $(MGOS_PATH)/fw/platforms/esp32
 MGOS_ESP_SRC_PATH ?= $(MGOS_PATH)/fw/platforms/esp32/src
-COMMON_FS_PATH ?= $(MGOS_PATH)/fw/skeleton/fs
 
 BUILD_DIR ?= $(CURDIR)/.build
 FS_STAGING_DIR = $(BUILD_DIR)/fs
@@ -202,7 +201,7 @@ $(GEN_DIR)/sys_config_schema.json $(GEN_DIR)/sys_ro_vars_schema.json: all_binari
 $(GEN_DIR)/conf0.json: all_binaries
 	$(Q) rsync -mt $(GEN_DIR)/sys_config_defaults.json $(GEN_DIR)/conf0.json
 
-$(FS_IMG): $(MKSPIFFS) $(APP_FS_DIRS) $(COMMON_FS_PATH) $(FS_FILES)
+$(FS_IMG): $(MKSPIFFS) $(APP_FS_DIRS) $(FS_FILES)
 	$(call mkspiffs,$(FS_SIZE))
 
 $(BREAKDOWN_FILE) : $(APP_BIN)

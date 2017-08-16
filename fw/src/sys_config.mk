@@ -1,5 +1,4 @@
 MGOS_PATH ?= ../..
-FS_PATH ?= $(MGOS_PATH)/fw/skeleton/fs
 SYS_CONF_SCHEMA ?=
 APP_CONF_SCHEMA ?=
 SYS_RO_VARS_SCHEMA ?= $(MGOS_PATH)/fw/src/sys_ro_vars_schema.yaml

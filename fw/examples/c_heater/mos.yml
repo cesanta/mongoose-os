@@ -20,6 +20,7 @@ config_schema:
   - ["hsw.sensor_report_interval_ms", "i", {title: "Sensor data report interval"}]
   - ["hsw.auth", "s", {title: "Authorization header"}]
 libs:
+  - origin: https://github.com/mongoose-os-libs/ca-bundle
   - origin: https://github.com/mongoose-os-libs/http-server
   - origin: https://github.com/mongoose-os-libs/ota-http-server
   - origin: https://github.com/mongoose-os-libs/rpc-loopback

@@ -135,7 +135,7 @@ OBJS = $(APP_OBJS) $(BUILD_DIR)/build_info.o
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
 GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 
-FS_FILES = $(wildcard $(SRC_PATH)/js/* $(MGOS_PATH)/fw/skeleton/fs/*)
+FS_FILES = $(wildcard $(SRC_PATH)/js/*)
 
 # Custom conf.json : by default, it is empty, so that the one from `fs` is
 # used. NOTE: if the custom one is provided, the file should anyway be named

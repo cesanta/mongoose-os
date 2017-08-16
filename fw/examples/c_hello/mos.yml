@@ -15,6 +15,7 @@ config_schema:
   - ["hello", "o", {"title": "Hello app settings"}]
   - ["hello.who", "s", "world", {"title": "Who to say hello to"}]
 libs:
+  - origin: https://github.com/mongoose-os-libs/ca-bundle
   - origin: https://github.com/mongoose-os-libs/http-server
   - origin: https://github.com/mongoose-os-libs/ota-http-server
   - origin: https://github.com/mongoose-os-libs/rpc-loopback

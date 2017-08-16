@@ -17,6 +17,7 @@ cdefs:
   MGOS_ENABLE_WEB_CONFIG: 1
   MGOS_ENABLE_FILE_UPLOAD: 1
 libs:
+  - origin: https://github.com/mongoose-os-libs/ca-bundle
   - origin: https://github.com/mongoose-os-libs/http-server
   - origin: https://github.com/mongoose-os-libs/ota-http-server
   - origin: https://github.com/mongoose-os-libs/rpc-loopback

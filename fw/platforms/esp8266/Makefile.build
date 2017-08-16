@@ -56,7 +56,6 @@ MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
 MBEDTLS_PATH ?= /opt/cs_mbedtls
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 UMM_MALLOC_PATH ?= $(COMMON_PATH)/umm_malloc
-COMMON_FS_PATH ?= $(MGOS_PATH)/fw/skeleton/fs
 BOOTLOADER_PATH ?= $(COMMON_ESP8266_PATH)/rboot
 ESPTOOL2 = $(BUILD_DIR)/esptool2
 # Enable heap allocation logging - every malloc/free is logged.
@@ -495,7 +494,7 @@ $(MG_BUILD_INFO_C): $(MGOS_OBJS)
 
 # -- Filesystem.
 
-$(FS_IMG): $(APP_FS_DIRS) $(COMMON_FS_PATH) $(FS_FILES) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
+$(FS_IMG): $(APP_FS_DIRS) $(FS_FILES) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 	$(call mkspiffs,$(FS_SIZE))
 
 #

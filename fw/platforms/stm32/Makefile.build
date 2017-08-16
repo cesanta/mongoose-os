@@ -98,7 +98,6 @@ ADD_SRCS += stm32_gpio_defs.c
 APP_ELF = $(BUILD_DIR)/$(APP).elf
 APP_BIN = $(BUILD_DIR)/$(APP).bin
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
-COMMON_FS_PATH ?= $(MGOS_PATH)/fw/skeleton/fs
 FS_IMG = ?
 # 256K is minimum size, because sector size is 128K and we need at least two
 FS_SIZE = 262144
@@ -223,7 +222,7 @@ $(MG_BUILD_INFO_C): $(FW_STAGING_DIR)
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)
 
-$(FS_IMG): $(APP_FS_DIRS) $(COMMON_FS_PATH) $(FS_FILES) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
+$(FS_IMG): $(APP_FS_DIRS) $(FS_FILES) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 	$(call mkspiffs,$(FS_SIZE))
 
 $(FS_HEADER) : $(FS_IMG)
