@@ -145,10 +145,11 @@ func GitClone(srcURL, targetDir, referenceDir string) error {
 	}
 	args = append(args, srcURL, targetDir)
 	cmd := exec.Command("git", args...)
+	cmd.Env = []string{"GIT_TERMINAL_PROMPT=0"}
 
 	err := cmd.Run()
 	if err != nil {
-		return errors.Trace(err)
+		return errors.Annotatef(err, "cloning %s", srcURL)
 	}
 
 	return nil
