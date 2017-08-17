@@ -1599,6 +1599,11 @@ libs:
 			continue libs
 		}
 
+		if m.Weak {
+			freportf(pc.logWriter, "Optional, skipping")
+			continue
+		}
+
 		libDirAbs, ok := pc.bParams.CustomLibLocations[name]
 
 		if !ok {
@@ -1660,10 +1665,6 @@ libs:
 			}
 			libDirAbs = filepath.Join(pc.userLibsDir, filepath.Base(libDirAbs))
 			libDirForManifest = filepath.Join(userLibsDirRel, filepath.Base(libDirAbs))
-		}
-
-		if m.Weak {
-			continue
 		}
 
 		// Now that we know we need to handle current lib, add a node for it
