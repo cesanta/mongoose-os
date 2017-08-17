@@ -473,8 +473,8 @@ func migrateProj(oldDir, newDir, oldVer string, wg *sync.WaitGroup) {
 		logWriter := bytes.Buffer{}
 
 		swmod := build.SWModule{
-			Origin:  originURL,
-			Version: version.GetMosVersion(),
+			Location: originURL,
+			Version:  version.GetMosVersion(),
 		}
 
 		glog.Infof("Checking out %s at the version %s...", basename, version.GetMosVersion())

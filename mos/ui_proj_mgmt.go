@@ -183,8 +183,8 @@ func initProjectManagementEndpoints() {
 		}
 
 		swmod := build.SWModule{
-			Origin:  url,
-			Version: version.GetMosVersion(),
+			Location: url,
+			Version:  version.GetMosVersion(),
 		}
 		target_name := r.FormValue("target_name")
 		if target_name != "" {

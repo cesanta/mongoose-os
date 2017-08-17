@@ -25,10 +25,12 @@ var (
 )
 
 type SWModule struct {
-	Type    string `yaml:"type,omitempty" json:"type,omitempty"`
-	Origin  string `yaml:"origin,omitempty" json:"origin,omitempty"`
-	Version string `yaml:"version,omitempty" json:"version,omitempty"`
-	Name    string `yaml:"name,omitempty" json:"name,omitempty"`
+	Type string `yaml:"type,omitempty" json:"type,omitempty"`
+	// Origin is deprecated since 2017/08/18
+	OriginOld string `yaml:"origin,omitempty" json:"origin,omitempty"`
+	Location  string `yaml:"location,omitempty" json:"location,omitempty"`
+	Version   string `yaml:"version,omitempty" json:"version,omitempty"`
+	Name      string `yaml:"name,omitempty" json:"name,omitempty"`
 
 	// Weak is relevant if only SWModule represents a lib (as opposed to an
 	// app or a module).
@@ -44,6 +46,15 @@ const (
 	SWModuleTypeLocal
 	SWModuleTypeGit
 )
+
+func (m *SWModule) Normalize() {
+	if m.Location == "" && m.OriginOld != "" {
+		m.Location = m.OriginOld
+	} else {
+		// Just for the compatibility with a bit older fwbuild
+		m.OriginOld = m.Location
+	}
+}
 
 // IsClean returns whether the local library repo is clean. Non-existing
 // dir is considered clean.
@@ -103,7 +114,7 @@ func (m *SWModule) PrepareLocalDir(
 		switch m.GetType() {
 		case SWModuleTypeGit:
 			version := m.getVersionGit(defaultVersion)
-			if err := prepareLocalCopyGit(m.Origin, version, lp, logWriter, deleteIfFailed, pullInterval); err != nil {
+			if err := prepareLocalCopyGit(m.Location, version, lp, logWriter, deleteIfFailed, pullInterval); err != nil {
 				return "", errors.Trace(err)
 			}
 
@@ -140,8 +151,8 @@ func (m *SWModule) GetLocalDir(libsDir, defaultVersion string) (string, error) {
 		return filepath.Join(libsDir, getGitDirName(name, m.getVersionGit(defaultVersion))), nil
 
 	case SWModuleTypeLocal:
-		if m.Origin != "" {
-			originAbs, err := filepath.Abs(m.Origin)
+		if m.Location != "" {
+			originAbs, err := filepath.Abs(m.Location)
 			if err != nil {
 				return "", errors.Trace(err)
 			}
@@ -150,7 +161,7 @@ func (m *SWModule) GetLocalDir(libsDir, defaultVersion string) (string, error) {
 		} else if m.Name != "" {
 			return filepath.Join(libsDir, m.Name), nil
 		} else {
-			return "", errors.Errorf("neither name nor origin is specified")
+			return "", errors.Errorf("neither name nor location is specified")
 		}
 
 	default:
@@ -173,7 +184,7 @@ func (m *SWModule) GetName() (string, error) {
 	switch m.GetType() {
 	case SWModuleTypeGit:
 		// Take last path fragment
-		u, err := url.Parse(m.Origin)
+		u, err := url.Parse(m.Location)
 		if err != nil {
 			return "", errors.Trace(err)
 		}
@@ -185,9 +196,9 @@ func (m *SWModule) GetName() (string, error) {
 
 		return parts[len(parts)-1], nil
 	case SWModuleTypeLocal:
-		_, name := filepath.Split(m.Origin)
+		_, name := filepath.Split(m.Location)
 		if name == "" {
-			return "", errors.Errorf("name is empty in the origin %q", m.Origin)
+			return "", errors.Errorf("name is empty in the location %q", m.Location)
 		}
 
 		return name, nil
@@ -199,13 +210,13 @@ func (m *SWModule) GetName() (string, error) {
 func (m *SWModule) GetType() SWModuleType {
 	stype := m.Type
 
-	if m.Origin == "" && m.Name == "" {
+	if m.Location == "" && m.Name == "" {
 		return SWModuleTypeInvalid
 	}
 
 	if stype == "" {
-		if m.Origin != "" {
-			u, err := url.Parse(m.Origin)
+		if m.Location != "" {
+			u, err := url.Parse(m.Location)
 			if err != nil {
 				return SWModuleTypeLocal
 			}

@@ -388,8 +388,8 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 			// TODO(dfrank) get upstream repo URL from a flag
 			// (and this flag needs to be forwarded to fwbuild as well, which should
 			// forward it to the mos invocation)
-			Origin:  "https://github.com/cesanta/mongoose-os",
-			Version: manifest.MongooseOsVersion,
+			Location: "https://github.com/cesanta/mongoose-os",
+			Version:  manifest.MongooseOsVersion,
 		}
 
 		var err error
@@ -1044,6 +1044,15 @@ func readManifestFile(
 		return nil, time.Time{}, errors.Errorf(
 			"manifest version is missing in %q", manifestFullName,
 		)
+	}
+
+	// Normalize all Libs and Modules
+	for i, _ := range manifest.Libs {
+		manifest.Libs[i].Normalize()
+	}
+
+	for i, _ := range manifest.Modules {
+		manifest.Modules[i].Normalize()
 	}
 
 	if manifest.BuildVars == nil {
