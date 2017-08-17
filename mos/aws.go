@@ -141,8 +141,8 @@ func getSvc() (*iot.IoT, error) {
 	reportf("AWS region: %s", awsRegion)
 	cfg.Region = aws.String(awsRegion)
 
-	creds := credentials.NewSharedCredentials("", "")
-	if err := checkAwsCredentials(); err != nil {
+	creds, err := getAwsCredentials()
+	if err != nil {
 		// In UI mode, UI credentials are acquired in a different way.
 		if isUI {
 			return nil, errors.Trace(err)
@@ -156,10 +156,15 @@ func getSvc() (*iot.IoT, error) {
 	return iot.New(sess, cfg), nil
 }
 
-func checkAwsCredentials() error {
-	creds := credentials.NewSharedCredentials("", "")
+func getAwsCredentials() (*credentials.Credentials, error) {
+	// Try environment first, fall back to shared.
+	creds := credentials.NewEnvCredentials()
 	_, err := creds.Get()
-	return err
+	if err != nil {
+		creds = credentials.NewSharedCredentials("", "")
+		_, err = creds.Get()
+	}
+	return creds, err
 }
 
 func getAWSRegions() []string {

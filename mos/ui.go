@@ -441,7 +441,7 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 	http.HandleFunc("/check-aws-credentials", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		err := checkAwsCredentials()
+		_, err := getAwsCredentials()
 		httpReply(w, err == nil, nil)
 	})
 
