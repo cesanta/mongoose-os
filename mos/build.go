@@ -12,11 +12,13 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path"
 	"path/filepath"
 	"regexp"
 	"runtime"
 	"strings"
+	"syscall"
 	"text/template"
 	"time"
 	"unicode"
@@ -567,7 +569,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	if os.Getenv("MGOS_SDK_REVISION") == "" && os.Getenv("MIOT_SDK_REVISION") == "" {
 		// We're outside of the docker container, so invoke docker
 
-		dockerArgs := []string{"run", "--rm", "-i"}
+		dockerRunArgs := []string{"--rm", "-i"}
 
 		gitToplevelDir, _ := gitutils.GitGetToplevelDir(appPath)
 
@@ -621,7 +623,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		}
 
 		for containerPath, hostPath := range mp {
-			dockerArgs = append(dockerArgs, "-v", fmt.Sprintf("%s:%s", hostPath, containerPath))
+			dockerRunArgs = append(dockerRunArgs, "-v", fmt.Sprintf("%s:%s", hostPath, containerPath))
 		}
 		// }}}
 
@@ -642,14 +644,14 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 			sdata := data.String()
 			userID := sdata[:len(sdata)-1]
 
-			dockerArgs = append(
-				dockerArgs, "--user", fmt.Sprintf("%s:%s", userID, userID),
+			dockerRunArgs = append(
+				dockerRunArgs, "--user", fmt.Sprintf("%s:%s", userID, userID),
 			)
 		}
 
 		// Add extra docker args
 		if buildDockerExtra != nil {
-			dockerArgs = append(dockerArgs, (*buildDockerExtra)...)
+			dockerRunArgs = append(dockerRunArgs, (*buildDockerExtra)...)
 		}
 
 		sdkVersionFile := filepath.Join(mosDirEffective, "fw/platforms", manifest.Platform, "sdk.version")
@@ -661,21 +663,17 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		}
 
 		sdkVersion := strings.TrimSpace(string(sdkVersionBytes))
-		dockerArgs = append(dockerArgs, sdkVersion)
+		dockerRunArgs = append(dockerRunArgs, sdkVersion)
 
 		makeArgs := getMakeArgs(
 			fmt.Sprintf("%s%s", dockerAppPath, appSubdir),
 			manifest,
 		)
-		dockerArgs = append(dockerArgs,
+		dockerRunArgs = append(dockerRunArgs,
 			"/bin/bash", "-c", "nice make '"+strings.Join(makeArgs, "' '")+"'",
 		)
 
-		freportf(logWriter, "Docker arguments: %s", strings.Join(dockerArgs, " "))
-
-		cmd := exec.Command("docker", dockerArgs...)
-		err = runCmd(cmd, logWriter)
-		if err != nil {
+		if err := runDockerBuild(dockerRunArgs); err != nil {
 			return errors.Trace(err)
 		}
 	} else {
@@ -709,6 +707,53 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		filepath.Join(objsDir, fmt.Sprintf("%s.elf", appName)), elfFilename,
 	)
 	if err != nil {
+		return errors.Trace(err)
+	}
+
+	return nil
+}
+
+func runDockerBuild(dockerRunArgs []string) error {
+	containerName := fmt.Sprint("mos_build_", time.Now().Format("2006-01-02T15-04-05-00"))
+
+	dockerArgs := append(
+		[]string{"run", "--name", containerName}, dockerRunArgs...,
+	)
+
+	freportf(logWriter, "Docker arguments: %s", strings.Join(dockerArgs, " "))
+
+	// When make runs with -j and we interrupt the container with Ctrl+C, make
+	// becomes a runaway process eating 100% of one CPU core. So far we failed
+	// to fix it properly, so the workaround is to kill the container on the
+	// reception of SIGINT or SIGTERM.
+	signals := []os.Signal{syscall.SIGINT, syscall.SIGTERM}
+
+	sigCh := make(chan os.Signal, 1)
+
+	// Signal handler goroutine: on SIGINT and SIGTERM it will kill the container
+	// and exit(1). When the sigCh is closed, goroutine returns.
+	go func() {
+		if _, ok := <-sigCh; !ok {
+			return
+		}
+
+		freportf(logWriterStderr, "\nCleaning up the container %q...", containerName)
+		cmd := exec.Command("docker", "kill", containerName)
+		cmd.Run()
+
+		os.Exit(1)
+	}()
+
+	signal.Notify(sigCh, signals...)
+	defer func() {
+		// Unsubscribe from the signals and close the channel so that the signal
+		// handler goroutine is properly cleaned up
+		signal.Reset(signals...)
+		close(sigCh)
+	}()
+
+	cmd := exec.Command("docker", dockerArgs...)
+	if err := runCmd(cmd, logWriter); err != nil {
 		return errors.Trace(err)
 	}
 
