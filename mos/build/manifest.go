@@ -71,7 +71,8 @@ type FWAppManifest struct {
 	Conds []ManifestCond `yaml:"conds" json:"conds"`
 
 	ManifestVersion string `yaml:"manifest_version" json:"manifest_version"`
-	// SkeletonVersion is deprecated since 05.06.2017
+	// SkeletonVersion is deprecated since 05.06.2017 (all existing manifests
+	// are updated at 18.08.2017)
 	SkeletonVersion string `yaml:"skeleton_version" json:"skeleton_version"`
 
 	// Old form of LibsHandled, deprecated since 03.06.2017

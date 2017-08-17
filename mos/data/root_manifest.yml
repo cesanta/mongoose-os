@@ -1,5 +1,5 @@
 
-skeleton_version: 2017-06-16
+manifest_version: 2017-06-16
 
 conds:
   - when: mos.platform == "esp32"
