@@ -58,6 +58,7 @@ type FWAppManifest struct {
 	FFISymbols        []string           `yaml:"ffi_symbols" json:"ffi_symbols"`
 	Modules           []SWModule         `yaml:"modules,omitempty" json:"modules"`
 	Libs              []SWModule         `yaml:"libs,omitempty" json:"libs"`
+	InitAfter         []string           `yaml:"init_after,omitempty" json:"init_after"`
 	ConfigSchema      []ConfigSchemaItem `yaml:"config_schema" json:"config_schema"`
 	BuildVars         map[string]string  `yaml:"build_vars" json:"build_vars"`
 	CFlags            []string           `yaml:"cflags" json:"cflags"`

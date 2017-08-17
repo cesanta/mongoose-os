@@ -1071,6 +1071,15 @@ func readManifestFile(
 		manifest.Platform = manifest.ArchOld
 	}
 
+	// Convert init_after to weak deps
+	for _, v := range manifest.InitAfter {
+		manifest.Libs = append(manifest.Libs, build.SWModule{
+			Name: v,
+			Weak: true,
+		})
+	}
+	manifest.InitAfter = nil
+
 	manifest.MongooseOsVersion, err = expandVars(interp, manifest.MongooseOsVersion)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
