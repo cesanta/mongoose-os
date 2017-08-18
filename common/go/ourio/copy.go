@@ -60,6 +60,19 @@ func CopyFile(src, dst string) (err error) {
 // as an optimization. If not, a full copy is performed (via CopyFile).
 func LinkOrCopyFile(src, dst string) (err error) {
 	glog.Infof("LinkOrCopyFile %q -> %q", src, dst)
+
+	srcInfo, err := os.Stat(src)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	if dstInfo, err := os.Stat(dst); err == nil {
+		if os.SameFile(srcInfo, dstInfo) {
+			// src and dst appear to be the same file, so, just silently do nothing
+			return nil
+		}
+	}
+
 	if err = os.Link(src, dst); err != nil {
 		if os.IsExist(err) {
 			if err = os.Remove(dst); err == nil {
