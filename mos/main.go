@@ -232,7 +232,7 @@ func main() {
 	}
 
 	if err := run(cmd, ctx, devConn); err != nil {
-		glog.Infof("Error: %+v", err)
+		glog.Infof("Error: %+v", errors.ErrorStack(err))
 		fmt.Fprintf(os.Stderr, "Error: %s\n", err)
 		glog.Flush()
 		os.Exit(1)
