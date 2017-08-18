@@ -221,22 +221,24 @@ enum mgos_upd_file_action mgos_upd_file_begin(
 
   if (falloc == 0) falloc = fi->size;
   if (tcmp(&type, "app") == 0) {
+    struct boot_cfg cur_cfg;
+    int r = read_boot_cfg(ctx->cur_boot_cfg_idx, &cur_cfg);
+    if (r < 0) {
+      ctx->status_msg = "Could not read current boot cfg";
+      return MGOS_UPDATER_ABORT;
+    }
 #if CC3200_SAFE_CODE_UPDATE
     /*
      * When safe code update is enabled, we write code to a new file.
      * Otherwise we write to the same slot we're using currently, which is
      * unsafe, makes reverting code update not possible, but saves space.
      */
-    create_fname(part_name, ctx->new_boot_cfg_idx, ctx->app_image_file,
-                 sizeof(ctx->app_image_file));
+    create_fname(
+        mg_mk_str_n(cur_cfg.app_image_file, strlen(cur_cfg.app_image_file) - 2),
+        ctx->new_boot_cfg_idx, ctx->app_image_file,
+        sizeof(ctx->app_image_file));
 #else
     {
-      struct boot_cfg cur_cfg;
-      int r = read_boot_cfg(ctx->cur_boot_cfg_idx, &cur_cfg);
-      if (r < 0) {
-        ctx->status_msg = "Could not read current boot cfg";
-        return MGOS_UPDATER_ABORT;
-      }
       strncpy(ctx->app_image_file, cur_cfg.app_image_file,
               sizeof(ctx->app_image_file));
     }
