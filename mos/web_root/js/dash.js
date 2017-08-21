@@ -383,9 +383,6 @@ $(document).on('click', '#wifi-button', function() {
 
 $(document).on('click', '#prototype-button', function() {
   $('#splash').modal('toggle');
-  var currentTab = $('.side-menu li.active a').attr('tab');
-  loadPage(currentTab);
-  $('#file-refresh-button').click();
 });
 
 var addLog = function(msg, type) {
@@ -416,6 +413,9 @@ var initRecentlyUsedDeviceAddresses = function() {
 $('[data-toggle="popover"]').popover({html:true});
 $(document).on('hide.bs.modal', function() {
   $('[data-toggle="popover"]').popover('hide');
+  var currentTab = $('.side-menu li.active a').attr('tab');
+  loadPage(currentTab);
+  $('#file-refresh-button').click();
 });
 $(document).on('click', 'input, button', function() {
   $('[data-toggle="popover"]').popover('hide');

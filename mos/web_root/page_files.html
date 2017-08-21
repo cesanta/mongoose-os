@@ -155,6 +155,7 @@
   });
 
   var refreshFileList = function() {
+    var selectedFile = $('.file.selected').attr('rel');
     return $.ajax({url: '/call', data: {method: 'FS.ListExt', timeout: 2}}).done(function(json) {
       var $tbody = $('#file-list').empty();
       json.result.sort(function(a, b) {
@@ -181,15 +182,11 @@
             .appendTo($tbody);
       });
       file_editor.setValue('', -1);
+    }).always(function() {
+      // Open init.js automatically if no file is opened
+      $('.file[rel="' + (selectedFile || 'init.js') + '"]').trigger('click');
     });
   };
-
   $(document).off('click', '#file-refresh-button');
   $(document).on('click', '#file-refresh-button', refreshFileList);
-
-  // Open init.js automatically
-  refreshFileList().done(function() {
-    $('.file.is_init').click();
-  });
-
 </script>
