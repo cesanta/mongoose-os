@@ -5,6 +5,10 @@ package moscommon
 
 import "unicode"
 
+const (
+	BuildTargetDefault = "all"
+)
+
 func IdentifierFromString(name string) string {
 	ret := ""
 	for _, c := range name {

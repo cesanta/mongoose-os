@@ -51,6 +51,7 @@ var (
 			"cc3200=docker.cesanta.com/mg-iot-cloud-project-cc3200:release",
 		"build images, arch1=image1,arch2=image2")
 	cleanBuild         = flag.Bool("clean", false, "perform a clean build, wipe the previous build state")
+	buildTarget        = flag.String("build-target", moscommon.BuildTargetDefault, "target to build with make")
 	keepTempFiles      = flag.Bool("keep-temp-files", false, "keep temp files after the build is done (by default they are in ~/.mos/tmp)")
 	modules            = flag.StringSlice("module", []string{}, "location of the module from mos.yaml, in the format: \"module_name:/path/to/location\". Can be used multiple times.")
 	libs               = flag.StringSlice("lib", []string{}, "location of the lib from mos.yaml, in the format: \"lib_name:/path/to/location\". Can be used multiple times.")
@@ -111,6 +112,7 @@ func init() {
 
 type buildParams struct {
 	Platform           string
+	BuildTarget        string
 	CustomLibLocations map[string]string
 }
 
@@ -123,6 +125,7 @@ func buildHandler(ctx context.Context, devConn *dev.DevConn) error {
 	bParams := buildParams{
 		Platform:           *platform,
 		CustomLibLocations: cll,
+		BuildTarget:        *buildTarget,
 	}
 
 	return errors.Trace(doBuild(ctx, &bParams))
@@ -181,37 +184,44 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 		return errors.Trace(err)
 	}
 
-	fwFilename := moscommon.GetFirmwareZipFilePath(buildDir)
+	if *buildTarget == moscommon.BuildTargetDefault {
+		// We were building a firmware, so perform the required actions with moving
+		// firmware around, etc.
+		fwFilename := moscommon.GetFirmwareZipFilePath(buildDir)
 
-	fw, err := common.NewZipFirmwareBundle(fwFilename, "")
-	if err != nil {
-		return errors.Trace(err)
-	}
-
-	end := time.Now()
-
-	if *saveBuildStat {
-		bstat := moscommon.BuildStat{
-			ArchOld:     fw.Platform,
-			Platform:    fw.Platform,
-			AppName:     fw.Name,
-			BuildTimeMS: int(end.Sub(start) / time.Millisecond),
-		}
-
-		data, err := json.MarshalIndent(&bstat, "", "  ")
+		fw, err := common.NewZipFirmwareBundle(fwFilename, "")
 		if err != nil {
 			return errors.Trace(err)
 		}
 
-		ioutil.WriteFile(moscommon.GetBuildStatFilePath(buildDir), data, 0666)
-	}
+		end := time.Now()
 
-	if *local || !*verbose {
-		if err == nil {
-			freportf(logWriter, "Success, built %s/%s version %s (%s).", fw.Name, fw.Platform, fw.Version, fw.BuildID)
+		if *saveBuildStat {
+			bstat := moscommon.BuildStat{
+				ArchOld:     fw.Platform,
+				Platform:    fw.Platform,
+				AppName:     fw.Name,
+				BuildTimeMS: int(end.Sub(start) / time.Millisecond),
+			}
+
+			data, err := json.MarshalIndent(&bstat, "", "  ")
+			if err != nil {
+				return errors.Trace(err)
+			}
+
+			ioutil.WriteFile(moscommon.GetBuildStatFilePath(buildDir), data, 0666)
 		}
 
-		freportf(logWriterStderr, "Firmware saved to %s", fwFilename)
+		if *local || !*verbose {
+			if err == nil {
+				freportf(logWriter, "Success, built %s/%s version %s (%s).", fw.Name, fw.Platform, fw.Version, fw.BuildID)
+			}
+
+			freportf(logWriterStderr, "Firmware saved to %s", fwFilename)
+		}
+	} else {
+		// We were building some custom target, so just report that we succeeded.
+		freportf(logWriterStderr, "Target %s is built successfully", *buildTarget)
 	}
 
 	// If received server version, compare it with the local one and notify the
@@ -665,10 +675,14 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		sdkVersion := strings.TrimSpace(string(sdkVersionBytes))
 		dockerRunArgs = append(dockerRunArgs, sdkVersion)
 
-		makeArgs := getMakeArgs(
+		makeArgs, err := getMakeArgs(
 			fmt.Sprintf("%s%s", dockerAppPath, appSubdir),
+			bParams.BuildTarget,
 			manifest,
 		)
+		if err != nil {
+			return errors.Trace(err)
+		}
 		dockerRunArgs = append(dockerRunArgs,
 			"/bin/bash", "-c", "nice make '"+strings.Join(makeArgs, "' '")+"'",
 		)
@@ -681,7 +695,10 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 
 		manifest.BuildVars["MGOS_PATH"] = mosDirEffectiveAbs
 
-		makeArgs := getMakeArgs(appPath, manifest)
+		makeArgs, err := getMakeArgs(appPath, bParams.BuildTarget, manifest)
+		if err != nil {
+			return errors.Trace(err)
+		}
 
 		freportf(logWriter, "Make arguments: %s", strings.Join(makeArgs, " "))
 
@@ -693,21 +710,26 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	}
 	// }}}
 
-	// Copy firmware to build/fw.zip
-	err = ourio.LinkOrCopyFile(
-		filepath.Join(fwDir, fmt.Sprintf("%s-%s-last.zip", appName, manifest.Platform)),
-		fwFilename,
-	)
-	if err != nil {
-		return errors.Trace(err)
-	}
+	if *buildTarget == moscommon.BuildTargetDefault {
+		// We were building a firmware, so perform the required actions with moving
+		// firmware around, etc.
 
-	// Copy ELF file to fw.elf
-	err = ourio.LinkOrCopyFile(
-		filepath.Join(objsDir, fmt.Sprintf("%s.elf", appName)), elfFilename,
-	)
-	if err != nil {
-		return errors.Trace(err)
+		// Copy firmware to build/fw.zip
+		err = ourio.LinkOrCopyFile(
+			filepath.Join(fwDir, fmt.Sprintf("%s-%s-last.zip", appName, manifest.Platform)),
+			fwFilename,
+		)
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		// Copy ELF file to fw.elf
+		err = ourio.LinkOrCopyFile(
+			filepath.Join(objsDir, fmt.Sprintf("%s.elf", appName)), elfFilename,
+		)
+		if err != nil {
+			return errors.Trace(err)
+		}
 	}
 
 	return nil
@@ -773,11 +795,24 @@ func printConfSchemaWarn(manifest *build.FWAppManifest) {
 	}
 }
 
-func getMakeArgs(dir string, manifest *build.FWAppManifest) []string {
+func getMakeArgs(dir, target string, manifest *build.FWAppManifest) ([]string, error) {
 	j := *buildParalellism
 	if j == 0 {
 		j = runtime.NumCPU()
 	}
+
+	// If target contains a slash, assume it's a path name, and absolutize it
+	// (that's a requirement because in makefile paths are absolutized).
+	// Actually, all file targets are going to begin with "build/", so this check
+	// is reliable.
+	if strings.Contains(target, "/") {
+		var err error
+		target, err = filepath.Abs(target)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+	}
+
 	makeArgs := []string{
 		"-j", fmt.Sprintf("%d", j),
 		"-C", dir,
@@ -789,6 +824,7 @@ func getMakeArgs(dir string, manifest *build.FWAppManifest) []string {
 			manifest.BuildVars["PLATFORM"],
 			"Makefile.build",
 		),
+		target,
 	}
 
 	for k, v := range manifest.BuildVars {
@@ -800,7 +836,7 @@ func getMakeArgs(dir string, manifest *build.FWAppManifest) []string {
 		makeArgs = append(makeArgs, (*buildCmdExtra)...)
 	}
 
-	return makeArgs
+	return makeArgs, nil
 }
 
 // globify takes a list of paths, and for each of them which resolves to a
@@ -1261,6 +1297,10 @@ func buildRemote(bParams *buildParams) error {
 		if err := mpw.WriteField(moscommon.FormCleanName, "1"); err != nil {
 			return errors.Trace(err)
 		}
+	}
+
+	if err := mpw.WriteField(moscommon.FormBuildTargetName, bParams.BuildTarget); err != nil {
+		return errors.Trace(err)
 	}
 
 	if data, err := ioutil.ReadFile(moscommon.GetBuildCtxFilePath(buildDir)); err == nil {
