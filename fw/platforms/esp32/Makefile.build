@@ -146,7 +146,7 @@ COMPONENT_DIRS = $(COMMON_PATH) \
                  $(MGOS_PATH)/third_party \
                  /opt
 # Explicitly specify SDK components to build.
-SDK_COMPONENTS = app_trace app_update bootloader bootloader_support bt driver \
+SDK_COMPONENTS = app_trace app_update bootloader bootloader_support driver \
                  esp_adc_cal esp32 esptool_py ethernet expat freertos heap \
                  log lwip micro-ecc newlib nvs_flash partition_table pthread soc \
                  spi_flash tcpip_adapter vfs wpa_supplicant xtensa-debug-module
