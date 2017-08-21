@@ -1,0 +1,267 @@
+# -*- mode: makefile -*-
+#
+# Mongoose OS for CC3220
+#
+# This file is executed inside Docker build container.
+# It can be used without container too if SDK_PATH are configured.
+MAKEFLAGS += --warn-undefined-variables
+.DEFAULT_GOAL := all
+
+APP ?= mongoose-os
+APP_PLATFORM = cc3220
+APP_CFLAGS ?=
+APP_CXXFLAGS ?=
+APP_LDFLAGS ?=
+APP_SLFS_PATH ?=
+APP_EXTRA_SRCS ?=
+FFI_SYMBOLS ?=
+# List of app source files, globs are supported
+APP_SOURCES ?=
+# List of app files to put into the device's filesystem, globs are supported
+APP_FS_FILES ?=
+# List of static libs (.a) which are parts of the app
+APP_BIN_LIBS ?=
+
+# NOTE: those two are deprecated. Use APP_SOURCES and APP_FS_FILES instead.
+APP_MODULES ?=
+APP_FS_PATH ?=
+
+# For backward compatibility, convert old APP_MODULES and APP_FS_PATH into
+# new APP_SOURCES and APP_FS_FILES
+ifneq "$(APP_MODULES)" ""
+APP_SOURCES += $(foreach m,$(APP_MODULES),$(m)/*.c $(m)/*.cpp)
+endif
+ifneq "$(APP_FS_PATH)" ""
+APP_FS_FILES += $(foreach m,$(APP_FS_PATH),$(m)/*)
+endif
+
+# Get list of dirs which contain sources and filesystem files
+APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
+APP_FS_DIRS = $(sort $(dir $(APP_FS_FILES)))
+
+MGOS_ENABLE_DEBUG_UDP = 0
+MGOS_DEBUG_UART = 0
+
+TOOLCHAIN ?= $(TI_COMPILER_PATH)
+APP_ORG = 0x20000000
+RAM_SIZE = 0x40000
+
+SDK_PATH ?=
+FREERTOS_PATH ?=
+MGOS_PATH ?= ../../..
+COMMON_PATH ?= $(MGOS_PATH)/common
+COMMON_CC3200_PATH ?= $(MGOS_PATH)/common/platforms/cc3200
+MGOS_CC3220_PATH ?= $(MGOS_PATH)/fw/platforms/cc3220
+MONGOOSE_PATH ?= $(MGOS_PATH)/mongoose
+FROZEN_PATH ?= $(MGOS_PATH)/frozen
+
+BUILD_DIR ?= $(CURDIR)/.build
+FW_STAGING_DIR ?= $(BUILD_DIR)/fw_temp
+FW_DIR ?= $(CURDIR)/firmware
+GEN_DIR ?= $(BUILD_DIR)/gen
+
+# Absolutize all paths which can be given by the caller
+override BUILD_DIR := $(abspath $(BUILD_DIR))
+override FW_STAGING_DIR := $(abspath $(FW_STAGING_DIR))
+override FW_DIR := $(abspath $(FW_DIR))
+override GEN_DIR := $(abspath $(GEN_DIR))
+
+MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
+
+# For FW_VERSION, MG_FEATURES_TINY
+include $(MGOS_PATH)/fw/common.mk
+
+VPATH = $(APP_SOURCE_DIRS) $(MGOS_SRC_PATH) $(MGOS_CC3220_PATH)/src $(GEN_DIR) \
+        $(MONGOOSE_PATH) $(FROZEN_PATH)
+IPATH = $(APP_SOURCE_DIRS) $(MGOS_PATH) $(MGOS_SRC_PATH) $(MGOS_CC3220_PATH)/include $(GEN_DIR)
+
+# Note: CC3220 has only 32 GPIO but our port uses pin-based numbering
+# and those go from 1 to 64.
+MGOS_CC3220_FEATURES ?= -DMGOS_NUM_GPIO=65 '-DUMM_ONFREE(ptr, size)=memset(ptr, 0xff, size)'
+
+MG_FEATURES ?= $(MG_FEATURES_TINY) \
+               -DMG_LOCALS -DMG_ENABLE_SSL \
+               -DMG_FS_SLFS -DMG_FS_NO_VFS \
+               -DMG_ENABLE_FILESYSTEM \
+               -DMG_ENABLE_DIRECTORY_LISTING \
+               -DCS_DISABLE_MD5 -DMG_EXT_MD5 \
+               -DCS_DISABLE_SHA1 -DMG_EXT_SHA1 \
+               -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5
+
+MGOS_FEATURES ?= -DMGOS_VFS_DECLARE_LIBC_DIR_API \
+                 -DMGOS_VFS_DEFINE_LIBC_DIR_API \
+                 -DMGOS_VFS_DEFINE_DIRENT
+
+APP_BIN = $(BUILD_DIR)/$(APP).bin
+APP_ELF = $(BUILD_DIR)/$(APP).elf
+MGOS_LIB = $(BUILD_DIR)/mongoose-os.a
+SYS_CONFIG_C = $(GEN_DIR)/sys_config.c
+SYS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/conf0.json
+SYS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/sys_config_schema.json
+SYS_RO_VARS_C = $(GEN_DIR)/sys_ro_vars.c
+SYS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/sys_ro_vars_schema.json
+BUILD_INFO_C = $(GEN_DIR)/build_info.c
+BUILD_INFO_O = $(BUILD_DIR)/build_info.c.o
+BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
+MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
+MG_BUILD_INFO_O = $(BUILD_DIR)/mg_build_info.c.o
+
+GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
+
+.PHONY: all clean
+
+MGOS_SRCS =
+
+#MGOS_SRCS += umm_malloc.c
+#VPATH += $(COMMON_PATH)/umm_malloc
+
+FREERTOS_SRCS = timers.c list.c queue.c tasks.c port.c heap_4.c
+FREERTOS_SRCS += ClockP_freertos.c HwiPCC32XX_freertos.c PowerCC32XX_freertos.c SemaphoreP_freertos.c SystemP_freertos.c
+DRIVER_SRCS = $(notdir $(wildcard $(SDK_PATH)/source/ti/devices/cc32xx/driverlib/*.c)) CC3220SF_LAUNCHXL.c DisplayUart.c
+SL_SRCS = socket.c wlan.c driver.c device.c netapp.c netcfg.c cc_pal.c fs.c
+SDK_SRCS = $(FREERTOS_SRCS) $(DRIVER_SRCS) $(SL_SRCS)
+
+SDK_SRCS += $(notdir $(wildcard $(SDK_PATH)/source/ti/drivers/*.c))
+SDK_SRCS += ADCCC32XX.c GPIOCC32XX.c I2CCC32XX.c PowerCC32XX.c List.c
+#SDK_SRCS += $(filter-out package_ti.drivers.c,$(notdir $(wildcard $(SDK_PATH)/source/ti/drivers/*/*.c)))
+
+IPATH += $(SDK_PATH)/source \
+         $(SDK_PATH)/source/ti/boards/CC3220SF_LAUNCHXL \
+         $(SDK_PATH)/source/ti/devices/cc32xx \
+         $(FREERTOS_PATH)/Source/include \
+         $(FREERTOS_PATH)/Source/portable/CCS/ARM_CM3
+
+VPATH += $(SDK_PATH)/source/ti/devices/cc32xx/driverlib \
+         $(SDK_PATH)/source/ti/display \
+         $(SDK_PATH)/source/ti/drivers \
+         $(SDK_PATH)/source/ti/drivers/adc \
+         $(SDK_PATH)/source/ti/drivers/camera \
+         $(SDK_PATH)/source/ti/drivers/capture \
+         $(SDK_PATH)/source/ti/drivers/crypto \
+         $(SDK_PATH)/source/ti/drivers/dma \
+         $(SDK_PATH)/source/ti/drivers/dpl \
+         $(SDK_PATH)/source/ti/drivers/gpio \
+         $(SDK_PATH)/source/ti/drivers/i2c \
+         $(SDK_PATH)/source/ti/drivers/i2s \
+         $(SDK_PATH)/source/ti/drivers/net/wifi/porting \
+         $(SDK_PATH)/source/ti/drivers/net/wifi/source \
+         $(SDK_PATH)/source/ti/drivers/nvs \
+         $(SDK_PATH)/source/ti/drivers/power \
+         $(SDK_PATH)/source/ti/drivers/pwm \
+         $(SDK_PATH)/source/ti/drivers/sd \
+         $(SDK_PATH)/source/ti/drivers/sdspi \
+         $(SDK_PATH)/source/ti/drivers/spi \
+         $(SDK_PATH)/source/ti/drivers/timer \
+         $(SDK_PATH)/source/ti/drivers/uart \
+         $(SDK_PATH)/source/ti/drivers/utils \
+         $(SDK_PATH)/source/ti/drivers/watchdog \
+         $(SDK_PATH)/kernel/freertos/dpl \
+         $(FREERTOS_PATH)/Source \
+         $(FREERTOS_PATH)/Source/portable/CCS/ARM_CM3 \
+         $(FREERTOS_PATH)/Source/portable/MemMang
+
+SDK_CFLAGS = -DTARGET_IS_CC3220 -DUSE_FREERTOS -DSL_PLATFORM_MULTI_THREADED
+
+MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3220_PATH)/src/*.c))
+APP_SRCS = $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
+APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
+
+MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" -DCS_PLATFORM=CS_P_CC3220 \
+              -DMGOS_MAX_NUM_UARTS=2 -D__SF_DEBUG__ \
+              -DMG_SSL_IF_SIMPLELINK_SLFS_PREFIX=\"/slfs/\" \
+              $(SDK_CFLAGS) \
+              -DC_DISABLE_BUILTIN_SNPRINTF
+
+clean:
+	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)
+
+$(BUILD_DIR) $(FW_DIR) $(FS_STAGING_DIR) $(APP_SLFS_PATH) $(FW_STAGING_DIR) $(GEN_DIR):
+	$(vecho) "MKDIR $@"
+	$(Q) mkdir -p $@
+
+ifneq "$(APP_SLFS_PATH)" ""
+  SLFS_FILES = $(wildcard $(APP_SLFS_PATH)/*)
+else
+  SLFS_FILES =
+endif
+
+CREATE_RAW_FS ?= 0
+
+FW_PARTS = /sys/mcuflashimg.bin:type=app,src=$(APP_BIN),load_addr=$(APP_ORG) \
+           $(foreach f,$(SLFS_FILES), $(notdir $(f)):type=slfile,src=$(f))
+
+include $(MGOS_PATH)/common/scripts/fw_meta.mk
+
+SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(SDK_SRCS:=.o))
+MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o))
+APP_OBJS = $(addprefix $(BUILD_DIR)/,$(APP_SRCS:=.o))
+
+MGOS_OBJS += $(BUILD_DIR)/portasm.asm.o
+
+include $(MGOS_PATH)/common/scripts/build_info.mk
+include $(MGOS_PATH)/fw/src/sys_config.mk
+
+$(FS_IMG): $(APP_FS_DIRS) $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(FS_FILES) $(MK_FS_META_BIN)
+	$(call mkspiffs,$(FS_SIZE))
+	$(Q) $(MK_FS_META_BIN) $(FS_SIZE) $(FS_BLOCK_SIZE) $(FS_PAGE_SIZE) $(FS_ERASE_SIZE) >> $@
+
+OBJCOPY = arm-none-eabi-objcopy
+
+include $(COMMON_CC3200_PATH)/ti.mk
+
+APP_LD_SCRIPT ?= $(MGOS_CC3220_PATH)/ld/CC3220SF_LAUNCHXL_FREERTOS.cmd
+APP_LDFLAGS += --rom_model --heap_size=0 --stack_size=0x1000 \
+               --disable_auto_rts -l rtsv7M4_T_le_eabi_cesanta.lib
+
+#MGOS_CFLAGS += -DMG_TI_NO_HOST_INTERFACE=1
+#MGOS_OBJS += $(BUILD_DIR)/exc_handler_top.asm.o \
+#             $(BUILD_DIR)/portasm.asm.o \
+#             $(BUILD_DIR)/startup_ccs.c.o
+#VPATH += $(MGOS_CC3200_PATH)/src/ti
+
+C_CXX_FLAGS += -DNDEBUG -DCS_NDEBUG -DconfigCREATE_SIMPLE_TICKLESS_DEMO=1 \
+               -DFW_ARCHITECTURE=$(APP_PLATFORM) \
+               $(patsubst %,-I%,$(subst :, ,$(IPATH))) \
+               $(MG_FEATURES) $(MGOS_FEATURES) $(MGOS_CC3220_FEATURES) \
+               $(MGOS_CFLAGS)
+
+CFLAGS += $(APP_CFLAGS)
+CXXFLAGS += $(APP_CXXFLAGS)
+
+all: $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(FS_STAGING_DIR) $(FW_ZIP)
+
+$(FW_MANIFEST): $(APP_BIN) $(FS_IMG) $(FS_EMPTY_IMG) \
+                $(APP_SLFS_PATH) $(SLFS_FILES) $(FS_FILES)
+
+$(APP_BIN): $(APP_ELF)
+	$(vecho) "BIN   $< -> $@"
+	$(Q) $(OBJCOPY) -O binary $< $@
+	$(Q) echo "     Code size: $$(ls -l $@ | awk '{print $$5}')"
+
+$(APP_ELF): $(APP_OBJS) $(MGOS_LIB) $(ATCA_LIB) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES)
+	$(call link,$(APP_LD_SCRIPT),$(APP_LDFLAGS),$(APP_OBJS) $(MGOS_LIB) $(ATCA_LIB) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES))
+
+$(MGOS_LIB): $(MGOS_OBJS) $(SDK_OBJS)
+	$(call ar,$^)
+
+$(BUILD_DIR)/%.c.o: %.c $(GENFILES_LIST)
+	$(call cc,$(CFLAGS),$<)
+
+$(BUILD_DIR)/%.cpp.o: %.cpp $(GENFILES_LIST)
+	$(call cxx,$(CXXFLAGS),$<)
+
+$(BUILD_DIR)/%.c.o: $(GEN_DIR)/%.c $(GENFILES_LIST)
+	$(call cc,$(CFLAGS),$<)
+
+$(BUILD_DIR)/%.asm.o: %.asm $(GENFILES_LIST)
+	$(call asm,$(CFLAGS),$<)
+
+# Regenerate build info if there are changes in objects.
+$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MGOS_OBJS)
+	$(call gen_build_info,$@,,$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
+
+$(MG_BUILD_INFO_C): $(MGOS_OBJS)
+	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
+
+# Pull in auto-generated .c dependencies (if any).
+-include $(wildcard $(BUILD_DIR)/*.d)

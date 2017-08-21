@@ -22,6 +22,11 @@
 #undef fd_set
 #endif
 
+#if CS_PLATFORM == CS_P_CC3220
+#include <ti/drivers/net/wifi/porting/user.h>
+#include <ti/drivers/net/wifi/simplelink.h>
+#include <ti/drivers/net/wifi/netapp.h>
+#else
 /* We want to disable SL_INC_STD_BSD_API_NAMING, so we include user.h ourselves
  * and undef it. */
 #define PROVISIONING_API_H_
@@ -31,6 +36,7 @@
 
 #include <simplelink/include/simplelink.h>
 #include <simplelink/include/netapp.h>
+#endif /* CS_PLATFORM == CS_P_CC3220 */
 
 /* Now define only the subset of the BSD API that we use.
  * Notably, close(), read() and write() are not defined. */

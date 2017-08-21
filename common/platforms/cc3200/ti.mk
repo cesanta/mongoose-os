@@ -45,7 +45,6 @@ define link
 	  --generate_dead_funcs_list=$@.garbage.xml \
 	  -i $(TOOLCHAIN)/lib \
 	  --reread_libs --warn_sections --display_error_number \
-	  --ram_model --cinit_compression=off --copy_compression=off \
 	  --unused_section_elimination=on \
 	  -o $@ --map_file=$@.map --xml_link_info=$@.map.xml \
 	  $2 $1 $3

@@ -11,6 +11,7 @@ APP ?= mongoose-os
 APP_PLATFORM = cc3200
 APP_CFLAGS ?=
 APP_CXXFLAGS ?=
+APP_LDFLAGS ?=
 APP_SLFS_PATH ?=
 APP_EXTRA_SRCS ?=
 FFI_SYMBOLS ?=
@@ -97,10 +98,13 @@ FS_STAGING_DIR = $(BUILD_DIR)/fs
 # For FW_VERSION, MG_FEATURES_TINY
 include $(MGOS_PATH)/fw/common.mk
 
-VPATH = $(APP_SOURCE_DIRS) $(MGOS_CC3200_SRC_PATH) \
-        $(BOOT_PATH)/lib $(BUILD_DIR) \
+VPATH = $(APP_SOURCE_DIRS) $(MGOS_SRC_PATH) $(MGOS_CC3200_SRC_PATH) \
+        $(COMMON_PATH) $(COMMON_PATH)/mg_rpc \
+        $(BOOT_PATH)/lib \
         $(MONGOOSE_PATH) $(FROZEN_PATH)
-IPATH = $(APP_SOURCE_DIRS) $(MGOS_PATH) $(MGOS_SRC_PATH) $(MGOS_CC3200_SRC_PATH) $(BOOT_PATH)/lib $(GEN_DIR)
+IPATH = $(APP_SOURCE_DIRS) $(MGOS_PATH) $(MGOS_SRC_PATH) $(MGOS_CC3200_SRC_PATH) \
+        $(COMMON_PATH)/mg_rpc \
+        $(BOOT_PATH)/lib $(GEN_DIR)
 
 # Note: CC3200 has only 32 GPIO but our port uses pin-based numbering
 # and those go from 1 to 64.
@@ -144,7 +148,7 @@ MK_FS_META_BIN = $(BUILD_DIR)/mkfsmeta
 
 GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 
-.PHONY: all clean flash
+.PHONY: all clean
 
 MGOS_SRCS = mgos_gpio.c \
             mgos_hooks.c \
@@ -162,8 +166,6 @@ MGOS_SRCS = mgos_gpio.c \
             cs_rbuf.c mgos_uart.c \
             boot.c mongoose.c frozen.c json_utils.c
 
-VPATH += $(MGOS_PATH)/fw/src $(COMMON_PATH) $(COMMON_PATH)/mg_rpc
-IPATH += $(COMMON_PATH)/mg_rpc
 ifneq "$(TOOLCHAIN)" "gcc"
   MGOS_SRCS += umm_malloc.c
   VPATH += $(COMMON_PATH)/umm_malloc
@@ -267,7 +269,7 @@ ifeq "$(TOOLCHAIN)" "gcc"
 
 include $(COMMON_CC3200_PATH)/gcc.mk
 APP_LD_SCRIPT ?= $(COMMON_CC3200_PATH)/cc3200.ld
-APP_LD_FLAGS ?= --defsym=ORG=$(APP_ORG) --defsym=RAM_SIZE=$(RAM_SIZE) --entry=ResetISR
+APP_LDFLAGS += --defsym=ORG=$(APP_ORG) --defsym=RAM_SIZE=$(RAM_SIZE) --entry=ResetISR
 MGOS_OBJS += $(BUILD_DIR)/startup_gcc.c.o
 VPATH += $(MGOS_CC3200_PATH)/tools
 
@@ -275,8 +277,9 @@ else
 
 include $(COMMON_CC3200_PATH)/ti.mk
 APP_LD_SCRIPT ?= $(MGOS_CC3200_PATH)/src/cc3200_mgiot.cmd
-APP_LD_FLAGS ?= --heap_size=0 --stack_size=0x100 \
-                --disable_auto_rts -l rtsv7M4_T_le_eabi_cesanta.lib
+APP_LDFLAGS += --ram_model --cinit_compression=off --copy_compression=off \
+               --heap_size=0 --stack_size=0x100 \
+               --disable_auto_rts -l rtsv7M4_T_le_eabi_cesanta.lib
 
 MGOS_CFLAGS += -DMG_TI_NO_HOST_INTERFACE=1
 MGOS_OBJS += $(BUILD_DIR)/exc_handler_top.asm.o \
@@ -332,7 +335,7 @@ $(APP_BIN): $(APP_ELF)
 	$(Q) echo "     Code size: $$(ls -l $@ | awk '{print $$5}')"
 
 $(APP_ELF): $(APP_OBJS) $(MGOS_LIB) $(ATCA_LIB) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES)
-	$(call link,$(APP_LD_SCRIPT),$(APP_LD_FLAGS),$(APP_OBJS) $(MGOS_LIB) $(ATCA_LIB) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES))
+	$(call link,$(APP_LD_SCRIPT),$(APP_LDFLAGS),$(APP_OBJS) $(MGOS_LIB) $(ATCA_LIB) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES))
 
 $(MGOS_LIB): $(MGOS_OBJS) $(SDK_OBJS)
 	$(call ar,$^)

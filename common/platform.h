@@ -10,9 +10,10 @@
 #define CS_P_WINDOWS 2
 #define CS_P_ESP32 15
 #define CS_P_ESP8266 3
-#define CS_P_CC3200 4
-#define CS_P_MSP432 5
 #define CS_P_CC3100 6
+#define CS_P_CC3200 4
+#define CS_P_CC3220 17
+#define CS_P_MSP432 5
 #define CS_P_TM4C129 14
 #define CS_P_MBED 7
 #define CS_P_WINCE 8
@@ -22,7 +23,7 @@
 #define CS_P_NRF52 10
 #define CS_P_PIC32 11
 #define CS_P_STM32 16
-/* Next id: 17 */
+/* Next id: 18 */
 
 /* If not specified explicitly, we guess platform by defines. */
 #ifndef CS_PLATFORM
@@ -75,8 +76,9 @@
 #include "common/platforms/platform_windows.h"
 #include "common/platforms/platform_esp32.h"
 #include "common/platforms/platform_esp8266.h"
-#include "common/platforms/platform_cc3200.h"
 #include "common/platforms/platform_cc3100.h"
+#include "common/platforms/platform_cc3200.h"
+#include "common/platforms/platform_cc3220.h"
 #include "common/platforms/platform_mbed.h"
 #include "common/platforms/platform_nrf51.h"
 #include "common/platforms/platform_nrf52.h"

@@ -3,9 +3,9 @@
  * All rights reserved
  */
 
-#ifndef CS_COMMON_PLATFORMS_PLATFORM_CC3200_H_
-#define CS_COMMON_PLATFORMS_PLATFORM_CC3200_H_
-#if CS_PLATFORM == CS_P_CC3200
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_CC3220_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_CC3220_H_
+#if CS_PLATFORM == CS_P_CC3220
 
 #include <assert.h>
 #include <ctype.h>
@@ -24,7 +24,7 @@
 #define MG_SSL_IF MG_SSL_IF_SIMPLELINK
 
 /* Only SPIFFS supports directories, SLFS does not. */
-#if defined(CC3200_FS_SPIFFS) && !defined(MG_ENABLE_DIRECTORY_LISTING)
+#if defined(CC3220_FS_SPIFFS) && !defined(MG_ENABLE_DIRECTORY_LISTING)
 #define MG_ENABLE_DIRECTORY_LISTING 1
 #endif
 
@@ -92,22 +92,7 @@ int stat(const char *pathname, struct stat *st);
 #define S_ISDIR(mode) __S_ISTYPE((mode), __S_IFDIR)
 #define S_ISREG(mode) __S_ISTYPE((mode), __S_IFREG)
 
-/* 5.x series compilers don't have va_copy, 16.x do. */
-#if __TI_COMPILER_VERSION__ < 16000000
-#define va_copy(apc, ap) ((apc) = (ap))
-#endif
-
 #endif /* __TI_COMPILER_VERSION__ */
-
-#ifdef CC3200_FS_SLFS
-#define MG_FS_SLFS
-#endif
-
-#if (defined(CC3200_FS_SPIFFS) || defined(CC3200_FS_SLFS)) && \
-    !defined(MG_ENABLE_FILESYSTEM)
-#define MG_ENABLE_FILESYSTEM 1
-#define CS_DEFINE_DIRENT
-#endif
 
 #ifndef CS_ENABLE_STDIO
 #define CS_ENABLE_STDIO 1
@@ -117,5 +102,5 @@ int stat(const char *pathname, struct stat *st);
 }
 #endif
 
-#endif /* CS_PLATFORM == CS_P_CC3200 */
+#endif /* CS_PLATFORM == CS_P_CC3220 */
 #endif /* CS_COMMON_PLATFORMS_PLATFORM_CC3200_H_ */
