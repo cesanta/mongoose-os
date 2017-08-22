@@ -321,7 +321,10 @@ var checkPorts = function() {
     if (ui.connected != result.IsConnected || ui.address != port) {
       ui.connected = result.IsConnected;
       ui.address = port;
-      if (ui.connected) ui.showWizard = false;  // Dont trigger wizard dialog from this point on
+      if (ui.connected) {
+        ui.showWizard = false;  // Dont trigger wizard dialog from this point on
+        $(document).trigger('hide.bs.modal');
+      }
       if (ui.connected && ui.address) probeDevice();
       if (!ui.connected && ui.showWizard) {
         ui.showWizard = false;
