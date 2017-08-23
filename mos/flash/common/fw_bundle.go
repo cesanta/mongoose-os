@@ -3,15 +3,23 @@ package common
 import (
 	"crypto/sha1"
 	"encoding/hex"
+	"fmt"
+	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 
+	moscommon "cesanta.com/mos/common"
 	"github.com/cesanta/errors"
+	"github.com/golang/glog"
 )
 
 type FirmwareBundle struct {
 	FirmwareManifest
 
 	Blobs map[string][]byte
+
+	tempDir string
 }
 
 type FirmwareManifest struct {
@@ -40,9 +48,26 @@ type FirmwarePart struct {
 	// ESP32, ESP8266
 	ESPFlashAddress uint32 `json:"addr,omitempty"`
 	ESP32Encrypt    bool   `json:"encrypt,omitempty"`
-	// CC3200
-	CC3200FileAllocSize uint32 `json:"falloc,omitempty"`
-	CC3200FileSignature string `json:"sign,omitempty"`
+	// CC32xx
+	CC32XXFileAllocSize    int    `json:"falloc,omitempty"`
+	CC32XXFileSignatureOld string `json:"sign,omitempty"` // Deprecated since 2017/08/22
+	CC32XXFileSignature    string `json:"sig,omitempty"`
+	CC32XXSigningCert      string `json:"sig_cert,omitempty"`
+}
+
+func (fw *FirmwareBundle) GetTempDir() (string, error) {
+	if fw.tempDir == "" {
+		td, err := ioutil.TempDir("", fmt.Sprintf("%s_%s_%s_",
+			moscommon.FileNameFromString(fw.Name),
+			moscommon.FileNameFromString(fw.Platform),
+			moscommon.FileNameFromString(fw.Version)))
+		if err != nil {
+			return "", errors.Annotatef(err, "failed to create temp dir")
+		}
+		fw.tempDir = td
+	}
+
+	return fw.tempDir, nil
 }
 
 func (fw *FirmwareBundle) GetPartData(name string) ([]byte, error) {
@@ -73,4 +98,35 @@ func (fw *FirmwareBundle) GetPartData(name string) ([]byte, error) {
 		return nil, errors.Errorf("%q: no source or filler specified", name)
 	}
 	return data, nil
+}
+
+func (fw *FirmwareBundle) GetPartDataFile(name string) (string, int, error) {
+	data, err := fw.GetPartData(name)
+	if err != nil {
+		return "", -1, errors.Trace(err)
+	}
+
+	td, err := fw.GetTempDir()
+	if err != nil {
+		return "", -1, errors.Trace(err)
+	}
+
+	fname := filepath.Join(td, moscommon.FileNameFromString(name))
+
+	err = ioutil.WriteFile(fname, data, 0644)
+
+	glog.V(3).Infof("Wrote %q to %q (%d bytes)", name, fname, len(data))
+
+	if err != nil {
+		return "", -1, errors.Annotatef(err, "failed to write fw part data")
+	}
+
+	return fname, len(data), nil
+}
+
+func (fw *FirmwareBundle) Cleanup() {
+	if fw.tempDir != "" {
+		glog.Infof("Cleaning up %q", fw.tempDir)
+		os.RemoveAll(fw.tempDir)
+	}
 }

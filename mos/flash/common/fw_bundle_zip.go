@@ -86,6 +86,8 @@ func NewZipFirmwareBundle(fname, versionSuffix string) (*FirmwareBundle, error) 
 	}
 	for n, p := range fwb.FirmwareManifest.Parts {
 		p.Name = n
+		// Backward compat
+		p.CC32XXFileSignature = p.CC32XXFileSignature + p.CC32XXFileSignatureOld
 	}
 	return fwb, nil
 }

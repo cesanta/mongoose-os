@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2017 Cesanta Software Limited
+ * All rights reserved
+ */
+
 package cc3200
 
 import (
@@ -16,9 +21,7 @@ type FlashOpts struct {
 }
 
 const (
-	baudRate       = 921600
-	servicePackImg = "/sys/servicepack.ucf"
-	bootImg        = "/sys/mcuimg.bin"
+	baudRate = 921600
 )
 
 type fileInfo struct {
@@ -27,16 +30,30 @@ type fileInfo struct {
 	part *common.FirmwarePart
 }
 
+func isKnownPartType(pt string) bool {
+	return pt == cc32xx.PartTypeServicePack ||
+		pt == cc32xx.PartTypeSLFile ||
+		pt == cc32xx.PartTypeBootLoader ||
+		pt == cc32xx.PartTypeBootLoaderConfig ||
+		pt == cc32xx.PartTypeApp ||
+		pt == cc32xx.PartTypeFSContainer
+}
+
 func Flash(fw *common.FirmwareBundle, opts *FlashOpts) error {
 	var files []*fileInfo
+
+	parts := []*common.FirmwarePart{}
 	for _, p := range fw.Parts {
-		if p.Type != "slfile" && p.Type != "boot" && p.Type != "boot_cfg" && p.Type != "app" && p.Type != "fs" {
-			continue
+		if isKnownPartType(p.Type) {
+			parts = append(parts, p)
 		}
+	}
+	sort.Sort(cc32xx.PartsByTypeAndName(parts))
+	for _, p := range parts {
 		fi := &fileInfo{
 			SLFSFileInfo: cc32xx.SLFSFileInfo{
 				Name:      p.Name,
-				AllocSize: p.CC3200FileAllocSize,
+				AllocSize: uint32(p.CC32XXFileAllocSize),
 			},
 			part: p,
 		}
@@ -46,10 +63,10 @@ func Flash(fw *common.FirmwareBundle, opts *FlashOpts) error {
 			if err != nil {
 				return errors.Annotatef(err, "%s: failed to get data", p.Name)
 			}
-			if p.CC3200FileSignature != "" {
-				fs, err := fw.GetPartData(p.CC3200FileSignature)
+			if p.CC32XXFileSignature != "" {
+				fs, err := fw.GetPartData(p.CC32XXFileSignature)
 				if err != nil {
-					return errors.Annotatef(err, "%s: failed to get signature data (%s)", p.Name, p.CC3200FileSignature)
+					return errors.Annotatef(err, "%s: failed to get signature data (%s)", p.Name, p.CC32XXFileSignature)
 				}
 				if len(fs) != cc32xx.FileSignatureLength {
 					return errors.Errorf("%s: invalid signature length (%d)", p.Name, len(fi.Signature))
@@ -59,7 +76,6 @@ func Flash(fw *common.FirmwareBundle, opts *FlashOpts) error {
 		}
 		files = append(files, fi)
 	}
-	sort.Sort(filesByTypeAndName(files))
 
 	common.Reportf("Opening %s...", opts.Port)
 	s, err := serial.Open(serial.OpenOptions{
@@ -87,6 +103,15 @@ func Flash(fw *common.FirmwareBundle, opts *FlashOpts) error {
 	rc, err := cc32xx.NewROMClient(s, dc)
 	if err != nil {
 		return errors.Annotatef(err, "failed to connect to boot loader")
+	}
+
+	vi, err := rc.GetVersionInfo()
+	if err != nil {
+		return errors.Annotatef(err, "failed to get loader version info")
+	}
+	if vi.BootLoaderVersion < 0x00040102 {
+		// These are early pre-production devices that require loading code stubs, etc.
+		return errors.Errorf("unsupported boot loader version (%s)", vi.BootLoaderVersionString())
 	}
 
 	if err := rc.SwitchToNWPLoader(); err != nil {
@@ -128,52 +153,4 @@ func (fi *fileInfo) String() string {
 		s += ", signed"
 	}
 	return s
-}
-
-type filesByTypeAndName []*fileInfo
-
-func (ff filesByTypeAndName) Len() int      { return len(ff) }
-func (ff filesByTypeAndName) Swap(i, j int) { ff[i], ff[j] = ff[j], ff[i] }
-func (ff filesByTypeAndName) Less(i, j int) bool {
-	fi, fj := ff[i], ff[j]
-	// Service pack goes first (there's only one).
-	if fi.Name == servicePackImg || fj.Name == servicePackImg {
-		return fi.Name == servicePackImg && fj.Name != servicePackImg
-	}
-	// Then boot image (there's only one).
-	if fi.Name == bootImg || fj.Name == bootImg {
-		return fi.Name == bootImg && fj.Name != bootImg
-	}
-	// Then boot configs.
-	if fi.part.Type == "boot_cfg" || fj.part.Type == "boot_cfg" {
-		if fi.part.Type == "boot_cfg" && fj.part.Type != "boot_cfg" {
-			return true
-		}
-		if fi.part.Type == "boot_cfg" && fj.part.Type == "boot_cfg" {
-			return fi.Name < fj.Name
-		}
-		return false
-	}
-	// Then app.
-	if fi.part.Type == "app" || fj.part.Type == "app" {
-		if fi.part.Type == "app" && fj.part.Type != "app" {
-			return true
-		}
-		if fi.part.Type == "app" && fj.part.Type == "app" {
-			return fi.Name < fj.Name
-		}
-		return false
-	}
-	// Then fs containers.
-	if fi.part.Type == "fs" || fj.part.Type == "fs" {
-		if fi.part.Type == "fs" && fj.part.Type != "fs" {
-			return true
-		}
-		if fi.part.Type == "fs" && fj.part.Type == "fs" {
-			return fi.Name < fj.Name
-		}
-		return false
-	}
-	// Then the rest, sorted by name.
-	return fi.Name < fj.Name
 }

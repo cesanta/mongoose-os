@@ -18,7 +18,7 @@ generate version/version.go version/version.json:
 	} || rm -f version/version version/build_id
 	@go install cesanta.com/vendor/github.com/jteeuwen/go-bindata/go-bindata
 	@go install cesanta.com/vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
-	@go generate . ./version
+	@go generate . ./flash/cc3220 ./version
 	@gofmt -w bindata_assetfs.go
 	@cat version/version.json
 	@echo

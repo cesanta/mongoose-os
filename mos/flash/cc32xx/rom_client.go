@@ -5,6 +5,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"time"
 
 	"cesanta.com/mos/flash/common"
@@ -27,12 +28,14 @@ const (
 	cmdGetStorageList = 0x27
 	cmdFormatSLFS     = 0x28
 
-	cmdEraseFile      = 0x2e
-	cmdGetVersionInfo = 0x2f
-
+	cmdRawStorageWrite     = 0x2d
+	cmdEraseFile           = 0x2e
+	cmdGetVersionInfo      = 0x2f
+	cmdRawStorageErase     = 0x30
 	cmdGetStorageInfo      = 0x31
 	cmdExecuteFromRAM      = 0x32
 	cmdSwitchUARTtoAppsMCU = 0x33
+	cmdProgramImage        = 0x34
 
 	cmdGetDeviceInfo = 0x37
 
@@ -41,6 +44,8 @@ const (
 
 const (
 	fsBlockSize         = 0x1000
+	rawWriteSize        = 0x1000 - 0x10
+	imageWriteSize      = 0x1000
 	uartSwitchDelay     = 26666667 // 1 second
 	FileSignatureLength = 0x100
 	fileUploadBlockSize = 0x1000
@@ -81,6 +86,23 @@ const (
 	statusFlashFail             = 0x44
 )
 
+type StorageBitmap uint8
+
+const (
+	StorageBitInvalid StorageBitmap = 0x00
+	StorageBitFlash                 = 0x02
+	StorageBitSFlash                = 0x04
+	StorageBitRAM                   = 0x80
+)
+
+type StorageID uint8
+
+const (
+	StorageRAM    StorageID = 0x00
+	StorageFlash            = 0x01
+	StorageSFlash           = 0x02
+)
+
 type ROMClient struct {
 	s  serial.Serial
 	ct ChipType
@@ -99,7 +121,7 @@ func NewROMClient(s serial.Serial, dc DeviceControl) (*ROMClient, error) {
 	}
 	vi, err := rc.GetVersionInfo()
 	if err != nil {
-		return nil, err
+		return nil, errors.Annotatef(err, "failed to get loader version info")
 	}
 	sb, err := rc.GetStorageList()
 	if err != nil {
@@ -107,10 +129,6 @@ func NewROMClient(s serial.Serial, dc DeviceControl) (*ROMClient, error) {
 	}
 	common.Reportf("  %s boot loader v%s, storage 0x%02x",
 		vi.ChipTypeString(), vi.BootLoaderVersionString(), sb)
-	if vi.BootLoaderVersion < 0x02010400 {
-		// These are early pre-production devices that require loading code stubs, etc.
-		return nil, errors.Errorf("unsupported boot loader version (%s)", vi.BootLoaderVersionString())
-	}
 	return rc, nil
 }
 
@@ -127,7 +145,7 @@ func (rc *ROMClient) SwitchToNWPLoader() error {
 	if err != nil {
 		return errors.Annotatef(err, "failed to get storage list")
 	}
-	if sb&StorageSFlash == 0 || sb&StorageRAM == 0 {
+	if sb&StorageBitSFlash == 0 || sb&StorageBitRAM == 0 {
 		return errors.Errorf("invalid storage type: 0x%02x", sb)
 	}
 	common.Reportf("  NWP boot loader v%s, storage 0x%02x", vi.BootLoaderVersionString(), sb)
@@ -255,7 +273,7 @@ func (vi *VersionInfo) BootLoaderVersionString() string {
 }
 
 func (vi *VersionInfo) ChipType() (ChipType, error) {
-	switch vi.ChipTypeV & 0xff {
+	switch vi.ChipTypeV >> 24 {
 	case 0x10:
 		if vi.BootLoaderVersion > 0x03000000 {
 			return ChipCC3220, nil
@@ -310,7 +328,7 @@ func (rc *ROMClient) commandWithStatus(cmd loaderCmd, args []byte) error {
 		return errors.Annotatef(err, "%s: failed to get status", cmd)
 	}
 	if status != statusOk {
-		return errors.Errorf("%s: status %02x", cmd, status)
+		return errors.Errorf("%s: status 0x%02x", cmd, status)
 	}
 	return nil
 }
@@ -324,32 +342,23 @@ func (rc *ROMClient) GetVersionInfo() (*VersionInfo, error) {
 		return nil, errors.Annotatef(err, "GetVersionInfo")
 	}
 	vi := &VersionInfo{}
-	binary.Read(rb, binary.LittleEndian, &vi.BootLoaderVersion)
-	binary.Read(rb, binary.LittleEndian, &vi.NWPVersion)
-	binary.Read(rb, binary.LittleEndian, &vi.MACVersion)
-	binary.Read(rb, binary.LittleEndian, &vi.PHYVersion)
-	binary.Read(rb, binary.LittleEndian, &vi.ChipTypeV)
+	binary.Read(rb, binary.BigEndian, &vi.BootLoaderVersion)
+	binary.Read(rb, binary.BigEndian, &vi.NWPVersion)
+	binary.Read(rb, binary.BigEndian, &vi.MACVersion)
+	binary.Read(rb, binary.BigEndian, &vi.PHYVersion)
+	binary.Read(rb, binary.BigEndian, &vi.ChipTypeV)
 	glog.V(3).Infof("VersionInfo: %+v", *vi)
 	return vi, nil
 }
 
-type StorageBitmap uint8
-
-const (
-	StorageInvalid StorageBitmap = 0x00
-	StorageFlash                 = 0x02
-	StorageSFlash                = 0x04
-	StorageRAM                   = 0x80
-)
-
 func (rc *ROMClient) GetStorageList() (StorageBitmap, error) {
 	err := rc.sendCommand(cmdGetStorageList, nil)
 	if err != nil {
-		return StorageInvalid, errors.Annotatef(err, "GetStorageList")
+		return StorageBitInvalid, errors.Annotatef(err, "GetStorageList")
 	}
 	sb, err := rc.readN(1)
 	if err != nil {
-		return StorageInvalid, errors.Annotatef(err, "failed to read GetStorageList response")
+		return StorageBitInvalid, errors.Annotatef(err, "failed to read GetStorageList response")
 	}
 	return StorageBitmap(sb[0]), nil
 }
@@ -360,9 +369,9 @@ type StorageInfo struct {
 	Reserved  uint32
 }
 
-func (rc *ROMClient) GetStorageInfo(storageId uint32) (*StorageInfo, error) {
+func (rc *ROMClient) GetStorageInfo(sid StorageID) (*StorageInfo, error) {
 	buf := bytes.NewBuffer(nil)
-	binary.Write(buf, binary.BigEndian, uint32(storageId))
+	binary.Write(buf, binary.BigEndian, uint32(sid))
 	if err := rc.sendCommand(cmdGetStorageInfo, buf.Bytes()); err != nil {
 		return nil, errors.Annotatef(err, "GetStorageInfo")
 	}
@@ -374,8 +383,16 @@ func (rc *ROMClient) GetStorageInfo(storageId uint32) (*StorageInfo, error) {
 	binary.Read(rb, binary.BigEndian, &si.BlockSize)
 	binary.Read(rb, binary.BigEndian, &si.NumBlocks)
 	binary.Read(rb, binary.BigEndian, &si.Reserved)
-	glog.V(3).Infof("StorageInfo %d: %+v", storageId, *si)
+	glog.V(3).Infof("StorageInfo %s: %+v", sid, *si)
 	return si, nil
+}
+
+func (rc *ROMClient) ExecuteFromRAM() error {
+	if err := rc.sendCommand(cmdExecuteFromRAM, nil); err != nil {
+		return errors.Trace(err)
+	}
+	// New loader should send ACK.
+	return rc.recvACK()
 }
 
 func (rc *ROMClient) SwitchUARTtoAppsMCU() error {
@@ -460,6 +477,66 @@ func (rc *ROMClient) FormatSLFS(size int) error {
 	binary.Write(buf, binary.BigEndian, uint32(2))
 	rc.s.SetReadTimeout(10 * time.Second)
 	return rc.commandWithStatus(cmdFormatSLFS, buf.Bytes())
+}
+
+func (rc *ROMClient) RawStorageWrite(sid StorageID, offset int, data []byte) error {
+	for numWritten := 0; numWritten < len(data); {
+		remaining := data[numWritten:]
+		writeSize := rawWriteSize
+		if writeSize > len(remaining) {
+			writeSize = len(remaining)
+		}
+		toWrite := remaining[:writeSize]
+		buf := bytes.NewBuffer(nil)
+		binary.Write(buf, binary.BigEndian, uint32(sid))
+		binary.Write(buf, binary.BigEndian, uint32(offset))
+		binary.Write(buf, binary.BigEndian, uint32(len(toWrite)))
+		buf.Write(toWrite)
+		glog.V(3).Infof("Raw write to %s: %d @ %d", sid, len(toWrite), offset)
+		err := rc.commandWithStatus(cmdRawStorageWrite, buf.Bytes())
+		if err != nil {
+			return errors.Annotatef(err, "%s write failed: %d @ %d", sid, len(toWrite), offset)
+		}
+		numWritten += writeSize
+		offset += writeSize
+	}
+	return nil
+}
+
+func (rc *ROMClient) RawStorageEraseBlocks(sid StorageID, startBlock int, numBlocks int) error {
+	buf := bytes.NewBuffer(nil)
+	binary.Write(buf, binary.BigEndian, uint32(sid))
+	binary.Write(buf, binary.BigEndian, uint32(startBlock))
+	binary.Write(buf, binary.BigEndian, uint32(numBlocks))
+	glog.V(3).Infof("Raw erase %s: %d @ %d", sid, numBlocks, startBlock)
+	err := rc.commandWithStatus(cmdRawStorageErase, buf.Bytes())
+	if err != nil {
+		return errors.Annotatef(err, "%s erase failed (%d @ %d)", sid, numBlocks, startBlock)
+	}
+	return nil
+}
+
+func (rc *ROMClient) RawStorageEraseBytes(sid StorageID, offset int, numBytes int) error {
+	si, err := rc.GetStorageInfo(sid)
+	if err != nil {
+		return errors.Annotatef(err, "failed to get storage info")
+	}
+	bs := int(si.BlockSize)
+	startBlock := offset / bs
+	endBlock := (offset + numBytes + bs - 1) / bs
+	numBlocks := endBlock - startBlock
+	glog.V(3).Infof("Erase %s blocks %d-%d (%d)", sid, startBlock, endBlock, numBlocks)
+	return rc.RawStorageEraseBlocks(sid, startBlock, numBlocks)
+}
+
+func (rc *ROMClient) RawEraseAndWrite(sid StorageID, offset int, data []byte) error {
+	if err := rc.RawStorageEraseBytes(sid, offset, len(data)); err != nil {
+		return errors.Trace(err)
+	}
+	if err := rc.RawStorageWrite(sid, offset, data); err != nil {
+		return errors.Trace(err)
+	}
+	return nil
 }
 
 func (rc *ROMClient) EraseFile(fname string) error {
@@ -547,6 +624,47 @@ func (rc *ROMClient) UploadFile(fi *SLFSFileInfo) error {
 	return nil
 }
 
+func (rc *ROMClient) UploadImageFile(fname string) error {
+	data, err := ioutil.ReadFile(fname)
+	if err != nil {
+		return errors.Annotatef(err, "failed to read image file")
+	}
+	rc.s.SetReadTimeout(25 * time.Second)
+	for numWritten := 0; numWritten < len(data); {
+		remaining := data[numWritten:]
+		writeSize := imageWriteSize
+		if writeSize > len(remaining) {
+			writeSize = len(remaining)
+		}
+		toWrite := remaining[:writeSize]
+		buf := bytes.NewBuffer(nil)
+		binary.Write(buf, binary.BigEndian, uint16(0)) // KeySize
+		binary.Write(buf, binary.BigEndian, uint16(writeSize))
+		binary.Write(buf, binary.BigEndian, uint32(0)) // Flags
+		buf.Write(toWrite)
+		glog.V(3).Infof("Image write: %d @ %d", len(toWrite), numWritten)
+		err := rc.sendCommand(cmdProgramImage, buf.Bytes())
+		if err != nil {
+			return errors.Annotatef(err, "image write failed: %d @ %d", len(toWrite), numWritten)
+		}
+		// Read extended status.
+		extStatus, err := rc.readN(4)
+		if err != nil {
+			return errors.Annotatef(err, "failed to read ACK")
+		}
+		var e0 int16
+		var e1 uint16
+		buf = bytes.NewBuffer(extStatus)
+		binary.Read(buf, binary.BigEndian, &e0)
+		binary.Read(buf, binary.BigEndian, &e1)
+		if e0 < 0 {
+			return errors.Errorf("image programming error @ %d: e0 = %d, e1 = %d", numWritten, e0, e1)
+		}
+		numWritten += writeSize
+	}
+	return nil
+}
+
 // TODO(rojer): Use stringer when it actually works.
 func (cmd loaderCmd) String() string {
 	switch cmd {
@@ -562,19 +680,40 @@ func (cmd loaderCmd) String() string {
 		return fmt.Sprintf("GetStorageList(0x%x)", uint8(cmd))
 	case cmdFormatSLFS:
 		return fmt.Sprintf("FormatSLFS(0x%x)", uint8(cmd))
+	case cmdRawStorageWrite:
+		return fmt.Sprintf("RawStorageWrite(0x%x)", uint8(cmd))
 	case cmdEraseFile:
 		return fmt.Sprintf("EraseFile(0x%x)", uint8(cmd))
 	case cmdGetVersionInfo:
 		return fmt.Sprintf("GetVersionInfo(0x%x)", uint8(cmd))
+	case cmdRawStorageErase:
+		return fmt.Sprintf("RawStorageErase(0x%x)", uint8(cmd))
 	case cmdGetStorageInfo:
 		return fmt.Sprintf("GetStorageInfo(0x%x)", uint8(cmd))
+	case cmdExecuteFromRAM:
+		return fmt.Sprintf("ExecuteFromRAM(0x%x)", uint8(cmd))
 	case cmdSwitchUARTtoAppsMCU:
 		return fmt.Sprintf("SwitchUARTtoAppsMCU(0x%x)", uint8(cmd))
+	case cmdProgramImage:
+		return fmt.Sprintf("ProgramImage(0x%x)", uint8(cmd))
 	case cmdGetDeviceInfo:
 		return fmt.Sprintf("GetDeviceInfo(0x%x)", uint8(cmd))
 	case cmdGetMACAddress:
 		return fmt.Sprintf("GetMACAddress(0x%x)", uint8(cmd))
 	default:
 		return fmt.Sprintf("?(0x%x)", uint8(cmd))
+	}
+}
+
+func (sid StorageID) String() string {
+	switch sid {
+	case StorageRAM:
+		return "RAM"
+	case StorageFlash:
+		return "Flash"
+	case StorageSFlash:
+		return "SFLASH"
+	default:
+		return fmt.Sprintf("?(0x%x)", sid)
 	}
 }

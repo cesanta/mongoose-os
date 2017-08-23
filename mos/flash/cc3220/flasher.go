@@ -1,3 +1,10 @@
+/*
+ * Copyright (c) 2014-2017 Cesanta Software Limited
+ * All rights reserved
+ */
+
+//go:generate go-bindata -pkg cc3220 -nocompress -modtime 1 -mode 420 data/
+
 package cc3220
 
 import (
@@ -10,13 +17,25 @@ import (
 type FlashOpts struct {
 	Port           string
 	FormatSLFSSize int
+	BPIBinary      string
 }
 
 const (
 	baudRate = 921600
+	// From cc3220_embedded_programming/sources/ImageProgramming.py
+	flashPatchWriteLocation = 33*0x1000 + 8
 )
 
 func Flash(fw *common.FirmwareBundle, opts *FlashOpts) error {
+	if opts.BPIBinary == "" {
+		bpib, err := findBPIBinary()
+		if err != nil {
+			return errors.Annotatef(err, "path to BuildProgrammingImage is not specified and it could not be found in the usual places. Make sure UniFlash 4.x is installed.")
+		}
+		common.Reportf("Found BPI binary: %s", bpib)
+		opts.BPIBinary = bpib
+	}
+
 	common.Reportf("Opening %s...", opts.Port)
 	s, err := serial.Open(serial.OpenOptions{
 		PortName:              opts.Port,
@@ -45,22 +64,9 @@ func Flash(fw *common.FirmwareBundle, opts *FlashOpts) error {
 		return errors.Annotatef(err, "failed to connect to boot loader")
 	}
 
-	// At some point we may want to program on-chip flash before switching to NWP.
-	rc.GetStorageInfo(0)
-	rc.GetStorageInfo(1)
-	rc.GetStorageInfo(2)
-	rc.GetStorageInfo(4)
-
 	if err := rc.SwitchToNWPLoader(); err != nil {
 		return errors.Annotatef(err, "failed to connect to switch to NWP boot loader")
 	}
-
-	rc.GetStorageInfo(0)
-	rc.GetStorageInfo(1)
-	rc.GetStorageInfo(2)
-	rc.GetStorageInfo(4)
-
-	rc.GetDeviceInfo()
 
 	mac, err := rc.GetMACAddress()
 	if err != nil {
@@ -68,14 +74,43 @@ func Flash(fw *common.FirmwareBundle, opts *FlashOpts) error {
 	}
 	common.Reportf("  MAC: %s", mac)
 
-	//opts.FormatSLFSSize = 4 * 1024 * 1024
-	if opts.FormatSLFSSize > 0 {
-		common.Reportf("Formatting SFLASH file system (%d)...", opts.FormatSLFSSize)
-		err = rc.FormatSLFS(opts.FormatSLFSSize)
-		if err != nil {
-			return errors.Annotatef(err, "failed to format SLFS")
-		}
+	// Upload programming code patches first.
+	common.Reportf("Applying boot loader patches...")
+	ramPatch := MustAsset("data/BTL_ram.ptc")
+	if err := rc.RawEraseAndWrite(cc32xx.StorageRAM, 0, ramPatch); err != nil {
+		return errors.Annotatef(err, "failed to apply RAM patch")
+	}
+	if err := rc.ExecuteFromRAM(); err != nil {
+		return errors.Annotatef(err, "failed to apply RAM patch")
+	}
+	vi, err := rc.GetVersionInfo()
+	if err != nil {
+		return errors.Annotatef(err, "failed to get patched loader version info")
+	}
+	common.Reportf("  RAM patch applied, new version: %s", vi.BootLoaderVersionString())
+	flashPatch := MustAsset("data/BTL_sflash.ptc")
+	if err := rc.RawEraseAndWrite(cc32xx.StorageSFlash, flashPatchWriteLocation, flashPatch); err != nil {
+		return errors.Annotatef(err, "failed to apply RAM patch")
+	}
+	common.Reportf("  Flash patch applied")
+
+	flashSize := 4 * 1024 * 1024 // TODO(rojer): detect
+
+	common.Reportf("Generating UCF image for %s (flash size: %d)", mac, flashSize)
+	imgfn, imgfs, err := buildUCFImageFromFirmwareBundle(fw, opts.BPIBinary, mac, flashSize)
+	if err != nil {
+		return errors.Annotatef(err, "failed to create UCF image")
 	}
 
-	return errors.NotImplementedf("flashing")
+	// imgfn = "/home/rojer/.SLImageCreator/projects/c_no_libs/sl_image/Output/Programming.ucf"
+
+	common.Reportf("Uploading UCF image (%d bytes)", imgfs)
+
+	if err := rc.UploadImageFile(imgfn); err != nil {
+		return errors.Annotatef(err, "failed to upload image")
+	}
+
+	common.Reportf("Rebooting device...")
+
+	return dc.BootFirmware()
 }

@@ -34,6 +34,9 @@ func init() {
 	// CC3200
 	flag.IntVar(&cc3200FlashOpts.FormatSLFSSize, "cc3200-format-slfs-size", 1048576,
 		"Format SLFS for this flash size (bytes)")
+	// CC3220
+	flag.StringVar(&cc3220FlashOpts.BPIBinary, "cc3220-bpi-binary", "",
+		"Path to BuildProgrammingImage binary. If not set will try looking in the default TI dir.")
 
 	// ESP8266, ESP32
 	flag.UintVar(&espFlashOpts.ROMBaudRate, "esp-rom-baud-rate", 115200,
@@ -93,6 +96,9 @@ func flash(ctx context.Context, devConn *dev.DevConn) error {
 	fw, err := common.NewZipFirmwareBundle(fwname, version.GetMosVersionSuffix())
 	if err != nil {
 		return errors.Annotatef(err, "failed to load %s", fwname)
+	}
+	if !*keepTempFiles {
+		defer fw.Cleanup()
 	}
 
 	ourutil.Reportf("Loaded %s/%s version %s (%s)", fw.Name, fw.Platform, fw.Version, fw.BuildID)

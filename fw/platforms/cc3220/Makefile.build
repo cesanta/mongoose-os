@@ -45,6 +45,7 @@ MGOS_DEBUG_UART = 0
 TOOLCHAIN ?= $(TI_COMPILER_PATH)
 APP_ORG = 0x20000000
 RAM_SIZE = 0x40000
+APP_IMAGE_MAX_SIZE = 524288
 
 SDK_PATH ?=
 FREERTOS_PATH ?=
@@ -54,6 +55,18 @@ COMMON_CC3200_PATH ?= $(MGOS_PATH)/common/platforms/cc3200
 MGOS_CC3220_PATH ?= $(MGOS_PATH)/fw/platforms/cc3220
 MONGOOSE_PATH ?= $(MGOS_PATH)/mongoose
 FROZEN_PATH ?= $(MGOS_PATH)/frozen
+
+# Binary images must be signed. By default, we sign with dummy "playground" keys from the SDK.
+SIG_CERT ?= $(SDK_PATH)/tools/cc32xx_tools/certificate-playground/dummy-root-ca-cert
+SIG_KEY ?= $(SDK_PATH)/tools/cc32xx_tools/certificate-playground/dummy-root-ca-cert-key
+ifeq ("$(lastword $(subst ., ,$(SIG_KEY)))", "pem")
+SIG_KEY_FORMAT ?= pem
+else
+SIG_KEY_FORMAT ?= der
+endif
+
+CA_BUNDLE ?= $(SDK_PATH)/tools/cc32xx_tools/certificate-playground/certcatalogPlayGround20160911.lst
+CA_BUNDLE_SIG ?= $(SDK_PATH)/tools/cc32xx_tools/certificate-playground/certcatalogPlayGround20160911.lst.signed.bin
 
 BUILD_DIR ?= $(CURDIR)/.build
 FW_STAGING_DIR ?= $(BUILD_DIR)/fw_temp
@@ -93,6 +106,8 @@ MGOS_FEATURES ?= -DMGOS_VFS_DECLARE_LIBC_DIR_API \
                  -DMGOS_VFS_DEFINE_DIRENT
 
 APP_BIN = $(BUILD_DIR)/$(APP).bin
+APP_BIN_SHA = $(BUILD_DIR)/$(APP).bin.sha
+APP_BIN_SHA_SIG = $(BUILD_DIR)/$(APP).bin.sha.sig
 APP_ELF = $(BUILD_DIR)/$(APP).elf
 MGOS_LIB = $(BUILD_DIR)/mongoose-os.a
 SYS_CONFIG_C = $(GEN_DIR)/sys_config.c
@@ -187,8 +202,15 @@ endif
 
 CREATE_RAW_FS ?= 0
 
-FW_PARTS = /sys/mcuflashimg.bin:type=app,src=$(APP_BIN),load_addr=$(APP_ORG) \
+FW_PARTS = /sys/mcuflashimg.bin:type=app,src=$(APP_BIN_SHA),falloc=$(APP_IMAGE_MAX_SIZE),sig_cert=$(notdir $(SIG_CERT)),sig=$(notdir $(APP_BIN_SHA_SIG)) \
+           $(notdir $(SIG_CERT)):type=slfile,src=$(SIG_CERT) \
+           $(notdir $(APP_BIN_SHA_SIG)):type=sig,src=$(APP_BIN_SHA_SIG) \
            $(foreach f,$(SLFS_FILES), $(notdir $(f)):type=slfile,src=$(f))
+
+CC3220_SP_FILE ?= $(wildcard $(SDK_PATH)/tools/cc32xx_tools/servicepack-cc3x20/sp_*.?.bin)
+ifneq "$(CC3220_SP_FILE)" ""
+  FW_PARTS += sp.bin:type=service_pack,src=$(CC3220_SP_FILE)
+endif
 
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
 
@@ -230,8 +252,21 @@ CXXFLAGS += $(APP_CXXFLAGS)
 
 all: $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(FS_STAGING_DIR) $(FW_ZIP)
 
-$(FW_MANIFEST): $(APP_BIN) $(FS_IMG) $(FS_EMPTY_IMG) \
-                $(APP_SLFS_PATH) $(SLFS_FILES) $(FS_FILES)
+$(FW_MANIFEST): $(APP_BIN) $(APP_BIN_SHA_SIG) $(FS_IMG) $(FS_EMPTY_IMG) \
+                $(APP_SLFS_PATH) $(SLFS_FILES) $(FS_FILES) \
+                $(SIG_CERT) $(CA_BUNDLE) $(CA_BUNDLE_SIG)
+
+$(APP_BIN_SHA_SIG): $(APP_BIN_SHA) $(SIG_KEY)
+	$(vecho) "SIGN  $(notdir $^) -> $@"
+	$(Q) openssl dgst -sha1 \
+	  -sign $(SIG_KEY) -keyform $(SIG_KEY_FORMAT) \
+	  -out $@ \
+	  $<
+
+$(APP_BIN_SHA): $(APP_BIN)
+	$(vecho) "DGST  $< -> $@"
+	$(Q) openssl dgst -sha1 -binary -out $(APP_BIN_SHA) $(APP_BIN)
+	$(Q) cat $(APP_BIN) >> $(APP_BIN_SHA)
 
 $(APP_BIN): $(APP_ELF)
 	$(vecho) "BIN   $< -> $@"
