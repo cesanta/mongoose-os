@@ -8,7 +8,7 @@ violations, something like this in the log:
 So we enable poisoning, heaplog, and call stack trace, in order to understand
 better what's going on:
 
-    $ mos build --build_var MGOS_ENABLE_HEAP_LOG:1 --build_var MGOS_ENABLE_CALL_TRACE:1
+    $ mos build --build-var MGOS_ENABLE_HEAP_LOG:1 --build-var MGOS_ENABLE_CALL_TRACE:1
 
 Before flashing this firmware, make sure you'll be able to save full session's
 log into a file. I usually adjust MFT `console-line-count` to be

@@ -105,9 +105,6 @@ func init() {
 	hiddenFlags = append(hiddenFlags, "docker_images")
 
 	flag.StringSliceVar(&buildVarsSlice, "build-var", []string{}, "build variable in the format \"NAME:VALUE\" Can be used multiple times.")
-
-	// deprecated since 2017/05/11
-	flag.StringSliceVar(&buildVarsSlice, "build_var", []string{}, "deprecated, use --build-var")
 }
 
 type buildParams struct {
@@ -566,8 +563,24 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 
 	// Add build vars from CLI flags
 	for _, v := range buildVarsSlice {
-		parts := strings.SplitN(v, ":", 2)
-		manifest.BuildVars[parts[0]] = parts[1]
+		pp1 := strings.SplitN(v, ":", 2)
+		pp2 := strings.SplitN(v, "=", 2)
+		var pp []string
+		switch {
+		case len(pp1) == 2 && len(pp2) == 1:
+			pp = pp1
+		case len(pp1) == 1 && len(pp2) == 2:
+			pp = pp2
+		case len(pp1) == 2 && len(pp2) == 2:
+			if len(pp1[0]) < len(pp2[0]) {
+				pp = pp1
+			} else {
+				pp = pp2
+			}
+		default:
+			return errors.Errorf("invalid --build-var spec: %q", v)
+		}
+		manifest.BuildVars[pp[0]] = pp[1]
 	}
 
 	appPath, err := getCodeDirAbs()

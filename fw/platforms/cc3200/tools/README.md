@@ -1,6 +1,6 @@
 # Using GDB with cc3200
 
-- Build the project with GCC (a flag `--build_var=TOOLCHAIN:gcc` for `mos build`)
+- Build the project with GCC (a flag `--build-var=TOOLCHAIN:gcc` for `mos build`)
 - Flash the device
 - Make sure you do NOT have a wire attached to J8, and you do have a jumper there
   (i.e. undo what's suggested here http://energia.nu/cc3200guide/)
