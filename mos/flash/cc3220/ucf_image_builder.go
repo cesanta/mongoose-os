@@ -95,10 +95,10 @@ type systemFileId string
 
 const (
 	sfiIPConfig   systemFileId = "CONFIG_TYPE_IP_CONFIG"
-	sfiDeviceName              = "CONFIG_TYCONFIG_TYPE_DEVICE_NAME"
-	sfiAP                      = "CONFIG_TYCONFIG_TYPE_AP"
-	sfiMode                    = "CONFIG_TYCONFIG_TYPE_MODE"
-	sfiSTAConfig               = "CONFIG_TYCONFIG_TYPE_STA_CONFIG"
+	sfiDeviceName              = "CONFIG_TYPE_DEVICE_NAME"
+	sfiAP                      = "CONFIG_TYPE_AP"
+	sfiMode                    = "CONFIG_TYPE_MODE"
+	sfiSTAConfig               = "CONFIG_TYPE_STA_CONFIG"
 	sfiDHCPSrv                 = "CONFIG_TYPE_DHCP_SRV"
 )
 
@@ -130,7 +130,10 @@ const (
 
 func isKnownPartType(pt string) bool {
 	return pt == cc32xx.PartTypeServicePack ||
+		pt == cc32xx.PartTypeCABundle ||
+		pt == cc32xx.PartTypeCertificate ||
 		pt == cc32xx.PartTypeSLFile ||
+		pt == cc32xx.PartTypeSLConfig ||
 		pt == cc32xx.PartTypeApp
 }
 
@@ -218,6 +221,10 @@ func buildXMLConfigFromFirmwareBundle(fw *common.FirmwareBundle, storageCapacity
 					},
 				},
 			})
+		case cc32xx.PartTypeCertificate:
+			// Certificate files are in every way the same as regular files,
+			// we just want them placed at the beginning.
+			fallthrough
 		case cc32xx.PartTypeSLFile:
 			fn, fs, err := fw.GetPartDataFile(p.Name)
 			if err != nil {
@@ -231,6 +238,40 @@ func buildXMLConfigFromFirmwareBundle(fw *common.FirmwareBundle, storageCapacity
 					FileLocation:   fn,
 					MaxFileSize:    fs,
 					FileSystemName: p.Name,
+				},
+			})
+		case cc32xx.PartTypeSLConfig:
+			break
+			sfid, err := systemFileIdFromString(p.Name)
+			if err != nil {
+				return "", errors.Annotatef(err, "%s", p.Name)
+			}
+			fn, _, err := fw.GetPartDataFile(p.Name)
+			if err != nil {
+				return "", errors.Annotatef(err, "%s: failed to get file data", p.Name)
+			}
+			cc = append(cc, command{
+				CommandWriteSystemFile: &commandWriteSystemFile{
+					FileLocation: fn,
+					SystemFileId: sfid,
+				},
+			})
+		case cc32xx.PartTypeCABundle:
+			if p.CC32XXFileSignature == "" {
+				return "", errors.Errorf("%s: CA bundle must be signed", p.Name)
+			}
+			cabfn, _, err := fw.GetPartDataFile(p.Name)
+			if err != nil {
+				return "", errors.Annotatef(err, "%s: failed to get CA bundle", p.Name)
+			}
+			sigfn, _, err := fw.GetPartDataFile(p.CC32XXFileSignature)
+			if err != nil {
+				return "", errors.Annotatef(err, "%s: failed to get signature for", p.Name)
+			}
+			cc = append(cc, command{
+				CommandWriteCertificateStore: &commandWriteCertificateStore{
+					FileLocation:      cabfn,
+					SignatureFileName: sigfn,
 				},
 			})
 		}
@@ -298,4 +339,23 @@ func buildUCFImageFromFirmwareBundle(fw *common.FirmwareBundle, bpiBinary string
 	}
 
 	return ucfn, int(fi.Size()), nil
+}
+
+func systemFileIdFromString(s string) (systemFileId, error) {
+	switch s {
+	case string(sfiIPConfig):
+		return sfiIPConfig, nil
+	case string(sfiDeviceName):
+		return sfiDeviceName, nil
+	case string(sfiAP):
+		return sfiAP, nil
+	case string(sfiMode):
+		return sfiMode, nil
+	case string(sfiSTAConfig):
+		return sfiSTAConfig, nil
+	case string(sfiDHCPSrv):
+		return sfiDHCPSrv, nil
+	default:
+		return systemFileId(""), errors.Errorf("unknown system file id %q", s)
+	}
 }

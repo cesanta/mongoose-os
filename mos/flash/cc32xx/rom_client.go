@@ -35,7 +35,7 @@ const (
 	cmdGetStorageInfo      = 0x31
 	cmdExecuteFromRAM      = 0x32
 	cmdSwitchUARTtoAppsMCU = 0x33
-	cmdProgramImage        = 0x34
+	cmdUploadImage         = 0x34
 
 	cmdGetDeviceInfo = 0x37
 
@@ -625,6 +625,7 @@ func (rc *ROMClient) UploadFile(fi *SLFSFileInfo) error {
 }
 
 func (rc *ROMClient) UploadImageFile(fname string) error {
+	glog.Infof("UCF image file name: %s", fname)
 	data, err := ioutil.ReadFile(fname)
 	if err != nil {
 		return errors.Annotatef(err, "failed to read image file")
@@ -643,9 +644,16 @@ func (rc *ROMClient) UploadImageFile(fname string) error {
 		binary.Write(buf, binary.BigEndian, uint32(0)) // Flags
 		buf.Write(toWrite)
 		glog.V(3).Infof("Image write: %d @ %d", len(toWrite), numWritten)
-		err := rc.sendCommand(cmdProgramImage, buf.Bytes())
+		err := rc.sendCommand(cmdUploadImage, buf.Bytes())
 		if err != nil {
-			return errors.Annotatef(err, "image write failed: %d @ %d", len(toWrite), numWritten)
+			if writeSize == len(remaining) {
+				// Extracting image can take a long time, but we cannot set read timeout more than 25 seconds.
+				// Try reading ACK again.
+				err = rc.recvACK()
+			}
+			if err != nil {
+				return errors.Annotatef(err, "image write failed: %d @ %d", len(toWrite), numWritten)
+			}
 		}
 		// Read extended status.
 		extStatus, err := rc.readN(4)
@@ -694,8 +702,8 @@ func (cmd loaderCmd) String() string {
 		return fmt.Sprintf("ExecuteFromRAM(0x%x)", uint8(cmd))
 	case cmdSwitchUARTtoAppsMCU:
 		return fmt.Sprintf("SwitchUARTtoAppsMCU(0x%x)", uint8(cmd))
-	case cmdProgramImage:
-		return fmt.Sprintf("ProgramImage(0x%x)", uint8(cmd))
+	case cmdUploadImage:
+		return fmt.Sprintf("UploadImage(0x%x)", uint8(cmd))
 	case cmdGetDeviceInfo:
 		return fmt.Sprintf("GetDeviceInfo(0x%x)", uint8(cmd))
 	case cmdGetMACAddress:

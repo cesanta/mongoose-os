@@ -102,8 +102,6 @@ func Flash(fw *common.FirmwareBundle, opts *FlashOpts) error {
 		return errors.Annotatef(err, "failed to create UCF image")
 	}
 
-	// imgfn = "/home/rojer/.SLImageCreator/projects/c_no_libs/sl_image/Output/Programming.ucf"
-
 	common.Reportf("Uploading UCF image (%d bytes)", imgfs)
 
 	if err := rc.UploadImageFile(imgfn); err != nil {
