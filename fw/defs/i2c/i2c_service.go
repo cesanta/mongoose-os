@@ -74,16 +74,17 @@ type Service interface {
 }
 
 type Instance interface {
-	Call(context.Context, string, *frame.Command) (*frame.Response, error)
+	Call(context.Context, string, *frame.Command, mgrpc.GetCredsCallback) (*frame.Response, error)
 }
 
-func NewClient(i Instance, addr string) Service {
-	return &_Client{i: i, addr: addr}
+func NewClient(i Instance, addr string, getCreds mgrpc.GetCredsCallback) Service {
+	return &_Client{i: i, addr: addr, getCreds: getCreds}
 }
 
 type _Client struct {
-	i    Instance
-	addr string
+	i        Instance
+	addr     string
+	getCreds mgrpc.GetCredsCallback
 }
 
 func (c *_Client) Read(ctx context.Context, args *ReadArgs) (res *ReadResult, err error) {
@@ -92,7 +93,7 @@ func (c *_Client) Read(ctx context.Context, args *ReadArgs) (res *ReadResult, er
 	}
 
 	cmd.Args = ourjson.DelayMarshaling(args)
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -114,7 +115,7 @@ func (c *_Client) ReadRegB(ctx context.Context, args *ReadRegBArgs) (res *ReadRe
 	}
 
 	cmd.Args = ourjson.DelayMarshaling(args)
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -136,7 +137,7 @@ func (c *_Client) ReadRegW(ctx context.Context, args *ReadRegWArgs) (res *ReadRe
 	}
 
 	cmd.Args = ourjson.DelayMarshaling(args)
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -156,7 +157,7 @@ func (c *_Client) Scan(ctx context.Context) (res []int64, err error) {
 	cmd := &frame.Command{
 		Cmd: "I2C.Scan",
 	}
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -178,7 +179,7 @@ func (c *_Client) Write(ctx context.Context, args *WriteArgs) (err error) {
 	}
 
 	cmd.Args = ourjson.DelayMarshaling(args)
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -194,7 +195,7 @@ func (c *_Client) WriteRegB(ctx context.Context, args *WriteRegBArgs) (err error
 	}
 
 	cmd.Args = ourjson.DelayMarshaling(args)
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return errors.Trace(err)
 	}

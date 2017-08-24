@@ -4,9 +4,10 @@ import (
 	"crypto/tls"
 	"crypto/x509"
 	"flag"
-	"golang.org/x/net/context"
 	"io/ioutil"
 	"strings"
+
+	"golang.org/x/net/context"
 
 	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"

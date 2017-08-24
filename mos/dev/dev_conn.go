@@ -2,8 +2,9 @@ package dev
 
 import (
 	"crypto/tls"
-	"golang.org/x/net/context"
 	"time"
+
+	"golang.org/x/net/context"
 
 	"cesanta.com/common/go/mgrpc"
 	"cesanta.com/common/go/mgrpc/codec"
@@ -11,6 +12,7 @@ import (
 	fwconfig "cesanta.com/fw/defs/config"
 	fwfilesystem "cesanta.com/fw/defs/fs"
 	fwsys "cesanta.com/fw/defs/sys"
+	"cesanta.com/mos/rpccreds"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 )
@@ -194,8 +196,8 @@ func (dc *DevConn) ConnectWithJunkHandler(ctx context.Context, junkHandler func(
 		return errors.Trace(err)
 	}
 
-	dc.CConf = fwconfig.NewClient(dc.RPC, debugDevId)
-	dc.CSys = fwsys.NewClient(dc.RPC, debugDevId)
-	dc.CFilesystem = fwfilesystem.NewClient(dc.RPC, debugDevId)
+	dc.CConf = fwconfig.NewClient(dc.RPC, debugDevId, rpccreds.GetRPCCreds)
+	dc.CSys = fwsys.NewClient(dc.RPC, debugDevId, rpccreds.GetRPCCreds)
+	dc.CFilesystem = fwfilesystem.NewClient(dc.RPC, debugDevId, rpccreds.GetRPCCreds)
 	return nil
 }

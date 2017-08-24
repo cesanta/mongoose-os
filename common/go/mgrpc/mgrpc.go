@@ -1,12 +1,18 @@
 package mgrpc
 
 import (
+	"crypto/md5"
+	"crypto/rand"
 	"crypto/tls"
+	"encoding/hex"
+	"encoding/json"
 	"fmt"
-	"golang.org/x/net/context"
+	"math/big"
 	"net"
 	"sync"
 	"time"
+
+	"golang.org/x/net/context"
 
 	"golang.org/x/net/websocket"
 
@@ -16,9 +22,15 @@ import (
 	"github.com/golang/glog"
 )
 
+const (
+	authTypeDigest = "digest"
+)
+
+type GetCredsCallback func() (username, passwd string, err error)
+
 type MgRPC interface {
 	Call(
-		ctx context.Context, dst string, cmd *frame.Command,
+		ctx context.Context, dst string, cmd *frame.Command, getCreds GetCredsCallback,
 	) (*frame.Response, error)
 	Disconnect(ctx context.Context) error
 	IsConnected() bool
@@ -40,6 +52,13 @@ type mgRPCImpl struct {
 type req struct {
 	respChan chan *frame.Response
 	errChan  chan error
+}
+
+type authErrorMsg struct {
+	AuthType string `json:"auth_type"`
+	Nonce    int    `json:"nonce"`
+	NC       int    `json:"nc"`
+	Realm    string `json:"realm"`
 }
 
 const tcpKeepAliveInterval = 3 * time.Minute
@@ -261,7 +280,7 @@ func (r *mgRPCImpl) recvLoop(ctx context.Context, c codec.Codec) {
 }
 
 func (r *mgRPCImpl) Call(
-	ctx context.Context, dst string, cmd *frame.Command,
+	ctx context.Context, dst string, cmd *frame.Command, getCreds GetCredsCallback,
 ) (*frame.Response, error) {
 	if cmd.ID == 0 {
 		cmd.ID = frame.CreateCommandUID()
@@ -285,7 +304,51 @@ func (r *mgRPCImpl) Call(
 
 	select {
 	case resp := <-respChan:
-		glog.V(2).Infof("got response on request %d: [%v]", cmd.ID, resp)
+		glog.V(2).Infof("got response to request %d: [%v] (%v)", cmd.ID, resp, resp.StatusMsg)
+		if resp.Status == 401 && cmd.Auth == nil {
+			var authMsg authErrorMsg
+			if err := json.Unmarshal([]byte(resp.StatusMsg), &authMsg); err == nil {
+				// Succeed in parsing error message, let's check auth type
+				switch authMsg.AuthType {
+				case authTypeDigest:
+					// Get username and password
+					username, passwd, err := getCreds()
+					if err != nil {
+						return nil, errors.Trace(err)
+					}
+
+					// Generate cnonce
+					cnonceBig, err := rand.Int(rand.Reader, big.NewInt(0xffffffff))
+					if err != nil {
+						return nil, errors.Annotatef(err, "generating cnonce")
+					}
+
+					cnonce := int(cnonceBig.Int64())
+
+					// Compute resp
+					resp := mkMd5Resp(
+						"dummy_method", "dummy_uri", username, authMsg.Realm, passwd,
+						authMsg.Nonce, authMsg.NC, cnonce, "auth",
+					)
+
+					cmdWithAuth := *cmd
+					cmdWithAuth.Auth = &frame.FrameAuth{
+						Realm:    authMsg.Realm,
+						Nonce:    authMsg.Nonce,
+						Username: username,
+						CNonce:   cnonce,
+						Response: resp,
+					}
+					glog.V(2).Infof("resending cmd %d with auth added: %v", cmd.ID, cmdWithAuth)
+					return r.Call(ctx, dst, &cmdWithAuth, getCreds)
+
+				default:
+					glog.Warningf("got 401 with an unknown auth_type: %v", authMsg.AuthType)
+				}
+			} else {
+				glog.Warningf("got 401 with an invalid message: %v", resp.StatusMsg)
+			}
+		}
 		return resp, nil
 	case err := <-errChan:
 		glog.V(2).Infof("got err on request %d: [%v]", cmd.ID, err)
@@ -304,7 +367,7 @@ func (r *mgRPCImpl) SendHello(dst string) {
 		Cmd: "/v1/Hello",
 	}
 	glog.V(2).Infof("Sending hello to %q", dst)
-	resp, err := r.Call(context.Background(), dst, hello)
+	resp, err := r.Call(context.Background(), dst, hello, nil)
 	glog.V(2).Infof("Hello response: %+v, %s", resp, err)
 }
 
@@ -315,4 +378,20 @@ func (r *mgRPCImpl) IsConnected() bool {
 
 func (r *mgRPCImpl) SetCodecOptions(opts *codec.Options) error {
 	return r.codec.SetOptions(opts)
+}
+
+func mkMd5Resp(method, uri, username, realm, passwd string, nonce, nc, cnonce int, qop string) string {
+	ha1Arr := md5.Sum([]byte(fmt.Sprintf("%s:%s:%s", username, realm, passwd)))
+	ha1 := hex.EncodeToString(ha1Arr[:])
+
+	ha2Arr := md5.Sum([]byte(fmt.Sprintf("%s:%s", method, uri)))
+	ha2 := hex.EncodeToString(ha2Arr[:])
+
+	respArr := md5.Sum([]byte(fmt.Sprintf(
+		"%s:%d:%d:%d:%s:%s",
+		ha1, nonce, nc, cnonce, "auth", ha2,
+	)))
+	resp := hex.EncodeToString(respArr[:])
+
+	return resp
 }

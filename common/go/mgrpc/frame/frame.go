@@ -40,6 +40,8 @@ type Frame struct {
 
 	Trace *Trace `json:"trace,omitempty"`
 
+	Auth *FrameAuth `json:"auth,omitempty"`
+
 	// Size hint, if present, gives approximate size of the frame in memory.
 	SizeHint int `json:"-"`
 }
@@ -54,6 +56,8 @@ type Command struct {
 	ID   int64              `json:"id,omitempty"`
 	Args ourjson.RawMessage `json:"args,omitempty"`
 
+	Auth *FrameAuth `json:"auth,omitempty"`
+
 	// Timestamp (as number of seconds since Epoch) of when the command result is no longer relevant.
 	Deadline int64 `json:"deadline,omitempty"`
 
@@ -61,6 +65,14 @@ type Command struct {
 	Timeout int64 `json:"timeout,omitempty"`
 
 	Trace *Trace `json:"trace,omitempty"`
+}
+
+type FrameAuth struct {
+	Realm    string `json:"realm"`
+	Username string `json:"username"`
+	Nonce    int    `json:"nonce"`
+	CNonce   int    `json:"cnonce"`
+	Response string `json:"response"`
 }
 
 // Trace groups optional call tracing info.
@@ -126,6 +138,9 @@ func (c Command) String() string {
 	if c.Deadline != 0 {
 		r += fmt.Sprintf(" deadline=%d (%+ds from now)", c.Deadline, c.Deadline-time.Now().Unix())
 	}
+	if c.Auth != nil {
+		r += fmt.Sprintf(" auth=%v", c.Auth)
+	}
 	return r + "}"
 }
 
@@ -154,6 +169,7 @@ func NewRequestFrame(src string, dst string, key string, cmd *Command) *Frame {
 		ID:       cmd.ID,
 		Method:   cmd.Cmd,
 		Args:     cmd.Args,
+		Auth:     cmd.Auth,
 		Deadline: cmd.Deadline,
 		Timeout:  cmd.Timeout,
 		Trace:    cmd.Trace,

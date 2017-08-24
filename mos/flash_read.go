@@ -3,10 +3,11 @@
 package main
 
 import (
-	"golang.org/x/net/context"
 	"io/ioutil"
 	"os"
 	"strconv"
+
+	"golang.org/x/net/context"
 
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/flash/esp"

@@ -87,7 +87,7 @@ type Service interface {
 }
 
 type Instance interface {
-	Call(context.Context, string, *frame.Command) (*frame.Response, error)
+	Call(context.Context, string, *frame.Command, mgrpc.GetCredsCallback) (*frame.Response, error)
 }
 
 type _validators struct {
@@ -252,14 +252,15 @@ func initValidators() {
 	}
 }
 
-func NewClient(i Instance, addr string) Service {
+func NewClient(i Instance, addr string, getCreds mgrpc.GetCredsCallback) Service {
 	validatorsOnce.Do(initValidators)
-	return &_Client{i: i, addr: addr}
+	return &_Client{i: i, addr: addr, getCreds: getCreds}
 }
 
 type _Client struct {
-	i    Instance
-	addr string
+	i        Instance
+	addr     string
+	getCreds mgrpc.GetCredsCallback
 }
 
 func (c *_Client) GenKey(ctx context.Context, args *GenKeyArgs) (res *GenKeyResult, err error) {
@@ -282,7 +283,7 @@ func (c *_Client) GenKey(ctx context.Context, args *GenKeyArgs) (res *GenKeyResu
 			}
 		}
 	}
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -314,7 +315,7 @@ func (c *_Client) GetConfig(ctx context.Context) (res *GetConfigResult, err erro
 	cmd := &frame.Command{
 		Cmd: "ATCA.GetConfig",
 	}
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -362,7 +363,7 @@ func (c *_Client) GetPubKey(ctx context.Context, args *GetPubKeyArgs) (res *GetP
 			}
 		}
 	}
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -410,7 +411,7 @@ func (c *_Client) LockZone(ctx context.Context, args *LockZoneArgs) (err error) 
 			}
 		}
 	}
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -440,7 +441,7 @@ func (c *_Client) SetConfig(ctx context.Context, args *SetConfigArgs) (err error
 			}
 		}
 	}
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -470,7 +471,7 @@ func (c *_Client) SetKey(ctx context.Context, args *SetKeyArgs) (err error) {
 			}
 		}
 	}
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -500,7 +501,7 @@ func (c *_Client) Sign(ctx context.Context, args *SignArgs) (res *SignResult, er
 			}
 		}
 	}
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}

@@ -94,7 +94,7 @@ type Service interface {
 }
 
 type Instance interface {
-	Call(context.Context, string, *frame.Command) (*frame.Response, error)
+	Call(context.Context, string, *frame.Command, mgrpc.GetCredsCallback) (*frame.Response, error)
 }
 
 type _validators struct {
@@ -283,14 +283,15 @@ func initValidators() {
 	}
 }
 
-func NewClient(i Instance, addr string) Service {
+func NewClient(i Instance, addr string, getCreds mgrpc.GetCredsCallback) Service {
 	validatorsOnce.Do(initValidators)
-	return &_Client{i: i, addr: addr}
+	return &_Client{i: i, addr: addr, getCreds: getCreds}
 }
 
 type _Client struct {
-	i    Instance
-	addr string
+	i        Instance
+	addr     string
+	getCreds mgrpc.GetCredsCallback
 }
 
 func (c *_Client) Get(ctx context.Context, args *GetArgs) (res *GetResult, err error) {
@@ -316,7 +317,7 @@ func (c *_Client) Get(ctx context.Context, args *GetArgs) (res *GetResult, err e
 			}
 		}
 	}
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -364,7 +365,7 @@ func (c *_Client) List(ctx context.Context, args *ListArgs) (res []string, err e
 			}
 		}
 	}
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -412,7 +413,7 @@ func (c *_Client) ListExt(ctx context.Context, args *ListExtArgs) (res []ListExt
 			}
 		}
 	}
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -460,7 +461,7 @@ func (c *_Client) Mkfs(ctx context.Context, args *MkfsArgs) (err error) {
 			}
 		}
 	}
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -490,7 +491,7 @@ func (c *_Client) Mount(ctx context.Context, args *MountArgs) (err error) {
 			}
 		}
 	}
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -523,7 +524,7 @@ func (c *_Client) Put(ctx context.Context, args *PutArgs) (err error) {
 			}
 		}
 	}
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -556,7 +557,7 @@ func (c *_Client) Remove(ctx context.Context, args *RemoveArgs) (err error) {
 			}
 		}
 	}
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -586,7 +587,7 @@ func (c *_Client) Umount(ctx context.Context, args *UmountArgs) (err error) {
 			}
 		}
 	}
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return errors.Trace(err)
 	}

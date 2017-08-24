@@ -10,13 +10,14 @@ import (
 	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-	"golang.org/x/net/context"
 	"io/ioutil"
 	"os"
 	"path/filepath"
 	"sort"
 	"strings"
 	"time"
+
+	"golang.org/x/net/context"
 
 	"cesanta.com/common/go/lptr"
 	atcaService "cesanta.com/fw/defs/atca"

@@ -5,13 +5,15 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"golang.org/x/net/context"
 	"regexp"
 	"strings"
+
+	"golang.org/x/net/context"
 
 	"cesanta.com/common/go/ourutil"
 	atcaService "cesanta.com/fw/defs/atca"
 	"cesanta.com/mos/dev"
+	"cesanta.com/mos/rpccreds"
 	"github.com/cesanta/errors"
 )
 
@@ -20,7 +22,7 @@ const (
 )
 
 func Connect(ctx context.Context, dc *dev.DevConn) (atcaService.Service, []byte, *Config, error) {
-	cl := atcaService.NewClient(dc.RPC, "")
+	cl := atcaService.NewClient(dc.RPC, "", rpccreds.GetRPCCreds)
 
 	r, err := cl.GetConfig(ctx)
 	if err != nil {

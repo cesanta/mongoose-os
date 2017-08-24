@@ -7,13 +7,14 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"encoding/pem"
-	"golang.org/x/net/context"
 	"io"
 	"io/ioutil"
 	"math/big"
 	"os"
 	"strconv"
 	"strings"
+
+	"golang.org/x/net/context"
 
 	atcaService "cesanta.com/fw/defs/atca"
 	"cesanta.com/mos/atca"

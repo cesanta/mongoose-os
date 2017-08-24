@@ -78,7 +78,7 @@ type Service interface {
 }
 
 type Instance interface {
-	Call(context.Context, string, *frame.Command) (*frame.Response, error)
+	Call(context.Context, string, *frame.Command, mgrpc.GetCredsCallback) (*frame.Response, error)
 }
 
 type _validators struct {
@@ -222,14 +222,15 @@ func initValidators() {
 	}
 }
 
-func NewClient(i Instance, addr string) Service {
+func NewClient(i Instance, addr string, getCreds mgrpc.GetCredsCallback) Service {
 	validatorsOnce.Do(initValidators)
-	return &_Client{i: i, addr: addr}
+	return &_Client{i: i, addr: addr, getCreds: getCreds}
 }
 
 type _Client struct {
-	i    Instance
-	addr string
+	i        Instance
+	addr     string
+	getCreds mgrpc.GetCredsCallback
 }
 
 func (c *_Client) Read(ctx context.Context, args *ReadArgs) (res *ReadResult, err error) {
@@ -252,7 +253,7 @@ func (c *_Client) Read(ctx context.Context, args *ReadArgs) (res *ReadResult, er
 			}
 		}
 	}
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -300,7 +301,7 @@ func (c *_Client) RemoveIntHandler(ctx context.Context, args *RemoveIntHandlerAr
 			}
 		}
 	}
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -330,7 +331,7 @@ func (c *_Client) SetIntHandler(ctx context.Context, args *SetIntHandlerArgs) (r
 			}
 		}
 	}
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -378,7 +379,7 @@ func (c *_Client) Toggle(ctx context.Context, args *ToggleArgs) (res *ToggleResu
 			}
 		}
 	}
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -426,7 +427,7 @@ func (c *_Client) Write(ctx context.Context, args *WriteArgs) (err error) {
 			}
 		}
 	}
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return errors.Trace(err)
 	}

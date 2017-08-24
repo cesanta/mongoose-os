@@ -45,16 +45,17 @@ type Service interface {
 }
 
 type Instance interface {
-	Call(context.Context, string, *frame.Command) (*frame.Response, error)
+	Call(context.Context, string, *frame.Command, mgrpc.GetCredsCallback) (*frame.Response, error)
 }
 
-func NewClient(i Instance, addr string) Service {
-	return &_Client{i: i, addr: addr}
+func NewClient(i Instance, addr string, getCreds mgrpc.GetCredsCallback) Service {
+	return &_Client{i: i, addr: addr, getCreds: getCreds}
 }
 
 type _Client struct {
-	i    Instance
-	addr string
+	i        Instance
+	addr     string
+	getCreds mgrpc.GetCredsCallback
 }
 
 func (c *_Client) Get(ctx context.Context, args *GetArgs) (res ourjson.RawMessage, err error) {
@@ -63,7 +64,7 @@ func (c *_Client) Get(ctx context.Context, args *GetArgs) (res ourjson.RawMessag
 	}
 
 	cmd.Args = ourjson.DelayMarshaling(args)
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return ourjson.RawMessage{}, errors.Trace(err)
 	}
@@ -85,7 +86,7 @@ func (c *_Client) Save(ctx context.Context, args *SaveArgs) (err error) {
 	}
 
 	cmd.Args = ourjson.DelayMarshaling(args)
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -101,7 +102,7 @@ func (c *_Client) Set(ctx context.Context, args *SetArgs) (err error) {
 	}
 
 	cmd.Args = ourjson.DelayMarshaling(args)
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return errors.Trace(err)
 	}

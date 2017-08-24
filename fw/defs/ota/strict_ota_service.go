@@ -55,7 +55,7 @@ type Service interface {
 }
 
 type Instance interface {
-	Call(context.Context, string, *frame.Command) (*frame.Response, error)
+	Call(context.Context, string, *frame.Command, mgrpc.GetCredsCallback) (*frame.Response, error)
 }
 
 type _validators struct {
@@ -142,21 +142,22 @@ func initValidators() {
 	}
 }
 
-func NewClient(i Instance, addr string) Service {
+func NewClient(i Instance, addr string, getCreds mgrpc.GetCredsCallback) Service {
 	validatorsOnce.Do(initValidators)
-	return &_Client{i: i, addr: addr}
+	return &_Client{i: i, addr: addr, getCreds: getCreds}
 }
 
 type _Client struct {
-	i    Instance
-	addr string
+	i        Instance
+	addr     string
+	getCreds mgrpc.GetCredsCallback
 }
 
 func (c *_Client) Commit(ctx context.Context) (err error) {
 	cmd := &frame.Command{
 		Cmd: "OTA.Commit",
 	}
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -186,7 +187,7 @@ func (c *_Client) CreateSnapshot(ctx context.Context, args *CreateSnapshotArgs) 
 			}
 		}
 	}
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -218,7 +219,7 @@ func (c *_Client) Revert(ctx context.Context) (err error) {
 	cmd := &frame.Command{
 		Cmd: "OTA.Revert",
 	}
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -248,7 +249,7 @@ func (c *_Client) Update(ctx context.Context, args *UpdateArgs) (err error) {
 			}
 		}
 	}
-	resp, err := c.i.Call(ctx, c.addr, cmd)
+	resp, err := c.i.Call(ctx, c.addr, cmd, c.getCreds)
 	if err != nil {
 		return errors.Trace(err)
 	}

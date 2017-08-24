@@ -3,11 +3,13 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+
 	"golang.org/x/net/context"
 
 	"cesanta.com/common/go/mgrpc/frame"
 	"cesanta.com/common/go/ourjson"
 	"cesanta.com/mos/dev"
+	"cesanta.com/mos/rpccreds"
 
 	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
@@ -35,7 +37,7 @@ func callDeviceService(
 		cmd.Args = ourjson.RawJSON([]byte(args))
 	}
 
-	resp, err := devConn.RPC.Call(ctx, devConn.Dest, cmd)
+	resp, err := devConn.RPC.Call(ctx, devConn.Dest, cmd, rpccreds.GetRPCCreds)
 	if err != nil {
 		return "", errors.Trace(err)
 	}
