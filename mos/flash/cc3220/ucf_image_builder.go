@@ -134,7 +134,10 @@ func isKnownPartType(pt string) bool {
 		pt == cc32xx.PartTypeCertificate ||
 		pt == cc32xx.PartTypeSLFile ||
 		pt == cc32xx.PartTypeSLConfig ||
-		pt == cc32xx.PartTypeApp
+		pt == cc32xx.PartTypeBootLoader ||
+		pt == cc32xx.PartTypeBootLoaderConfig ||
+		pt == cc32xx.PartTypeApp ||
+		pt == cc32xx.PartTypeFSContainer
 }
 
 func buildXMLConfigFromFirmwareBundle(fw *common.FirmwareBundle, storageCapacity int, mac cc32xx.MACAddress) (string, error) {
