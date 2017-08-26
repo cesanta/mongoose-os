@@ -53,6 +53,7 @@ MGOS_PATH ?= ../../..
 COMMON_PATH ?= $(MGOS_PATH)/common
 COMMON_CC3200_PATH ?= $(MGOS_PATH)/common/platforms/cc3200
 MGOS_CC3220_PATH ?= $(MGOS_PATH)/fw/platforms/cc3220
+MGOS_CC32XX_PATH ?= $(MGOS_PATH)/fw/platforms/cc32xx
 MONGOOSE_PATH ?= $(MGOS_PATH)/mongoose
 FROZEN_PATH ?= $(MGOS_PATH)/frozen
 
@@ -84,9 +85,10 @@ MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
 # For FW_VERSION, MG_FEATURES_TINY
 include $(MGOS_PATH)/fw/common.mk
 
-VPATH = $(APP_SOURCE_DIRS) $(MGOS_SRC_PATH) $(MGOS_CC3220_PATH)/src $(GEN_DIR) \
+VPATH = $(APP_SOURCE_DIRS) $(MGOS_SRC_PATH) $(MGOS_CC32XX_PATH)/src $(MGOS_CC3220_PATH)/src \
+        $(COMMON_PATH) $(GEN_DIR) \
         $(MONGOOSE_PATH) $(FROZEN_PATH)
-IPATH = $(APP_SOURCE_DIRS) $(MGOS_PATH) $(MGOS_SRC_PATH) $(MGOS_CC3220_PATH)/include $(GEN_DIR)
+IPATH = $(APP_SOURCE_DIRS) $(MGOS_PATH) $(MGOS_SRC_PATH) $(MGOS_CC32XX_PATH)/src $(MGOS_CC3220_PATH)/src $(GEN_DIR)
 
 # Note: CC3220 has only 32 GPIO but our port uses pin-based numbering
 # and those go from 1 to 64.
@@ -94,12 +96,15 @@ MGOS_CC3220_FEATURES ?= -DMGOS_NUM_GPIO=65 '-DUMM_ONFREE(ptr, size)=memset(ptr, 
 
 MG_FEATURES ?= $(MG_FEATURES_TINY) \
                -DMG_LOCALS -DMG_ENABLE_SSL \
-               -DMG_FS_SLFS -DMG_FS_NO_VFS \
+               -DMG_FS_NO_VFS \
                -DMG_ENABLE_FILESYSTEM \
                -DMG_ENABLE_DIRECTORY_LISTING \
+               -DMG_SIMPLELINK_NO_OSI \
                -DCS_DISABLE_MD5 -DMG_EXT_MD5 \
                -DCS_DISABLE_SHA1 -DMG_EXT_SHA1 \
                -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5
+
+#               -DMG_FS_SLFS \
 
 MGOS_FEATURES ?= -DMGOS_VFS_DECLARE_LIBC_DIR_API \
                  -DMGOS_VFS_DEFINE_LIBC_DIR_API \
@@ -127,13 +132,15 @@ GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 
 MGOS_SRCS =
 
-#MGOS_SRCS += umm_malloc.c
-#VPATH += $(COMMON_PATH)/umm_malloc
+MGOS_SRCS += umm_malloc.c
+VPATH += $(COMMON_PATH)/umm_malloc
 
-FREERTOS_SRCS = timers.c list.c queue.c tasks.c port.c heap_4.c
+FREERTOS_SRCS = timers.c list.c queue.c tasks.c port.c
+# TODO(rojer): Unify allocators, make FreeRTOS use UMM malloc as well.
+FREERTOS_SRCS += heap_4.c
 FREERTOS_SRCS += ClockP_freertos.c HwiPCC32XX_freertos.c PowerCC32XX_freertos.c SemaphoreP_freertos.c SystemP_freertos.c
-DRIVER_SRCS = $(notdir $(wildcard $(SDK_PATH)/source/ti/devices/cc32xx/driverlib/*.c)) CC3220SF_LAUNCHXL.c DisplayUart.c
-SL_SRCS = socket.c wlan.c driver.c device.c netapp.c netcfg.c cc_pal.c fs.c
+DRIVER_SRCS = $(notdir $(wildcard $(SDK_PATH)/source/ti/devices/cc32xx/driverlib/*.c)) DisplayUart.c
+SL_SRCS = sl_socket.c wlan.c driver.c device.c netapp.c netcfg.c cc_pal.c fs.c
 SDK_SRCS = $(FREERTOS_SRCS) $(DRIVER_SRCS) $(SL_SRCS)
 
 SDK_SRCS += $(notdir $(wildcard $(SDK_PATH)/source/ti/drivers/*.c))
@@ -175,17 +182,24 @@ VPATH += $(SDK_PATH)/source/ti/devices/cc32xx/driverlib \
          $(FREERTOS_PATH)/Source/portable/CCS/ARM_CM3 \
          $(FREERTOS_PATH)/Source/portable/MemMang
 
-SDK_CFLAGS = -DTARGET_IS_CC3220 -DUSE_FREERTOS -DSL_PLATFORM_MULTI_THREADED
+SDK_CFLAGS = -DTARGET_IS_CC3220 -DUSE_CC3220_ROM_DRV_API -DUSE_FREERTOS -DSL_PLATFORM_MULTI_THREADED
 
-MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3220_PATH)/src/*.c))
+MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3220_PATH)/src/*.c)) \
+             cs_dbg.c cs_rbuf.c mbuf.c \
+             mongoose.c \
+             mgos_debug.c mgos_hooks.c mgos_mongoose.c mgos_uart.c mgos_vfs.c \
+             cc32xx_hal.c cc32xx_main.c cc32xx_uart.c cc32xx_vfs.c
 APP_SRCS = $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
 
-MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" -DCS_PLATFORM=CS_P_CC3220 \
-              -DMGOS_MAX_NUM_UARTS=2 -D__SF_DEBUG__ \
+MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" \
+              -DMGOS_MAX_NUM_UARTS=2 -DMGOS_DEBUG_UART=$(MGOS_DEBUG_UART) \
+              -DSYS_CLK=80000000 -D__SF_DEBUG__ \
               -DMG_SSL_IF_SIMPLELINK_SLFS_PREFIX=\"/slfs/\" \
               $(SDK_CFLAGS) \
               -DC_DISABLE_BUILTIN_SNPRINTF
+
+include $(MGOS_PATH)/fw/src/mgos_features.mk
 
 clean:
 	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)
@@ -275,8 +289,8 @@ $(APP_BIN): $(APP_ELF)
 	$(Q) $(OBJCOPY) -O binary $< $@
 	$(Q) echo "     Code size: $$(ls -l $@ | awk '{print $$5}')"
 
-$(APP_ELF): $(APP_OBJS) $(MGOS_LIB) $(ATCA_LIB) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES)
-	$(call link,$(APP_LD_SCRIPT),$(APP_LDFLAGS),$(APP_OBJS) $(MGOS_LIB) $(ATCA_LIB) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES))
+$(APP_ELF): $(APP_OBJS) $(MGOS_LIB) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES)
+	$(call link,$(APP_LD_SCRIPT),$(APP_LDFLAGS),$(APP_OBJS) $(MGOS_LIB) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES))
 
 $(MGOS_LIB): $(MGOS_OBJS) $(SDK_OBJS)
 	$(call ar,$^)

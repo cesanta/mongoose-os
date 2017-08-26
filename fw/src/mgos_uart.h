@@ -21,8 +21,8 @@
 
 #include "mgos_init.h"
 
-#if CS_PLATFORM == CS_P_CC3200
-#include "fw/platforms/cc3200/src/cc3200_uart.h"
+#if CS_PLATFORM == CS_P_CC3200 || CS_PLATFORM == CS_P_CC3220
+#include "cc32xx_uart.h"
 #elif CS_PLATFORM == CS_P_ESP32
 #include "fw/platforms/esp32/src/esp32_uart.h"
 #elif CS_PLATFORM == CS_P_ESP8266

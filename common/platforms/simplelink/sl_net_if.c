@@ -20,12 +20,16 @@ int sl_set_ssl_opts(struct mg_connection *nc);
 
 void mg_set_non_blocking_mode(sock_t sock) {
   SlSockNonblocking_t opt;
+#if SL_MAJOR_VERSION_NUM < 2
   opt.NonblockingEnabled = 1;
+#else
+  opt.NonBlockingEnabled = 1;
+#endif
   sl_SetSockOpt(sock, SL_SOL_SOCKET, SL_SO_NONBLOCKING, &opt, sizeof(opt));
 }
 
 static int mg_is_error(int n) {
-  return (n < 0 && n != SL_EALREADY && n != SL_EAGAIN);
+  return (n < 0 && n != SL_ERROR_BSD_EALREADY && n != SL_ERROR_BSD_EAGAIN);
 }
 
 void mg_sl_if_connect_tcp(struct mg_connection *nc,
@@ -226,7 +230,7 @@ void mg_mgr_handle_conn(struct mg_connection *nc, int fd_flags, double now) {
        fd_flags, nc->flags, (int) nc->recv_mbuf.len, (int) nc->send_mbuf.len));
 
   if (nc->flags & MG_F_CONNECTING) {
-    if (nc->flags & MG_F_UDP || nc->err != SL_EALREADY) {
+    if (nc->flags & MG_F_UDP || nc->err != SL_ERROR_BSD_EALREADY) {
       mg_if_connect_cb(nc, nc->err);
     } else {
       /* In SimpleLink, to get status of non-blocking connect() we need to wait
@@ -235,9 +239,9 @@ void mg_mgr_handle_conn(struct mg_connection *nc, int fd_flags, double now) {
       if (fd_flags & _MG_F_FD_CAN_WRITE) {
         nc->err = sl_Connect(nc->sock, &nc->sa.sa, sizeof(nc->sa.sin));
         DBG(("%p conn res=%d", nc, nc->err));
-        if (nc->err == SL_ESECSNOVERIFY ||
+        if (nc->err == SL_ERROR_BSD_ESECSNOVERIFY ||
             /* TODO(rojer): Provide API to set the date for verification. */
-            nc->err == SL_ESECDATEERROR) {
+            nc->err == SL_ERROR_BSD_ESECDATEERROR) {
           nc->err = 0;
         }
         if (nc->flags & MG_F_SSL && nc->err == 0) {
@@ -311,9 +315,9 @@ time_t mg_sl_if_poll(struct mg_iface *iface, int timeout_ms) {
   sock_t max_fd = INVALID_SOCKET;
   int num_fds, num_ev = 0, num_timers = 0;
 
-  SL_FD_ZERO(&read_set);
-  SL_FD_ZERO(&write_set);
-  SL_FD_ZERO(&err_set);
+  SL_SOCKET_FD_ZERO(&read_set);
+  SL_SOCKET_FD_ZERO(&write_set);
+  SL_SOCKET_FD_ZERO(&err_set);
 
   /*
    * Note: it is ok to have connections with sock == INVALID_SOCKET in the list,
@@ -329,14 +333,14 @@ time_t mg_sl_if_poll(struct mg_iface *iface, int timeout_ms) {
       if (!(nc->flags & MG_F_WANT_WRITE) &&
           nc->recv_mbuf.len < nc->recv_mbuf_limit &&
           (!(nc->flags & MG_F_UDP) || nc->listener == NULL)) {
-        SL_FD_SET(nc->sock, &read_set);
+        SL_SOCKET_FD_SET(nc->sock, &read_set);
         if (max_fd == INVALID_SOCKET || nc->sock > max_fd) max_fd = nc->sock;
       }
 
       if (((nc->flags & MG_F_CONNECTING) && !(nc->flags & MG_F_WANT_READ)) ||
           (nc->send_mbuf.len > 0 && !(nc->flags & MG_F_CONNECTING))) {
-        SL_FD_SET(nc->sock, &write_set);
-        SL_FD_SET(nc->sock, &err_set);
+        SL_SOCKET_FD_SET(nc->sock, &write_set);
+        SL_SOCKET_FD_SET(nc->sock, &err_set);
         if (max_fd == INVALID_SOCKET || nc->sock > max_fd) max_fd = nc->sock;
       }
     }
@@ -377,12 +381,13 @@ time_t mg_sl_if_poll(struct mg_iface *iface, int timeout_ms) {
     if (nc->sock != INVALID_SOCKET) {
       if (num_ev > 0) {
         fd_flags =
-            (SL_FD_ISSET(nc->sock, &read_set) &&
+            (SL_SOCKET_FD_ISSET(nc->sock, &read_set) &&
                      (!(nc->flags & MG_F_UDP) || nc->listener == NULL)
                  ? _MG_F_FD_CAN_READ
                  : 0) |
-            (SL_FD_ISSET(nc->sock, &write_set) ? _MG_F_FD_CAN_WRITE : 0) |
-            (SL_FD_ISSET(nc->sock, &err_set) ? _MG_F_FD_ERROR : 0);
+            (SL_SOCKET_FD_ISSET(nc->sock, &write_set) ? _MG_F_FD_CAN_WRITE
+                                                      : 0) |
+            (SL_SOCKET_FD_ISSET(nc->sock, &err_set) ? _MG_F_FD_ERROR : 0);
       }
       /* SimpleLink does not report UDP sockets as writable. */
       if (nc->flags & MG_F_UDP && nc->send_mbuf.len > 0) {

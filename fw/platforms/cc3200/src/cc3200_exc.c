@@ -2,13 +2,13 @@
 
 #include <stdio.h>
 
-#include "hw_types.h"
-#include "hw_memmap.h"
-#include "rom.h"
-#include "rom_map.h"
-#include "uart.h"
+#include "inc/hw_types.h"
+#include "inc/hw_memmap.h"
+#include "driverlib/rom.h"
+#include "driverlib/rom_map.h"
+#include "driverlib/uart.h"
 
-#include "fw/platforms/cc3200/src/cc3200_uart.h"
+#include "cc32xx_uart.h"
 #include "fw/platforms/cc3200/src/config.h"
 #include "mgos_sys_config.h"
 
@@ -26,7 +26,7 @@
 void uart_puts(const char *s) {
   int uart_no = (get_cfg() ? get_cfg()->debug.stderr_uart : MGOS_DEBUG_UART);
   if (uart_no < 0) return;
-  uint32_t base = cc3200_uart_get_base(uart_no);
+  uint32_t base = cc32xx_uart_get_base(uart_no);
   for (; *s != '\0'; s++) {
     MAP_UARTCharPut(base, *s);
   }

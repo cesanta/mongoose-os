@@ -89,7 +89,7 @@
 
 /* Constants related to the behaviour or the scheduler. */
 #define configUSE_PORT_OPTIMISED_TASK_SELECTION	1
-#define configTICK_RATE_HZ						( ( TickType_t ) 1000 )
+#define configTICK_RATE_HZ						( ( TickType_t ) 100 )
 #define configUSE_PREEMPTION					1
 #define configUSE_TIME_SLICING					1
 #define configMAX_PRIORITIES					( 5 )
@@ -99,17 +99,15 @@
 /* Constants used to specify if only static allocation is to be supported (in
 which case a heap_n.c file is not required), only dynamic allocation is to be
 supported, or if both static and dynamic allocation are supported. */
-#define configSUPPORT_STATIC_ALLOCATION			1
-#define configSUPPORT_DYNAMIC_ALLOCATION		1
+#define configSUPPORT_STATIC_ALLOCATION 0
+#define configSUPPORT_DYNAMIC_ALLOCATION 1
 
 /* Constants that describe the hardware and memory usage. */
 #define configCPU_CLOCK_HZ						( ( unsigned long ) 80000000 )
 #define configMINIMAL_STACK_SIZE				( ( uint16_t ) 100 )
 #define configMAX_TASK_NAME_LEN					( 12 )
 
-/* Note heap_5.c is used so this only defines the part of the heap that is in
-the first block of RAM on the LPC device.  See the initialisation of the heap
-in main.c. */
+/* Note: Only for FreeRTOS's internal use (pvPortMalloc(), vPortFree()), malloc() and free() are UMM */
 #define configTOTAL_HEAP_SIZE					( ( size_t ) ( 50 * 1024 ) )
 
 /* Constants that build features in or out. */
@@ -124,9 +122,9 @@ in main.c. */
 #define configUSE_TASK_NOTIFICATIONS			1
 
 /* Constants that define which hook (callback) functions should be used. */
-#define configUSE_IDLE_HOOK						1
-#define configUSE_TICK_HOOK						1
-#define configUSE_MALLOC_FAILED_HOOK			1
+#define configUSE_IDLE_HOOK 0
+#define configUSE_TICK_HOOK 1
+#define configUSE_MALLOC_FAILED_HOOK 0
 
 /* Constants provided for debugging and optimisation assistance. */
 #define configCHECK_FOR_STACK_OVERFLOW			2

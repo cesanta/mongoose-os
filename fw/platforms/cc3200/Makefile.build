@@ -54,7 +54,7 @@ SDK_PATH ?= /cc3200-sdk
 MGOS_PATH ?= ../../..
 COMMON_PATH ?= $(MGOS_PATH)/common
 MGOS_CC3200_PATH ?= $(MGOS_PATH)/fw/platforms/cc3200
-MGOS_CC3200_SRC_PATH ?= $(MGOS_CC3200_PATH)/src
+MGOS_CC32XX_PATH ?= $(MGOS_PATH)/fw/platforms/cc32xx
 COMMON_CC3200_PATH ?= $(MGOS_PATH)/common/platforms/cc3200
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 MONGOOSE_PATH ?= $(MGOS_PATH)/mongoose
@@ -98,12 +98,11 @@ FS_STAGING_DIR = $(BUILD_DIR)/fs
 # For FW_VERSION, MG_FEATURES_TINY
 include $(MGOS_PATH)/fw/common.mk
 
-VPATH = $(APP_SOURCE_DIRS) $(MGOS_SRC_PATH) $(MGOS_CC3200_SRC_PATH) \
-        $(COMMON_PATH) $(COMMON_PATH)/mg_rpc \
+VPATH = $(APP_SOURCE_DIRS) $(MGOS_SRC_PATH) $(MGOS_CC32XX_PATH)/src $(MGOS_CC3200_PATH)/src \
+        $(COMMON_PATH) \
         $(BOOT_PATH)/lib \
         $(MONGOOSE_PATH) $(FROZEN_PATH)
-IPATH = $(APP_SOURCE_DIRS) $(MGOS_PATH) $(MGOS_SRC_PATH) $(MGOS_CC3200_SRC_PATH) \
-        $(COMMON_PATH)/mg_rpc \
+IPATH = $(APP_SOURCE_DIRS) $(MGOS_PATH) $(MGOS_SRC_PATH) $(MGOS_CC32XX_PATH)/src $(MGOS_CC3200_PATH)/src \
         $(BOOT_PATH)/lib $(GEN_DIR)
 
 # Note: CC3200 has only 32 GPIO but our port uses pin-based numbering
@@ -113,6 +112,7 @@ MGOS_CC3200_FEATURES ?= -DMGOS_NUM_GPIO=65 '-DUMM_ONFREE(ptr, size)=memset(ptr, 
 MG_FEATURES ?= $(MG_FEATURES_TINY) \
                -DMG_LOCALS -DMG_ENABLE_SSL \
                -DMG_FS_SLFS -DMG_FS_NO_VFS \
+               -DMG_SIMPLELINK_NO_OSI \
                -DMG_ENABLE_FILESYSTEM \
                -DMG_ENABLE_DIRECTORY_LISTING \
                -DCS_DISABLE_MD5 -DMG_EXT_MD5 \
@@ -189,12 +189,14 @@ VPATH += $(SDK_PATH)/driverlib $(SDK_PATH)/oslib $(SDK_PATH)/simplelink \
          $(SDK_PATH)/third_party/FreeRTOS/source/portable/MemMang
 SDK_CFLAGS = -DTARGET_IS_CC3200 -DUSE_FREERTOS -DSL_PLATFORM_MULTI_THREADED
 
-MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3200_SRC_PATH)/*.c))
+MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3200_PATH)/src/*.c)) \
+             cc32xx_hal.c cc32xx_main.c cc32xx_uart.c cc32xx_vfs.c
 APP_SRCS = $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
 
 MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" -DCS_PLATFORM=CS_P_CC3200 \
-              -DMGOS_MAX_NUM_UARTS=2 \
+              -DMGOS_MAX_NUM_UARTS=2 -DMGOS_DEBUG_UART=$(MGOS_DEBUG_UART) \
+              -DSYS_CLK=80000000 -D__SF_DEBUG__ \
               -DMG_SSL_IF_SIMPLELINK_SLFS_PREFIX=\"/slfs/\" \
               $(SDK_CFLAGS) \
               -DC_DISABLE_BUILTIN_SNPRINTF
@@ -249,7 +251,7 @@ include $(MGOS_PATH)/common/scripts/build_info.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
 include $(MGOS_PATH)/fw/src/sys_config.mk
 
-SYS_CONF_SCHEMA += $(MGOS_CC3200_SRC_PATH)/cc3200_sys_config.yaml
+SYS_CONF_SCHEMA += $(MGOS_CC3200_PATH)/src/cc3200_sys_config.yaml
 
 $(BUILD_DIR)/miniz.o: CFLAGS += -DMINIZ_NO_STDIO
 

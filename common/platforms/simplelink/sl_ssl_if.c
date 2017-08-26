@@ -195,13 +195,14 @@ int sl_set_ssl_opts(struct mg_connection *nc) {
     }
     if (ctx->ssl_server_name != NULL) {
       err = sl_SetSockOpt(nc->sock, SL_SOL_SOCKET,
-                          SO_SECURE_DOMAIN_NAME_VERIFICATION,
+                          SL_SO_SECURE_DOMAIN_NAME_VERIFICATION,
                           ctx->ssl_server_name, strlen(ctx->ssl_server_name));
       DBG(("DOMAIN_NAME_VERIFICATION %s -> %d", ctx->ssl_server_name, err));
       /* Domain name verificationw as added in a NWP service pack, older
-       * versions return SL_ENOPROTOOPT. There isn't much we can do about it,
+       * versions return SL_ERROR_BSD_ENOPROTOOPT. There isn't much we can do
+       * about it,
        * so we ignore the error. */
-      if (err != 0 && err != SL_ENOPROTOOPT) return err;
+      if (err != 0 && err != SL_ERROR_BSD_ENOPROTOOPT) return err;
     }
   }
   return 0;

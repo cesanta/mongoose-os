@@ -66,8 +66,14 @@ SECTIONS
 
     .data       : > SRAM
     .bss        : > SRAM
+    .heap_start : > SRAM
+
     .sysmem     : > SRAM
-    .stack      : > SRAM(HIGH)
+    GROUP {
+      .sysmem : type = DSECT
+      .heap_end
+      .stack
+    } > SRAM(HIGH)
 
     /* these sections are used by FreeRTOS */
     .resetVecs  : > FLASH_BASE

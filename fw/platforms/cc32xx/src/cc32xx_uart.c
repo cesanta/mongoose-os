@@ -8,20 +8,18 @@
 #include <stdlib.h>
 
 /* Driverlib includes */
-#include "hw_types.h"
+#include "inc/hw_types.h"
 
-#include "hw_ints.h"
-#include "hw_memmap.h"
-#include "hw_uart.h"
-#include "interrupt.h"
-#include "pin.h"
-#include "prcm.h"
-#include "rom.h"
-#include "rom_map.h"
-#include "uart.h"
-#include "utils.h"
-
-#include "oslib/osi.h"
+#include "inc/hw_ints.h"
+#include "inc/hw_memmap.h"
+#include "inc/hw_uart.h"
+#include "driverlib/interrupt.h"
+#include "driverlib/pin.h"
+#include "driverlib/prcm.h"
+#include "driverlib/rom.h"
+#include "driverlib/rom_map.h"
+#include "driverlib/uart.h"
+#include "driverlib/utils.h"
 
 #include "common/cs_rbuf.h"
 #include "mgos_utils.h"
@@ -30,13 +28,13 @@
 #define UART_TX_INTS (UART_INT_TX)
 #define UART_INFO_INTS (UART_INT_OE)
 
-#define CC3200_UART_ISR_RX_BUF_SIZE 64
-#define CC3200_UART_ISR_RX_BUF_FC_THRESH 32
+#define CC32xx_UART_ISR_RX_BUF_SIZE 64
+#define CC32xx_UART_ISR_RX_BUF_FC_THRESH 32
 
-struct cc3200_uart_state {
+struct cc32xx_uart_state {
   uint32_t base;
   /*
-   * CC3200 has a very short hardware RX FIFO (16 bytes). To avoid loss we want
+   * CC32xx hava a very short hardware RX FIFO (16 bytes). To avoid loss we want
    * to be able to receive data from the ISR, but mOS UART API does not allow
    * sharing state with the int handler: RX buffer are guarded by mutex which
    * cannot be taken from the ISR. As a workaround, we have this small auxiliary
@@ -46,11 +44,11 @@ struct cc3200_uart_state {
   struct cs_rbuf isr_rx_buf;
 };
 
-uint32_t cc3200_uart_get_base(int uart_no) {
+uint32_t cc32xx_uart_get_base(int uart_no) {
   return (uart_no == 0 ? UARTA0_BASE : UARTA1_BASE);
 }
 
-static int cc3200_uart_rx_bytes(uint32_t base, struct cs_rbuf *rxb) {
+static int cc32xx_uart_rx_bytes(uint32_t base, struct cs_rbuf *rxb) {
   int num_recd = 0;
   while (rxb->avail > 0 && MAP_UARTCharsAvail(base)) {
     uint32_t chf = HWREG(base + UART_O_DR);
@@ -61,9 +59,9 @@ static int cc3200_uart_rx_bytes(uint32_t base, struct cs_rbuf *rxb) {
   return num_recd;
 }
 
-static void cc3200_int_handler(struct mgos_uart_state *us) {
+static void cc32xx_int_handler(struct mgos_uart_state *us) {
   if (us == NULL) return;
-  struct cc3200_uart_state *ds = (struct cc3200_uart_state *) us->dev_data;
+  struct cc32xx_uart_state *ds = (struct cc32xx_uart_state *) us->dev_data;
   uint32_t int_st = MAP_UARTIntStatus(ds->base, true /* masked */);
   us->stats.ints++;
   uint32_t int_dis = UART_TX_INTS;
@@ -75,9 +73,9 @@ static void cc3200_int_handler(struct mgos_uart_state *us) {
     if (int_st & UART_RX_INTS) {
       us->stats.rx_ints++;
       struct cs_rbuf *irxb = &ds->isr_rx_buf;
-      cc3200_uart_rx_bytes(ds->base, irxb);
+      cc32xx_uart_rx_bytes(ds->base, irxb);
       if (us->cfg.rx_fc_type == MGOS_UART_FC_SW &&
-          irxb->used >= CC3200_UART_ISR_RX_BUF_FC_THRESH && !us->xoff_sent) {
+          irxb->used >= CC32xx_UART_ISR_RX_BUF_FC_THRESH && !us->xoff_sent) {
         MAP_UARTCharPut(ds->base, MGOS_UART_XOFF_CHAR);
         us->xoff_sent = true;
       }
@@ -93,12 +91,12 @@ static void cc3200_int_handler(struct mgos_uart_state *us) {
 
 void mgos_uart_hal_dispatch_rx_top(struct mgos_uart_state *us) {
   bool recd;
-  struct cc3200_uart_state *ds = (struct cc3200_uart_state *) us->dev_data;
+  struct cc32xx_uart_state *ds = (struct cc32xx_uart_state *) us->dev_data;
   cs_rbuf_t *irxb = &ds->isr_rx_buf;
   MAP_UARTIntDisable(ds->base, UART_RX_INTS);
 recv_more:
   recd = false;
-  cc3200_uart_rx_bytes(ds->base, irxb);
+  cc32xx_uart_rx_bytes(ds->base, irxb);
   while (irxb->used > 0 && mgos_uart_rxb_free(us) > 0) {
     int num_recd = 0;
     do {
@@ -109,7 +107,7 @@ recv_more:
       cs_rbuf_consume(irxb, num_recd);
       us->stats.rx_bytes += num_recd;
       if (num_recd > 0) recd = true;
-      cc3200_uart_rx_bytes(ds->base, irxb);
+      cc32xx_uart_rx_bytes(ds->base, irxb);
     } while (num_recd > 0);
   }
   /* If we received something during this cycle and there is buffer space
@@ -131,7 +129,7 @@ recv_more:
 }
 
 void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us) {
-  struct cc3200_uart_state *ds = (struct cc3200_uart_state *) us->dev_data;
+  struct cc32xx_uart_state *ds = (struct cc32xx_uart_state *) us->dev_data;
   struct mbuf *txb = &us->tx_buf;
   size_t len = 0;
   while (len < txb->len && MAP_UARTSpaceAvail(ds->base)) {
@@ -144,7 +142,7 @@ void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us) {
 }
 
 void mgos_uart_hal_dispatch_bottom(struct mgos_uart_state *us) {
-  struct cc3200_uart_state *ds = (struct cc3200_uart_state *) us->dev_data;
+  struct cc32xx_uart_state *ds = (struct cc32xx_uart_state *) us->dev_data;
   uint32_t int_ena = UART_INFO_INTS;
   if (us->rx_enabled && ds->isr_rx_buf.avail > 0) int_ena |= UART_RX_INTS;
   if (us->tx_buf.len > 0) int_ena |= UART_TX_INTS;
@@ -152,7 +150,7 @@ void mgos_uart_hal_dispatch_bottom(struct mgos_uart_state *us) {
 }
 
 void mgos_uart_hal_set_rx_enabled(struct mgos_uart_state *us, bool enabled) {
-  struct cc3200_uart_state *ds = (struct cc3200_uart_state *) us->dev_data;
+  struct cc32xx_uart_state *ds = (struct cc32xx_uart_state *) us->dev_data;
   uint32_t ctl = HWREG(ds->base + UART_O_CTL);
   if (enabled) {
     if (us->cfg.rx_fc_type == MGOS_UART_FC_HW) {
@@ -167,17 +165,17 @@ void mgos_uart_hal_set_rx_enabled(struct mgos_uart_state *us, bool enabled) {
 }
 
 void mgos_uart_hal_flush_fifo(struct mgos_uart_state *us) {
-  struct cc3200_uart_state *ds = (struct cc3200_uart_state *) us->dev_data;
+  struct cc32xx_uart_state *ds = (struct cc32xx_uart_state *) us->dev_data;
   while (MAP_UARTBusy(ds->base)) {
   }
 }
 
 static void u0_int(void) {
-  cc3200_int_handler(mgos_uart_hal_get_state(0));
+  cc32xx_int_handler(mgos_uart_hal_get_state(0));
 }
 
 static void u1_int(void) {
-  cc3200_int_handler(mgos_uart_hal_get_state(1));
+  cc32xx_int_handler(mgos_uart_hal_get_state(1));
 }
 
 void mgos_uart_hal_config_set_defaults(int uart_no,
@@ -187,7 +185,7 @@ void mgos_uart_hal_config_set_defaults(int uart_no,
 }
 
 bool mgos_uart_hal_init(struct mgos_uart_state *us) {
-  uint32_t base = cc3200_uart_get_base(us->uart_no);
+  uint32_t base = cc32xx_uart_get_base(us->uart_no);
   uint32_t periph, int_no;
   void (*int_handler)();
 
@@ -207,20 +205,22 @@ bool mgos_uart_hal_init(struct mgos_uart_state *us) {
   } else {
     return false;
   }
-  struct cc3200_uart_state *ds =
-      (struct cc3200_uart_state *) calloc(1, sizeof(*ds));
+  struct cc32xx_uart_state *ds =
+      (struct cc32xx_uart_state *) calloc(1, sizeof(*ds));
   ds->base = base;
-  cs_rbuf_init(&ds->isr_rx_buf, CC3200_UART_ISR_RX_BUF_SIZE);
+  cs_rbuf_init(&ds->isr_rx_buf, CC32xx_UART_ISR_RX_BUF_SIZE);
+  us->dev_data = ds;
   MAP_PRCMPeripheralClkEnable(periph, PRCM_RUN_MODE_CLK);
   MAP_UARTIntDisable(base, ~0); /* Start with ints disabled. */
-  osi_InterruptRegister(int_no, int_handler, INT_PRIORITY_LVL_1);
-  us->dev_data = ds;
+  MAP_IntRegister(int_no, int_handler);
+  MAP_IntPrioritySet(int_no, INT_PRIORITY_LVL_1);
+  MAP_IntEnable(int_no);
   return true;
 }
 
 bool mgos_uart_hal_configure(struct mgos_uart_state *us,
                              const struct mgos_uart_config *cfg) {
-  uint32_t base = cc3200_uart_get_base(us->uart_no);
+  uint32_t base = cc32xx_uart_get_base(us->uart_no);
   if (us->uart_no == 0 && (cfg->tx_fc_type == MGOS_UART_FC_HW ||
                            cfg->rx_fc_type == MGOS_UART_FC_HW)) {
     /* No FC on UART0, according to the TRM. */
@@ -291,17 +291,17 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
   return true;
 }
 
-bool cc3200_uart_cts(int uart_no) {
-  uint32_t base = cc3200_uart_get_base(uart_no);
+bool cc32xx_uart_cts(int uart_no) {
+  uint32_t base = cc32xx_uart_get_base(uart_no);
   return (UARTModemStatusGet(base) != 0);
 }
 
-uint32_t cc3200_uart_raw_ints(int uart_no) {
-  uint32_t base = cc3200_uart_get_base(uart_no);
+uint32_t cc32xx_uart_raw_ints(int uart_no) {
+  uint32_t base = cc32xx_uart_get_base(uart_no);
   return MAP_UARTIntStatus(base, false /* masked */);
 }
 
-uint32_t cc3200_uart_int_mask(int uart_no) {
-  uint32_t base = cc3200_uart_get_base(uart_no);
+uint32_t cc32xx_uart_int_mask(int uart_no) {
+  uint32_t base = cc32xx_uart_get_base(uart_no);
   return HWREG(base + UART_O_IM);
 }

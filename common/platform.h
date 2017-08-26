@@ -30,8 +30,10 @@
 
 #if defined(TARGET_IS_MSP432P4XX) || defined(__MSP432P401R__)
 #define CS_PLATFORM CS_P_MSP432
-#elif defined(cc3200)
+#elif defined(cc3200) || defined(TARGET_IS_CC3200)
 #define CS_PLATFORM CS_P_CC3200
+#elif defined(cc3220) || defined(TARGET_IS_CC3220)
+#define CS_PLATFORM CS_P_CC3220
 #elif defined(__unix__) || defined(__APPLE__)
 #define CS_PLATFORM CS_P_UNIX
 #elif defined(WINCE)

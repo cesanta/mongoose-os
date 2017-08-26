@@ -14,7 +14,7 @@ const char *inet_ntop(int af, const void *src, char *dst, socklen_t size) {
   int res;
   struct in_addr *in = (struct in_addr *) src;
   if (af != AF_INET) {
-    errno = EAFNOSUPPORT;
+    errno = ENOTSUP;
     return NULL;
   }
   res = snprintf(dst, size, "%lu.%lu.%lu.%lu", SL_IPV4_BYTE(in->s_addr, 0),
@@ -32,7 +32,7 @@ int inet_pton(int af, const char *src, void *dst) {
   uint32_t a0, a1, a2, a3;
   uint8_t *db = (uint8_t *) dst;
   if (af != AF_INET) {
-    errno = EAFNOSUPPORT;
+    errno = ENOTSUP;
     return 0;
   }
   if (sscanf(src, "%lu.%lu.%lu.%lu", &a0, &a1, &a2, &a3) != 4) {
