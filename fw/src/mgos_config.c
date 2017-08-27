@@ -11,9 +11,17 @@
 #include "mgos_config.h"
 
 bool mgos_conf_check_access(const struct mg_str key, const char *acl) {
+  return mgos_conf_check_access_n(key, mg_mk_str(acl));
+}
+
+bool mgos_conf_check_access_n(const struct mg_str key, struct mg_str acl) {
   struct mg_str entry;
-  if (acl == NULL) return false;
-  while ((acl = mg_next_comma_list_entry(acl, &entry, NULL)) != NULL) {
+  if (acl.len == 0) return false;
+  while (true) {
+    acl = mg_next_comma_list_entry_n(acl, &entry, NULL);
+    if (acl.p == NULL) {
+      break;
+    }
     if (entry.len == 0) continue;
     bool result = (entry.p[0] != '-');
     if (entry.p[0] == '-' || entry.p[0] == '+') {

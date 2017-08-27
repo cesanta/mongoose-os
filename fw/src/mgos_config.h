@@ -31,6 +31,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 bool mgos_conf_check_access(const struct mg_str key, const char *acl);
+bool mgos_conf_check_access_n(const struct mg_str key, struct mg_str acl);
 
 enum mgos_conf_type {
   CONF_TYPE_INT = 0,
