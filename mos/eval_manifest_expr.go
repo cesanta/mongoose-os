@@ -53,11 +53,15 @@ func evalManifestExpr(ctx context.Context, devConn *dev.DevConn) error {
 		logWriter = &bytes.Buffer{}
 	}
 
-	_, _, err = readManifestWithLibs(
+	manifest, _, err := readManifestWithLibs(
 		appDir, bParams, logWriter, paths.LibsDir, interp,
 		false /* require arch */, false /* skip clean */, true, /* finalize */
 	)
 	if err != nil {
+		return errors.Trace(err)
+	}
+
+	if err := interpreter.SetManifestVars(interp.MVars, manifest); err != nil {
 		return errors.Trace(err)
 	}
 
