@@ -71,7 +71,7 @@ OBJCOPY = arm-none-eabi-objcopy
 include $(COMMON_CC3200_PATH)/gcc.mk
 
 CFLAGS += $(patsubst %,-I%,$(subst :, ,$(IPATH)))
-CFLAGS += -DNDEBUG -DCS_NDEBUG -DCS_PLATFORM=4 \
+CFLAGS += -DNDEBUG -DCS_NDEBUG -DCS_PLATFORM=CS_P_CC3200 \
           $(SDK_FLAGS) $(CFLAGS_EXTRA)
 
 dirs: $(BUILD_DIR) $(FW_DIR)

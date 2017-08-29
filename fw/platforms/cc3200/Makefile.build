@@ -187,10 +187,11 @@ IPATH += $(SDK_PATH) $(SDK_PATH)/inc $(SDK_PATH)/driverlib $(SDK_PATH)/oslib \
 VPATH += $(SDK_PATH)/driverlib $(SDK_PATH)/oslib $(SDK_PATH)/simplelink \
          $(SDK_PATH)/simplelink/source $(SDK_PATH)/third_party/FreeRTOS/source \
          $(SDK_PATH)/third_party/FreeRTOS/source/portable/MemMang
-SDK_CFLAGS = -DTARGET_IS_CC3200 -DUSE_FREERTOS -DSL_PLATFORM_MULTI_THREADED
+SDK_CFLAGS = -DTARGET_IS_CC3200 -DUSE_FREERTOS
 
 MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3200_PATH)/src/*.c)) \
-             cc32xx_hal.c cc32xx_main.c cc32xx_uart.c cc32xx_vfs.c
+             cc32xx_hal.c cc32xx_libc.c cc32xx_main.c cc32xx_sl_spawn.c cc32xx_uart.c cc32xx_vfs.c \
+             cc32xx_exc.c
 APP_SRCS = $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
 
@@ -284,7 +285,7 @@ APP_LDFLAGS += --ram_model --cinit_compression=off --copy_compression=off \
                --disable_auto_rts -l rtsv7M4_T_le_eabi_cesanta.lib
 
 MGOS_CFLAGS += -DMG_TI_NO_HOST_INTERFACE=1
-MGOS_OBJS += $(BUILD_DIR)/exc_handler_top.asm.o \
+MGOS_OBJS += $(BUILD_DIR)/cc32xx_exc_handler_top.asm.o \
              $(BUILD_DIR)/portasm.asm.o \
              $(BUILD_DIR)/startup_ccs.c.o
 VPATH += $(MGOS_CC3200_PATH)/src/ti
@@ -336,7 +337,7 @@ $(APP_BIN): $(APP_ELF)
 	$(Q) $(OBJCOPY) -O binary $< $@
 	$(Q) echo "     Code size: $$(ls -l $@ | awk '{print $$5}')"
 
-$(APP_ELF): $(APP_OBJS) $(MGOS_LIB) $(ATCA_LIB) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES)
+$(APP_ELF): $(APP_OBJS) $(MGOS_LIB) $(ATCA_LIB) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES) $(APP_LD_SCRIPT)
 	$(call link,$(APP_LD_SCRIPT),$(APP_LDFLAGS),$(APP_OBJS) $(MGOS_LIB) $(ATCA_LIB) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES))
 
 $(MGOS_LIB): $(MGOS_OBJS) $(SDK_OBJS)

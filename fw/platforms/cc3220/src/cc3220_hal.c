@@ -8,24 +8,29 @@
 #include <driverlib/rom.h>
 #include <driverlib/rom_map.h>
 
+#include "common/cs_dbg.h"
+#include "common/platform.h"
+
 #include "mgos_hal.h"
+#include "cc32xx_exc.h"
 
 void mgos_system_restart(int exit_code) {
   MAP_PRCMMCUReset(true /* bIncludeSubsystem */);
 }
 
-void mgos_wdt_feed(void) {
-  // TODO(rojer)
+void SimpleLinkFatalErrorEventHandler(SlDeviceFatal_t *e) {
+  cc32xx_exc_printf(
+      "SL fatal error 0x%x assert 0x%x,0x%x no_ack 0x%x timeout 0x%x", e->Id,
+      e->Data.DeviceAssert.Code, e->Data.DeviceAssert.Value,
+      e->Data.NoCmdAck.Code, e->Data.CmdTimeout.Code);
+  mgos_system_restart(0);
 }
 
-void mgos_wdt_set_timeout(int secs) {
-  // TODO(rojer)
+#ifndef MGOS_HAVE_WIFI
+void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *e) {
+  (void) e;
 }
-
-void mgos_wdt_enable(void) {
-  // TODO(rojer)
+void SimpleLinkWlanEventHandler(SlWlanEvent_t *e) {
+  (void) e;
 }
-
-void mgos_wdt_disable(void) {
-  // TODO(rojer)
-}
+#endif

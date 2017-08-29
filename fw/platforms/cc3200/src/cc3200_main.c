@@ -29,7 +29,6 @@
 #include "simplelink.h"
 #include "device.h"
 
-#include "oslib/osi.h"
 #include "FreeRTOS.h"
 #include "semphr.h"
 
@@ -39,14 +38,10 @@
 #include "mgos_mongoose.h"
 #include "mgos_updater_common.h"
 
-#include "cc3200_exc.h"
 #include "cc3200_fs.h"
 #include "cc3200_main_task.h"
 #include "cc32xx_main.h"
 #include "cc3200_vfs_dev_slfs_container.h"
-
-extern const char *build_version, *build_id;
-extern const char *mg_build_version, *mg_build_id;
 
 int g_boot_cfg_idx;
 struct boot_cfg g_boot_cfg;
@@ -76,24 +71,6 @@ static void cc3200_srand(void) {
   srand(r);
 }
 
-int start_nwp(void) {
-  int r = sl_Start(NULL, NULL, NULL);
-  if (r < 0) return r;
-  SlVersionFull ver;
-  unsigned char opt = SL_DEVICE_GENERAL_VERSION;
-  unsigned char len = sizeof(ver);
-
-  memset(&ver, 0, sizeof(ver));
-  sl_DevGet(SL_DEVICE_GENERAL_CONFIGURATION, &opt, &len,
-            (unsigned char *) (&ver));
-  LOG(LL_INFO, ("NWP v%lu.%lu.%lu.%lu started, host driver v%ld.%ld.%ld.%ld",
-                ver.NwpVersion[0], ver.NwpVersion[1], ver.NwpVersion[2],
-                ver.NwpVersion[3], SL_MAJOR_VERSION_NUM, SL_MINOR_VERSION_NUM,
-                SL_VERSION_NUM, SL_SUB_VERSION_NUM));
-  cc3200_srand();
-  return 0;
-}
-
 enum cc3200_init_result {
   CC3200_INIT_OK = 0,
   CC3200_INIT_FAILED_TO_START_NWP = -100,
@@ -104,23 +81,10 @@ enum cc3200_init_result {
   CC3200_INIT_UPDATE_FAILED = -107,
 };
 
-static enum cc3200_init_result cc3200_init(void *arg) {
-  mongoose_init();
-  if (mgos_debug_uart_init() != MGOS_INIT_OK) {
-    return CC3200_INIT_UART_INIT_FAILED;
-  }
-
-  if (strcmp(MGOS_APP, "mongoose-os") != 0) {
-    LOG(LL_INFO, ("%s %s (%s)", MGOS_APP, build_version, build_id));
-  }
-  LOG(LL_INFO, ("Mongoose OS %s (%s)", mg_build_version, mg_build_id));
-  LOG(LL_INFO, ("RAM: %d total, %d free", mgos_get_heap_size(),
-                mgos_get_free_heap_size()));
-
-  int r = start_nwp();
-  if (r < 0) {
-    LOG(LL_ERROR, ("Failed to start NWP: %d", r));
-    return CC3200_INIT_FAILED_TO_START_NWP;
+static int cc3200_init(bool pre) {
+  if (pre) {
+    cc3200_srand();
+    return 0;
   }
 
   g_boot_cfg_idx = get_active_boot_cfg_idx();
@@ -164,7 +128,7 @@ static enum cc3200_init_result cc3200_init(void *arg) {
 #if MGOS_ENABLE_UPDATER
   if (g_boot_cfg.flags & BOOT_F_FIRST_BOOT) {
     LOG(LL_INFO, ("Applying update"));
-    r = mgos_upd_apply_update();
+    int r = mgos_upd_apply_update();
     if (r < 0) {
       LOG(LL_ERROR, ("Failed to apply update: %d", r));
       return CC3200_INIT_UPDATE_FAILED;
@@ -185,7 +149,6 @@ void cc3200_nsleep100(uint32_t n);
 
 int main(void) {
   MAP_IntVTableBaseSet((unsigned long) &g_pfnVectors[0]);
-  cc3200_exc_init();
   mgos_nsleep100 = &cc3200_nsleep100;
 
   /* Early init app hook. */
@@ -193,24 +156,8 @@ int main(void) {
 
   MAP_IntEnable(FAULT_SYSTICK);
   MAP_IntMasterEnable();
-  PRCMCC3200MCUInit();
-  if (!MAP_PRCMRTCInUseGet()) {
-    MAP_PRCMRTCInUseSet();
-    MAP_PRCMRTCSet(0, 0);
-  }
-  MAP_PRCMPeripheralClkEnable(PRCM_WDT, PRCM_RUN_MODE_CLK);
 
-  mgos_wdt_set_timeout(5 /* seconds */);
-  mgos_wdt_enable();
-
-  cc32xx_main((cc32xx_init_func_t) cc3200_init); /* Does not return */
+  cc32xx_main(cc3200_init); /* Does not return */
 
   return 0;
-}
-
-/* FreeRTOS assert() hook. */
-void vAssertCalled(const char *pcFile, unsigned long ulLine) {
-  // Handle Assert here
-  while (1) {
-  }
 }

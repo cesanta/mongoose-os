@@ -1,9 +1,6 @@
 MKSPIFFS ?= /usr/local/bin/mkspiffs
 
 FS_FILES ?=
-ifneq "$(COMMON_FS_PATH)" ""
-  FS_FILES += $(foreach m,$(COMMON_FS_PATH),$(wildcard $(m)/*))
-endif
 ifneq "$(APP_FS_FILES)" ""
   FS_FILES += $(foreach m,$(APP_FS_FILES),$(wildcard $(m)))
 endif

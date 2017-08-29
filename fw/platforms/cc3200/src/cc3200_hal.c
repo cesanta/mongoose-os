@@ -13,7 +13,6 @@
 #include "driverlib/prcm.h"
 #include "driverlib/rom.h"
 #include "driverlib/rom_map.h"
-#include "driverlib/wdt.h"
 
 #include "common/platform.h"
 #include "common/cs_dbg.h"
@@ -32,27 +31,6 @@
 
 size_t mgos_get_fs_memory_usage(void) {
   return 0; /* Not even sure if it's possible to tell. */
-}
-
-void mgos_wdt_feed(void) {
-  MAP_WatchdogIntClear(WDT_BASE);
-}
-
-void mgos_wdt_set_timeout(int secs) {
-  MAP_WatchdogUnlock(WDT_BASE);
-  /* Reset is triggered after the timer reaches zero for the second time. */
-  MAP_WatchdogReloadSet(WDT_BASE, secs * SYS_CLK / 2);
-  MAP_WatchdogLock(WDT_BASE);
-}
-
-void mgos_wdt_enable(void) {
-  MAP_WatchdogUnlock(WDT_BASE);
-  MAP_WatchdogEnable(WDT_BASE);
-  MAP_WatchdogLock(WDT_BASE);
-}
-
-void mgos_wdt_disable(void) {
-  LOG(LL_ERROR, ("WDT cannot be disabled!"));
 }
 
 void mgos_system_restart(int exit_code) {
@@ -85,17 +63,3 @@ void SimpleLinkWlanEventHandler(SlWlanEvent_t *e) {
   (void) e;
 }
 #endif
-
-void SimpleLinkSockEventHandler(SlSockEvent_t *e) {
-  (void) e;
-}
-
-void SimpleLinkHttpServerCallback(SlHttpServerEvent_t *e,
-                                  SlHttpServerResponse_t *resp) {
-  (void) e;
-  (void) resp;
-}
-
-uint32_t mgos_get_cpu_freq(void) {
-  return 80000000;
-}

@@ -25,8 +25,9 @@ extern unsigned int _heap_end;
 
 /* Start and end addresses of the heap */
 #define UMM_MALLOC_CFG__HEAP_ADDR ((char *) (&_heap_start))
+#define UMM_MALLOC_CFG__HEAP_END ((char *) (&_heap_end))
 #define UMM_MALLOC_CFG__HEAP_SIZE \
-  (((char *) &_heap_end) - UMM_MALLOC_CFG__HEAP_ADDR)
+  (UMM_MALLOC_CFG__HEAP_END - UMM_MALLOC_CFG__HEAP_ADDR)
 
 /* A couple of macros to make packing structures less compiler dependent */
 

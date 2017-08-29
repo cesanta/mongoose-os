@@ -64,13 +64,12 @@ SECTIONS
     .pinit      : > FLASH
     .init_array : > FLASH
 
-    .data       : > SRAM
-    .bss        : > SRAM
-    .heap_start : > SRAM
-
-    .sysmem     : > SRAM
     GROUP {
-      .sysmem : type = DSECT
+      .data
+      .bss
+      .heap_start
+    } > SRAM
+    GROUP {
       .heap_end
       .stack
     } > SRAM(HIGH)

@@ -6,11 +6,13 @@
 #ifndef CS_FW_PLATFORMS_CC32XX_SRC_CC32XX_MAIN_H_
 #define CS_FW_PLATFORMS_CC32XX_SRC_CC32XX_MAIN_H_
 
+#include <stdbool.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef int (*cc32xx_init_func_t)(void);
+typedef int (*cc32xx_init_func_t)(bool pre);
 void cc32xx_main(cc32xx_init_func_t init_func);
 
 #ifdef __cplusplus

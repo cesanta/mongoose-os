@@ -154,6 +154,7 @@ const CryptoCC32XX_Config CryptoCC32XX_config[CC3220SF_LAUNCHXL_CRYPTOCOUNT] = {
 };
 
 const uint_least8_t CryptoCC32XX_count = CC3220SF_LAUNCHXL_CRYPTOCOUNT;
+#endif
 
 /*
  *  =============================== DMA ===============================
@@ -163,9 +164,9 @@ const uint_least8_t CryptoCC32XX_count = CC3220SF_LAUNCHXL_CRYPTOCOUNT;
 #if defined(__TI_COMPILER_VERSION__)
 #pragma DATA_ALIGN(dmaControlTable, 1024)
 #elif defined(__IAR_SYSTEMS_ICC__)
-#pragma data_alignment=1024
+#pragma data_alignment = 1024
 #elif defined(__GNUC__)
-__attribute__ ((aligned (1024)))
+__attribute__((aligned(1024)))
 #endif
 static tDMAControlTable dmaControlTable[64];
 
@@ -173,31 +174,27 @@ static tDMAControlTable dmaControlTable[64];
  *  ======== dmaErrorFxn ========
  *  This is the handler for the uDMA error interrupt.
  */
-static void dmaErrorFxn(uintptr_t arg)
-{
-    int status = MAP_uDMAErrorStatusGet();
-    MAP_uDMAErrorStatusClear();
+static void dmaErrorFxn(uintptr_t arg) {
+  int status = MAP_uDMAErrorStatusGet();
+  MAP_uDMAErrorStatusClear();
 
-    /* Suppress unused variable warning */
-    (void)status;
+  /* Suppress unused variable warning */
+  (void) status;
 
-    while (1);
+  while (1)
+    ;
 }
 
 UDMACC32XX_Object udmaCC3220SObject;
 
 const UDMACC32XX_HWAttrs udmaCC3220SHWAttrs = {
-    .controlBaseAddr = (void *)dmaControlTable,
-    .dmaErrorFxn = (UDMACC32XX_ErrorFxn)dmaErrorFxn,
+    .controlBaseAddr = (void *) dmaControlTable,
+    .dmaErrorFxn = (UDMACC32XX_ErrorFxn) dmaErrorFxn,
     .intNum = INT_UDMAERR,
-    .intPriority = (~0)
-};
+    .intPriority = (~0)};
 
-const UDMACC32XX_Config UDMACC32XX_config = {
-    .object = &udmaCC3220SObject,
-    .hwAttrs = &udmaCC3220SHWAttrs
-};
-#endif
+const UDMACC32XX_Config UDMACC32XX_config = {.object = &udmaCC3220SObject,
+                                             .hwAttrs = &udmaCC3220SHWAttrs};
 
 /*
  *  =============================== General ===============================
@@ -205,10 +202,9 @@ const UDMACC32XX_Config UDMACC32XX_config = {
 /*
  *  ======== CC3220SF_LAUNCHXL_initGeneral ========
  */
-void CC3220SF_LAUNCHXL_initGeneral(void)
-{
-    PRCMCC3200MCUInit();
-    Power_init();
+void CC3220SF_LAUNCHXL_initGeneral(void) {
+  PRCMCC3200MCUInit();
+  Power_init();
 }
 
 /*
@@ -234,17 +230,21 @@ GPIO_PinConfig gpioPinConfigs[] = {
 
     /* output pins */
     /* CC3220SF_LAUNCHXL_GPIO_LED_D7 */
-    GPIOCC32XX_GPIO_09 | GPIO_CFG_OUT_STD | GPIO_CFG_OUT_STR_HIGH | GPIO_CFG_OUT_LOW,
+    GPIOCC32XX_GPIO_09 | GPIO_CFG_OUT_STD | GPIO_CFG_OUT_STR_HIGH |
+        GPIO_CFG_OUT_LOW,
 
     /*
-     *  CC3220SF_LAUNCHXL_GPIO_LED_D5 and CC3220SF_LAUNCHXL_GPIO_LED_D6 are shared with the
+     *  CC3220SF_LAUNCHXL_GPIO_LED_D5 and CC3220SF_LAUNCHXL_GPIO_LED_D6 are
+     * shared with the
      *  I2C and PWM peripherals. In order for those examples to work, these
      *  LEDs are taken out of gpioPinCOnfig[]
      */
     /* CC3220SF_LAUNCHXL_GPIO_LED_D6 */
-    //GPIOCC32XX_GPIO_10 | GPIO_CFG_OUT_STD | GPIO_CFG_OUT_STR_HIGH | GPIO_CFG_OUT_LOW,
+    // GPIOCC32XX_GPIO_10 | GPIO_CFG_OUT_STD | GPIO_CFG_OUT_STR_HIGH |
+    // GPIO_CFG_OUT_LOW,
     /* CC3220SF_LAUNCHXL_GPIO_LED_D5 */
-    //GPIOCC32XX_GPIO_11 | GPIO_CFG_OUT_STD | GPIO_CFG_OUT_STR_HIGH | GPIO_CFG_OUT_LOW,
+    // GPIOCC32XX_GPIO_11 | GPIO_CFG_OUT_STD | GPIO_CFG_OUT_STR_HIGH |
+    // GPIO_CFG_OUT_LOW,
 };
 
 /*
@@ -255,19 +255,18 @@ GPIO_PinConfig gpioPinConfigs[] = {
  *       reduce memory usage (if placed at end of gpioPinConfigs array).
  */
 GPIO_CallbackFxn gpioCallbackFunctions[] = {
-    NULL,  /* CC3220SF_LAUNCHXL_GPIO_SW2 */
-    NULL   /* CC3220SF_LAUNCHXL_GPIO_SW3 */
+    NULL, /* CC3220SF_LAUNCHXL_GPIO_SW2 */
+    NULL  /* CC3220SF_LAUNCHXL_GPIO_SW3 */
 };
 
 /* The device-specific GPIO_config structure */
 const GPIOCC32XX_Config GPIOCC32XX_config = {
-    .pinConfigs = (GPIO_PinConfig *)gpioPinConfigs,
-    .callbacks = (GPIO_CallbackFxn *)gpioCallbackFunctions,
-    .numberOfPinConfigs = sizeof(gpioPinConfigs)/sizeof(GPIO_PinConfig),
-    .numberOfCallbacks = sizeof(gpioCallbackFunctions)/sizeof(GPIO_CallbackFxn),
-    .intPriority = (~0)
-};
-
+    .pinConfigs = (GPIO_PinConfig *) gpioPinConfigs,
+    .callbacks = (GPIO_CallbackFxn *) gpioCallbackFunctions,
+    .numberOfPinConfigs = sizeof(gpioPinConfigs) / sizeof(GPIO_PinConfig),
+    .numberOfCallbacks =
+        sizeof(gpioCallbackFunctions) / sizeof(GPIO_CallbackFxn),
+    .intPriority = (~0)};
 
 #if 0
 /*
@@ -295,11 +294,11 @@ const DisplayUart_HWAttrs displayUartHWAttrs = {
 
 const Display_Config Display_config[] = {
     {
-#  if (BOARD_DISPLAY_USE_UART_ANSI)
+#if (BOARD_DISPLAY_USE_UART_ANSI)
         .fxnTablePtr = &DisplayUartAnsi_fxnTable,
-#  else /* Default to minimal UART with no cursor placement */
+#else /* Default to minimal UART with no cursor placement */
         .fxnTablePtr = &DisplayUartMin_fxnTable,
-#  endif
+#endif
         .object = &displayUartObject,
         .hwAttrs = &displayUartHWAttrs
     }
@@ -383,39 +382,41 @@ const uint_least8_t I2S_count = CC3220SF_LAUNCHXL_I2SCOUNT;
  * corresponding entries in this table should indicate PowerCC32XX_DONT_PARK.
  */
 PowerCC32XX_ParkInfo parkInfo[] = {
-/*          PIN                    PARK STATE              PIN ALIAS (FUNCTION)
-     -----------------  ------------------------------     -------------------- */
-    {PowerCC32XX_PIN01, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO10              */
-    {PowerCC32XX_PIN02, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO11              */
-    {PowerCC32XX_PIN03, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO12              */
-    {PowerCC32XX_PIN04, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO13              */
-    {PowerCC32XX_PIN05, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO14              */
-    {PowerCC32XX_PIN06, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO15              */
-    {PowerCC32XX_PIN07, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO16              */
-    {PowerCC32XX_PIN08, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO17              */
-    {PowerCC32XX_PIN13, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* FLASH_SPI_DIN       */
-    {PowerCC32XX_PIN15, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO22              */
-    {PowerCC32XX_PIN16, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* TDI (JTAG DEBUG)    */
-    {PowerCC32XX_PIN17, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* TDO (JTAG DEBUG)    */
-    {PowerCC32XX_PIN19, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* TCK (JTAG DEBUG)    */
-    {PowerCC32XX_PIN20, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* TMS (JTAG DEBUG)    */
-    {PowerCC32XX_PIN18, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO28              */
-    {PowerCC32XX_PIN21, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* SOP2                */
-    {PowerCC32XX_PIN29, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* ANTSEL1             */
-    {PowerCC32XX_PIN30, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* ANTSEL2             */
-    {PowerCC32XX_PIN45, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* DCDC_ANA2_SW_P      */
-    {PowerCC32XX_PIN50, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO0               */
-    {PowerCC32XX_PIN52, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* RTC_XTAL_N          */
-    {PowerCC32XX_PIN53, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO30              */
-    {PowerCC32XX_PIN55, PowerCC32XX_WEAK_PULL_UP_STD},   /* GPIO1 (XDS_UART_RX) */
-    {PowerCC32XX_PIN57, PowerCC32XX_WEAK_PULL_UP_STD},   /* GPIO2 (XDS_UART_TX) */
-    {PowerCC32XX_PIN58, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO3               */
-    {PowerCC32XX_PIN59, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO4               */
-    {PowerCC32XX_PIN60, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO5               */
-    {PowerCC32XX_PIN61, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO6               */
-    {PowerCC32XX_PIN62, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO7               */
-    {PowerCC32XX_PIN63, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO8               */
-    {PowerCC32XX_PIN64, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO9               */
+    /*          PIN                    PARK STATE              PIN ALIAS
+       (FUNCTION)
+         -----------------  ------------------------------
+       -------------------- */
+    {PowerCC32XX_PIN01, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO10 */
+    {PowerCC32XX_PIN02, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO11 */
+    {PowerCC32XX_PIN03, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO12 */
+    {PowerCC32XX_PIN04, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO13 */
+    {PowerCC32XX_PIN05, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO14 */
+    {PowerCC32XX_PIN06, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO15 */
+    {PowerCC32XX_PIN07, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO16 */
+    {PowerCC32XX_PIN08, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO17 */
+    {PowerCC32XX_PIN13, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* FLASH_SPI_DIN */
+    {PowerCC32XX_PIN15, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO22 */
+    {PowerCC32XX_PIN16, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* TDI (JTAG DEBUG) */
+    {PowerCC32XX_PIN17, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* TDO (JTAG DEBUG) */
+    {PowerCC32XX_PIN19, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* TCK (JTAG DEBUG) */
+    {PowerCC32XX_PIN20, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* TMS (JTAG DEBUG) */
+    {PowerCC32XX_PIN18, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO28 */
+    {PowerCC32XX_PIN21, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* SOP2 */
+    {PowerCC32XX_PIN29, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* ANTSEL1 */
+    {PowerCC32XX_PIN30, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* ANTSEL2 */
+    {PowerCC32XX_PIN45, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* DCDC_ANA2_SW_P */
+    {PowerCC32XX_PIN50, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO0 */
+    {PowerCC32XX_PIN52, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* RTC_XTAL_N */
+    {PowerCC32XX_PIN53, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO30 */
+    {PowerCC32XX_PIN55, PowerCC32XX_WEAK_PULL_UP_STD}, /* GPIO1 (XDS_UART_RX) */
+    {PowerCC32XX_PIN57, PowerCC32XX_WEAK_PULL_UP_STD}, /* GPIO2 (XDS_UART_TX) */
+    {PowerCC32XX_PIN58, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO3 */
+    {PowerCC32XX_PIN59, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO4 */
+    {PowerCC32XX_PIN60, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO5 */
+    {PowerCC32XX_PIN61, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO6 */
+    {PowerCC32XX_PIN62, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO7 */
+    {PowerCC32XX_PIN63, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO8 */
+    {PowerCC32XX_PIN64, PowerCC32XX_WEAK_PULL_DOWN_STD}, /* GPIO9 */
 };
 
 /*
@@ -441,13 +442,12 @@ const PowerCC32XX_ConfigV1 PowerCC32XX_config = {
     .wakeupGPIOFxnLPDSArg = 0,
     .wakeupGPIOSourceShutdown = 0,
     .wakeupGPIOTypeShutdown = 0,
-    .ramRetentionMaskLPDS = PRCM_SRAM_COL_1 | PRCM_SRAM_COL_2 |
-        PRCM_SRAM_COL_3 | PRCM_SRAM_COL_4,
+    .ramRetentionMaskLPDS =
+        PRCM_SRAM_COL_1 | PRCM_SRAM_COL_2 | PRCM_SRAM_COL_3 | PRCM_SRAM_COL_4,
     .keepDebugActiveDuringLPDS = false,
     .ioRetentionShutdown = PRCM_IO_RET_GRP_1,
     .pinParkDefs = parkInfo,
-    .numPins = sizeof(parkInfo) / sizeof(PowerCC32XX_ParkInfo)
-};
+    .numPins = sizeof(parkInfo) / sizeof(PowerCC32XX_ParkInfo)};
 
 #if 0
 /*
@@ -560,6 +560,7 @@ const SDSPI_Config SDSPI_config[CC3220SF_LAUNCHXL_SDSPICOUNT] = {
 };
 
 const uint_least8_t SDSPI_count = CC3220SF_LAUNCHXL_SDSPICOUNT;
+#endif
 
 /*
  *  =============================== SPI ===============================
@@ -572,69 +573,61 @@ SPICC32XXDMA_Object spiCC3220SDMAObjects[CC3220SF_LAUNCHXL_SPICOUNT];
 #if defined(__TI_COMPILER_VERSION__)
 #pragma DATA_ALIGN(spiCC3220SDMAscratchBuf, 32)
 #elif defined(__IAR_SYSTEMS_ICC__)
-#pragma data_alignment=32
+#pragma data_alignment = 32
 #elif defined(__GNUC__)
-__attribute__ ((aligned (32)))
+__attribute__((aligned(32)))
 #endif
 uint32_t spiCC3220SDMAscratchBuf[CC3220SF_LAUNCHXL_SPICOUNT];
 
-const SPICC32XXDMA_HWAttrsV1 spiCC3220SDMAHWAttrs[CC3220SF_LAUNCHXL_SPICOUNT] = {
-    /* index 0 is reserved for LSPI that links to the NWP */
+const SPICC32XXDMA_HWAttrsV1 spiCC3220SDMAHWAttrs[CC3220SF_LAUNCHXL_SPICOUNT] =
     {
-        .baseAddr = LSPI_BASE,
-        .intNum = INT_LSPI,
-        .intPriority = (~0),
-        .spiPRCM = PRCM_LSPI,
-        .csControl = SPI_SW_CTRL_CS,
-        .csPolarity = SPI_CS_ACTIVEHIGH,
-        .pinMode = SPI_4PIN_MODE,
-        .turboMode = SPI_TURBO_OFF,
-        .scratchBufPtr = &spiCC3220SDMAscratchBuf[CC3220SF_LAUNCHXL_SPI0],
-        .defaultTxBufValue = 0,
-        .rxChannelIndex = UDMA_CH12_LSPI_RX,
-        .txChannelIndex = UDMA_CH13_LSPI_TX,
-        .minDmaTransferSize = 100,
-        .mosiPin = SPICC32XXDMA_PIN_NO_CONFIG,
-        .misoPin = SPICC32XXDMA_PIN_NO_CONFIG,
-        .clkPin = SPICC32XXDMA_PIN_NO_CONFIG,
-        .csPin = SPICC32XXDMA_PIN_NO_CONFIG
-    },
-    {
-        .baseAddr = GSPI_BASE,
-        .intNum = INT_GSPI,
-        .intPriority = (~0),
-        .spiPRCM = PRCM_GSPI,
-        .csControl = SPI_HW_CTRL_CS,
-        .csPolarity = SPI_CS_ACTIVELOW,
-        .pinMode = SPI_4PIN_MODE,
-        .turboMode = SPI_TURBO_OFF,
-        .scratchBufPtr = &spiCC3220SDMAscratchBuf[CC3220SF_LAUNCHXL_SPI1],
-        .defaultTxBufValue = 0,
-        .rxChannelIndex = UDMA_CH6_GSPI_RX,
-        .txChannelIndex = UDMA_CH7_GSPI_TX,
-        .minDmaTransferSize = 100,
-        .mosiPin = SPICC32XXDMA_PIN_07_MOSI,
-        .misoPin = SPICC32XXDMA_PIN_06_MISO,
-        .clkPin = SPICC32XXDMA_PIN_05_CLK,
-        .csPin = SPICC32XXDMA_PIN_08_CS
-    }
-};
+     /* index 0 is reserved for LSPI that links to the NWP */
+     {.baseAddr = LSPI_BASE,
+      .intNum = INT_LSPI,
+      .intPriority = (~0),
+      .spiPRCM = PRCM_LSPI,
+      .csControl = SPI_SW_CTRL_CS,
+      .csPolarity = SPI_CS_ACTIVEHIGH,
+      .pinMode = SPI_4PIN_MODE,
+      .turboMode = SPI_TURBO_OFF,
+      .scratchBufPtr = &spiCC3220SDMAscratchBuf[CC3220SF_LAUNCHXL_SPI0],
+      .defaultTxBufValue = 0,
+      .rxChannelIndex = UDMA_CH12_LSPI_RX,
+      .txChannelIndex = UDMA_CH13_LSPI_TX,
+      .minDmaTransferSize = 100,
+      .mosiPin = SPICC32XXDMA_PIN_NO_CONFIG,
+      .misoPin = SPICC32XXDMA_PIN_NO_CONFIG,
+      .clkPin = SPICC32XXDMA_PIN_NO_CONFIG,
+      .csPin = SPICC32XXDMA_PIN_NO_CONFIG},
+     {.baseAddr = GSPI_BASE,
+      .intNum = INT_GSPI,
+      .intPriority = (~0),
+      .spiPRCM = PRCM_GSPI,
+      .csControl = SPI_HW_CTRL_CS,
+      .csPolarity = SPI_CS_ACTIVELOW,
+      .pinMode = SPI_4PIN_MODE,
+      .turboMode = SPI_TURBO_OFF,
+      .scratchBufPtr = &spiCC3220SDMAscratchBuf[CC3220SF_LAUNCHXL_SPI1],
+      .defaultTxBufValue = 0,
+      .rxChannelIndex = UDMA_CH6_GSPI_RX,
+      .txChannelIndex = UDMA_CH7_GSPI_TX,
+      .minDmaTransferSize = 100,
+      .mosiPin = SPICC32XXDMA_PIN_07_MOSI,
+      .misoPin = SPICC32XXDMA_PIN_06_MISO,
+      .clkPin = SPICC32XXDMA_PIN_05_CLK,
+      .csPin = SPICC32XXDMA_PIN_08_CS}};
 
 const SPI_Config SPI_config[CC3220SF_LAUNCHXL_SPICOUNT] = {
-    {
-        .fxnTablePtr = &SPICC32XXDMA_fxnTable,
-        .object = &spiCC3220SDMAObjects[CC3220SF_LAUNCHXL_SPI0],
-        .hwAttrs = &spiCC3220SDMAHWAttrs[CC3220SF_LAUNCHXL_SPI0]
-    },
-    {
-        .fxnTablePtr = &SPICC32XXDMA_fxnTable,
-        .object = &spiCC3220SDMAObjects[CC3220SF_LAUNCHXL_SPI1],
-        .hwAttrs = &spiCC3220SDMAHWAttrs[CC3220SF_LAUNCHXL_SPI1]
-    }
-};
+    {.fxnTablePtr = &SPICC32XXDMA_fxnTable,
+     .object = &spiCC3220SDMAObjects[CC3220SF_LAUNCHXL_SPI0],
+     .hwAttrs = &spiCC3220SDMAHWAttrs[CC3220SF_LAUNCHXL_SPI0]},
+    {.fxnTablePtr = &SPICC32XXDMA_fxnTable,
+     .object = &spiCC3220SDMAObjects[CC3220SF_LAUNCHXL_SPI1],
+     .hwAttrs = &spiCC3220SDMAHWAttrs[CC3220SF_LAUNCHXL_SPI1]}};
 
 const uint_least8_t SPI_count = CC3220SF_LAUNCHXL_SPICOUNT;
 
+#if 0
 /*
  *  =============================== Timer ===============================
  */
@@ -817,14 +810,9 @@ const uint_least8_t Watchdog_count = CC3220SF_LAUNCHXL_WATCHDOGCOUNT;
 #if defined(__TI_COMPILER_VERSION__)
 #pragma DATA_SECTION(ulDebugHeader, ".dbghdr")
 #elif defined(__IAR_SYSTEMS_ICC__)
-#pragma data_location=".dbghdr"
+#pragma data_location = ".dbghdr"
 #elif defined(__GNUC__)
-__attribute__ ((section (".dbghdr")))
+__attribute__((section(".dbghdr")))
 #endif
-const unsigned long ulDebugHeader[]=
-{
-                0x5AA5A55A,
-                0x000FF800,
-                0xEFA3247D
-};
+const unsigned long ulDebugHeader[] = {0x5AA5A55A, 0x000FF800, 0xEFA3247D};
 #endif

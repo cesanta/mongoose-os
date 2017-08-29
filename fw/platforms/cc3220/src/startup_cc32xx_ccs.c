@@ -43,16 +43,9 @@
 #include <ti/devices/cc32xx/driverlib/rom_map.h>
 #include <ti/devices/cc32xx/driverlib/prcm.h>
 
-//*****************************************************************************
-//
-// Forward declaration of the default fault handlers.
-//
-//*****************************************************************************
+#include "cc32xx_exc.h"
+
 void resetISR(void);
-static void nmiISR(void);
-static void faultISR(void);
-static void defaultHandler(void);
-static void busFaultHandler(void);
 
 //*****************************************************************************
 //
@@ -80,27 +73,25 @@ extern unsigned long __STACK_END;
 //*****************************************************************************
 #pragma RETAIN(resetVectors)
 #pragma DATA_SECTION(resetVectors, ".resetVecs")
-void (* const resetVectors[16])(void) =
-{
-    (void (*)(void))((unsigned long)&__STACK_END),
-                                         // The initial stack pointer
-    resetISR,                            // The reset handler
-    nmiISR,                              // The NMI handler
-    faultISR,                            // The hard fault handler
-    defaultHandler,                      // The MPU fault handler
-    busFaultHandler,                     // The bus fault handler
-    defaultHandler,                      // The usage fault handler
-    0,                                   // Reserved
-    0,                                   // Reserved
-    0,                                   // Reserved
-    0,                                   // Reserved
-    vPortSVCHandler,                     // SVCall handler
-    defaultHandler,                      // Debug monitor handler
-    0,                                   // Reserved
-    xPortPendSVHandler,                  // The PendSV handler
-    xPortSysTickHandler                  // The SysTick handler
+void (*const resetVectors[16])(void) = {
+    (void (*)(void))((unsigned long) &__STACK_END),
+    // The initial stack pointer
+    resetISR,                       // The reset handler
+    cc32xx_nmi_handler,             /* The NMI handler */
+    cc32xx_hard_fault_handler_top,  /* The hard fault handler */
+    cc32xx_mem_fault_handler_top,   /* The MPU fault handler */
+    cc32xx_bus_fault_handler_top,   /* The hard fault handler */
+    cc32xx_usage_fault_handler_top, /* The usage fault handler */
+    0,                              // Reserved
+    0,                              // Reserved
+    0,                              // Reserved
+    0,                              // Reserved
+    vPortSVCHandler,                // SVCall handler
+    cc32xx_unhandled_int,           /* Debug monitor handler */
+    0,                              // Reserved
+    xPortPendSVHandler,             // The PendSV handler
+    xPortSysTickHandler             // The SysTick handler
 };
-
 
 #pragma DATA_SECTION(ramVectors, ".ramVecs")
 static unsigned long ramVectors[256];
@@ -112,24 +103,23 @@ static unsigned long ramVectors[256];
 // be updated at runtime.
 //
 //*****************************************************************************
-void initVectors(void)
-{
-    int i;
+void initVectors(void) {
+  int i;
 
-    /* Copy from reset vector table into RAM vector table */
-    memcpy(ramVectors, resetVectors, 16*4);
+  /* Copy from reset vector table into RAM vector table */
+  memcpy(ramVectors, resetVectors, 16 * 4);
 
-    /* fill remaining vectors with default handler */
-    for (i=16; i < 256; i++) {
-        ramVectors[i] = (unsigned long)defaultHandler;
-    }
+  /* fill remaining vectors with default handler */
+  for (i = 16; i < 256; i++) {
+    ramVectors[i] = (unsigned long) cc32xx_unhandled_int;
+  }
 
-    /* Set vector table base */
-    MAP_IntVTableBaseSet((unsigned long)&ramVectors[0]);
+  /* Set vector table base */
+  MAP_IntVTableBaseSet((unsigned long) &ramVectors[0]);
 
-    /* Enable Processor */
-    MAP_IntMasterEnable();
-    MAP_IntEnable(FAULT_SYSTICK);
+  /* Enable Processor */
+  MAP_IntMasterEnable();
+  MAP_IntEnable(FAULT_SYSTICK);
 }
 
 //*****************************************************************************
@@ -142,90 +132,26 @@ void initVectors(void)
 // application.
 //
 //*****************************************************************************
-void resetISR(void)
-{
-    /*
-     * Set stack pointer based on the stack value stored in the vector table.
-     * This is necessary to ensure that the application is using the correct
-     * stack when using a debugger since a reset within the debugger will
-     * load the stack pointer from the bootloader's vector table at address '0'.
-     */
-    __asm(" .global resetVectorAddr\n"
-          " ldr r0, resetVectorAddr\n"
-          " ldr r0, [r0]\n"
-          " mov sp, r0\n"
-          " bl initVectors");
+void resetISR(void) {
+  /*
+   * Set stack pointer based on the stack value stored in the vector table.
+   * This is necessary to ensure that the application is using the correct
+   * stack when using a debugger since a reset within the debugger will
+   * load the stack pointer from the bootloader's vector table at address '0'.
+   */
+  __asm(
+      " .global resetVectorAddr\n"
+      " ldr r0, resetVectorAddr\n"
+      " ldr r0, [r0]\n"
+      " mov sp, r0\n"
+      " bl initVectors");
 
-    /* Jump to the CCS C Initialization Routine. */
-    __asm(" .global _c_int00\n"
-          " b.w     _c_int00");
+  /* Jump to the CCS C Initialization Routine. */
+  __asm(
+      " .global _c_int00\n"
+      " b.w     _c_int00");
 
-    _Pragma("diag_suppress 1119");
-    __asm("resetVectorAddr: .word resetVectors");
-    _Pragma("diag_default 1119");
-}
-
-//*****************************************************************************
-//
-// This is the code that gets called when the processor receives a NMI.  This
-// simply enters an infinite loop, preserving the system state for examination
-// by a debugger.
-//
-//*****************************************************************************
-static void
-nmiISR(void)
-{
-    /* Enter an infinite loop. */
-    while(1)
-    {
-    }
-}
-
-//*****************************************************************************
-//
-// This is the code that gets called when the processor receives a fault
-// interrupt.  This simply enters an infinite loop, preserving the system state
-// for examination by a debugger.
-//
-//*****************************************************************************
-static void
-faultISR(void)
-{
-    /* Enter an infinite loop. */
-    while(1)
-    {
-    }
-}
-
-//*****************************************************************************
-//
-// This is the code that gets called when the processor receives an unexpected
-// interrupt.  This simply enters an infinite loop, preserving the system state
-// for examination by a debugger.
-//
-//*****************************************************************************
-
-static void
-busFaultHandler(void)
-{
-    /* Enter an infinite loop. */
-    while(1)
-    {
-    }
-}
-
-//*****************************************************************************
-//
-// This is the code that gets called when the processor receives an unexpected
-// interrupt.  This simply enters an infinite loop, preserving the system state
-// for examination by a debugger.
-//
-//*****************************************************************************
-static void
-defaultHandler(void)
-{
-    /* Enter an infinite loop. */
-    while(1)
-    {
-    }
+  _Pragma("diag_suppress 1119");
+  __asm("resetVectorAddr: .word resetVectors");
+  _Pragma("diag_default 1119");
 }

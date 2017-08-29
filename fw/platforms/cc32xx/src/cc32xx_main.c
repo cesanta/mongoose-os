@@ -7,11 +7,16 @@
 
 #include <stdbool.h>
 
+#include <inc/hw_types.h>
+#include <driverlib/prcm.h>
+#include <driverlib/rom_map.h>
+
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "task.h"
 
 #include "common/cs_dbg.h"
+#include "common/platform.h"
 
 #include "mgos_debug.h"
 #include "mgos_features.h"
@@ -20,22 +25,15 @@
 #include "mgos_uart.h"
 #include "mgos_updater_common.h"
 
+#include "cc32xx_exc.h"
+#include "cc32xx_sl_spawn.h"
+#include "cc32xx_task_config.h"
+#include "umm_malloc_cfg.h"
+
 /* TODO(rojer): Refactor */
 #if CS_PLATFORM == CS_P_CC3200
 #include "fw/platforms/cc3200/boot/lib/boot.h"
 extern struct boot_cfg g_boot_cfg;
-#endif
-
-#ifndef MGOS_TASK_STACK_SIZE
-#define MGOS_TASK_STACK_SIZE 8192 /* in bytes */
-#endif
-
-#ifndef MGOS_TASK_PRIORITY
-#define MGOS_TASK_PRIORITY 5
-#endif
-
-#ifndef MGOS_TASK_QUEUE_LENGTH
-#define MGOS_TASK_QUEUE_LENGTH 32
 #endif
 
 struct mgos_event {
@@ -45,23 +43,69 @@ struct mgos_event {
 
 static QueueHandle_t s_main_queue = NULL;
 
+extern const char *build_version, *build_id;
+extern const char *mg_build_version, *mg_build_id;
+
 void mgos_lock_init(void);
+
+static int cc32xx_start_nwp(void) {
+  int r = sl_Start(NULL, NULL, NULL);
+  if (r < 0) {
+    return r;
+  }
+  SlDeviceVersion_t ver;
+  _u8 opt = SL_DEVICE_GENERAL_VERSION;
+  SL_DEV_GET_LEN_TYPE len = sizeof(ver);
+  memset(&ver, 0, sizeof(ver));
+  sl_DeviceGet(SL_DEVICE_GENERAL, &opt, &len,
+               (void *) (&ver));
+  LOG(LL_INFO, ("NWP v%lu.%lu.%lu.%lu started, host driver v%ld.%ld.%ld.%ld",
+                ver.NwpVersion[0], ver.NwpVersion[1], ver.NwpVersion[2],
+                ver.NwpVersion[3], SL_MAJOR_VERSION_NUM, SL_MINOR_VERSION_NUM,
+                SL_VERSION_NUM, SL_SUB_VERSION_NUM));
+  return 0;
+}
 
 #ifdef __TI_COMPILER_VERSION__
 __attribute__((section(".heap_start"))) uint32_t _heap_start;
 __attribute__((section(".heap_end"))) uint32_t _heap_end;
 #endif
 
-static void cc32xx_main_task(void *arg) {
-  struct mgos_event e;
-  s_main_queue = xQueueCreate(MGOS_TASK_QUEUE_LENGTH, sizeof(e));
-  cc32xx_init_func_t init_func = (cc32xx_init_func_t) arg;
-
+int cc32xx_init(void) {
   mgos_lock_init();
   mgos_uart_init();
   mgos_debug_init();
+  mgos_debug_uart_init();
 
-  int r = init_func();
+  setvbuf(stdout, NULL, _IOLBF, 256);
+  setvbuf(stderr, NULL, _IOLBF, 256);
+  cs_log_set_level(MGOS_EARLY_DEBUG_LEVEL);
+
+  if (strcmp(MGOS_APP, "mongoose-os") != 0) {
+    LOG(LL_INFO, ("%s %s (%s)", MGOS_APP, build_version, build_id));
+  }
+  LOG(LL_INFO, ("Mongoose OS %s (%s)", mg_build_version, mg_build_id));
+  LOG(LL_INFO, ("RAM: %d total, %d free", mgos_get_heap_size(),
+                mgos_get_free_heap_size()));
+
+  int r = cc32xx_start_nwp();
+  if (r < 0) {
+    LOG(LL_ERROR, ("Failed to start NWP: %d", r));
+    return -2;
+  }
+
+  mongoose_init();
+
+  return 0;
+}
+
+static void cc32xx_main_task(void *arg) {
+  struct mgos_event e;
+  cc32xx_init_func_t init_func = (cc32xx_init_func_t) arg;
+
+  int r = init_func(true /* pre */);
+  r = (r == 0 ? cc32xx_init() : r);
+  r = (r == 0 ? init_func(false /* pre */) : r);
   bool init_success = (r == 0);
   if (!init_success) LOG(LL_ERROR, ("Init failed: %d", r));
 
@@ -75,6 +119,8 @@ static void cc32xx_main_task(void *arg) {
     mgos_usleep(500000);
     mgos_system_restart(0);
   }
+
+  mgos_wdt_set_feed_on_poll(true);
 
   while (1) {
     mongoose_poll(0);
@@ -100,25 +146,34 @@ bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
 
 void umm_oom_cb(size_t size, unsigned short int blocks_cnt) {
   (void) blocks_cnt;
-  // TODO(rojer): Not ok to use buffered I/O here!
-  LOG(LL_ERROR, ("Failed to allocate %u", size));
+  cc32xx_exc_printf("E:M %u\r\n", size, blocks_cnt);
 }
 
 void cc32xx_main(cc32xx_init_func_t init_func) {
+  PRCMCC3200MCUInit();
+  cc32xx_exc_init();
 #ifdef __TI_COMPILER_VERSION__
   /* UMM malloc expects heap to be zeroed */
-  memset(&_heap_start, 0, (char *) &_heap_end - (char *) &_heap_start);
+  memset(UMM_MALLOC_CFG__HEAP_ADDR, 0, UMM_MALLOC_CFG__HEAP_SIZE);
 #endif
+  cc32xx_exc_puts("\r\n");
 
-  setvbuf(stdout, NULL, _IOLBF, 256);
-  setvbuf(stderr, NULL, _IOLBF, 256);
-  cs_log_set_level(MGOS_EARLY_DEBUG_LEVEL);
+  MAP_PRCMPeripheralClkEnable(PRCM_WDT, PRCM_RUN_MODE_CLK);
+  mgos_wdt_set_timeout(5 /* seconds */);
+  mgos_wdt_enable();
 
-#if CS_PLATFORM == CS_P_CC3200
-  VStartSimpleLinkSpawnTask(MGOS_TASK_PRIORITY + 1);
-#endif
+  if (!MAP_PRCMRTCInUseGet()) {
+    MAP_PRCMRTCInUseSet();
+    MAP_PRCMRTCSet(0, 0);
+  }
 
-  xTaskCreate(cc32xx_main_task, "main", MGOS_TASK_STACK_SIZE, init_func, MGOS_TASK_PRIORITY, NULL);
+  cc32xx_sl_spawn_init();
+
+  s_main_queue = xQueueCreate(MGOS_TASK_QUEUE_LENGTH, sizeof(struct mgos_event));
+  xTaskCreate(cc32xx_main_task, "main", MGOS_TASK_STACK_SIZE/sizeof(portSTACK_TYPE), init_func, MGOS_TASK_PRIORITY, NULL);
+
   vTaskStartScheduler();
-  /* Not reached */
+  /* Not reached, but just in case... */
+  cc32xx_exc_puts("Scheduler failed to start!\r\n");
+  mgos_system_restart(0);
 }

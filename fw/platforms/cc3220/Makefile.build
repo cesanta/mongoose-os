@@ -136,15 +136,14 @@ MGOS_SRCS += umm_malloc.c
 VPATH += $(COMMON_PATH)/umm_malloc
 
 FREERTOS_SRCS = timers.c list.c queue.c tasks.c port.c
-# TODO(rojer): Unify allocators, make FreeRTOS use UMM malloc as well.
-FREERTOS_SRCS += heap_4.c
-FREERTOS_SRCS += ClockP_freertos.c HwiPCC32XX_freertos.c PowerCC32XX_freertos.c SemaphoreP_freertos.c SystemP_freertos.c
+FREERTOS_SRCS += heap_3.c
+FREERTOS_SRCS += ClockP_freertos.c HwiPCC32XX_freertos.c MutexP_freertos.c PowerCC32XX_freertos.c SemaphoreP_freertos.c SystemP_freertos.c
 DRIVER_SRCS = $(notdir $(wildcard $(SDK_PATH)/source/ti/devices/cc32xx/driverlib/*.c)) DisplayUart.c
-SL_SRCS = sl_socket.c wlan.c driver.c device.c netapp.c netcfg.c cc_pal.c fs.c
+SL_SRCS = sl_socket.c wlan.c driver.c device.c eventreg.c flowcont.c netapp.c netcfg.c netutil.c cc_pal.c fs.c
 SDK_SRCS = $(FREERTOS_SRCS) $(DRIVER_SRCS) $(SL_SRCS)
 
 SDK_SRCS += $(notdir $(wildcard $(SDK_PATH)/source/ti/drivers/*.c))
-SDK_SRCS += ADCCC32XX.c GPIOCC32XX.c I2CCC32XX.c PowerCC32XX.c List.c
+SDK_SRCS += ADCCC32XX.c GPIOCC32XX.c I2CCC32XX.c List.c PowerCC32XX.c SPICC32XXDMA.c UDMACC32XX.c
 #SDK_SRCS += $(filter-out package_ti.drivers.c,$(notdir $(wildcard $(SDK_PATH)/source/ti/drivers/*/*.c)))
 
 IPATH += $(SDK_PATH)/source \
@@ -165,6 +164,7 @@ VPATH += $(SDK_PATH)/source/ti/devices/cc32xx/driverlib \
          $(SDK_PATH)/source/ti/drivers/gpio \
          $(SDK_PATH)/source/ti/drivers/i2c \
          $(SDK_PATH)/source/ti/drivers/i2s \
+         $(SDK_PATH)/source/ti/drivers/net/wifi \
          $(SDK_PATH)/source/ti/drivers/net/wifi/porting \
          $(SDK_PATH)/source/ti/drivers/net/wifi/source \
          $(SDK_PATH)/source/ti/drivers/nvs \
@@ -182,13 +182,14 @@ VPATH += $(SDK_PATH)/source/ti/devices/cc32xx/driverlib \
          $(FREERTOS_PATH)/Source/portable/CCS/ARM_CM3 \
          $(FREERTOS_PATH)/Source/portable/MemMang
 
-SDK_CFLAGS = -DTARGET_IS_CC3220 -DUSE_CC3220_ROM_DRV_API -DUSE_FREERTOS -DSL_PLATFORM_MULTI_THREADED
+SDK_CFLAGS = -DTARGET_IS_CC3220 -DUSE_CC3220_ROM_DRV_API -DUSE_FREERTOS
 
 MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3220_PATH)/src/*.c)) \
              cs_dbg.c cs_rbuf.c mbuf.c \
              mongoose.c \
-             mgos_debug.c mgos_hooks.c mgos_mongoose.c mgos_uart.c mgos_vfs.c \
-             cc32xx_hal.c cc32xx_main.c cc32xx_uart.c cc32xx_vfs.c
+             mgos_debug.c mgos_hooks.c mgos_mongoose.c mgos_timers_mongoose.c mgos_uart.c mgos_vfs.c \
+             cc32xx_exc.c cc32xx_exc_handler_top.asm \
+             cc32xx_hal.c cc32xx_libc.c cc32xx_main.c cc32xx_sl_spawn.c cc32xx_uart.c cc32xx_vfs.c
 APP_SRCS = $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
 
@@ -289,7 +290,7 @@ $(APP_BIN): $(APP_ELF)
 	$(Q) $(OBJCOPY) -O binary $< $@
 	$(Q) echo "     Code size: $$(ls -l $@ | awk '{print $$5}')"
 
-$(APP_ELF): $(APP_OBJS) $(MGOS_LIB) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES)
+$(APP_ELF): $(APP_OBJS) $(MGOS_LIB) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES) $(APP_LD_SCRIPT)
 	$(call link,$(APP_LD_SCRIPT),$(APP_LDFLAGS),$(APP_OBJS) $(MGOS_LIB) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES))
 
 $(MGOS_LIB): $(MGOS_OBJS) $(SDK_OBJS)

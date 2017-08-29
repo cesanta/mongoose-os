@@ -15,7 +15,7 @@ MGOS_FEATURES += -DMGOS_DEBUG_UART=$(MGOS_DEBUG_UART) \
                  -DMGOS_DEBUG_UART_BAUD_RATE=$(MGOS_DEBUG_UART_BAUD_RATE) \
                  -DMG_ENABLE_CALLBACK_USERDATA
 
-ifeq "$(MGOS_HAVE_ATCA)" "1"
+ifdef MGOS_HAVE_ATCA
   ATCA_PATH ?= $(MGOS_PATH)/third_party/cryptoauthlib
   ATCA_LIB = $(BUILD_DIR)/libatca.a
 

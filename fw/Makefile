@@ -12,6 +12,7 @@ difftest:
 REPO_ROOT = ..
 FORMAT_FILES = 'examples/*/*/*.[ch]' 'examples/*/*/*.cpp' \
                'platforms/cc3200/src/*.[ch]' \
+               'platforms/cc3220/src/*.[ch]' \
                'platforms/esp32/src/*.[ch]' \
                'platforms/esp8266/*.[ch]' \
                'src/*.[ch]' 'src/*.cpp'

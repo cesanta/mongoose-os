@@ -291,6 +291,29 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
   return true;
 }
 
+void cc32xx_uart_early_init(int uart_no, int baud_rate) {
+  if (uart_no < 0) return;
+  uint32_t base = cc32xx_uart_get_base(uart_no);
+  uint32_t periph;
+  if (uart_no == 0) {
+    periph = PRCM_UARTA0;
+    MAP_PinTypeUART(PIN_55, PIN_MODE_3); /* UART0_TX */
+    MAP_PinTypeUART(PIN_57, PIN_MODE_3); /* UART0_RX */
+  } else if (uart_no == 1) {
+    periph = PRCM_UARTA1;
+    MAP_PinTypeUART(PIN_07, PIN_MODE_5); /* UART1_TX */
+    MAP_PinTypeUART(PIN_08, PIN_MODE_5); /* UART1_RX */
+  } else {
+    return;
+  }
+  MAP_PRCMPeripheralClkEnable(periph, PRCM_RUN_MODE_CLK);
+  MAP_UARTConfigSetExpClk(base, MAP_PRCMPeripheralClockGet(periph),
+                          baud_rate,
+                          UART_CONFIG_WLEN_8 | UART_CONFIG_PAR_NONE | UART_CONFIG_STOP_ONE);
+  MAP_UARTFIFODisable(base);
+  MAP_UARTIntDisable(base, ~0); /* Start with ints disabled. */
+}
+
 bool cc32xx_uart_cts(int uart_no) {
   uint32_t base = cc32xx_uart_get_base(uart_no);
   return (UARTModemStatusGet(base) != 0);

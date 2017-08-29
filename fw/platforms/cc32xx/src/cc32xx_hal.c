@@ -4,14 +4,17 @@
  */
 
 #include <inc/hw_types.h>
+#include <inc/hw_memmap.h>
 #include <driverlib/prcm.h>
 #include <driverlib/rom.h>
 #include <driverlib/rom_map.h>
+#include <driverlib/wdt.h>
 
 #include "FreeRTOS.h"
 #include "semphr.h"
 #include "task.h"
 
+#include "common/cs_dbg.h"
 #include "common/umm_malloc/umm_malloc.h"
 
 #include "mgos_hal.h"
@@ -78,6 +81,31 @@ void mongoose_poll_cb(void *arg) {
   (void) arg;
 }
 
+void mgos_wdt_feed(void) {
+  MAP_WatchdogIntClear(WDT_BASE);
+}
+
+void mgos_wdt_set_timeout(int secs) {
+  MAP_WatchdogUnlock(WDT_BASE);
+  /* Reset is triggered after the timer reaches zero for the second time. */
+  MAP_WatchdogReloadSet(WDT_BASE, secs * SYS_CLK / 2);
+  MAP_WatchdogLock(WDT_BASE);
+}
+
+void mgos_wdt_enable(void) {
+  MAP_WatchdogUnlock(WDT_BASE);
+  MAP_WatchdogEnable(WDT_BASE);
+  MAP_WatchdogLock(WDT_BASE);
+}
+
+void mgos_wdt_disable(void) {
+  LOG(LL_ERROR, ("WDT cannot be disabled!"));
+}
+
+uint32_t mgos_get_cpu_freq(void) {
+  return SYS_CLK;
+}
+
 #ifdef __TI_COMPILER_VERSION__
 
 size_t mgos_get_heap_size(void) {
@@ -118,4 +146,3 @@ size_t mgos_get_min_free_heap_size(void) {
 }
 
 #endif
-
