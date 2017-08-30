@@ -128,7 +128,7 @@ BOOT_BIN = $(BOOT_FW_DIR)/mg-boot.bin
 APP_ELF = $(BUILD_DIR)/$(APP).elf
 MGOS_LIB = $(BUILD_DIR)/mongoose-os.a
 MK_BOOT_CFG_BIN = $(BOOT_BUILD_DIR)/mkcfg
-FS_IMG = $(BUILD_DIR)/fs.img
+FS_IMG = $(BUILD_DIR)/spiffs.img
 FS_EMPTY_IMG = $(BUILD_DIR)/fs_empty.img
 SYS_CONFIG_C = $(GEN_DIR)/sys_config.c
 SYS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/conf0.json
@@ -157,9 +157,7 @@ MGOS_SRCS = mgos_gpio.c \
             mgos_timers_mongoose.c \
             mgos_config.c mgos_sys_config.c \
             mgos_dlsym.c \
-            mgos_vfs.c \
-            mgos_vfs_dev.c \
-            mgos_vfs_fs_spiffs.c \
+            mgos_vfs.c mgos_vfs_dev.c mgos_vfs_fs_spiffs.c \
             $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
             cs_crc32.c cs_file.c \
             cs_frbuf.c mgos_utils.c \
@@ -190,8 +188,9 @@ VPATH += $(SDK_PATH)/driverlib $(SDK_PATH)/oslib $(SDK_PATH)/simplelink \
 SDK_CFLAGS = -DTARGET_IS_CC3200 -DUSE_FREERTOS
 
 MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3200_PATH)/src/*.c)) \
-             cc32xx_hal.c cc32xx_libc.c cc32xx_main.c cc32xx_sl_spawn.c cc32xx_uart.c cc32xx_vfs.c \
-             cc32xx_exc.c
+             cc32xx_exc.c cc32xx_fs.c cc32xx_hal.c cc32xx_libc.c cc32xx_main.c \
+             cc32xx_sl_spawn.c cc32xx_uart.c \
+             cc32xx_vfs.c cc32xx_vfs_dev_slfs_container.c cc32xx_vfs_fs_slfs.c
 APP_SRCS = $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
 
@@ -369,9 +368,9 @@ $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MGOS_OBJS)
 $(MG_BUILD_INFO_C): $(MGOS_OBJS)
 	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
 
-$(MK_FS_META_BIN): $(MGOS_CC3200_PATH)/tools/mkfsmeta.c
+$(MK_FS_META_BIN): $(MGOS_CC32XX_PATH)/tools/mkfsmeta.c
 	$(vecho) "GCC   $< -> $@"
-	$(Q) gcc -Wall -Werror -I$(MGOS_CC3200_PATH) -o $@ $^
+	$(Q) gcc -Wall -Werror -I$(MGOS_CC32XX_PATH)/src -o $@ $^
 
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)

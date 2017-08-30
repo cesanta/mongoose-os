@@ -27,11 +27,6 @@
 #include "mgos_vfs.h"
 
 #include "fw/platforms/cc3200/src/config.h"
-#include "fw/platforms/cc3200/src/cc3200_fs.h"
-
-size_t mgos_get_fs_memory_usage(void) {
-  return 0; /* Not even sure if it's possible to tell. */
-}
 
 void mgos_system_restart(int exit_code) {
   (void) exit_code;

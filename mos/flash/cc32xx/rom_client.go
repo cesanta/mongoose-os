@@ -644,6 +644,10 @@ func (rc *ROMClient) UploadImageFile(fname string) error {
 		binary.Write(buf, binary.BigEndian, uint32(0)) // Flags
 		buf.Write(toWrite)
 		glog.V(3).Infof("Image write: %d @ %d", len(toWrite), numWritten)
+		if writeSize == len(remaining) {
+			// This is the last write, it will trigger image extraction and will take a while.
+			common.Reportf("Upload finished, image is being extracted...")
+		}
 		err := rc.sendCommand(cmdUploadImage, buf.Bytes())
 		if err != nil {
 			if writeSize == len(remaining) {

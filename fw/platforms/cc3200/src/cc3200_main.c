@@ -34,14 +34,16 @@
 
 #include "mgos_app.h"
 #include "mgos_hal.h"
-
 #include "mgos_mongoose.h"
 #include "mgos_updater_common.h"
+#include "mgos_vfs_fs_spiffs.h"
 
-#include "cc3200_fs.h"
-#include "cc3200_main_task.h"
+#include "cc32xx_fs.h"
 #include "cc32xx_main.h"
-#include "cc3200_vfs_dev_slfs_container.h"
+#include "cc32xx_vfs_dev_slfs_container.h"
+#include "cc32xx_vfs_fs_slfs.h"
+
+#include "fw/platforms/cc3200/boot/lib/boot.h"
 
 int g_boot_cfg_idx;
 struct boot_cfg g_boot_cfg;
@@ -69,6 +71,14 @@ static void cc3200_srand(void) {
   uint32_t r = 0, *p;
   for (p = (uint32_t *) 0x20000000; p < (uint32_t *) 0x20040000; p++) r ^= *p;
   srand(r);
+}
+
+static bool cc3200_fs_init(const char *root_container_prefix) {
+  return cc32xx_vfs_dev_slfs_container_register_type() &&
+         cc32xx_vfs_fs_slfs_register_type() &&
+         mgos_vfs_fs_spiffs_register_type() &&
+         cc32xx_fs_spiffs_container_mount("/", root_container_prefix) &&
+         cc32xx_fs_slfs_mount("/slfs");
 }
 
 enum cc3200_init_result {
@@ -120,7 +130,7 @@ static int cc3200_init(bool pre) {
     struct boot_cfg cfg;
     int inactive_idx = (g_boot_cfg_idx == 0 ? 1 : 0);
     if (read_boot_cfg(inactive_idx, &cfg) >= 0) {
-      cc3200_vfs_dev_slfs_container_delete_inactive_container(
+      cc32xx_vfs_dev_slfs_container_delete_inactive_container(
           cfg.fs_container_prefix);
     }
   }

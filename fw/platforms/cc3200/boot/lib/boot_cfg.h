@@ -6,7 +6,9 @@
 #ifndef CS_FW_PLATFORMS_CC3200_BOOT_LIB_BOOT_CFG_H_
 #define CS_FW_PLATFORMS_CC3200_BOOT_LIB_BOOT_CFG_H_
 
-#include <inttypes.h>
+#include <stdint.h>
+
+#include "cc32xx_vfs_dev_slfs_container_meta.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,8 +19,6 @@ extern "C" {
  * Little-endian.
  */
 #define MAX_APP_IMAGE_FILE_LEN 50
-#define MAX_FS_CONTAINER_PREFIX_LEN 50
-#define MAX_FS_CONTAINER_FNAME_LEN (MAX_FS_CONTAINER_PREFIX_LEN + 3)
 
 struct boot_cfg {
   uint64_t seq;

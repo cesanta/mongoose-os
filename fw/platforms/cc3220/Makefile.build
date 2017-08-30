@@ -54,6 +54,7 @@ COMMON_PATH ?= $(MGOS_PATH)/common
 COMMON_CC3200_PATH ?= $(MGOS_PATH)/common/platforms/cc3200
 MGOS_CC3220_PATH ?= $(MGOS_PATH)/fw/platforms/cc3220
 MGOS_CC32XX_PATH ?= $(MGOS_PATH)/fw/platforms/cc32xx
+SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 MONGOOSE_PATH ?= $(MGOS_PATH)/mongoose
 FROZEN_PATH ?= $(MGOS_PATH)/frozen
 
@@ -80,6 +81,13 @@ override FW_STAGING_DIR := $(abspath $(FW_STAGING_DIR))
 override FW_DIR := $(abspath $(FW_DIR))
 override GEN_DIR := $(abspath $(GEN_DIR))
 
+FS_SIZE ?= 262144
+FS_BLOCK_SIZE ?= 4096
+FS_PAGE_SIZE ?= 256
+FS_ERASE_SIZE ?= 4096
+FS_META_SIZE = 64
+FS_IMAGE_SIZE = $(shell echo $$(($(FS_SIZE) + $(FS_META_SIZE))))
+
 MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
 
 # For FW_VERSION, MG_FEATURES_TINY
@@ -96,7 +104,7 @@ MGOS_CC3220_FEATURES ?= -DMGOS_NUM_GPIO=65 '-DUMM_ONFREE(ptr, size)=memset(ptr, 
 
 MG_FEATURES ?= $(MG_FEATURES_TINY) \
                -DMG_LOCALS -DMG_ENABLE_SSL \
-               -DMG_FS_NO_VFS \
+               -DMG_FS_SLFS -DMG_FS_NO_VFS \
                -DMG_ENABLE_FILESYSTEM \
                -DMG_ENABLE_DIRECTORY_LISTING \
                -DMG_SIMPLELINK_NO_OSI \
@@ -115,6 +123,7 @@ APP_BIN_SHA = $(BUILD_DIR)/$(APP).bin.sha
 APP_BIN_SHA_SIG = $(BUILD_DIR)/$(APP).bin.sha.sig
 APP_ELF = $(BUILD_DIR)/$(APP).elf
 MGOS_LIB = $(BUILD_DIR)/mongoose-os.a
+FS_IMG = $(BUILD_DIR)/spiffs.img
 SYS_CONFIG_C = $(GEN_DIR)/sys_config.c
 SYS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/conf0.json
 SYS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/sys_config_schema.json
@@ -125,6 +134,7 @@ BUILD_INFO_O = $(BUILD_DIR)/build_info.c.o
 BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
 MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
 MG_BUILD_INFO_O = $(BUILD_DIR)/mg_build_info.c.o
+MK_FS_META_BIN = $(BUILD_DIR)/mkfsmeta
 
 GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 
@@ -186,10 +196,17 @@ SDK_CFLAGS = -DTARGET_IS_CC3220 -DUSE_CC3220_ROM_DRV_API -DUSE_FREERTOS
 
 MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3220_PATH)/src/*.c)) \
              cs_dbg.c cs_rbuf.c mbuf.c \
-             mongoose.c \
-             mgos_debug.c mgos_hooks.c mgos_mongoose.c mgos_timers_mongoose.c mgos_uart.c mgos_vfs.c \
-             cc32xx_exc.c cc32xx_exc_handler_top.asm \
-             cc32xx_hal.c cc32xx_libc.c cc32xx_main.c cc32xx_sl_spawn.c cc32xx_uart.c cc32xx_vfs.c
+             frozen.c mongoose.c \
+             mgos_debug.c mgos_hooks.c mgos_mongoose.c mgos_timers_mongoose.c mgos_uart.c \
+             mgos_vfs.c mgos_vfs_dev.c mgos_vfs_fs_spiffs.c \
+             cc32xx_exc.c cc32xx_exc_handler_top.asm cc32xx_fs.c \
+             cc32xx_hal.c cc32xx_libc.c cc32xx_main.c cc32xx_sl_spawn.c cc32xx_uart.c \
+             cc32xx_vfs.c cc32xx_vfs_dev_slfs_container.c cc32xx_vfs_fs_slfs.c
+
+IPATH += $(SPIFFS_PATH)
+VPATH += $(SPIFFS_PATH)
+MGOS_SRCS += $(notdir $(wildcard $(SPIFFS_PATH)/*.c))
+
 APP_SRCS = $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
 
@@ -201,6 +218,7 @@ MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" \
               -DC_DISABLE_BUILTIN_SNPRINTF
 
 include $(MGOS_PATH)/fw/src/mgos_features.mk
+include $(MGOS_PATH)/fw/src/spiffs.mk
 
 clean:
 	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)
@@ -222,6 +240,9 @@ FW_PARTS = $(notdir $(CA_BUNDLE)):type=cabundle,src=$(CA_BUNDLE),sig=$(notdir $(
            /sys/mcuflashimg.bin:type=app,src=$(APP_BIN_SHA),falloc=$(APP_IMAGE_MAX_SIZE),sig_cert=$(notdir $(SIG_CERT)),sig=$(notdir $(APP_BIN_SHA_SIG)) \
            $(notdir $(SIG_CERT)):type=cert,src=$(SIG_CERT) \
            $(notdir $(APP_BIN_SHA_SIG)):type=sig,src=$(APP_BIN_SHA_SIG) \
+           spiffs.img.0.0:type=fs,falloc=$(FS_IMAGE_SIZE),src=$(FS_IMG),fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE) \
+           spiffs.img.0.1:type=slfile,falloc=$(FS_IMAGE_SIZE),fill=0xff,size=0 \
+           spiffs.img.1.0:type=slfile,falloc=$(FS_IMAGE_SIZE),fill=0xff,size=0 \
            $(foreach f,$(SLFS_FILES), $(notdir $(f)):type=slfile,src=$(f))
 
 CC3220_SP_FILE ?= $(wildcard $(SDK_PATH)/tools/cc32xx_tools/servicepack-cc3x20/sp_*.?.bin)
@@ -252,12 +273,6 @@ APP_LD_SCRIPT ?= $(MGOS_CC3220_PATH)/ld/CC3220SF_LAUNCHXL_FREERTOS.cmd
 APP_LDFLAGS += --rom_model --heap_size=0 --stack_size=0x1000 \
                --disable_auto_rts -l rtsv7M4_T_le_eabi_cesanta.lib
 
-#MGOS_CFLAGS += -DMG_TI_NO_HOST_INTERFACE=1
-#MGOS_OBJS += $(BUILD_DIR)/exc_handler_top.asm.o \
-#             $(BUILD_DIR)/portasm.asm.o \
-#             $(BUILD_DIR)/startup_ccs.c.o
-#VPATH += $(MGOS_CC3200_PATH)/src/ti
-
 C_CXX_FLAGS += -DNDEBUG -DCS_NDEBUG -DconfigCREATE_SIMPLE_TICKLESS_DEMO=1 \
                -DFW_ARCHITECTURE=$(APP_PLATFORM) \
                $(patsubst %,-I%,$(subst :, ,$(IPATH))) \
@@ -270,7 +285,7 @@ CXXFLAGS += $(APP_CXXFLAGS)
 all: $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(FS_STAGING_DIR) $(FW_ZIP)
 
 $(FW_MANIFEST): $(APP_BIN) $(APP_BIN_SHA_SIG) $(FS_IMG) $(FS_EMPTY_IMG) \
-                $(APP_SLFS_PATH) $(SLFS_FILES) $(FS_FILES) \
+                $(APP_SLFS_PATH) $(FS_IMG) $(SLFS_FILES) $(FS_FILES) \
                 $(SIG_CERT) $(CA_BUNDLE) $(CA_BUNDLE_SIG)
 
 $(APP_BIN_SHA_SIG): $(APP_BIN_SHA) $(SIG_KEY)
@@ -314,6 +329,10 @@ $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MGOS_OBJS)
 
 $(MG_BUILD_INFO_C): $(MGOS_OBJS)
 	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
+
+$(MK_FS_META_BIN): $(MGOS_CC32XX_PATH)/tools/mkfsmeta.c
+	$(vecho) "GCC   $< -> $@"
+	$(Q) gcc -Wall -Werror -I$(MGOS_CC32XX_PATH)/src -o $@ $^
 
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)

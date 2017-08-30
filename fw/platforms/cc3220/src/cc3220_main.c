@@ -22,17 +22,19 @@
 #include "mgos_mongoose.h"
 #include "mgos_sys_config.h"
 #include "mgos_uart.h"
+#include "mgos_vfs_fs_spiffs.h"
 
-#include "cc32xx_exc.h"
+#include "cc32xx_fs.h"
 #include "cc32xx_main.h"
+#include "cc32xx_vfs_dev_slfs_container.h"
+#include "cc32xx_vfs_fs_slfs.h"
 
-static int pulse = 0;
-
-void vApplicationTickHook(void) {
-  static int x = 0;
-  if (!pulse) return;
-  GPIO_write(2, x);
-  x ^= 1;
+static bool cc3220_fs_init(const char *root_container_prefix) {
+  return cc32xx_vfs_dev_slfs_container_register_type() &&
+         cc32xx_vfs_fs_slfs_register_type() &&
+         mgos_vfs_fs_spiffs_register_type() &&
+         cc32xx_fs_spiffs_container_mount("/", root_container_prefix) &&
+         cc32xx_fs_slfs_mount("/slfs");
 }
 
 int cc3220_init(bool pre) {
@@ -41,6 +43,11 @@ int cc3220_init(bool pre) {
     GPIO_init();
     SPI_init(); /* For NWP */
     UDMACC32XX_init();
+    return 0;
+  }
+  if (!cc3220_fs_init("spiffs.img.0")) {
+    LOG(LL_ERROR, ("FS init error"));
+    return -1;
   }
   return 0;
 }

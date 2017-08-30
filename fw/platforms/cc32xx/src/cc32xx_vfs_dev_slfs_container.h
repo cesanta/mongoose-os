@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_PLATFORMS_CC3200_SRC_CC3200_VFS_DEV_SLFS_CONTAINER_H_
-#define CS_FW_PLATFORMS_CC3200_SRC_CC3200_VFS_DEV_SLFS_CONTAINER_H_
+#ifndef CS_FW_PLATFORMS_CC32XX_SRC_CC32XX_VFS_DEV_SLFS_CONTAINER_H_
+#define CS_FW_PLATFORMS_CC32XX_SRC_CC32XX_VFS_DEV_SLFS_CONTAINER_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -20,25 +20,25 @@ extern "C" {
  * otherwise additional 4K is allocated (compare AllocatedLen vs FileLen). */
 #define FS_CONTAINER_SIZE(fs_size) (((((fs_size) >> 12) + 1) << 12) - 1024)
 
-bool cc3200_vfs_dev_slfs_container_register_type(void);
+bool cc32xx_vfs_dev_slfs_container_register_type(void);
 
-void cc3200_vfs_dev_slfs_container_fname(const char *cpfx, int cidx,
+void cc32xx_vfs_dev_slfs_container_fname(const char *cpfx, int cidx,
                                          uint8_t *fname);
 
-bool cc3200_vfs_dev_slfs_container_write_meta(int fh, uint64_t seq,
+bool cc32xx_vfs_dev_slfs_container_write_meta(int fh, uint64_t seq,
                                               uint32_t fs_size,
                                               uint32_t fs_block_size,
                                               uint32_t fs_page_size,
                                               uint32_t fs_erase_size);
 
-void cc3200_vfs_dev_slfs_container_delete_container(const char *cpfx, int cidx);
+void cc32xx_vfs_dev_slfs_container_delete_container(const char *cpfx, int cidx);
 
-void cc3200_vfs_dev_slfs_container_delete_inactive_container(const char *cpfx);
+void cc32xx_vfs_dev_slfs_container_delete_inactive_container(const char *cpfx);
 
-void cc3200_vfs_dev_slfs_container_flush_all(void);
+void cc32xx_vfs_dev_slfs_container_flush_all(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* CS_FW_PLATFORMS_CC3200_SRC_CC3200_VFS_DEV_SLFS_CONTAINER_H_ */
+#endif /* CS_FW_PLATFORMS_CC32XX_SRC_CC32XX_VFS_DEV_SLFS_CONTAINER_H_ */

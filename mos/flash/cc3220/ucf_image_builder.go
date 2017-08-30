@@ -228,6 +228,9 @@ func buildXMLConfigFromFirmwareBundle(fw *common.FirmwareBundle, storageCapacity
 			// Certificate files are in every way the same as regular files,
 			// we just want them placed at the beginning.
 			fallthrough
+		case cc32xx.PartTypeFSContainer:
+			// FS container is just another file on SLFS.
+			fallthrough
 		case cc32xx.PartTypeSLFile:
 			fn, fs, err := fw.GetPartDataFile(p.Name)
 			if err != nil {

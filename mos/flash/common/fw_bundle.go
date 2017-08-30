@@ -89,7 +89,7 @@ func (fw *FirmwareBundle) GetPartData(name string) ([]byte, error) {
 				return nil, errors.Errorf("%q: digest mismatch: expected %s, got %s", name, expectedDigestHex, digestHex)
 			}
 		}
-	} else if p.Fill != nil && p.Size > 0 {
+	} else if p.Fill != nil && p.Size >= 0 {
 		data = make([]byte, p.Size)
 		for i, _ := range data {
 			data[i] = *p.Fill

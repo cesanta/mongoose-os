@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include "fw/platforms/cc3200/src/cc3200_vfs_dev_slfs_container.h"
+#include "cc32xx_vfs_dev_slfs_container.h"
 
 #include "common/cs_dbg.h"
 #include "common/platform.h"
@@ -17,8 +17,8 @@
 #include "mgos_vfs_dev.h"
 #include "mgos_vfs_fs_spiffs.h"
 
-#include "fw/platforms/cc3200/boot/lib/boot.h"
-#include "fw/platforms/cc3200/src/cc3200_vfs_dev_slfs_container_meta.h"
+#include "cc32xx_vfs_dev_slfs_container_meta.h"
+#include "cc32xx_vfs_fs_slfs.h"
 
 struct dev_data {
   char *cpfx;        /* Container filename prefix. */
@@ -39,7 +39,7 @@ static SLIST_HEAD(s_devs, dev_data) s_devs = SLIST_HEAD_INITIALIZER(s_devs);
 #define MGOS_VFS_DEV_SLFS_CONTAINER_FLUSH_INTERVAL_MS 1000
 #endif
 
-void cc3200_vfs_dev_slfs_container_fname(const char *cpfx, int cidx,
+void cc32xx_vfs_dev_slfs_container_fname(const char *cpfx, int cidx,
                                          _u8 *fname) {
   int l = 0;
   while (cpfx[l] != '\0' && l < MAX_FS_CONTAINER_PREFIX_LEN) {
@@ -57,23 +57,23 @@ int fs_get_info(const char *cpfx, int cidx, struct fs_container_info *info) {
   SlFsFileInfo_t fi;
   _i32 fh;
   _u32 offset;
-  cc3200_vfs_dev_slfs_container_fname(cpfx, cidx, fname);
+  cc32xx_vfs_dev_slfs_container_fname(cpfx, cidx, fname);
   _i32 r = sl_FsGetInfo(fname, 0, &fi);
-  DBG(("finfo %s %d %d %d", fname, (int) r, (int) fi.FileLen,
-       (int) fi.AllocatedLen));
+  DBG(("finfo %s %d %d %d", fname, (int) r, (int) SL_FI_FILE_SIZE(fi),
+       (int) SL_FI_FILE_MAX_SIZE(fi)));
   if (r != 0) {
-    if (r == SL_FS_FILE_HAS_NOT_BEEN_CLOSE_CORRECTLY) {
+    if (r == SL_ERROR_FS_FILE_HAS_NOT_BEEN_CLOSE_CORRECTLY) {
       LOG(LL_ERROR, ("corrupt container %s", fname));
       sl_FsDel(fname, 0);
     }
     return r;
   }
-  if (fi.AllocatedLen < sizeof(meta)) return -200;
-  r = sl_FsOpen(fname, FS_MODE_OPEN_READ, NULL, &fh);
-  DBG(("fopen %s %d", fname, (int) r));
-  if (r != 0) return r;
+  if (SL_FI_FILE_MAX_SIZE(fi) < sizeof(meta)) return -200;
+  fh = slfs_open(fname, SL_FS_READ);
+  DBG(("fopen %s %d", fname, (int) fh));
+  if (fh < 0) return fh;
 
-  offset = fi.FileLen - sizeof(meta);
+  offset = SL_FI_FILE_SIZE(fi) - sizeof(meta);
   r = sl_FsRead(fh, offset, (_u8 *) &meta, sizeof(meta));
   DBG(("read meta @ %d: %d", (int) offset, (int) r));
 
@@ -122,7 +122,7 @@ int fs_get_active_idx(const char *cpfx, struct fs_container_info *info) {
   return r;
 }
 
-bool cc3200_vfs_dev_slfs_container_write_meta(int fh, uint64_t seq,
+bool cc32xx_vfs_dev_slfs_container_write_meta(int fh, uint64_t seq,
                                               uint32_t fs_size,
                                               uint32_t fs_block_size,
                                               uint32_t fs_page_size,
@@ -145,7 +145,7 @@ bool cc3200_vfs_dev_slfs_container_write_meta(int fh, uint64_t seq,
 }
 
 static bool fs_write_mount_meta(struct dev_data *m) {
-  return cc3200_vfs_dev_slfs_container_write_meta(
+  return cc32xx_vfs_dev_slfs_container_write_meta(
       m->fh, m->seq, m->size,
       /* These are no longer used, only for backward compat. */
       MGOS_SPIFFS_DEFAULT_BLOCK_SIZE, MGOS_SPIFFS_DEFAULT_PAGE_SIZE,
@@ -154,24 +154,23 @@ static bool fs_write_mount_meta(struct dev_data *m) {
 
 _i32 fs_open_container(const char *cpfx, int cidx) {
   _u8 fname[MAX_FS_CONTAINER_FNAME_LEN];
-  cc3200_vfs_dev_slfs_container_fname(cpfx, cidx, fname);
-  _i32 fh;
-  _i32 r = sl_FsOpen(fname, FS_MODE_OPEN_READ, NULL, &fh);
-  LOG((r >= 0 ? LL_DEBUG : LL_ERROR), ("open %s -> %ld %ld", fname, r, fh));
-  return (r >= 0 ? fh : -1);
+  cc32xx_vfs_dev_slfs_container_fname(cpfx, cidx, fname);
+  _i32 fh = slfs_open(fname, SL_FS_READ);
+  LOG((fh >= 0 ? LL_DEBUG : LL_ERROR), ("open %s -> %ld", fname, fh));
+  return fh;
 }
 
 _i32 fs_create_container(const char *cpfx, int cidx, _u32 size) {
   _i32 fh = -1;
   _u8 fname[MAX_FS_CONTAINER_FNAME_LEN];
   _u32 fsize = FS_CONTAINER_SIZE(size);
-  cc3200_vfs_dev_slfs_container_fname(cpfx, cidx, fname);
+  cc32xx_vfs_dev_slfs_container_fname(cpfx, cidx, fname);
   int r = sl_FsDel(fname, 0);
   DBG(("del %s -> %ld", fname, r));
-  r = sl_FsOpen(fname, FS_MODE_OPEN_CREATE(fsize, 0), NULL, &fh);
-  LOG((r == 0 ? LL_DEBUG : LL_ERROR),
-      ("open %s %lu -> %d %ld", fname, fsize, r, fh));
-  if (r != 0) return r;
+  fh = slfs_open(fname, FS_MODE_OPEN_CREATE(fsize, 0));
+  LOG((fh >= 0 ? LL_DEBUG : LL_ERROR),
+      ("open %s %lu -> %ld", fname, fsize, fh));
+  (void) r;
   return fh;
 }
 
@@ -223,12 +222,12 @@ _i32 fs_switch_container(struct dev_data *dd, _u32 mask_begin, _u32 mask_len) {
   }
   if (old_fh < 0) {
     _u8 fname[MAX_FS_CONTAINER_FNAME_LEN];
-    cc3200_vfs_dev_slfs_container_fname(dd->cpfx, dd->cidx, fname);
-    r = sl_FsOpen(fname, FS_MODE_OPEN_READ, NULL, &old_fh);
-    DBG(("fopen %s %ld", dd->cpfx, r));
-    if (r < 0) {
+    cc32xx_vfs_dev_slfs_container_fname(dd->cpfx, dd->cidx, fname);
+    old_fh = slfs_open(fname, SL_FS_READ);
+    DBG(("fopen %s %ld", dd->cpfx, old_fh));
+    if (old_fh < 0) {
       r = -1;
-      goto out_close_old;
+      goto out;
     }
   }
   mgos_wdt_feed();
@@ -290,12 +289,13 @@ out_free:
 out_close_new:
   if (new_fh > 0) sl_FsClose(new_fh, NULL, NULL, 0);
 out_close_old:
-  sl_FsClose(old_fh, NULL, NULL, 0);
+  if (old_fh > 0) sl_FsClose(old_fh, NULL, NULL, 0);
+out:
   LOG((r == 0 ? LL_DEBUG : LL_ERROR), ("%d", r));
   return r;
 }
 
-static bool cc3200_vfs_dev_slfs_container_open(struct mgos_vfs_dev *dev,
+static bool cc32xx_vfs_dev_slfs_container_open(struct mgos_vfs_dev *dev,
                                                const char *opts) {
   int cidx = -1;
   bool ret = false;
@@ -327,7 +327,7 @@ static bool cc3200_vfs_dev_slfs_container_open(struct mgos_vfs_dev *dev,
       dd->fh = fs_create_container(cpfx, cidx, size);
       dd->cidx = 0;
       dd->rw = true;
-      dd->seq = BOOT_CFG_INITIAL_SEQ;
+      dd->seq = FS_INITIAL_SEQ;
       dd->size = size;
       dd->last_write = mg_time();
       if (dd->flush_interval_ms > 0) {
@@ -351,7 +351,7 @@ out:
   return ret;
 }
 
-static bool cc3200_vfs_dev_slfs_container_read(struct mgos_vfs_dev *dev,
+static bool cc32xx_vfs_dev_slfs_container_read(struct mgos_vfs_dev *dev,
                                                size_t offset, size_t size,
                                                void *dst) {
   _i32 r = -1;
@@ -365,7 +365,7 @@ static bool cc3200_vfs_dev_slfs_container_read(struct mgos_vfs_dev *dev,
       if (dd->fh < 0) break;
     }
     r = sl_FsRead(dd->fh, offset, dst, size);
-    if (r == SL_FS_ERR_INVALID_HANDLE) {
+    if (r == SL_ERROR_FS_INVALID_HANDLE) {
       /*
        * This happens when SimpleLink is reinitialized - all file handles are
        * invalidated. SL has to be reinitialized to e.g. configure WiFi.
@@ -376,7 +376,7 @@ static bool cc3200_vfs_dev_slfs_container_read(struct mgos_vfs_dev *dev,
   return (r == size);
 }
 
-static bool cc3200_vfs_dev_slfs_container_write(struct mgos_vfs_dev *dev,
+static bool cc32xx_vfs_dev_slfs_container_write(struct mgos_vfs_dev *dev,
                                                 size_t offset, size_t size,
                                                 const void *src) {
   _i32 r = -1;
@@ -389,7 +389,7 @@ static bool cc3200_vfs_dev_slfs_container_write(struct mgos_vfs_dev *dev,
       if (fs_switch_container(dd, 0, 0) != 0) break;
     }
     r = sl_FsWrite(dd->fh, offset, (unsigned char *) src, size);
-    if (r == SL_FS_ERR_INVALID_HANDLE) {
+    if (r == SL_ERROR_FS_INVALID_HANDLE) {
       /*
        * This happens when SimpleLink is reinitialized - all file handles are
        * invalidated. SL has to be reinitialized to e.g. configure WiFi.
@@ -400,19 +400,19 @@ static bool cc3200_vfs_dev_slfs_container_write(struct mgos_vfs_dev *dev,
   return (r == size);
 }
 
-static bool cc3200_vfs_dev_slfs_container_erase(struct mgos_vfs_dev *dev,
+static bool cc32xx_vfs_dev_slfs_container_erase(struct mgos_vfs_dev *dev,
                                                 size_t offset, size_t len) {
   struct dev_data *dd = (struct dev_data *) dev->dev_data;
   LOG(LL_VERBOSE_DEBUG, ("%p erase %d @ %d", dev, (int) len, (int) offset));
   return (fs_switch_container(dd, offset, len) == 0);
 }
 
-static size_t cc3200_vfs_dev_slfs_container_get_size(struct mgos_vfs_dev *dev) {
+static size_t cc32xx_vfs_dev_slfs_container_get_size(struct mgos_vfs_dev *dev) {
   struct dev_data *dd = (struct dev_data *) dev->dev_data;
   return dd->size;
 }
 
-static bool cc3200_vfs_dev_slfs_container_close(struct mgos_vfs_dev *dev) {
+static bool cc32xx_vfs_dev_slfs_container_close(struct mgos_vfs_dev *dev) {
   struct dev_data *dd = (struct dev_data *) dev->dev_data;
   SLIST_REMOVE(&s_devs, dd, dev_data, next);
   LOG(LL_DEBUG, ("%p fh %ld rw %d", dev, dd->fh, dd->rw));
@@ -422,26 +422,26 @@ static bool cc3200_vfs_dev_slfs_container_close(struct mgos_vfs_dev *dev) {
   return true;
 }
 
-static const struct mgos_vfs_dev_ops cc3200_vfs_dev_slfs_container_ops = {
-    .open = cc3200_vfs_dev_slfs_container_open,
-    .read = cc3200_vfs_dev_slfs_container_read,
-    .write = cc3200_vfs_dev_slfs_container_write,
-    .erase = cc3200_vfs_dev_slfs_container_erase,
-    .get_size = cc3200_vfs_dev_slfs_container_get_size,
-    .close = cc3200_vfs_dev_slfs_container_close,
+static const struct mgos_vfs_dev_ops cc32xx_vfs_dev_slfs_container_ops = {
+    .open = cc32xx_vfs_dev_slfs_container_open,
+    .read = cc32xx_vfs_dev_slfs_container_read,
+    .write = cc32xx_vfs_dev_slfs_container_write,
+    .erase = cc32xx_vfs_dev_slfs_container_erase,
+    .get_size = cc32xx_vfs_dev_slfs_container_get_size,
+    .close = cc32xx_vfs_dev_slfs_container_close,
 };
 
-bool cc3200_vfs_dev_slfs_container_register_type(void) {
+bool cc32xx_vfs_dev_slfs_container_register_type(void) {
   return mgos_vfs_dev_register_type(MGOS_DEV_TYPE_SLFS_CONTAINER,
-                                    &cc3200_vfs_dev_slfs_container_ops);
+                                    &cc32xx_vfs_dev_slfs_container_ops);
 }
 
-void cc3200_vfs_dev_slfs_container_delete_container(const char *cpfx,
+void cc32xx_vfs_dev_slfs_container_delete_container(const char *cpfx,
                                                     int cidx) {
   _i32 ret = -1;
   SlFsFileInfo_t fi;
   _u8 fname[MAX_FS_CONTAINER_FNAME_LEN];
-  cc3200_vfs_dev_slfs_container_fname(cpfx, cidx, fname);
+  cc32xx_vfs_dev_slfs_container_fname(cpfx, cidx, fname);
   ret = sl_FsGetInfo(fname, cidx, &fi);
   if (ret == 0) {
     LOG(LL_INFO, ("Deleting %s", fname));
@@ -449,16 +449,16 @@ void cc3200_vfs_dev_slfs_container_delete_container(const char *cpfx,
   }
 }
 
-void cc3200_vfs_dev_slfs_container_delete_inactive_container(const char *cpfx) {
+void cc32xx_vfs_dev_slfs_container_delete_inactive_container(const char *cpfx) {
   struct fs_container_info info;
   int active_idx = fs_get_active_idx(cpfx, &info);
   if (active_idx >= 0) {
     int inactive_idx = active_idx ^ 1;
-    cc3200_vfs_dev_slfs_container_delete_container(cpfx, inactive_idx);
+    cc32xx_vfs_dev_slfs_container_delete_container(cpfx, inactive_idx);
   }
 }
 
-void cc3200_vfs_dev_slfs_container_flush_all(void) {
+void cc32xx_vfs_dev_slfs_container_flush_all(void) {
   struct dev_data *dd;
   SLIST_FOREACH(dd, &s_devs, next) {
     fs_close_container(dd);
