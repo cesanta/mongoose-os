@@ -32,7 +32,6 @@
 #include "FreeRTOS.h"
 #include "semphr.h"
 
-#include "mgos_app.h"
 #include "mgos_hal.h"
 #include "mgos_mongoose.h"
 #include "mgos_updater_common.h"
@@ -146,12 +145,6 @@ static int cc3200_init(bool pre) {
   }
 #endif
 
-  enum mgos_init_result ir = mgos_init();
-  if (ir != MGOS_INIT_OK) {
-    LOG(LL_ERROR, ("%s init error: %d", "MG", ir));
-    return CC3200_INIT_MG_INIT_FAILED;
-  }
-
   return CC3200_INIT_OK;
 }
 
@@ -160,9 +153,6 @@ void cc3200_nsleep100(uint32_t n);
 int main(void) {
   MAP_IntVTableBaseSet((unsigned long) &g_pfnVectors[0]);
   mgos_nsleep100 = &cc3200_nsleep100;
-
-  /* Early init app hook. */
-  mgos_app_preinit();
 
   MAP_IntEnable(FAULT_SYSTICK);
   MAP_IntMasterEnable();

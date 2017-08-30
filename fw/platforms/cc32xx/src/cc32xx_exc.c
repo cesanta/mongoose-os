@@ -43,7 +43,8 @@ void cc32xx_exc_puts(const char *s) {
   for (; *s != '\0'; s++) {
     MAP_UARTCharPut(base, *s);
   }
-  while (MAP_UARTBusy(base)) {}
+  while (MAP_UARTBusy(base)) {
+  }
 }
 
 void cc32xx_exc_printf(const char *fmt, ...) {
@@ -57,18 +58,17 @@ void cc32xx_exc_printf(const char *fmt, ...) {
 
 void handle_exception(struct cc32xx_exc_frame *f, const char *type) {
   cc32xx_exc_printf(
-           "\n\n--- %s Fault ---\n"
-           "  SHCTL=0x%08x, FSTAT=0x%08x, HFSTAT=0x%08x, FADDR=%08x\n",
-           type, (unsigned int) HWREG(SCB_SYSHNDCTRL),
-           (unsigned int) HWREG(SCB_FAULTSTAT),
-           (unsigned int) HWREG(SCB_HFAULTSTAT),
-           (unsigned int) HWREG(SCB_FAULTADDR));
+      "\n\n--- %s Fault ---\n"
+      "  SHCTL=0x%08x, FSTAT=0x%08x, HFSTAT=0x%08x, FADDR=%08x\n",
+      type, (unsigned int) HWREG(SCB_SYSHNDCTRL),
+      (unsigned int) HWREG(SCB_FAULTSTAT), (unsigned int) HWREG(SCB_HFAULTSTAT),
+      (unsigned int) HWREG(SCB_FAULTADDR));
   cc32xx_exc_printf(
-           "  SF @ 0x%08x:\n    R0=0x%08x R1=0x%08x R2=0x%08x R3=0x%08x "
-           "R12=0x%08x\n",
-           (unsigned int) f, f->r0, f->r1, f->r2, f->r3, f->r12);
-  cc32xx_exc_printf("    LR=0x%08x PC=0x%08x xPSR=0x%08x\n---\n",
-           f->lr, f->pc, f->xpsr);
+      "  SF @ 0x%08x:\n    R0=0x%08x R1=0x%08x R2=0x%08x R3=0x%08x "
+      "R12=0x%08x\n",
+      (unsigned int) f, f->r0, f->r1, f->r2, f->r3, f->r12);
+  cc32xx_exc_printf("    LR=0x%08x PC=0x%08x xPSR=0x%08x\n---\n", f->lr, f->pc,
+                    f->xpsr);
   EXC_ACTION
 }
 

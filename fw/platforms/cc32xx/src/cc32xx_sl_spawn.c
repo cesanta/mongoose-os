@@ -21,9 +21,10 @@ struct spawn_event {
   void *arg;
 };
 
-extern _volatile _u8           RxIrqCnt;
+extern _volatile _u8 RxIrqCnt;
 
-int16_t cc32xx_sl_spawn(int16_t (*pEntry)(void *pValue), void* pValue, uint32_t flags) {
+int16_t cc32xx_sl_spawn(int16_t (*pEntry)(void *pValue), void *pValue,
+                        uint32_t flags) {
   int r = 0;
   struct spawn_event e = {.cb = pEntry, .arg = pValue};
   (void) flags;
@@ -49,6 +50,9 @@ void cc32xx_sl_spawn_task(void *arg) {
 }
 
 void cc32xx_sl_spawn_init(void) {
-  s_sl_spawn_queue = xQueueCreate(SL_SPAWN_TASK_QUEUE_LENGTH, sizeof(struct spawn_event));
-  xTaskCreate(cc32xx_sl_spawn_task, "SL", SL_SPAWN_TASK_STACK_SIZE / sizeof(portSTACK_TYPE), NULL, SL_SPAWN_TASK_PRIORITY, NULL);
+  s_sl_spawn_queue =
+      xQueueCreate(SL_SPAWN_TASK_QUEUE_LENGTH, sizeof(struct spawn_event));
+  xTaskCreate(cc32xx_sl_spawn_task, "SL",
+              SL_SPAWN_TASK_STACK_SIZE / sizeof(portSTACK_TYPE), NULL,
+              SL_SPAWN_TASK_PRIORITY, NULL);
 }

@@ -188,7 +188,7 @@ VPATH += $(SDK_PATH)/driverlib $(SDK_PATH)/oslib $(SDK_PATH)/simplelink \
 SDK_CFLAGS = -DTARGET_IS_CC3200 -DUSE_FREERTOS
 
 MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3200_PATH)/src/*.c)) \
-             cc32xx_exc.c cc32xx_fs.c cc32xx_hal.c cc32xx_libc.c cc32xx_main.c \
+             cc32xx_exc.c cc32xx_fs.c cc32xx_gpio.c cc32xx_hal.c cc32xx_libc.c cc32xx_main.c \
              cc32xx_sl_spawn.c cc32xx_uart.c \
              cc32xx_vfs.c cc32xx_vfs_dev_slfs_container.c cc32xx_vfs_fs_slfs.c
 APP_SRCS = $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)

@@ -2,27 +2,25 @@
  * Copyright (c) 2014-2016 Cesanta Software Limited
  * All rights reserved
  *
- * CC3200 GPIO support.
+ * CC32xx GPIO support.
  * Documentation: TRM (swru367), Chapter 5.
  */
 
 #include "mgos_gpio.h"
 #include "mgos_gpio_hal.h"
 
-#include <inttypes.h>
+#include <stdint.h>
 #include <stdio.h>
 
-#include "hw_types.h"
-#include "hw_memmap.h"
-#include "hw_ocp_shared.h"
-#include "hw_gpio.h"
-#include "hw_ints.h"
-#include "interrupt.h"
-#include "pin.h"
-#include "prcm.h"
-#include "rom_map.h"
-
-#include "oslib/osi.h"
+#include "inc/hw_types.h"
+#include "inc/hw_memmap.h"
+#include "inc/hw_ocp_shared.h"
+#include "inc/hw_gpio.h"
+#include "inc/hw_ints.h"
+#include "driverlib/interrupt.h"
+#include "driverlib/pin.h"
+#include "driverlib/prcm.h"
+#include "driverlib/rom_map.h"
 
 #include "common/cs_dbg.h"
 #include "mgos_hal.h"
@@ -233,11 +231,12 @@ bool mgos_gpio_hal_set_int_mode(int pin, enum mgos_gpio_int_mode mode) {
       break;
   }
   if (mode != MGOS_GPIO_INT_NONE) {
-    P_OSI_INTR_ENTRY handlers[4] = {gpio_a0_int_handler, gpio_a1_int_handler,
-                                    gpio_a2_int_handler, gpio_a3_int_handler};
+    void (*handlers[4])(void) = {gpio_a0_int_handler, gpio_a1_int_handler,
+                                 gpio_a2_int_handler, gpio_a3_int_handler};
     int int_no = (INT_GPIOA0 + port_no);
-    osi_InterruptRegister(int_no, handlers[port_no], INT_PRIORITY_LVL_1);
-    IntEnable(int_no);
+    MAP_IntRegister(int_no, handlers[port_no]);
+    MAP_IntPrioritySet(int_no, INT_PRIORITY_LVL_1);
+    MAP_IntEnable(int_no);
     s_enabled_ints |= (1 << gpio_no);
     HWREG(port_base + GPIO_O_GPIO_ICR) = port_bit_mask;
   } else {

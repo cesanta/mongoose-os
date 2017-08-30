@@ -195,13 +195,16 @@ VPATH += $(SDK_PATH)/source/ti/devices/cc32xx/driverlib \
 SDK_CFLAGS = -DTARGET_IS_CC3220 -DUSE_CC3220_ROM_DRV_API -DUSE_FREERTOS
 
 MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3220_PATH)/src/*.c)) \
-             cs_dbg.c cs_rbuf.c mbuf.c \
+             cs_dbg.c cs_file.c cs_rbuf.c mbuf.c \
              frozen.c mongoose.c \
-             mgos_debug.c mgos_hooks.c mgos_mongoose.c mgos_timers_mongoose.c mgos_uart.c \
+             mgos_config.c mgos_debug.c mgos_gpio.c mgos_hooks.c mgos_init.c \
+             mgos_mongoose.c mgos_sys_config.c \
+             mgos_timers_mongoose.c mgos_uart.c mgos_utils.c \
              mgos_vfs.c mgos_vfs_dev.c mgos_vfs_fs_spiffs.c \
-             cc32xx_exc.c cc32xx_exc_handler_top.asm cc32xx_fs.c \
+             cc32xx_exc.c cc32xx_exc_handler_top.asm cc32xx_fs.c cc32xx_gpio.c \
              cc32xx_hal.c cc32xx_libc.c cc32xx_main.c cc32xx_sl_spawn.c cc32xx_uart.c \
-             cc32xx_vfs.c cc32xx_vfs_dev_slfs_container.c cc32xx_vfs_fs_slfs.c
+             cc32xx_vfs.c cc32xx_vfs_dev_slfs_container.c cc32xx_vfs_fs_slfs.c \
+             $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C))
 
 IPATH += $(SPIFFS_PATH)
 VPATH += $(SPIFFS_PATH)

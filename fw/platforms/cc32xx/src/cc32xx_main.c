@@ -18,9 +18,11 @@
 #include "common/cs_dbg.h"
 #include "common/platform.h"
 
+#include "mgos_app.h"
 #include "mgos_debug.h"
 #include "mgos_features.h"
 #include "mgos_hal.h"
+#include "mgos_init.h"
 #include "mgos_mongoose.h"
 #include "mgos_uart.h"
 #include "mgos_updater_common.h"
@@ -57,8 +59,7 @@ static int cc32xx_start_nwp(void) {
   _u8 opt = SL_DEVICE_GENERAL_VERSION;
   SL_DEV_GET_LEN_TYPE len = sizeof(ver);
   memset(&ver, 0, sizeof(ver));
-  sl_DeviceGet(SL_DEVICE_GENERAL, &opt, &len,
-               (void *) (&ver));
+  sl_DeviceGet(SL_DEVICE_GENERAL, &opt, &len, (void *) (&ver));
   LOG(LL_INFO, ("NWP v%lu.%lu.%lu.%lu started, host driver v%ld.%ld.%ld.%ld",
                 ver.NwpVersion[0], ver.NwpVersion[1], ver.NwpVersion[2],
                 ver.NwpVersion[3], SL_MAJOR_VERSION_NUM, SL_MINOR_VERSION_NUM,
@@ -106,12 +107,13 @@ static void cc32xx_main_task(void *arg) {
   int r = init_func(true /* pre */);
   r = (r == 0 ? cc32xx_init() : r);
   r = (r == 0 ? init_func(false /* pre */) : r);
+  r = (r == 0 ? mgos_init() : r);
+
   bool init_success = (r == 0);
   if (!init_success) LOG(LL_ERROR, ("Init failed: %d", r));
 
 #if MGOS_ENABLE_UPDATER
-  mgos_upd_boot_finish(init_success,
-                       (g_boot_cfg.flags & BOOT_F_FIRST_BOOT));
+  mgos_upd_boot_finish(init_success, (g_boot_cfg.flags & BOOT_F_FIRST_BOOT));
 #endif
 
   if (!init_success) {
@@ -167,10 +169,16 @@ void cc32xx_main(cc32xx_init_func_t init_func) {
     MAP_PRCMRTCSet(0, 0);
   }
 
+  /* Early init app hook. */
+  mgos_app_preinit();
+
   cc32xx_sl_spawn_init();
 
-  s_main_queue = xQueueCreate(MGOS_TASK_QUEUE_LENGTH, sizeof(struct mgos_event));
-  xTaskCreate(cc32xx_main_task, "main", MGOS_TASK_STACK_SIZE/sizeof(portSTACK_TYPE), init_func, MGOS_TASK_PRIORITY, NULL);
+  s_main_queue =
+      xQueueCreate(MGOS_TASK_QUEUE_LENGTH, sizeof(struct mgos_event));
+  xTaskCreate(cc32xx_main_task, "main",
+              MGOS_TASK_STACK_SIZE / sizeof(portSTACK_TYPE), init_func,
+              MGOS_TASK_PRIORITY, NULL);
 
   vTaskStartScheduler();
   /* Not reached, but just in case... */

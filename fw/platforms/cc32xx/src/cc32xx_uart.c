@@ -307,9 +307,9 @@ void cc32xx_uart_early_init(int uart_no, int baud_rate) {
     return;
   }
   MAP_PRCMPeripheralClkEnable(periph, PRCM_RUN_MODE_CLK);
-  MAP_UARTConfigSetExpClk(base, MAP_PRCMPeripheralClockGet(periph),
-                          baud_rate,
-                          UART_CONFIG_WLEN_8 | UART_CONFIG_PAR_NONE | UART_CONFIG_STOP_ONE);
+  MAP_UARTConfigSetExpClk(
+      base, MAP_PRCMPeripheralClockGet(periph), baud_rate,
+      UART_CONFIG_WLEN_8 | UART_CONFIG_PAR_NONE | UART_CONFIG_STOP_ONE);
   MAP_UARTFIFODisable(base);
   MAP_UARTIntDisable(base, ~0); /* Start with ints disabled. */
 }

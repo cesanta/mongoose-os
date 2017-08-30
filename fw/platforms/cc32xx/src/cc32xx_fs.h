@@ -14,7 +14,8 @@ extern "C" {
 #endif
 
 bool cc32xx_fs_slfs_mount(const char *path);
-bool cc32xx_fs_spiffs_container_mount(const char *path, const char *container_prefix);
+bool cc32xx_fs_spiffs_container_mount(const char *path,
+                                      const char *container_prefix);
 
 #ifdef __cplusplus
 }

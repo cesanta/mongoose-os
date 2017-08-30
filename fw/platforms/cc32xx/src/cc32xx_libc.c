@@ -44,4 +44,3 @@ int settimeofday(const struct timeval *tv, const void *tz) {
   MAP_PRCMRTCSet(tv->tv_sec, tv->tv_usec / 1000);
   return 0;
 }
-

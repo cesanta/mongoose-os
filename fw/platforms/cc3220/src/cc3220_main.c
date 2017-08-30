@@ -52,11 +52,6 @@ int cc3220_init(bool pre) {
   return 0;
 }
 
-// XXX: Temporary.
-struct sys_config *get_cfg(void) {
-  return NULL;
-}
-
 int main(void) {
   cc32xx_main(cc3220_init); /* Does not return */
 
