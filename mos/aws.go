@@ -172,8 +172,12 @@ func getAWSRegions() []string {
 	resolver := endpoints.DefaultResolver()
 	partitions := resolver.(endpoints.EnumPartitions).Partitions()
 	endpoints := partitions[0].Services()["iot"]
+	endpointsCN := partitions[1].Services()["iot"]
 	var regions []string
 	for k := range endpoints.Endpoints() {
+		regions = append(regions, k)
+	}
+	for k := range endpointsCN.Endpoints() {
 		regions = append(regions, k)
 	}
 	sort.Strings(regions)
