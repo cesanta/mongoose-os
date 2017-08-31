@@ -1,7 +1,6 @@
 package codec
 
 import (
-	"bytes"
 	"golang.org/x/net/context"
 	"io"
 	"runtime"
@@ -104,25 +103,22 @@ func (c *serialCodec) connRead(buf []byte) (read int, err error) {
 	if !c.isClosed {
 		read, err = c.conn.Read(buf)
 		if err == nil {
-			data := buf[0:read]
-			// Do a quick check first, most of the time there are not FC chars.
-			if bytes.Contains(data, []byte{0x11}) || bytes.Contains(data, []byte{0x13}) {
-				newData := make([]byte, 0, read)
-				for _, b := range data {
-					switch b {
-					case xoffChar:
-						glog.V(3).Infof("XOFF")
-						c.blockWrite()
-					case xonChar:
-						glog.V(3).Infof("XON")
-						c.unblockWrite()
-					default:
-						newData = append(newData, b)
-					}
+			i := 0
+			// Process and excise XON/XOFF symbols.
+			for _, b := range buf[0:read] {
+				switch b {
+				case xoffChar:
+					glog.V(3).Infof("XOFF")
+					c.blockWrite()
+				case xonChar:
+					glog.V(3).Infof("XON")
+					c.unblockWrite()
+				default:
+					buf[i] = b
+					i++
 				}
-				data = newData
-				read = len(data)
 			}
+			read = i
 		}
 		return read, err
 	} else {
