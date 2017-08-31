@@ -42,7 +42,7 @@
 #define BUTTON_GPIO 0 /* Usually a "Flash" button. */
 #define BUTTON_PULL MGOS_GPIO_PULL_UP
 #define BUTTON_EDGE MGOS_GPIO_INT_EDGE_POS
-#elif CS_PLATFORM == CS_P_CC3200
+#elif CS_PLATFORM == CS_P_CC3200 || CS_PLATFORM == CS_P_CC3220
 /* On CC3200 LAUNCHXL pin 64 is the red LED. */
 #define LED_GPIO 64 /* The red LED on LAUNCHXL */
 #define LED_OFF 0

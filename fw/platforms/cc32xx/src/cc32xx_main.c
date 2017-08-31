@@ -106,8 +106,11 @@ static void cc32xx_main_task(void *arg) {
 
   int r = init_func(true /* pre */);
   r = (r == 0 ? cc32xx_init() : r);
+  mgos_wdt_feed();
   r = (r == 0 ? init_func(false /* pre */) : r);
+  mgos_wdt_feed();
   r = (r == 0 ? mgos_init() : r);
+  mgos_wdt_feed();
 
   bool init_success = (r == 0);
   if (!init_success) LOG(LL_ERROR, ("Init failed: %d", r));
@@ -151,7 +154,13 @@ void umm_oom_cb(size_t size, unsigned short int blocks_cnt) {
   cc32xx_exc_printf("E:M %u\r\n", size, blocks_cnt);
 }
 
+void (*mgos_nsleep100)(uint32_t n);
+void cc32xx_nsleep100(uint32_t n) {
+  /* TODO(rojer) */
+}
+
 void cc32xx_main(cc32xx_init_func_t init_func) {
+  mgos_nsleep100 = cc32xx_nsleep100;
   PRCMCC3200MCUInit();
   cc32xx_exc_init();
 #ifdef __TI_COMPILER_VERSION__
@@ -161,7 +170,7 @@ void cc32xx_main(cc32xx_init_func_t init_func) {
   cc32xx_exc_puts("\r\n");
 
   MAP_PRCMPeripheralClkEnable(PRCM_WDT, PRCM_RUN_MODE_CLK);
-  mgos_wdt_set_timeout(5 /* seconds */);
+  mgos_wdt_set_timeout(10 /* seconds */);
   mgos_wdt_enable();
 
   if (!MAP_PRCMRTCInUseGet()) {

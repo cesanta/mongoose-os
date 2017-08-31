@@ -5,7 +5,7 @@ MJS_PATH = $(REPO_ROOT)/mjs
 LIBS_PATH = $(REPO_ROOT)/mos_libs
 
 EXAMPLES_cc3200 = c_aws_shadow c_binary_lib c_hello c_mqtt c_network c_no_libs
-EXAMPLES_cc3220 = c_binary_lib c_hello c_no_libs
+EXAMPLES_cc3220 = c_aws_shadow c_binary_lib c_hello c_no_libs
 EXAMPLES_esp32 =  c_aws_shadow c_binary_lib c_hello c_mqtt c_network c_no_libs
 EXAMPLES_esp8266 = c_aws_shadow c_binary_lib c_heater c_hello c_mqtt c_network c_no_libs
 EXAMPLES_pic32 =

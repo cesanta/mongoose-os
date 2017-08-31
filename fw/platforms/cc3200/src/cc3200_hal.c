@@ -42,12 +42,6 @@ void mgos_system_restart(int exit_code) {
   MAP_PRCMHibernateEnter();
 }
 
-uint32_t mgos_bitbang_n100_cal;
-void (*mgos_nsleep100)(uint32_t n);
-void cc3200_nsleep100(uint32_t n) {
-  /* TODO(rojer) */
-}
-
 #ifndef MGOS_HAVE_WIFI
 void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *e) {
   (void) e;
