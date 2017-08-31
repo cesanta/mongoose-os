@@ -57,7 +57,7 @@ static int cc32xx_start_nwp(void) {
   }
   SlDeviceVersion_t ver;
   _u8 opt = SL_DEVICE_GENERAL_VERSION;
-  SL_DEV_GET_LEN_TYPE len = sizeof(ver);
+  SL_LEN_TYPE len = sizeof(ver);
   memset(&ver, 0, sizeof(ver));
   sl_DeviceGet(SL_DEVICE_GENERAL, &opt, &len, (void *) (&ver));
   LOG(LL_INFO, ("NWP v%lu.%lu.%lu.%lu started, host driver v%ld.%ld.%ld.%ld",

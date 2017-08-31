@@ -1,7 +1,6 @@
 name: c_hello
-# arch: PLATFORM
 version: 1.0
-manifest_version: 2017-05-18
+manifest_version: 2017-06-16
 
 libs_version: ${mos_version}
 modules_version: ${mos_version}
@@ -14,18 +13,16 @@ filesystem:
 config_schema:
   - ["hello", "o", {"title": "Hello app settings"}]
   - ["hello.who", "s", "world", {"title": "Who to say hello to"}]
+
 libs:
+  # Only small subset of libs: basic connectifity (wifi), basic RPC services,
+  # no peripherals other than GPIO.
   - origin: https://github.com/mongoose-os-libs/ca-bundle
   - origin: https://github.com/mongoose-os-libs/http-server
-  - origin: https://github.com/mongoose-os-libs/ota-http-server
   - origin: https://github.com/mongoose-os-libs/rpc-loopback
   - origin: https://github.com/mongoose-os-libs/rpc-mqtt
   - origin: https://github.com/mongoose-os-libs/rpc-service-config
   - origin: https://github.com/mongoose-os-libs/rpc-service-fs
   - origin: https://github.com/mongoose-os-libs/rpc-service-gpio
-  - origin: https://github.com/mongoose-os-libs/rpc-service-i2c
-  - origin: https://github.com/mongoose-os-libs/rpc-service-ota
   - origin: https://github.com/mongoose-os-libs/rpc-uart
-  - origin: https://github.com/mongoose-os-libs/spi
-  - origin: https://github.com/mongoose-os-libs/vfs-dev-spi-flash
   - origin: https://github.com/mongoose-os-libs/wifi

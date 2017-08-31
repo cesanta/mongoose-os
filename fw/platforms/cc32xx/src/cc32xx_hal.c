@@ -107,7 +107,7 @@ uint32_t mgos_get_cpu_freq(void) {
 }
 
 void device_get_mac_address(uint8_t mac[6]) {
-  SL_DEV_GET_LEN_TYPE mac_len = 6;
+  SL_LEN_TYPE mac_len = 6;
   sl_NetCfgGet(SL_NETCFG_MAC_ADDRESS_GET, NULL, &mac_len, mac);
 }
 

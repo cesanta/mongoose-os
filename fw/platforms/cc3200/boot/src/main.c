@@ -19,8 +19,6 @@
 #include "uart.h"
 #include "utils.h"
 
-#include "fw/platforms/cc3200/src/config.h"
-
 /*
  * We want to disable SL_INC_STD_BSD_API_NAMING, so we include user.h ourselves
  * and undef it.

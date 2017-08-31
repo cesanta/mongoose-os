@@ -145,16 +145,12 @@ MGOS_SRCS =
 MGOS_SRCS += umm_malloc.c
 VPATH += $(COMMON_PATH)/umm_malloc
 
-FREERTOS_SRCS = timers.c list.c queue.c tasks.c port.c
-FREERTOS_SRCS += heap_3.c
+FREERTOS_SRCS = heap_3.c list.c port.c queue.c tasks.c timers.c
 FREERTOS_SRCS += ClockP_freertos.c HwiPCC32XX_freertos.c MutexP_freertos.c PowerCC32XX_freertos.c SemaphoreP_freertos.c SystemP_freertos.c
-DRIVER_SRCS = $(notdir $(wildcard $(SDK_PATH)/source/ti/devices/cc32xx/driverlib/*.c)) DisplayUart.c
+DRIVER_SRCS = GPIOCC32XX.c List.c PowerCC32XX.c SPI.c SPICC32XXDMA.c UDMACC32XX.c
+DRIVERLIB_SRCS = cpu.c flash.c interrupt.c pin.c prcm.c utils.c
 SL_SRCS = sl_socket.c wlan.c driver.c device.c eventreg.c flowcont.c netapp.c netcfg.c netutil.c cc_pal.c fs.c
-SDK_SRCS = $(FREERTOS_SRCS) $(DRIVER_SRCS) $(SL_SRCS)
-
-SDK_SRCS += $(notdir $(wildcard $(SDK_PATH)/source/ti/drivers/*.c))
-SDK_SRCS += ADCCC32XX.c GPIOCC32XX.c I2CCC32XX.c List.c PowerCC32XX.c SPICC32XXDMA.c UDMACC32XX.c
-#SDK_SRCS += $(filter-out package_ti.drivers.c,$(notdir $(wildcard $(SDK_PATH)/source/ti/drivers/*/*.c)))
+SDK_SRCS = $(FREERTOS_SRCS) $(DRIVER_SRCS) $(DRIVERLIB_SRCS) $(SL_SRCS)
 
 IPATH += $(SDK_PATH)/source \
          $(SDK_PATH)/source/ti/boards/CC3220SF_LAUNCHXL \
@@ -195,13 +191,13 @@ VPATH += $(SDK_PATH)/source/ti/devices/cc32xx/driverlib \
 SDK_CFLAGS = -DTARGET_IS_CC3220 -DUSE_CC3220_ROM_DRV_API -DUSE_FREERTOS
 
 MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3220_PATH)/src/*.c)) \
-             cs_dbg.c cs_file.c cs_rbuf.c mbuf.c \
-             frozen.c mongoose.c \
+             cs_crc32.c cs_dbg.c cs_file.c cs_rbuf.c mbuf.c \
+             frozen.c json_utils.c mongoose.c \
              mgos_config.c mgos_debug.c mgos_gpio.c mgos_hooks.c mgos_init.c \
              mgos_mongoose.c mgos_sys_config.c \
              mgos_timers_mongoose.c mgos_uart.c mgos_utils.c \
              mgos_vfs.c mgos_vfs_dev.c mgos_vfs_fs_spiffs.c \
-             cc32xx_exc.c cc32xx_exc_handler_top.asm cc32xx_fs.c cc32xx_gpio.c \
+             cc32xx_crypto.c cc32xx_exc.c cc32xx_exc_handler_top.asm cc32xx_fs.c cc32xx_gpio.c \
              cc32xx_hal.c cc32xx_libc.c cc32xx_main.c cc32xx_sl_spawn.c cc32xx_uart.c \
              cc32xx_vfs.c cc32xx_vfs_dev_slfs_container.c cc32xx_vfs_fs_slfs.c \
              $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C))

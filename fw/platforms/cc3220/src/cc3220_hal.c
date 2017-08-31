@@ -15,6 +15,7 @@
 #include "cc32xx_exc.h"
 
 void mgos_system_restart(int exit_code) {
+  sl_DeviceDisable(); /* Turn off NWP */
   MAP_PRCMMCUReset(true /* bIncludeSubsystem */);
 }
 

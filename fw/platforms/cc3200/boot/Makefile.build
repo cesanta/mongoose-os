@@ -72,6 +72,8 @@ include $(COMMON_CC3200_PATH)/gcc.mk
 
 CFLAGS += $(patsubst %,-I%,$(subst :, ,$(IPATH)))
 CFLAGS += -DNDEBUG -DCS_NDEBUG -DCS_PLATFORM=CS_P_CC3200 \
+          -DMGOS_DEBUG_UART=$(MGOS_DEBUG_UART) \
+          -DMGOS_DEBUG_UART_BAUD_RATE=$(MGOS_DEBUG_UART_BAUD_RATE) \
           $(SDK_FLAGS) $(CFLAGS_EXTRA)
 
 dirs: $(BUILD_DIR) $(FW_DIR)

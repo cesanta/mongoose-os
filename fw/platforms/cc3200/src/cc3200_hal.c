@@ -26,8 +26,6 @@
 #include "mgos_hal.h"
 #include "mgos_vfs.h"
 
-#include "fw/platforms/cc3200/src/config.h"
-
 void mgos_system_restart(int exit_code) {
   (void) exit_code;
   if (exit_code != 100) {

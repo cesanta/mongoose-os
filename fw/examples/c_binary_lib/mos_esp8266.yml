@@ -1,4 +1,2 @@
 binary_libs:
   - binary_libs/esp8266
-
-manifest_version: 2017-05-18

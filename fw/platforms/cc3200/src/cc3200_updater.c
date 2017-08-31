@@ -18,11 +18,11 @@
 #include "mgos_updater_util.h"
 #include "mgos_utils.h"
 
+#include "cc32xx_crypto.h"
 #include "cc32xx_fs.h"
 #include "cc32xx_vfs_dev_slfs_container.h"
 #include "cc32xx_vfs_dev_slfs_container_meta.h"
 
-#include "cc3200_crypto.h"
 #include "cc3200_main_task.h"
 #include "fw/platforms/cc3200/boot/lib/boot.h"
 
@@ -85,7 +85,7 @@ static int read_file(const char *fn, int offset, int len, read_file_cb_t cb,
 }
 
 static int sha1_update_cb(_u8 *data, int len, void *arg) {
-  cc3200_hash_update((struct cc3200_hash_ctx *) arg, data, len);
+  cc32xx_hash_update((struct cc32xx_hash_ctx *) arg, data, len);
   return len;
 }
 
@@ -100,12 +100,12 @@ static bool verify_checksum(const char *fn, int fs,
     return false;
   }
 
-  struct cc3200_hash_ctx ctx;
-  cc3200_hash_init(&ctx, CC3200_HASH_ALGO_SHA1);
+  struct cc32xx_hash_ctx ctx;
+  cc32xx_hash_init(&ctx, CC32XX_HASH_ALGO_SHA1);
   if (read_file(fn, 0, fs, sha1_update_cb, &ctx) < 0) {
     return false;
   }
-  cc3200_hash_final(&ctx, digest);
+  cc32xx_hash_final(&ctx, digest);
   bin2hex(digest, 20, digest_str);
 
   LOG(LL_INFO,

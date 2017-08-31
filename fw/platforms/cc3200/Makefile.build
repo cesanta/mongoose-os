@@ -188,8 +188,8 @@ VPATH += $(SDK_PATH)/driverlib $(SDK_PATH)/oslib $(SDK_PATH)/simplelink \
 SDK_CFLAGS = -DTARGET_IS_CC3200 -DUSE_FREERTOS
 
 MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3200_PATH)/src/*.c)) \
-             cc32xx_exc.c cc32xx_fs.c cc32xx_gpio.c cc32xx_hal.c cc32xx_libc.c cc32xx_main.c \
-             cc32xx_sl_spawn.c cc32xx_uart.c \
+             cc32xx_crypto.c cc32xx_exc.c cc32xx_fs.c cc32xx_gpio.c cc32xx_hal.c \
+             cc32xx_libc.c cc32xx_main.c cc32xx_sl_spawn.c cc32xx_uart.c \
              cc32xx_vfs.c cc32xx_vfs_dev_slfs_container.c cc32xx_vfs_fs_slfs.c
 APP_SRCS = $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
@@ -321,6 +321,8 @@ $(BOOT_BIN) $(MK_BOOT_CFG_BIN): $(wildcard $(BOOT_PATH)/src/*) \
 	             SDK_PATH=$(SDK_PATH) PYTHON=$(PYTHON) \
 	             BUILD_DIR=$(abspath $(BOOT_BUILD_DIR)) \
 	             FW_DIR=$(abspath $(BOOT_FW_DIR)) \
+	             MGOS_DEBUG_UART=$(MGOS_DEBUG_UART) \
+	             MGOS_DEBUG_UART_BAUD_RATE=$(MGOS_DEBUG_UART_BAUD_RATE) \
 	             CREATE_ZIP=0 dirs $(abspath $@)
 
 $(BOOT_CFG_0): $(MK_BOOT_CFG_BIN)
