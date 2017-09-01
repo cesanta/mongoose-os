@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 
 	"cesanta.com/common/go/ourutil"
@@ -21,7 +22,6 @@ import (
 
 const (
 	imageConfigFileName = "ImageConfig.xml"
-	bpiBinaryName       = "BuildProgrammingImage"
 )
 
 // This is not documented anywhere, but examples can be found in
@@ -300,11 +300,18 @@ func buildXMLConfigFromFirmwareBundle(fw *common.FirmwareBundle, storageCapacity
 }
 
 func findBPIBinary() (string, error) {
-	// TODO(rojer): Mac, Windows support
-	ufPattern := filepath.Join(os.Getenv("HOME"), "ti", "uniflash*")
+	// TODO(rojer): Mac support
+	ufPattern, bpiBinaryName := "", ""
+	if runtime.GOOS == "windows" {
+		ufPattern = filepath.Join("c:\\", "ti", "uniflash_*")
+		bpiBinaryName = "BuildProgrammingImage.exe"
+	} else {
+		ufPattern = filepath.Join(os.Getenv("HOME"), "ti", "uniflash_*")
+		bpiBinaryName = "BuildProgrammingImage"
+	}
 	matches, _ := filepath.Glob(ufPattern)
 	if len(matches) == 0 {
-		return "", errors.Errorf("UniFlash not found (tried %q)", ufPattern)
+		return "", errors.Errorf("UniFlash not found (tried %s). Please install UniFlash from http://processors.wiki.ti.com/index.php/Category:CCS_UniFlash", ufPattern)
 	}
 	// In case there are multiple versions installed, use the latest.
 	sort.Strings(matches)
@@ -335,7 +342,7 @@ func buildUCFImageFromFirmwareBundle(fw *common.FirmwareBundle, bpiBinary string
 	td, _ := fw.GetTempDir()
 
 	if err := ourutil.RunCmd(ourutil.CmdOutOnError, bpiBinary, "-i", td, "-x", cfgfn); err != nil {
-		return "", -1, errors.Annotatef(err, "%s failed", bpiBinaryName)
+		return "", -1, errors.Annotatef(err, "%s failed", filepath.Base(bpiBinary))
 	}
 
 	ucfn := filepath.Join(td, "Output", "Programming.ucf")
