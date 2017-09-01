@@ -134,6 +134,8 @@ BUILD_INFO_O = $(BUILD_DIR)/build_info.c.o
 BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
 MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
 MG_BUILD_INFO_O = $(BUILD_DIR)/mg_build_info.c.o
+FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
+FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.c.o
 MK_FS_META_BIN = $(BUILD_DIR)/mkfsmeta
 
 GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
@@ -193,7 +195,7 @@ SDK_CFLAGS = -DTARGET_IS_CC3220 -DUSE_CC3220_ROM_DRV_API -DUSE_FREERTOS
 MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3220_PATH)/src/*.c)) \
              cs_crc32.c cs_dbg.c cs_file.c cs_rbuf.c mbuf.c \
              frozen.c json_utils.c mongoose.c \
-             mgos_config.c mgos_debug.c mgos_gpio.c mgos_hooks.c mgos_init.c \
+             mgos_config.c mgos_debug.c mgos_dlsym.c mgos_gpio.c mgos_hooks.c mgos_init.c \
              mgos_mongoose.c mgos_sys_config.c \
              mgos_timers_mongoose.c mgos_uart.c mgos_utils.c \
              mgos_vfs.c mgos_vfs_dev.c mgos_vfs_fs_spiffs.c \
@@ -258,6 +260,7 @@ APP_OBJS = $(addprefix $(BUILD_DIR)/,$(APP_SRCS:=.o))
 MGOS_OBJS += $(BUILD_DIR)/portasm.asm.o
 
 include $(MGOS_PATH)/common/scripts/build_info.mk
+include $(MGOS_PATH)/common/scripts/ffi_exports.mk
 include $(MGOS_PATH)/fw/src/sys_config.mk
 
 $(FS_IMG): $(APP_FS_DIRS) $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(FS_FILES) $(MK_FS_META_BIN)
@@ -303,8 +306,8 @@ $(APP_BIN): $(APP_ELF)
 	$(Q) $(OBJCOPY) -O binary $< $@
 	$(Q) echo "     Code size: $$(ls -l $@ | awk '{print $$5}')"
 
-$(APP_ELF): $(APP_OBJS) $(MGOS_LIB) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES) $(APP_LD_SCRIPT)
-	$(call link,$(APP_LD_SCRIPT),$(APP_LDFLAGS),$(APP_OBJS) $(MGOS_LIB) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES))
+$(APP_ELF): $(APP_OBJS) $(MGOS_LIB) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES) $(APP_LD_SCRIPT)
+	$(call link,$(APP_LD_SCRIPT),$(APP_LDFLAGS),$(APP_OBJS) $(MGOS_LIB) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES))
 
 $(MGOS_LIB): $(MGOS_OBJS) $(SDK_OBJS)
 	$(call ar,$^)
@@ -320,6 +323,9 @@ $(BUILD_DIR)/%.c.o: $(GEN_DIR)/%.c $(GENFILES_LIST)
 
 $(BUILD_DIR)/%.asm.o: %.asm $(GENFILES_LIST)
 	$(call asm,$(CFLAGS),$<)
+
+$(FFI_EXPORTS_C): $(APP_FS_FILES)
+	$(call gen_ffi_exports,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))
 
 # Regenerate build info if there are changes in objects.
 $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MGOS_OBJS)

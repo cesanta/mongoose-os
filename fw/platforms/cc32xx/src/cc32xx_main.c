@@ -115,7 +115,7 @@ static void cc32xx_main_task(void *arg) {
   bool init_success = (r == 0);
   if (!init_success) LOG(LL_ERROR, ("Init failed: %d", r));
 
-#if MGOS_ENABLE_UPDATER
+#if MGOS_ENABLE_UPDATER && CS_PLATFORM != CS_P_CC3220
   mgos_upd_boot_finish(init_success, (g_boot_cfg.flags & BOOT_F_FIRST_BOOT));
 #endif
 
@@ -158,6 +158,7 @@ void (*mgos_nsleep100)(uint32_t n);
 void cc32xx_nsleep100(uint32_t n) {
   /* TODO(rojer) */
 }
+uint32_t mgos_bitbang_n100_cal = 0;
 
 void cc32xx_main(cc32xx_init_func_t init_func) {
   mgos_nsleep100 = cc32xx_nsleep100;
