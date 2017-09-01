@@ -39,7 +39,6 @@ MGOS_SRCS += mgos_config.c mgos_gpio.c mgos_hooks.c mgos_init.c mgos_mmap_esp.c 
              mgos_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
              mgos_timers_mongoose.c mgos_uart.c mgos_utils.c mgos_dlsym.c \
              mgos_vfs.c mgos_vfs_dev.c mgos_vfs_fs_spiffs.c \
-             esp32_adc.c \
              esp32_crypto.c esp32_debug.c esp32_exc.c esp32_fs.c esp32_fs_crypt.c \
              esp32_vfs_dev_partition.c \
              esp32_gpio.c esp32_hal.c \

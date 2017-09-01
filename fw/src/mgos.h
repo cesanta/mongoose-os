@@ -14,7 +14,6 @@
 #include "common/cs_dbg.h"
 #include "common/cs_file.h"
 
-#include "mgos_adc.h"
 #include "mgos_app.h"
 #include "mgos_bitbang.h"
 #include "mgos_config.h"

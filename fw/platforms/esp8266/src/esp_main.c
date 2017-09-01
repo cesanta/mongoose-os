@@ -28,7 +28,9 @@
 #include "mgos_updater_hal.h"
 #include "common/platforms/esp8266/esp_umm_malloc.h"
 
-#include "fw/platforms/esp8266/src/esp_adc.h"
+#ifdef MGOS_HAVE_ADC
+#include "esp_adc.h"
+#endif
 #include "fw/platforms/esp8266/src/esp_exc.h"
 #include "fw/platforms/esp8266/src/esp_fs.h"
 #include "fw/platforms/esp8266/src/esp_hw.h"
@@ -244,10 +246,13 @@ void sdk_init_done_cb(void) {
 
 void user_init(void) {
   uart_div_modify(0, UART_CLK_FREQ / MGOS_DEBUG_UART_BAUD_RATE);
+#ifdef MGOS_HAVE_ADC
+  /* Note: it's critical to call this early to record value at boot ASAP. */
   esp_adc_init();
+#endif
   mgos_uart_init();
   mgos_debug_init();
-  srand(system_get_time() ^ system_get_rtc_time() ^ esp_adc_value_at_boot());
+  srand(system_get_time() ^ system_get_rtc_time());
   os_timer_disarm(&s_mg_poll_tmr);
   os_timer_setfn(&s_mg_poll_tmr, (void (*) (void *)) mongoose_schedule_poll,
                  /* RTOS callbacks are executed in ISR context; for non-OS it

@@ -122,8 +122,7 @@ MGOS_SRCS = cs_file.c cs_rbuf.c \
             umm_malloc.c \
             mongoose.c frozen.c
 
-MGOS_SRCS += esp_adc.c \
-             esp_config.c \
+MGOS_SRCS += esp_config.c \
              esp_coredump.c \
              esp_debug.c \
              esp_exc.c \
