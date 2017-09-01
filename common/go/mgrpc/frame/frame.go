@@ -44,6 +44,9 @@ type Frame struct {
 
 	// Size hint, if present, gives approximate size of the frame in memory.
 	SizeHint int `json:"-"`
+
+	// Send no response to this frame
+	NoResponse bool `json:"nr,omitempty"`
 }
 
 type Error struct {

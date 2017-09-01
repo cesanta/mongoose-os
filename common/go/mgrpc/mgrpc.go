@@ -27,11 +27,13 @@ const (
 )
 
 type GetCredsCallback func() (username, passwd string, err error)
+type Handler func(frame.Frame) frame.Frame
 
 type MgRPC interface {
 	Call(
 		ctx context.Context, dst string, cmd *frame.Command, getCreds GetCredsCallback,
 	) (*frame.Response, error)
+	AddHandler(method string, handler Handler)
 	Disconnect(ctx context.Context) error
 	IsConnected() bool
 	SetCodecOptions(opts *codec.Options) error
@@ -43,6 +45,10 @@ type mgRPCImpl struct {
 	// Map of outgoing requests, and its lock
 	reqs     map[int64]req
 	reqsLock sync.Mutex
+
+	// Map of handlers, and its lock
+	handlers     map[string]Handler
+	handlersLock sync.Mutex
 
 	opts *connectOptions
 
@@ -92,6 +98,16 @@ func New(ctx context.Context, connectAddr string, opts ...ConnectOption) (MgRPC,
 	return &rpc, nil
 }
 
+func Serve(ctx context.Context, c codec.Codec) MgRPC {
+	rpc := mgRPCImpl{
+		reqs:     make(map[int64]req),
+		handlers: make(map[string]Handler),
+		codec:    c,
+	}
+	go rpc.recvLoop(ctx, rpc.codec)
+	return &rpc
+}
+
 // wsDialConfig does the same thing as websocket.DialConfig, but also enables
 // TCP keep-alive.
 func wsDialConfig(config *websocket.Config) (*websocket.Conn, error) {
@@ -132,6 +148,10 @@ func wsDialConfig(config *websocket.Config) (*websocket.Conn, error) {
 
 	conn, err := websocket.NewClient(config, nc)
 	return conn, errors.Trace(err)
+}
+
+func (r *mgRPCImpl) AddHandler(method string, handler Handler) {
+	r.handlers[method] = handler
 }
 
 func (r *mgRPCImpl) mqttConnect(dst string, opts *connectOptions) (codec.Codec, error) {
@@ -240,6 +260,13 @@ func (r *mgRPCImpl) Disconnect(ctx context.Context) error {
 	return nil
 }
 
+func sendErrorResponse(f frame.Frame) frame.Frame {
+	return frame.Frame{
+		ID:    f.ID,
+		Error: &frame.Error{Code: 404, Message: fmt.Sprintf("Method [%s] not found", f.Method)},
+	}
+}
+
 func (r *mgRPCImpl) recvLoop(ctx context.Context, c codec.Codec) {
 	glog.V(2).Infof("Started recv loop, codec: %v", c)
 	for {
@@ -256,6 +283,7 @@ func (r *mgRPCImpl) recvLoop(ctx context.Context, c codec.Codec) {
 		}
 		if err != nil {
 			glog.Infof("error returned from codec Recv: %s, keep trying", err)
+			r.closing = true
 			continue
 		}
 
@@ -265,6 +293,22 @@ func (r *mgRPCImpl) recvLoop(ctx context.Context, c codec.Codec) {
 				s = fmt.Sprintf("%s... (%d)", s[:1024], len(s))
 			}
 			glog.V(2).Infof("Rec'd %s", s)
+		}
+
+		if f.Method != "" {
+			glog.V(2).Infof("GOT REQUEST! %v", f)
+			callback := sendErrorResponse
+			for k, v := range r.handlers {
+				if k == f.Method {
+					callback = v
+					break
+				}
+			}
+			resp := callback(*f)
+			if !f.NoResponse {
+				c.Send(ctx, &resp)
+			}
+			continue
 		}
 
 		resp := frame.NewResponseFromFrame(f)
