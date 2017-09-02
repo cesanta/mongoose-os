@@ -36,6 +36,15 @@ func Flash(fw *common.FirmwareBundle, opts *FlashOpts) error {
 		opts.BPIBinary = bpib
 	}
 
+	dc, err := NewCC3220DeviceControl(opts.Port)
+	if err != nil {
+		common.Reportf(
+			"Failed to open device control interface (%s). "+
+				"Make sure that device is in the boot loader mode (SOP2 = 1).", err)
+	} else {
+		defer dc.Close()
+	}
+
 	common.Reportf("Opening %s...", opts.Port)
 	s, err := serial.Open(serial.OpenOptions{
 		PortName:              opts.Port,
@@ -49,15 +58,6 @@ func Flash(fw *common.FirmwareBundle, opts *FlashOpts) error {
 		return errors.Annotatef(err, "failed to open %s", opts.Port)
 	}
 	defer s.Close()
-
-	dc, err := NewCC3220DeviceControl(opts.Port)
-	if err != nil {
-		common.Reportf(
-			"Failed to open device control interface (%s). "+
-				"Make sure that device is in the boot loader mode (SOP2 = 1).", err)
-	} else {
-		defer dc.Close()
-	}
 
 	rc, err := cc32xx.NewROMClient(s, dc)
 	if err != nil {

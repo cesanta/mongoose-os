@@ -7,61 +7,90 @@ import (
 	"encoding/binary"
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/cesanta/errors"
+	"github.com/cesanta/gousb"
 	"github.com/golang/glog"
-	"github.com/gotmc/libusb"
 )
 
 const (
 	vendorTI      = 0x0451
 	productXDS110 = 0xbef3
+	intfNum       = 0x02
 	endpointOut   = 0x02
 	endpointIn    = 0x83
 	maxPacketLen  = 0x1000
 )
 
 type XDS110Client struct {
-	ctx *libusb.Context
-	dd  *libusb.DeviceDescriptor
-	dh  *libusb.DeviceHandle
+	ctx     *gousb.Context
+	dev     *gousb.Device
+	cfg     *gousb.Config
+	intf    *gousb.Interface
+	inEndp  *gousb.InEndpoint
+	outEndp *gousb.OutEndpoint
 }
 
 func NewXDS110Client(serial string) (*XDS110Client, error) {
-	ctx, err := libusb.NewContext()
-	if err != nil {
-		return nil, errors.Annotatef(err, "couldn't list USB devices")
-	}
-	devs, err := ctx.GetDeviceList()
-	if err != nil {
-		return nil, errors.Annotatef(err, "couldn't list USB devices")
-	}
-	var dh *libusb.DeviceHandle
+	ok := false
+	xc := &XDS110Client{ctx: gousb.NewContext()}
+	defer func() {
+		if !ok {
+			xc.Close()
+		}
+	}()
+	devs, _ := xc.ctx.OpenDevices(func(dd *gousb.DeviceDesc) bool {
+		result := (dd.Vendor == vendorTI && dd.Product == productXDS110)
+		glog.V(1).Infof("Dev %s %s %t %+v", dd.Vendor, dd.Product, result, dd)
+		return result
+	})
+	// OpenDevices may fail overall but still return results.
 	for _, dev := range devs {
-		dd, err := dev.GetDeviceDescriptor()
-		if err != nil {
+		if xc.dev != nil {
+			dev.Close()
 			continue
 		}
-		if dd.VendorID != vendorTI || dd.ProductID != productXDS110 {
-			continue
+		sn, err := dev.SerialNumber()
+		glog.V(1).Infof("Dev %+v sn '%s' %s", dev, sn, err)
+		if serial == "" || sn == serial {
+			xc.dev = dev
+		} else {
+			dev.Close()
 		}
-		dh, err = dev.Open()
-		if err != nil {
-			continue
-		}
-		xc := &XDS110Client{ctx: ctx, dd: dd, dh: dh}
-		glog.V(3).Infof("%04x %04x %q %q", dd.VendorID, dd.ProductID, xc.GetSerialNumber(), serial)
-		if serial == "" || serial == xc.GetSerialNumber() {
-			return xc, nil
-		}
-		dh.Close()
 	}
-	if serial == "" {
-		return nil, errors.Errorf("No XDS110 probe found")
-	} else {
-		return nil, errors.Errorf("XDS110 probe with S/N %s not found", serial)
+	if xc.dev == nil {
+		if serial == "" {
+			return nil, errors.Errorf("No XDS110 probe found")
+		} else {
+			return nil, errors.Errorf("XDS110 probe with S/N %s not found", serial)
+		}
 	}
+
+	cfgNum, err := xc.dev.ActiveConfigNum()
+	if err != nil {
+		return nil, errors.Annotatef(err, "failed to get active config number of device %s", xc.dev)
+	}
+	xc.cfg, err = xc.dev.Config(cfgNum)
+	if err != nil {
+		return nil, errors.Annotatef(err, "failed to claim config %d of device %s", cfgNum, xc.dev)
+	}
+	xc.intf, err = xc.cfg.Interface(intfNum, 0)
+	if err != nil {
+		return nil, errors.Annotatef(err, "couldn't open interface %+v", xc.cfg)
+	}
+
+	xc.outEndp, err = xc.intf.OutEndpoint(endpointOut)
+	if err != nil {
+		return nil, errors.Annotatef(err, "couldn't open output endpoint")
+	}
+
+	xc.inEndp, err = xc.intf.InEndpoint(endpointIn)
+	if err != nil {
+		return nil, errors.Annotatef(err, "couldn't open input endpoint")
+	}
+
+	ok = true
+	return xc, nil
 }
 
 type xds110Command uint8
@@ -84,12 +113,15 @@ const (
 )
 
 func (xc *XDS110Client) GetSerialNumber() string {
-	sn, _ := xc.dh.GetStringDescriptorASCII(xc.dd.SerialNumberIndex)
+	sn, _ := xc.dev.SerialNumber()
 	// Sometimes serial contains trailing NULs. Not sure whose fault it is (libusb?), strip them.
 	return strings.TrimRight(sn, "\x00")
 }
 
-func (xc *XDS110Client) doCommand(cmd xds110Command, argBuf *bytes.Buffer, respPayloadLen int, timeout time.Duration) (*bytes.Buffer, error) {
+func (xc *XDS110Client) doCommand(cmd xds110Command, argBuf *bytes.Buffer, respPayloadLen int) (*bytes.Buffer, error) {
+	if xc.outEndp == nil {
+		return nil, errors.Errorf("not connected")
+	}
 	if argBuf == nil {
 		argBuf = bytes.NewBuffer(nil)
 	}
@@ -99,11 +131,12 @@ func (xc *XDS110Client) doCommand(cmd xds110Command, argBuf *bytes.Buffer, respP
 	binary.Write(cmdBuf, binary.LittleEndian, &cmd)
 	cmdBuf.Write(argBuf.Bytes())
 	glog.V(4).Infof("=> (%d) %q", len(cmdBuf.Bytes()), cmdBuf.Bytes())
-	_, err := xc.dh.BulkTransferOut(endpointOut, cmdBuf.Bytes(), int(timeout.Seconds()*1000))
+	_, err := xc.outEndp.Write(cmdBuf.Bytes())
 	if err != nil {
 		return nil, errors.Annotatef(err, "failed to send command")
 	}
-	resp, n, err := xc.dh.BulkTransferIn(endpointIn, maxPacketLen, int(timeout.Seconds()*1000))
+	resp := make([]byte, maxPacketLen)
+	n, err := xc.inEndp.Read(resp)
 	if err != nil {
 		return nil, errors.Annotatef(err, "failed to read response")
 	}
@@ -139,7 +172,7 @@ func (xc *XDS110Client) Echo(data []byte) error {
 	ab := bytes.NewBuffer(nil)
 	binary.Write(ab, binary.LittleEndian, uint32(len(data)&0xff))
 	ab.Write(data)
-	echoData, err := xc.doCommand(cmdEcho, ab, len(data), 100*time.Millisecond)
+	echoData, err := xc.doCommand(cmdEcho, ab, len(data))
 	if err == nil && !bytes.Equal(echoData.Bytes(), data) {
 		return errors.Errorf("invalid echo response: send %q, got %q", data, echoData.Bytes())
 	}
@@ -147,12 +180,12 @@ func (xc *XDS110Client) Echo(data []byte) error {
 }
 
 func (xc *XDS110Client) Connect() error {
-	_, err := xc.doCommand(cmdConnect, nil, 0, 100*time.Millisecond)
+	_, err := xc.doCommand(cmdConnect, nil, 0)
 	return errors.Annotatef(err, "Connect")
 }
 
 func (xc *XDS110Client) Disconnect() error {
-	_, err := xc.doCommand(cmdDisconnect, nil, 7, 100*time.Millisecond)
+	_, err := xc.doCommand(cmdDisconnect, nil, 7)
 	return errors.Annotatef(err, "Disconnect")
 }
 
@@ -163,7 +196,7 @@ type XDS110VersionInfo struct {
 }
 
 func (xc *XDS110Client) GetVersionInfo() (*XDS110VersionInfo, error) {
-	rb, err := xc.doCommand(cmdGetVersionInfo, nil, 6, 100*time.Millisecond)
+	rb, err := xc.doCommand(cmdGetVersionInfo, nil, 6)
 	if err != nil {
 		return nil, errors.Annotatef(err, "GetVersionInfo")
 	}
@@ -180,7 +213,7 @@ func (xc *XDS110Client) GetVersionInfo() (*XDS110VersionInfo, error) {
 func (xc *XDS110Client) SetTCLKDelay(delay uint8) error {
 	ab := bytes.NewBuffer(nil)
 	binary.Write(ab, binary.LittleEndian, uint32(delay))
-	_, err := xc.doCommand(cmdSetTCLKDelay, ab, 0, 100*time.Millisecond)
+	_, err := xc.doCommand(cmdSetTCLKDelay, ab, 0)
 	return errors.Annotatef(err, "SetTCLKDelay")
 }
 
@@ -194,14 +227,36 @@ func boolToByte(b bool) byte {
 
 func (xc *XDS110Client) SetTRST(rstOn bool) error {
 	ab := bytes.NewBuffer([]byte{boolToByte(rstOn)})
-	_, err := xc.doCommand(cmdSetTRST, ab, 0, 100*time.Millisecond)
+	_, err := xc.doCommand(cmdSetTRST, ab, 0)
 	return errors.Annotatef(err, "SetTRST")
 }
 
 func (xc *XDS110Client) SetSRST(rstOn bool) error {
 	ab := bytes.NewBuffer([]byte{boolToByte(!rstOn)})
-	_, err := xc.doCommand(cmdSetSRST, ab, 0, 100*time.Millisecond)
+	_, err := xc.doCommand(cmdSetSRST, ab, 0)
 	return errors.Annotatef(err, "SetSRST")
+}
+
+func (xc *XDS110Client) Close() error {
+	if xc.intf != nil {
+		xc.inEndp = nil
+		xc.outEndp = nil
+		xc.intf.Close()
+		xc.intf = nil
+	}
+	if xc.cfg != nil {
+		xc.cfg.Close()
+		xc.cfg = nil
+	}
+	if xc.dev != nil {
+		xc.dev.Close()
+		xc.dev = nil
+	}
+	if xc.ctx != nil {
+		xc.ctx.Close()
+		xc.ctx = nil
+	}
+	return nil
 }
 
 // TODO(rojer): Use stringer when it actually works.

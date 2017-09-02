@@ -1,4 +1,4 @@
-// +build !no_libudev
+// +build !no_libudev,!darwin,!windows
 
 package cc3220
 
@@ -52,4 +52,5 @@ func (dc *xds110DeviceControl) BootFirmware() error {
 
 func (dc *xds110DeviceControl) Close() {
 	dc.xc.Disconnect()
+	dc.xc.Close()
 }

@@ -171,6 +171,12 @@
 			"revisionTime": "2017-01-05T15:26:49Z"
 		},
 		{
+			"checksumSHA1": "LxFRe8ljzNJvvnXYJgfgK+AYWgA=",
+			"path": "github.com/cesanta/gousb",
+			"revision": "6ad02c354cc33fbdfe9ec2f9fda74b824553ba1c",
+			"revisionTime": "2017-09-02T17:26:56Z"
+		},
+		{
 			"checksumSHA1": "YJQqkH5JJ/h8r8245J9GCP4zG38=",
 			"path": "github.com/eclipse/paho.mqtt.golang",
 			"revision": "dfe35ae8bd6ead198596c5e5f4af1f55914741cf",
@@ -211,12 +217,6 @@
 			"path": "github.com/golang/glog",
 			"revision": "23def4e6c14b4da8ac2ed8007337bc5eb5007998",
 			"revisionTime": "2016-01-25T20:49:56Z"
-		},
-		{
-			"checksumSHA1": "5NoRLKcHid5dVwMUQHafOQi/XUo=",
-			"path": "github.com/gotmc/libusb",
-			"revision": "03beedfaba0e7e5bbbc80f977fa0634ade058b6e",
-			"revisionTime": "2017-06-29T02:23:21Z"
 		},
 		{
 			"checksumSHA1": "0ZrwvB6KoGPj2PoDNSEJwxQ6Mog=",
