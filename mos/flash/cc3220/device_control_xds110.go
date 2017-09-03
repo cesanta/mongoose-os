@@ -1,4 +1,4 @@
-// +build !no_libudev,!darwin,!windows
+// +build !no_libudev,!darwin
 
 package cc3220
 
