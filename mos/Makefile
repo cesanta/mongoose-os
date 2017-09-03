@@ -39,7 +39,8 @@ linux: generate
     cesanta.com/mos
 
 mac: generate
-	GOOS=darwin go build -o downloads/mos/mac/mos
+	brew install libusb-compat
+	go build -o downloads/mos/mac/mos
 
 win: generate
 	docker run -i --rm \

@@ -302,11 +302,15 @@ func buildXMLConfigFromFirmwareBundle(fw *common.FirmwareBundle, storageCapacity
 func findBPIBinary() (string, error) {
 	// TODO(rojer): Mac support
 	ufPattern, bpiBinaryName := "", ""
-	if runtime.GOOS == "windows" {
+	switch runtime.GOOS {
+	case "windows":
 		ufPattern = filepath.Join("c:\\", "ti", "uniflash_*")
 		bpiBinaryName = "BuildProgrammingImage.exe"
-	} else {
+	case "linux":
 		ufPattern = filepath.Join(os.Getenv("HOME"), "ti", "uniflash_*")
+		bpiBinaryName = "BuildProgrammingImage"
+	case "darwin":
+		ufPattern = filepath.Join("/Applications", "ti", "uniflash_*")
 		bpiBinaryName = "BuildProgrammingImage"
 	}
 	matches, _ := filepath.Glob(ufPattern)
