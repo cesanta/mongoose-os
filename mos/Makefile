@@ -19,7 +19,7 @@ generate version/version.go version/version.json:
 	@go install cesanta.com/vendor/github.com/jteeuwen/go-bindata/go-bindata
 	@go install cesanta.com/vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
 	@go generate . ./flash/cc3220 ./version
-	@gofmt -w bindata_assetfs.go
+	@gofmt -w bindata_assetfs.go flash/cc3220/bindata.go
 	@cat version/version.json
 	@echo
 
