@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/cesanta/errors"
-	"github.com/cesanta/gousb"
 	"github.com/golang/glog"
+	"github.com/google/gousb"
 )
 
 const (

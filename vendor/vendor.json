@@ -219,6 +219,12 @@
 			"revisionTime": "2016-01-25T20:49:56Z"
 		},
 		{
+			"checksumSHA1": "H3MHrQBfcFL/dbXpTOYP2stuD/M=",
+			"path": "github.com/google/gousb",
+			"revision": "757722bf8ee7481874da28bb990dbd1f253eed18",
+			"revisionTime": "2017-09-03T22:42:55Z"
+		},
+		{
 			"checksumSHA1": "0ZrwvB6KoGPj2PoDNSEJwxQ6Mog=",
 			"path": "github.com/jmespath/go-jmespath",
 			"revision": "bd40a432e4c76585ef6b72d3fd96fb9b6dc7b68d",
@@ -259,6 +265,12 @@
 			"path": "github.com/mattn/go-shellwords",
 			"revision": "02e3cf038dcea8290e44424da473dd12be796a8a",
 			"revisionTime": "2017-04-11T07:14:55Z"
+		},
+		{
+			"checksumSHA1": "AaoLHneeweH6/lDOizQdQykyzCI=",
+			"path": "github.com/mcuadros/go-version",
+			"revision": "257f7b9a7d87427c8d7f89469a5958d57f8abd7c",
+			"revisionTime": "2016-11-05T18:36:18Z"
 		},
 		{
 			"checksumSHA1": "h/HMhokbQHTdLUbruoBBTee+NYw=",
@@ -307,12 +319,6 @@
 			"path": "gopkg.in/yaml.v2",
 			"revision": "cd8b52f8269e0feb286dfeef29f8fe4d5b397e0b",
 			"revisionTime": "2017-04-07T17:21:22Z"
-		},
-		{
-			"checksumSHA1": "AaoLHneeweH6/lDOizQdQykyzCI=",
-			"path": "github.com/mcuadros/go-version",
-			"revision": "257f7b9a7d87427c8d7f89469a5958d57f8abd7c",
-			"revisionTime": "2016-11-05T18:36:18Z"
 		}
 	],
 	"rootPath": "cesanta.com"
