@@ -24,6 +24,9 @@ type Frame struct {
 	// Key should contains pre-shared key if client certificates are not used.
 	Key string `json:"key,omitempty"`
 
+	// Tag, if present, should be copied verbatim to the response frame.
+	Tag string `json:"tag,omitempty"`
+
 	ID int64 `json:"id,omitempty"`
 
 	// Request
