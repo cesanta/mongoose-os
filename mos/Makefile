@@ -55,11 +55,11 @@ downloads: linux mac win
 
 deploy: deploy-fwbuild deploy-mos-binary
 
-deploy-fwbuild:
+deploy-fwbuild: generate
 	cd ../prod && \
     ansible-playbook fwbuild.yml -e build=yes -e mos_version_tag='$(TAG)' -t cloud-mos,fwbuild-instance
 
-deploy-mos-binary:
+deploy-mos-binary: generate
 	cd ../prod && \
     ansible-playbook website.yml -e build=yes -e mos_version_tag='$(TAG)' -t build_mos,mos
 
