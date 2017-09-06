@@ -39,7 +39,7 @@ linux: generate
     cesanta.com/mos
 
 mac: generate
-	brew install libusb-compat
+	brew install libftdi libusb-compat pkg-config
 	go build -o downloads/mos/mac/mos
 
 win: generate
