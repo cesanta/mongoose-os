@@ -14,7 +14,7 @@ if [ -z "${VERSION}" ]; then
   RECIPE_MOUNT=
 else
   # Version is given: replace 1.11_CHANGE_ME with the actual version
-  RECIPE_TMP_DIR=/tmp/recipe-${PACKAGE}-${DISTR}-${VERSION}
+  RECIPE_TMP_DIR=$HOME/tmp/recipe-${PACKAGE}-${DISTR}-${VERSION}
   mkdir -p ${RECIPE_TMP_DIR}
   RECIPE_HOST_FILE=${RECIPE_TMP_DIR}/recipe
 
