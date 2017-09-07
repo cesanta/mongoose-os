@@ -156,7 +156,7 @@
 
   var refreshFileList = function() {
     var selectedFile = $('.file.selected').attr('rel');
-    return $.ajax({url: '/call', data: {method: 'FS.ListExt', timeout: 2}}).done(function(json) {
+    return $.ajax({url: '/call', data: {method: 'FS.ListExt', timeout: 15}}).done(function(json) {
       var $tbody = $('#file-list').empty();
       json.result.sort(function(a, b) {
         if (a.name.match(/jsc$/) && b.name.match(/jsc$/)) return a.name > b.name ? 1 : -1;

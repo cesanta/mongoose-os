@@ -294,7 +294,7 @@ var setUDPLog = function() {
 };
 
 var probeDevice = function() {
-  return $.ajax({url: '/call', global: false, data: {method: 'Sys.GetInfo', timeout: 5}}).then(function(data) {
+  return $.ajax({url: '/call', global: false, data: {method: 'Sys.GetInfo', timeout: 15}}).then(function(data) {
     ui.info = data.result;
     // Let other pages know that the device info has changed
     var infostr = JSON.stringify(ui.info);
