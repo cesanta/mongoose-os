@@ -27,7 +27,7 @@ const (
 )
 
 type GetCredsCallback func() (username, passwd string, err error)
-type Handler func(frame.Frame) frame.Frame
+type Handler func(MgRPC, *frame.Frame) *frame.Frame
 
 type MgRPC interface {
 	Call(
@@ -103,6 +103,7 @@ func Serve(ctx context.Context, c codec.Codec) MgRPC {
 		reqs:     make(map[int64]req),
 		handlers: make(map[string]Handler),
 		codec:    c,
+		opts:     &connectOptions{localID: ""},
 	}
 	go rpc.recvLoop(ctx, rpc.codec)
 	return &rpc
@@ -260,8 +261,8 @@ func (r *mgRPCImpl) Disconnect(ctx context.Context) error {
 	return nil
 }
 
-func sendErrorResponse(f frame.Frame) frame.Frame {
-	return frame.Frame{
+func sendErrorResponse(r MgRPC, f *frame.Frame) *frame.Frame {
+	return &frame.Frame{
 		ID:    f.ID,
 		Error: &frame.Error{Code: 404, Message: fmt.Sprintf("Method [%s] not found", f.Method)},
 	}
@@ -270,7 +271,9 @@ func sendErrorResponse(f frame.Frame) frame.Frame {
 func (r *mgRPCImpl) recvLoop(ctx context.Context, c codec.Codec) {
 	glog.V(2).Infof("Started recv loop, codec: %v", c)
 	for {
+		glog.V(2).Infof("recv ...")
 		f, err := c.Recv(ctx)
+		glog.V(2).Infof("done, %v", err)
 		if r.closing {
 			glog.Infof("devConn is disconnected, breaking out of the recvLoop", err)
 			r.reqsLock.Lock()
@@ -279,6 +282,7 @@ func (r *mgRPCImpl) recvLoop(ctx context.Context, c codec.Codec) {
 				delete(r.reqs, k)
 			}
 			r.reqsLock.Unlock()
+			r.Disconnect(ctx)
 			return
 		}
 		if err != nil {
@@ -296,7 +300,6 @@ func (r *mgRPCImpl) recvLoop(ctx context.Context, c codec.Codec) {
 		}
 
 		if f.Method != "" {
-			glog.V(2).Infof("GOT REQUEST! %v", f)
 			callback := sendErrorResponse
 			for k, v := range r.handlers {
 				if k == f.Method {
@@ -304,9 +307,9 @@ func (r *mgRPCImpl) recvLoop(ctx context.Context, c codec.Codec) {
 					break
 				}
 			}
-			resp := callback(*f)
+			resp := callback(r, f)
 			if !f.NoResponse {
-				c.Send(ctx, &resp)
+				c.Send(ctx, resp)
 			}
 			continue
 		}
