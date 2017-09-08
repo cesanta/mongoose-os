@@ -383,28 +383,11 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	// }}}
 
 	// Determine mongoose-os dir (mosDirEffective) {{{
-	var mosDirEffective string
-	if *mosRepo != "" {
-		freportf(logWriter, "Using mongoose-os located at %q", *mosRepo)
-		mosDirEffective = *mosRepo
-	} else {
-		freportf(logWriter, "The flag --repo is not given, going to use mongoose-os repository")
-
-		m := build.SWModule{
-			Type: "git",
-			// TODO(dfrank) get upstream repo URL from a flag
-			// (and this flag needs to be forwarded to fwbuild as well, which should
-			// forward it to the mos invocation)
-			Location: "https://github.com/cesanta/mongoose-os",
-			Version:  manifest.MongooseOsVersion,
-		}
-
-		var err error
-		mosDirEffective, err = m.PrepareLocalDir(paths.ModulesDir, logWriter, true, "", *libsUpdateInterval)
-		if err != nil {
-			return errors.Annotatef(err, "preparing local copy of the mongoose-os repo")
-		}
+	mosDirEffective, err := getMosDirEffective(manifest.MongooseOsVersion, *libsUpdateInterval)
+	if err != nil {
+		return errors.Trace(err)
 	}
+
 	interpreter.SetModuleVars(interp.MVars, "mongoose-os", mosDirEffective)
 
 	mosDirEffectiveAbs, err := filepath.Abs(mosDirEffective)
@@ -2367,4 +2350,74 @@ func newMosVars() *interpreter.MosVars {
 
 func isInDockerToolbox() bool {
 	return os.Getenv("DOCKER_HOST") != ""
+}
+
+func getMosDirEffective(mongooseOsVersion string, updateInterval time.Duration) (string, error) {
+	var mosDirEffective string
+	if *mosRepo != "" {
+		freportf(logWriter, "Using mongoose-os located at %q", *mosRepo)
+		mosDirEffective = *mosRepo
+	} else {
+		freportf(logWriter, "The flag --repo is not given, going to use mongoose-os repository")
+
+		m := build.SWModule{
+			Type: "git",
+			// TODO(dfrank) get upstream repo URL from a flag
+			// (and this flag needs to be forwarded to fwbuild as well, which should
+			// forward it to the mos invocation)
+			Location: "https://github.com/cesanta/mongoose-os",
+			Version:  mongooseOsVersion,
+		}
+
+		var err error
+		mosDirEffective, err = m.PrepareLocalDir(paths.ModulesDir, logWriter, true, "", updateInterval)
+		if err != nil {
+			return "", errors.Annotatef(err, "preparing local copy of the mongoose-os repo")
+		}
+	}
+
+	return mosDirEffective, nil
+}
+
+func getMosRepoDir(ctx context.Context, devConn *dev.DevConn) error {
+	logWriterStderr = io.MultiWriter(&logBuf, os.Stderr)
+	logWriter = io.MultiWriter(&logBuf)
+	if *verbose {
+		logWriter = logWriterStderr
+	}
+
+	cll, err := getCustomLibLocations()
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	bParams := &buildParams{
+		Platform:           *platform,
+		CustomLibLocations: cll,
+	}
+
+	appDir, err := getCodeDirAbs()
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	interp := interpreter.NewInterpreter(newMosVars())
+
+	manifest, _, err := readManifest(appDir, bParams, interp)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	mosDirEffective, err := getMosDirEffective(manifest.MongooseOsVersion, time.Hour*99999)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	mosDirEffectiveAbs, err := filepath.Abs(mosDirEffective)
+	if err != nil {
+		return errors.Annotatef(err, "getting absolute path of %q", mosDirEffective)
+	}
+
+	fmt.Println(mosDirEffectiveAbs)
+	return nil
 }
