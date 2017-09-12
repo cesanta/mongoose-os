@@ -5,6 +5,7 @@
 
 #include <string.h>
 
+#include "common/cs_time.h"
 #include "common/cs_varint.h"
 #include "common/mg_str.h"
 #include "common/str_util.h"
@@ -78,6 +79,15 @@ static const char *test_cs_varint(void) {
   ASSERT_EQ((llen_enc = cs_varint_encode(0xffffffffffffffff, buf)), 10);
   ASSERT_EQ(cs_varint_decode(buf, &llen_dec), 0xffffffffffffffff);
   ASSERT_EQ(llen_dec, llen_enc);
+
+  return NULL;
+}
+
+static const char *test_cs_timegm(void) {
+  struct tm t;
+  time_t now = time(NULL);
+  gmtime_r(&now, &t);
+  ASSERT_EQ((double) timegm(&t), cs_timegm(&t));
 
   return NULL;
 }
@@ -190,6 +200,7 @@ static const char *test_mg_strstr(void) {
 static const char *run_tests(const char *filter, double *total_elapsed) {
   RUN_TEST(test_c_snprintf);
   RUN_TEST(test_cs_varint);
+  RUN_TEST(test_cs_timegm);
   RUN_TEST(test_mg_match_prefix);
   RUN_TEST(test_mg_mk_str);
   RUN_TEST(test_mg_strdup);
