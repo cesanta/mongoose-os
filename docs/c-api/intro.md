@@ -1,0 +1,18 @@
+---
+items:
+  - { name: mgos_bitbang.h }
+  - { name: mgos_config.h }
+  - { name: mgos_gpio.h }
+  - { name: mgos_i2c.h }
+  - { name: mgos_mongoose.h }
+  - { name: mg_rpc.h }
+  - { name: mgos_sntp.h }
+  - { name: mgos_spi.h }
+  - { name: mgos_sys_config.h }
+  - { name: mgos_timers.h }
+  - { name: mgos_uart.h }
+  - { name: mgos_utils.h }
+  - { name: mgos_wifi.h }
+  - { name: mgos_aws_shadow.h }
+  - { name: mgos_mqtt.h }
+---
