@@ -153,6 +153,7 @@ static err_t mg_lwip_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb,
     struct pbuf *q = p->next;
     for (; q != NULL; q = q->next) pbuf_ref(q);
   }
+  mgos_lock();
   if (cs->rx_chain == NULL) {
     cs->rx_offset = 0;
   } else if (pbuf_clen(cs->rx_chain) >= 4) {
@@ -166,6 +167,7 @@ static err_t mg_lwip_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb,
       p = np;
     }
   }
+  mgos_unlock();
   mg_lwip_recv_common(nc, p);
   return ERR_OK;
 }
@@ -643,7 +645,8 @@ void mg_lwip_if_recved(struct mg_connection *nc, size_t len) {
     DBG(("%p invalid socket", nc));
     return;
   }
-  DBG(("%p %p %u", nc, cs->pcb.tcp, len));
+  DBG(("%p %p %u %u", nc, cs->pcb.tcp, len,
+       (cs->rx_chain ? cs->rx_chain->tot_len : 0)));
   struct tcp_recved_ctx ctx = {.tpcb = cs->pcb.tcp, .len = len};
 #if MG_ENABLE_SSL
   if (!(nc->flags & MG_F_SSL)) {
