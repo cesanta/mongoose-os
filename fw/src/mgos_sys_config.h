@@ -45,6 +45,7 @@ struct sys_config *get_cfg(void);
  * Reboot is required to reload the config.
  * If return value is false, a message may be provided in *msg.
  * If non-NULL, it must be free()d.
+ * It is safe to pass a NULL `msg`
  */
 bool save_cfg(const struct sys_config *cfg, char **msg);
 
@@ -79,6 +80,12 @@ void device_get_mac_address(uint8_t mac[6]);
 void mgos_expand_mac_address_placeholders(char *str);
 
 enum mgos_init_result mgos_sys_config_init(void);
+
+/* Apply a subset of system configuration. Return true on success. */
+bool mgos_config_apply(const char *sys_config_subset_json, bool save);
+
+/* Same as mgos_config_apply but uses mg_str */
+bool mgos_config_apply_s(const struct mg_str, bool save);
 
 #ifdef __cplusplus
 }

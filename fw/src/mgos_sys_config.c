@@ -96,6 +96,8 @@ bool load_config_defaults(struct sys_config *cfg) {
 bool save_cfg(const struct sys_config *cfg, char **msg) {
   bool result = false;
   struct sys_config defaults;
+  char *ptr = NULL;
+  if (msg == NULL) msg = &ptr;
   memset(&defaults, 0, sizeof(defaults));
   *msg = NULL;
   int i;
@@ -114,6 +116,7 @@ bool save_cfg(const struct sys_config *cfg, char **msg) {
     *msg = strdup("failed to write file");
   }
 clean:
+  free(ptr);
   mgos_conf_free(sys_config_schema(), &defaults);
   return result;
 }
@@ -264,4 +267,18 @@ void mgos_register_config_validator(mgos_config_validator_fn fn) {
       s_validators, (s_num_validators + 1) * sizeof(*s_validators));
   if (s_validators == NULL) return;
   s_validators[s_num_validators++] = fn;
+}
+
+bool mgos_config_apply_s(const struct mg_str json, bool save) {
+  struct sys_config *cfg = get_cfg();
+  /* Make a temporary copy, in case it gets overridden while loading. */
+  char *acl_copy = (cfg->conf_acl != NULL ? strdup(cfg->conf_acl) : NULL);
+  bool res = mgos_conf_parse(json, acl_copy, sys_config_schema(), cfg);
+  free(acl_copy);
+  if (save) save_cfg(cfg, NULL);
+  return res;
+}
+
+bool mgos_config_apply(const char *json, bool save) {
+  return mgos_config_apply_s(mg_mk_str(json), save);
 }
