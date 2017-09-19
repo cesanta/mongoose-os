@@ -393,13 +393,25 @@ $(BUILD_DIR) $(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
 	$(vecho) "MKDIR $@"
 	$(Q) mkdir -p $@
 
+MGOS_ADC_MODE_VDD ?= 0
+# If MGOS_ADC_MODE_VDD == 1, we want to measure VDD33 internal (system_get_vdd33).
+# Then the 107th byte in esp_init_data_default.bin (named as vdd33_const)
+# must be set to 255 (0xFF).
+# So we change the path to the esp_init_data_default.bin file
+ifeq "$(MGOS_ADC_MODE_VDD)" "1"
+  SDK_INIT_DATA_PATH = $(MGOS_ESP8266_PATH)
+else
+  SDK_INIT_DATA_PATH = $(SDK_PATH)
+endif
+CFLAGS += -DMGOS_ADC_MODE_VDD=$(MGOS_ADC_MODE_VDD)
+
 # Main output product: firmware files.
 FW_PARTS = boot:addr=$(BOOT_LOADER_ADDR),src=$(BOOT_LOADER_BIN) \
            boot_cfg:addr=$(BOOT_CONFIG_WRITE_ADDR),size=0x1000,fill=0xff \
            fw:addr=$(APP0_ADDR),src=$(APP_BIN) \
            fs:src=$(FS_IMG),type=fs,addr=$(FS0_ADDR),fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE) \
            rf_cal_data:addr=$(FW_RF_CAL_DATA_ADDR),size=$(RF_CAL_DATA_SIZE),fill=0xff \
-           sys_params:type=sys_params,src=$(SDK_PATH)/bin/esp_init_data_default.bin,addr=$(SYS_PARAMS_ADDR)
+           sys_params:type=sys_params,src=$(SDK_INIT_DATA_PATH)/bin/esp_init_data_default.bin,addr=$(SYS_PARAMS_ADDR)
 
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
 
