@@ -57,11 +57,24 @@ bool mgos_gpio_toggle(int pin);
 /*
  * Install a GPIO interrupt handler.
  *
+ * This will invoke handler on the main task, which makes it possible to use
+ * any functions but may delay servicing of the interrupt. If lower latency
+ * is required, use `mgos_gpio_set_int_handler_isr`, but you'll need to
+ * understand the implications, which are platform-specific.
+ *
  * Note that this will not enable the interrupt, this must be done explicitly
  * with `mgos_gpio_enable_int()`.
  */
 bool mgos_gpio_set_int_handler(int pin, enum mgos_gpio_int_mode mode,
                                mgos_gpio_int_handler_f cb, void *arg);
+
+/*
+ * Same as mgos_gpio_set_int_handler but invokes handler in ISR context,
+ * without the overhead of a context switch. GPIO interrupts are disabled while
+ * the handler is running.
+ */
+bool mgos_gpio_set_int_handler_isr(int pin, enum mgos_gpio_int_mode mode,
+                                   mgos_gpio_int_handler_f cb, void *arg);
 
 /* Enable interrupt on the specified pin. */
 bool mgos_gpio_enable_int(int pin);

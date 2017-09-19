@@ -22,6 +22,7 @@
 struct mgos_gpio_state {
   mgos_gpio_int_handler_f cb;
   void *cb_arg;
+  unsigned int isr : 1;
   unsigned int cb_pending : 1;
   unsigned int debounce_ms : 16;
 };
@@ -33,7 +34,13 @@ static void mgos_gpio_int_done_cb(void *arg);
 /* In ISR context */
 IRAM void mgos_gpio_hal_int_cb(int pin) {
   struct mgos_gpio_state *s = &s_state[pin];
-  if (s->cb_pending || s->cb == NULL) return;
+  if (s->cb == NULL) return;
+  if (s->isr) {
+    s->cb(pin, s->cb_arg);
+    mgos_gpio_hal_int_done(pin);
+    return;
+  }
+  if (s->cb_pending) return;
   if (mgos_invoke_cb(mgos_gpio_int_cb, (void *) (intptr_t) pin,
                      true /* from_isr */)) {
     s->cb_pending = true;
@@ -67,17 +74,29 @@ static void mgos_gpio_int_done_cb(void *arg) {
   mgos_gpio_hal_int_done(pin);
 }
 
-bool mgos_gpio_set_int_handler(int pin, enum mgos_gpio_int_mode mode,
-                               mgos_gpio_int_handler_f cb, void *arg) {
+static bool gpio_set_int_handler_common(int pin, enum mgos_gpio_int_mode mode,
+                                        mgos_gpio_int_handler_f cb, void *arg,
+                                        bool isr) {
   if (pin < 0 || pin > MGOS_NUM_GPIO) return false;
   if (!mgos_gpio_hal_set_int_mode(pin, mode)) return false;
   if (mode == MGOS_GPIO_INT_NONE) return true;
   struct mgos_gpio_state *s = (struct mgos_gpio_state *) &s_state[pin];
+  s->isr = isr;
   s->cb = cb;
   s->cb_arg = arg;
   s->debounce_ms = 0;
   s->cb_pending = false;
   return true;
+}
+
+bool mgos_gpio_set_int_handler(int pin, enum mgos_gpio_int_mode mode,
+                               mgos_gpio_int_handler_f cb, void *arg) {
+  return gpio_set_int_handler_common(pin, mode, cb, arg, false /* isr */);
+}
+
+bool mgos_gpio_set_int_handler_isr(int pin, enum mgos_gpio_int_mode mode,
+                                   mgos_gpio_int_handler_f cb, void *arg) {
+  return gpio_set_int_handler_common(pin, mode, cb, arg, true /* isr */);
 }
 
 void mgos_gpio_remove_int_handler(int pin, mgos_gpio_int_handler_f *old_cb,
