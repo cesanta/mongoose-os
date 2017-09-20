@@ -367,6 +367,10 @@ void mgos_conf_set_str(char **vp, const char *v) {
   }
 }
 
+bool mgos_conf_str_empty(const char *s) {
+  return (s == NULL || s[0] == '\0');
+}
+
 enum mgos_conf_type mgos_conf_value_type(struct mgos_conf_entry *e) {
   return e->type;
 }

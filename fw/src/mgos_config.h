@@ -84,6 +84,9 @@ const struct mgos_conf_entry *mgos_conf_find_schema_entry_s(
 
 void mgos_conf_set_str(char **vp, const char *v);
 
+/* Returns true if the string is NULL or empty. */
+bool mgos_conf_str_empty(const char *s);
+
 /*
  * Returns a type of the value (this function is primarily for FFI)
  */
