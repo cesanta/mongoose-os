@@ -1661,31 +1661,74 @@ libs:
 		libDirAbs, ok := pc.bParams.CustomLibLocations[name]
 
 		if !ok {
-			freportf(pc.logWriter, "The --lib flag was not given for it, checking repository")
+			defVersion := pc.appManifest.LibsVersion
+			for {
+				freportf(pc.logWriter, "The --lib flag was not given for it, checking repository")
 
-			needPull := true
+				needPull := true
 
-			if *noLibsUpdate {
-				localDir, err := m.GetLocalDir(paths.LibsDir, pc.appManifest.LibsVersion)
-				if err != nil {
-					return nil, time.Time{}, errors.Trace(err)
+				if *noLibsUpdate {
+					localDir, err := m.GetLocalDir(paths.LibsDir, defVersion)
+					if err != nil {
+						return nil, time.Time{}, errors.Trace(err)
+					}
+
+					if _, err := os.Stat(localDir); err == nil {
+						freportf(pc.logWriter, "--no-libs-update was given, and %q exists: skipping update", localDir)
+						libDirAbs = localDir
+						needPull = false
+					}
 				}
 
-				if _, err := os.Stat(localDir); err == nil {
-					freportf(pc.logWriter, "--no-libs-update was given, and %q exists: skipping update", localDir)
-					libDirAbs = localDir
-					needPull = false
-				}
-			}
+				if needPull {
+					// Note: we always call PrepareLocalDir for libsDir, but then,
+					// if pc.userLibsDir is different, will need to copy it to the new location
+					libDirAbs, err = m.PrepareLocalDir(paths.LibsDir, pc.logWriter, true, defVersion, *libsUpdateInterval)
+					if err != nil {
+						if m.Version == "" && defVersion != "latest" {
+							// We failed to fetch lib at the default version (mos.version),
+							// which is not "latest", and the lib in manifest does not have
+							// version specified explicitly. This might happen when some
+							// latest app is built with older mos tool.
 
-			if needPull {
-				// Note: we always call PrepareLocalDir for libsDir, but then,
-				// if pc.userLibsDir is different, will need to copy it to the new location
-				libDirAbs, err = m.PrepareLocalDir(paths.LibsDir, pc.logWriter, true, pc.appManifest.LibsVersion, *libsUpdateInterval)
-				if err != nil {
-					return nil, time.Time{}, errors.Annotatef(err, "preparing local copy of the lib %q", name)
-				}
+							serverVersion := defVersion
+							v, err := update.GetServerMosVersion(update.GetUpdateChannel())
+							if err == nil {
+								serverVersion = version.GetMosVersionFromBuildId(v.BuildId)
+							}
 
+							freportf(logWriterStderr,
+								"WARNING: the lib %q does not have version %s. Resorting to latest, but the build might fail.\n"+
+									"It usually happens if you clone the latest version of some example app, and try to build it with the mos tool which is older than the lib (in this case, %q).", name, defVersion, name,
+							)
+
+							if serverVersion != version.GetMosVersion() {
+								// There is a newer version of the mos tool available, so
+								// suggest upgrading.
+
+								freportf(logWriterStderr,
+									"There is a newer version of the mos tool available: %s, try to update mos tool (mos update), and build again. "+
+										"Alternatively, you can build the version %s of the app (git checkout %s).", serverVersion, defVersion, defVersion,
+								)
+							} else {
+								// Current mos is at the newest released version, so the only
+								// alternatives are: build older (released) version of the app,
+								// or use latest mos.
+
+								freportf(logWriterStderr,
+									"Consider using the version %s of the app (git checkout %s), or using latest mos tool (mos update latest).", defVersion, defVersion,
+								)
+							}
+
+							// In any case, retry with the latest lib version and cross fingers.
+
+							defVersion = "latest"
+							continue
+						}
+						return nil, time.Time{}, errors.Annotatef(err, "preparing local copy of the lib %q", name)
+					}
+				}
+				break
 			}
 		} else {
 			freportf(pc.logWriter, "Using the location %q as is (given as a --lib flag)", libDirAbs)
