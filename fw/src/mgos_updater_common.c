@@ -613,7 +613,7 @@ void updater_finish(struct update_context *ctx) {
   LOG(LL_INFO, ("Finished: %d %s", ctx->result, msg));
   updater_process_int(ctx, NULL, 0);
   if (s_event_cb != NULL) {
-    (void) s_event_cb(MGOS_UPD_EV_END, &ctx->result, s_event_cb_arg);
+    (void) s_event_cb(MGOS_UPD_EV_END, ctx, s_event_cb_arg);
   }
 }
 

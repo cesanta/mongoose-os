@@ -39,7 +39,7 @@ enum mgos_upd_event {
   MGOS_UPD_EV_BEGIN = 2,
   /* ev_data = const struct mgos_upd_info *; return: ignored. */
   MGOS_UPD_EV_PROGRESS = 3,
-  /* ev_data = const int *result, 1 = success; return: ignored */
+  /* ev_data = struct update_context *; return: ignored */
   MGOS_UPD_EV_END = 4,
 };
 
