@@ -133,7 +133,7 @@ extern int json_printer_file(struct json_out *, const char *, size_t);
 #define JSON_OUT_FILE(fp)   \
   {                         \
     json_printer_file, {    \
-      { (void *) fp, 0, 0 } \
+      { (char *) fp, 0, 0 } \
     }                       \
   }
 
@@ -156,6 +156,13 @@ typedef int (*json_printf_callback_t)(struct json_out *, va_list *ap);
  */
 int json_printf(struct json_out *, const char *fmt, ...);
 int json_vprintf(struct json_out *, const char *fmt, va_list ap);
+
+/*
+ * Same as json_printf, but prints to a file.
+ * File is created if does not exist. File is truncated if already exists.
+ */
+int json_fprintf(const char *file_name, const char *fmt, ...);
+int json_vfprintf(const char *file_name, const char *fmt, va_list ap);
 
 /*
  * Helper %M callback that prints contiguous C arrays.
@@ -219,6 +226,12 @@ int json_unescape(const char *src, int slen, char *dst, int dlen);
  * Return the number of bytes printed.
  */
 int json_escape(struct json_out *out, const char *str, size_t str_len);
+
+/*
+ * Read the whole file in memory.
+ * Return malloc-ed file content, or NULL on error. The caller must free().
+ */
+char *json_fread(const char *file_name);
 
 #ifdef __cplusplus
 }

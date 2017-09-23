@@ -1016,3 +1016,49 @@ int json_scanf(const char *str, int len, const char *fmt, ...) {
   va_end(ap);
   return result;
 }
+
+int json_vfprintf(const char *file_name, const char *fmt, va_list ap) WEAK;
+int json_vfprintf(const char *file_name, const char *fmt, va_list ap) {
+  int res = -1;
+  FILE *fp = fopen(file_name, "w");
+  if (fp != NULL) {
+    struct json_out out = JSON_OUT_FILE(fp);
+    res = json_vprintf(&out, fmt, ap);
+    fputc('\n', fp);
+    fclose(fp);
+  }
+  return res;
+}
+
+int json_fprintf(const char *file_name, const char *fmt, ...) WEAK;
+int json_fprintf(const char *file_name, const char *fmt, ...) {
+  int result;
+  va_list ap;
+  va_start(ap, fmt);
+  result = json_vfprintf(file_name, fmt, ap);
+  va_end(ap);
+  return result;
+}
+
+char *json_fread(const char *path) WEAK;
+char *json_fread(const char *path) {
+  FILE *fp;
+  char *data = NULL;
+  if ((fp = fopen(path, "rb")) == NULL) {
+  } else if (fseek(fp, 0, SEEK_END) != 0) {
+    fclose(fp);
+  } else {
+    size_t size = ftell(fp);
+    data = (char *) malloc(size + 1);
+    if (data != NULL) {
+      fseek(fp, 0, SEEK_SET); /* Some platforms might not have rewind(), Oo */
+      if (fread(data, 1, size, fp) != size) {
+        free(data);
+        return NULL;
+      }
+      data[size] = '\0';
+    }
+    fclose(fp);
+  }
+  return data;
+}
