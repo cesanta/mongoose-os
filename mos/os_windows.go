@@ -1,11 +1,45 @@
 package main
 
+/*
+#include <direct.h>
+#include <process.h>
+#include <stdio.h>
+#include <windows.h>
+
+static char *s_canonical_path = "c:\\mos\\bin\\mos.exe";
+
+void install(const char *prog) {
+  ShowWindow(GetConsoleWindow(), SW_HIDE);
+  if (stricmp(prog, s_canonical_path) != 0) {
+    // we're not installed. show message
+    int res = MessageBoxA(
+        NULL, "Click OK to move mos tool to C:\\mos, or Cancel to "
+        "abort installation", "mos", MB_OKCANCEL | MB_ICONQUESTION);
+    if (res == IDCANCEL) exit(1);
+
+    // move exe to the destination
+    mkdir("c:\\mos");
+    mkdir("c:\\mos\\bin");
+    remove(s_canonical_path);
+    rename(prog, s_canonical_path);
+
+    // restart
+    system(s_canonical_path);
+    exit(0);
+  }
+}
+*/
+import "C"
+
 import (
+	"os"
 	"sort"
 	"strconv"
 	"strings"
 
 	"golang.org/x/sys/windows/registry"
+
+	"github.com/zserge/webview"
 )
 
 func enumerateSerialPorts() []string {
@@ -65,4 +99,12 @@ func getDefaultPort() string {
 	}
 	sort.Strings(filteredPorts)
 	return filteredPorts[0]
+}
+
+func osSpecificInit() {
+	C.install(C.CString(os.Args[0]))
+}
+
+func webview() {
+	webview.Open("Mongoose OS Web UI", url, 1024, 480, true)
 }

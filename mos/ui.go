@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strconv"
 	"sync"
@@ -49,6 +50,7 @@ var (
 	wsClientsMtx = sync.Mutex{}
 	wwwRoot      = ""
 	startBrowser = true
+	startWebview = runtime.GOOS != "linux"
 	inLogLine    = map[string]bool{}
 	devConnMtx   = sync.Mutex{}
 
@@ -157,6 +159,9 @@ func init() {
 
 	flag.BoolVar(&startBrowser, "start-browser", true, "Automatically start browser")
 	hiddenFlags = append(hiddenFlags, "start-browser")
+
+	flag.BoolVar(&startWebview, "start-webview", true, "Automatically start WebView")
+	hiddenFlags = append(hiddenFlags, "start-webview")
 }
 
 func devlock(devConn *dev.DevConn) {
@@ -622,10 +627,15 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		os.Stderr = origStderr
 		return errors.Trace(err)
 	}
-	if startBrowser {
-		open.Start(url)
+	if startWebview {
+		go http.Serve(listener, nil)
+		webview()
+	} else {
+		if startBrowser {
+			open.Start(url)
+		}
+		http.Serve(listener, nil)
 	}
-	http.Serve(listener, nil)
 
 	// Unreacahble
 	return nil

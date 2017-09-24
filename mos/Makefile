@@ -1,4 +1,4 @@
-.PHONY: build clean deploy deploy-fwbuild deploy-mos-binary downloads generate install
+.PHONY: build clean deploy deploy-fwbuild deploy-mos-binary downloads generate install dmg
 
 TAG ?= latest
 
@@ -42,13 +42,13 @@ mac: generate
 	brew install libftdi libusb-compat pkg-config
 	go build -o downloads/mos/mac/mos
 
+
 win: generate
-	docker run -i --rm \
-    -v $${GOPATH%%:*}/src:/go/src \
-    -v $$(pwd):/out \
+	set -x ; docker run -i --rm \
+    -v /$$(cd ../.. && pwd):/go/src \
+    -v /$$(pwd):/out \
     docker.cesanta.com/gobuild-mingw \
-    bash -c 'GOOS=windows GOARCH=386 CGO_ENABLED=1 CXX=i686-w64-mingw32-g++ CC=i686-w64-mingw32-gcc \
-               go build -o /out/downloads/mos/win/mos.exe --ldflags "-extldflags -static" cesanta.com/mos'
+    bash -c 'GOOS=windows GOARCH=386 CGO_ENABLED=1 CXX=i686-w64-mingw32-g++ CC=i686-w64-mingw32-gcc go build -o /out/downloads/mos/win/mos.exe --ldflags "-extldflags -static" cesanta.com/mos'
 
 downloads: linux mac win
 	cp version/version.json downloads/mos/
@@ -63,6 +63,21 @@ deploy-mos-binary: generate
 	cd ../prod && \
     ansible-playbook website.yml -e build=yes -e mos_version_tag='$(TAG)' -t build_mos,mos
 
+APPNAME = mos
+DMGDIR = dmg/$(APPNAME).app
+dmg:
+	rm -rf dmg a.dmg mos.dmg
+	mkdir -p $(DMGDIR)/Contents/{MacOS,Resources}
+	install -m 644 $(APPNAME).icns $(DMGDIR)/Contents/Resources/
+	install -m 644 Info.plist $(DMGDIR)/Contents/
+	install -m 755 downloads/mos/mac/mos $(DMGDIR)/Contents/MacOS/_$(APPNAME)
+	install -m 755 downloads/mos/libusb-1.0.0.dylib $(DMGDIR)/Contents/MacOS/
+	install -m 755 downloads/mos/libftdi1.2.dylib  $(DMGDIR)/Contents/MacOS/
+	install -m 755 mac_app_wrapper.sh $(DMGDIR)/Contents/MacOS/$(APPNAME)
+	ln -fs /Applications dmg/
+	hdiutil create a.dmg -volname mos -srcfolder dmg -ov
+	hdiutil convert a.dmg -format UDRW -o mos.dmg
+	rm -rf a.dmg
 
 clean:
 	rm -rf mos_* mos.exe mos gobuild-cache downloads/mos/{mac,linux,win} version/version.*

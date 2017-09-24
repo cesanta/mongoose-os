@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleExecutable</key> <string>mos</string>
+  <key>CFBundlePackageType</key> <string>APPL</string>
+  <key>CFBundleTypeRole</key> <string>None</string>
+  <key>CFBundleIconFile</key> <string>mos.icns</string>
+  <key>LSUIElement</key> <true/>
+  <key>RunAtLoad</key> <false/>
+  <key>Label</key> <string>com.cesanta.mos</string>
+  <!-- <key>ProgramArguments</key> <array></array> -->
+  <key>KeepAlive</key> <true/>
+  <key>LSEnvironment</key>
+  <dict>
+  <key>DYLD_LIBRARY_PATH</key>
+  <string>/Users/lsm/src/cesanta.com/mos/dmg/mos.app/Contents/MacOS/</string>
+  </dict>
+</dict>
+</plist>
