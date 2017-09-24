@@ -60,6 +60,9 @@ extern "C" {
 #define SPIFFS_ERR_IX_MAP_MAPPED        -10038
 #define SPIFFS_ERR_IX_MAP_BAD_RANGE     -10039
 
+#define SPIFFS_ERR_SEEK_BOUNDS          -10040
+
+
 #define SPIFFS_ERR_INTERNAL             -10050
 
 #define SPIFFS_ERR_TEST                 -10100
@@ -137,7 +140,7 @@ typedef void (*spiffs_file_callback)(struct spiffs_t *fs, spiffs_fileop_type op,
 
 #ifndef SPIFFS_DBG
 #define SPIFFS_DBG(...) \
-    print(__VA_ARGS__)
+    printf(__VA_ARGS__)
 #endif
 #ifndef SPIFFS_GC_DBG
 #define SPIFFS_GC_DBG(...) printf(__VA_ARGS__)
