@@ -38,22 +38,40 @@ bool cc32xx_vfs_fs_slfs_umount(struct mgos_vfs_fs *fs) {
   return true;
 }
 
+static void slfs_get_fs_info(size_t *bytes_total, size_t *bytes_used,
+                             size_t *bytes_free) {
+  *bytes_total = *bytes_used = *bytes_free = 0;
+#if SL_MAJOR_VERSION_NUM >= 2
+  SlFsControlGetStorageInfoResponse_t si;
+  if (sl_FsCtl((SlFsCtl_e) SL_FS_CTL_GET_STORAGE_INFO, 0, NULL, NULL, 0,
+               (_u8 *) &si, sizeof(si), NULL) == 0) {
+    _u32 bs = si.DeviceUsage.DeviceBlockSize;
+    *bytes_total = si.DeviceUsage.DeviceBlocksCapacity *bs;
+    *bytes_free = si.DeviceUsage.NumOfAvailableBlocksForUserFiles *bs;
+    *bytes_used = *bytes_total - *bytes_free;
+  }
+#endif
+}
+
 size_t cc32xx_vfs_fs_slfs_get_space_total(struct mgos_vfs_fs *fs) {
-  /* Not supported. */
+  size_t bytes_total, bytes_used, bytes_free;
+  slfs_get_fs_info(&bytes_total, &bytes_used, &bytes_free);
   (void) fs;
-  return 0;
+  return bytes_total;
 }
 
 size_t cc32xx_vfs_fs_slfs_get_space_used(struct mgos_vfs_fs *fs) {
-  /* Not supported. */
+  size_t bytes_total, bytes_used, bytes_free;
+  slfs_get_fs_info(&bytes_total, &bytes_used, &bytes_free);
   (void) fs;
-  return 0;
+  return bytes_used;
 }
 
 size_t cc32xx_vfs_fs_slfs_get_space_free(struct mgos_vfs_fs *fs) {
-  /* Not supported. */
+  size_t bytes_total, bytes_used, bytes_free;
+  slfs_get_fs_info(&bytes_total, &bytes_used, &bytes_free);
   (void) fs;
-  return 0;
+  return bytes_free;
 }
 
 bool cc32xx_vfs_fs_slfs_gc(struct mgos_vfs_fs *fs) {

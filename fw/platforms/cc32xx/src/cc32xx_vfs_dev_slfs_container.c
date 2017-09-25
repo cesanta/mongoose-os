@@ -139,7 +139,8 @@ bool cc32xx_vfs_dev_slfs_container_write_meta(int fh, uint64_t seq,
 
   offset = FS_CONTAINER_SIZE(meta.info.fs_size) - sizeof(meta);
   r = sl_FsWrite(fh, offset, (_u8 *) &meta, sizeof(meta));
-  DBG(("write meta fh %d 0x%llx @ %d: %d", fh, seq, (int) offset, (int) r));
+  LOG(LL_DEBUG,
+      ("write meta fh %d 0x%llx @ %d: %d", fh, seq, (int) offset, (int) r));
   if (r == sizeof(meta)) r = 0;
   return (r == 0);
 }
@@ -224,7 +225,7 @@ _i32 fs_switch_container(struct dev_data *dd, _u32 mask_begin, _u32 mask_len) {
     _u8 fname[MAX_FS_CONTAINER_FNAME_LEN];
     cc32xx_vfs_dev_slfs_container_fname(dd->cpfx, dd->cidx, fname);
     old_fh = slfs_open(fname, SL_FS_READ);
-    DBG(("fopen %s %ld", dd->cpfx, old_fh));
+    LOG(LL_DEBUG, ("open %s %ld", dd->cpfx, old_fh));
     if (old_fh < 0) {
       r = -1;
       goto out;
@@ -254,7 +255,7 @@ _i32 fs_switch_container(struct dev_data *dd, _u32 mask_begin, _u32 mask_len) {
     if (offset + len > dd->size) {
       len = dd->size - offset;
     }
-    DBG(("copy %d @ %d", (int) len, (int) offset));
+    LOG(LL_DEBUG, ("copy %d @ %d", (int) len, (int) offset));
     if (len > 0) {
       r = sl_FsRead(old_fh, offset, buf, len);
       if (r != len) {
@@ -347,7 +348,6 @@ out:
                 (dd ? dd->size : 0), (dd ? dd->seq : 0)));
   if (!ret) free(dd);
   free(cpfx);
-  (void) dev;
   return ret;
 }
 
@@ -371,6 +371,9 @@ static bool cc32xx_vfs_dev_slfs_container_read(struct mgos_vfs_dev *dev,
        * invalidated. SL has to be reinitialized to e.g. configure WiFi.
        */
       dd->fh = -1;
+    } else if (r != size) {
+      LOG(LL_ERROR,
+          ("%p read %d @ %d -> %d", dev, (int) size, (int) offset, (int) r));
     }
   } while (dd->fh < 0);
   return (r == size);
@@ -395,6 +398,9 @@ static bool cc32xx_vfs_dev_slfs_container_write(struct mgos_vfs_dev *dev,
        * invalidated. SL has to be reinitialized to e.g. configure WiFi.
        */
       dd->fh = -1;
+    } else if (r != size) {
+      LOG(LL_ERROR,
+          ("%p write %d @ %d -> %d", dev, (int) size, (int) offset, (int) r));
     }
   } while (dd->fh < 0);
   return (r == size);

@@ -903,8 +903,6 @@ s32_t spiffs_page_delete(
     spiffs *fs,
     spiffs_page_ix pix) {
   s32_t res;
-  spiffs_page_header hdr;
-  hdr.flags = 0xff & ~(SPIFFS_PH_FLAG_DELET | SPIFFS_PH_FLAG_USED);
   // mark deleted entry in source object lookup
   spiffs_obj_id d_obj_id = SPIFFS_OBJ_ID_DELETED;
   res = _spiffs_wr(fs, SPIFFS_OP_T_OBJ_LU | SPIFFS_OP_C_DELE,
@@ -918,11 +916,16 @@ s32_t spiffs_page_delete(
   fs->stats_p_allocated--;
 
   // mark deleted in source page
+  u8_t flags;
+  res = _spiffs_rd(fs, SPIFFS_OP_T_OBJ_DA | SPIFFS_OP_C_READ,
+      0, SPIFFS_PAGE_TO_PADDR(fs, pix) + offsetof(spiffs_page_header, flags),
+      sizeof(flags), &flags);
+  SPIFFS_CHECK_RES(res);
+  flags &= ~(SPIFFS_PH_FLAG_DELET | SPIFFS_PH_FLAG_USED);
   res = _spiffs_wr(fs, SPIFFS_OP_T_OBJ_DA | SPIFFS_OP_C_DELE,
       0,
       SPIFFS_PAGE_TO_PADDR(fs, pix) + offsetof(spiffs_page_header, flags),
-      sizeof(u8_t),
-      (u8_t *)&hdr.flags);
+      sizeof(flags), &flags);
 
   return res;
 }

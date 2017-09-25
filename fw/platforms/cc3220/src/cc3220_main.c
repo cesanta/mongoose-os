@@ -16,6 +16,7 @@
 #include "task.h"
 
 #include "common/cs_dbg.h"
+#include "common/str_util.h"
 
 #include "mgos_debug.h"
 #include "mgos_hal.h"
@@ -26,14 +27,23 @@
 
 #include "cc32xx_fs.h"
 #include "cc32xx_main.h"
-#include "cc32xx_vfs_dev_slfs_container.h"
 #include "cc32xx_vfs_fs_slfs.h"
 
+#include "cc3220_vfs_dev_flash.h"
+
 static bool cc3220_fs_init(const char *root_container_prefix) {
-  return cc32xx_vfs_dev_slfs_container_register_type() &&
+  return cc3220_vfs_dev_flash_register_type() &&
          cc32xx_vfs_fs_slfs_register_type() &&
          mgos_vfs_fs_spiffs_register_type() &&
-         cc32xx_fs_spiffs_container_mount("/", root_container_prefix) &&
+         mgos_vfs_mount(
+             "/", MGOS_DEV_TYPE_FLASH,
+             "{offset: " CS_STRINGIFY_MACRO(MGOS_FS_OFFSET) ", "
+             "size: " CS_STRINGIFY_MACRO(MGOS_FS_SIZE) ", "
+             "image: \"" MGOS_FS_IMG "\"}",
+             MGOS_VFS_FS_TYPE_SPIFFS,
+             "{bs: " CS_STRINGIFY_MACRO(MGOS_FS_BLOCK_SIZE) ", "
+             "ps: " CS_STRINGIFY_MACRO(MGOS_FS_PAGE_SIZE) ", "
+             "es: " CS_STRINGIFY_MACRO(MGOS_FS_ERASE_SIZE) "}") &&
          cc32xx_fs_slfs_mount("/slfs");
 }
 

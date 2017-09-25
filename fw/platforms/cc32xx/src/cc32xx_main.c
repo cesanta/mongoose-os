@@ -100,6 +100,8 @@ int cc32xx_init(void) {
   return 0;
 }
 
+extern int dump;
+
 static void cc32xx_main_task(void *arg) {
   struct mgos_event e;
   cc32xx_init_func_t init_func = (cc32xx_init_func_t) arg;
@@ -126,7 +128,7 @@ static void cc32xx_main_task(void *arg) {
   }
 
   mgos_wdt_set_feed_on_poll(true);
-
+  // dump = 1;
   while (1) {
     mongoose_poll(0);
     while (xQueueReceive(s_main_queue, &e, 10 /* tick */)) {

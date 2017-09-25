@@ -45,6 +45,7 @@ MGOS_DEBUG_UART = 0
 TOOLCHAIN ?= $(TI_COMPILER_PATH)
 APP_ORG = 0x20000000
 RAM_SIZE = 0x40000
+FLASH_SIZE = 0x100000
 APP_IMAGE_MAX_SIZE ?= 262144
 
 SDK_PATH ?=
@@ -82,11 +83,10 @@ override FW_DIR := $(abspath $(FW_DIR))
 override GEN_DIR := $(abspath $(GEN_DIR))
 
 FS_SIZE ?= 262144
+FS_OFFSET ?= $(shell echo $$(($(FLASH_SIZE) - $(FS_SIZE))))
 FS_BLOCK_SIZE ?= 4096
 FS_PAGE_SIZE ?= 256
-FS_ERASE_SIZE ?= 4096
-FS_META_SIZE = 64
-FS_IMAGE_SIZE = $(shell echo $$(($(FS_SIZE) + $(FS_META_SIZE))))
+FS_ERASE_SIZE ?= 2048
 
 MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
 
@@ -100,7 +100,13 @@ IPATH = $(APP_SOURCE_DIRS) $(MGOS_PATH) $(MGOS_SRC_PATH) $(MGOS_CC32XX_PATH)/src
 
 # Note: CC3220 has only 32 GPIO but our port uses pin-based numbering
 # and those go from 1 to 64.
-MGOS_CC3220_FEATURES ?= -DMGOS_NUM_GPIO=65 '-DUMM_ONFREE(ptr, size)=memset(ptr, 0xff, size)'
+MGOS_CC3220_FEATURES ?= -DMGOS_NUM_GPIO=65 '-DUMM_ONFREE(ptr, size)=memset(ptr, 0xff, size)' \
+                        -DMGOS_FS_OFFSET=$(FS_OFFSET) \
+                        -DMGOS_FS_SIZE=$(FS_SIZE) \
+                        -DMGOS_FS_BLOCK_SIZE=$(FS_BLOCK_SIZE) \
+                        -DMGOS_FS_PAGE_SIZE=$(FS_PAGE_SIZE) \
+                        -DMGOS_FS_ERASE_SIZE=$(FS_ERASE_SIZE) \
+                        -DMGOS_FS_IMG=\"$(notdir $(FS_IMG))\"
 
 MG_FEATURES ?= $(MG_FEATURES_TINY) \
                -DMG_LOCALS -DMG_ENABLE_SSL \
@@ -111,8 +117,6 @@ MG_FEATURES ?= $(MG_FEATURES_TINY) \
                -DCS_DISABLE_MD5 -DMG_EXT_MD5 \
                -DCS_DISABLE_SHA1 -DMG_EXT_SHA1 \
                -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5
-
-#               -DMG_FS_SLFS \
 
 MGOS_FEATURES ?= -DMGOS_VFS_DECLARE_LIBC_DIR_API \
                  -DMGOS_VFS_DEFINE_LIBC_DIR_API \
@@ -136,7 +140,6 @@ MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
 MG_BUILD_INFO_O = $(BUILD_DIR)/mg_build_info.c.o
 FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
 FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.c.o
-MK_FS_META_BIN = $(BUILD_DIR)/mkfsmeta
 
 GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 
@@ -201,7 +204,7 @@ MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3220_PATH)/src/*.c)) \
              mgos_vfs.c mgos_vfs_dev.c mgos_vfs_fs_spiffs.c \
              cc32xx_crypto.c cc32xx_exc.c cc32xx_exc_handler_top.asm cc32xx_fs.c cc32xx_gpio.c \
              cc32xx_hal.c cc32xx_libc.c cc32xx_main.c cc32xx_sl_spawn.c cc32xx_uart.c \
-             cc32xx_vfs.c cc32xx_vfs_dev_slfs_container.c cc32xx_vfs_fs_slfs.c \
+             cc32xx_vfs.c cc32xx_vfs_fs_slfs.c \
              $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C))
 
 IPATH += $(SPIFFS_PATH)
@@ -241,9 +244,7 @@ FW_PARTS = $(notdir $(CA_BUNDLE)):type=cabundle,src=$(CA_BUNDLE),sig=$(notdir $(
            /sys/mcuflashimg.bin:type=app,src=$(APP_BIN_SHA),falloc=$(APP_IMAGE_MAX_SIZE),sig_cert=$(notdir $(SIG_CERT)),sig=$(notdir $(APP_BIN_SHA_SIG)) \
            $(notdir $(SIG_CERT)):type=cert,src=$(SIG_CERT) \
            $(notdir $(APP_BIN_SHA_SIG)):type=sig,src=$(APP_BIN_SHA_SIG) \
-           spiffs.img.0.0:type=fs,falloc=$(FS_IMAGE_SIZE),src=$(FS_IMG),fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE) \
-           spiffs.img.0.1:type=slfile,falloc=$(FS_IMAGE_SIZE),fill=0xff,size=0 \
-           spiffs.img.1.0:type=slfile,falloc=$(FS_IMAGE_SIZE),fill=0xff,size=0 \
+           $(notdir $(FS_IMG)):type=fs,src=$(FS_IMG),fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE) \
            $(foreach f,$(SLFS_FILES), $(notdir $(f)):type=slfile,src=$(f))
 
 CC3220_SP_FILE ?= $(wildcard $(SDK_PATH)/tools/cc32xx_tools/servicepack-cc3x20/sp_*.?.bin)
@@ -263,9 +264,8 @@ include $(MGOS_PATH)/common/scripts/build_info.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
 include $(MGOS_PATH)/fw/src/sys_config.mk
 
-$(FS_IMG): $(APP_FS_DIRS) $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(FS_FILES) $(MK_FS_META_BIN)
+$(FS_IMG): $(APP_FS_DIRS) $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(FS_FILES)
 	$(call mkspiffs,$(FS_SIZE),$(FS_BLOCK_SIZE),$(FS_PAGE_SIZE),$(FS_ERASE_SIZE))
-	$(Q) $(MK_FS_META_BIN) $(FS_SIZE) $(FS_BLOCK_SIZE) $(FS_PAGE_SIZE) $(FS_ERASE_SIZE) >> $@
 
 OBJCOPY = arm-none-eabi-objcopy
 
@@ -333,10 +333,6 @@ $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MGOS_OBJS)
 
 $(MG_BUILD_INFO_C): $(MGOS_OBJS)
 	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
-
-$(MK_FS_META_BIN): $(MGOS_CC32XX_PATH)/tools/mkfsmeta.c
-	$(vecho) "GCC   $< -> $@"
-	$(Q) gcc -Wall -Werror -I$(MGOS_CC32XX_PATH)/src -o $@ $^
 
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)
