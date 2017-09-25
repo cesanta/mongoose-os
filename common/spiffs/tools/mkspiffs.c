@@ -57,7 +57,8 @@ bool copy(char *src, char *dst) {
   if (SPIFFS_write(&fs, sfd, (uint8_t *) buf, size) != size) {
     fprintf(stderr, "SPIFFS_write failed: %d\n", SPIFFS_errno(&fs));
     if (SPIFFS_errno(&fs) == SPIFFS_ERR_FULL) {
-      fprintf(stderr, "*** Out of space, tried to write %d bytes ***\n", (int) size);
+      fprintf(stderr, "*** Out of space, tried to write %d bytes ***\n",
+              (int) size);
     }
     goto spiffs_cleanup;
   }
@@ -93,37 +94,92 @@ cleanup:
   return result;
 }
 
+void show_usage(char *argv[], const char *err_msg) {
+  if (err_msg != NULL) fprintf(stderr, "Error: %s\r\n", err_msg);
+  fprintf(stderr,
+          "usage: %s [-s fs_size] [-b block_size] [-p page_size] [-e "
+          "erase_size] [-f image_file] [-u] <root_dir>\n",
+          argv[0]);
+  exit(1);
+}
+
 int main(int argc, char **argv) {
-  const char *root_dir;
+  int opt;
+  const char *root_dir = NULL;
+  const char *image_file = NULL;
   DIR *dir;
+  bool update = false;
+  int fs_size = -1, bs = FS_BLOCK_SIZE, ps = FS_PAGE_SIZE, es = FS_ERASE_SIZE;
 
-  if (argc < 3) {
-    fprintf(stderr, "usage: %s <size> <root_dir> [image_file]\n", argv[0]);
-    return 1;
+  while ((opt = getopt(argc, argv, "b:e:f:p:s:u")) != -1) {
+    switch (opt) {
+      case 'b': {
+        bs = (size_t) strtol(optarg, NULL, 0);
+        if (bs == 0) {
+          fprintf(stderr, "invalid fs block size '%s'\n", optarg);
+          return 1;
+        }
+        break;
+      }
+      case 'e': {
+        es = (size_t) strtol(optarg, NULL, 0);
+        if (es == 0) {
+          fprintf(stderr, "invalid fs erase size '%s'\n", optarg);
+          return 1;
+        }
+        break;
+      }
+      case 'f': {
+        image_file = optarg;
+        break;
+      }
+      case 'p': {
+        ps = (size_t) strtol(optarg, NULL, 0);
+        if (ps == 0) {
+          fprintf(stderr, "invalid fs page size '%s'\n", optarg);
+          return 1;
+        }
+        break;
+      }
+      case 's': {
+        fs_size = (size_t) strtol(optarg, NULL, 0);
+        if (fs_size == 0) {
+          fprintf(stderr, "invalid fs size '%s'\n", optarg);
+          return 1;
+        }
+        break;
+      }
+      case 'u': {
+        update = true;
+        break;
+      }
+    }
   }
 
-  image_size = (size_t) strtol(argv[1], NULL, 0);
-  if (image_size == 0) {
-    fprintf(stderr, "invalid size '%s'\n", argv[1]);
-    return 1;
+  if (update) {
+    if (image_file == NULL) show_usage(argv, "Image file is required with -u");
+    if (mem_spiffs_mount_file(image_file, bs, ps, es) != SPIFFS_OK) {
+      return 1;
+    }
+  } else {
+    if (fs_size == -1)
+      show_usage(argv, "-s is required when creating an image");
+    image = malloc(fs_size);
+    mem_spiffs_erase(NULL, 0, fs_size);
+    // Mount will fail but is required.
+    mem_spiffs_mount(fs_size, bs, ps, es);
+    if (SPIFFS_format(&fs) != SPIFFS_OK) {
+      fprintf(stderr, "SPIFFS_format failed: %d. wrong parameters?\n",
+              SPIFFS_errno(&fs));
+      return 1;
+    }
+    if (mem_spiffs_mount(fs_size, bs, ps, es) != SPIFFS_OK) {
+      fprintf(stderr, "SPIFFS_mount failed: %d\n", SPIFFS_errno(&fs));
+      return 1;
+    }
   }
 
-  root_dir = argv[2];
-
-  image = malloc(image_size);
-  if (image == NULL) {
-    fprintf(stderr, "cannot allocate %lu bytes\n", image_size);
-    return 1;
-  }
-
-  mem_spiffs_erase(NULL, 0, image_size);
-  mem_spiffs_mount();  // Will fail but is required.
-  SPIFFS_format(&fs);
-  if (mem_spiffs_mount() != SPIFFS_OK) {
-    fprintf(stderr, "SPIFFS_mount failed: %d\n", SPIFFS_errno(&fs));
-    return 1;
-  }
-
+  root_dir = argv[optind++];
   if ((dir = opendir(root_dir)) == NULL) {
     fprintf(stderr, "unable to open directory %s\n", root_dir);
     return 1;
@@ -137,20 +193,7 @@ int main(int argc, char **argv) {
   SPIFFS_info(&fs, &total, &used);
   fprintf(stderr,
           "     Image stats: size=%u, space: total=%u, used=%u, free=%u\n",
-          (unsigned int) image_size, total, used, total - used);
+          (unsigned int) fs_size, total, used, total - used);
 
-  FILE *out = stdout;
-  if (argc == 4) {
-    out = fopen(argv[3], "w");
-    if (out == NULL) {
-      fprintf(stderr, "failed to open %s for writing\n", argv[3]);
-      return 1;
-    }
-  }
-
-  fwrite(image, image_size, 1, out);
-
-  if (out != stdout) fclose(out);
-
-  return 0;
+  return mem_spiffs_dump(image_file) ? 0 : 2;
 }

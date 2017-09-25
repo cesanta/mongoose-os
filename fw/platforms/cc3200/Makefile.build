@@ -256,7 +256,7 @@ SYS_CONF_SCHEMA += $(MGOS_CC3200_PATH)/src/cc3200_sys_config.yaml
 $(BUILD_DIR)/miniz.o: CFLAGS += -DMINIZ_NO_STDIO
 
 $(FS_IMG): $(APP_FS_DIRS) $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(FS_FILES) $(MK_FS_META_BIN)
-	$(call mkspiffs,$(FS_SIZE))
+	$(call mkspiffs,$(FS_SIZE),$(FS_BLOCK_SIZE),$(FS_PAGE_SIZE),$(FS_ERASE_SIZE))
 	$(Q) $(MK_FS_META_BIN) $(FS_SIZE) $(FS_BLOCK_SIZE) $(FS_PAGE_SIZE) $(FS_ERASE_SIZE) >> $@
 
 $(FS_EMPTY_IMG): $(MK_FS_META_BIN)

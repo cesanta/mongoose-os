@@ -506,7 +506,7 @@ $(MG_BUILD_INFO_C): $(MGOS_OBJS)
 # -- Filesystem.
 
 $(FS_IMG): $(APP_FS_DIRS) $(FS_FILES) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
-	$(call mkspiffs,$(FS_SIZE))
+	$(call mkspiffs,$(FS_SIZE),$(FS_BLOCK_SIZE),$(FS_PAGE_SIZE),$(FS_ERASE_SIZE))
 
 #
 # Auxiliary targets.

@@ -6,56 +6,70 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
+#include <unistd.h>
 
 #include "mem_spiffs.h"
 
 static void show_usage(char *argv[]) {
-  fprintf(stderr, "usage: %s [-l] [-d extdir] <filename>\n", argv[0]);
+  fprintf(stderr, "usage: %s [-l] [-d extdir] [-v] <filename>\n", argv[0]);
   exit(1);
 }
 
 int main(int argc, char **argv) {
-  FILE *fp;
-  const char *filename = NULL;
-  int i;
+  int opt;
   int list = 0, vis = 0;
-  const char *extDir = ".";
+  const char *ext_dir = NULL;
 
-  for (i = 1; i < argc && argv[i][0] == '-'; i++) {
-    if (strcmp(argv[i], "-d") == 0 && i + 1 < argc) {
-      extDir = argv[i + 1];
-      i++;
-    } else if (strcmp(argv[i], "-v") == 0) {
-      vis = 1;
-    } else if (strcmp(argv[i], "-l") == 0) {
-      list = 1;
-    } else if (strcmp(argv[i], "-h") == 0) {
-      show_usage(argv);
+  int bs = FS_BLOCK_SIZE, ps = FS_PAGE_SIZE, es = FS_ERASE_SIZE;
+
+  while ((opt = getopt(argc, argv, "b:d:e:lp:v")) != -1) {
+    switch (opt) {
+      case 'b': {
+        bs = (size_t) strtol(optarg, NULL, 0);
+        if (bs == 0) {
+          fprintf(stderr, "invalid fs block size '%s'\n", optarg);
+          return 1;
+        }
+        break;
+      }
+      case 'd': {
+        ext_dir = optarg;
+        break;
+      }
+      case 'e': {
+        es = (size_t) strtol(optarg, NULL, 0);
+        if (es == 0) {
+          fprintf(stderr, "invalid fs erase size '%s'\n", optarg);
+          return 1;
+        }
+        break;
+      }
+      case 'l': {
+        list = 1;
+        break;
+      }
+      case 'p': {
+        ps = (size_t) strtol(optarg, NULL, 0);
+        if (ps == 0) {
+          fprintf(stderr, "invalid fs page size '%s'\n", optarg);
+          return 1;
+        }
+        break;
+      }
+      case 'v': {
+        vis = 1;
+        break;
+      }
     }
   }
 
-  if (argc - i < 1) {
+  if (argc - optind < 1) {
     show_usage(argv);
   }
 
-  filename = argv[i];
-  fp = fopen(filename, "r");
-  if (fp == NULL) {
-    fprintf(stderr, "unable to open %s, err: %d\n", filename, errno);
+  if (mem_spiffs_mount_file(argv[optind], bs, ps, es) != SPIFFS_OK) {
     return 1;
   }
-
-  fseek(fp, 0, SEEK_END);
-  image_size = ftell(fp);
-  fseek(fp, 0, SEEK_SET);
-
-  image = (char *) malloc(image_size);
-  if (fread(image, image_size, 1, fp) < 1) {
-    fprintf(stderr, "cannot read %s, err: %d\n", filename, errno);
-    return 1;
-  }
-
-  mem_spiffs_mount();
 
   if (vis) SPIFFS_vis(&fs);
 
@@ -66,14 +80,14 @@ int main(int argc, char **argv) {
 
     while (SPIFFS_readdir(&d, &de) != NULL) {
       if (list) {
-        printf("%s\n", de.name);
-      } else {
+        printf("%s %d\n", de.name, de.size);
+      } else if (ext_dir != NULL) {
         char target[1024];
         char *buf = NULL;
         FILE *out;
         spiffs_file in;
 
-        sprintf(target, "%s/%s", extDir, de.name);
+        sprintf(target, "%s/%s", ext_dir, de.name);
 
         fprintf(stderr, "extracting %s\n", de.name);
         out = fopen(target, "w");
@@ -107,7 +121,6 @@ int main(int argc, char **argv) {
   }
 
   free(image);
-  fclose(fp);
 
   return 0;
 }

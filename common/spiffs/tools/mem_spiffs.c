@@ -5,11 +5,13 @@
 
 #include "mem_spiffs.h"
 
+#include <stdio.h>
 #include <stdlib.h>
-#include <unistd.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include <unistd.h>
+
 #include "/usr/include/dirent.h"
 
 #include "common/cs_crc32.h"
@@ -20,11 +22,10 @@
 #define STRINGIFY2(a) #a
 
 spiffs fs;
-u8_t spiffs_work_buf[LOG_PAGE_SIZE * 2];
+u8_t *spiffs_work_buf;
 u8_t spiffs_fds[32 * 4];
 
 char *image; /* in memory flash image */
-size_t image_size;
 bool log_reads = false, log_writes = false, log_erases = false;
 int opr, opw, ope;
 int wfail = -1;
@@ -61,15 +62,18 @@ s32_t mem_spiffs_erase(spiffs *fs, u32_t addr, u32_t size) {
   return SPIFFS_OK;
 }
 
-int mem_spiffs_mount(void) {
+int mem_spiffs_mount(int fs_size, int bs, int ps, int es) {
   spiffs_config cfg;
+  memset(&cfg, 0, sizeof(cfg));
 
-  cfg.phys_size = image_size;
+  spiffs_work_buf = (u8_t *) calloc(2, ps);
+
+  cfg.phys_size = fs_size;
   cfg.phys_addr = 0;
 
-  cfg.phys_erase_block = FLASH_BLOCK_SIZE;
-  cfg.log_block_size = FLASH_BLOCK_SIZE;
-  cfg.log_page_size = LOG_PAGE_SIZE;
+  cfg.phys_erase_block = es;
+  cfg.log_block_size = bs;
+  cfg.log_page_size = ps;
 
   cfg.hal_read_f = mem_spiffs_read;
   cfg.hal_write_f = mem_spiffs_write;
@@ -79,18 +83,41 @@ int mem_spiffs_mount(void) {
                       sizeof(spiffs_fds), 0, 0, 0);
 }
 
-bool mem_spiffs_dump(const char *fname) {
-  FILE *out = fopen(fname, "w");
-  if (out == NULL) {
-    fprintf(stderr, "failed to open %s for writing\n", fname);
-    return false;
+int mem_spiffs_mount_file(const char *fname, int bs, int ps, int es) {
+  FILE *in = fopen(fname, "r");
+  if (in == NULL) {
+    fprintf(stderr, "failed to open %s\n", fname);
+    return -1;
   }
-  if (fwrite(image, image_size, 1, out) != 1) {
+  fseek(in, 0, SEEK_END);
+  int fs = ftell(in);
+  fseek(in, 0, SEEK_SET);
+  image = malloc(fs);
+  int nr = fread(image, fs, 1, in);
+  fclose(in);
+  if (nr != 1) {
+    fprintf(stderr, "Image %s exists but cannot be read\n", fname);
+    return -1;
+  }
+  fprintf(stderr, "Mounting SPIFFS from %s (fs %d bs %d ps %d es %d)\n", fname,
+          fs, bs, ps, es);
+  return mem_spiffs_mount(fs, bs, ps, es);
+}
+
+bool mem_spiffs_dump(const char *fname) {
+  FILE *out = stdout;
+  if (fname != NULL) {
+    out = fopen(fname, "w");
+    if (out == NULL) {
+      fprintf(stderr, "failed to open %s for writing\n", fname);
+      return false;
+    }
+  }
+  if (fwrite(image, fs.cfg.phys_size, 1, out) != 1) {
     fprintf(stderr, "write failed\n");
     return false;
   }
-  fclose(out);
-  fprintf(stderr, "== dumped fs to %s\n", fname);
+  if (out != stdout) fclose(out);
   return true;
 }
 
