@@ -233,6 +233,25 @@ int json_escape(struct json_out *out, const char *str, size_t str_len);
  */
 char *json_fread(const char *file_name);
 
+/*
+ * Update given JSON string `s,len` by changing the value at given `json_path`.
+ * The result is saved to `out`. If `json_fmt` == NULL, that deletes the key.
+ * If path is not present, missing keys are added. Array path without an
+ * index pushes a value to the end of an array.
+ * Return 1 if the string was changed, 0 otherwise.
+ *
+ * Example:  s is a JSON string { "a": 1, "b": [ 2 ] }
+ *   json_setf(s, len, out, ".a", "7");     // { "a": 7, "b": [ 2 ] }
+ *   json_setf(s, len, out, ".b", "7");     // { "a": 1, "b": 7 }
+ *   json_setf(s, len, out, ".b[]", "7");   // { "a": 1, "b": [ 2,7 ] }
+ *   json_setf(s, len, out, ".b", NULL);    // { "a": 1 }
+ */
+int json_setf(const char *s, int len, struct json_out *out,
+              const char *json_path, const char *json_fmt, ...);
+
+int json_vsetf(const char *s, int len, struct json_out *out,
+               const char *json_path, const char *json_fmt, va_list ap);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
