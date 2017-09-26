@@ -50,7 +50,6 @@ int esp32_get_boot_slot() {
 
 bool esp32_fs_init(void) {
   esp_vfs_t esp_vfs = {
-    .fd_offset = 0,
     .flags = ESP_VFS_FLAG_DEFAULT,
     /* ESP API uses void * as first argument, hence all the ugly casts. */
     .open = mgos_vfs_open,
