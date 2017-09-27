@@ -45,6 +45,18 @@ func GetFirmwareElfFilePath(buildDir string) string {
 	return filepath.Join(GetObjectDir(buildDir), "fw.elf")
 }
 
+func GetOrigLibArchiveFilePath(buildDir, platform string) string {
+	if platform == "esp32" {
+		return filepath.Join(GetObjectDir(buildDir), "moslib", "libmoslib.a")
+	} else {
+		return filepath.Join(GetObjectDir(buildDir), "lib.a")
+	}
+}
+
+func GetLibArchiveFilePath(buildDir string) string {
+	return filepath.Join(buildDir, "lib.a")
+}
+
 func GetFirmwareZipFilePath(buildDir string) string {
 	return filepath.Join(buildDir, "fw.zip")
 }

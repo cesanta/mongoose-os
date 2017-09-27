@@ -31,9 +31,6 @@ FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.o
 
 NM = xtensa-esp32-elf-nm
 
-COMPONENT_EXTRA_INCLUDES = $(MGOS_PATH) $(MGOS_SRC_PATH) $(MGOS_ESP_PATH)/include \
-                           $(SPIFFS_PATH) $(GEN_DIR) $(APP_SOURCE_DIRS)
-
 MGOS_SRCS += mgos_config.c mgos_dlsym.c mgos_gpio.c mgos_hooks.c mgos_init.c \
              mgos_mmap_esp.c mgos_mongoose.c \
              mgos_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
@@ -82,7 +79,6 @@ APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
 MGOS_OBJS = $(addsuffix .o,$(basename $(MGOS_SRCS))) esp32_nsleep100.o
 APP_OBJS = $(addsuffix .o,$(basename $(APP_SRCS)))
 BUILD_INFO_OBJS = $(addsuffix .o,$(basename $(notdir $(BUILD_INFO_C)) $(notdir $(MG_BUILD_INFO_C))))
-COMPONENT_OBJS = $(MGOS_OBJS) $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_OBJS)
 
 C_CXX_CFLAGS += -DMGOS_APP=\"$(APP)\" -DFW_ARCHITECTURE=$(APP_PLATFORM) \
                 -DIRAM='__attribute__((section(".iram1")))' \
@@ -102,9 +98,6 @@ C_CXX_CFLAGS += -DMGOS_APP=\"$(APP)\" -DFW_ARCHITECTURE=$(APP_PLATFORM) \
 
 CFLAGS += $(C_CXX_CFLAGS)
 CXXFLAGS += -std=c++11 -fno-exceptions $(C_CXX_CFLAGS)
-COMPONENT_EXTRA_INCLUDES += $(IPATH)
-
-COMPONENT_ADD_LDFLAGS := $(APP_BIN_LIB_FILES) -Wl,--whole-archive -lsrc -Wl,--no-whole-archive
 
 $(BUILD_INFO_C): $(MGOS_OBJS) $(APP_OBJS)
 	$(call gen_build_info,$@,,$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
@@ -125,6 +118,10 @@ $(FFI_EXPORTS_O): $(FFI_EXPORTS_C)
 $(FFI_EXPORTS_C): $(APP_FS_FILES)
 	$(call gen_ffi_exports,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))
 
+./%.o: %.S
+	$(summary) "CC $@"
+	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
+
 ./%.o: %.c $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
 	$(summary) "CC $@"
 	$(CC) $(CFLAGS) $(CPPFLAGS) \
@@ -138,3 +135,6 @@ $(FFI_EXPORTS_C): $(APP_FS_FILES)
 	  $(addprefix -I ,$(COMPONENT_INCLUDES)) \
 	  $(addprefix -I ,$(COMPONENT_EXTRA_INCLUDES)) \
 	  -c $< -o $@
+
+COMPONENT_EXTRA_INCLUDES = $(MGOS_ESP_SRC_PATH) $(MGOS_PATH) $(MGOS_SRC_PATH) $(MGOS_ESP_PATH)/include \
+                           $(SPIFFS_PATH) $(GEN_DIR) $(APP_SOURCE_DIRS) $(IPATH)

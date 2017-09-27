@@ -29,6 +29,8 @@ APP_BIN_LIBS ?=
 APP_MODULES ?=
 APP_FS_PATH ?=
 
+BUILD_LIB_NAME ?= lib.a
+
 # For backward compatibility, convert old APP_MODULES and APP_FS_PATH into
 # new APP_SOURCES and APP_FS_FILES
 ifneq "$(APP_MODULES)" ""
@@ -190,7 +192,7 @@ FEATURES = $(MG_FEATURES) $(MGOS_FEATURES) $(MGOS_ESP_FEATURES) \
 
 MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5
 
-.PHONY: all clean
+.PHONY: all clean build-lib
 
 MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" \
               -DMGOS_MAX_NUM_UARTS=2 \
@@ -502,6 +504,12 @@ $(MG_BUILD_INFO_C): $(MGOS_OBJS)
 
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)
+
+# Build lib.a
+
+$(BUILD_DIR)/$(BUILD_LIB_NAME): $(BUILD_DIR) $(APP_OBJS)
+	$(vecho) "AR    $@"
+	$(AR) cru $@ $(APP_OBJS)
 
 # -- Filesystem.
 

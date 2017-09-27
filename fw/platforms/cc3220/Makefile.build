@@ -26,6 +26,8 @@ APP_BIN_LIBS ?=
 APP_MODULES ?=
 APP_FS_PATH ?=
 
+BUILD_LIB_NAME ?= lib.a
+
 # For backward compatibility, convert old APP_MODULES and APP_FS_PATH into
 # new APP_SOURCES and APP_FS_FILES
 ifneq "$(APP_MODULES)" ""
@@ -333,6 +335,11 @@ $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MGOS_OBJS)
 
 $(MG_BUILD_INFO_C): $(MGOS_OBJS)
 	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
+
+# Build lib.a
+
+$(BUILD_DIR)/$(BUILD_LIB_NAME): $(BUILD_DIR) $(APP_OBJS)
+	$(call ar,$(APP_OBJS))
 
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)

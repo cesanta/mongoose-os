@@ -144,7 +144,10 @@ SDK_COMPONENTS = app_trace app_update bootloader bootloader_support bt driver es
                  ethernet expat freertos heap log lwip micro-ecc newlib \
                  nvs_flash partition_table soc spi_flash tcpip_adapter vfs \
                  wpa_supplicant xtensa-debug-module
-COMPONENTS = $(SDK_COMPONENTS) src spiffs cryptoauthlib cs_mbedtls $(ESP_IDF_EXTRA_COMPONENTS)
+
+MGOS_MAIN_COMPONENT ?= mosapp
+
+COMPONENTS = $(SDK_COMPONENTS) $(MGOS_MAIN_COMPONENT) spiffs cryptoauthlib cs_mbedtls $(ESP_IDF_EXTRA_COMPONENTS)
 
 ESPFLASHMODE = qio
 ESPFLASHSIZE = 4MB
