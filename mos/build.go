@@ -1128,7 +1128,15 @@ func readManifestFile(
 	}
 
 	if manifest.MongooseOsVersion == "" {
-		manifest.MongooseOsVersion = "master"
+		manifest.MongooseOsVersion = wrapMosExpr(interpreter.GetMVarNameMosVersion())
+	}
+
+	if manifest.LibsVersion == "" {
+		manifest.LibsVersion = wrapMosExpr(interpreter.GetMVarNameMosVersion())
+	}
+
+	if manifest.ModulesVersion == "" {
+		manifest.ModulesVersion = wrapMosExpr(interpreter.GetMVarNameMosVersion())
 	}
 
 	if manifest.Platform == "" && manifest.ArchOld != "" {
@@ -2501,4 +2509,8 @@ func getMosRepoDir(ctx context.Context, devConn *dev.DevConn) error {
 
 	fmt.Println(mosDirEffectiveAbs)
 	return nil
+}
+
+func wrapMosExpr(s string) string {
+	return fmt.Sprintf("${%s}", s)
 }
