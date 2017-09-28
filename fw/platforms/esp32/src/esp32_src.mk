@@ -38,7 +38,7 @@ MGOS_SRCS += mgos_config.c mgos_dlsym.c mgos_gpio.c mgos_hooks.c mgos_init.c \
              mgos_vfs.c mgos_vfs_dev.c mgos_vfs_fs_spiffs.c \
              esp32_crypto.c esp32_debug.c esp32_exc.c esp32_fs.c esp32_fs_crypt.c \
              esp32_vfs_dev_partition.c \
-             esp32_gpio.c esp32_hal.c \
+             esp32_gpio.c esp32_hal.c esp32_hw_timer.c \
              esp32_main.c esp32_mdns.c esp32_uart.c
 
 include $(MGOS_PATH)/fw/common.mk

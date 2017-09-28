@@ -133,6 +133,7 @@ MGOS_SRCS += esp_config.c \
              esp_gpio.c \
              esp_hal.c \
              esp_heap_trace.c \
+             esp_hw_timer.c \
              esp_hw_wdt.c \
              esp_libc.c \
              esp_main.c \

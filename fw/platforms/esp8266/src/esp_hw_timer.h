@@ -1,0 +1,19 @@
+/*
+ * Copyright (c) 2014-2017 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#ifndef CS_FW_PLATFORMS_ESP8266_SRC_ESP_HW_TIMER_H_
+#define CS_FW_PLATFORMS_ESP8266_SRC_ESP_HW_TIMER_H_
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
+#define MGOS_ESP8266_HW_TIMER_NMI 0x10000
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
+
+#endif /* CS_FW_PLATFORMS_ESP8266_SRC_ESP_HW_TIMER_H_ */

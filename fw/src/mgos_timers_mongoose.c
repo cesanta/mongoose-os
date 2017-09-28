@@ -12,6 +12,12 @@
 #include <mgos_mongoose.h>
 #include <mgos_sntp.h>
 
+#define MGOS_SW_TIMER_MASK 0xffff0000
+
+#ifndef IRAM
+#define IRAM
+#endif
+
 struct timer_info {
   int interval_ms;
   double next_invocation;
@@ -98,8 +104,7 @@ mgos_timer_id mgos_set_timer(int msecs, int repeat, timer_callback cb,
   return (mgos_timer_id) ti;
 }
 
-void mgos_clear_timer(mgos_timer_id id) {
-  if (id == MGOS_INVALID_TIMER_ID) return;
+static void mgos_clear_sw_timer(mgos_timer_id id) {
   struct timer_info *ti = (struct timer_info *) id, *ti2;
   mgos_lock();
   LIST_FOREACH(ti2, &s_timer_data->timers, entries) {
@@ -113,6 +118,18 @@ void mgos_clear_timer(mgos_timer_id id) {
   }
   mgos_unlock();
   free(ti);
+}
+
+void mgos_clear_hw_timer(mgos_timer_id id);
+
+IRAM void mgos_clear_timer(mgos_timer_id id) {
+  if (id == MGOS_INVALID_TIMER_ID) {
+    return;
+  } else if (id & MGOS_SW_TIMER_MASK) {
+    mgos_clear_sw_timer(id);
+  } else {
+    mgos_clear_hw_timer(id);
+  }
 }
 
 #if MGOS_ENABLE_SNTP
