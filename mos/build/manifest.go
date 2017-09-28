@@ -51,6 +51,7 @@ type FWAppManifest struct {
 	Description       string             `yaml:"description" json:"description"`
 	MongooseOsVersion string             `yaml:"mongoose_os_version" json:"mongoose_os_version"`
 	Sources           []string           `yaml:"sources" json:"sources"`
+	Includes          []string           `yaml:"includes" json:"includes"`
 	Filesystem        []string           `yaml:"filesystem" json:"filesystem"`
 	BinaryLibs        []string           `yaml:"binary_libs" json:"binary_libs"`
 	ExtraFiles        []string           `yaml:"extra_files" json:"extra_files"`

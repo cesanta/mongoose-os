@@ -407,6 +407,11 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		return errors.Trace(err)
 	}
 
+	appIncludes, err := expandVarsSlice(interp, manifest.Includes)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
 	appFSFiles, err := expandVarsSlice(interp, manifest.Filesystem)
 	if err != nil {
 		return errors.Trace(err)
@@ -418,7 +423,6 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	}
 	// }}}
 
-	appSourceDirs := []string{}
 	appFSDirs := []string{}
 	appBinLibsDirs := []string{}
 
@@ -474,13 +478,18 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 
 	// Makefile expects globs, not dir names, so we convert source and filesystem
 	// dirs to the appropriate globs. Non-dir items will stay intact.
-	appSources, appSourceDirs, err = globify(appSources, []string{"*.c", "*.cpp"})
-	if err != nil {
-		return errors.Trace(err)
+	{
+		appSourceDirs := []string{}
+		appSources, appSourceDirs, err = globify(appSources, []string{"*.c", "*.cpp"})
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		appIncludes = append(appIncludes, appSourceDirs...)
 	}
 
 	// When building a lib, we need to build only sources of the lib itself and
-	// not its dependencies. But appSourceDirs need to include all deps' dirs
+	// not its dependencies. But appIncludes need to include all deps' dirs
 	// since they are used as include paths.
 	if manifest.Type == build.AppTypeLib {
 		manifestOrig, _, err := readManifest(appDir, bParams, interp)
@@ -510,7 +519,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	}
 
 	freportf(logWriter, "Sources: %v", appSources)
-	freportf(logWriter, "Source dirs: %v", appSourceDirs)
+	freportf(logWriter, "Include dirs: %v", appIncludes)
 	if len(appBinLibs) > 0 {
 		freportf(logWriter, "Binary libs: %v", appBinLibs)
 	}
@@ -533,7 +542,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		"APP":            appName,
 		"APP_VERSION":    manifest.Version,
 		"APP_SOURCES":    strings.Join(getPathsForDocker(appSources), " "),
-		"APP_INCLUDES":   strings.Join(getPathsForDocker(appSourceDirs), " "),
+		"APP_INCLUDES":   strings.Join(getPathsForDocker(appIncludes), " "),
 		"APP_FS_FILES":   strings.Join(getPathsForDocker(appFSFiles), " "),
 		"APP_BIN_LIBS":   strings.Join(getPathsForDocker(appBinLibs), " "),
 		"FFI_SYMBOLS":    strings.Join(ffiSymbols, " "),
@@ -607,7 +616,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		mp.addMountPoint(buildDirAbs, getPathForDocker(buildDirAbs))
 
 		// Mount all dirs with source files
-		for _, d := range appSourceDirs {
+		for _, d := range appIncludes {
 			mp.addMountPoint(d, getPathForDocker(d))
 		}
 
@@ -1232,6 +1241,10 @@ func buildRemote(bParams *buildParams) error {
 		return errors.Trace(err)
 	}
 
+	if err := copyExternalCodeAll(&manifest.Includes, appDir, tmpCodeDir); err != nil {
+		return errors.Trace(err)
+	}
+
 	if err := copyExternalCodeAll(&manifest.Filesystem, appDir, tmpCodeDir); err != nil {
 		return errors.Trace(err)
 	}
@@ -1286,6 +1299,9 @@ func buildRemote(bParams *buildParams) error {
 		".":                               true,
 	}
 	for _, v := range manifest.Sources {
+		whitelist[ourfilepath.GetFirstPathComponent(v)] = true
+	}
+	for _, v := range manifest.Includes {
 		whitelist[ourfilepath.GetFirstPathComponent(v)] = true
 	}
 	for _, v := range manifest.Filesystem {
@@ -2058,6 +2074,11 @@ func extendManifest(
 		prependPaths(m1.Sources, m1Dir),
 		prependPaths(m2.Sources, m2Dir)...,
 	)
+	// Extend include paths
+	mMain.Includes = append(
+		prependPaths(m1.Includes, m1Dir),
+		prependPaths(m2.Includes, m2Dir)...,
+	)
 	// Extend filesystem
 	mMain.Filesystem = append(
 		prependPaths(m1.Filesystem, m1Dir),
@@ -2125,6 +2146,7 @@ func prependCondPaths(conds []build.ManifestCond, dir string) []build.ManifestCo
 		if c.Apply != nil {
 			subManifest := *c.Apply
 			subManifest.Sources = prependPaths(subManifest.Sources, dir)
+			subManifest.Includes = prependPaths(subManifest.Includes, dir)
 			subManifest.Filesystem = prependPaths(subManifest.Filesystem, dir)
 			subManifest.BinaryLibs = prependPaths(subManifest.BinaryLibs, dir)
 			c.Apply = &subManifest
@@ -2244,6 +2266,11 @@ func expandManifestAllLibsPaths(manifest *build.FWAppManifest) error {
 	var err error
 
 	manifest.Sources, err = expandAllLibsPaths(manifest.Sources, manifest.LibsHandled)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	manifest.Includes, err = expandAllLibsPaths(manifest.Includes, manifest.LibsHandled)
 	if err != nil {
 		return errors.Trace(err)
 	}
