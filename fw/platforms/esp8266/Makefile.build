@@ -20,6 +20,8 @@ APP_EXTRA_SRCS ?=
 FFI_SYMBOLS ?=
 # List of app source files, globs are supported
 APP_SOURCES ?=
+# List of include dirs, in addition to dirs from APP_SOURCES
+APP_INCLUDES ?=
 # List of app files to put into the device's filesystem, globs are supported
 APP_FS_FILES ?=
 # List of static libs (.a) which are parts of the app
@@ -154,7 +156,7 @@ VPATH = $(APP_SOURCE_DIRS) $(MGOS_SRC_PATH) $(MONGOOSE_PATH) \
         $(BOOTLOADER_PATH)/rboot/appcode $(COMMON_PATH) $(COMMON_PATH)/mg_rpc \
         $(MGOS_ESP_SRC_PATH) $(SPIFFS_PATH) $(COMMON_ESP8266_PATH) \
         $(COMMON_ESP_PATH)
-IPATH = $(APP_SOURCE_DIRS) $(MGOS_PATH) $(MGOS_SRC_PATH) $(MGOS_ESP8266_PATH)/include $(SPIFFS_PATH) \
+IPATH = $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) $(MGOS_PATH) $(MGOS_SRC_PATH) $(MGOS_ESP8266_PATH)/include $(SPIFFS_PATH) \
         $(BOOTLOADER_PATH)/rboot $(SDK_PATH)/include/lwip \
         $(SDK_PATH) $(SDK_PATH)/include \
         $(COMMON_ESP8266_PATH) $(COMMON_ESP_PATH) \

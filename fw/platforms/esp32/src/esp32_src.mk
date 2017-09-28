@@ -8,6 +8,7 @@ override APP_FS_FILES = $(_APP_FS_FILES)
 override APP_BIN_LIBS = $(_APP_BIN_LIBS)
 override FS_FILES = $(_FS_FILES)
 override APP_SOURCES = $(_APP_SOURCES)
+override APP_INCLUDES = $(_APP_INCLUDES)
 override BUILD_DIR = $(_BUILD_DIR)
 override FW_DIR := $(_FW_DIR)
 override GEN_DIR := $(_GEN_DIR)
@@ -137,4 +138,4 @@ $(FFI_EXPORTS_C): $(APP_FS_FILES)
 	  -c $< -o $@
 
 COMPONENT_EXTRA_INCLUDES = $(MGOS_ESP_SRC_PATH) $(MGOS_PATH) $(MGOS_SRC_PATH) $(MGOS_ESP_PATH)/include \
-                           $(SPIFFS_PATH) $(GEN_DIR) $(APP_SOURCE_DIRS) $(IPATH)
+                           $(SPIFFS_PATH) $(GEN_DIR) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) $(IPATH)

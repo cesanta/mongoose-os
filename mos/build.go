@@ -326,7 +326,6 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		if manifest.Platform == "esp32" {
 			*buildCmdExtra = append(*buildCmdExtra, "MGOS_MAIN_COMPONENT=moslib")
 		}
-		//return errors.Errorf("can't build a library; only apps can be built. Libraries can be only used as dependencies for apps or for other libs")
 	default:
 		return errors.Errorf("invalid project type: %q", manifest.Type)
 	}
@@ -403,31 +402,19 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	// }}}
 
 	// Get sources and filesystem files from the manifest, expanding expressions {{{
-	appSources := []string{}
-	for _, s := range manifest.Sources {
-		s, err = expandVars(interp, s)
-		if err != nil {
-			return errors.Trace(err)
-		}
-		appSources = append(appSources, s)
+	appSources, err := expandVarsSlice(interp, manifest.Sources)
+	if err != nil {
+		return errors.Trace(err)
 	}
 
-	appFSFiles := []string{}
-	for _, s := range manifest.Filesystem {
-		s, err = expandVars(interp, s)
-		if err != nil {
-			return errors.Trace(err)
-		}
-		appFSFiles = append(appFSFiles, s)
+	appFSFiles, err := expandVarsSlice(interp, manifest.Filesystem)
+	if err != nil {
+		return errors.Trace(err)
 	}
 
-	appBinLibs := []string{}
-	for _, s := range manifest.BinaryLibs {
-		s, err = expandVars(interp, s)
-		if err != nil {
-			return errors.Trace(err)
-		}
-		appBinLibs = append(appBinLibs, s)
+	appBinLibs, err := expandVarsSlice(interp, manifest.BinaryLibs)
+	if err != nil {
+		return errors.Trace(err)
 	}
 	// }}}
 
@@ -492,6 +479,26 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		return errors.Trace(err)
 	}
 
+	// When building a lib, we need to build only sources of the lib itself and
+	// not its dependencies. But appSourceDirs need to include all deps' dirs
+	// since they are used as include paths.
+	if manifest.Type == build.AppTypeLib {
+		manifestOrig, _, err := readManifest(appDir, bParams, interp)
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		appSources, err = expandVarsSlice(interp, manifestOrig.Sources)
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		appSources, _, err = globify(appSources, []string{"*.c", "*.cpp"})
+		if err != nil {
+			return errors.Trace(err)
+		}
+	}
+
 	appFSFiles, appFSDirs, err = globify(appFSFiles, []string{"*"})
 	if err != nil {
 		return errors.Trace(err)
@@ -503,6 +510,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	}
 
 	freportf(logWriter, "Sources: %v", appSources)
+	freportf(logWriter, "Source dirs: %v", appSourceDirs)
 	if len(appBinLibs) > 0 {
 		freportf(logWriter, "Binary libs: %v", appBinLibs)
 	}
@@ -525,6 +533,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		"APP":            appName,
 		"APP_VERSION":    manifest.Version,
 		"APP_SOURCES":    strings.Join(getPathsForDocker(appSources), " "),
+		"APP_INCLUDES":   strings.Join(getPathsForDocker(appSourceDirs), " "),
 		"APP_FS_FILES":   strings.Join(getPathsForDocker(appFSFiles), " "),
 		"APP_BIN_LIBS":   strings.Join(getPathsForDocker(appBinLibs), " "),
 		"FFI_SYMBOLS":    strings.Join(ffiSymbols, " "),
@@ -2400,6 +2409,18 @@ func expandVars(interp *interpreter.MosInterpreter, s string) (string, error) {
 		return val
 	})
 	return result, errRet
+}
+
+func expandVarsSlice(interp *interpreter.MosInterpreter, slice []string) ([]string, error) {
+	ret := []string{}
+	for _, s := range slice {
+		s, err := expandVars(interp, s)
+		if err != nil {
+			return nil, errors.Trace(err)
+		}
+		ret = append(ret, s)
+	}
+	return ret, nil
 }
 
 func newMosVars() *interpreter.MosVars {
