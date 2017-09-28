@@ -46,8 +46,9 @@ static IRAM NOINSTR void hw_timer_isr(void) {
   }
 }
 
-mgos_timer_id mgos_set_hw_timer(int usecs, int flags, timer_callback cb,
-                                void *arg) {
+/* Note: In IRAM to be able to set hw timer from ISR. */
+IRAM NOINSTR mgos_timer_id
+mgos_set_hw_timer(int usecs, int flags, timer_callback cb, void *arg) {
   struct timer_info *ti = &s_ti;
   if (ti->cb != NULL) {
     /* Timer is already configured and running. */
