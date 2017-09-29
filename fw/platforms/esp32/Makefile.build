@@ -144,10 +144,10 @@ COMPONENT_DIRS = $(IDF_PATH)/components/ \
                  $(COMMON_PATH) \
                  /opt
 # Explicitly specify SDK components to build.
-SDK_COMPONENTS = app_trace app_update bootloader bootloader_support bt driver esp32 esptool_py \
-                 ethernet expat freertos heap log lwip micro-ecc newlib \
-                 nvs_flash partition_table soc spi_flash tcpip_adapter vfs \
-                 wpa_supplicant xtensa-debug-module
+SDK_COMPONENTS = app_trace app_update bootloader bootloader_support bt driver \
+                 esp_adc_cal esp32 esptool_py ethernet expat freertos heap \
+                 log lwip micro-ecc newlib nvs_flash partition_table soc \
+                 spi_flash tcpip_adapter vfs wpa_supplicant xtensa-debug-module
 
 MGOS_MAIN_COMPONENT ?= mosapp
 
