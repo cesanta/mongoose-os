@@ -80,3 +80,7 @@ func GetDepsInitCFilePath(buildDir string) string {
 func GetConfSchemaFilePath(buildDir string) string {
 	return filepath.Join(GetGeneratedFilesDir(buildDir), "mos_conf_schema.yml")
 }
+
+func GetBinaryLibFilePath(libDir, name, platform string) string {
+	return filepath.Join(libDir, "lib", platform, fmt.Sprintf("lib%s.a", name))
+}

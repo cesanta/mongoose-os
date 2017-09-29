@@ -62,6 +62,8 @@ var (
 	buildParalellism = flag.Int("build-parallelism", 0, "build parallelism. default is to use number of CPUs.")
 	saveBuildStat    = flag.Bool("save-build-stat", true, "save build statistics")
 
+	preferPrebuiltLibs = flag.Bool("prefer-prebuilt-libs", true, "if both sources and prebuilt binary of a lib exists, use the binary")
+
 	buildVarsSlice []string
 
 	noLibsUpdate = flag.Bool("no-libs-update", false, "if true, never try to pull existing libs (treat existing default locations as if they were given in --lib)")
@@ -1954,6 +1956,18 @@ func expandManifestLibsAndConds(
 			lcur := allManifests[k]
 
 			curManifest := *lcur.Manifest
+
+			// Check if binary version of the lib exists. If so, use it instead
+			// of sources.
+			bl := moscommon.GetBinaryLibFilePath(lcur.Path, lcur.Name, manifest.Platform)
+			if _, err := os.Stat(bl); err == nil {
+				// Prebuilt lib exists: use it if either *preferPrebuiltLibs is true
+				// (so that we prefer binary) or if there are no sources.
+				if len(curManifest.Sources) == 0 || *preferPrebuiltLibs {
+					curManifest.Sources = []string{}
+					curManifest.BinaryLibs = append(curManifest.BinaryLibs, bl)
+				}
+			}
 
 			if err := extendManifest(
 				&curManifest, commonManifest, &curManifest, "", lcur.Path, interp,
