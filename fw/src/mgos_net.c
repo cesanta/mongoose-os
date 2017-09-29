@@ -41,7 +41,6 @@ static inline void net_unlock(void) {
 static const char *get_if_name(enum mgos_net_if_type if_type, int if_instance) {
   const char *name = "";
   switch (if_type) {
-#ifdef MGOS_HAVE_WIFI
     case MGOS_NET_IF_TYPE_WIFI: {
       switch (if_instance) {
         case 0: {
@@ -55,13 +54,10 @@ static const char *get_if_name(enum mgos_net_if_type if_type, int if_instance) {
       }
       break;
     }
-#endif
-#ifdef MGOS_HAVE_ETHERNET
     case MGOS_NET_IF_TYPE_ETHERNET: {
       name = "ETH";
       break;
     }
-#endif
     case MGOS_NET_IF_MAX: {
       break;
     }
@@ -139,15 +135,17 @@ void mgos_net_add_event_handler(mgos_net_event_handler_t eh, void *arg) {
 bool mgos_net_get_ip_info(enum mgos_net_if_type if_type, int if_instance,
                           struct mgos_net_ip_info *ip_info) {
   switch (if_type) {
+    case MGOS_NET_IF_TYPE_WIFI:
 #ifdef MGOS_HAVE_WIFI
-    case MGOS_NET_IF_TYPE_WIFI: {
       return mgos_wifi_dev_get_ip_info(if_instance, ip_info);
-    }
+#else
+      return false;
 #endif
+    case MGOS_NET_IF_TYPE_ETHERNET:
 #ifdef MGOS_HAVE_ETHERNET
-    case MGOS_NET_IF_TYPE_ETHERNET: {
       return mgos_eth_dev_get_ip_info(if_instance, ip_info);
-    }
+#else
+      return false;
 #endif
     case MGOS_NET_IF_MAX: {
       (void) if_type;
