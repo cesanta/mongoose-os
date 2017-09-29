@@ -158,7 +158,7 @@ MGOS_SRCS = mgos_gpio.c \
             mgos_hooks.c \
             mgos_init.c \
             mgos_mongoose.c \
-            mgos_timers_mongoose.c \
+            mgos_hw_timers.c mgos_timers.c \
             mgos_config.c mgos_sys_config.c \
             mgos_dlsym.c \
             mgos_vfs.c mgos_vfs_dev.c mgos_vfs_fs_spiffs.c \
@@ -193,7 +193,7 @@ SDK_CFLAGS = -DTARGET_IS_CC3200 -DUSE_FREERTOS
 
 MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3200_PATH)/src/*.c)) \
              cc32xx_crypto.c cc32xx_exc.c cc32xx_fs.c cc32xx_gpio.c cc32xx_hal.c \
-             cc32xx_hw_timer.c \
+             cc32xx_hw_timers.c \
              cc32xx_libc.c cc32xx_main.c cc32xx_sl_spawn.c cc32xx_uart.c \
              cc32xx_vfs.c cc32xx_vfs_dev_slfs_container.c cc32xx_vfs_fs_slfs.c
 APP_SRCS = $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)

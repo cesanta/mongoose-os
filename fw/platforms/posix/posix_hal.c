@@ -152,3 +152,8 @@ bool mgos_eth_dev_get_ip_info(int if_instance,
 void mgos_clear_hw_timer(int id) {
   (void) id;
 }
+
+bool mgos_hw_timers_init(void *ti) {
+  (void) ti;
+  return true;
+}

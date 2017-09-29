@@ -10,7 +10,11 @@
 extern "C" {
 #endif /* __cplusplus */
 
+#define MGOS_NUM_HW_TIMERS 1
+
 #define MGOS_ESP8266_HW_TIMER_NMI 0x10000
+
+struct mgos_hw_timer_dev_data {};
 
 #ifdef __cplusplus
 }

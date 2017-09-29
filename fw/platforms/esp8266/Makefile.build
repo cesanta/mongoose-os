@@ -110,8 +110,9 @@ MGOS_SRCS = cs_file.c cs_rbuf.c \
             mgos_dlsym.c \
             mgos_gpio.c \
             mgos_hooks.c \
+            mgos_hw_timers.c \
             mgos_init.c \
-            mgos_timers_mongoose.c \
+            mgos_timers.c \
             mgos_mmap_esp.c \
             mgos_mongoose.c \
             mgos_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
@@ -135,7 +136,7 @@ MGOS_SRCS += esp_config.c \
              esp_gpio.c \
              esp_hal.c \
              esp_heap_trace.c \
-             esp_hw_timer.c \
+             esp_hw_timers.c \
              esp_hw_wdt.c \
              esp_libc.c \
              esp_main.c \

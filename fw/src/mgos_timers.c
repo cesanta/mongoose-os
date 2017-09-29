@@ -145,6 +145,8 @@ static void mgos_time_change_cb(void *arg, double delta) {
 }
 #endif
 
+enum mgos_init_result mgos_hw_timers_init(void);
+
 enum mgos_init_result mgos_timers_init(void) {
   struct timer_data *td = (struct timer_data *) calloc(1, sizeof(*td));
   struct mg_add_sock_opts opts;
@@ -158,7 +160,7 @@ enum mgos_init_result mgos_timers_init(void) {
 #if MGOS_ENABLE_SNTP
   mgos_sntp_add_time_change_cb(mgos_time_change_cb, td);
 #endif
-  return MGOS_INIT_OK;
+  return mgos_hw_timers_init();
 }
 
 double mgos_uptime(void) {
