@@ -33,10 +33,9 @@ IRAM bool mgos_hw_timers_dev_set(struct mgos_hw_timer_info *ti, int usecs,
   }
   timer_set_counter_value(tgn, tn, 0);
   timer_set_alarm_value(tgn, tn, usecs);
-  /* Note: ESP_INTR_FLAG_IRAM is not specified, so there's no requirement to pin
-   * all the functions used in the ISR to IRAM. This may cause update stalls
-   * during flash read/write operations, but is safe. */
-  int intr_flags = (flags & MGOS_ESP32_HW_TIMER_IRAM ? ESP_INTR_FLAG_IRAM : 0);
+  int intr_flags = 0;
+  if (flags & MGOS_ESP32_HW_TIMER_NMI) intr_flags |= ESP_INTR_FLAG_NMI;
+  if (flags & MGOS_ESP32_HW_TIMER_IRAM) intr_flags |= ESP_INTR_FLAG_IRAM;
   timer_isr_register(tgn, tn, (void (*) (void *)) mgos_hw_timers_isr, ti,
                      intr_flags, NULL);
   timer_enable_intr(tgn, tn);

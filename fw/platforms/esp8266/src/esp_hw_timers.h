@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_PLATFORMS_ESP8266_SRC_ESP_HW_TIMER_H_
-#define CS_FW_PLATFORMS_ESP8266_SRC_ESP_HW_TIMER_H_
+#ifndef CS_FW_PLATFORMS_ESP8266_SRC_ESP_HW_TIMERS_H_
+#define CS_FW_PLATFORMS_ESP8266_SRC_ESP_HW_TIMERS_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,4 +20,4 @@ struct mgos_hw_timer_dev_data {};
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_PLATFORMS_ESP8266_SRC_ESP_HW_TIMER_H_ */
+#endif /* CS_FW_PLATFORMS_ESP8266_SRC_ESP_HW_TIMERS_H_ */

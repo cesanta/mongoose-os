@@ -16,7 +16,8 @@ extern "C" {
 
 #define MGOS_NUM_HW_TIMERS 4
 
-#define MGOS_ESP32_HW_TIMER_IRAM 0x10000
+#define MGOS_ESP32_HW_TIMER_NMI 0x10000
+#define MGOS_ESP32_HW_TIMER_IRAM 0x20000
 
 struct mgos_hw_timer_dev_data {
   timg_dev_t *tg;

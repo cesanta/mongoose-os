@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include "esp_hw_timer.h"
+#include "esp_hw_timers.h"
 
 #include "user_interface.h"
 

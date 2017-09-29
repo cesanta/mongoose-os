@@ -21,6 +21,7 @@ IRAM void mgos_hw_timers_isr(struct mgos_hw_timer_info *ti) {
   /* Release a one-shot timer before invoking the callback so it can be
    * rescheduled from within it. */
   if (!(ti->flags & MGOS_TIMER_REPEAT)) {
+    mgos_hw_timers_dev_clear(ti);
     ti->cb_arg = NULL;
     ti->cb = NULL;
   }

@@ -14,7 +14,7 @@
 #include "mgos_timers.h"
 
 #if CS_PLATFORM == CS_P_ESP8266
-#include "esp_hw_timer.h"
+#include "esp_hw_timers.h"
 #elif CS_PLATFORM == CS_P_ESP32
 #include "esp32_hw_timers.h"
 #elif CS_PLATFORM == CS_P_CC3200 || CS_PLATFORM == CS_P_CC3220
