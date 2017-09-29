@@ -518,6 +518,26 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		return errors.Trace(err)
 	}
 
+	appSources, err = absPathSlice(appSources)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	appIncludes, err = absPathSlice(appIncludes)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	appFSFiles, err = absPathSlice(appFSFiles)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	appBinLibs, err = absPathSlice(appBinLibs)
+	if err != nil {
+		return errors.Trace(err)
+	}
+
 	freportf(logWriter, "Sources: %v", appSources)
 	freportf(logWriter, "Include dirs: %v", appIncludes)
 	if len(appBinLibs) > 0 {
@@ -2540,4 +2560,20 @@ func getMosRepoDir(ctx context.Context, devConn *dev.DevConn) error {
 
 func wrapMosExpr(s string) string {
 	return fmt.Sprintf("${%s}", s)
+}
+
+func absPathSlice(slice []string) ([]string, error) {
+	ret := make([]string, len(slice))
+	for i, v := range slice {
+		var err error
+		if !filepath.IsAbs(v) {
+			ret[i], err = filepath.Abs(v)
+			if err != nil {
+				return nil, errors.Trace(err)
+			}
+		} else {
+			ret[i] = v
+		}
+	}
+	return ret, nil
 }
