@@ -55,6 +55,8 @@ var (
 	force     = flag.Bool("force", false, "Use the force")
 	verbose   = flag.Bool("verbose", false, "Verbose output")
 
+	invertedControlLines = flag.Bool("inverted-control-lines", false, "DTR and RTS control lines use inverted polarity")
+
 	versionFlag = flag.Bool("version", false, "Print version and exit")
 	helpFull    = flag.Bool("helpfull", false, "Show full help, including advanced flags")
 

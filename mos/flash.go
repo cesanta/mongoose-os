@@ -46,8 +46,6 @@ func init() {
 	flag.StringVar(&espFlashOpts.DataPort, "esp-data-port", "",
 		"If specified, this port will be used to send data during flashing. "+
 			"If not set, --port is used.")
-	flag.BoolVar(&espFlashOpts.InvertedControlLines, "esp-inverted-control-lines", false,
-		"DTR and RTS control lines use inverted polarity")
 	flag.StringVar(&espFlashOpts.FlashParams, "esp-flash-params", "",
 		"Flash chip params. Either a comma-separated string of mode,size,freq or a number. "+
 			"Mode must be one of: qio, qout, dio, dout. "+
@@ -114,6 +112,8 @@ func flash(ctx context.Context, devConn *dev.DevConn) error {
 	if err != nil {
 		return errors.Trace(err)
 	}
+
+	espFlashOpts.InvertedControlLines = *invertedControlLines
 
 	switch strings.ToLower(fw.Platform) {
 	case "cc3200":

@@ -84,8 +84,10 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 	// On Linux all the serial drivers are known to behave sensibly.
 	// On other systems, some converters/drivers activate them which,
 	// in case of ESP, may put device in reset mode.
-	if runtime.GOOS != "linux" {
-		s.SetRTSDTR(false, false)
+	// If control pin polarity is inverted, then it also needs explicit setting.
+	if runtime.GOOS != "linux" || *invertedControlLines {
+		bFalse := !*invertedControlLines
+		s.SetRTSDTR(bFalse, bFalse)
 	}
 
 	cctx, cancel := context.WithCancel(ctx)
