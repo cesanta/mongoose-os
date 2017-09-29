@@ -90,8 +90,9 @@ const (
 	// - 2017-06-03: added support for @all_libs in filesystem and sources
 	// - 2017-06-16: added support for conds with very basic expressions
 	//               (only build_vars)
+	// - 2017-09-29: added support for includes
 	minManifestVersion = "2017-03-17"
-	maxManifestVersion = "2017-06-16"
+	maxManifestVersion = "2017-09-29"
 
 	localLibsDir = "local_libs"
 
