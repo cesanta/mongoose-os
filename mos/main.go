@@ -204,7 +204,6 @@ func main() {
 
 	if len(flag.Args()) == 0 || flag.Arg(0) == "ui" {
 		isUI = true
-		*reconnect = true
 	}
 
 	if *helpFull {

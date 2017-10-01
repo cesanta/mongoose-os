@@ -41,8 +41,9 @@ input.form-control { box-shadow: none !important; }
 .block_content h2.title { margin-bottom: 10px !important; }
 .tags { top: 15px !important;}
 .modal-dialog { min-width: 640px; }
-.greyed { background-color: #eee !important; }
-.greyed:after { border-left-color: #eee !important; }
+.greyed { background-color: #fafafa !important; }
+.greyed:after { border-left-color: #fafafa !important; }
+.completed { background: #f0fff0 !important; }
 .btn-mos { background-color: #fafafa; }
 .done { font-size: 120%; color: rgb(26, 187, 156); }
 .green { color: #7f7; }

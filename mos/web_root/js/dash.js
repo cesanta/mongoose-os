@@ -81,11 +81,6 @@ $(document).on('click', '.clear-logs-button', function() {
   $(this).parent().parent().find('.logs').empty();
 });
 
-var connected = false;
-
-// A page which needs to be loaded once serial port connection is established
-var deferredLoadPage = undefined;
-
 var loadPage = function(page) {
   var doit = function() {
     $('#app_view .page').hide();
@@ -261,18 +256,21 @@ var updateDeviceStatus = function() {
 
   // Step1
   $('#step1 .done').toggleClass('hidden', n == 0);
+  $('#step1').toggleClass('completed', n > 0);
 
   // Step2
-  $('#step2 a.tag').toggleClass('greyed', n == 0);
-  $('#step2 .btn').prop('disabled', n == 0);
+  $('#step2 a.tag, #step2').toggleClass('greyed', n == 0);
+  $('#step2 .btn, #step2 input').prop('disabled', n == 0);
   $('#step2 .done').toggleClass('hidden', n < 2);
   if (ui.info) $('.devinfo').html(formatDevInfo(ui.info));
   $('.devinfo, #found-device-info').toggle(n > 1);
+  $('#step2').toggleClass('completed', n > 1);
 
   // Step3
-  $('#step3 a.tag').toggleClass('greyed', n < 2);
+  $('#step3 a.tag, #step3').toggleClass('greyed', n < 2);
   $('#step3 .btn, #step3 input').prop('disabled', n < 2);
   $('#step3 .done').toggleClass('hidden', n < 3);
+  $('#step3').toggleClass('completed', n > 2);
 
   $('#prototype-button').prop('disabled', n < 2);
 };
@@ -294,7 +292,8 @@ var setUDPLog = function() {
 };
 
 var probeDevice = function() {
-  return $.ajax({url: '/call', global: false, data: {method: 'Sys.GetInfo', timeout: 15}}).then(function(data) {
+  var data = {method: 'Sys.GetInfo', timeout: 3};
+  return $.ajax({url: '/call', global: false, data: data}).then(function(data) {
     ui.info = data.result;
     // Let other pages know that the device info has changed
     var infostr = JSON.stringify(ui.info);
@@ -323,7 +322,6 @@ var checkPorts = function() {
       ui.address = port;
       if (ui.connected) {
         ui.showWizard = false;  // Dont trigger wizard dialog from this point on
-        $(document).trigger('hide.bs.modal');
       }
       if (ui.connected && ui.address) probeDevice();
       if (!ui.connected && ui.showWizard) {

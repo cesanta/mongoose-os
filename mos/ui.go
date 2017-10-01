@@ -50,6 +50,7 @@ var (
 	wwwRoot      = ""
 	startBrowser = true
 	inLogLine    = map[string]bool{}
+	devConnMtx   = sync.Mutex{}
 
 	origStdout = os.Stdout
 	origStderr = os.Stderr
@@ -85,7 +86,6 @@ func wsSend(ws *websocket.Conn, m wsmessage) {
 func wsBroadcast(m wsmessage) {
 	wsClientsMtx.Lock()
 	defer wsClientsMtx.Unlock()
-
 	for ws := range wsClients {
 		wsSend(ws, m)
 	}
@@ -159,6 +159,21 @@ func init() {
 	hiddenFlags = append(hiddenFlags, "start-browser")
 }
 
+func devlock(devConn *dev.DevConn) {
+	if devConn == nil {
+		glog.Infof("Locking device NIL")
+	} else {
+		glog.Infof("Locking device %v", devConn.IsConnected())
+	}
+	devConnMtx.Lock()
+	glog.Infof("Locked.")
+}
+
+func devunlock() {
+	glog.Infof("Unlocking device")
+	devConnMtx.Unlock()
+}
+
 func reconnectToDevice(ctx context.Context) (*dev.DevConn, error) {
 	return createDevConnWithJunkHandler(ctx, consoleJunkHandler, MqttLogHandler)
 }
@@ -192,8 +207,6 @@ func UDPLogCatcher() {
 }
 
 func startUI(ctx context.Context, devConn *dev.DevConn) error {
-	var devConnMtx sync.Mutex
-
 	glog.CopyStandardLogTo("INFO")
 	go reportConsoleLogs()
 	go UDPLogCatcher()
@@ -220,8 +233,8 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 		// TODO(lsm): the following snippet is similar to the one in "/terminal"
 		// handler, refactor to reduce copypasta.
-		devConnMtx.Lock()
-		defer devConnMtx.Unlock()
+		devlock(devConn)
+		defer devunlock()
 		if devConn != nil {
 			devConn.Disconnect(ctx)
 			devConn = nil
@@ -257,8 +270,8 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
 		defer cancel()
 
-		devConnMtx.Lock()
-		defer devConnMtx.Unlock()
+		devlock(devConn)
+		defer devunlock()
 
 		if devConn == nil {
 			httpReply(w, nil, errors.Errorf("Device is not connected"))
@@ -315,8 +328,8 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		portArg := r.FormValue("port")
 		reconnect := r.FormValue("reconnect")
 
-		devConnMtx.Lock()
-		defer devConnMtx.Unlock()
+		devlock(devConn)
+		defer devunlock()
 
 		// If we're already connected to the given port, and the caller didn't
 		// explicitly ask to reconnect in any case, don't do anything and just
@@ -380,8 +393,8 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
 
-		devConnMtx.Lock()
-		defer devConnMtx.Unlock()
+		devlock(devConn)
+		defer devunlock()
 
 		if devConn == nil {
 			httpReply(w, nil, errors.Errorf("Device is not connected"))
@@ -397,8 +410,8 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		ctx2, cancel := context.WithTimeout(ctx, 15*time.Second)
 		defer cancel()
 
-		devConnMtx.Lock()
-		defer devConnMtx.Unlock()
+		devlock(devConn)
+		defer devunlock()
 
 		if devConn == nil {
 			httpReply(w, nil, errors.Errorf("Device is not connected"))
@@ -426,8 +439,8 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		ctx2, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
 
-		devConnMtx.Lock()
-		defer devConnMtx.Unlock()
+		devlock(devConn)
+		defer devunlock()
 
 		err := awsIoTSetup(ctx2, devConn)
 		httpReply(w, true, err)
@@ -448,9 +461,6 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 	http.HandleFunc("/getports", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		devConnMtx.Lock()
-		defer devConnMtx.Unlock()
-
 		type GetPortsResult struct {
 			IsConnected bool
 			CurrentPort string
@@ -458,10 +468,13 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 			Ports       []string
 		}
 		reply := GetPortsResult{false, "", *portFlag, enumerateSerialPorts()}
+		devlock(devConn)
 		if devConn != nil {
 			reply.CurrentPort = devConn.ConnectAddr
 			reply.IsConnected = devConn.IsConnected()
 		}
+		devunlock()
+		glog.Infof("enumerated, returning...")
 
 		httpReply(w, reply, nil)
 	})
@@ -501,8 +514,8 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		ctx2, cancel := context.WithTimeout(ctx, time.Duration(timeout)*time.Second)
 		defer cancel()
 
-		devConnMtx.Lock()
-		defer devConnMtx.Unlock()
+		devlock(devConn)
+		defer devunlock()
 
 		if devConn == nil {
 			httpReply(w, nil, errors.Errorf("Device is not connected"))
@@ -551,8 +564,8 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 		cmd := getCommand(flag.Arg(0))
 
 		if cmd != nil && !cmd.needDevConn {
-			devConnMtx.Lock()
-			defer devConnMtx.Unlock()
+			devlock(devConn)
+			defer devunlock()
 
 			// On MacOS and Windows, sleep for 1 second after we close serial
 			// port. Otherwise, open call fails for some reason we have
