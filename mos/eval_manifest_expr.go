@@ -9,7 +9,6 @@ import (
 
 	"golang.org/x/net/context"
 
-	"cesanta.com/mos/common/paths"
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/interpreter"
 	"github.com/cesanta/errors"
@@ -42,6 +41,8 @@ func evalManifestExpr(ctx context.Context, devConn *dev.DevConn) error {
 		return errors.Trace(err)
 	}
 
+	libsDir := getDepsDir(appDir)
+
 	// Never update libs on that command
 	*noLibsUpdate = true
 
@@ -54,7 +55,7 @@ func evalManifestExpr(ctx context.Context, devConn *dev.DevConn) error {
 	}
 
 	manifest, _, err := readManifestWithLibs(
-		appDir, appDir, bParams, logWriter, paths.LibsDir, interp,
+		appDir, appDir, bParams, logWriter, libsDir, interp,
 		false /* require arch */, false /* skip clean */, true, /* finalize */
 	)
 	if err != nil {
