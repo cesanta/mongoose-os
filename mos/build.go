@@ -759,7 +759,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		if err != nil {
 			return errors.Trace(err)
 		}
-	} else if p := moscommon.GetOrigLibArchiveFilePath(buildDir, bParams.Platform); bParams.BuildTarget == p {
+	} else if p := moscommon.GetOrigLibArchiveFilePath(buildDir, manifest.Platform); bParams.BuildTarget == p {
 		// Copy lib to build/lib.a
 		err = ourio.LinkOrCopyFile(
 			p, moscommon.GetLibArchiveFilePath(buildDir),
@@ -1259,6 +1259,15 @@ func buildRemote(bParams *buildParams) error {
 	)
 	if err != nil {
 		return errors.Trace(err)
+	}
+
+	switch manifest.Type {
+	case build.AppTypeApp:
+		// Fine
+	case build.AppTypeLib:
+		bParams.BuildTarget = moscommon.GetOrigLibArchiveFilePath(buildDir, manifest.Platform)
+	default:
+		return errors.Errorf("invalid project type: %q", manifest.Type)
 	}
 
 	// Copy all external code (which is outside of the appDir) under tmpCodeDir {{{
