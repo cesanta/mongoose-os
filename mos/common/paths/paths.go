@@ -96,6 +96,10 @@ func Init() error {
 func NormalizePath(p, version string) (string, error) {
 	var err error
 
+	if p == "" {
+		return "", nil
+	}
+
 	// Replace tilda with the actual path to home directory
 	if len(p) > 0 && p[0] == '~' {
 		// Unfortunately user.Current() doesn't play nicely with static build, so
