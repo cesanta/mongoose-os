@@ -16,7 +16,6 @@ import (
 var (
 	dirTplMosVersion = "${mos.version}"
 
-	LibsDirTpl    = fmt.Sprintf("~/.mos/libs-%s", dirTplMosVersion)
 	AppsDirTpl    = fmt.Sprintf("~/.mos/apps-%s", dirTplMosVersion)
 	ModulesDirTpl = fmt.Sprintf("~/.mos/modules-%s", dirTplMosVersion)
 
@@ -35,7 +34,7 @@ var (
 
 func init() {
 	flag.StringVar(&TmpDir, "temp-dir", "~/.mos/tmp", "Directory to store temporary files")
-	flag.StringVar(&LibsDir, "libs-dir", LibsDirTpl, "Directory to store libraries into")
+	flag.StringVar(&LibsDir, "libs-dir", "", "Directory to store libraries into")
 	flag.StringVar(&AppsDir, "apps-dir", AppsDirTpl, "Directory to store apps into")
 	flag.StringVar(&ModulesDir, "modules-dir", ModulesDirTpl, "Directory to store modules into")
 

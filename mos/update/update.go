@@ -246,11 +246,6 @@ func migrateData() error {
 
 	if !state.GetState().OldDirsConverted {
 		var curVersions []string
-		if curVersions, err = convertOldDir(paths.LibsDirOld, paths.LibsDirTpl); err != nil {
-			return errors.Trace(err)
-		}
-		convertedVersions = append(convertedVersions, curVersions...)
-
 		if curVersions, err = convertOldDir(paths.AppsDirOld, paths.AppsDirTpl); err != nil {
 			return errors.Trace(err)
 		}
@@ -304,10 +299,6 @@ func migrateData() error {
 			// There are some versions available, so we'll pick the latest one
 			// and copy data from it to the current version
 			latestVersion := versions[len(versions)-1]
-
-			if err := migrateProjects(paths.LibsDirTpl, latestVersion, mosVersion); err != nil {
-				return errors.Trace(err)
-			}
 
 			if err := migrateProjects(paths.AppsDirTpl, latestVersion, mosVersion); err != nil {
 				return errors.Trace(err)

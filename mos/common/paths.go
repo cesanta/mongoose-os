@@ -5,6 +5,10 @@ import (
 	"path/filepath"
 )
 
+func GetDepsDir(projectDir string) string {
+	return filepath.Join(projectDir, "deps")
+}
+
 func GetBuildDir(projectDir string) string {
 	return filepath.Join(projectDir, "build")
 }

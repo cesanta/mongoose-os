@@ -54,7 +54,7 @@ func evalManifestExpr(ctx context.Context, devConn *dev.DevConn) error {
 	}
 
 	manifest, _, err := readManifestWithLibs(
-		appDir, bParams, logWriter, paths.LibsDir, interp,
+		appDir, appDir, bParams, logWriter, paths.LibsDir, interp,
 		false /* require arch */, false /* skip clean */, true, /* finalize */
 	)
 	if err != nil {

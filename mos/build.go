@@ -313,8 +313,10 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		return errors.Trace(err)
 	}
 
+	libsDir := getDepsDir(appDir)
+
 	manifest, mtime, err := readManifestWithLibs(
-		appDir, bParams, logWriter, paths.LibsDir, interp,
+		appDir, appDir, bParams, logWriter, libsDir, interp,
 		true /* require arch */, false /* skip clean */, true, /* finalize */
 	)
 	if err != nil {
@@ -1252,7 +1254,7 @@ func buildRemote(bParams *buildParams) error {
 
 	// Get manifest which includes stuff from all libs
 	manifest, _, err := readManifestWithLibs(
-		tmpCodeDir, bParams, logWriter, userLibsDir, interp,
+		tmpCodeDir, appDir, bParams, logWriter, userLibsDir, interp,
 		true /* require arch */, true /* skip clean */, false, /* finalize */
 	)
 	if err != nil {
@@ -1564,7 +1566,7 @@ func identityTransformer(r io.ReadCloser) (io.ReadCloser, error) {
 // If skipClean is true, then clean or non-existing libs will NOT be expanded,
 // it's useful when crafting a manifest to send to the remote builder.
 func readManifestWithLibs(
-	dir string, bParams *buildParams,
+	dir, origDir string, bParams *buildParams,
 	logWriter io.Writer, userLibsDir string, interp *interpreter.MosInterpreter,
 	requireArch, skipClean, finalize bool,
 ) (*build.FWAppManifest, time.Time, error) {
@@ -1575,8 +1577,9 @@ func readManifestWithLibs(
 	deps.AddNode(depsApp)
 
 	manifest, mtime, err := readManifestWithLibs2(manifestParseContext{
-		dir:        dir,
-		rootAppDir: dir,
+		dir:            dir,
+		rootAppDir:     dir,
+		origRootAppDir: origDir,
 
 		bParams:     bParams,
 		logWriter:   logWriter,
@@ -1651,8 +1654,11 @@ func readManifestWithLibs(
 type manifestParseContext struct {
 	// Manifest's directory
 	dir string
-	// Directory of the "root" app; for the app's manifest it's the same as dir
+	// Directory of the "root" app; for the app's manifest it's the same as dir.
+	// Might be a temporary directory
 	rootAppDir string
+	// Same as rootAppDir, but can't be temporary directory
+	origRootAppDir string
 
 	bParams     *buildParams
 	logWriter   io.Writer
@@ -1670,6 +1676,8 @@ type manifestParseContext struct {
 }
 
 func readManifestWithLibs2(pc manifestParseContext) (*build.FWAppManifest, time.Time, error) {
+	libsDir := getDepsDir(pc.origRootAppDir)
+
 	manifest, mtime, err := readManifest(pc.dir, pc.bParams, pc.interp)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
@@ -1741,7 +1749,7 @@ libs:
 				needPull := true
 
 				if *noLibsUpdate {
-					localDir, err := m.GetLocalDir(paths.LibsDir, defVersion)
+					localDir, err := m.GetLocalDir(libsDir, defVersion)
 					if err != nil {
 						return nil, time.Time{}, errors.Trace(err)
 					}
@@ -1756,7 +1764,7 @@ libs:
 				if needPull {
 					// Note: we always call PrepareLocalDir for libsDir, but then,
 					// if pc.userLibsDir is different, will need to copy it to the new location
-					libDirAbs, err = m.PrepareLocalDir(paths.LibsDir, pc.logWriter, true, defVersion, *libsUpdateInterval)
+					libDirAbs, err = m.PrepareLocalDir(libsDir, pc.logWriter, true, defVersion, *libsUpdateInterval)
 					if err != nil {
 						if m.Version == "" && defVersion != "latest" {
 							// We failed to fetch lib at the default version (mos.version),
@@ -1813,7 +1821,7 @@ libs:
 
 		skip := false
 		if pc.skipClean {
-			isClean, err := m.IsClean(paths.LibsDir, pc.appManifest.LibsVersion)
+			isClean, err := m.IsClean(libsDir, pc.appManifest.LibsVersion)
 			if err != nil {
 				return nil, time.Time{}, errors.Trace(err)
 			}
@@ -1823,7 +1831,7 @@ libs:
 
 		// If libs should be placed in some specific dir, copy the current lib
 		// there (it will also affect the libs path used in resulting manifest)
-		if !skip && pc.userLibsDir != paths.LibsDir {
+		if !skip && pc.userLibsDir != libsDir {
 			userLibsDirRel, err := filepath.Rel(pc.rootAppDir, pc.userLibsDir)
 			if err != nil {
 				return nil, time.Time{}, errors.Trace(err)
@@ -2591,4 +2599,12 @@ func absPathSlice(slice []string) ([]string, error) {
 		}
 	}
 	return ret, nil
+}
+
+func getDepsDir(projectDir string) string {
+	if paths.LibsDir != "" {
+		return paths.LibsDir
+	} else {
+		return moscommon.GetDepsDir(projectDir)
+	}
 }
