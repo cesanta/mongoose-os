@@ -361,10 +361,13 @@ $(document).on('click', '#flash-button', function() {
   var btn = $(this);
   var arch = $('.builds-input').val();
   spin(btn);
-  $.ajax({url: '/flash', global: false, data: {firmware: arch}}).always(function() {
+  $.ajax({url: '/flash', global: false, data: {firmware: arch}}).then(function() {
     setTimeout(function() {
       probeDevice().always(function() { stopspin(btn); });
     }, 2000);
+  }).catch(function(e) {
+    addLog('Flashing error: ' + e.responseJSON.error);
+    stopspin(btn);
   });
 });
 
