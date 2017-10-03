@@ -66,7 +66,8 @@ var (
 
 	buildVarsSlice []string
 
-	noLibsUpdate = flag.Bool("no-libs-update", false, "if true, never try to pull existing libs (treat existing default locations as if they were given in --lib)")
+	noLibsUpdate  = flag.Bool("no-libs-update", false, "if true, never try to pull existing libs (treat existing default locations as if they were given in --lib)")
+	skipCleanLibs = flag.Bool("skip-clean-libs", true, "if false, then during the remote build all libs will be uploaded to the builder")
 
 	// In-memory buffer containing all the log messages
 	logBuf bytes.Buffer
@@ -1255,7 +1256,7 @@ func buildRemote(bParams *buildParams) error {
 	// Get manifest which includes stuff from all libs
 	manifest, _, err := readManifestWithLibs(
 		tmpCodeDir, appDir, bParams, logWriter, userLibsDir, interp,
-		true /* require arch */, true /* skip clean */, false, /* finalize */
+		true /* require arch */, *skipCleanLibs /* skip clean */, false, /* finalize */
 	)
 	if err != nil {
 		return errors.Trace(err)
