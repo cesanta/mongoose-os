@@ -503,6 +503,10 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 			return errors.Trace(err)
 		}
 
+		if err := expandManifestConds(manifestOrig, manifestOrig, interp); err != nil {
+			return errors.Trace(err)
+		}
+
 		appSources, err = expandVarsSlice(interp, manifestOrig.Sources)
 		if err != nil {
 			return errors.Trace(err)
