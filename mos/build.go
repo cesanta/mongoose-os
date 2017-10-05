@@ -1394,6 +1394,15 @@ func buildRemote(bParams *buildParams) error {
 		}
 	}
 
+	pbValue := "0"
+	if *preferPrebuiltLibs {
+		pbValue = "1"
+	}
+
+	if err := mpw.WriteField(moscommon.FormPreferPrebuildLibsName, pbValue); err != nil {
+		return errors.Trace(err)
+	}
+
 	if err := mpw.WriteField(moscommon.FormBuildTargetName, bParams.BuildTarget); err != nil {
 		return errors.Trace(err)
 	}
