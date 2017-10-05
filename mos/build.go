@@ -778,7 +778,9 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 }
 
 func runDockerBuild(dockerRunArgs []string) error {
-	containerName := fmt.Sprint("mos_build_", time.Now().Format("2006-01-02T15-04-05-00"))
+	containerName := fmt.Sprintf(
+		"mos_build_%s_%d", time.Now().Format("2006-01-02T15-04-05-00"), os.Getpid(),
+	)
 
 	dockerArgs := append(
 		[]string{"run", "--name", containerName}, dockerRunArgs...,
