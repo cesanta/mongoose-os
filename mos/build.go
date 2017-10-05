@@ -1266,6 +1266,14 @@ func buildRemote(bParams *buildParams) error {
 		return errors.Trace(err)
 	}
 
+	// We still need to expand some conds we have so far, at least to ensure that
+	// manifest.Sources contain all the app's sources we need to build, so that
+	// they will be whitelisted (see whitelisting logic below) and thus uploaded
+	// to the remote builder.
+	if err := expandManifestConds(manifest, manifest, interp); err != nil {
+		return errors.Trace(err)
+	}
+
 	switch manifest.Type {
 	case build.AppTypeApp:
 		// Fine
