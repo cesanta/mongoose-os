@@ -62,7 +62,7 @@ var (
 	buildParalellism = flag.Int("build-parallelism", 0, "build parallelism. default is to use number of CPUs.")
 	saveBuildStat    = flag.Bool("save-build-stat", true, "save build statistics")
 
-	preferPrebuiltLibs = flag.Bool("prefer-prebuilt-libs", false, "if both sources and prebuilt binary of a lib exists, use the binary")
+	preferPrebuiltLibs = flag.Bool("prefer-prebuilt-libs", true, "if both sources and prebuilt binary of a lib exists, use the binary")
 
 	buildVarsSlice []string
 
