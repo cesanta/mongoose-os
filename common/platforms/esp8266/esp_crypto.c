@@ -7,6 +7,8 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include "mongoose/mongoose.h"
+
 #ifdef RTOS_SDK
 #include "esp_libc.h"
 #else
