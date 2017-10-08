@@ -263,6 +263,7 @@ ifeq "$(SSL)" "mbedTLS"
   MGOS_SRCS += esp_crypto.c
   MGOS_ESP_FEATURES += -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS \
                        -DMG_SSL_IF_MBEDTLS_FREE_CERTS \
+                       -DMG_SSL_IF_MBEDTLS_MAX_FRAG_LEN=1024 \
                        -DMBEDTLS_X509_CA_CHAIN_ON_DISK
   MBEDTLS_CFLAGS = $(CFLAGS)
   SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp_mbedtls_config.yaml
