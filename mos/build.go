@@ -59,6 +59,8 @@ var (
 
 	buildDockerExtra = flag.StringSlice("build-docker-extra", []string{}, "extra docker flags, added before image name. Can be used multiple times: e.g. --build-docker-extra -v --build-docker-extra /foo:/bar.")
 	buildCmdExtra    = flag.StringSlice("build-cmd-extra", []string{}, "extra make flags, added at the end of the make command. Can be used multiple times.")
+	cflagsExtra      = flag.StringSlice("cflags-extra", []string{}, "extra C flag, appended to the \"cflags\" in the manifest. Can be used multiple times.")
+	cxxflagsExtra    = flag.StringSlice("cxxflags-extra", []string{}, "extra C++ flag, appended to the \"cxxflags\" in the manifest. Can be used multiple times.")
 	buildParalellism = flag.Int("build-parallelism", 0, "build parallelism. default is to use number of CPUs.")
 	saveBuildStat    = flag.Bool("save-build-stat", true, "save build statistics")
 
@@ -600,9 +602,14 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		printConfSchemaWarn(manifest)
 	}
 
+	// Amend build vars with the values given in command line
 	if err := addBuildVarsFromCLI(manifest); err != nil {
 		return errors.Trace(err)
 	}
+
+	// Amend cflags and cxxflags with the values given in command line
+	manifest.CFlags = append(manifest.CFlags, *cflagsExtra...)
+	manifest.CXXFlags = append(manifest.CXXFlags, *cxxflagsExtra...)
 
 	appPath, err := getCodeDirAbs()
 	if err != nil {
@@ -1310,6 +1317,10 @@ func buildRemote(bParams *buildParams) error {
 	if err := addBuildVarsFromCLI(manifest); err != nil {
 		return errors.Trace(err)
 	}
+
+	// Amend cflags and cxxflags with the values given in command line
+	manifest.CFlags = append(manifest.CFlags, *cflagsExtra...)
+	manifest.CXXFlags = append(manifest.CXXFlags, *cxxflagsExtra...)
 
 	manifest.Name, err = fixupAppName(manifest.Name)
 	if err != nil {
