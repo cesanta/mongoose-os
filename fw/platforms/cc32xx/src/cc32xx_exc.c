@@ -22,7 +22,7 @@
   while (1) {      \
   }
 #else
-#define EXC_ACTION mgos_system_restart(100);
+#define EXC_ACTION mgos_dev_system_restart();
 #endif
 
 #define ARM_PERIPH_BASE 0xE000E000
@@ -100,7 +100,7 @@ void cc32xx_unhandled_int(void) {
 
 void vMainAssertCalled(const char *file, uint32_t line) {
   cc32xx_exc_printf("Assert at %s:%u\r\n", file, line);
-  mgos_system_restart(0);
+  mgos_system_restart();
 }
 
 void vAssertCalled(const char *file, uint32_t line) {

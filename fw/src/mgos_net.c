@@ -11,6 +11,7 @@
 
 #include "mgos_hal.h"
 #include "mgos_mongoose.h"
+#include "mgos_system.h"
 #ifdef MGOS_HAVE_WIFI
 #include "mgos_wifi_hal.h"
 #endif

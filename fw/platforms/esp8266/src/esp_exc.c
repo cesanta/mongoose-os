@@ -156,11 +156,7 @@ IRAM NOINSTR void abort(void) {
   /* esp_exc_common does not return. */
 }
 
-void mgos_system_restart(int exit_code) {
-  (void) exit_code;
-  mgos_vfs_umount_all();
-  LOG(LL_INFO, ("Restarting"));
-  mgos_debug_flush();
+void mgos_dev_system_restart(void) {
   /*
    * system_restart sometimes thorws an exception.
    * Since we are rebooting anyway, we don't want to dump core.

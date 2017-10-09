@@ -94,9 +94,9 @@ void mgos_wdt_enable(void) {
 void mgos_wdt_disable(void) {
 }
 
-void mgos_system_restart(int exit_code) {
+void mgos_dev_system_restart(void) {
   /* An external supervisor can restart us */
-  exit(exit_code);
+  exit(0);
 }
 
 void mgos_usleep(uint32_t usecs) {

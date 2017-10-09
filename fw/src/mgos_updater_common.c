@@ -742,7 +742,7 @@ bool mgos_upd_revert(bool reboot) {
   if (mgos_upd_is_committed()) return false;
   LOG(LL_INFO, ("Reverting update"));
   mgos_upd_boot_revert();
-  if (reboot) mgos_system_restart(0);
+  if (reboot) mgos_system_restart();
   return true;
 }
 

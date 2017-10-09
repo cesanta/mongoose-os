@@ -19,19 +19,13 @@
 
 #include "simplelink.h"
 #include "device.h"
-#include "oslib/osi.h"
 #include "FreeRTOS.h"
 #include "semphr.h"
 
 #include "mgos_hal.h"
-#include "mgos_vfs.h"
 
-void mgos_system_restart(int exit_code) {
-  (void) exit_code;
-  if (exit_code != 100) {
-    mgos_vfs_umount_all();
-    sl_Stop(50 /* ms */);
-  }
+void mgos_dev_system_restart(void) {
+  sl_DeviceDisable(); /* Turn off NWP */
   /* Turns out to be not that easy. In particular, using *Reset functions is
    * not a good idea.
    * https://e2e.ti.com/support/wireless_connectivity/f/968/p/424736/1516404

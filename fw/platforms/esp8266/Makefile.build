@@ -116,6 +116,7 @@ MGOS_SRCS = cs_file.c cs_rbuf.c \
             mgos_mmap_esp.c \
             mgos_mongoose.c \
             mgos_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
+            mgos_system.c \
             mgos_uart.c \
             mgos_utils.c \
             mgos_vfs.c \

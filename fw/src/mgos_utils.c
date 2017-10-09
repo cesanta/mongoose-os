@@ -13,7 +13,7 @@ extern enum cs_log_level cs_log_threshold;
 extern FILE *cs_log_file;
 
 static void reboot_timer_cb(void *param) {
-  mgos_system_restart(0);
+  mgos_system_restart();
   (void) param;
 }
 

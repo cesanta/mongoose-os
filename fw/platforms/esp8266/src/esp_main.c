@@ -167,7 +167,7 @@ static void esp_mgos_init(void) {
     LOG(LL_ERROR, ("Init failed: %d", result));
     /* Arbitrary delay to make potential reboot loop less tight. */
     mgos_usleep(500000);
-    mgos_system_restart(0);
+    mgos_system_restart();
   }
 }
 

@@ -124,7 +124,7 @@ static void cc32xx_main_task(void *arg) {
   if (!init_success) {
     /* Arbitrary delay to make potential reboot loop less tight. */
     mgos_usleep(500000);
-    mgos_system_restart(0);
+    mgos_system_restart();
   }
 
   mgos_wdt_set_feed_on_poll(true);
@@ -195,5 +195,5 @@ void cc32xx_main(cc32xx_init_func_t init_func) {
   vTaskStartScheduler();
   /* Not reached, but just in case... */
   cc32xx_exc_puts("Scheduler failed to start!\r\n");
-  mgos_system_restart(0);
+  mgos_system_restart();
 }

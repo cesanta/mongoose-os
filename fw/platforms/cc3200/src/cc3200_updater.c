@@ -413,7 +413,7 @@ void mgos_upd_boot_revert() {
   /* Tombstone the current config. */
   cfg->seq = BOOT_CFG_TOMBSTONE_SEQ;
   write_boot_cfg(cfg, boot_cfg_idx);
-  mgos_system_restart(0);
+  mgos_system_restart();
 }
 
 void mgos_upd_boot_commit() {

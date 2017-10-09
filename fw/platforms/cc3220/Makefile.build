@@ -205,7 +205,7 @@ MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3220_PATH)/src/*.c)) \
              frozen.c json_utils.c mongoose.c \
              mgos_config.c mgos_debug.c mgos_dlsym.c mgos_gpio.c mgos_hooks.c mgos_init.c \
              mgos_mongoose.c mgos_sys_config.c \
-             mgos_hw_timers.c mgos_timers.c mgos_uart.c mgos_utils.c \
+             mgos_hw_timers.c mgos_system.c mgos_timers.c mgos_uart.c mgos_utils.c \
              mgos_vfs.c mgos_vfs_dev.c mgos_vfs_fs_spiffs.c \
              cc32xx_crypto.c cc32xx_exc.c cc32xx_exc_handler_top.asm cc32xx_fs.c cc32xx_gpio.c \
              cc32xx_hal.c cc32xx_hw_timers.c cc32xx_libc.c cc32xx_main.c cc32xx_sl_spawn.c cc32xx_uart.c \

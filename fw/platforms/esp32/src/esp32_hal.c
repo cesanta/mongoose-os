@@ -16,9 +16,6 @@
 #include "mgos_hal.h"
 #include "mgos_sys_config.h"
 #include "mgos_vfs.h"
-#ifdef MGOS_HAVE_WIFI
-#include "mgos_wifi.h"
-#endif
 #include "fw/platforms/esp32/src/esp32_fs.h"
 
 size_t mgos_get_heap_size(void) {
@@ -35,14 +32,7 @@ size_t mgos_get_min_free_heap_size(void) {
   return xPortGetMinimumEverFreeHeapSize();
 }
 
-void mgos_system_restart(int exit_code) {
-  (void) exit_code;
-  mgos_vfs_umount_all();
-#ifdef MGOS_HAVE_WIFI
-  mgos_wifi_disconnect();
-#endif
-  LOG(LL_INFO, ("Restarting"));
-  mgos_debug_flush();
+void mgos_dev_system_restart(void) {
   esp_restart();
 }
 

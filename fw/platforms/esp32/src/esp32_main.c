@@ -270,7 +270,7 @@ void mgos_task(void *arg) {
   if (!success) {
     /* Arbitrary delay to make potential reboot loop less tight. */
     mgos_usleep(500000);
-    mgos_system_restart(0);
+    mgos_system_restart();
   }
 
   while (true) {

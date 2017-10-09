@@ -14,7 +14,7 @@
 #include "mgos_hal.h"
 #include "cc32xx_exc.h"
 
-void mgos_system_restart(int exit_code) {
+void mgos_dev_system_restart(void) {
   sl_DeviceDisable(); /* Turn off NWP */
   MAP_PRCMMCUReset(true /* bIncludeSubsystem */);
 }
@@ -24,7 +24,7 @@ void SimpleLinkFatalErrorEventHandler(SlDeviceFatal_t *e) {
       "SL fatal error 0x%x assert 0x%x,0x%x no_ack 0x%x timeout 0x%x", e->Id,
       e->Data.DeviceAssert.Code, e->Data.DeviceAssert.Value,
       e->Data.NoCmdAck.Code, e->Data.CmdTimeout.Code);
-  mgos_system_restart(0);
+  mgos_system_restart();
 }
 
 #ifndef MGOS_HAVE_WIFI
