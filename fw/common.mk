@@ -7,6 +7,7 @@ MG_FEATURES_TINY = -DMG_MODULE_LINES \
                    -DMG_ENABLE_TUN=0 \
                    -DMG_ENABLE_HTTP_STREAMING_MULTIPART \
                    -DMG_SSL_IF_MBEDTLS_MAX_FRAGMENT_LEN=1024 \
+                   -DMG_MAX_HTTP_REQUEST_SIZE=2048 \
                    -DMG_LOG_DNS_FAILURES \
                    -DMG_MAX_PATH=256 \
 
