@@ -32,8 +32,8 @@ double cs_log_ts WEAK;
 
 enum cs_log_level cs_log_cur_msg_level WEAK = LL_NONE;
 
-void cs_log_set_filter(char *str) WEAK;
-void cs_log_set_filter(char *str) {
+void cs_log_set_filter(const char *str) WEAK;
+void cs_log_set_filter(const char *str) {
   free(s_filter_pattern);
   if (str != NULL) {
     s_filter_pattern = strdup(str);

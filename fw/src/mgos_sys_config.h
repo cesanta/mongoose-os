@@ -8,8 +8,8 @@
 
 #include <stdbool.h>
 
-#include "sys_config.h"
-#include "sys_ro_vars.h"
+#include "mgos_config.h"
+#include "mgos_ro_vars.h"
 #include "mgos_init.h"
 #include "common/cs_dbg.h"
 
@@ -34,11 +34,7 @@ enum mgos_config_level {
   MGOS_CONFIG_LEVEL_USER = 9,
 };
 
-/*
- * Returns global instance of the config.
- * Note: Will return NULL before mgos_sys_config_init.
- */
-struct sys_config *get_cfg(void);
+bool mgos_sys_config_is_initialized(void);
 
 /*
  * Save config. Performs diff against defaults and only saves diffs.
@@ -47,12 +43,12 @@ struct sys_config *get_cfg(void);
  * If non-NULL, it must be free()d.
  * It is safe to pass a NULL `msg`
  */
-bool save_cfg(const struct sys_config *cfg, char **msg);
+bool save_cfg(const struct mgos_config *cfg, char **msg);
 
 /*
  * Reset all config values to defaults.
  */
-bool load_config_defaults(struct sys_config *cfg);
+bool load_config_defaults(struct mgos_config *cfg);
 
 /*
  * Reset config down to and including |level|.
@@ -68,11 +64,9 @@ void mgos_config_reset(int level);
  * An error message may be *msg may be set to error message.
  * Note: if non-NULL, *msg will be freed. Remember to use strdup and asprintf.
  */
-typedef bool (*mgos_config_validator_fn)(const struct sys_config *cfg,
+typedef bool (*mgos_config_validator_fn)(const struct mgos_config *cfg,
                                          char **msg);
 void mgos_register_config_validator(mgos_config_validator_fn fn);
-
-const struct sys_ro_vars *get_ro_vars(void);
 
 void device_get_mac_address(uint8_t mac[6]);
 

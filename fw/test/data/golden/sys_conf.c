@@ -25,3 +25,84 @@ const struct mgos_conf_entry sys_conf_schema_[16] = {
 const struct mgos_conf_entry *sys_conf_schema() {
   return sys_conf_schema_;
 }
+
+/* Getters {{{ */
+const struct sys_conf_wifi *sys_conf_get_wifi(struct sys_conf *cfg) {
+  return &cfg->wifi;
+}
+const struct sys_conf_wifi_sta *sys_conf_get_wifi_sta(struct sys_conf *cfg) {
+  return &cfg->wifi.sta;
+}
+const char *sys_conf_get_wifi_sta_ssid(struct sys_conf *cfg) {
+  return cfg->wifi.sta.ssid;
+}
+const char *sys_conf_get_wifi_sta_pass(struct sys_conf *cfg) {
+  return cfg->wifi.sta.pass;
+}
+const struct sys_conf_wifi_ap *sys_conf_get_wifi_ap(struct sys_conf *cfg) {
+  return &cfg->wifi.ap;
+}
+const char *sys_conf_get_wifi_ap_ssid(struct sys_conf *cfg) {
+  return cfg->wifi.ap.ssid;
+}
+const char *sys_conf_get_wifi_ap_pass(struct sys_conf *cfg) {
+  return cfg->wifi.ap.pass;
+}
+int         sys_conf_get_wifi_ap_channel(struct sys_conf *cfg) {
+  return cfg->wifi.ap.channel;
+}
+const char *sys_conf_get_wifi_ap_dhcp_end(struct sys_conf *cfg) {
+  return cfg->wifi.ap.dhcp_end;
+}
+const struct sys_conf_http *sys_conf_get_http(struct sys_conf *cfg) {
+  return &cfg->http;
+}
+int         sys_conf_get_http_enable(struct sys_conf *cfg) {
+  return cfg->http.enable;
+}
+int         sys_conf_get_http_port(struct sys_conf *cfg) {
+  return cfg->http.port;
+}
+const struct sys_conf_debug *sys_conf_get_debug(struct sys_conf *cfg) {
+  return &cfg->debug;
+}
+int         sys_conf_get_debug_level(struct sys_conf *cfg) {
+  return cfg->debug.level;
+}
+const char *sys_conf_get_debug_dest(struct sys_conf *cfg) {
+  return cfg->debug.dest;
+}
+/* }}} */
+
+/* Setters {{{ */
+void sys_conf_set_wifi_sta_ssid(struct sys_conf *cfg, const char *val) {
+  mgos_conf_set_str(&cfg->wifi.sta.ssid, val);
+}
+void sys_conf_set_wifi_sta_pass(struct sys_conf *cfg, const char *val) {
+  mgos_conf_set_str(&cfg->wifi.sta.pass, val);
+}
+void sys_conf_set_wifi_ap_ssid(struct sys_conf *cfg, const char *val) {
+  mgos_conf_set_str(&cfg->wifi.ap.ssid, val);
+}
+void sys_conf_set_wifi_ap_pass(struct sys_conf *cfg, const char *val) {
+  mgos_conf_set_str(&cfg->wifi.ap.pass, val);
+}
+void sys_conf_set_wifi_ap_channel(struct sys_conf *cfg, int         val) {
+  cfg->wifi.ap.channel = val;
+}
+void sys_conf_set_wifi_ap_dhcp_end(struct sys_conf *cfg, const char *val) {
+  mgos_conf_set_str(&cfg->wifi.ap.dhcp_end, val);
+}
+void sys_conf_set_http_enable(struct sys_conf *cfg, int         val) {
+  cfg->http.enable = val;
+}
+void sys_conf_set_http_port(struct sys_conf *cfg, int         val) {
+  cfg->http.port = val;
+}
+void sys_conf_set_debug_level(struct sys_conf *cfg, int         val) {
+  cfg->debug.level = val;
+}
+void sys_conf_set_debug_dest(struct sys_conf *cfg, const char *val) {
+  mgos_conf_set_str(&cfg->debug.dest, val);
+}
+/* }}} */

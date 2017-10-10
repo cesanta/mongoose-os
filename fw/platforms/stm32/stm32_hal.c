@@ -78,7 +78,7 @@ void mgos_usleep(uint32_t usecs) {
   mgos_msleep(msecs);
 }
 
-enum mgos_init_result mgos_sys_config_init_platform(struct sys_config *cfg) {
+enum mgos_init_result mgos_sys_config_init_platform(struct mgos_config *cfg) {
   return MGOS_INIT_OK;
 }
 

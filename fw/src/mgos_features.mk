@@ -37,7 +37,7 @@ endif
 
 ifeq "$(MGOS_ENABLE_DEBUG_UDP)" "1"
   MGOS_FEATURES += -DMGOS_ENABLE_DEBUG_UDP
-  SYS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_debug_udp_config.yaml
+  MGOS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_debug_udp_config.yaml
 endif
 
 ifeq "$(MGOS_ENABLE_BITBANG)" "1"
@@ -53,11 +53,11 @@ endif
 ifeq "$(MGOS_ENABLE_SNTP)" "1"
   MGOS_SRCS += mgos_sntp.c
   MGOS_FEATURES += -DMG_ENABLE_SNTP -DMGOS_ENABLE_SNTP
-  SYS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_sntp_config.yaml
+  MGOS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_sntp_config.yaml
 endif
 
 ifeq "$(MGOS_ENABLE_UPDATER)" "1"
-  SYS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_updater_config.yaml
+  MGOS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_updater_config.yaml
   MGOS_SRCS += mgos_updater_common.c
   MGOS_FEATURES += -DMGOS_ENABLE_UPDATER
 endif

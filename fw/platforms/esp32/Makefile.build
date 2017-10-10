@@ -113,14 +113,14 @@ export BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
 
 MGOS_SRCS =
 MGOS_FEATURES =
-SYS_CONF_SCHEMA =
+MGOS_CONF_SCHEMA =
 FS_FILES =
 
 include $(MGOS_PATH)/fw/src/mgos_features.mk
 
 export MGOS_SRCS
 export MGOS_FEATURES
-export SYS_CONF_SCHEMA
+export MGOS_CONF_SCHEMA
 export IPATH
 export VPATH
 
@@ -193,8 +193,8 @@ include $(MGOS_PATH)/fw/src/spiffs.mk
 all: $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(FW_ZIP) $(BREAKDOWN_FILE)
 
 FS_FILES += $(GEN_DIR)/conf0.json \
-            $(GEN_DIR)/sys_config_schema.json \
-            $(GEN_DIR)/sys_ro_vars_schema.json
+            $(GEN_DIR)/mgos_config_schema.json \
+            $(GEN_DIR)/mgos_ro_vars_schema.json
 
 $(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
 	$(vecho) "MKDIR $@"
@@ -202,11 +202,11 @@ $(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
 
 $(FW_MANIFEST): $(APP_BIN) $(BOOTLOADER_BIN) $(PARTITION_TABLE_BIN) $(FS_IMG)
 
-# sys_config is generated during binary build
-$(GEN_DIR)/sys_config_schema.json $(GEN_DIR)/sys_ro_vars_schema.json: all_binaries
+# mgos_config is generated during binary build
+$(GEN_DIR)/mgos_config_schema.json $(GEN_DIR)/mgos_ro_vars_schema.json: all_binaries
 
 $(GEN_DIR)/conf0.json: all_binaries
-	$(Q) rsync -mt $(GEN_DIR)/sys_config_defaults.json $(GEN_DIR)/conf0.json
+	$(Q) rsync -mt $(GEN_DIR)/mgos_config_defaults.json $(GEN_DIR)/conf0.json
 
 $(FS_IMG): $(MKSPIFFS) $(APP_FS_DIRS) $(FS_FILES)
 	$(call mkspiffs,$(FS_SIZE),$(FS_BLOCK_SIZE),$(FS_PAGE_SIZE),$(FS_ERASE_SIZE))

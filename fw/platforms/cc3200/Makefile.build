@@ -134,11 +134,11 @@ MGOS_LIB = $(BUILD_DIR)/mongoose-os.a
 MK_BOOT_CFG_BIN = $(BOOT_BUILD_DIR)/mkcfg
 FS_IMG = $(BUILD_DIR)/spiffs.img
 FS_EMPTY_IMG = $(BUILD_DIR)/fs_empty.img
-SYS_CONFIG_C = $(GEN_DIR)/sys_config.c
-SYS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/conf0.json
-SYS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/sys_config_schema.json
-SYS_RO_VARS_C = $(GEN_DIR)/sys_ro_vars.c
-SYS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/sys_ro_vars_schema.json
+MGOS_CONFIG_C = $(GEN_DIR)/mgos_config.c
+MGOS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/conf0.json
+MGOS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/mgos_config_schema.json
+MGOS_RO_VARS_C = $(GEN_DIR)/mgos_ro_vars.c
+MGOS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/mgos_ro_vars_schema.json
 BUILD_INFO_C = $(GEN_DIR)/build_info.c
 BUILD_INFO_O = $(BUILD_DIR)/build_info.c.o
 BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
@@ -150,7 +150,7 @@ BOOT_CFG_0 = $(BUILD_DIR)/mg-boot.cfg.0
 BOOT_CFG_1 = $(BUILD_DIR)/mg-boot.cfg.1
 MK_FS_META_BIN = $(BUILD_DIR)/mkfsmeta
 
-GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
+GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
 
 .PHONY: all clean
 
@@ -159,10 +159,10 @@ MGOS_SRCS = mgos_gpio.c \
             mgos_init.c \
             mgos_mongoose.c \
             mgos_hw_timers.c mgos_timers.c \
-            mgos_config.c mgos_sys_config.c \
+            mgos_config_util.c mgos_sys_config.c \
             mgos_dlsym.c mgos_system.c \
             mgos_vfs.c mgos_vfs_dev.c mgos_vfs_fs_spiffs.c \
-            $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
+            $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
             cs_crc32.c cs_file.c \
             cs_frbuf.c mgos_utils.c \
             cs_rbuf.c mgos_uart.c \
@@ -254,13 +254,13 @@ APP_OBJS = $(addprefix $(BUILD_DIR)/,$(APP_SRCS:=.o))
 
 include $(MGOS_PATH)/common/scripts/build_info.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
-include $(MGOS_PATH)/fw/src/sys_config.mk
+include $(MGOS_PATH)/fw/src/mgos_config.mk
 
-SYS_CONF_SCHEMA += $(MGOS_CC3200_PATH)/src/cc3200_sys_config.yaml
+MGOS_CONF_SCHEMA += $(MGOS_CC3200_PATH)/src/cc3200_sys_config.yaml
 
 $(BUILD_DIR)/miniz.o: CFLAGS += -DMINIZ_NO_STDIO
 
-$(FS_IMG): $(APP_FS_DIRS) $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(FS_FILES) $(MK_FS_META_BIN)
+$(FS_IMG): $(APP_FS_DIRS) $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(FS_FILES) $(MK_FS_META_BIN)
 	$(call mkspiffs,$(FS_SIZE),$(FS_BLOCK_SIZE),$(FS_PAGE_SIZE),$(FS_ERASE_SIZE))
 	$(Q) $(MK_FS_META_BIN) $(FS_SIZE) $(FS_BLOCK_SIZE) $(FS_PAGE_SIZE) $(FS_ERASE_SIZE) >> $@
 

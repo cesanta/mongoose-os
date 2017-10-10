@@ -133,11 +133,11 @@ APP_BIN_SHA_SIG = $(BUILD_DIR)/$(APP).bin.sha.sig
 APP_ELF = $(BUILD_DIR)/$(APP).elf
 MGOS_LIB = $(BUILD_DIR)/mongoose-os.a
 FS_IMG = $(BUILD_DIR)/spiffs.img
-SYS_CONFIG_C = $(GEN_DIR)/sys_config.c
-SYS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/conf0.json
-SYS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/sys_config_schema.json
-SYS_RO_VARS_C = $(GEN_DIR)/sys_ro_vars.c
-SYS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/sys_ro_vars_schema.json
+MGOS_CONFIG_C = $(GEN_DIR)/mgos_config.c
+MGOS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/conf0.json
+MGOS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/mgos_config_schema.json
+MGOS_RO_VARS_C = $(GEN_DIR)/mgos_ro_vars.c
+MGOS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/mgos_ro_vars_schema.json
 BUILD_INFO_C = $(GEN_DIR)/build_info.c
 BUILD_INFO_O = $(BUILD_DIR)/build_info.c.o
 BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
@@ -146,7 +146,7 @@ MG_BUILD_INFO_O = $(BUILD_DIR)/mg_build_info.c.o
 FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
 FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.c.o
 
-GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
+GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
 
 .PHONY: all clean
 
@@ -203,14 +203,14 @@ SDK_CFLAGS = -DTARGET_IS_CC3220 -DUSE_CC3220_ROM_DRV_API -DUSE_FREERTOS
 MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3220_PATH)/src/*.c)) \
              cs_crc32.c cs_dbg.c cs_file.c cs_rbuf.c mbuf.c \
              frozen.c json_utils.c mongoose.c \
-             mgos_config.c mgos_debug.c mgos_dlsym.c mgos_gpio.c mgos_hooks.c mgos_init.c \
+             mgos_config_util.c mgos_debug.c mgos_dlsym.c mgos_gpio.c mgos_hooks.c mgos_init.c \
              mgos_mongoose.c mgos_sys_config.c \
              mgos_hw_timers.c mgos_system.c mgos_timers.c mgos_uart.c mgos_utils.c \
              mgos_vfs.c mgos_vfs_dev.c mgos_vfs_fs_spiffs.c \
              cc32xx_crypto.c cc32xx_exc.c cc32xx_exc_handler_top.asm cc32xx_fs.c cc32xx_gpio.c \
              cc32xx_hal.c cc32xx_hw_timers.c cc32xx_libc.c cc32xx_main.c cc32xx_sl_spawn.c cc32xx_uart.c \
              cc32xx_vfs.c cc32xx_vfs_fs_slfs.c \
-             $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C))
+             $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C))
 
 IPATH += $(SPIFFS_PATH)
 VPATH += $(SPIFFS_PATH)
@@ -267,9 +267,9 @@ MGOS_OBJS += $(BUILD_DIR)/portasm.asm.o
 
 include $(MGOS_PATH)/common/scripts/build_info.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
-include $(MGOS_PATH)/fw/src/sys_config.mk
+include $(MGOS_PATH)/fw/src/mgos_config.mk
 
-$(FS_IMG): $(APP_FS_DIRS) $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(FS_FILES)
+$(FS_IMG): $(APP_FS_DIRS) $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(FS_FILES)
 	$(call mkspiffs,$(FS_SIZE),$(FS_BLOCK_SIZE),$(FS_PAGE_SIZE),$(FS_ERASE_SIZE))
 
 OBJCOPY = arm-none-eabi-objcopy

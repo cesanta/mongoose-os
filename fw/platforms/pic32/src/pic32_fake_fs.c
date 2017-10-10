@@ -149,7 +149,7 @@
   "  [\"conf_acl\", \"s\", {\"title\": \"Conf ACL\"}]"                         \
   "  ]"
 
-#define SYS_RO_VARS_SCHEMA_JSON                                           \
+#define MGOS_RO_VARS_SCHEMA_JSON                                           \
   "["                                                                     \
   "  [\"mac_address\", \"s\", {\"read_only\": true, \"title\": \"MAC "    \
   "address\"}],"                                                          \
@@ -173,10 +173,10 @@ char *cs_read_file(const char *path, size_t *size) {
     *size = strlen(SYS_CONFIG_SCHEMA_JSON);
     ret = malloc(*size + 1);
     memcpy(ret, SYS_CONFIG_SCHEMA_JSON, *size + 1);
-  } else if (strcmp(path, "sys_ro_vars_schema.json") == 0) {
-    *size = strlen(SYS_RO_VARS_SCHEMA_JSON);
+  } else if (strcmp(path, "mgos_ro_vars_schema.json") == 0) {
+    *size = strlen(MGOS_RO_VARS_SCHEMA_JSON);
     ret = malloc(*size + 1);
-    memcpy(ret, SYS_RO_VARS_SCHEMA_JSON, *size + 1);
+    memcpy(ret, MGOS_RO_VARS_SCHEMA_JSON, *size + 1);
   }
 
   return ret;

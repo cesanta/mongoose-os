@@ -37,7 +37,9 @@
 #define SCB_FAULTADDR (ARM_PERIPH_BASE + 0xD38)
 
 void cc32xx_exc_puts(const char *s) {
-  int uart_no = (get_cfg() ? get_cfg()->debug.stderr_uart : MGOS_DEBUG_UART);
+  int uart_no = (mgos_sys_config_is_initialized()
+                     ? mgos_sys_config_get_debug_stderr_uart()
+                     : MGOS_DEBUG_UART);
   if (uart_no < 0) return;
   uint32_t base = cc32xx_uart_get_base(uart_no);
   for (; *s != '\0'; s++) {

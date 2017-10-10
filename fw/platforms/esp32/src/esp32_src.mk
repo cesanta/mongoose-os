@@ -21,20 +21,20 @@ MGOS_DEBUG_UART ?= 0
 
 BUILD_INFO_C = $(GEN_DIR)/build_info.c
 MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
-SYS_CONFIG_C = $(GEN_DIR)/sys_config.c
-SYS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/conf0.json
-SYS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/sys_config_schema.json
-SYS_RO_VARS_C = $(GEN_DIR)/sys_ro_vars.c
-SYS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/sys_ro_vars_schema.json
+MGOS_CONFIG_C = $(GEN_DIR)/mgos_config.c
+MGOS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/conf0.json
+MGOS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/mgos_config_schema.json
+MGOS_RO_VARS_C = $(GEN_DIR)/mgos_ro_vars.c
+MGOS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/mgos_ro_vars_schema.json
 
 FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
 FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.o
 
 NM = xtensa-esp32-elf-nm
 
-MGOS_SRCS += mgos_config.c mgos_dlsym.c mgos_gpio.c mgos_hooks.c mgos_init.c \
+MGOS_SRCS += mgos_config_util.c mgos_dlsym.c mgos_gpio.c mgos_hooks.c mgos_init.c \
              mgos_mmap_esp.c mgos_mongoose.c \
-             mgos_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
+             mgos_sys_config.c $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
              mgos_hw_timers.c mgos_system.c mgos_timers.c mgos_uart.c mgos_utils.c \
              mgos_vfs.c mgos_vfs_dev.c mgos_vfs_fs_spiffs.c \
              esp32_crypto.c esp32_debug.c esp32_exc.c esp32_fs.c esp32_fs_crypt.c \
@@ -45,7 +45,7 @@ MGOS_SRCS += mgos_config.c mgos_dlsym.c mgos_gpio.c mgos_hooks.c mgos_init.c \
 include $(MGOS_PATH)/fw/common.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
 
-SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_config.yaml
+MGOS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_config.yaml
 
 ifeq "$(MGOS_ENABLE_UPDATER)" "1"
   MGOS_SRCS += esp32_updater.c
@@ -53,9 +53,9 @@ endif
 
 include $(MGOS_PATH)/common/scripts/build_info.mk
 
-include $(MGOS_PATH)/fw/src/sys_config.mk
+include $(MGOS_PATH)/fw/src/mgos_config.mk
 
-SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_sys_config.yaml
+MGOS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_sys_config.yaml
 
 VPATH += $(MGOS_ESP_SRC_PATH) $(MGOS_PATH)/common \
          $(MGOS_PATH)/common/platforms/esp/src
@@ -107,7 +107,7 @@ $(BUILD_INFO_C): $(MGOS_OBJS) $(APP_OBJS)
 $(MG_BUILD_INFO_C): $(MGOS_OBJS)
 	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
 
-libsrc.a: $(GEN_DIR)/sys_config.o
+libsrc.a: $(GEN_DIR)/mgos_config.o
 
 # In ffi exports file we use fake signatures: void func(void), and it conflicts
 # with the builtin functions like fopen, etc.
@@ -124,14 +124,14 @@ $(FFI_EXPORTS_C): $(APP_FS_FILES)
 	$(summary) "CC $@"
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
-./%.o: %.c $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
+./%.o: %.c $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
 	$(summary) "CC $@"
 	$(CC) $(CFLAGS) $(CPPFLAGS) \
 	  $(addprefix -I ,$(COMPONENT_INCLUDES)) \
 	  $(addprefix -I ,$(COMPONENT_EXTRA_INCLUDES)) \
 	  -c $< -o $@
 
-./%.o: %.cpp $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
+./%.o: %.cpp $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
 	$(summary) "CXX $@"
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) \
 	  $(addprefix -I ,$(COMPONENT_INCLUDES)) \

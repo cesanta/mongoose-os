@@ -95,9 +95,8 @@ static bool mgos_sntp_query(const char *server) {
 }
 
 static void mgos_sntp_retry_timer_cb(void *user_data) {
-  const struct sys_config_sntp *scfg = &get_cfg()->sntp;
   s_state.retry_timer_id = MGOS_INVALID_TIMER_ID;
-  mgos_sntp_query(scfg->server);
+  mgos_sntp_query(mgos_sys_config_get_sntp_server());
   /*
    * Response may never arrive, so we schedule a retry immediately.
    * Successful response will clear the timer.
@@ -107,19 +106,18 @@ static void mgos_sntp_retry_timer_cb(void *user_data) {
 }
 
 static void mgos_sntp_retry(void) {
-  const struct sys_config_sntp *scfg = &get_cfg()->sntp;
-  if (!scfg->enable) return;
+  if (!mgos_sys_config_get_sntp_enable()) return;
   if (s_state.retry_timer_id != MGOS_INVALID_TIMER_ID) return;
   int rt_ms = 0;
   if (s_state.synced) {
-    rt_ms = scfg->update_interval * 1000;
+    rt_ms = mgos_sys_config_get_sntp_update_interval() * 1000;
   } else {
     rt_ms = s_state.retry_timeout_ms * 2;
-    if (rt_ms < scfg->retry_min * 1000) {
-      rt_ms = scfg->retry_min * 1000;
+    if (rt_ms < mgos_sys_config_get_sntp_retry_min() * 1000) {
+      rt_ms = mgos_sys_config_get_sntp_retry_min() * 1000;
     }
-    if (rt_ms > scfg->retry_max * 1000) {
-      rt_ms = scfg->retry_max * 1000;
+    if (rt_ms > mgos_sys_config_get_sntp_retry_max() * 1000) {
+      rt_ms = mgos_sys_config_get_sntp_retry_max() * 1000;
     }
     s_state.retry_timeout_ms = rt_ms;
   }
@@ -157,9 +155,8 @@ static void mgos_sntp_net_ev(enum mgos_net_event ev,
 }
 
 enum mgos_init_result mgos_sntp_init(void) {
-  struct sys_config_sntp *scfg = &get_cfg()->sntp;
-  if (!scfg->enable) return MGOS_INIT_OK;
-  if (scfg->server == NULL) {
+  if (!mgos_sys_config_get_sntp_enable()) return MGOS_INIT_OK;
+  if (mgos_sys_config_get_sntp_server() == NULL) {
     LOG(LL_ERROR, ("sntp.server is required"));
     return MGOS_INIT_SNTP_INIT_FAILED;
   }

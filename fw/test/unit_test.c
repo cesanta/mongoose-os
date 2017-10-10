@@ -4,7 +4,7 @@
  */
 
 #include "test_util.h"
-#include "mgos_config.h"
+#include "mgos_config_util.h"
 #include "cs_dbg.h"
 #include "cs_file.h"
 #include "sys_conf.h"

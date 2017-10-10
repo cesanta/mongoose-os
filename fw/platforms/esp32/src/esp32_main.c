@@ -108,7 +108,7 @@ struct mgos_event {
 static void s_init_done_hook(enum mgos_hook_type type,
                              const struct mgos_hook_arg *arg, void *userdata) {
   /* initialize TZ env variable with the sys.tz_spec config value */
-  char *tz_spec = get_cfg()->sys.tz_spec;
+  const char *tz_spec = mgos_sys_config_get_sys_tz_spec();
   if (tz_spec == NULL) {
     tz_spec = "";
   }

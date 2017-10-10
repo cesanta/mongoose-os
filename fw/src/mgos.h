@@ -16,7 +16,7 @@
 
 #include "mgos_app.h"
 #include "mgos_bitbang.h"
-#include "mgos_config.h"
+#include "mgos_config_util.h"
 #include "mgos_debug.h"
 #include "mgos_debug_hal.h"
 #include "mgos_deps.h"

@@ -54,7 +54,7 @@ static void button_cb(int pin, void *arg) {
 
 enum mgos_app_init_result mgos_app_init(void) {
   { /* Print a message using a value from config. */
-    printf("Hello, %s!\n", get_cfg()->hello.who);
+    printf("Hello, %s!\n", mgos_sys_config_get_hello_who());
   }
 
   { /* Set up the blinky timer. */

@@ -64,7 +64,7 @@ import sys
 
 parser = argparse.ArgumentParser(description="Create C config boilerplate from a YAML schema")
 parser.add_argument("--c_name", required=True, help="name of the top-level C struct")
-parser.add_argument("--c_const_char", type=bool, default=False, help="Generate const char members for strings")
+parser.add_argument("--c_global_name", required=False, help="name for the global instance, also will be used as a prefix for its accessors")
 parser.add_argument("--dest_dir", default=".", help="base path of generated files")
 parser.add_argument("schema_files", nargs="+", help="YAML schema files")
 
@@ -220,12 +220,25 @@ class JSONSchemaWriter(object):
         return "[\n%s\n]\n" % ",\n".join(
             "  %s" % json.dumps(e, sort_keys=True) for e in self._schema)
 
+def get_ctype(vtype):
+    if vtype in (SchemaEntry.V_BOOL, SchemaEntry.V_INT):
+        ctype_api = "int         "
+        ctype_field = "int "
+    elif vtype == SchemaEntry.V_DOUBLE:
+        ctype_api = "double      "
+        ctype_field = "double "
+    elif vtype == SchemaEntry.V_STRING:
+        ctype_api = "const char *"
+        ctype_field = "char *"
+    return (ctype_api, ctype_field)
 
-# Writes C header file.
-class HWriter(object):
-    def __init__(self, struct_name, const_char):
+# Generates struct definitions.
+# TODO(dfrank): add support for public/private structs, and then have two
+# methods instead of a single GetLines() : we need some structs to be
+# present in header, and some in .c file.
+class StructDefGen(object):
+    def __init__(self, struct_name):
         self._struct_name = struct_name
-        self._const_char = const_char
         self._obj_type = "struct %s" % struct_name
         self._objs = []
         self._fields = []
@@ -239,22 +252,14 @@ class HWriter(object):
 
     def Value(self, e):
         key = e.key
-        if e.vtype in (SchemaEntry.V_BOOL, SchemaEntry.V_INT):
-            decl = "int %s" % key
-        elif e.vtype == SchemaEntry.V_DOUBLE:
-            decl = "double %s" % key
-        elif e.vtype == SchemaEntry.V_STRING:
-            if self._const_char:
-                decl = "const char *%s" % key
-            else:
-                decl = "char *%s" % key
-        self._fields.append(decl)
+        _, ctype_field = get_ctype(e.vtype)
+        self._fields.append("%s%s" % (ctype_field, key))
 
     def ObjectEnd(self, e):
         self._objs.append((len(self._stack), self._obj_type, self._fields))
         self._obj_type, self._fields = self._stack.pop()
 
-    def __str__(self):
+    def GetLines(self):
         self._objs.append((len(self._stack), self._obj_type, self._fields))
         lines = []
         for _, obj_type, fields in self._objs:
@@ -264,6 +269,127 @@ class HWriter(object):
             lines.append("};")
             lines.append("")
 
+        return lines
+
+# Generators of accessors, for both header and source files. If `c_global_name`
+# is not None, then header will additionally contain static inline functions
+# to access a global config instance, allocated globally in the source.
+class AccessorsGen(object):
+    def __init__(self, struct_name, c_global_name):
+        self._struct_name = struct_name
+        self._c_global_name = c_global_name
+        self._stack = []
+        self._getters = []
+        self._setters = []
+        self._cur_acc_prefix = ""
+
+    def ObjectStart(self, e):
+        self._stack.append(self._cur_acc_prefix)
+        self._cur_acc_prefix += ".%s" % e.key
+        self._getters.append(("const struct %s%s *" % (self._struct_name, self._cur_acc_prefix.replace(".", "_")), "", self._cur_acc_prefix))
+
+    def Value(self, e):
+        key = e.key
+        ctype_api, ctype_field = get_ctype(e.vtype)
+        cur_path = "%s.%s" % (self._cur_acc_prefix, key)
+        self._getters.append((ctype_api, ctype_field, cur_path))
+        self._setters.append((ctype_api, ctype_field, cur_path))
+
+    def ObjectEnd(self, e):
+        self._cur_acc_prefix = self._stack.pop()
+
+    def GetGetterSignature(self, path, ctype):
+        name = path.replace(".", "_")
+        return "%s%s_get%s(struct %s *cfg)" % (ctype, self._struct_name, name, self._struct_name)
+    def GetSetterSignature(self, path, ctype):
+        name = path.replace(".", "_")
+        return "void %s_set%s(struct %s *cfg, %sval)" % (self._struct_name, name, self._struct_name, ctype)
+
+    # Returns array of lines to be pasted to the header.
+    def GetHeaderLines(self):
+        lines = []
+
+        lines.append("/* Parametrized accessor prototypes {{{ */")
+        for ctype_api, ctype_field, path in self._getters:
+            lines.append("%s;" % self.GetGetterSignature(path, ctype_api))
+        lines.append("")
+
+        for ctype_api, ctype_field, path in self._setters:
+            lines.append("%s;" % self.GetSetterSignature(path, ctype_api))
+        lines.append("/* }}} */")
+        lines.append("")
+
+        if self._c_global_name != None:
+            lines.append("extern struct %s %s;" % (self._struct_name, self._c_global_name))
+            lines.append("")
+            for ctype_api, ctype_field, path in self._getters:
+                name = path.replace(".", "_")
+                lines.append("static inline %s%s_get%s(void) { return %s_get%s(&%s); }" % (ctype_api, self._c_global_name, name, self._struct_name, name, self._c_global_name))
+            lines.append("")
+            for ctype_api, ctype_field, path in self._setters:
+                name = path.replace(".", "_")
+                lines.append("static inline void %s_set%s(%sval) { %s_set%s(&%s, val); }" % (self._c_global_name, name, ctype_api, self._struct_name, name, self._c_global_name))
+            lines.append("")
+
+        return lines
+
+    # Returns array of lines to be pasted to the C source file.
+    def GetSourceLines(self):
+        lines = []
+
+        if self._c_global_name != None:
+            lines.append("/* Global instance */")
+            lines.append("struct %s %s;" % (self._struct_name, self._c_global_name))
+            lines.append("")
+
+        lines.append("/* Getters {{{ */")
+        for ctype_api, ctype_field, path in self._getters:
+            # If we're going to return a struct, then we need to take an
+            # address of the value being returned; otherwise return the value
+            # itself
+            ampersand = ""
+            if "struct" in ctype_api:
+                ampersand = "&"
+
+            lines.append("%s {" % self.GetGetterSignature(path, ctype_api))
+            lines.append("  return %scfg->%s;" % (ampersand, path[1:]))
+            lines.append("}")
+        lines.append("/* }}} */")
+        lines.append("")
+
+        lines.append("/* Setters {{{ */")
+        for ctype_api, ctype_field, path in self._setters:
+            lines.append("%s {" % self.GetSetterSignature(path, ctype_api))
+            if "char" in ctype_api:
+                lines.append("  mgos_conf_set_str(&cfg->%s, val);" % path[1:])
+            else:
+                lines.append("  cfg->%s = val;" % path[1:])
+            lines.append("}")
+        lines.append("/* }}} */")
+
+        return lines
+
+
+# Writes C header file.
+class HWriter(object):
+    def __init__(self, struct_name, c_global_name):
+        self._acc_gen = AccessorsGen(struct_name, c_global_name)
+        self._struct_def_gen = StructDefGen(struct_name)
+        self._struct_name = struct_name
+
+    def ObjectStart(self, e):
+        self._acc_gen.ObjectStart(e)
+        self._struct_def_gen.ObjectStart(e)
+
+    def Value(self, e):
+        self._acc_gen.Value(e)
+        self._struct_def_gen.Value(e)
+
+    def ObjectEnd(self, e):
+        self._acc_gen.ObjectEnd(e)
+        self._struct_def_gen.ObjectEnd(e)
+
+    def __str__(self):
         return """\
 /*
  * Generated file - do not edit.
@@ -273,12 +399,13 @@ class HWriter(object):
 #ifndef {name_uc}_H_
 #define {name_uc}_H_
 
-#include "mgos_config.h"
+#include "mgos_config_util.h"
 
 #ifdef __cplusplus
 extern "C" {{
 #endif /* __cplusplus */
 
+{struct_def_lines}
 {lines}
 
 const struct mgos_conf_entry *{name}_schema();
@@ -291,10 +418,11 @@ const struct mgos_conf_entry *{name}_schema();
 """.format(cmd=' '.join(sys.argv),
            name=self._struct_name,
            name_uc=self._struct_name.upper(),
-           lines="\n".join(lines))
+           struct_def_lines="\n".join(self._struct_def_gen.GetLines()),
+           lines="\n".join(self._acc_gen.GetHeaderLines()))
 
 
-# Writes C source file with schema definition.
+# Writes C source file with schema definition
 class CWriter(object):
     _CONF_TYPES = {
         SchemaEntry.V_INT: "CONF_TYPE_INT",
@@ -303,24 +431,28 @@ class CWriter(object):
         SchemaEntry.V_STRING: "CONF_TYPE_STRING",
     }
 
-    def __init__(self, struct_name):
+    def __init__(self, struct_name, c_global_name):
+        self._acc_gen = AccessorsGen(struct_name, c_global_name)
         self._struct_name = struct_name
-        self._lines = []
+        self._schema_lines = []
         self._start_indices = []
 
     def ObjectStart(self, _e):
-        self._start_indices.append(len(self._lines))
-        self._lines.append(None)  # Placeholder
+        self._acc_gen.ObjectStart(_e)
+        self._start_indices.append(len(self._schema_lines))
+        self._schema_lines.append(None)  # Placeholder
 
     def Value(self, e):
-        self._lines.append(
+        self._acc_gen.Value(e)
+        self._schema_lines.append(
             '  {.type = %s, .key = "%s", .offset = offsetof(struct %s, %s)},'
             % (self._CONF_TYPES[e.vtype], e.key, self._struct_name, e.path))
 
     def ObjectEnd(self, e):
+        self._acc_gen.ObjectEnd(e)
         si = self._start_indices.pop()
-        num_desc = len(self._lines) - si - 1
-        self._lines[si] = (
+        num_desc = len(self._schema_lines) - si - 1
+        self._schema_lines[si] = (
             '  {.type = CONF_TYPE_OBJECT, .key = "%s", .num_desc = %d},'
             % (e.key, num_desc))
 
@@ -333,16 +465,19 @@ class CWriter(object):
 
 const struct mgos_conf_entry {name}_schema_[{num_entries}] = {{
   {{.type = CONF_TYPE_OBJECT, .key = "", .num_desc = {num_desc}}},
-{lines}
+{schema_lines}
 }};
 
 const struct mgos_conf_entry *{name}_schema() {{
   return {name}_schema_;
 }}
+
+{accessor_lines}
 """.format(name=self._struct_name,
-           num_entries=len(self._lines) + 1,
-           num_desc=len(self._lines),
-           lines="\n".join(self._lines))
+           num_entries=len(self._schema_lines) + 1,
+           num_desc=len(self._schema_lines),
+           schema_lines="\n".join(self._schema_lines),
+           accessor_lines="\n".join(self._acc_gen.GetSourceLines()))
 
 
 @contextlib. contextmanager
@@ -392,13 +527,13 @@ if __name__ == "__main__":
     with open_with_temp(jsfn) as jsf:
         jsf.write(str(jsw))
 
-    hw = HWriter(args.c_name, args.c_const_char)
+    hw = HWriter(args.c_name, args.c_global_name)
     schema.Walk(hw)
     hfn = os.path.join(args.dest_dir, "%s.h" % args.c_name)
     with open_with_temp(hfn) as hf:
         hf.write(str(hw))
 
-    cw = CWriter(args.c_name)
+    cw = CWriter(args.c_name, args.c_global_name)
     schema.Walk(cw)
     cfn = os.path.join(args.dest_dir, "%s.c" % args.c_name)
     with open_with_temp(cfn) as cf:

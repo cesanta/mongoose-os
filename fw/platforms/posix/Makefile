@@ -44,8 +44,8 @@ INCLUDES = $(MGOS_PATH) $(SRC_PATH) $(BUILD_DIR)
 MGOS_SRCS = $(notdir $(wildcard *.c)) mgos_init.c  \
             mongoose.c frozen.c mgos_mongoose.c mgos_gpio.c mgos_hooks.c \
             mgos_system.c mgos_timers.c \
-            mgos_config.c mgos_sys_config.c mgos_vfs.c mgos_vfs_dev.c \
-            $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
+            mgos_config_util.c mgos_sys_config.c mgos_vfs.c mgos_vfs_dev.c \
+            $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
             json_utils.c cs_rbuf.c mgos_uart.c \
             mgos_utils.c cs_file.c cs_crc32.c
 
@@ -127,13 +127,13 @@ INCDIRS = $(addprefix -I,$(INCLUDES))
 LIBS = $(addprefix -l,$(ADD_LIBS))
 
 APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(MGOS_SRCS))
-SYS_CONFIG_C = $(BUILD_DIR)/sys_config.c
-SYS_CONFIG_DEFAULTS_JSON = $(BUILD_DIR)/conf0.json
-SYS_RO_VARS_C = $(BUILD_DIR)/sys_ro_vars.c
+MGOS_CONFIG_C = $(BUILD_DIR)/mgos_config.c
+MGOS_CONFIG_DEFAULTS_JSON = $(BUILD_DIR)/conf0.json
+MGOS_RO_VARS_C = $(BUILD_DIR)/mgos_ro_vars.c
 BUILD_INFO_C = $(BUILD_DIR)/build_info.c
 OBJS = $(APP_OBJS) $(BUILD_DIR)/build_info.o
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
-GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
+GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
 
 FS_FILES = $(wildcard $(SRC_PATH)/js/*)
 
@@ -160,7 +160,7 @@ endef
 
 all: $(BIN_DIR) $(BUILD_DIR) $(BIN_DIR)/$(APP) fs
 
-include $(MGOS_PATH)/fw/src/sys_config.mk
+include $(MGOS_PATH)/fw/src/mgos_config.mk
 
 $(BIN_DIR) $(BUILD_DIR):
 	$(vecho) MKDIR $@
@@ -195,7 +195,7 @@ $(BIN_DIR)/$(APP): $(BIN_DIR) $(OBJS)
 	$(Q) $(CC_WRAPPER) $(CC) $(OBJS) $(LIBS) $(LDFLAGS) -o $@
 
 # After file copy, change default HTTP port to 9080
-fs: $(BIN_DIR) $(FS_FILES) $(SYS_CONFIG_C)
+fs: $(BIN_DIR) $(FS_FILES) $(MGOS_CONFIG_C)
 	@echo "MKFS $@"
 	$(Q) cp $(FS_FILES) $(BIN_DIR)
 	$(Q) perl -pi"" -e 's/"80"/"9080"/' $(BIN_DIR)/conf0.json

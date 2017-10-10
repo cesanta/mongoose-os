@@ -42,7 +42,7 @@ void mongoose_schedule_poll(bool from_isr) {
   mg_broadcast(mgos_get_mgr(), dummy_handler, NULL, 0);
 }
 
-enum mgos_init_result mgos_sys_config_init_platform(struct sys_config *cfg) {
+enum mgos_init_result mgos_sys_config_init_platform(struct mgos_config *cfg) {
   cs_log_set_level(cfg->debug.level);
   return MGOS_INIT_OK;
 }

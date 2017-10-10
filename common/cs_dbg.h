@@ -40,7 +40,7 @@ enum cs_log_level {
 void cs_log_set_level(enum cs_log_level level);
 
 /* Set log filter. NULL (a default) logs everything. */
-void cs_log_set_filter(char *source_file_name);
+void cs_log_set_filter(const char *source_file_name);
 
 int cs_log_print_prefix(enum cs_log_level level, const char *func,
                         const char *filename);

@@ -11,7 +11,7 @@
 #include "mongoose/mongoose.h"
 
 #include "mgos_init.h"
-#include "sys_config.h"
+#include "mgos_config.h"
 
 #ifdef __cplusplus
 extern "C" {

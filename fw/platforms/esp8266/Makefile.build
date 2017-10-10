@@ -106,7 +106,7 @@ include $(MGOS_PATH)/fw/common.mk
 MGOS_ESP_SRC_PATH = $(MGOS_ESP8266_PATH)/src
 
 MGOS_SRCS = cs_file.c cs_rbuf.c \
-            mgos_config.c \
+            mgos_config_util.c \
             mgos_dlsym.c \
             mgos_gpio.c \
             mgos_hooks.c \
@@ -115,7 +115,7 @@ MGOS_SRCS = cs_file.c cs_rbuf.c \
             mgos_timers.c \
             mgos_mmap_esp.c \
             mgos_mongoose.c \
-            mgos_sys_config.c $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
+            mgos_sys_config.c $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
             mgos_system.c \
             mgos_uart.c \
             mgos_utils.c \
@@ -206,11 +206,11 @@ MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" \
               -DESP_COREDUMP
 
 MGOS_LIB = $(BUILD_DIR)/mongoose-os.a
-SYS_CONFIG_C = $(GEN_DIR)/sys_config.c
-SYS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/conf0.json
-SYS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/sys_config_schema.json
-SYS_RO_VARS_C = $(GEN_DIR)/sys_ro_vars.c
-SYS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/sys_ro_vars_schema.json
+MGOS_CONFIG_C = $(GEN_DIR)/mgos_config.c
+MGOS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/conf0.json
+MGOS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/mgos_config_schema.json
+MGOS_RO_VARS_C = $(GEN_DIR)/mgos_ro_vars.c
+MGOS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/mgos_ro_vars_schema.json
 BUILD_INFO_C = $(GEN_DIR)/build_info.c
 BUILD_INFO_O = $(BUILD_DIR)/build_info.c.o
 BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
@@ -219,7 +219,7 @@ MG_BUILD_INFO_O = $(BUILD_DIR)/mg_build_info.c.o
 FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
 FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.c.o
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
-GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
+GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
 IMAGE_HEADER_SIZE = 0
 MAP_FILE = $(BUILD_DIR)/$(APP).elf.map
 BREAKDOWN_FILE = $(BUILD_DIR)/breakdown.txt
@@ -267,7 +267,7 @@ ifeq "$(SSL)" "mbedTLS"
                        -DMG_SSL_IF_MBEDTLS_MAX_FRAG_LEN=1024 \
                        -DMBEDTLS_X509_CA_CHAIN_ON_DISK
   MBEDTLS_CFLAGS = $(CFLAGS)
-  SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp_mbedtls_config.yaml
+  MGOS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp_mbedtls_config.yaml
   ifeq "$(MGOS_HAVE_ATCA)" "1"
     MBEDTLS_CFLAGS += -DMBEDTLS_ECP_ATCA -DMBEDTLS_X509_CA_CHAIN_ON_DISK -I$(ATCA_PATH)/lib
     SSL_LIBS = $(addprefix $(MBEDTLS_PATH)/library/,libmbedcrypto_atca.a libmbedtls_atca.a libmbedx509_atca.a)
@@ -490,9 +490,9 @@ $(LD_SCRIPT): $(LD_SCRIPT_TEMPL)
 
 include $(MGOS_PATH)/common/scripts/build_info.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
-include $(MGOS_PATH)/fw/src/sys_config.mk
+include $(MGOS_PATH)/fw/src/mgos_config.mk
 
-SYS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp_sys_config.yaml
+MGOS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp_sys_config.yaml
 
 $(FFI_EXPORTS_C): $(APP_FS_FILES)
 	$(call gen_ffi_exports,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))
@@ -519,7 +519,7 @@ $(BUILD_DIR)/$(BUILD_LIB_NAME): $(BUILD_DIR) $(APP_OBJS)
 
 # -- Filesystem.
 
-$(FS_IMG): $(APP_FS_DIRS) $(FS_FILES) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
+$(FS_IMG): $(APP_FS_DIRS) $(FS_FILES) $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
 	$(call mkspiffs,$(FS_SIZE),$(FS_BLOCK_SIZE),$(FS_PAGE_SIZE),$(FS_ERASE_SIZE))
 
 #

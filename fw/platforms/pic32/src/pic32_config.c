@@ -1,7 +1,7 @@
 #include "common/platform.h"
 #include "mgos_sys_config.h"
 
-enum mgos_init_result mgos_sys_config_init_platform(struct sys_config *cfg) {
+enum mgos_init_result mgos_sys_config_init_platform(struct mgos_config *cfg) {
   return MGOS_INIT_OK;
 }
 

@@ -60,9 +60,8 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
     len = mgos_uart_write(uart_no, data, len);
     mgos_uart_flush(uart_no);
   }
-  const struct sys_config *cfg = get_cfg();
   /* Only send LL_INFO messages and below, to avoid loops. */
-  if (cfg == NULL || cs_log_cur_msg_level > LL_INFO) {
+  if (!mgos_sys_config_is_initialized() || cs_log_cur_msg_level > LL_INFO) {
     s_in_debug = false;
     debug_unlock();
     return;
@@ -71,9 +70,11 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
   /* Only send STDERR to UDP. */
   if (fd == 2) {
     static uint32_t s_seq = 0;
-    int n =
-        snprintf(buf, sizeof(buf), "%s %u %.3lf %d|",
-                 (cfg->device.id ? cfg->device.id : "-"), s_seq, mg_time(), fd);
+    int n = snprintf(
+        buf, sizeof(buf), "%s %u %.3lf %d|",
+        (mgos_sys_config_get_device_id() ? mgos_sys_config_get_device_id()
+                                         : "-"),
+        s_seq, mg_time(), fd);
     if (n > 0) {
       mgos_debug_udp_send(mg_mk_str_n(buf, n), mg_mk_str_n(data, len));
     }

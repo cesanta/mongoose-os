@@ -119,8 +119,9 @@ struct update_context *updater_context_create() {
 
   s_ctx->dev_ctx = mgos_upd_hal_ctx_create();
 
-  LOG(LL_INFO, ("Starting update (timeout %d)", get_cfg()->update.timeout));
-  s_ctx->wdt = mgos_set_timer(get_cfg()->update.timeout * 1000,
+  LOG(LL_INFO,
+      ("Starting update (timeout %d)", mgos_sys_config_get_update_timeout()));
+  s_ctx->wdt = mgos_set_timer(mgos_sys_config_get_update_timeout() * 1000,
                               false /* repeat */, updater_abort, s_ctx);
   return s_ctx;
 }

@@ -36,9 +36,9 @@ static void pub(struct mg_connection *c, const char *fmt, ...) {
   va_start(ap, fmt);
   n = json_vprintf(&jmo, fmt, ap);
   va_end(ap);
-  mg_mqtt_publish(c, get_cfg()->mqtt.pub, mgos_mqtt_get_packet_id(),
+  mg_mqtt_publish(c, mgos_sys_config_get_mqtt_pub(), mgos_mqtt_get_packet_id(),
                   MG_MQTT_QOS(1), msg, n);
-  LOG(LL_INFO, ("%s -> %s", get_cfg()->mqtt.pub, msg));
+  LOG(LL_INFO, ("%s -> %s", mgos_sys_config_get_mqtt_pub(), msg));
 }
 
 static uint8_t from_hex(const char *s) {
@@ -68,10 +68,11 @@ static void ev_handler(struct mg_connection *c, int ev, void *p,
 
   if (ev == MG_EV_MQTT_CONNACK) {
     LOG(LL_INFO, ("CONNACK: %d", msg->connack_ret_code));
-    if (get_cfg()->mqtt.sub == NULL || get_cfg()->mqtt.pub == NULL) {
+    if (mgos_sys_config_get_mqtt_sub() == NULL ||
+        mgos_sys_config_get_mqtt_pub() == NULL) {
       LOG(LL_ERROR, ("Run 'mgos config-set mqtt.sub=... mqtt.pub=...'"));
     } else {
-      sub(c, "%s", get_cfg()->mqtt.sub);
+      sub(c, "%s", mgos_sys_config_get_mqtt_sub());
     }
   } else if (ev == MG_EV_MQTT_SUBACK) {
     LOG(LL_INFO, ("Subscription %u acknowledged", msg->message_id));

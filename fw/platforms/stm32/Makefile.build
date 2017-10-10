@@ -116,19 +116,19 @@ include $(MGOS_PATH)/fw/src/spiffs.mk
 BUILD_INFO_C = $(GEN_DIR)/build_info.c
 BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
 MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
-SYS_CONFIG_C = $(GEN_DIR)/sys_config.c
-SYS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/conf0.json
-SYS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/sys_config_schema.json
-SYS_RO_VARS_C = $(GEN_DIR)/sys_ro_vars.c
-SYS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/sys_ro_vars_schema.json
+MGOS_CONFIG_C = $(GEN_DIR)/mgos_config.c
+MGOS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/conf0.json
+MGOS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/mgos_config_schema.json
+MGOS_RO_VARS_C = $(GEN_DIR)/mgos_ro_vars.c
+MGOS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/mgos_ro_vars_schema.json
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
-GENFILES_LIST = $(SYS_CONFIG_C) $(SYS_RO_VARS_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C) $(FS_HEADER)
+GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C) $(FS_HEADER)
 SYMBOLS_DUMP = $(GEN_DIR)/symbols_dump.txt
 FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
 FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.c.o
 SRCS = $(SDK_SRCS) $(ADD_SRCS) $(APP_SRCS) $(MGOS_SRCS)
 
-MGOS_SRCS +=  $(notdir $(SYS_CONFIG_C)) $(notdir $(SYS_RO_VARS_C)) \
+MGOS_SRCS +=  $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
 			 $(notdir $(MG_BUILD_INFO_C)) $(notdir $(BUILD_INFO_C)) \
              mgos_gpio.c mgos_sys_config.c mgos_config.c mongoose.c \
              mgos_timers_mongoose.c cs_crc32.c cs_file.c mgos_mongoose.c \
@@ -175,7 +175,7 @@ IPATH += -I$(MGOS_PATH) -I$(GEN_DIR) -I$(PLATFORM_SDK_PATH) \
 
 all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(APP_BIN) $(FW_ZIP)
 
-$(FW_MANIFEST): $(APP_BIN) $(SYS_CONFIG_C) $(BUILD_INFO_C) $(BUILD_INFO_JSON) $(MG_BUILD_INFO_C) $(FW_DIR)
+$(FW_MANIFEST): $(APP_BIN) $(MGOS_CONFIG_C) $(BUILD_INFO_C) $(BUILD_INFO_JSON) $(MG_BUILD_INFO_C) $(FW_DIR)
 
 $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR):
 	$(vecho) MKDIR $@
@@ -209,9 +209,9 @@ $(APP_BIN): $(APP_ELF)
 
 include $(MGOS_PATH)/common/scripts/build_info.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
-include $(MGOS_PATH)/fw/src/sys_config.mk
+include $(MGOS_PATH)/fw/src/mgos_config.mk
 
-SYS_CONF_SCHEMA += $(MGOS_PLATFORM_PATH)/stm32_config.yaml
+MGOS_CONF_SCHEMA += $(MGOS_PLATFORM_PATH)/stm32_config.yaml
 
 $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(FW_STAGING_DIR)
 	$(call gen_build_info,$@,,$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
@@ -222,7 +222,7 @@ $(MG_BUILD_INFO_C): $(FW_STAGING_DIR)
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)
 
-$(FS_IMG): $(APP_FS_DIRS) $(FS_FILES) $(SYS_CONFIG_C) $(SYS_RO_VARS_C)
+$(FS_IMG): $(APP_FS_DIRS) $(FS_FILES) $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
 	$(call mkspiffs,$(FS_SIZE))
 
 $(FS_HEADER) : $(FS_IMG)

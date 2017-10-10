@@ -241,8 +241,8 @@ bool mgos_is_inbound(struct mg_connection *c) {
 char *mgos_get_nameserver() {
 #ifdef MGOS_HAVE_WIFI
   char *dns = NULL;
-  if (get_cfg()->wifi.sta.nameserver != NULL) {
-    dns = strdup(get_cfg()->wifi.sta.nameserver);
+  if (mgos_sys_config_get_wifi_sta_nameserver() != NULL) {
+    dns = strdup(mgos_sys_config_get_wifi_sta_nameserver());
   } else {
     dns = mgos_wifi_get_sta_default_dns();
   }
