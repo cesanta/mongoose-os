@@ -2009,6 +2009,11 @@ func expandManifestLibsAndConds(
 			// of sources.
 			bl := moscommon.GetBinaryLibFilePath(lcur.Path, lcur.Name, manifest.Platform)
 			if _, err := os.Stat(bl); err == nil {
+				bl, err := filepath.Abs(bl)
+				if err != nil {
+					return errors.Trace(err)
+				}
+
 				// Prebuilt lib exists: use it if either *preferPrebuiltLibs is true
 				// (so that we prefer binary) or if there are no sources.
 				if len(curManifest.Sources) == 0 || *preferPrebuiltLibs {
