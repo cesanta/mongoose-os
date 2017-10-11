@@ -629,7 +629,7 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 	}
 	if startWebview {
 		go http.Serve(listener, nil)
-		webview()
+		webview(url)
 	} else {
 		if startBrowser {
 			open.Start(url)

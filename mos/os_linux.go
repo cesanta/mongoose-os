@@ -14,6 +14,6 @@ func enumerateSerialPorts() []string {
 func osSpecificInit() {
 }
 
-func webview() {
+func webview(url string) {
 	fmt.Println("WebView for Linux is not yet supported.")
 }

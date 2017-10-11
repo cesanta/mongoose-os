@@ -39,7 +39,7 @@ import (
 
 	"golang.org/x/sys/windows/registry"
 
-	"github.com/zserge/webview"
+	zwebview "github.com/zserge/webview"
 )
 
 func enumerateSerialPorts() []string {
@@ -105,6 +105,6 @@ func osSpecificInit() {
 	C.install(C.CString(os.Args[0]))
 }
 
-func webview() {
-	webview.Open("Mongoose OS Web UI", url, 1024, 480, true)
+func webview(url string) {
+	zwebview.Open("Mongoose OS Web UI", url, 1024, 480, true)
 }

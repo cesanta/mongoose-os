@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/zserge/webview"
+	zwebview "github.com/zserge/webview"
 )
 
 func enumerateSerialPorts() []string {
@@ -34,6 +34,6 @@ func osSpecificInit() {
 	}
 }
 
-func webview() {
-	webview.Open("Mongoose OS Web UI", url, 1024, 480, true)
+func webview(url string) {
+	zwebview.Open("Mongoose OS Web UI", url, 1024, 480, true)
 }
