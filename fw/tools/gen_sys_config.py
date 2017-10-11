@@ -10,9 +10,9 @@
 #  - JSON file with defaults
 #  - JSON file with schema (for consumption by the UI)
 #
-# Resulting configuration is an object which is represented as a C struct,
-# but definition is a list of entries, where each entry represents a key
-# in the resulting struct. Each item is a [path, type, default, params] array,
+# Resulting configuration is an object which is represented as an opaque C
+# struct, and accessors for it (so far struct is still public, but it will
+# change soon). Each item is a [path, type, default, params] array,
 # where path is the full path to the key, type is bool, int or string, default
 # is the default value and params is a dict with various params (currently only
 # used by web UI to assist rendering).
@@ -25,22 +25,43 @@
 #   ["foo.frombulate", "b", false, {"title": "Enable frombulation"}],
 # ]
 #
-# $ gen_sys_config.py --c_name=foo_config example.yaml
+# $ gen_sys_config.py --c_name=myconfig --dest_dir /tmp/myconfig example.yaml
 # $ cat foo_config.h
-#     struct foo_config_foo_bar {
-# struct foo_config_foo {
-#     struct foo_config_foo_bar {
-#       char *name;
-#       int num_quux;
-#     } bar;
-#     int frombulate;
-#   }
-# struct foo_config {
-#   struct foo_config_foo foo;
-# };
+# ....
+# const struct myconfig_foo *myconfig_get_foo(struct myconfig *cfg);
+# const struct myconfig_foo_bar *myconfig_get_foo_bar(struct myconfig *cfg);
+# const char *myconfig_get_foo_bar_name(struct myconfig *cfg);
+# int         myconfig_get_foo_bar_num_quux(struct myconfig *cfg);
+# int         myconfig_get_foo_frombulate(struct myconfig *cfg);
+#
+# void myconfig_set_foo_bar_name(struct myconfig *cfg, const char *val);
+# void myconfig_set_foo_bar_num_quux(struct myconfig *cfg, int         val);
+# void myconfig_set_foo_frombulate(struct myconfig *cfg, int         val);
+# ....
+#
+# There is an optional flag --c_global_name=<name>; if it's given, then
+# the resulting source file will contain the definition of a config instance
+# with the given name, and the header will contain a bunch of accessors for
+# that global instance:
+#
+# $ gen_sys_config.py --c_name=myconfig --c_global_name=myconfig_global --dest_dir /tmp/myconfig example.yaml
+# $ cat foo_config.h
+# ....
+# extern struct myconfig myconfig_global;
+#
+# static inline const struct myconfig_foo *myconfig_global_get_foo(void) { return myconfig_get_foo(&myconfig_global); }
+# static inline const struct myconfig_foo_bar *myconfig_global_get_foo_bar(void) { return myconfig_get_foo_bar(&myconfig_global); }
+# static inline const char *myconfig_global_get_foo_bar_name(void) { return myconfig_get_foo_bar_name(&myconfig_global); }
+# static inline int         myconfig_global_get_foo_bar_num_quux(void) { return myconfig_get_foo_bar_num_quux(&myconfig_global); }
+# static inline int         myconfig_global_get_foo_frombulate(void) { return myconfig_get_foo_frombulate(&myconfig_global); }
+#
+# static inline void myconfig_global_set_foo_bar_name(const char *val) { myconfig_set_foo_bar_name(&myconfig_global, val); }
+# static inline void myconfig_global_set_foo_bar_num_quux(int         val) { myconfig_set_foo_bar_num_quux(&myconfig_global, val); }
+# static inline void myconfig_global_set_foo_frombulate(int         val) { myconfig_set_foo_frombulate(&myconfig_global, val); }
+# ....
 #
 # If default value is not specified when an entry is defined, a zero-value
-# is assumed: false for bo9oleans, 0 for ints and an empty string for strings.
+# is assumed: false for booleans, 0 for ints and an empty string for strings.
 # These two definitions are equivalent:
 #
 # ["foo.frombulate", "b", false, {"title": "Enable frombulation"}],
