@@ -15,7 +15,6 @@ import (
 	"os/signal"
 	"path"
 	"path/filepath"
-	"regexp"
 	"runtime"
 	"strings"
 	"syscall"
@@ -79,10 +78,6 @@ var (
 
 	// The same as logWriterStderr, but skips os.Stderr unless --verbose is given
 	logWriter io.Writer
-
-	// Note: we opted to use ${foo} instead of {{foo}}, because {{foo}} needs to
-	// be quoted in yaml, whereas ${foo} does not.
-	varRegexp = regexp.MustCompile(`\$\{[^}]+\}`)
 )
 
 const (
@@ -410,22 +405,22 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	// }}}
 
 	// Get sources and filesystem files from the manifest, expanding expressions {{{
-	appSources, err := expandVarsSlice(interp, manifest.Sources)
+	appSources, err := interpreter.ExpandVarsSlice(interp, manifest.Sources)
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	appIncludes, err := expandVarsSlice(interp, manifest.Includes)
+	appIncludes, err := interpreter.ExpandVarsSlice(interp, manifest.Includes)
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	appFSFiles, err := expandVarsSlice(interp, manifest.Filesystem)
+	appFSFiles, err := interpreter.ExpandVarsSlice(interp, manifest.Filesystem)
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	appBinLibs, err := expandVarsSlice(interp, manifest.BinaryLibs)
+	appBinLibs, err := interpreter.ExpandVarsSlice(interp, manifest.BinaryLibs)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -509,7 +504,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 			return errors.Trace(err)
 		}
 
-		appSources, err = expandVarsSlice(interp, manifestOrig.Sources)
+		appSources, err = interpreter.ExpandVarsSlice(interp, manifestOrig.Sources)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -1200,17 +1195,17 @@ func readManifestFile(
 	}
 	manifest.InitAfter = nil
 
-	manifest.MongooseOsVersion, err = expandVars(interp, manifest.MongooseOsVersion)
+	manifest.MongooseOsVersion, err = interpreter.ExpandVars(interp, manifest.MongooseOsVersion)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
 	}
 
-	manifest.LibsVersion, err = expandVars(interp, manifest.LibsVersion)
+	manifest.LibsVersion, err = interpreter.ExpandVars(interp, manifest.LibsVersion)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
 	}
 
-	manifest.ModulesVersion, err = expandVars(interp, manifest.ModulesVersion)
+	manifest.ModulesVersion, err = interpreter.ExpandVars(interp, manifest.ModulesVersion)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
 	}
@@ -2264,7 +2259,7 @@ func mergeMapsString(
 	}
 	for k, v := range m2 {
 		var err error
-		bv[k], err = expandVars(interp, v)
+		bv[k], err = interpreter.ExpandVars(interp, v)
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
@@ -2518,31 +2513,6 @@ func copyExternalCodeAll(paths *[]string, appDir, tmpCodeDir string) error {
 	}
 
 	return nil
-}
-
-func expandVars(interp *interpreter.MosInterpreter, s string) (string, error) {
-	var errRet error
-	result := varRegexp.ReplaceAllStringFunc(s, func(v string) string {
-		expr := v[2 : len(v)-1]
-		val, err := interp.EvaluateExprString(expr)
-		if err != nil {
-			errRet = errors.Trace(err)
-		}
-		return val
-	})
-	return result, errRet
-}
-
-func expandVarsSlice(interp *interpreter.MosInterpreter, slice []string) ([]string, error) {
-	ret := []string{}
-	for _, s := range slice {
-		s, err := expandVars(interp, s)
-		if err != nil {
-			return nil, errors.Trace(err)
-		}
-		ret = append(ret, s)
-	}
-	return ret, nil
 }
 
 func newMosVars() *interpreter.MosVars {

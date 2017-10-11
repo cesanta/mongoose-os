@@ -76,7 +76,14 @@ func evalManifestExpr(ctx context.Context, devConn *dev.DevConn) error {
 		return errors.Trace(err)
 	}
 
-	fmt.Println(string(data))
+	// TODO(dfrank): probably add a flag whether to expand vars (the default
+	// being to expand)
+	sdata, err := interpreter.ExpandVars(interp, string(data))
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	fmt.Println(sdata)
 
 	return nil
 }
