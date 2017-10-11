@@ -3,6 +3,19 @@
  * All rights reserved
  */
 
+/*
+ * This file contains definitions for the user-defined app entry point,
+ * `mgos_app_init()`.
+ *
+ * The `mgos_app_init()` function is like the `main()` function in the C
+ * program. This is a app's entry point.
+ *
+ * The mongoose-os core code does implement `mgos_app_init()`
+ * stub function as a weak symbol, so if user app does not define its own
+ * `mgos_app_init()`, a default stub will be used. That's what most of the
+ * JavaScript based apps do - they do not contain C code at all.
+ */
+
 #ifndef CS_FW_SRC_MGOS_APP_H_
 #define CS_FW_SRC_MGOS_APP_H_
 
@@ -17,8 +30,10 @@ enum mgos_app_init_result {
   MGOS_APP_INIT_ERROR = -2,
 };
 
-/* User app init functions, C and JS respectively.
- * A weak stub is provided in mgos_app_init.c, which can be overridden. */
+/*
+ * User app init function.
+ * A weak stub is provided in `mgos_app_init.c`, which can be overridden.
+ */
 enum mgos_app_init_result mgos_app_init(void);
 
 /*

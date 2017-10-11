@@ -4,8 +4,11 @@
  */
 
 /*
- * View this file on GitHub:
- * [mgos_bitbang.h](https://github.com/cesanta/mongoose-os/blob/master/mgos_bitbang.h)
+ * Bit banging is a technique to implement hardware protocols fully in
+ * software, by managing microcontroller pin states - including timing,
+ * voltage levels, etc.
+ * See [wikipedia article](https://en.wikipedia.org/wiki/Bit_banging) for
+ * a detailed information.
  */
 
 #ifndef CS_FW_SRC_MGOS_BITBANG_H_
@@ -28,12 +31,14 @@ enum mgos_delay_unit {
  * Bit bang GPIO pin `gpio`. `len` bytes from `data` are sent to the specified
  * pin bit by bit. Sending each bit consists of a "high" and "low" phases,
  * length of which is determined by the specified timing parameters.
- *  _____
- * |     |
- * |     |
- * |     |_________
  *
- *   tXh     tXl
+ * ```
+ *  +-----+
+ *  |     |
+ * -+     +-------
+ *
+ *  tXh   tXl
+ * ```
  *
  * `t0h` and `t0l` specify timings if the bit being transmitted is 0,
  * `t1h` and `t1l` specify the same for the case where the bit is 1.
