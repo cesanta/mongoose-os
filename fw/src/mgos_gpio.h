@@ -4,9 +4,9 @@
  */
 
 /*
- * See on GitHub:
- * [mgos_gpio.h](https://github.com/cesanta/mongoose-os/blob/master/mgos_gpio.h),
- * [mgos_gpio.c](https://github.com/cesanta/mongoose-os/blob/master/mgos_gpio.c)
+ * GPIO API - see [wikipedia
+ * article](https://en.wikipedia.org/wiki/General-purpose_input/output)
+ * for the background information.
  */
 
 #ifndef CS_FW_SRC_MGOS_GPIO_H_
@@ -20,26 +20,30 @@
 extern "C" {
 #endif /* __cplusplus */
 
-enum mgos_gpio_mode { MGOS_GPIO_MODE_INPUT = 0, MGOS_GPIO_MODE_OUTPUT = 1 };
+enum mgos_gpio_mode {
+  MGOS_GPIO_MODE_INPUT = 0, /* input mode */
+  MGOS_GPIO_MODE_OUTPUT = 1 /* output mode */
+};
 
 enum mgos_gpio_pull_type {
   MGOS_GPIO_PULL_NONE = 0,
-  MGOS_GPIO_PULL_UP = 1,
-  MGOS_GPIO_PULL_DOWN = 2
+  MGOS_GPIO_PULL_UP = 1,  /* pin is pilled to the high voltage */
+  MGOS_GPIO_PULL_DOWN = 2 /* pin is pulled to the low voltage */
 };
 
 enum mgos_gpio_int_mode {
   MGOS_GPIO_INT_NONE = 0,
-  MGOS_GPIO_INT_EDGE_POS = 1,
-  MGOS_GPIO_INT_EDGE_NEG = 2,
-  MGOS_GPIO_INT_EDGE_ANY = 3,
-  MGOS_GPIO_INT_LEVEL_HI = 4,
-  MGOS_GPIO_INT_LEVEL_LO = 5
+  MGOS_GPIO_INT_EDGE_POS = 1, /* positive edge */
+  MGOS_GPIO_INT_EDGE_NEG = 2, /* negative edge */
+  MGOS_GPIO_INT_EDGE_ANY = 3, /* any edge - positive or negative */
+  MGOS_GPIO_INT_LEVEL_HI = 4, /* high voltage level */
+  MGOS_GPIO_INT_LEVEL_LO = 5  /* low voltage level */
 };
 
+/* GPIO interrupt handler signature. */
 typedef void (*mgos_gpio_int_handler_f)(int pin, void *arg);
 
-/* Set mode - input or output */
+/* Set mode - input or output. */
 bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode);
 
 /* Set pull-up or pull-down type. */

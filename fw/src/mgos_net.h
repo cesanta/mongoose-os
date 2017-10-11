@@ -3,6 +3,14 @@
  * All rights reserved
  */
 
+/*
+ * Low-level network configuration API.
+ *
+ * Contains definitions of the configuration state. Allows to set up an
+ * event handler that tracks state changes: when the network connectivity
+ * is lost, established, etc.
+ */
+
 #ifndef CS_FW_SRC_MGOS_NET_H_
 #define CS_FW_SRC_MGOS_NET_H_
 
@@ -10,8 +18,8 @@
 
 #include "mongoose/mongoose.h"
 
-#include "mgos_init.h"
 #include "mgos_config.h"
+#include "mgos_init.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -43,14 +51,18 @@ struct mgos_net_event_data {
   struct mgos_net_ip_info ip_info;
 };
 
+/* Event handler signature. */
 typedef void (*mgos_net_event_handler_t)(
     enum mgos_net_event ev, const struct mgos_net_event_data *ev_data,
     void *arg);
 
+/* Register network configuration event handler. */
 void mgos_net_add_event_handler(mgos_net_event_handler_t eh, void *arg);
 
+/* Unregister network configuration event handler. */
 void mgos_net_remove_event_handler(mgos_net_event_handler_t eh, void *arg);
 
+/* Retrieve IP configuration. */
 bool mgos_net_get_ip_info(enum mgos_net_if_type if_type, int if_instance,
                           struct mgos_net_ip_info *ip_info);
 

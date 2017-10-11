@@ -3,6 +3,10 @@
  * All rights reserved
  */
 
+/*
+ * TODO(lsm): merge this file with `mgos_gpio.h`.
+ */
+
 #ifndef CS_FW_SRC_MGOS_GPIO_HAL_H_
 #define CS_FW_SRC_MGOS_GPIO_HAL_H_
 
@@ -12,11 +16,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
-
-/*
- * MGOS_NUM_GPIO must be defined to max number of GPIO.
- * It is used to size various arrays.
- */
 
 /* Device must implement these methods from the public interface. */
 bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode);

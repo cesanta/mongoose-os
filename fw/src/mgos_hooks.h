@@ -4,7 +4,13 @@
  */
 
 /*
- * Hooks API
+ * Hooks API.
+ *
+ * Mongoose OS provides a way to get a notification when certain event
+ * happens. Possible event types are specified by the `enum mgos_hook_type`.
+ * User code can register a handler which gets called when an event
+ * happens. Event parameters are passed as a pointer to a structure that
+ * depends on an event type.
  */
 
 #ifndef CS_FW_SRC_MGOS_HOOKS_H_
@@ -40,8 +46,11 @@ struct mgos_hook_arg {
 typedef void(mgos_hook_fn_t)(enum mgos_hook_type type,
                              const struct mgos_hook_arg *arg, void *userdata);
 
+/* Register event handler. */
 bool mgos_hook_register(enum mgos_hook_type type, mgos_hook_fn_t *cb,
                         void *userdata);
+
+/* Trigger an event. */
 void mgos_hook_trigger(enum mgos_hook_type type,
                        const struct mgos_hook_arg *arg);
 

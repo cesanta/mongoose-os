@@ -4,9 +4,10 @@
  */
 
 /*
- * See on GitHub:
- * [mgos_mongoose.h](https://github.com/cesanta/mongoose-os/blob/master/mgos_mongoose.h),
- * [mgos_mongoose.c](https://github.com/cesanta/mongoose-os/blob/master/mgos_mongoose.c)
+ * This file contains wrappers around low-level Mongoose Library calls.
+ *
+ * See https://mongoose-os.com/docs/book/intro.html#main-event-loop
+ * for the detailed explanation.
  */
 
 #ifndef CS_FW_SRC_MGOS_MONGOOSE_H_
