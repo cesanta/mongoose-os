@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"io"
 	"os"
+	"strings"
 
 	"golang.org/x/net/context"
 
@@ -34,6 +34,13 @@ func evalManifestExpr(ctx context.Context, devConn *dev.DevConn) error {
 		CustomLibLocations: cll,
 	}
 
+	// Create map of given module locations, via --module flag(s)
+	customModuleLocations := map[string]string{}
+	for _, m := range *modules {
+		parts := strings.SplitN(m, ":", 2)
+		customModuleLocations[parts[0]] = parts[1]
+	}
+
 	interp := interpreter.NewInterpreter(newMosVars())
 
 	appDir, err := getCodeDirAbs()
@@ -46,17 +53,17 @@ func evalManifestExpr(ctx context.Context, devConn *dev.DevConn) error {
 	// Never update libs on that command
 	*noLibsUpdate = true
 
-	var logWriter io.Writer
+	logWriterStderr = os.Stderr
 
 	if *verbose {
-		logWriter = os.Stderr
+		logWriter = logWriterStderr
 	} else {
 		logWriter = &bytes.Buffer{}
 	}
 
-	manifest, _, err := readManifestWithLibs(
+	manifest, _, err := readManifestFinal(
 		appDir, appDir, bParams, logWriter, libsDir, interp,
-		false /* require arch */, false /* skip clean */, true, /* finalize */
+		customModuleLocations, false,
 	)
 	if err != nil {
 		return errors.Trace(err)
