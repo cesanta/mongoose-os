@@ -253,6 +253,12 @@
 			"revisionTime": "2017-05-10T13:15:34Z"
 		},
 		{
+			"checksumSHA1": "TLN4B4P3g0SwMPWwXHuVEA8A/YU=",
+			"path": "github.com/matishsiao/goInfo",
+			"revision": "617e6440957ee5591c8912e8b7e2f03a86298722",
+			"revisionTime": "2017-08-03T14:20:06Z"
+		},
+		{
 			"checksumSHA1": "cTDA66oZUy18cIzJsU1diKq+9CE=",
 			"path": "github.com/mattn/go-colorable",
 			"revision": "ad5389df28cdac544c99bd7b9161a0b5b6ca9d1b",
