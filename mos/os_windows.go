@@ -8,7 +8,7 @@ package main
 
 static char *s_canonical_path = "c:\\mos\\bin\\mos.exe";
 
-void install(const char *prog) {
+void hideWindow(const char *prog) {
   ShowWindow(GetConsoleWindow(), SW_HIDE);
 }
 */
@@ -85,7 +85,9 @@ func getDefaultPort() string {
 }
 
 func osSpecificInit() {
-	C.install(C.CString(os.Args[0]))
+	if startWebview {
+		C.hideWindow(C.CString(os.Args[0]))
+	}
 }
 
 func webview(url string) {

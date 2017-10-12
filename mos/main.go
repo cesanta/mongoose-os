@@ -165,8 +165,6 @@ func consoleJunkHandler(data []byte) {
 }
 
 func main() {
-	osSpecificInit()
-
 	seed1 := time.Now().UnixNano()
 	seed2, _ := cRand.Int(cRand.Reader, big.NewInt(4000000000))
 	mRand.Seed(seed1 ^ seed2.Int64())
@@ -183,6 +181,9 @@ func main() {
 	}
 	initFlags()
 	flag.Parse()
+
+	osSpecificInit()
+
 	goflag.CommandLine.Parse([]string{}) // Workaround for noise in golang/glog
 	pflagenv.Parse(envPrefix)
 

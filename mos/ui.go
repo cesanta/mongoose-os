@@ -25,7 +25,9 @@ import (
 	"github.com/cesanta/errors"
 	"github.com/elazarl/go-bindata-assetfs"
 	"github.com/golang/glog"
+	"github.com/matishsiao/goInfo"
 	shellwords "github.com/mattn/go-shellwords"
+	goversion "github.com/mcuadros/go-version"
 	"github.com/skratchdot/open-golang/open"
 	flag "github.com/spf13/pflag"
 
@@ -34,6 +36,10 @@ import (
 
 const (
 	expireTime = 1 * time.Minute
+
+	// Show webview on windows starting from Windows 8
+	// (see windows versions info here: https://msdn.microsoft.com/en-us/library/windows/desktop/ms724832(v=vs.85).aspx)
+	webviewMinWindowsVersion = "6.2"
 )
 
 type projectType string
@@ -50,7 +56,7 @@ var (
 	wsClientsMtx = sync.Mutex{}
 	wwwRoot      = ""
 	startBrowser = true
-	startWebview = runtime.GOOS != "linux"
+	startWebview = false
 	inLogLine    = map[string]bool{}
 	devConnMtx   = sync.Mutex{}
 
@@ -151,6 +157,19 @@ func httpReply(w http.ResponseWriter, result interface{}, err error) {
 }
 
 func init() {
+	switch runtime.GOOS {
+	case "linux":
+		// leave false
+	case "darwin":
+		startWebview = true
+	case "windows":
+		// On windows, open webview only at Windows 8 and later
+		windowsVersion := goInfo.GetInfo().Core
+		if goversion.CompareNormalized(windowsVersion, webviewMinWindowsVersion, ">=") {
+			startWebview = true
+		}
+	}
+
 	flag.StringVar(&wwwRoot, "web-root", "", "UI Web root to use instead of built-in")
 	hiddenFlags = append(hiddenFlags, "web-root")
 
