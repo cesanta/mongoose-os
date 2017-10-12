@@ -160,7 +160,7 @@ func init() {
 	flag.BoolVar(&startBrowser, "start-browser", true, "Automatically start browser")
 	hiddenFlags = append(hiddenFlags, "start-browser")
 
-	flag.BoolVar(&startWebview, "start-webview", true, "Automatically start WebView")
+	flag.BoolVar(&startWebview, "start-webview", startWebview, "Automatically start WebView")
 	hiddenFlags = append(hiddenFlags, "start-webview")
 }
 
