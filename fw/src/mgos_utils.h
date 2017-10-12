@@ -3,6 +3,10 @@
  * All rights reserved
  */
 
+/*
+ * Misc utility functions.
+ */
+
 #ifndef CS_FW_SRC_MGOS_UTILS_H_
 #define CS_FW_SRC_MGOS_UTILS_H_
 
@@ -22,6 +26,7 @@ extern "C" {
 /* Restart system after the specified number of milliseconds */
 void mgos_system_restart_after(int delay_ms);
 
+/* Return random number in a given range. */
 float mgos_rand_range(float from, float to);
 
 #ifdef __cplusplus

@@ -3,6 +3,13 @@
  * All rights reserved
  */
 
+/*
+ * OTA API.
+ *
+ * See https://mongoose-os.com/docs/book/ota.html for more details about
+ * Mongoose OS OTA mechanism.
+ */
+
 #ifndef CS_FW_SRC_MGOS_UPDATER_H_
 #define CS_FW_SRC_MGOS_UPDATER_H_
 

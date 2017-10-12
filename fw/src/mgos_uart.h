@@ -4,9 +4,10 @@
  */
 
 /*
- * See on GitHub:
- * [mgos_uart.h](https://github.com/cesanta/mongoose-os/blob/master/mgos_uart.h),
- * [mgos_uart.c](https://github.com/cesanta/mongoose-os/blob/master/mgos_uart.c)
+ * UART API.
+ *
+ * See https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter
+ * for more information about UART.
  */
 
 #ifndef CS_FW_SRC_MGOS_UART_H_

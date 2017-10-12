@@ -4,8 +4,23 @@
  */
 
 /*
- * View this file on GitHub:
- * [mgos_timers.h](https://github.com/cesanta/mongoose-os/blob/master/mgos_timers.h)
+ * Timers API.
+ *
+ * Mongoose OS supports two types of timers: software timers and hardware
+ * timers.
+ *
+ * - Software timers. Implemented as Mongoose library events, in software.
+ *   Timer callback is called in a Mongoose task context. Frequency is
+ *   specified in milliseconds. Number of software timers is not limited.
+ *   Timer intervals cannot be short - limited by the underlying
+ *   task scheduling. For example, if you want a very frequent sensor reading,
+ *   like thousand readings a second, use hardware timer instead.
+ *   Both C and JavaScript API is available.
+ * - Hardware timers. Implemented in hardware. Timer callback is executed in
+ *   the ISR context, therefore it can do a limited set of actions.
+ *   Number of hardware timers is limied: (ESP8266: 1, ESP32: 4, CC32xx: 4).
+ *   Frequency is specified in microseconds. Only C API is present, because
+ *   calling to JS requires switching to Mongoose task context.
  */
 
 #ifndef CS_FW_SRC_MGOS_TIMERS_H_
@@ -29,6 +44,7 @@ typedef void (*timer_callback)(void *param);
 /* Timer ID type */
 typedef uintptr_t mgos_timer_id;
 
+/* Flag for mgos_set*_timer() */
 #define MGOS_TIMER_REPEAT 1
 
 /*
@@ -68,6 +84,10 @@ enum mgos_init_result mgos_timers_init(void);
 double mgos_uptime(void);
 void mgos_uptime_init(void);
 
+/*
+ * Format `time` according to a `strftime()`-conformant format.
+ * Write the result into the `s,size` buffer. Return resulting string length.
+ */
 int mgos_strftime(char *s, int size, char *fmt, int time);
 
 #ifdef __cplusplus
