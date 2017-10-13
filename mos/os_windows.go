@@ -85,7 +85,7 @@ func getDefaultPort() string {
 }
 
 func osSpecificInit() {
-	if startWebview {
+	if startWebview && len(os.Args) == 1 {
 		C.hideWindow(C.CString(os.Args[0]))
 	}
 }
