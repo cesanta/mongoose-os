@@ -100,6 +100,7 @@ typedef void (*json_walk_callback_t)(void *callback_data, const char *name,
 /*
  * Parse `json_string`, invoking `callback` in a way similar to SAX parsers;
  * see `json_walk_callback_t`.
+ * Return number of processed bytes, or a negative error code.
  */
 int json_walk(const char *json_string, int json_string_length,
               json_walk_callback_t callback, void *callback_data);
@@ -251,6 +252,19 @@ int json_setf(const char *s, int len, struct json_out *out,
 
 int json_vsetf(const char *s, int len, struct json_out *out,
                const char *json_path, const char *json_fmt, va_list ap);
+
+/*
+ * Pretty-print JSON string `s,len` into `out`.
+ * Return number of processed bytes in `s`.
+ */
+int json_prettify(const char *s, int len, struct json_out *out);
+
+/*
+ * Prettify JSON file `file_name`.
+ * Return number of processed bytes, or negative number of error.
+ * On error, file content is not modified.
+ */
+int json_prettify_file(const char *file_name);
 
 #ifdef __cplusplus
 }
