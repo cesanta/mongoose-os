@@ -100,6 +100,8 @@ const (
 
 	assetPrefix           = "asset://"
 	rootManifestAssetName = "data/root_manifest.yml"
+
+	swmodSuffixTpl = "-${version}"
 )
 
 func init() {
@@ -1064,6 +1066,7 @@ func readManifestFile(
 
 	for i, _ := range manifest.Modules {
 		manifest.Modules[i].Normalize()
+		manifest.Modules[i].SuffixTpl = swmodSuffixTpl
 	}
 
 	if manifest.BuildVars == nil {
@@ -1858,6 +1861,8 @@ func readManifestWithLibs2(pc manifestParseContext) (*build.FWAppManifest, time.
 	// Prepare all libs {{{
 libs:
 	for _, m := range manifest.Libs {
+		m.SuffixTpl = ""
+
 		name, err := m.GetName()
 		if err != nil {
 			return nil, time.Time{}, errors.Trace(err)
@@ -2643,8 +2648,9 @@ func getMosDirEffective(mongooseOsVersion string, updateInterval time.Duration) 
 			// TODO(dfrank) get upstream repo URL from a flag
 			// (and this flag needs to be forwarded to fwbuild as well, which should
 			// forward it to the mos invocation)
-			Location: "https://github.com/cesanta/mongoose-os",
-			Version:  mongooseOsVersion,
+			Location:  "https://github.com/cesanta/mongoose-os",
+			Version:   mongooseOsVersion,
+			SuffixTpl: swmodSuffixTpl,
 		}
 
 		var err error

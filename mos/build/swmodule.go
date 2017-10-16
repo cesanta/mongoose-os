@@ -1,7 +1,6 @@
 package build
 
 import (
-	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -20,10 +19,6 @@ import (
 	"github.com/golang/glog"
 )
 
-var (
-	swmodSuffixTpl = flag.String("swmodule-suffix", "-${version}", "")
-)
-
 type SWModule struct {
 	Type string `yaml:"type,omitempty" json:"type,omitempty"`
 	// Origin is deprecated since 2017/08/18
@@ -31,6 +26,8 @@ type SWModule struct {
 	Location  string `yaml:"location,omitempty" json:"location,omitempty"`
 	Version   string `yaml:"version,omitempty" json:"version,omitempty"`
 	Name      string `yaml:"name,omitempty" json:"name,omitempty"`
+
+	SuffixTpl string
 
 	// Weak is relevant if only SWModule represents a lib (as opposed to an
 	// app or a module).
@@ -66,7 +63,7 @@ func (m *SWModule) IsClean(libsDir, defaultVersion string) (bool, error) {
 
 	switch m.GetType() {
 	case SWModuleTypeGit:
-		lp := filepath.Join(libsDir, getGitDirName(name, m.getVersionGit(defaultVersion)))
+		lp := filepath.Join(libsDir, m.getGitDirName(name, m.getVersionGit(defaultVersion)))
 
 		if _, err := os.Stat(lp); err != nil {
 			if os.IsNotExist(err) {
@@ -148,7 +145,7 @@ func (m *SWModule) GetLocalDir(libsDir, defaultVersion string) (string, error) {
 			return "", errors.Trace(err)
 		}
 
-		return filepath.Join(libsDir, getGitDirName(name, m.getVersionGit(defaultVersion))), nil
+		return filepath.Join(libsDir, m.getGitDirName(name, m.getVersionGit(defaultVersion))), nil
 
 	case SWModuleTypeLocal:
 		if m.Location != "" {
@@ -427,8 +424,8 @@ func prepareLocalCopyGit(
 
 // getGitDirName returns given name with the appropriate version suffix
 // (see moscommon.GetVersionSuffix(repoVersion))
-func getGitDirName(name, repoVersion string) string {
-	return fmt.Sprint(name, moscommon.GetVersionSuffixTpl(repoVersion, *swmodSuffixTpl))
+func (m *SWModule) getGitDirName(name, repoVersion string) string {
+	return fmt.Sprint(name, moscommon.GetVersionSuffixTpl(repoVersion, m.SuffixTpl))
 }
 
 func freportf(logFile io.Writer, f string, args ...interface{}) {
