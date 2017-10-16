@@ -1165,13 +1165,13 @@ func buildRemote(bParams *buildParams) error {
 
 	interp := interpreter.NewInterpreter(newMosVars())
 
-	// Get manifest which includes stuff from all libs
-	manifest, _, err := readManifestWithLibs(
-		tmpCodeDir, appDir, bParams, logWriter, userLibsDir, interp,
-		true /* require arch */, *skipCleanLibs /* skip clean */, false, /* finalize */
-	)
+	manifest, _, err := readManifest(tmpCodeDir, bParams, interp)
 	if err != nil {
 		return errors.Trace(err)
+	}
+
+	if manifest.Platform == "" {
+		return errors.Errorf("--platform must be specified or mos.yml should contain a platform key")
 	}
 
 	// We still need to expand some conds we have so far, at least to ensure that
