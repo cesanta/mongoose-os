@@ -24,13 +24,6 @@
 #error MGOS_NUM_GPIO must match GPIO_PIN_COUNT
 #endif
 
-/* These declarations are missing in SDK headers since ~1.0 */
-#define PERIPHS_IO_MUX_PULLDWN BIT6
-#define PIN_PULLDWN_DIS(PIN_NAME) \
-  CLEAR_PERI_REG_MASK(PIN_NAME, PERIPHS_IO_MUX_PULLDWN)
-#define PIN_PULLDWN_EN(PIN_NAME) \
-  SET_PERI_REG_MASK(PIN_NAME, PERIPHS_IO_MUX_PULLDWN)
-
 #define GPIO_PIN_COUNT 16
 
 static uint8_t s_int_config[GPIO_PIN_COUNT];
@@ -140,16 +133,14 @@ IRAM bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
   switch (pull) {
     case MGOS_GPIO_PULL_NONE:
       PIN_PULLUP_DIS(gi->periph);
-      PIN_PULLDWN_DIS(gi->periph);
       break;
     case MGOS_GPIO_PULL_UP:
       PIN_PULLDWN_DIS(gi->periph);
       PIN_PULLUP_EN(gi->periph);
       break;
     case MGOS_GPIO_PULL_DOWN:
-      PIN_PULLUP_DIS(gi->periph);
-      PIN_PULLDWN_EN(gi->periph);
-      break;
+      /* No pull-down on ESP8266 */
+      return false;
     default:
       return false;
   }
