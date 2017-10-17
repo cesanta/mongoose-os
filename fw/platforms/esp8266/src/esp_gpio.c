@@ -135,7 +135,6 @@ IRAM bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
       PIN_PULLUP_DIS(gi->periph);
       break;
     case MGOS_GPIO_PULL_UP:
-      PIN_PULLDWN_DIS(gi->periph);
       PIN_PULLUP_EN(gi->periph);
       break;
     case MGOS_GPIO_PULL_DOWN:
