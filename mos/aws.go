@@ -272,7 +272,12 @@ func genCert(ctx context.Context, iotSvc *iot.IoT, devConn *dev.DevConn, devConf
 		pkPEMBlockType = "EC PRIVATE KEY"
 	} else {
 		if certType == "" {
-			certType = defaultCertType
+			// CC32XX seem to work better with RSA certs.
+			if strings.HasPrefix(strings.ToLower(*devInfo.Arch), "cc32") {
+				certType = "RSA"
+			} else {
+				certType = defaultCertType
+			}
 		}
 		switch strings.ToUpper(certType) {
 		case "RSA":
@@ -495,11 +500,11 @@ func awsIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 		}
 	}
 
-	// ca.pem has both roots in it, so, for platforms other than CC3200, we can just use that.
-	// CC3200 does not support cert bundles and will always require specific CA cert.
+	// ca.pem has both roots in it, so, for platforms other than CC32XX, we can just use that.
+	// CC32XX do not support cert bundles and will always require specific CA cert.
 	caCertFile := "ca.pem"
 	uploadCACert := false
-	if strings.ToLower(*devInfo.Arch) == "cc3200" {
+	if strings.HasPrefix(strings.ToLower(*devInfo.Arch), "cc32") {
 		caCertFile = rsaCACert
 		uploadCACert = true
 	}
