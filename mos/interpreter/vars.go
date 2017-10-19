@@ -1,6 +1,7 @@
 package interpreter
 
 import (
+	"fmt"
 	"regexp"
 
 	"github.com/cesanta/errors"
@@ -35,4 +36,8 @@ func ExpandVarsSlice(interp *MosInterpreter, slice []string) ([]string, error) {
 		ret = append(ret, s)
 	}
 	return ret, nil
+}
+
+func WrapMosExpr(s string) string {
+	return fmt.Sprintf("${%s}", s)
 }

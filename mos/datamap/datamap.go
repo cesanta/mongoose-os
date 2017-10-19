@@ -26,6 +26,20 @@ func New(getFailHandler GetFailHandler) *DataMap {
 	}
 }
 
+func (dm *DataMap) Copy() *DataMap {
+	ret := New(dm.getFailHandler)
+
+	// TODO(dfrank): deep copy.
+	// At the moment there's no pressing need for that because the only use case
+	// for copying is to create a new interpreter and then override "manifest",
+	// which is a top level key; but overall, this code should be generic.
+	for k, v := range dm.data {
+		ret.data[k] = v
+	}
+
+	return ret
+}
+
 // Set sets new value at the provided name (path), like "foo.bar.baz". All
 // intermediary non-existing parts will be silently created.
 func (dm *DataMap) Set(name string, value interface{}) {

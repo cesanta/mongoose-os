@@ -17,6 +17,7 @@ import (
 	"cesanta.com/mos/build"
 	"cesanta.com/mos/common/paths"
 	"cesanta.com/mos/interpreter"
+	"cesanta.com/mos/manifest_parser"
 	"cesanta.com/mos/version"
 )
 
@@ -140,7 +141,7 @@ func initProjectManagementEndpoints() {
 
 		for _, f := range files {
 			name := f.Name()
-			manifest, _, err := readManifest(filepath.Join(dirPath, name), nil, interp)
+			manifest, _, err := manifest_parser.ReadManifest(filepath.Join(dirPath, name), "", interp)
 			if err == nil {
 				ret[name] = manifest
 			}

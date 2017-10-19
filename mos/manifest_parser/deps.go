@@ -1,4 +1,4 @@
-package main
+package manifest_parser
 
 import (
 	"sort"

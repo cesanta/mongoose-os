@@ -11,6 +11,7 @@ import (
 
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/interpreter"
+	"cesanta.com/mos/manifest_parser"
 	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 )
@@ -48,8 +49,6 @@ func evalManifestExpr(ctx context.Context, devConn *dev.DevConn) error {
 		return errors.Trace(err)
 	}
 
-	libsDir := getDepsDir(appDir)
-
 	// Never update libs on that command
 	*noLibsUpdate = true
 
@@ -61,9 +60,14 @@ func evalManifestExpr(ctx context.Context, devConn *dev.DevConn) error {
 		logWriter = &bytes.Buffer{}
 	}
 
-	manifest, _, err := readManifestFinal(
-		appDir, appDir, bParams, logWriter, libsDir, interp,
-		customModuleLocations, false,
+	compProvider := compProviderReal{
+		bParams:   bParams,
+		logWriter: logWriter,
+	}
+
+	manifest, _, err := manifest_parser.ReadManifestFinal(
+		appDir, bParams.Platform, logWriter, interp,
+		&manifest_parser.ReadManifestCallbacks{ComponentProvider: &compProvider}, true, *preferPrebuiltLibs,
 	)
 	if err != nil {
 		return errors.Trace(err)

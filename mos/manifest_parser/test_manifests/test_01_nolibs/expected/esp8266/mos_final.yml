@@ -1,0 +1,14 @@
+type: app
+version: "1.0"
+platform: esp8266
+author: mongoose-os
+description: My nolibs app
+sources:
+- __APP_ROOT__/app/src/bar.c
+- __APP_ROOT__/app/src/foo.c
+filesystem:
+- __APP_ROOT__/app/fs/myfile
+libs_version: "0.01"
+modules_version: "0.01"
+mongoose_os_version: "0.01"
+manifest_version: 2017-05-18

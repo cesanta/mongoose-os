@@ -27,6 +27,12 @@ func NewInterpreter(mVars *MosVars) *MosInterpreter {
 	}
 }
 
+func (mi *MosInterpreter) Copy() *MosInterpreter {
+	return &MosInterpreter{
+		MVars: mi.MVars.Copy(),
+	}
+}
+
 // EvaluateExpr can evaluate expressions of the following form:
 //
 //   - operand

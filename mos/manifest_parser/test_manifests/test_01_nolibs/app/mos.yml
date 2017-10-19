@@ -1,0 +1,11 @@
+author: mongoose-os
+description: My nolibs app
+version: 1.0
+
+sources:
+  - src
+
+filesystem:
+  - fs
+
+manifest_version: 2017-05-18

@@ -40,6 +40,13 @@ func NewMosVars() *MosVars {
 	return ret
 }
 
+func (mv *MosVars) Copy() *MosVars {
+	ret := &MosVars{
+		data: mv.data.Copy(),
+	}
+	return ret
+}
+
 func (mv *MosVars) SetVar(name string, value interface{}) {
 	glog.Infof("Set '%s'='%s'", name, value)
 	mv.data.Set(name, value)
