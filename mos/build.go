@@ -1138,6 +1138,11 @@ func getCodeDirAbs() (string, error) {
 		return "", errors.Trace(err)
 	}
 
+	absCodeDir, err = filepath.EvalSymlinks(absCodeDir)
+	if err != nil {
+		return "", errors.Trace(err)
+	}
+
 	for _, c := range absCodeDir {
 		if unicode.IsSpace(c) {
 			return "", errors.Errorf("code dir (%q) should not contain spaces", absCodeDir)
