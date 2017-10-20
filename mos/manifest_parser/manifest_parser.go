@@ -13,6 +13,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"text/template"
 	"time"
 
@@ -45,6 +46,8 @@ const (
 )
 
 type ComponentProvider interface {
+	// GetLibLocalPath returns local path to the given software module.
+	// NOTE that this method can be called concurrently for different modules.
 	GetLibLocalPath(
 		m *build.SWModule, rootAppDir, libsDefVersion string,
 	) (string, error)
@@ -70,6 +73,11 @@ type RMFOut struct {
 	AppBinLibDirs []string
 }
 
+type libPrepareResult struct {
+	mtime time.Time
+	err   error
+}
+
 func ReadManifestFinal(
 	dir, platform string,
 	logWriter io.Writer, interp *interpreter.MosInterpreter,
@@ -89,6 +97,9 @@ func ReadManifestFinal(
 	if err != nil {
 		return nil, nil, errors.Trace(err)
 	}
+
+	// Set the mos.platform variable
+	interp.MVars.SetVar(interpreter.GetMVarNameMosPlatform(), manifest.Platform)
 
 	if err := interpreter.SetManifestVars(interp.MVars, manifest); err != nil {
 		return nil, nil, errors.Trace(err)
@@ -291,10 +302,16 @@ func readManifestWithLibs(
 		requireArch: requireArch,
 
 		cbs: cbs,
+
+		mtx:     &sync.Mutex{},
+		flagSet: newStringFlagSet(),
 	})
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
 	}
+
+	// Set the mos.platform variable
+	interp.MVars.SetVar(interpreter.GetMVarNameMosPlatform(), manifest.Platform)
 
 	// Get all deps in topological order
 	topo, cycle := deps.Topological(true)
@@ -350,6 +367,9 @@ type manifestParseContext struct {
 	cbs *ReadManifestCallbacks
 
 	requireArch bool
+
+	mtx     *sync.Mutex
+	flagSet *stringFlagSet
 }
 
 func readManifestWithLibs2(pc manifestParseContext) (*build.FWAppManifest, time.Time, error) {
@@ -369,87 +389,138 @@ func readManifestWithLibs2(pc manifestParseContext) (*build.FWAppManifest, time.
 	}
 
 	// Prepare all libs {{{
-libs:
+	wg := &sync.WaitGroup{}
+	wg.Add(len(manifest.Libs))
+
+	lpres := make(chan libPrepareResult)
+
 	for _, m := range manifest.Libs {
-		m.SuffixTpl = ""
+		go prepareLib(m, manifest, &pc, lpres, wg)
+	}
 
-		name, err := m.GetName()
-		if err != nil {
-			return nil, time.Time{}, errors.Trace(err)
-		}
+	// Closer goroutine
+	go func() {
+		wg.Wait()
+		close(lpres)
+	}()
+	// }}}
 
-		ourutil.Freportf(pc.logWriter, "Handling lib %q...", name)
-
-		pc.deps.AddDep(pc.nodeName, name)
-
-		if pc.deps.NodeExists(name) {
-			ourutil.Freportf(pc.logWriter, "Already handled, skipping")
-			continue libs
-		}
-
-		if m.Weak {
-			ourutil.Freportf(pc.logWriter, "Optional, skipping")
-			continue libs
-		}
-
-		libLocalDir, err := pc.cbs.ComponentProvider.GetLibLocalPath(
-			&m, pc.rootAppDir, pc.appManifest.LibsVersion,
-		)
-		if err != nil {
-			return nil, time.Time{}, errors.Trace(err)
-		}
-
-		libLocalDir, err = filepath.Abs(libLocalDir)
-		if err != nil {
-			return nil, time.Time{}, errors.Trace(err)
-		}
-
-		// Now that we know we need to handle current lib, add a node for it
-		pc.deps.AddNode(name)
-
-		pc2 := pc
-
-		pc2.dir = libLocalDir
-		pc2.nodeName = name
-
-		// If platform is empty in pc2, we need to set it from the outer manifest,
-		// because arch is used in libs to handle arch-dependent submanifests, like
-		// mos_esp8266.yml.
-		if pc2.platform == "" {
-			pc2.platform = manifest.Platform
-		}
-
-		libManifest, libMtime, err := readManifestWithLibs2(pc2)
-		if err != nil {
-			return nil, time.Time{}, errors.Trace(err)
+	// Handle all lib prepare results
+	for res := range lpres {
+		if res.err != nil {
+			return nil, time.Time{}, errors.Trace(res.err)
 		}
 
 		// We should return the latest modification date of all encountered
 		// manifests, so let's see if we got the later mtime here
-		if libMtime.After(mtime) {
-			mtime = libMtime
+		if res.mtime.After(mtime) {
+			mtime = res.mtime
 		}
-
-		// Add a build var and C macro MGOS_HAVE_<lib_name>
-		haveName := fmt.Sprintf(
-			"MGOS_HAVE_%s", strings.ToUpper(moscommon.IdentifierFromString(name)),
-		)
-		manifest.BuildVars[haveName] = "1"
-		manifest.CDefs[haveName] = "1"
-
-		pc.libsHandled[name] = build.FWAppManifestLibHandled{
-			Name:     name,
-			Path:     libLocalDir,
-			Deps:     pc.deps.GetDeps(name),
-			Manifest: libManifest,
-		}
-
 	}
-	// }}}
 
 	manifest.Libs = nil
 
 	return manifest, mtime, nil
+}
+
+func prepareLib(
+	m build.SWModule,
+	manifest *build.FWAppManifest,
+	pc *manifestParseContext,
+	lpres chan libPrepareResult,
+	wg *sync.WaitGroup,
+) {
+	defer wg.Done()
+	m.SuffixTpl = ""
+
+	name, err := m.GetName()
+	if err != nil {
+		lpres <- libPrepareResult{
+			err: errors.Trace(err),
+		}
+		return
+	}
+
+	pc.mtx.Lock()
+	pc.deps.AddDep(pc.nodeName, name)
+	pc.mtx.Unlock()
+
+	if m.Weak {
+		ourutil.Freportf(pc.logWriter, "Lib %q is optional, skipping", name)
+		return
+	}
+
+	if !pc.flagSet.Add(name) {
+		// That library is already handled by someone else
+		ourutil.Freportf(pc.logWriter, "Lib %q is already handled, skipping", name)
+		return
+	}
+
+	ourutil.Freportf(pc.logWriter, "Handling lib %q...", name)
+
+	libLocalDir, err := pc.cbs.ComponentProvider.GetLibLocalPath(
+		&m, pc.rootAppDir, pc.appManifest.LibsVersion,
+	)
+	if err != nil {
+		lpres <- libPrepareResult{
+			err: errors.Trace(err),
+		}
+		return
+	}
+
+	libLocalDir, err = filepath.Abs(libLocalDir)
+	if err != nil {
+		lpres <- libPrepareResult{
+			err: errors.Trace(err),
+		}
+		return
+	}
+
+	// Now that we know we need to handle current lib, add a node for it
+	pc.mtx.Lock()
+	pc.deps.AddNode(name)
+	pc.mtx.Unlock()
+
+	pc2 := manifestParseContext{}
+	pc2 = *pc
+
+	pc2.dir = libLocalDir
+	pc2.nodeName = name
+
+	// If platform is empty in pc2, we need to set it from the outer manifest,
+	// because arch is used in libs to handle arch-dependent submanifests, like
+	// mos_esp8266.yml.
+	if pc2.platform == "" {
+		pc2.platform = manifest.Platform
+	}
+
+	libManifest, libMtime, err := readManifestWithLibs2(pc2)
+	if err != nil {
+		lpres <- libPrepareResult{
+			err: errors.Trace(err),
+		}
+		return
+	}
+
+	// Add a build var and C macro MGOS_HAVE_<lib_name>
+	haveName := fmt.Sprintf(
+		"MGOS_HAVE_%s", strings.ToUpper(moscommon.IdentifierFromString(name)),
+	)
+	pc.mtx.Lock()
+	manifest.BuildVars[haveName] = "1"
+	manifest.CDefs[haveName] = "1"
+
+	pc.libsHandled[name] = build.FWAppManifestLibHandled{
+		Name:     name,
+		Path:     libLocalDir,
+		Deps:     pc.deps.GetDeps(name),
+		Manifest: libManifest,
+	}
+	pc.mtx.Unlock()
+
+	lpres <- libPrepareResult{
+		mtime: libMtime,
+	}
 }
 
 // ReadManifest reads manifest file(s) from the specific directory; if the

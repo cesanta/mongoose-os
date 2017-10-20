@@ -3,7 +3,9 @@
 
 package datamap
 
-import "strings"
+import (
+	"strings"
+)
 
 // GetFailHandler, if specified, is called when DataMap.Get fails to get the
 // value normally. This way, client can create some "phantom" values.
@@ -29,14 +31,34 @@ func New(getFailHandler GetFailHandler) *DataMap {
 func (dm *DataMap) Copy() *DataMap {
 	ret := New(dm.getFailHandler)
 
-	// TODO(dfrank): deep copy.
-	// At the moment there's no pressing need for that because the only use case
-	// for copying is to create a new interpreter and then override "manifest",
-	// which is a top level key; but overall, this code should be generic.
-	for k, v := range dm.data {
-		ret.data[k] = v
-	}
+	ret.data = deepCopyMap(dm.data)
 
+	return ret
+}
+
+func deepCopy(val interface{}) interface{} {
+	switch v := val.(type) {
+	case map[string]interface{}:
+		return deepCopyMap(v)
+	case []interface{}:
+		return deepCopySlice(v)
+	}
+	return val
+}
+
+func deepCopyMap(m map[string]interface{}) map[string]interface{} {
+	ret := map[string]interface{}{}
+	for k, v := range m {
+		ret[k] = deepCopy(v)
+	}
+	return ret
+}
+
+func deepCopySlice(in []interface{}) []interface{} {
+	ret := []interface{}{}
+	for _, v := range in {
+		ret = append(ret, deepCopy(v))
+	}
 	return ret
 }
 

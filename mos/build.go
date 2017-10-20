@@ -17,6 +17,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"sync"
 	"syscall"
 	"time"
 	"unicode"
@@ -71,8 +72,11 @@ var (
 	noLibsUpdate  = flag.Bool("no-libs-update", false, "if true, never try to pull existing libs (treat existing default locations as if they were given in --lib)")
 	skipCleanLibs = flag.Bool("skip-clean-libs", true, "if false, then during the remote build all libs will be uploaded to the builder")
 
-	// In-memory buffer containing all the log messages
-	logBuf bytes.Buffer
+	// In-memory buffer containing all the log messages.  It has to be
+	// thread-safe, because it's used in compProviderReal, which is an
+	// implementation of the manifest_parser.ComponentProvider interface, whose
+	// methods are called concurrently.
+	logBuf threadSafeBuffer
 
 	// Log writer which always writes to the build.log file, os.Stderr and logBuf
 	logWriterStderr io.Writer
@@ -693,6 +697,9 @@ func buildRemote(bParams *buildParams) error {
 	if manifest.Platform == "" {
 		return errors.Errorf("--platform must be specified or mos.yml should contain a platform key")
 	}
+
+	// Set the mos.platform variable
+	interp.MVars.SetVar(interpreter.GetMVarNameMosPlatform(), manifest.Platform)
 
 	// We still need to expand some conds we have so far, at least to ensure that
 	// manifest.Sources contain all the app's sources we need to build, so that
@@ -1549,6 +1556,29 @@ func getMosDirEffective(mongooseOsVersion string, updateInterval time.Duration) 
 	}
 
 	return mosDirEffective, nil
+}
+
+// }}}
+
+// Thread-safe bytes.Buffer {{{
+
+type threadSafeBuffer struct {
+	buf bytes.Buffer
+	mtx sync.Mutex
+}
+
+func (b *threadSafeBuffer) Write(p []byte) (n int, err error) {
+	b.mtx.Lock()
+	defer b.mtx.Unlock()
+
+	return b.buf.Write(p)
+}
+
+func (b *threadSafeBuffer) Bytes() []byte {
+	b.mtx.Lock()
+	defer b.mtx.Unlock()
+
+	return b.buf.Bytes()
 }
 
 // }}}
