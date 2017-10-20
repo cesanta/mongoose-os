@@ -263,8 +263,6 @@ func ReadManifestFinal(
 
 	fp.MTime = mtime
 
-	manifest.LibsHandled = nil
-
 	return manifest, fp, nil
 }
 

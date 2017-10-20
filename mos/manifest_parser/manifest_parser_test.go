@@ -122,10 +122,11 @@ func singleManifestTest(t *testing.T, appPath string) error {
 			filepath.Join(appPath, appDir), platform, logWriter, interp,
 			&ReadManifestCallbacks{ComponentProvider: &compProviderTest{}}, true, descr.PreferBinaryLibs,
 		)
-
 		if err != nil {
 			return errors.Trace(err)
 		}
+
+		manifest.LibsHandled = nil
 
 		data, err := yaml.Marshal(manifest)
 		if err != nil {
