@@ -67,7 +67,7 @@ func evalManifestExpr(ctx context.Context, devConn *dev.DevConn) error {
 
 	manifest, _, err := manifest_parser.ReadManifestFinal(
 		appDir, bParams.Platform, logWriter, interp,
-		&manifest_parser.ReadManifestCallbacks{ComponentProvider: &compProvider}, true, *preferPrebuiltLibs,
+		&manifest_parser.ReadManifestCallbacks{ComponentProvider: &compProvider}, false, *preferPrebuiltLibs,
 	)
 	if err != nil {
 		return errors.Trace(err)
