@@ -266,6 +266,33 @@ int json_prettify(const char *s, int len, struct json_out *out);
  */
 int json_prettify_file(const char *file_name);
 
+/*
+ * Iterate over an object at given JSON `path`.
+ * On each iteration, fill the `key` and `val` tokens. It is OK to pass NULL
+ * for `key`, or `val`, in which case they won't be populated.
+ * Return an opaque value suitable for the next iteration, or NULL when done.
+ *
+ * Example:
+ *
+ * ```c
+ * void *h = NULL;
+ * struct json_token key, val;
+ * while ((h = json_next_key(s, len, h, ".foo", &key, &val)) != NULL) {
+ *   printf("[%.*s] -> [%.*s]\n", key.len, key.ptr, val.len, val.ptr);
+ * }
+ * ```
+ */
+void *json_next_key(const char *s, int len, void *handle, const char *path,
+                    struct json_token *key, struct json_token *val);
+
+
+/*
+ * Iterate over an array at given JSON `path`.
+ * Similar to `json_next_key`, but fills array index `idx` instead of `key`.
+ */
+void *json_next_elem(const char *s, int len, void *handle, const char *path,
+                     int *idx, struct json_token *val);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
