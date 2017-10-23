@@ -73,7 +73,7 @@ typedef unsigned _int64 uint64_t;
 #endif
 
 #ifndef JSON_MAX_PATH_LEN
-#define JSON_MAX_PATH_LEN 60
+#define JSON_MAX_PATH_LEN 256
 #endif
 
 struct frozen {
