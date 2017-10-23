@@ -384,6 +384,10 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		}
 	}
 
+	// Amend cflags and cxxflags with the values given in command line
+	manifest.CFlags = append(manifest.CFlags, *cflagsExtra...)
+	manifest.CXXFlags = append(manifest.CXXFlags, *cxxflagsExtra...)
+
 	appSources, err := absPathSlice(manifest.Sources)
 	if err != nil {
 		return errors.Trace(err)
@@ -473,10 +477,6 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	if err := addBuildVarsFromCLI(manifest); err != nil {
 		return errors.Trace(err)
 	}
-
-	// Amend cflags and cxxflags with the values given in command line
-	manifest.CFlags = append(manifest.CFlags, *cflagsExtra...)
-	manifest.CXXFlags = append(manifest.CXXFlags, *cxxflagsExtra...)
 
 	appPath, err := getCodeDirAbs()
 	if err != nil {
