@@ -24,6 +24,12 @@ type FlashOpts struct {
 	ESP32FlashCryptConf    uint32
 }
 
+type RegReaderWriter interface {
+	ReadReg(reg uint32) (uint32, error)
+	WriteReg(reg, value uint32) error
+	Disconnect()
+}
+
 func (ct ChipType) String() string {
 	switch ct {
 	case ChipESP8266:

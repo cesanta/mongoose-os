@@ -24,7 +24,7 @@ func init() {
 	flag.BoolVar(&esp32FakeFuses, "esp32-fake-fuses", false, "Use fake eFuse controller implementation, for testing")
 }
 
-func getRRW() (rom_client.RegReaderWriter, error) {
+func getRRW() (esp.RegReaderWriter, error) {
 	if esp32FakeFuses {
 		return esp32.NewFakeFuseController(), nil
 	}

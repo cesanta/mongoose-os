@@ -12,6 +12,8 @@ import (
 
 	"cesanta.com/mos/flash/common"
 	"cesanta.com/mos/flash/esp"
+	"cesanta.com/mos/flash/esp32"
+	"cesanta.com/mos/flash/esp8266"
 	"github.com/cesanta/errors"
 	"github.com/cesanta/go-serial/serial"
 	"github.com/golang/glog"
@@ -41,12 +43,6 @@ const (
 	cmdWriteReg              = 0x09
 	cmdReadReg               = 0x0a
 )
-
-type RegReaderWriter interface {
-	ReadReg(reg uint32) (uint32, error)
-	WriteReg(reg, value uint32) error
-	Disconnect()
-}
 
 type ROMClient struct {
 	ct        esp.ChipType
@@ -146,8 +142,12 @@ func (rc *ROMClient) connect() error {
 		rc.sc.SetRTSDTR(mFalse, mFalse)
 		err := rc.sync()
 		if err == nil {
-			common.Reportf("  Connected")
 			rc.connected = true
+			cd, err := rc.GetChipDescr()
+			if err != nil {
+				return errors.Annotatef(err, "failed to read chip type")
+			}
+			common.Reportf("  Connected, chip: %s", cd)
 			return nil
 		} else {
 			glog.V(1).Infof("Sync #%d failed: %s", i, err)
@@ -164,6 +164,16 @@ func (rc *ROMClient) Disconnect() {
 	}
 	rc.sc = nil
 	rc.sd = nil
+}
+
+func (rc *ROMClient) GetChipDescr() (string, error) {
+	switch rc.ct {
+	case esp.ChipESP8266:
+		return esp8266.GetChipDescr(rc)
+	case esp.ChipESP32:
+		return esp32.GetChipDescr(rc)
+	}
+	return rc.ct.String(), nil
 }
 
 func (rc *ROMClient) sendCommand(cmd romCmd, arg []byte, csum uint8) error {

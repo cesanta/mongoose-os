@@ -29,6 +29,7 @@
 #include "ets_sys.h"
 #include "../../../miniz.c"
 #elif defined(ESP32)
+#include "rom/efuse.h"
 #include "rom/miniz.h"
 #include "rom/spi_flash.h"
 #include "soc/uart_reg.h"
@@ -490,10 +491,7 @@ void stub_main1(void) {
   SelectSpiFunction();
   SET_PERI_REG_MASK(0x3FF00014, 1); /* Switch to 160 MHz */
 #elif defined(ESP32)
-  esp_rom_spiflash_attach(0 /* ishspi */, 0 /* legacy */);
-  /* Set flash to 40 MHz. Note: clkdiv _should_ be 2, but actual meausrement
-   * shows that with clkdiv = 1 clock is indeed 40 MHz. */
-  esp_rom_spiflash_config_clk(1, 1);
+  esp_rom_spiflash_attach(ets_efuse_get_spiconfig(), 0 /* legacy */);
 #endif
 
   esp_rom_spiflash_config_param(
@@ -515,10 +513,6 @@ void stub_main1(void) {
 #else
   SLIP_send(&greeting, 4);
 #endif
-
-  // led_setup(22);
-  // led_setup(16);
-  // led_setup(2);
 
   last_cmd = cmd_loop();
 

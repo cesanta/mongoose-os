@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"math/big"
 
-	"cesanta.com/mos/flash/esp/rom_client"
+	"cesanta.com/mos/flash/esp"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 )
@@ -66,7 +66,8 @@ var (
 		// 3, 3, 0 - ?
 		{name: "SPI_pad_config_hd", block: 0, fields: []bitField{{3, 8, 4}}, wdBit: 3, rdBit: -1},
 		{name: "chip_version", block: 0, fields: []bitField{{3, 12, 9}}, wdBit: 3, rdBit: -1},
-		// 3, 31, 13 - ?
+		{name: "chip_revision", block: 0, fields: []bitField{{3, 16, 13}}, wdBit: 3, rdBit: -1},
+		// 3, 31, 17 - ?
 		// 4, 13, 0 - ?
 		{name: "XPD_SDIO_REG", block: 0, fields: []bitField{{4, 14, 14}}, wdBit: 5, rdBit: -1},
 		{name: "SDIO_TIEH", block: 0, fields: []bitField{{4, 15, 15}}, wdBit: 5, rdBit: -1},
@@ -95,7 +96,7 @@ var (
 )
 
 type FuseBlock struct {
-	rrw   rom_client.RegReaderWriter
+	rrw   esp.RegReaderWriter
 	num   int
 	rBase uint32
 	wBase uint32
@@ -382,7 +383,7 @@ func (f *Fuse) KeyString() string {
 	return hex.EncodeToString(kb)
 }
 
-func readFuseBlock(rrw rom_client.RegReaderWriter, num int) (*FuseBlock, error) {
+func readFuseBlock(rrw esp.RegReaderWriter, num int) (*FuseBlock, error) {
 	b := &FuseBlock{
 		rrw: rrw, num: num,
 		rBase: blockReadBases[num],
@@ -397,7 +398,7 @@ func readFuseBlock(rrw rom_client.RegReaderWriter, num int) (*FuseBlock, error) 
 	return b, nil
 }
 
-func eFuseCtlWaitIdle(rrw rom_client.RegReaderWriter) error {
+func eFuseCtlWaitIdle(rrw esp.RegReaderWriter) error {
 	for i := 0; i < 10; i++ {
 		v, err := rrw.ReadReg(eFuseCtlRegCmd)
 		if err != nil {
@@ -411,7 +412,7 @@ func eFuseCtlWaitIdle(rrw rom_client.RegReaderWriter) error {
 	return errors.Errorf("eFuse controller is busy")
 }
 
-func eFuseCtlDoOp(rrw rom_client.RegReaderWriter, ctlOp eFuseCtlOp) error {
+func eFuseCtlDoOp(rrw esp.RegReaderWriter, ctlOp eFuseCtlOp) error {
 	if err := eFuseCtlWaitIdle(rrw); err != nil {
 		return errors.Trace(err)
 	}
@@ -435,7 +436,7 @@ func eFuseCtlDoOp(rrw rom_client.RegReaderWriter, ctlOp eFuseCtlOp) error {
 	return nil
 }
 
-func ReadFuses(rrw rom_client.RegReaderWriter) ([]*FuseBlock, []*Fuse, map[string]*Fuse, error) {
+func ReadFuses(rrw esp.RegReaderWriter) ([]*FuseBlock, []*Fuse, map[string]*Fuse, error) {
 	var blocks []*FuseBlock
 
 	if err := eFuseCtlDoOp(rrw, eFuseCtlOpRead); err != nil {
@@ -461,7 +462,7 @@ func ReadFuses(rrw rom_client.RegReaderWriter) ([]*FuseBlock, []*Fuse, map[strin
 	return blocks, fuses, fusesByName, nil
 }
 
-func ProgramFuses(rrw rom_client.RegReaderWriter) error {
+func ProgramFuses(rrw esp.RegReaderWriter) error {
 	if err := eFuseCtlDoOp(rrw, eFuseCtlOpWrite); err != nil {
 		return errors.Annotatef(err, "failed to perform eFuse write operation")
 	}

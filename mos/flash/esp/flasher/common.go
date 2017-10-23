@@ -48,7 +48,7 @@ func ConnectToFlasherClient(ct esp.ChipType, opts *esp.FlashOpts) (*cfResult, er
 		return nil, errors.Annotatef(
 			err,
 			"Failed to talk to bootloader. See "+
-				"https://mongoose-os.com/docs/#/quickstart/flash.md/ "+
+				"https://mongoose-os.com/docs/quickstart/setup.html"+
 				"for wiring instructions or put the device into flashing mode manually by "+
 				"pulling GPIO0 low and resetting.",
 		)

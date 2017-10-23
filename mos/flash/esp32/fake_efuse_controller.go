@@ -1,7 +1,7 @@
 package esp32
 
 import (
-	"cesanta.com/mos/flash/esp/rom_client"
+	"cesanta.com/mos/flash/esp"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
 )
@@ -11,7 +11,7 @@ type fakeFuseController struct {
 	busyCounter int
 }
 
-func NewFakeFuseController() rom_client.RegReaderWriter {
+func NewFakeFuseController() esp.RegReaderWriter {
 	return &fakeFuseController{
 		regs: map[uint32]uint32{
 			// eFuse register block 0
