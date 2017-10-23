@@ -1254,7 +1254,7 @@ static void prettify_cb(void *userdata, const char *name, size_t name_len,
 
 int json_prettify(const char *s, int len, struct json_out *out) WEAK;
 int json_prettify(const char *s, int len, struct json_out *out) {
-  struct prettify_data pd = { out, 0, JSON_TYPE_INVALID };
+  struct prettify_data pd = {out, 0, JSON_TYPE_INVALID};
   return json_walk(s, len, prettify_cb, &pd);
 }
 
@@ -1316,9 +1316,9 @@ static void next_cb(void *userdata, const char *name, size_t name_len,
   const char *p = path + d->path_len;
   if (d->found) return;
   if (d->path_len >= (int) strlen(path)) return;
-  if (strchr(p, '.') != NULL) return;     /* More nested objects - skip */
+  if (strncmp(d->path, path, d->path_len) != 0) return;
+  if (strchr(p + 1, '.') != NULL) return; /* More nested objects - skip */
   if (strchr(p + 1, '[') != NULL) return; /* Ditto for arrays */
-
   // {OBJECT,ARRAY}_END types do not pass name, _START does. Save key.
   if (t->type == JSON_TYPE_OBJECT_START || t->type == JSON_TYPE_ARRAY_START) {
     // printf("SAV %s %d %p\n", path, t->type, t->ptr);
