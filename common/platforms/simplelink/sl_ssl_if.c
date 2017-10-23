@@ -149,9 +149,9 @@ static char *sl_pem2der(const char *pem_file) {
 }
 #endif
 
-int sl_set_ssl_opts(struct mg_connection *nc) {
+int sl_set_ssl_opts(int sock, struct mg_connection *nc) {
   int err;
-  struct mg_ssl_if_ctx *ctx = (struct mg_ssl_if_ctx *) nc->ssl_if_data;
+  const struct mg_ssl_if_ctx *ctx = (struct mg_ssl_if_ctx *) nc->ssl_if_data;
   DBG(("%p ssl ctx: %p", nc, ctx));
 
   if (ctx != NULL) {
@@ -163,11 +163,11 @@ int sl_set_ssl_opts(struct mg_connection *nc) {
       char *ssl_cert = sl_pem2der(ctx->ssl_cert);
       char *ssl_key = sl_pem2der(ctx->ssl_key);
       if (ssl_cert != NULL && ssl_key != NULL) {
-        err = sl_SetSockOpt(nc->sock, SL_SOL_SOCKET,
+        err = sl_SetSockOpt(sock, SL_SOL_SOCKET,
                             SL_SO_SECURE_FILES_CERTIFICATE_FILE_NAME, ssl_cert,
                             strlen(ssl_cert));
         LOG(LL_INFO, ("CERTIFICATE_FILE_NAME %s -> %d", ssl_cert, err));
-        err = sl_SetSockOpt(nc->sock, SL_SOL_SOCKET,
+        err = sl_SetSockOpt(sock, SL_SOL_SOCKET,
                             SL_SO_SECURE_FILES_PRIVATE_KEY_FILE_NAME, ssl_key,
                             strlen(ssl_key));
         LOG(LL_INFO, ("PRIVATE_KEY_FILE_NAME %s -> %d", ssl_key, err));
@@ -182,7 +182,7 @@ int sl_set_ssl_opts(struct mg_connection *nc) {
       if (ctx->ssl_ca_cert[0] != '\0') {
         char *ssl_ca_cert = sl_pem2der(ctx->ssl_ca_cert);
         if (ssl_ca_cert != NULL) {
-          err = sl_SetSockOpt(nc->sock, SL_SOL_SOCKET,
+          err = sl_SetSockOpt(sock, SL_SOL_SOCKET,
                               SL_SO_SECURE_FILES_CA_FILE_NAME, ssl_ca_cert,
                               strlen(ssl_ca_cert));
           LOG(LL_INFO, ("CA_FILE_NAME %s -> %d", ssl_ca_cert, err));
@@ -194,7 +194,7 @@ int sl_set_ssl_opts(struct mg_connection *nc) {
       }
     }
     if (ctx->ssl_server_name != NULL) {
-      err = sl_SetSockOpt(nc->sock, SL_SOL_SOCKET,
+      err = sl_SetSockOpt(sock, SL_SOL_SOCKET,
                           SL_SO_SECURE_DOMAIN_NAME_VERIFICATION,
                           ctx->ssl_server_name, strlen(ctx->ssl_server_name));
       DBG(("DOMAIN_NAME_VERIFICATION %s -> %d", ctx->ssl_server_name, err));
