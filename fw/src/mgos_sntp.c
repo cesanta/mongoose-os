@@ -33,9 +33,11 @@ static void mgos_sntp_retry(void);
 
 static void mgos_sntp_ev(struct mg_connection *nc, int ev, void *ev_data,
                          void *user_data) {
+  char addr[32];
   switch (ev) {
     case MG_EV_CONNECT: {
-      LOG(LL_DEBUG, ("SNTP query sent"));
+      mg_sock_addr_to_str(&nc->sa, addr, sizeof(addr), MG_SOCK_STRINGIFY_IP);
+      LOG(LL_DEBUG, ("SNTP sent query to %s", addr));
       mg_sntp_send_request(nc);
       break;
     }
@@ -43,7 +45,6 @@ static void mgos_sntp_ev(struct mg_connection *nc, int ev, void *ev_data,
       struct mg_sntp_message *m = (struct mg_sntp_message *) ev_data;
       double now = mg_time();
       double delta = (m->time - now);
-      char addr[32];
       mg_sock_addr_to_str(&nc->sa, addr, sizeof(addr), MG_SOCK_STRINGIFY_IP);
       LOG(LL_INFO, ("SNTP reply from %s: time %lf, local %lf, delta %lf", addr,
                     m->time, now, delta));
