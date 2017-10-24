@@ -31,7 +31,7 @@ func GetChipDescr(rrw esp.RegReaderWriter) (string, error) {
 	if err != nil {
 		return "", errors.Trace(err)
 	}
-	cver, err := fusesByName["chip_version"].Value(false)
+	cver, err := fusesByName["chip_package"].Value(false)
 	if err != nil {
 		return "", errors.Trace(err)
 	}
@@ -49,7 +49,7 @@ func GetChipDescr(rrw esp.RegReaderWriter) (string, error) {
 		chip_ver = fmt.Sprintf("ESP32?%d", cver.Uint64())
 	}
 
-	crev, err := fusesByName["chip_revision"].Value(false)
+	crev, err := fusesByName["chip_version"].Value(false)
 	if err != nil {
 		return "", errors.Trace(err)
 	}
