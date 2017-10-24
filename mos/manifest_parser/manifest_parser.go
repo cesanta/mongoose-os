@@ -22,6 +22,7 @@ import (
 	moscommon "cesanta.com/mos/common"
 	"cesanta.com/mos/interpreter"
 	"github.com/cesanta/errors"
+	flag "github.com/spf13/pflag"
 	yaml "gopkg.in/yaml.v2"
 )
 
@@ -43,6 +44,10 @@ const (
 	rootManifestAssetName = "data/root_manifest.yml"
 
 	SwmodSuffixTpl = "-${version}"
+)
+
+var (
+	sourceGlobs = flag.StringSlice("source-glob", []string{"*.c", "*.cpp"}, "glob to use for source dirs. Can be used multiple times.")
 )
 
 type ComponentProvider interface {
@@ -205,7 +210,7 @@ func ReadManifestFinal(
 	}
 
 	// Convert manifest.Sources into paths to concrete existing source files.
-	manifest.Sources, fp.AppSourceDirs, err = resolvePaths(manifest.Sources, []string{"*.c", "*.cpp"})
+	manifest.Sources, fp.AppSourceDirs, err = resolvePaths(manifest.Sources, *sourceGlobs)
 	if err != nil {
 		return nil, nil, errors.Trace(err)
 	}
@@ -221,7 +226,7 @@ func ReadManifestFinal(
 			libSourceDirs := []string{}
 
 			// Convert dirs and globs to actual files
-			manifest.LibsHandled[k].Sources, libSourceDirs, err = resolvePaths(lcur.Sources, []string{"*.c", "*.cpp"})
+			manifest.LibsHandled[k].Sources, libSourceDirs, err = resolvePaths(lcur.Sources, *sourceGlobs)
 			if err != nil {
 				return nil, nil, errors.Trace(err)
 			}
