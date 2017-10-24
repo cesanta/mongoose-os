@@ -60,6 +60,7 @@ COMMON_PATH ?= $(MGOS_PATH)/common
 MGOS_CC3200_PATH ?= $(MGOS_PATH)/fw/platforms/cc3200
 MGOS_CC32XX_PATH ?= $(MGOS_PATH)/fw/platforms/cc32xx
 COMMON_CC3200_PATH ?= $(MGOS_PATH)/common/platforms/cc3200
+MBEDTLS_PATH ?= /opt/cs_mbedtls
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 MONGOOSE_PATH ?= $(MGOS_PATH)/mongoose
 FROZEN_PATH ?= $(MGOS_PATH)/frozen
@@ -106,8 +107,10 @@ VPATH = $(APP_SOURCE_DIRS) $(MGOS_SRC_PATH) $(MGOS_CC32XX_PATH)/src $(MGOS_CC320
         $(COMMON_PATH) \
         $(BOOT_PATH)/lib \
         $(MONGOOSE_PATH) $(FROZEN_PATH)
-IPATH = $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) $(MGOS_PATH) $(MGOS_SRC_PATH) $(MGOS_CC32XX_PATH)/src $(MGOS_CC3200_PATH)/src \
-        $(BOOT_PATH)/lib $(GEN_DIR)
+IPATH = $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) $(MGOS_PATH) $(MGOS_SRC_PATH) \
+        $(MGOS_CC32XX_PATH)/src $(MGOS_CC3200_PATH)/src \
+        $(BOOT_PATH)/lib $(GEN_DIR) \
+        $(MBEDTLS_PATH)/include
 
 # Note: CC3200 has only 32 GPIO but our port uses pin-based numbering
 # and those go from 1 to 64.
@@ -251,6 +254,7 @@ include $(MGOS_PATH)/common/scripts/fw_meta.mk
 SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(SDK_SRCS:=.o))
 MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o))
 APP_OBJS = $(addprefix $(BUILD_DIR)/,$(APP_SRCS:=.o))
+MBEDTLS_LIBS = $(addprefix $(MBEDTLS_PATH)/library/,libmbedcrypto.a libmbedtls.a libmbedx509.a)
 
 include $(MGOS_PATH)/common/scripts/build_info.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
@@ -343,8 +347,8 @@ $(APP_BIN): $(APP_ELF)
 	$(Q) $(OBJCOPY) -O binary $< $@
 	$(Q) echo "     Code size: $$(ls -l $@ | awk '{print $$5}')"
 
-$(APP_ELF): $(APP_OBJS) $(MGOS_LIB) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES) $(APP_LD_SCRIPT)
-	$(call link,$(APP_LD_SCRIPT),$(APP_LDFLAGS),$(APP_OBJS) $(MGOS_LIB) $(ATCA_LIB) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES))
+$(APP_ELF): $(APP_OBJS) $(MGOS_LIB) $(MBEDTLS_LIBS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES) $(APP_LD_SCRIPT)
+	$(call link,$(APP_LD_SCRIPT),$(APP_LDFLAGS),$(APP_OBJS) $(MGOS_LIB) $(MBEDTLS_LIBS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES))
 
 $(MGOS_LIB): $(MGOS_OBJS) $(SDK_OBJS)
 	$(call ar,$^)

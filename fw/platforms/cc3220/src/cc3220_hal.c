@@ -7,6 +7,7 @@
 #include <driverlib/prcm.h>
 #include <driverlib/rom.h>
 #include <driverlib/rom_map.h>
+#include <ti/drivers/net/wifi/netutil.h>
 
 #include "common/cs_dbg.h"
 #include "common/platform.h"
@@ -25,6 +26,11 @@ void SimpleLinkFatalErrorEventHandler(SlDeviceFatal_t *e) {
       e->Data.DeviceAssert.Code, e->Data.DeviceAssert.Value,
       e->Data.NoCmdAck.Code, e->Data.CmdTimeout.Code);
   mgos_system_restart();
+}
+
+int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {
+  _u16 len16 = len;
+  return sl_NetUtilGet(SL_NETUTIL_TRUE_RANDOM, 0, buf, &len16);
 }
 
 #ifndef MGOS_HAVE_WIFI

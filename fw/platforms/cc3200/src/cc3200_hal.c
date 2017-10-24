@@ -36,6 +36,14 @@ void mgos_dev_system_restart(void) {
   MAP_PRCMHibernateEnter();
 }
 
+/* There is no true random source on CC3200. */
+int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {
+  for (size_t i = 0; i < len; i++) {
+    buf[i] = rand();
+  }
+  return 0;
+}
+
 #ifndef MGOS_HAVE_WIFI
 void SimpleLinkNetAppEventHandler(SlNetAppEvent_t *e) {
   (void) e;
