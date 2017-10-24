@@ -174,10 +174,17 @@ func ReadManifestFinal(
 		return nil, nil, errors.Trace(err)
 	}
 
+	manifest.Tests, err = interpreter.ExpandVarsSlice(interp, manifest.Tests)
+	if err != nil {
+		return nil, nil, errors.Trace(err)
+	}
+
 	manifest.Sources = prependPaths(manifest.Sources, dir)
 	manifest.Includes = prependPaths(manifest.Includes, dir)
 	manifest.Filesystem = prependPaths(manifest.Filesystem, dir)
 	manifest.BinaryLibs = prependPaths(manifest.BinaryLibs, dir)
+
+	manifest.Tests = prependPaths(manifest.Tests, dir)
 	// }}}
 
 	if manifest.Type == build.AppTypeApp {
@@ -262,6 +269,11 @@ func ReadManifestFinal(
 	}
 
 	manifest.BinaryLibs, fp.AppBinLibDirs, err = resolvePaths(manifest.BinaryLibs, []string{"*.a"})
+	if err != nil {
+		return nil, nil, errors.Trace(err)
+	}
+
+	manifest.Tests, _, err = resolvePaths(manifest.Tests, []string{"*"})
 	if err != nil {
 		return nil, nil, errors.Trace(err)
 	}

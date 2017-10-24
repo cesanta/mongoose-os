@@ -56,6 +56,7 @@ type FWAppManifest struct {
 	BinaryLibs   []string           `yaml:"binary_libs,omitempty" json:"binary_libs"`
 	ExtraFiles   []string           `yaml:"extra_files,omitempty" json:"extra_files"`
 	FFISymbols   []string           `yaml:"ffi_symbols,omitempty" json:"ffi_symbols"`
+	Tests        []string           `yaml:"tests,omitempty" json:"tests"`
 	Modules      []SWModule         `yaml:"modules,omitempty" json:"modules"`
 	Libs         []SWModule         `yaml:"libs,omitempty" json:"libs"`
 	InitAfter    []string           `yaml:"init_after,omitempty" json:"init_after"`
