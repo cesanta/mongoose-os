@@ -266,9 +266,8 @@ func prepareLocalCopyGit(
 				return errors.Trace(err)
 			}
 			if len(files) > 0 {
-				return errors.Errorf(
-					"%q is not empty, but is not a git repository either", targetDir,
-				)
+				freportf(logWriter, "%q is not empty, but is not a git repository either, leaving it intact", targetDir)
+				return nil
 			}
 		}
 	} else if !os.IsNotExist(err) {
