@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 
 	"github.com/cesanta/errors"
 
@@ -55,13 +56,29 @@ func gcpIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 		return errors.Errorf("Please set --gcp-project, --gcp-region, --gcp-registry")
 	}
 
-	devConf, err := devConn.GetConfig(ctx)
+	reportf("Connecting to the device...")
+	devInfo, err := devConn.GetInfo(ctx)
 	if err != nil {
 		return errors.Annotatef(err, "failed to connect to device")
 	}
+	devArch, devMAC := *devInfo.Arch, *devInfo.Mac
+	reportf("  %s %s running %s", devArch, devMAC, *devInfo.App)
+
+	devConf, err := devConn.GetConfig(ctx)
+	if err != nil {
+		return errors.Annotatef(err, "failed to connect to get device config")
+	}
 	devId, err := devConf.Get("device.id")
 	if err != nil {
-		return errors.Annotatef(err, "failed to connect to device")
+		return errors.Annotatef(err, "failed to get device ID")
+	}
+	mqttConf, err := devConf.Get("mqtt")
+	if err != nil {
+		return errors.Annotatef(err, "failed to get device MQTT config. Make sure firmware supports MQTT")
+	}
+	gcpConf, err := devConf.Get("gcp")
+	if err != nil {
+		return errors.Annotatef(err, "failed to get GCP config. Make sure the firmware supports GCP")
 	}
 
 	privName := "gcp-" + devId + ".priv.pem"
@@ -85,6 +102,7 @@ func gcpIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 		}
 	}
 
+	reportf("(Re)creating the cloud device...")
 	out, err := exec.Command("gcloud", "beta", "iot", "devices", "delete", devId,
 		"--project", gcpProject, "--region", gcpRegion, "--registry", gcpRegistry).Output()
 	if err != nil {
@@ -98,17 +116,40 @@ func gcpIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 		return errors.Annotatef(err, "gcloud device create: %s", string(out))
 	}
 
+	reportf("Uploading key...")
 	err = fsPutFile(ctx, devConn, privName, filepath.Base(privName))
 	if err != nil {
 		return errors.Annotatef(err, "failed to upload %s", privName)
 	}
 
+	// ca.pem has both roots in it, so, for platforms other than CC32XX, we can just use that.
+	// CC32XX do not support cert bundles and will always require specific CA cert.
+	// http://e2e.ti.com/support/wireless_connectivity/simplelink_wifi_cc31xx_cc32xx/f/968/t/634431
+	// CA certificate itself is a pretty ancient 1024-bit root, which is not good.
+	// Unfortunately, SimpleLink does not support vrifying intermediates, so we have to use it.
+	// http://e2e.ti.com/support/wireless_connectivity/simplelink_wifi_cc31xx_cc32xx/f/968/p/634427
+	caCertFile := "ca.pem"
+	uploadCACert := false
+	if strings.HasPrefix(strings.ToLower(*devInfo.Arch), "cc32") {
+		caCertFile = "data/ca-equifax.crt.pem"
+		uploadCACert = true
+	}
+
+	if uploadCACert {
+		caCertData := MustAsset(caCertFile)
+		reportf("Uploading CA certificate...")
+		err = fsPutData(ctx, devConn, bytes.NewBuffer(caCertData), filepath.Base(caCertFile))
+		if err != nil {
+			return errors.Annotatef(err, "failed to upload %s", filepath.Base(caCertFile))
+		}
+	}
+
+	// GCP does not support bi-di MQTT comms, RPC won't work.
 	devConf.Set("rpc.mqtt.enable", "false")
 	devConf.Set("sntp.enable", "true")
 	devConf.Set("mqtt.enable", "true")
 	devConf.Set("mqtt.server", "mqtt.googleapis.com:8883")
-	devConf.Set("mqtt.client_id", fmt.Sprintf("projects/%s/locations/%s/registries/%s/devices/%s", gcpProject, gcpRegion, gcpRegistry, devId))
-	devConf.Set("mqtt.ssl_ca_cert", "ca.pem")
+	devConf.Set("mqtt.ssl_ca_cert", filepath.Base(caCertFile))
 	devConf.Set("gcp.enable", "true")
 	devConf.Set("gcp.project", gcpProject)
 	devConf.Set("gcp.region", gcpRegion)
@@ -116,8 +157,9 @@ func gcpIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	devConf.Set("gcp.device", devId)
 	devConf.Set("gcp.key", privName)
 
-	mqttConf, _ := devConf.Get("mqtt")
-	reportf("New MQTT config: %+v", mqttConf)
+	mqttConf, _ = devConf.Get("mqtt")
+	gcpConf, _ = devConf.Get("gcp")
+	reportf("New config:\ngcp %+v\nmqtt %+v", gcpConf, mqttConf)
 
 	err = configSetAndSave(ctx, devConn, devConf)
 	if err != nil {

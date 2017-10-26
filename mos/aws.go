@@ -466,7 +466,7 @@ func awsIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	}
 	mqttConf, err := devConf.Get("mqtt")
 	if err != nil {
-		return errors.Annotatef(err, "failed to get device MQTT config")
+		return errors.Annotatef(err, "failed to get device MQTT config. Make sure firmware supports MQTT")
 	}
 	reportf("Current MQTT config: %+v", mqttConf)
 
