@@ -35,6 +35,8 @@
 #endif
 
 #ifdef _WIN32
+#undef snprintf
+#undef vsnprintf
 #define snprintf cs_win_snprintf
 #define vsnprintf cs_win_vsnprintf
 int cs_win_snprintf(char *str, size_t size, const char *format, ...);
@@ -47,26 +49,20 @@ typedef unsigned _int64 uint64_t;
 #endif
 #define PRId64 "I64d"
 #define PRIu64 "I64u"
-#if !defined(SIZE_T_FMT)
-#if _MSC_VER >= 1310
-#define SIZE_T_FMT "Iu"
-#else
-#define SIZE_T_FMT "u"
-#endif
-#endif
 #else /* _WIN32 */
 /* <inttypes.h> wants this for C++ */
 #ifndef __STDC_FORMAT_MACROS
 #define __STDC_FORMAT_MACROS
 #endif
 #include <inttypes.h>
-#if !defined(SIZE_T_FMT)
-#define SIZE_T_FMT "zu"
-#endif
 #endif /* _WIN32 */
 
+#ifndef INT64_FMT
 #define INT64_FMT PRId64
+#endif
+#ifndef UINT64_FMT
 #define UINT64_FMT PRIu64
+#endif
 
 #ifndef va_copy
 #define va_copy(x, y) x = y
@@ -502,7 +498,7 @@ static int b64rev(int c) {
   }
 }
 
-static uint8_t hexdec(const char *s) {
+static unsigned char hexdec(const char *s) {
 #define HEXTOI(x) (x >= '0' && x <= '9' ? x - '0' : x - 'W')
   int a = tolower(*(const unsigned char *) s);
   int b = tolower(*(const unsigned char *) (s + 1));
@@ -566,7 +562,7 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
         skip += 2;
       } else if (fmt[1] == 'z' && fmt[2] == 'u') {
         size_t val = va_arg(ap, size_t);
-        snprintf(buf, sizeof(buf), "%" SIZE_T_FMT, val);
+        snprintf(buf, sizeof(buf), "%lu", (unsigned long) val);
         len += out->printer(out, buf, strlen(buf));
         skip += 1;
       } else if (fmt[1] == 'M') {
@@ -626,29 +622,47 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
          */
 
         const char *end_of_format_specifier = "sdfFgGlhuIcx.*-0123456789";
-        size_t n = strspn(fmt + 1, end_of_format_specifier);
+        int n = strspn(fmt + 1, end_of_format_specifier);
         char *pbuf = buf;
-        size_t need_len;
+        int need_len, size = sizeof(buf);
         char fmt2[20];
-        va_list sub_ap;
-        strncpy(fmt2, fmt, n + 1 > sizeof(fmt2) ? sizeof(fmt2) : n + 1);
+        va_list ap_copy;
+        strncpy(fmt2, fmt,
+                n + 1 > (int) sizeof(fmt2) ? sizeof(fmt2) : (size_t) n + 1);
         fmt2[n + 1] = '\0';
 
-        va_copy(sub_ap, ap);
-        need_len =
-            vsnprintf(buf, sizeof(buf), fmt2, sub_ap) + 1 /* null-term */;
-        /*
-         * TODO(lsm): Fix windows & eCos code path here. Their vsnprintf
-         * implementation returns -1 on overflow rather needed size.
-         */
-        if (need_len > sizeof(buf)) {
+        va_copy(ap_copy, ap);
+        need_len = vsnprintf(pbuf, size, fmt2, ap_copy);
+        va_end(ap_copy);
+
+        if (need_len < 0) {
+          /*
+           * Windows & eCos vsnprintf implementation return -1 on overflow
+           * instead of needed size.
+           */
+          pbuf = NULL;
+          while (need_len < 0) {
+            free(pbuf);
+            size *= 2;
+            if ((pbuf = (char *) malloc(size)) == NULL) break;
+            va_copy(ap_copy, ap);
+            need_len = vsnprintf(pbuf, size, fmt2, ap_copy);
+            va_end(ap_copy);
+          }
+        } else if (need_len >= (int) sizeof(buf)) {
           /*
            * resulting string doesn't fit into a stack-allocated buffer `buf`,
            * so we need to allocate a new buffer from heap and use it
            */
-          pbuf = (char *) malloc(need_len);
-          va_copy(sub_ap, ap);
-          vsnprintf(pbuf, need_len, fmt2, sub_ap);
+          if ((pbuf = (char *) malloc(need_len + 1)) != NULL) {
+            va_copy(ap_copy, ap);
+            vsnprintf(pbuf, need_len + 1, fmt2, ap_copy);
+            va_end(ap_copy);
+          }
+        }
+        if (pbuf == NULL) {
+          buf[0] = '\0';
+          pbuf = buf;
         }
 
         /*
@@ -1015,7 +1029,7 @@ int json_scanf(const char *str, int len, const char *fmt, ...) {
 int json_vfprintf(const char *file_name, const char *fmt, va_list ap) WEAK;
 int json_vfprintf(const char *file_name, const char *fmt, va_list ap) {
   int res = -1;
-  FILE *fp = fopen(file_name, "w");
+  FILE *fp = fopen(file_name, "wb");
   if (fp != NULL) {
     struct json_out out = JSON_OUT_FILE(fp);
     res = json_vprintf(&out, fmt, ap);
@@ -1263,13 +1277,13 @@ int json_prettify_file(const char *file_name) {
   int res = -1;
   char *s = json_fread(file_name);
   FILE *fp;
-  if (s != NULL && (fp = fopen(file_name, "w")) != NULL) {
+  if (s != NULL && (fp = fopen(file_name, "wb")) != NULL) {
     struct json_out out = JSON_OUT_FILE(fp);
     res = json_prettify(s, strlen(s), &out);
     if (res < 0) {
       /* On error, restore the old content */
       fclose(fp);
-      fp = fopen(file_name, "w");
+      fp = fopen(file_name, "wb");
       fseek(fp, 0, SEEK_SET);
       fwrite(s, 1, strlen(s), fp);
     } else {

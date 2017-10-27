@@ -16,7 +16,14 @@ test: unit_test
 	make -C segstack
 
 clean:
-	rm -f *.o unit_test
+	rm -f *.o unit_test *.obj _CL_*
+
+ci-test: vc2017 unit_test
+
+CLFLAGS = /DWIN32_LEAN_AND_MEAN /MD /O2 /TC /W2 /WX /I..
+vc98 vc2017:
+	docker run -v $$(pwd):$$(pwd) -w $$(pwd) docker.cesanta.com/$@ wine cl $(SOURCES) $(CLFLAGS) /Fe$@.exe
+	docker run -v $$(pwd):$$(pwd) -w $$(pwd) docker.cesanta.com/$@ wine $@.exe 
 
 REPO_ROOT = ..
 FORMAT_FILES = *.[ch] platforms/*/*.[ch] mg_rpc/*.[ch] segstack/*.[ch]

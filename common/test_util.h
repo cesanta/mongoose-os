@@ -68,6 +68,7 @@ void _strfail(const char *a, const char *e, int len);
       msg = test();                                \
       elapsed = cs_time() - elapsed;               \
       printf("  [%.3f] %s\n", elapsed, test_name); \
+      fflush(stdout);                              \
       *total_elapsed += elapsed;                   \
     }                                              \
     if (msg) return msg;                           \

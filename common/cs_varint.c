@@ -3,9 +3,7 @@
  * All rights reserved
  */
 
-#include "common/cs_varint.h"
-
-#include <stdio.h>
+#include "cs_varint.h"
 
 /*
  * Strings in AST are encoded as tuples (length, string).

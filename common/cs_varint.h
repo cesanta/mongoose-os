@@ -6,7 +6,14 @@
 #ifndef CS_COMMON_CS_VARINT_H_
 #define CS_COMMON_CS_VARINT_H_
 
+#include <stdio.h>
+
+#if defined(_WIN32) && _MSC_VER < 1700
+typedef unsigned char uint8_t;
+typedef unsigned __int64 uint64_t;
+#else
 #include <stdint.h>
+#endif
 
 #if defined(__cplusplus)
 extern "C" {
