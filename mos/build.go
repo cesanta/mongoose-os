@@ -370,18 +370,16 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	}
 
 	// Check if the app supports the given arch
-	if len(manifest.Platforms) > 0 {
-		found := false
-		for _, v := range manifest.Platforms {
-			if v == manifest.Platform {
-				found = true
-				break
-			}
+	found := false
+	for _, v := range manifest.Platforms {
+		if v == manifest.Platform {
+			found = true
+			break
 		}
+	}
 
-		if !found {
-			return errors.Errorf("can't build for the platform %s; only those platforms are supported: %v", manifest.Platform, manifest.Platforms)
-		}
+	if !found {
+		return errors.Errorf("can't build for the platform %s; only those platforms are supported: %v", manifest.Platform, manifest.Platforms)
 	}
 
 	// Amend cflags and cxxflags with the values given in command line

@@ -30,10 +30,12 @@ const (
 
 	manifestParserRootPlaceholder = "__MANIFEST_PARSER_ROOT__"
 	appRootPlaceholder            = "__APP_ROOT__"
+	allPlatformsPlaceholder       = "__ALL_PLATFORMS__"
 )
 
 var (
 	manifestParserRoot = ""
+	repoRoot           = ""
 )
 
 type TestDescr struct {
@@ -43,6 +45,11 @@ type TestDescr struct {
 func init() {
 	var err error
 	manifestParserRoot, err = filepath.Abs(".")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	repoRoot, err = filepath.Abs("../..")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -133,7 +140,10 @@ func singleManifestTest(t *testing.T, appPath string) error {
 			return errors.Trace(err)
 		}
 
-		data = addPlaceholders(data, appPath)
+		data, err = addPlaceholders(data, appPath)
+		if err != nil {
+			return errors.Trace(err)
+		}
 
 		expectedFilename := filepath.Join(appPath, expectedDir, platform, finalManifestName)
 
@@ -181,8 +191,7 @@ func (lpt *compProviderTest) GetModuleLocalPath(
 func (lpt *compProviderTest) GetMongooseOSLocalPath(
 	rootAppDir, modulesDefVersion string,
 ) (string, error) {
-	// This one doesn't actually exist, but we don't care
-	return filepath.Join(rootAppDir, "..", "mongoose-os"), nil
+	return repoRoot, nil
 }
 
 func newMosVars() *interpreter.MosVars {
@@ -191,7 +200,7 @@ func newMosVars() *interpreter.MosVars {
 	return ret
 }
 
-func addPlaceholders(data []byte, appPath string) []byte {
+func addPlaceholders(data []byte, appPath string) ([]byte, error) {
 	data = []byte(strings.Replace(
 		string(data),
 		path.Join(manifestParserRoot, appPath),
@@ -203,5 +212,21 @@ func addPlaceholders(data []byte, appPath string) []byte {
 		string(data), manifestParserRoot, manifestParserRootPlaceholder, -1,
 	))
 
-	return data
+	// All platforms placeholder
+	allPlatforms, err := getAllSupportedPlatforms(repoRoot)
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	if len(allPlatforms) == 0 {
+		return nil, errors.Errorf("getAllSupportedPlatforms returned empty array")
+	}
+
+	allPlatformsStr := "- " + strings.Join(allPlatforms, "\n- ")
+
+	data = []byte(strings.Replace(
+		string(data), allPlatformsStr, allPlatformsPlaceholder, -1,
+	))
+
+	return data, nil
 }

@@ -1,6 +1,8 @@
 type: app
 version: "1.0"
 platform: esp32
+platforms:
+__ALL_PLATFORMS__
 author: mongoose-os
 description: My test app
 sources:

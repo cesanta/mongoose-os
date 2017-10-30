@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"strings"
 	"sync"
 	"text/template"
@@ -277,6 +278,14 @@ func ReadManifestFinal(
 	if err != nil {
 		return nil, nil, errors.Trace(err)
 	}
+
+	allPlatforms, err := getAllSupportedPlatforms(fp.MosDirEffective)
+	if err != nil {
+		return nil, nil, errors.Trace(err)
+	}
+
+	manifest.Platforms = mergeSupportedPlatforms(manifest.Platforms, allPlatforms)
+	sort.Strings(manifest.Platforms)
 
 	fp.MTime = mtime
 
@@ -1273,4 +1282,23 @@ func globify(srcPaths []string, globs []string) (sources []string, dirs []string
 	}
 
 	return sources, dirs, nil
+}
+
+func getAllSupportedPlatforms(mosDir string) ([]string, error) {
+	paths, err := filepath.Glob(filepath.Join(mosDir, "fw", "platforms", "*", "sdk.version"))
+	if err != nil {
+		return nil, errors.Trace(err)
+	}
+
+	ret := []string{}
+
+	for _, p := range paths {
+		p1, _ := filepath.Split(p)
+		_, p2 := filepath.Split(p1[:len(p1)-1])
+		ret = append(ret, p2)
+	}
+
+	sort.Strings(ret)
+
+	return ret, nil
 }
