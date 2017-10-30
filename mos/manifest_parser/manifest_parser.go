@@ -911,10 +911,15 @@ func expandAllLibsPaths(
 }
 
 // ExpandManifestConds expands all "conds" in the dstManifest, but all cond
-// expressions are evaluated against the refManifest. Nested conds are
-// not expanded: if there are some new conds left, a new refManifest should
-// be computed by the caller, and ExpandManifestConds should be called again
-// for each lib's manifest and for app's manifest.
+// "when" expressions are evaluated against the refManifest. Nested conds are
+// not expanded: if there are some new conds left, a new refManifest should be
+// computed by the caller, and ExpandManifestConds should be called again for
+// each lib's manifest and for app's manifest.
+//
+// NOTE that although cond "when" expressions are evaluated against refManifest,
+// expressions inside of the conditionally-applied manifest (like
+// `${build_vars.FOO} bar`) are expanded against dstManifest. See README.md,
+// Step 3 for details.
 func ExpandManifestConds(
 	dstManifest, refManifest *build.FWAppManifest, interp *interpreter.MosInterpreter,
 ) error {

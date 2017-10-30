@@ -84,14 +84,32 @@ When this aggregate manifest is ready, conds come into place.
 
 ### Step 3: expand conds, if any
 
-If aggregate manifest contains no conds, we're done and return that aggregate
-manifest. Otherwise (there are some conds), cond expressions are evaluated
-against the aggregate manifest, but they are expanded into the individual
-components' manifests: conds in `libA_whole` expand into `libA_whole`, conds in
-`app_whole` expand into `app_whole`, etc. It's done this way because everything
-under conds should be present in aggregate manifest in topological order.
+If aggregate manifest contains no conds, we're done and proceed to the "step 4"
+with that aggregate manifest. Otherwise (there are some conds), we expand them,
+and cond "when" expressions are evaluated against the aggregate manifest, but
+they are expanded into the individual components' manifests: conds in
+`libA_whole` expand into `libA_whole`, conds in `app_whole` expand into
+`app_whole`, etc. It's done this way because everything under conds should be
+present in aggregate manifest in topological order.
 
 When we expand conds for each component, we go back to step 2 and repeat.
+
+NOTE also that even though cond "when" expressions are evaluated against the
+aggregate manifest, the expressions inside of the conditionally-applied manifest
+(like `${build_vars.FOO} bar`) are expanded against the individual components'
+manifests. It wouldn't make sense to expand those against aggregate, because
+it would result in repetitive insertion of the same values: consider the case
+when an app has a build var `FOO` set to `"${build_vars.FOO} from_app"`, and
+`libA` has a cond (e.g. if the platform is esp32) which sets `FOO` to
+`"${build_vars.FOO} from_lib_a"`.  So on esp32, `FOO` should end up having a
+value `" from_lib_a from_app"`. On the first run of "step 2", `FOO` in the
+aggregate manifest gets the value `" from_app"`. That aggregate manifest has
+a cond, so we expand it, and if we evaluate expression `build_vars.FOO` against
+aggregate manifest, it will be `" from_app"`. Thus, `FOO` in `libA` will be `"
+from_app from_lib_a"`. Now we proceed to the second run of "step 2", and `FOO`
+in the aggregate manifest ends up having a value `" from_app from_lib_a
+from_app"`. It doesn't make sense. Thus, expressions like `${build_vars.FOO}`
+are expanded against individual components' manifests, not aggregate manifest.
 
 ### Step 4: add sources or binary libs
 
