@@ -48,12 +48,10 @@ manifest:
 
   - `app -> app_arch = app_whole`
 
-So, **LIMITATION_1**: `app_arch` can use `build_vars` and `cdefs` defined in
-`app`, **but** it can't use vars from anywhere else, e.g. from `libA` or
-`libB`, even though `app` depends on those two libs.
-
-TODO: a possible workaround could be to check whether the expression can be
-evaluated, and if not, just keep `${...}` unexpanded for now.
+Expressions `${...}` which failed to expand at this point are left unexpanded:
+e.g. submanifest could depend on `rootManifest` or on some lib, neither of
+which is available at this point, so those expressions will be expanded later,
+when we build an aggregate manifest (see below).
 
 So now, `app_whole` contains all libs `app` depends on directly. Now we read
 each of those libs (which in our case is just `libA`), and perform the same
@@ -64,9 +62,6 @@ parsing recursively:
 And then again recursively form `libB`:
 
   - `libB -> libB_arch = libB_whole`
-
-Note the LIMITATION_1 again: `libA_arch` is expanded against `libA`, so it
-can't depend on anything from e.g. `libB` or `rootManifest` (see below).
 
 So now we have full manifests for all 3 components, and we build an aggregate
 manifest:
@@ -117,7 +112,7 @@ From the description above, we can conclude a few more limitations:
 
 ### Limitations
 
-**LIMITATION_2** is as follows:
+**LIMITATION_1** is as follows:
 
 So in the example above, `libB` defines a build var `VAR_FROM_LIB_B`, so that
 "upper" components, like `libA` or `app`, can refer to it with
@@ -165,10 +160,10 @@ And no, we can't just expand conds earlier, because, as was mentioned in the
 beginning, one of the goals is to expand conds as late as possible, so that
 app can override things these conds depend on.
 
-TODO: probably we can try to apply the same workaround as for LIMITATION_1: if
-we can't evaluate the expression, postpone the evaluation for later, when we
-might have expanded some conds. However, this might add more confusion: like,
-if some lib has two levels of conds:
+TODO: probably we can try to apply the same workaround as we do when expanding
+arch-specific submanifest: if we can't evaluate the expression, postpone the
+evaluation for later, when we might have expanded some conds. However, this
+might add more confusion: like, if some lib has two levels of conds:
 
 ```yaml
 conds:
@@ -193,10 +188,10 @@ build_vars:
 Then in the end `SOME_VAR` will end up being `1 app 2`, which is confusing. So,
 not sure whether it's a good idea in this case.
 
-**LIMITATION_3** is as follows:
+**LIMITATION_2** is as follows:
 
 Conds can't contain libs. At the time we expand conds, we don't look at libs
-anymore. BUT, even if we do, it would make `LIMITATION_2` even more confusing:
+anymore. BUT, even if we do, it would make `LIMITATION_1` even more confusing:
 
 Consider that `libA` contains a cond which adds one more library `libC` if the
 platform is esp8266. Then, cond levels for that `libC` will be shifted: what is

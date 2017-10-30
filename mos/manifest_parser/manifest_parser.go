@@ -143,19 +143,19 @@ func ReadManifestFinal(
 	// }}}
 
 	// Get sources and filesystem files from the manifest, expanding expressions {{{
-	manifest.Sources, err = interpreter.ExpandVarsSlice(interp, manifest.Sources)
+	manifest.Sources, err = interpreter.ExpandVarsSlice(interp, manifest.Sources, false)
 	if err != nil {
 		return nil, nil, errors.Trace(err)
 	}
 
 	for k, v := range manifest.LibsHandled {
-		manifest.LibsHandled[k].Sources, err = interpreter.ExpandVarsSlice(interp, v.Sources)
+		manifest.LibsHandled[k].Sources, err = interpreter.ExpandVarsSlice(interp, v.Sources, false)
 		if err != nil {
 			return nil, nil, errors.Trace(err)
 		}
 	}
 
-	manifest.Includes, err = interpreter.ExpandVarsSlice(interp, manifest.Includes)
+	manifest.Includes, err = interpreter.ExpandVarsSlice(interp, manifest.Includes, false)
 	if err != nil {
 		return nil, nil, errors.Trace(err)
 	}
@@ -164,17 +164,17 @@ func ReadManifestFinal(
 	// docker container
 	fp.AppSourceDirs = []string{}
 
-	manifest.Filesystem, err = interpreter.ExpandVarsSlice(interp, manifest.Filesystem)
+	manifest.Filesystem, err = interpreter.ExpandVarsSlice(interp, manifest.Filesystem, false)
 	if err != nil {
 		return nil, nil, errors.Trace(err)
 	}
 
-	manifest.BinaryLibs, err = interpreter.ExpandVarsSlice(interp, manifest.BinaryLibs)
+	manifest.BinaryLibs, err = interpreter.ExpandVarsSlice(interp, manifest.BinaryLibs, false)
 	if err != nil {
 		return nil, nil, errors.Trace(err)
 	}
 
-	manifest.Tests, err = interpreter.ExpandVarsSlice(interp, manifest.Tests)
+	manifest.Tests, err = interpreter.ExpandVarsSlice(interp, manifest.Tests, false)
 	if err != nil {
 		return nil, nil, errors.Trace(err)
 	}
@@ -583,7 +583,9 @@ func ReadManifest(
 			}
 
 			// Extend common app manifest with arch-specific things.
-			if err := extendManifest(manifest, manifest, archManifest, "", "", interp, nil); err != nil {
+			if err := extendManifest(manifest, manifest, archManifest, "", "", interp, &extendManifestOptions{
+				skipFailedExpansions: true,
+			}); err != nil {
 				return nil, time.Time{}, errors.Trace(err)
 			}
 		} else if !os.IsNotExist(err) {
@@ -698,17 +700,17 @@ func ReadManifestFile(
 	}
 	manifest.InitAfter = nil
 
-	manifest.MongooseOsVersion, err = interpreter.ExpandVars(interp, manifest.MongooseOsVersion)
+	manifest.MongooseOsVersion, err = interpreter.ExpandVars(interp, manifest.MongooseOsVersion, false)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
 	}
 
-	manifest.LibsVersion, err = interpreter.ExpandVars(interp, manifest.LibsVersion)
+	manifest.LibsVersion, err = interpreter.ExpandVars(interp, manifest.LibsVersion, false)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
 	}
 
-	manifest.ModulesVersion, err = interpreter.ExpandVars(interp, manifest.ModulesVersion)
+	manifest.ModulesVersion, err = interpreter.ExpandVars(interp, manifest.ModulesVersion, false)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
 	}
@@ -949,7 +951,9 @@ func ExpandManifestConds(
 
 		// Apply submanifest if present
 		if cond.Apply != nil {
-			if err := extendManifest(dstManifest, dstManifest, cond.Apply, "", "", interp, nil); err != nil {
+			if err := extendManifest(dstManifest, dstManifest, cond.Apply, "", "", interp, &extendManifestOptions{
+				skipFailedExpansions: true,
+			}); err != nil {
 				return errors.Trace(err)
 			}
 		}
@@ -1035,12 +1039,12 @@ func extendManifest(
 
 	var err error
 
-	mMain.BuildVars, err = mergeMapsString(m1.BuildVars, m2.BuildVars, interp)
+	mMain.BuildVars, err = mergeMapsString(m1.BuildVars, m2.BuildVars, interp, opts.skipFailedExpansions)
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	mMain.CDefs, err = mergeMapsString(m1.CDefs, m2.CDefs, interp)
+	mMain.CDefs, err = mergeMapsString(m1.CDefs, m2.CDefs, interp, opts.skipFailedExpansions)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -1057,7 +1061,8 @@ func extendManifest(
 }
 
 type extendManifestOptions struct {
-	skipSources bool
+	skipSources          bool
+	skipFailedExpansions bool
 }
 
 func prependPaths(items []string, dir string) []string {
@@ -1096,7 +1101,7 @@ func prependCondPaths(conds []build.ManifestCond, dir string) []build.ManifestCo
 // precedence over m1. Values of m2 can contain expressions which are expanded
 // against the given interp.
 func mergeMapsString(
-	m1, m2 map[string]string, interp *interpreter.MosInterpreter,
+	m1, m2 map[string]string, interp *interpreter.MosInterpreter, skipFailed bool,
 ) (map[string]string, error) {
 	bv := make(map[string]string)
 
@@ -1105,7 +1110,7 @@ func mergeMapsString(
 	}
 	for k, v := range m2 {
 		var err error
-		bv[k], err = interpreter.ExpandVars(interp, v)
+		bv[k], err = interpreter.ExpandVars(interp, v, skipFailed)
 		if err != nil {
 			return nil, errors.Trace(err)
 		}
