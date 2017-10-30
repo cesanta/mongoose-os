@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
@@ -20,6 +21,8 @@ const (
 	endpointOut   = 0x02
 	endpointIn    = 0x83
 	maxPacketLen  = 0x1000
+
+	shortTimeout = 200 * time.Millisecond
 )
 
 type XDS110Client struct {
@@ -118,7 +121,7 @@ func (xc *XDS110Client) GetSerialNumber() string {
 	return strings.TrimRight(sn, "\x00")
 }
 
-func (xc *XDS110Client) doCommand(cmd xds110Command, argBuf *bytes.Buffer, respPayloadLen int) (*bytes.Buffer, error) {
+func (xc *XDS110Client) doCommand(cmd xds110Command, argBuf *bytes.Buffer, respPayloadLen int, timeout time.Duration) (*bytes.Buffer, error) {
 	if xc.outEndp == nil {
 		return nil, errors.Errorf("not connected")
 	}
@@ -135,6 +138,7 @@ func (xc *XDS110Client) doCommand(cmd xds110Command, argBuf *bytes.Buffer, respP
 	if err != nil {
 		return nil, errors.Annotatef(err, "failed to send command")
 	}
+	xc.inEndp.Timeout = timeout
 	resp := make([]byte, maxPacketLen)
 	n, err := xc.inEndp.Read(resp)
 	if err != nil {
@@ -172,7 +176,7 @@ func (xc *XDS110Client) Echo(data []byte) error {
 	ab := bytes.NewBuffer(nil)
 	binary.Write(ab, binary.LittleEndian, uint32(len(data)&0xff))
 	ab.Write(data)
-	echoData, err := xc.doCommand(cmdEcho, ab, len(data))
+	echoData, err := xc.doCommand(cmdEcho, ab, len(data), shortTimeout)
 	if err == nil && !bytes.Equal(echoData.Bytes(), data) {
 		return errors.Errorf("invalid echo response: send %q, got %q", data, echoData.Bytes())
 	}
@@ -180,12 +184,12 @@ func (xc *XDS110Client) Echo(data []byte) error {
 }
 
 func (xc *XDS110Client) Connect() error {
-	_, err := xc.doCommand(cmdConnect, nil, 0)
+	_, err := xc.doCommand(cmdConnect, nil, 0, shortTimeout)
 	return errors.Annotatef(err, "Connect")
 }
 
 func (xc *XDS110Client) Disconnect() error {
-	_, err := xc.doCommand(cmdDisconnect, nil, 7)
+	_, err := xc.doCommand(cmdDisconnect, nil, 7, shortTimeout)
 	return errors.Annotatef(err, "Disconnect")
 }
 
@@ -196,7 +200,7 @@ type XDS110VersionInfo struct {
 }
 
 func (xc *XDS110Client) GetVersionInfo() (*XDS110VersionInfo, error) {
-	rb, err := xc.doCommand(cmdGetVersionInfo, nil, 6)
+	rb, err := xc.doCommand(cmdGetVersionInfo, nil, 6, shortTimeout)
 	if err != nil {
 		return nil, errors.Annotatef(err, "GetVersionInfo")
 	}
@@ -213,7 +217,7 @@ func (xc *XDS110Client) GetVersionInfo() (*XDS110VersionInfo, error) {
 func (xc *XDS110Client) SetTCLKDelay(delay uint8) error {
 	ab := bytes.NewBuffer(nil)
 	binary.Write(ab, binary.LittleEndian, uint32(delay))
-	_, err := xc.doCommand(cmdSetTCLKDelay, ab, 0)
+	_, err := xc.doCommand(cmdSetTCLKDelay, ab, 0, shortTimeout)
 	return errors.Annotatef(err, "SetTCLKDelay")
 }
 
@@ -227,13 +231,13 @@ func boolToByte(b bool) byte {
 
 func (xc *XDS110Client) SetTRST(rstOn bool) error {
 	ab := bytes.NewBuffer([]byte{boolToByte(rstOn)})
-	_, err := xc.doCommand(cmdSetTRST, ab, 0)
+	_, err := xc.doCommand(cmdSetTRST, ab, 0, shortTimeout)
 	return errors.Annotatef(err, "SetTRST")
 }
 
 func (xc *XDS110Client) SetSRST(rstOn bool) error {
 	ab := bytes.NewBuffer([]byte{boolToByte(!rstOn)})
-	_, err := xc.doCommand(cmdSetSRST, ab, 0)
+	_, err := xc.doCommand(cmdSetSRST, ab, 0, shortTimeout)
 	return errors.Annotatef(err, "SetSRST")
 }
 
