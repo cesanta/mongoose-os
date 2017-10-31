@@ -50,7 +50,7 @@ win: generate
     docker.cesanta.com/gobuild-mingw \
     bash -c 'GOOS=windows GOARCH=386 CGO_ENABLED=1 CXX=i686-w64-mingw32-g++ CC=i686-w64-mingw32-gcc go build -o /out/downloads/mos/win/mos.exe --ldflags "-extldflags -static" cesanta.com/mos'
 
-downloads: linux mac win
+downloads: linux mac win dmg
 	cp version/version.json downloads/mos/
 
 deploy: deploy-fwbuild deploy-mos-binary
@@ -65,7 +65,7 @@ deploy-mos-binary: generate
 
 APPNAME = mos
 DMGDIR = dmg/$(APPNAME).app
-dmg:
+dmg: mac
 	rm -rf dmg a.dmg mos.dmg
 	mkdir -p $(DMGDIR)/Contents/{MacOS,Resources}
 	install -m 644 $(APPNAME).icns $(DMGDIR)/Contents/Resources/
