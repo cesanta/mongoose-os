@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"runtime"
 	"sort"
 	"strconv"
 	"sync"
@@ -25,9 +24,7 @@ import (
 	"github.com/cesanta/errors"
 	"github.com/elazarl/go-bindata-assetfs"
 	"github.com/golang/glog"
-	"github.com/matishsiao/goInfo"
 	shellwords "github.com/mattn/go-shellwords"
-	goversion "github.com/mcuadros/go-version"
 	"github.com/skratchdot/open-golang/open"
 	flag "github.com/spf13/pflag"
 
@@ -157,18 +154,21 @@ func httpReply(w http.ResponseWriter, result interface{}, err error) {
 }
 
 func init() {
-	switch runtime.GOOS {
-	case "linux":
-		// leave false
-	case "darwin":
-		startWebview = true
-	case "windows":
-		// On windows, open webview only at Windows 8 and later
-		windowsVersion := goInfo.GetInfo().Core
-		if goversion.CompareNormalized(windowsVersion, webviewMinWindowsVersion, ">=") {
-			startWebview = true
-		}
-	}
+	// TODO: fix webview issues https://www.youtube.com/watch?v=5xFkZYfyP5A and
+	// uncomment
+
+	//switch runtime.GOOS {
+	//case "linux":
+	//// leave false
+	//case "darwin":
+	//startWebview = true
+	//case "windows":
+	//// On windows, open webview only at Windows 8 and later
+	//windowsVersion := goInfo.GetInfo().Core
+	//if goversion.CompareNormalized(windowsVersion, webviewMinWindowsVersion, ">=") {
+	//startWebview = true
+	//}
+	//}
 
 	flag.StringVar(&wwwRoot, "web-root", "", "UI Web root to use instead of built-in")
 	hiddenFlags = append(hiddenFlags, "web-root")
