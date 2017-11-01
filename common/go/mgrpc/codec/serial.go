@@ -3,7 +3,6 @@ package codec
 import (
 	"golang.org/x/net/context"
 	"io"
-	"runtime"
 	"sync"
 	"time"
 
@@ -34,6 +33,7 @@ type SerialCodecOptions struct {
 	SendChunkSize        int
 	SendChunkDelay       time.Duration
 	JunkHandler          func(junk []byte)
+	SetControlLines      bool
 	InvertedControlLines bool
 }
 
@@ -76,11 +76,7 @@ func Serial(ctx context.Context, portName string, opts *SerialCodecOptions) (Cod
 		return nil, errors.Trace(err)
 	}
 
-	// On Linux all the serial drivers are known to behave sensibly.
-	// On other systems, some converters/drivers activate them which,
-	// in case of ESP, may put device in reset mode.
-	// If control pin polarity is inverted, then it also needs explicit setting.
-	if runtime.GOOS != "linux" || opts.InvertedControlLines {
+	if opts.SetControlLines || opts.InvertedControlLines {
 		bFalse := opts.InvertedControlLines
 		s.SetRTSDTR(bFalse, bFalse)
 	}

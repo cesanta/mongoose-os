@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"golang.org/x/net/context"
 	"os"
-	"runtime"
 	"time"
 
 	"cesanta.com/mos/dev"
@@ -17,10 +16,11 @@ import (
 
 // console specific flags
 var (
-	baudRate uint
-	noInput  bool
-	hwFC     bool
-	tsfSpec  string
+	baudRate        uint
+	noInput         bool
+	hwFC            bool
+	setControlLines bool
+	tsfSpec         string
 )
 
 var (
@@ -32,6 +32,7 @@ func init() {
 	flag.BoolVar(&noInput, "no-input", false,
 		"Do not read from stdin, only print device's output to stdout")
 	flag.BoolVar(&hwFC, "hw-flow-control", false, "Enable hardware flow control (CTS/RTS)")
+	flag.BoolVar(&setControlLines, "set-control-lines", true, "Set RTS and DTR explicitly when in console/RPC mode")
 
 	flag.StringVar(&tsfSpec, "timestamp", "StampMilli",
 		"Prepend each line with a timestamp in the specified format. A number of specifications are supported:"+
@@ -81,11 +82,7 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 		return errors.Annotatef(err, "failed to open %s", port)
 	}
 
-	// On Linux all the serial drivers are known to behave sensibly.
-	// On other systems, some converters/drivers activate them which,
-	// in case of ESP, may put device in reset mode.
-	// If control pin polarity is inverted, then it also needs explicit setting.
-	if runtime.GOOS != "linux" || *invertedControlLines {
+	if setControlLines || *invertedControlLines {
 		bFalse := *invertedControlLines
 		s.SetRTSDTR(bFalse, bFalse)
 	}

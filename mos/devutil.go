@@ -83,6 +83,7 @@ func createDevConnWithJunkHandler(
 			// Due to lack of flow control, we send data in chunks and wait after each.
 			SendChunkSize:        16,
 			SendChunkDelay:       5 * time.Millisecond,
+			SetControlLines:      setControlLines,
 			InvertedControlLines: *invertedControlLines,
 		},
 	}
