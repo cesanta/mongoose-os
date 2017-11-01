@@ -11,8 +11,9 @@ import (
 )
 
 var (
-	regexpPart   = regexp.MustCompile(`\s+`)
-	regexpString = regexp.MustCompile(`^\"[^"]*\"$`)
+	regexpPart    = regexp.MustCompile(`\s+`)
+	regexpString  = regexp.MustCompile(`^\"[^"]*\"$`)
+	regexpDefined = regexp.MustCompile(`^defined\(\s*([^)]+)\s*\)$`)
 )
 
 // MosInterpreter can evaluate very simple expressions, see EvaluateExpr.
@@ -125,6 +126,10 @@ func (mi *MosInterpreter) evaluatePart(expr string) (interface{}, error) {
 	if regexpString.MatchString(expr) {
 		// Expression looks like a string
 		return expr[1 : len(expr)-1], nil
+	} else if subexprs := regexpDefined.FindStringSubmatch(expr); subexprs != nil {
+		// Expression looks like "defined(foo)"
+		_, ok := mi.MVars.GetVar(subexprs[1])
+		return ok, nil
 	} else {
 		// Try to get variable value
 		val, ok := mi.MVars.GetVar(expr)

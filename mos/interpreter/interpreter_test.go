@@ -67,6 +67,9 @@ func TestInterpreterBasic(t *testing.T) {
 		interpExpectBool{`foo == "foo_val"`, true, ""},
 		interpExpectBool{`bar.baz.boo == "boo_val"`, true, ""},
 		interpExpectBool{`bar.baz.booo`, false, "failed to evaluate bar.baz.booo"},
+		interpExpectBool{`defined(foo)`, true, ""},
+		interpExpectBool{`defined(bar.baz.boo)`, true, ""},
+		interpExpectBool{`defined(bar.baz.booo)`, false, ""},
 	}
 
 	for _, v := range eb {
