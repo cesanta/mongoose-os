@@ -27,13 +27,12 @@ const (
 )
 
 type DevConn struct {
-	c              *Client
-	ConnectAddr    string
-	RPC            mgrpc.MgRPC
-	Dest           string
-	JunkHandler    func(junk []byte)
-	MQTTLogHandler func(topic string, data []byte)
-	Reconnect      bool
+	c           *Client
+	ConnectAddr string
+	RPC         mgrpc.MgRPC
+	Dest        string
+	Reconnect   bool
+	codecOpts   codec.Options
 
 	CConf       fwconfig.Service
 	CSys        fwsys.Service
@@ -57,11 +56,11 @@ func (c *Client) CreateDevConn(
 	return dc, nil
 }
 
-func (c *Client) CreateDevConnWithJunkHandler(ctx context.Context, connectAddr string, junkHandler func(junk []byte), MQTTLogHandler func(string, []byte), reconnect bool, tlsConfig *tls.Config) (*DevConn, error) {
+func (c *Client) CreateDevConnWithOpts(ctx context.Context, connectAddr string, reconnect bool, tlsConfig *tls.Config, codecOpts *codec.Options) (*DevConn, error) {
 
-	dc := &DevConn{c: c, ConnectAddr: connectAddr, Dest: debugDevId, MQTTLogHandler: MQTTLogHandler}
+	dc := &DevConn{c: c, ConnectAddr: connectAddr, Dest: debugDevId}
 
-	err := dc.ConnectWithJunkHandler(ctx, junkHandler, MQTTLogHandler, reconnect, tlsConfig)
+	err := dc.ConnectWithOpts(ctx, reconnect, tlsConfig, codecOpts)
 	if err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -120,19 +119,6 @@ func (dc *DevConn) SetConfig(ctx context.Context, devConf *DevConf) error {
 
 func (dc *DevConn) GetInfo(ctx context.Context) (*fwsys.GetInfoResult, error) {
 	r, err := dc.CSys.GetInfo(ctx)
-	// 2017/06/20: Temporarily disabled, need better UART handling on the devices to go FASTA.
-	if false && err == nil && r.Arch != nil && *r.Arch == "esp32" || *r.Arch == "esp8266" {
-		glog.Infof("MOAR FASTA")
-		dc.RPC.SetCodecOptions(
-			&codec.Options{
-				Serial: codec.SerialCodecOptions{
-					JunkHandler: dc.JunkHandler,
-					// ESP8266 and ESP32 have long enough FIFOs so chunking is not necessary.
-					SendChunkSize:  0,
-					SendChunkDelay: 0,
-				},
-			})
-	}
 	return r, err
 }
 
@@ -157,38 +143,25 @@ func (dc *DevConn) IsConnected() bool {
 }
 
 func (dc *DevConn) Connect(ctx context.Context, reconnect bool) error {
-	if dc.JunkHandler == nil {
-		dc.JunkHandler = func(junk []byte) {}
-	}
-	return dc.ConnectWithJunkHandler(ctx, dc.JunkHandler, dc.MQTTLogHandler, reconnect, nil)
+	return dc.ConnectWithOpts(ctx, reconnect, nil, nil)
 }
 
-func (dc *DevConn) ConnectWithJunkHandler(ctx context.Context, junkHandler func(junk []byte), MQTTLogHandler func(string, []byte), reconnect bool, tlsConfig *tls.Config) error {
+func (dc *DevConn) ConnectWithOpts(ctx context.Context, reconnect bool, tlsConfig *tls.Config, codecOpts *codec.Options) error {
 	var err error
 
 	if dc.RPC != nil {
 		return nil
 	}
 
-	dc.JunkHandler = junkHandler
-	dc.Reconnect = reconnect
+	if codecOpts != nil {
+		dc.codecOpts = *codecOpts
+	}
 
 	opts := []mgrpc.ConnectOption{
 		mgrpc.LocalID("mos"),
 		mgrpc.Reconnect(reconnect),
 		mgrpc.TlsConfig(tlsConfig),
-		mgrpc.CodecOptions(
-			codec.Options{
-				MQTT: codec.MQTTCodecOptions{
-					LogCallback: MQTTLogHandler,
-				},
-				Serial: codec.SerialCodecOptions{
-					JunkHandler: junkHandler,
-					// Due to lack of flow control, we send data in chunks and wait after each.
-					SendChunkSize:  16,
-					SendChunkDelay: 5 * time.Millisecond,
-				},
-			}),
+		mgrpc.CodecOptions(dc.codecOpts),
 	}
 
 	dc.RPC, err = mgrpc.New(ctx, dc.ConnectAddr, opts...)

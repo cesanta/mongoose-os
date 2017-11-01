@@ -6,9 +6,11 @@ import (
 	"flag"
 	"io/ioutil"
 	"strings"
+	"time"
 
 	"golang.org/x/net/context"
 
+	"cesanta.com/common/go/mgrpc/codec"
 	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"
 )
@@ -72,6 +74,18 @@ func createDevConnWithJunkHandler(
 		}
 	}
 
-	devConn, err := c.CreateDevConnWithJunkHandler(ctx, addr, junkHandler, logHandler, *reconnect, tlsConfig)
+	codecOpts := &codec.Options{
+		MQTT: codec.MQTTCodecOptions{
+			LogCallback: logHandler,
+		},
+		Serial: codec.SerialCodecOptions{
+			JunkHandler: junkHandler,
+			// Due to lack of flow control, we send data in chunks and wait after each.
+			SendChunkSize:        16,
+			SendChunkDelay:       5 * time.Millisecond,
+			InvertedControlLines: *invertedControlLines,
+		},
+	}
+	devConn, err := c.CreateDevConnWithOpts(ctx, addr, *reconnect, tlsConfig, codecOpts)
 	return devConn, errors.Trace(err)
 }

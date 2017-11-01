@@ -86,7 +86,7 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 	// in case of ESP, may put device in reset mode.
 	// If control pin polarity is inverted, then it also needs explicit setting.
 	if runtime.GOOS != "linux" || *invertedControlLines {
-		bFalse := !*invertedControlLines
+		bFalse := *invertedControlLines
 		s.SetRTSDTR(bFalse, bFalse)
 	}
 
