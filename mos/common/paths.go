@@ -88,3 +88,7 @@ func GetConfSchemaFilePath(buildDir string) string {
 func GetBinaryLibFilePath(libDir, name, platform string) string {
 	return filepath.Join(libDir, "lib", platform, fmt.Sprintf("lib%s.a", name))
 }
+
+func GetSdkVersionGlob(mosDir string) string {
+	return filepath.Join(mosDir, "fw", "platforms", "*", "sdk.version")
+}
