@@ -1048,7 +1048,11 @@ func getMakeArgs(dir, target string, manifest *build.FWAppManifest) ([]string, e
 	}
 
 	for k, v := range manifest.BuildVars {
-		makeArgs = append(makeArgs, fmt.Sprintf("%s=%s", k, v))
+		makeArgs = append(makeArgs, fmt.Sprintf(
+			"%s=%s",
+			k,
+			strings.Replace(strings.Replace(v, "\n", " ", -1), "\r", " ", -1),
+		))
 	}
 
 	// Add extra make args
