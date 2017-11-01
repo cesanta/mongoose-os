@@ -167,7 +167,7 @@ func singleManifestTest(t *testing.T, appPath string) error {
 type compProviderTest struct{}
 
 func (lpt *compProviderTest) GetLibLocalPath(
-	m *build.SWModule, rootAppDir, libsDefVersion string,
+	m *build.SWModule, rootAppDir, libsDefVersion, platform string,
 ) (string, error) {
 	appName, err := m.GetName()
 	if err != nil {
@@ -178,7 +178,7 @@ func (lpt *compProviderTest) GetLibLocalPath(
 }
 
 func (lpt *compProviderTest) GetModuleLocalPath(
-	m *build.SWModule, rootAppDir, modulesDefVersion string,
+	m *build.SWModule, rootAppDir, modulesDefVersion, platform string,
 ) (string, error) {
 	appName, err := m.GetName()
 	if err != nil {

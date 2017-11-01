@@ -85,8 +85,16 @@ func GetConfSchemaFilePath(buildDir string) string {
 	return filepath.Join(GetGeneratedFilesDir(buildDir), "mos_conf_schema.yml")
 }
 
+func GetBinaryLibsDir(libDir string) string {
+	return filepath.Join(libDir, "lib")
+}
+
+func GetBinaryLibsPlatformDir(libDir, platform string) string {
+	return filepath.Join(GetBinaryLibsDir(libDir), platform)
+}
+
 func GetBinaryLibFilePath(libDir, name, platform string) string {
-	return filepath.Join(libDir, "lib", platform, fmt.Sprintf("lib%s.a", name))
+	return filepath.Join(GetBinaryLibsPlatformDir(libDir, platform), fmt.Sprintf("lib%s.a", name))
 }
 
 func GetSdkVersionGlob(mosDir string) string {

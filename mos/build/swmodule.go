@@ -41,7 +41,7 @@ type SWModuleType int
 const (
 	SWModuleTypeInvalid SWModuleType = iota
 	SWModuleTypeLocal
-	SWModuleTypeGit
+	SWModuleTypeGithub
 )
 
 func (m *SWModule) Normalize() {
@@ -62,7 +62,7 @@ func (m *SWModule) IsClean(libsDir, defaultVersion string) (bool, error) {
 	}
 
 	switch m.GetType() {
-	case SWModuleTypeGit:
+	case SWModuleTypeGithub:
 		lp := filepath.Join(libsDir, m.getGitDirName(name, m.getVersionGit(defaultVersion)))
 
 		if _, err := os.Stat(lp); err != nil {
@@ -109,7 +109,7 @@ func (m *SWModule) PrepareLocalDir(
 		}
 
 		switch m.GetType() {
-		case SWModuleTypeGit:
+		case SWModuleTypeGithub:
 			version := m.getVersionGit(defaultVersion)
 			if err := prepareLocalCopyGit(m.Location, version, lp, logWriter, deleteIfFailed, pullInterval); err != nil {
 				return "", errors.Trace(err)
@@ -139,7 +139,7 @@ func (m *SWModule) getVersionGit(defaultVersion string) string {
 
 func (m *SWModule) GetLocalDir(libsDir, defaultVersion string) (string, error) {
 	switch m.GetType() {
-	case SWModuleTypeGit:
+	case SWModuleTypeGithub:
 		name, err := m.GetName()
 		if err != nil {
 			return "", errors.Trace(err)
@@ -179,7 +179,7 @@ func (m *SWModule) GetName() (string, error) {
 	}
 
 	switch m.GetType() {
-	case SWModuleTypeGit:
+	case SWModuleTypeGithub:
 		// Take last path fragment
 		u, err := url.Parse(m.Location)
 		if err != nil {
@@ -220,7 +220,7 @@ func (m *SWModule) GetType() SWModuleType {
 
 			switch u.Host {
 			case "github.com":
-				stype = "git"
+				stype = "github"
 			}
 		} else {
 			// Name is already checked to be not empty
@@ -229,8 +229,8 @@ func (m *SWModule) GetType() SWModuleType {
 	}
 
 	switch stype {
-	case "git":
-		return SWModuleTypeGit
+	case "github":
+		return SWModuleTypeGithub
 	default:
 		return SWModuleTypeLocal
 	}

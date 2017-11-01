@@ -55,11 +55,11 @@ type ComponentProvider interface {
 	// GetLibLocalPath returns local path to the given software module.
 	// NOTE that this method can be called concurrently for different modules.
 	GetLibLocalPath(
-		m *build.SWModule, rootAppDir, libsDefVersion string,
+		m *build.SWModule, rootAppDir, libsDefVersion, platform string,
 	) (string, error)
 
 	GetModuleLocalPath(
-		m *build.SWModule, rootAppDir, modulesDefVersion string,
+		m *build.SWModule, rootAppDir, modulesDefVersion, platform string,
 	) (string, error)
 
 	GetMongooseOSLocalPath(rootAppDir, mongooseOSVersion string) (string, error)
@@ -118,7 +118,7 @@ func ReadManifestFinal(
 			return nil, nil, errors.Trace(err)
 		}
 
-		moduleDir, err := cbs.ComponentProvider.GetModuleLocalPath(&m, dir, manifest.ModulesVersion)
+		moduleDir, err := cbs.ComponentProvider.GetModuleLocalPath(&m, dir, manifest.ModulesVersion, platform)
 		if err != nil {
 			return nil, nil, errors.Trace(err)
 		}
@@ -483,7 +483,7 @@ func prepareLib(
 	ourutil.Freportf(pc.logWriter, "Handling lib %q...", name)
 
 	libLocalDir, err := pc.cbs.ComponentProvider.GetLibLocalPath(
-		&m, pc.rootAppDir, pc.appManifest.LibsVersion,
+		&m, pc.rootAppDir, pc.appManifest.LibsVersion, manifest.Platform,
 	)
 	if err != nil {
 		lpres <- libPrepareResult{

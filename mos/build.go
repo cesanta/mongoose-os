@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -1279,6 +1280,17 @@ func absPathSlice(slice []string) ([]string, error) {
 	return ret, nil
 }
 
+func getGithubLibAssetUrl(repoUrl, platform, version string) (string, error) {
+	u, err := url.Parse(repoUrl)
+	if err != nil {
+		return "", errors.Trace(err)
+	}
+
+	_, name := path.Split(u.Path)
+
+	return fmt.Sprintf("%s/releases/download/%s/lib%s-%s.a", repoUrl, version, name, platform), nil
+}
+
 // Docker utils {{{
 
 // Docker mount points {{{
@@ -1398,7 +1410,7 @@ type compProviderReal struct {
 }
 
 func (lpr *compProviderReal) GetLibLocalPath(
-	m *build.SWModule, rootAppDir, libsDefVersion string,
+	m *build.SWModule, rootAppDir, libsDefVersion, platform string,
 ) (string, error) {
 	name, err := m.GetName()
 	if err != nil {
@@ -1414,25 +1426,37 @@ func (lpr *compProviderReal) GetLibLocalPath(
 
 	libDirAbs, ok := lpr.bParams.CustomLibLocations[name]
 	if !ok {
+
 		for {
 			ourutil.Freportf(lpr.logWriter, "The --lib flag was not given for it, checking repository")
 
-			needPull := true
+			needUpdate := true
 
-			if *noLibsUpdate {
-				localDir, err := m.GetLocalDir(libsDir, libsDefVersion)
-				if err != nil {
-					return "", errors.Trace(err)
-				}
+			localDir, err := m.GetLocalDir(libsDir, libsDefVersion)
+			if err != nil {
+				return "", errors.Trace(err)
+			}
 
-				if _, err := os.Stat(localDir); err == nil {
+			curHash := ""
+
+			if _, err := os.Stat(localDir); err == nil {
+				// lib's local dir already exists
+
+				if *noLibsUpdate {
 					ourutil.Freportf(lpr.logWriter, "--no-libs-update was given, and %q exists: skipping update", localDir)
 					libDirAbs = localDir
-					needPull = false
+					needUpdate = false
+				}
+
+				if m.GetType() == build.SWModuleTypeGithub {
+					curHash, err = gitutils.GitGetCurrentHash(localDir)
+					if err != nil {
+						return "", errors.Trace(err)
+					}
 				}
 			}
 
-			if needPull {
+			if needUpdate {
 				libDirAbs, err = m.PrepareLocalDir(libsDir, lpr.logWriter, true, libsDefVersion, *libsUpdateInterval)
 				if err != nil {
 					if m.Version == "" && libsDefVersion != "latest" {
@@ -1477,7 +1501,60 @@ func (lpr *compProviderReal) GetLibLocalPath(
 					}
 					return "", errors.Annotatef(err, "preparing local copy of the lib %q", name)
 				}
+
+				if m.GetType() == build.SWModuleTypeGithub {
+					newHash, err := gitutils.GitGetCurrentHash(localDir)
+					if err != nil {
+						return "", errors.Trace(err)
+					}
+
+					if newHash != curHash {
+						freportf(logWriter, "Hash is updated: %s -> %s", curHash, newHash)
+						// The current repo hash has changed after the pull, so we need to
+						// vanish the lib we might have downloaded before
+						os.RemoveAll(moscommon.GetBinaryLibsDir(localDir))
+
+						// But in case the lib dir is a part of the repo itself, we have to
+						// do "git checkout ." on the repo. We shouldn't be afraid of
+						// losing user's local changes, because the fact that hash has
+						// changed means that the repo was clean anyway.
+						gitutils.GitCheckout(localDir, ".")
+					}
+				}
+
+				// Check if prebuilt binary exists, and if not, try to fetch it
+				prebuiltFilePath := moscommon.GetBinaryLibFilePath(localDir, name, platform)
+
+				if _, err := os.Stat(prebuiltFilePath); err != nil {
+					// Prebuilt binary doesn't exist; let's see if we can fetch it
+					err = fetchPrebuiltBinary(m, platform, prebuiltFilePath)
+					if err == nil {
+						ourutil.Freportf(lpr.logWriter, "Successfully fetched prebuilt binary for %s to %s", m.Location, prebuiltFilePath)
+
+						// If localDir is a git repo, then <localDir>/.git/info/exclude
+						// should exist, and we'll add the filename of the fetched binary
+						// there, so that the repo will stay clean
+						excludePath := getGitExcludePath(localDir)
+						if _, err := os.Stat(excludePath); err == nil {
+							f, err := os.OpenFile(excludePath, os.O_APPEND|os.O_WRONLY, 0644)
+							if err != nil {
+								return "", errors.Trace(err)
+							}
+
+							defer f.Close()
+
+							_, pfname := filepath.Split(prebuiltFilePath)
+							fmt.Fprintf(f, "%s\n", pfname)
+						}
+
+					} else {
+						ourutil.Freportf(lpr.logWriter, "Failed to fetched prebuilt binary for %s: %s", m.Location, err.Error())
+					}
+				} else {
+					ourutil.Freportf(lpr.logWriter, "Prebuilt binary for %s already exists", m.Location)
+				}
 			}
+
 			break
 		}
 	} else {
@@ -1489,7 +1566,7 @@ func (lpr *compProviderReal) GetLibLocalPath(
 }
 
 func (lpr *compProviderReal) GetModuleLocalPath(
-	m *build.SWModule, rootAppDir, modulesDefVersion string,
+	m *build.SWModule, rootAppDir, modulesDefVersion, platform string,
 ) (string, error) {
 	name, err := m.GetName()
 	if err != nil {
@@ -1559,6 +1636,50 @@ func getMosDirEffective(mongooseOsVersion string, updateInterval time.Duration) 
 	}
 
 	return mosDirEffective, nil
+}
+
+func fetchPrebuiltBinary(m *build.SWModule, platform, tgt string) error {
+	switch m.GetType() {
+	case build.SWModuleTypeGithub:
+		assetUrl, err := getGithubLibAssetUrl(m.Location, platform, version.GetMosVersion())
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		resp, err := http.Get(assetUrl)
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		defer resp.Body.Close()
+
+		if resp.StatusCode != http.StatusOK {
+			return errors.Errorf("Got %d status code", resp.StatusCode)
+		}
+
+		// Fetched the asset successfully
+		data, err := ioutil.ReadAll(resp.Body)
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		if err := os.MkdirAll(filepath.Dir(tgt), 0755); err != nil {
+			return errors.Trace(err)
+		}
+
+		if err := ioutil.WriteFile(tgt, data, 0644); err != nil {
+			return errors.Trace(err)
+		}
+
+	default:
+		return errors.Errorf("Unable to fetch library for swmodule of type %v", m.GetType())
+	}
+
+	return nil
+}
+
+func getGitExcludePath(gitRepo string) string {
+	return filepath.Join(gitRepo, ".git", "info", "exclude")
 }
 
 // }}}
