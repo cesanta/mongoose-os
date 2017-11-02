@@ -857,15 +857,7 @@ func expandManifestLibsAndConds(
 					skipSources: true,
 				},
 			); err != nil {
-				names := []string{}
-				for i := 1; /* skip dummy empty manifest */ i < len(allManifests); i++ {
-					names = append(names, allManifests[i].Name)
-				}
-				return errors.Annotatef(
-					err, `expanding %q (%s) (full chain is: "%s")`, lcur.Name, lcur.Path, strings.Join(
-						names, `" <- "`,
-					),
-				)
+				return errors.Annotatef(err, `expanding %q`, lcur.Name)
 			}
 
 			commonManifest = &curManifest
@@ -897,7 +889,7 @@ func expandManifestLibsAndConds(
 		// are no conds left.
 
 		if err := ExpandManifestConds(manifest, commonManifest, interp); err != nil {
-			return errors.Trace(err)
+			return errors.Annotatef(err, "expanding app manifest's conds")
 		}
 
 		for k := range manifest.LibsHandled {
@@ -905,7 +897,7 @@ func expandManifestLibsAndConds(
 				if err := ExpandManifestConds(
 					manifest.LibsHandled[k].Manifest, commonManifest, interp,
 				); err != nil {
-					return errors.Trace(err)
+					return errors.Annotatef(err, "expanding %q conds", manifest.LibsHandled[k].Name)
 				}
 			}
 		}
@@ -991,7 +983,7 @@ func ExpandManifestConds(
 	for _, cond := range conds {
 		res, err := interp.EvaluateExprBool(cond.When)
 		if err != nil {
-			return errors.Trace(err)
+			return errors.Annotatef(err, "evaluating cond %q expression '%s'", "when", cond.When)
 		}
 
 		if !res {
