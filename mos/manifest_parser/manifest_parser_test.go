@@ -39,7 +39,8 @@ var (
 )
 
 type TestDescr struct {
-	PreferBinaryLibs bool `yaml:"prefer_binary_libs"`
+	PreferBinaryLibs bool              `yaml:"prefer_binary_libs"`
+	BuildVars        map[string]string `yaml:"build_vars"`
 }
 
 func init() {
@@ -126,7 +127,10 @@ func singleManifestTest(t *testing.T, appPath string) error {
 		t.Logf("testing %q for %q", appPath, platform)
 
 		manifest, _, err := ReadManifestFinal(
-			filepath.Join(appPath, appDir), platform, logWriter, interp,
+			filepath.Join(appPath, appDir), &ManifestAdjustments{
+				Platform:  platform,
+				BuildVars: descr.BuildVars,
+			}, logWriter, interp,
 			&ReadManifestCallbacks{ComponentProvider: &compProviderTest{}}, true, descr.PreferBinaryLibs,
 		)
 		if err != nil {

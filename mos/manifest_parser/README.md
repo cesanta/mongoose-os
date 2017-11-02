@@ -53,6 +53,10 @@ e.g. submanifest could depend on `rootManifest` or on some lib, neither of
 which is available at this point, so those expressions will be expanded later,
 when we build an aggregate manifest (see below).
 
+Also, for an app manifest, we apply the "last-minute adjustments" given at the
+command line: platform, build vars, maybe something else (TODO: apply at least
+cflags and cxxflags as well)
+
 So now, `app_whole` contains all libs `app` depends on directly. Now we read
 each of those libs (which in our case is just `libA`), and perform the same
 parsing recursively:
@@ -79,6 +83,11 @@ build_vars:
 ```
 
 which will result in `VAR_FROM_LIB_B` having the value `"from_lib_b and_from_lib_a"`.
+
+*NOTE that instead of applying last-minute adjustments at the step 1, we might
+actually apply them at this step, so that they just go last in the chain (after
+`app_whole`), but then it would require a separate code for the remote build
+where we only have app manifest.*
 
 When this aggregate manifest is ready, conds come into place.
 

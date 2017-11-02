@@ -1,0 +1,56 @@
+type: app
+version: "1.0"
+platform: esp8266
+platforms:
+__ALL_PLATFORMS__
+author: mongoose-os
+description: My test app
+sources:
+- __APP_ROOT__/app/build/gen/deps_init.c
+- __APP_ROOT__/libs/mylib1/src/mylib1_src1.c
+- __APP_ROOT__/libs/mylib4/src/mylib4_src1.c
+- __APP_ROOT__/libs/mylib2/src/mylib2_src1.c
+- __APP_ROOT__/libs/mylib3/src/mylib3_src1.c
+includes:
+- __APP_ROOT__/libs/mylib4/include
+- __APP_ROOT__/libs/mylib2/include
+- __APP_ROOT__/libs/mylib3/include
+filesystem:
+- __APP_ROOT__/libs/mylib1/fs/mylib1_file1
+- __APP_ROOT__/libs/mylib4/fs/mylib4_file1
+- __APP_ROOT__/libs/mylib2/fs/mylib2_file1
+- __APP_ROOT__/libs/mylib3/fs/mylib3_file1
+config_schema:
+- - mylib1
+  - o
+  - title: mylib1 settings
+- - mylib4
+  - o
+  - title: mylib4 settings
+- - mylib2
+  - o
+  - title: mylib2 settings
+- - mylib3
+  - o
+  - title: mylib3 settings
+- - myapp
+  - o
+  - title: Myapp settings
+build_vars:
+  FOO: lib4_var1 lib3_var1 foo_from_cli
+  LIB4_VAR1: lib4_var1 lib3_var1
+  LIB4_VAR2: lib4_var2 lib3_var2 app from_cli
+  LIB4_VAR3: lib4_var3 app
+  MGOS_HAVE_MYLIB1: "1"
+  MGOS_HAVE_MYLIB2: "1"
+  MGOS_HAVE_MYLIB3: "1"
+  MGOS_HAVE_MYLIB4: "1"
+cdefs:
+  MGOS_HAVE_MYLIB1: "1"
+  MGOS_HAVE_MYLIB2: "1"
+  MGOS_HAVE_MYLIB3: "1"
+  MGOS_HAVE_MYLIB4: "1"
+libs_version: "0.01"
+modules_version: "0.01"
+mongoose_os_version: "0.01"
+manifest_version: 2017-09-29

@@ -315,8 +315,16 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		return errors.Trace(err)
 	}
 
+	buildVarsCli, err := getBuildVarsFromCLI()
+	if err != nil {
+		return errors.Trace(err)
+	}
+
 	manifest, fp, err := manifest_parser.ReadManifestFinal(
-		appDir, bParams.Platform, logWriter, interp,
+		appDir, &manifest_parser.ManifestAdjustments{
+			Platform:  bParams.Platform,
+			BuildVars: buildVarsCli,
+		}, logWriter, interp,
 		&manifest_parser.ReadManifestCallbacks{ComponentProvider: &compProvider}, true, *preferPrebuiltLibs,
 	)
 	if err != nil {
@@ -470,11 +478,6 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 		}
 	} else {
 		printConfSchemaWarn(manifest)
-	}
-
-	// Amend build vars with the values given in command line
-	if err := addBuildVarsFromCLI(manifest); err != nil {
-		return errors.Trace(err)
 	}
 
 	appPath, err := getCodeDirAbs()
@@ -686,9 +689,17 @@ func buildRemote(bParams *buildParams) error {
 		return errors.Trace(err)
 	}
 
+	buildVarsCli, err := getBuildVarsFromCLI()
+	if err != nil {
+		return errors.Trace(err)
+	}
+
 	interp := interpreter.NewInterpreter(newMosVars())
 
-	manifest, _, err := manifest_parser.ReadManifest(tmpCodeDir, bParams.Platform, interp)
+	manifest, _, err := manifest_parser.ReadManifest(tmpCodeDir, &manifest_parser.ManifestAdjustments{
+		Platform:  bParams.Platform,
+		BuildVars: buildVarsCli,
+	}, interp)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -737,11 +748,6 @@ func buildRemote(bParams *buildParams) error {
 
 	// Print a warning if APP_CONF_SCHEMA is set in manifest manually
 	printConfSchemaWarn(manifest)
-
-	// Amend build vars with the values given in command line
-	if err := addBuildVarsFromCLI(manifest); err != nil {
-		return errors.Trace(err)
-	}
 
 	// Amend cflags and cxxflags with the values given in command line
 	manifest.CFlags = append(manifest.CFlags, *cflagsExtra...)
@@ -1078,7 +1084,9 @@ func addBuildVar(manifest *build.FWAppManifest, name, value string) error {
 	return nil
 }
 
-func addBuildVarsFromCLI(manifest *build.FWAppManifest) error {
+func getBuildVarsFromCLI() (map[string]string, error) {
+	m := make(map[string]string)
+
 	// Add build vars from CLI flags
 	for _, v := range buildVarsSlice {
 		pp1 := strings.SplitN(v, ":", 2)
@@ -1096,11 +1104,12 @@ func addBuildVarsFromCLI(manifest *build.FWAppManifest) error {
 				pp = pp2
 			}
 		default:
-			return errors.Errorf("invalid --build-var spec: %q", v)
+			return nil, errors.Errorf("invalid --build-var spec: %q", v)
 		}
-		addBuildVar(manifest, pp[0], pp[1])
+		m[pp[0]] = pp[1]
 	}
-	return nil
+
+	return m, nil
 }
 
 // runCmd runs given command and redirects its output to the given log file.

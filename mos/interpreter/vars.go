@@ -22,7 +22,7 @@ func ExpandVars(interp *MosInterpreter, s string, skipFailed bool) (string, erro
 			if skipFailed {
 				return v
 			}
-			errRet = errors.Trace(err)
+			errRet = errors.Annotatef(err, "expanding expressions in %q", s)
 		}
 		return val
 	})

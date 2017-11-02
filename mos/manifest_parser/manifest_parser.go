@@ -69,6 +69,14 @@ type ReadManifestCallbacks struct {
 	ComponentProvider ComponentProvider
 }
 
+// Last-minute adjustments for the manifest, typically constructed from command
+// line
+type ManifestAdjustments struct {
+	Platform  string
+	BuildVars map[string]string
+	// TODO(dfrank): add CFlags and CxxFlags here as well
+}
+
 type RMFOut struct {
 	MTime time.Time
 
@@ -85,12 +93,17 @@ type libPrepareResult struct {
 }
 
 func ReadManifestFinal(
-	dir, platform string,
+	dir string, adjustments *ManifestAdjustments,
 	logWriter io.Writer, interp *interpreter.MosInterpreter,
 	cbs *ReadManifestCallbacks,
 	requireArch, preferPrebuiltLibs bool,
 ) (*build.FWAppManifest, *RMFOut, error) {
 	interp = interp.Copy()
+
+	if adjustments == nil {
+		adjustments = &ManifestAdjustments{}
+	}
+
 	fp := &RMFOut{}
 	buildDirAbs, err := filepath.Abs(moscommon.GetBuildDir(dir))
 	if err != nil {
@@ -98,7 +111,7 @@ func ReadManifestFinal(
 	}
 
 	manifest, mtime, err := readManifestWithLibs(
-		dir, platform, logWriter, interp, cbs, requireArch,
+		dir, adjustments, logWriter, interp, cbs, requireArch,
 	)
 	if err != nil {
 		return nil, nil, errors.Trace(err)
@@ -118,7 +131,7 @@ func ReadManifestFinal(
 			return nil, nil, errors.Trace(err)
 		}
 
-		moduleDir, err := cbs.ComponentProvider.GetModuleLocalPath(&m, dir, manifest.ModulesVersion, platform)
+		moduleDir, err := cbs.ComponentProvider.GetModuleLocalPath(&m, dir, manifest.ModulesVersion, manifest.Platform)
 		if err != nil {
 			return nil, nil, errors.Trace(err)
 		}
@@ -297,7 +310,7 @@ func ReadManifestFinal(
 // and also returns the most recent modification time of all encountered
 // manifests.
 func readManifestWithLibs(
-	dir, platform string,
+	dir string, adjustments *ManifestAdjustments,
 	logWriter io.Writer, interp *interpreter.MosInterpreter,
 	cbs *ReadManifestCallbacks,
 	requireArch bool,
@@ -313,8 +326,8 @@ func readManifestWithLibs(
 		dir:        dir,
 		rootAppDir: dir,
 
-		platform:  platform,
-		logWriter: logWriter,
+		adjustments: *adjustments,
+		logWriter:   logWriter,
 
 		nodeName:    depsApp,
 		deps:        deps,
@@ -359,7 +372,7 @@ func readManifestWithLibs(
 		manifest.LibsHandled = append(manifest.LibsHandled, libsHandled[v])
 	}
 
-	if err := expandManifestLibsAndConds(manifest, interp); err != nil {
+	if err := expandManifestLibsAndConds(manifest, interp, adjustments); err != nil {
 		return nil, time.Time{}, errors.Trace(err)
 	}
 
@@ -378,8 +391,8 @@ type manifestParseContext struct {
 	// Might be a temporary directory
 	rootAppDir string
 
-	platform  string
-	logWriter io.Writer
+	adjustments ManifestAdjustments
+	logWriter   io.Writer
 
 	nodeName    string
 	deps        *Deps
@@ -397,7 +410,7 @@ type manifestParseContext struct {
 }
 
 func readManifestWithLibs2(pc manifestParseContext) (*build.FWAppManifest, time.Time, error) {
-	manifest, mtime, err := ReadManifest(pc.dir, pc.platform, pc.interp)
+	manifest, mtime, err := ReadManifest(pc.dir, &pc.adjustments, pc.interp)
 	if err != nil {
 		return nil, time.Time{}, errors.Trace(err)
 	}
@@ -410,6 +423,10 @@ func readManifestWithLibs2(pc manifestParseContext) (*build.FWAppManifest, time.
 	// remember it as such
 	if pc.appManifest == nil {
 		pc.appManifest = manifest
+
+		// Also, remove any build vars from adjustments, so that they won't be set on
+		// deps' manifest we're going to read as well
+		pc.adjustments.BuildVars = make(map[string]string)
 	}
 
 	// Prepare all libs {{{
@@ -514,8 +531,8 @@ func prepareLib(
 	// If platform is empty in pc2, we need to set it from the outer manifest,
 	// because arch is used in libs to handle arch-dependent submanifests, like
 	// mos_esp8266.yml.
-	if pc2.platform == "" {
-		pc2.platform = manifest.Platform
+	if pc2.adjustments.Platform == "" {
+		pc2.adjustments.Platform = manifest.Platform
 	}
 
 	libManifest, libMtime, err := readManifestWithLibs2(pc2)
@@ -551,9 +568,13 @@ func prepareLib(
 // manifest or given BuildParams have arch specified, then the returned
 // manifest will contain all arch-specific adjustments (if any)
 func ReadManifest(
-	appDir, platform string, interp *interpreter.MosInterpreter,
+	appDir string, adjustments *ManifestAdjustments, interp *interpreter.MosInterpreter,
 ) (*build.FWAppManifest, time.Time, error) {
 	interp = interp.Copy()
+
+	if adjustments == nil {
+		adjustments = &ManifestAdjustments{}
+	}
 
 	manifestFullName := moscommon.GetManifestFilePath(appDir)
 	manifest, mtime, err := ReadManifestFile(manifestFullName, interp, true)
@@ -562,8 +583,8 @@ func ReadManifest(
 	}
 
 	// Override arch with the value given in command line
-	if platform != "" {
-		manifest.Platform = platform
+	if adjustments.Platform != "" {
+		manifest.Platform = adjustments.Platform
 	}
 	manifest.Platform = strings.ToLower(manifest.Platform)
 
@@ -605,6 +626,17 @@ func ReadManifest(
 
 	if manifest.Platforms == nil {
 		manifest.Platforms = []string{}
+	}
+
+	// Apply adjustments (other than Platform which was applied earlier)
+	if err := extendManifest(
+		manifest, manifest, &build.FWAppManifest{
+			BuildVars: adjustments.BuildVars,
+		}, "", "", interp, &extendManifestOptions{
+			skipFailedExpansions: true,
+		},
+	); err != nil {
+		return nil, time.Time{}, errors.Trace(err)
 	}
 
 	return manifest, mtime, nil
@@ -751,6 +783,7 @@ func ReadManifestFile(
 //   b. Go to step 1
 func expandManifestLibsAndConds(
 	manifest *build.FWAppManifest, interp *interpreter.MosInterpreter,
+	adjustments *ManifestAdjustments,
 ) error {
 	interp = interp.Copy()
 
@@ -824,13 +857,22 @@ func expandManifestLibsAndConds(
 					skipSources: true,
 				},
 			); err != nil {
-				return errors.Trace(err)
+				names := []string{}
+				for i := 1; /* skip dummy empty manifest */ i < len(allManifests); i++ {
+					names = append(names, allManifests[i].Name)
+				}
+				return errors.Annotatef(
+					err, `expanding %q (%s) (full chain is: "%s")`, lcur.Name, lcur.Path, strings.Join(
+						names, `" <- "`,
+					),
+				)
 			}
 
 			commonManifest = &curManifest
 		}
 
-		// Now, commonManifest contains app's manifest with all libs expanded.
+		// Now, commonManifest has everything expanded. Let's see if it contains
+		// non-expanded conds.
 
 		if len(commonManifest.Conds) == 0 {
 			// No more conds in the common manifest, so cleanup all libs manifests,
@@ -1055,12 +1097,12 @@ func extendManifest(
 
 	mMain.BuildVars, err = mergeMapsString(m1.BuildVars, m2.BuildVars, interp, opts.skipFailedExpansions)
 	if err != nil {
-		return errors.Trace(err)
+		return errors.Annotatef(err, "handling build_vars")
 	}
 
 	mMain.CDefs, err = mergeMapsString(m1.CDefs, m2.CDefs, interp, opts.skipFailedExpansions)
 	if err != nil {
-		return errors.Trace(err)
+		return errors.Annotatef(err, "handling cdefs")
 	}
 
 	mMain.Platforms = mergeSupportedPlatforms(m1.Platforms, m2.Platforms)
@@ -1126,7 +1168,7 @@ func mergeMapsString(
 		var err error
 		bv[k], err = interpreter.ExpandVars(interp, v, skipFailed)
 		if err != nil {
-			return nil, errors.Trace(err)
+			return nil, errors.Annotatef(err, "handling %q", k)
 		}
 	}
 

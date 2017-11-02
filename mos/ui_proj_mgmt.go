@@ -141,7 +141,7 @@ func initProjectManagementEndpoints() {
 
 		for _, f := range files {
 			name := f.Name()
-			manifest, _, err := manifest_parser.ReadManifest(filepath.Join(dirPath, name), "", interp)
+			manifest, _, err := manifest_parser.ReadManifest(filepath.Join(dirPath, name), nil, interp)
 			if err == nil {
 				ret[name] = manifest
 			}

@@ -65,8 +65,16 @@ func evalManifestExpr(ctx context.Context, devConn *dev.DevConn) error {
 		logWriter: logWriter,
 	}
 
+	buildVarsCli, err := getBuildVarsFromCLI()
+	if err != nil {
+		return errors.Trace(err)
+	}
+
 	manifest, _, err := manifest_parser.ReadManifestFinal(
-		appDir, bParams.Platform, logWriter, interp,
+		appDir, &manifest_parser.ManifestAdjustments{
+			Platform:  bParams.Platform,
+			BuildVars: buildVarsCli,
+		}, logWriter, interp,
 		&manifest_parser.ReadManifestCallbacks{ComponentProvider: &compProvider}, false, *preferPrebuiltLibs,
 	)
 	if err != nil {

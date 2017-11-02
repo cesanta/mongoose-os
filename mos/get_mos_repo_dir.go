@@ -39,7 +39,9 @@ func getMosRepoDir(ctx context.Context, devConn *dev.DevConn) error {
 
 	interp := interpreter.NewInterpreter(newMosVars())
 
-	manifest, _, err := manifest_parser.ReadManifest(appDir, bParams.Platform, interp)
+	manifest, _, err := manifest_parser.ReadManifest(appDir, &manifest_parser.ManifestAdjustments{
+		Platform: bParams.Platform,
+	}, interp)
 	if err != nil {
 		return errors.Trace(err)
 	}
