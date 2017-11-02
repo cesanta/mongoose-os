@@ -4,6 +4,7 @@
 #include "mgos_app.h"
 #include "mgos_gpio.h"
 #include "mgos_sys_config.h"
+#include "mgos_system.h"
 #include "mgos_timers.h"
 
 #if CS_PLATFORM == CS_P_ESP8266
@@ -42,7 +43,8 @@
 
 static void blink_timer_cb(void *arg) {
   bool current_level = mgos_gpio_toggle(LED_GPIO);
-  LOG(LL_INFO, ("%s", (current_level ? "Tick" : "Tock")));
+  LOG(LL_INFO,
+      ("%s %u", (current_level ? "Tick" : "Tock"), mgos_get_free_heap_size()));
   (void) arg;
 }
 
