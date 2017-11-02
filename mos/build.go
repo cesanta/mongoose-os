@@ -1632,7 +1632,6 @@ func getMosDirEffective(mongooseOsVersion string, updateInterval time.Duration) 
 		freportf(logWriter, "The flag --repo is not given, going to use mongoose-os repository")
 
 		m := build.SWModule{
-			Type: "git",
 			// TODO(dfrank) get upstream repo URL from a flag
 			// (and this flag needs to be forwarded to fwbuild as well, which should
 			// forward it to the mos invocation)
