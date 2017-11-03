@@ -33,6 +33,8 @@
 
 #define FW_SLOT_SIZE 0x100000
 
+#define FLASH_PARAMS_ADDR 0
+
 struct slot_info {
   int id;
   uint32_t fw_addr;
@@ -46,9 +48,15 @@ struct slot_info {
 struct mgos_upd_hal_ctx {
   const char *status_msg;
   struct slot_info write_slot;
+  struct json_token boot_file_name, boot_cs_sha1;
   struct json_token fw_file_name, fw_cs_sha1;
   struct json_token fs_file_name, fs_cs_sha1;
-  uint32_t fw_size, fs_size;
+  uint32_t boot_addr, boot_size, fw_size, fs_size;
+  bool update_bootloader;
+  union {
+    uint8_t bytes[4];
+    uint32_t align4;
+  } flash_params;
 
   struct esp_flash_write_ctx wctx;
   const struct json_token *wcs;
@@ -99,18 +107,25 @@ int mgos_upd_begin(struct mgos_upd_hal_ctx *ctx, struct json_token *parts) {
     ctx->status_msg = "Invalid manifest";
     return -1;
   }
-  uint32_t fw_addr = 0;
-  uint32_t fs_addr = 0;
-  if (json_scanf(parts->ptr, parts->len,
-                 "{fw: {src: %T, addr: %u, cs_sha1: %T}, "
-                 "fs: {src: %T, addr: %u, cs_sha1: %T}}",
-                 &ctx->fw_file_name, &fw_addr, &ctx->fw_cs_sha1,
-                 &ctx->fs_file_name, &fs_addr, &ctx->fs_cs_sha1) != 6) {
+  uint32_t boot_addr = 0, fw_addr = 0, fs_addr = 0;
+  int update_bootloader = false;
+  json_scanf(parts->ptr, parts->len,
+             "{boot: {src: %T, addr: %u, cs_sha1: %T, update: %B}, "
+             "fw: {src: %T, addr: %u, cs_sha1: %T}, "
+             "fs: {src: %T, addr: %u, cs_sha1: %T}}",
+             &ctx->boot_file_name, &boot_addr, &ctx->boot_cs_sha1,
+             &update_bootloader, &ctx->fw_file_name, &fw_addr, &ctx->fw_cs_sha1,
+             &ctx->fs_file_name, &fs_addr, &ctx->fs_cs_sha1);
+  if (ctx->fw_file_name.len == 0 || ctx->fw_cs_sha1.len == 0 ||
+      ctx->fs_file_name.len == 0 || ctx->fs_cs_sha1.len == 0 || fs_addr == 0 ||
+      (ctx->update_bootloader &&
+       (ctx->boot_file_name.len == 0 || ctx->boot_cs_sha1.len == 0))) {
     ctx->status_msg = "Incomplete update package";
     return -3;
   }
 
-  if (ctx->fw_cs_sha1.len != CS_HEX_LEN || ctx->fs_cs_sha1.len != CS_HEX_LEN) {
+  if (ctx->fw_cs_sha1.len != CS_HEX_LEN || ctx->fs_cs_sha1.len != CS_HEX_LEN ||
+      (ctx->update_bootloader && ctx->boot_cs_sha1.len != CS_HEX_LEN)) {
     ctx->status_msg = "Invalid checksum format";
     return -4;
   }
@@ -122,6 +137,24 @@ int mgos_upd_begin(struct mgos_upd_hal_ctx *ctx, struct json_token *parts) {
   if (ctx->write_slot.fw_addr == 0) {
     ctx->status_msg = "OTA is not supported in this build";
     return -5;
+  }
+
+  ctx->boot_addr = boot_addr;
+  ctx->update_bootloader = update_bootloader;
+  if (ctx->update_bootloader) {
+    /*
+     * Preserve old flash params.
+     * We need bytes 2 and 3, but the first 2 bytes are constant anyway, so we
+     * read and write 4 for simplicity.
+     */
+    if (spi_flash_read(FLASH_PARAMS_ADDR, &ctx->flash_params.align4, 4) != 0) {
+      ctx->status_msg = "Failed to read flash params";
+      return -6;
+    }
+    LOG(LL_INFO,
+        ("Boot: %.*s -> 0x%x, current flash params: 0x%02x%02x",
+         (int) ctx->boot_file_name.len, ctx->boot_file_name.ptr, ctx->boot_addr,
+         ctx->flash_params.bytes[2], ctx->flash_params.bytes[3]));
   }
 
   LOG(LL_INFO,
@@ -172,7 +205,19 @@ enum mgos_upd_file_action mgos_upd_file_begin(
     struct mgos_upd_hal_ctx *ctx, const struct mgos_upd_file_info *fi) {
   bool res = false;
   struct esp_flash_write_ctx *wctx = &ctx->wctx;
-  if (strncmp(fi->name, ctx->fw_file_name.ptr, ctx->fw_file_name.len) == 0) {
+  if (ctx->update_bootloader &&
+      strncmp(fi->name, ctx->boot_file_name.ptr, ctx->boot_file_name.len) ==
+          0) {
+    if (fi->size <= BOOT_CONFIG_ADDR) {
+      res = esp_init_flash_write_ctx(wctx, ctx->boot_addr, BOOT_CONFIG_ADDR);
+      ctx->wcs = &ctx->boot_cs_sha1;
+      ctx->boot_size = fi->size;
+    } else {
+      LOG(LL_ERROR, ("Boot loader too big."));
+      res = false;
+    }
+  } else if (strncmp(fi->name, ctx->fw_file_name.ptr, ctx->fw_file_name.len) ==
+             0) {
     res = esp_init_flash_write_ctx(wctx, ctx->write_slot.fw_addr,
                                    ctx->write_slot.fw_slot_size);
     ctx->wcs = &ctx->fw_cs_sha1;
@@ -228,7 +273,18 @@ int mgos_upd_file_end(struct mgos_upd_hal_ctx *ctx,
   }
   if (!verify_checksum(ctx->wctx.addr, fi->size, ctx->wcs->ptr, true)) {
     ctx->status_msg = "Invalid checksum";
-    return -1;
+    return -2;
+  } else {
+    LOG(LL_INFO, ("Write finished, checksum ok"));
+  }
+  if (ctx->update_bootloader &&
+      strncmp(fi->name, ctx->boot_file_name.ptr, ctx->boot_file_name.len) ==
+          0) {
+    LOG(LL_INFO, ("Restoring flash params"));
+    if (spi_flash_write(FLASH_PARAMS_ADDR, &ctx->flash_params.align4, 4) != 0) {
+      ctx->status_msg = "Failed to write flash params";
+      return -3;
+    }
   }
   memset(&ctx->wctx, 0, sizeof(ctx->wctx));
   return tail.len;

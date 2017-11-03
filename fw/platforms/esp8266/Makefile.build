@@ -69,6 +69,8 @@ MGOS_ENABLE_HEAP_LOG ?= 0
 MGOS_ENABLE_CALL_TRACE ?= 0
 MGOS_ESP8266_RTOS ?= 0
 
+MGOS_UPDATE_BOOT_LOADER ?= false
+
 FLASH_SIZE ?= 4194304
 FS_BLOCK_SIZE = 4096
 FS_PAGE_SIZE = 256
@@ -414,7 +416,7 @@ endif
 CFLAGS += -DMGOS_ADC_MODE_VDD=$(MGOS_ADC_MODE_VDD)
 
 # Main output product: firmware files.
-FW_PARTS = boot:addr=$(BOOT_LOADER_ADDR),src=$(BOOT_LOADER_BIN) \
+FW_PARTS = boot:addr=$(BOOT_LOADER_ADDR),src=$(BOOT_LOADER_BIN),update=$(MGOS_UPDATE_BOOT_LOADER) \
            boot_cfg:addr=$(BOOT_CONFIG_WRITE_ADDR),size=0x1000,fill=0xff \
            fw:addr=$(APP0_ADDR),src=$(APP_BIN) \
            fs:src=$(FS_IMG),type=fs,addr=$(FS0_ADDR),fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE) \
@@ -493,6 +495,8 @@ include $(MGOS_PATH)/common/scripts/ffi_exports.mk
 include $(MGOS_PATH)/fw/src/mgos_config.mk
 
 MGOS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp_sys_config.yaml
+
+$(MGOS_CONFIG_C): $(MANIFEST_FINAL)
 
 $(FFI_EXPORTS_C): $(APP_FS_FILES)
 	$(call gen_ffi_exports,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))

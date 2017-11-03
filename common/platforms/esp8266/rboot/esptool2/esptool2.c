@@ -18,6 +18,7 @@
 *    along with esptool2.  If not, see <http://www.gnu.org/licenses/>.
 *
 **********************************************************************************/
+/* clang-format off */
 
 #include <stdlib.h>
 #include <string.h>
@@ -394,8 +395,9 @@ int main(int argc, char *argv[]) {
 	bool paramerror = false;
 	bool iromchksum = false;
 	int bootver = 0;
-	unsigned char mode = 0;
-	unsigned char size = 0;
+	/* Overwrite-friendly by default */
+	unsigned char mode = 0xff;
+	unsigned char size = 0xff;
 	unsigned char clock = 0;
 	int opts = 0;
 

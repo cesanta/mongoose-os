@@ -8,8 +8,11 @@
 #include <stdint.h>
 #include <strings.h>
 
+#include "esp_flash_encrypt.h"
+#include "esp_flash_partitions.h"
 #include "esp_ota_ops.h"
 #include "esp_partition.h"
+#include "esp_spi_flash.h"
 #include "nvs.h"
 
 #include "mbedtls/sha1.h"
@@ -50,10 +53,30 @@
 #define CS_HEX_LEN (CS_LEN * 2)
 #define CS_HEX_BUF_SIZE (CS_HEX_LEN + 1)
 
+#define FLASH_PARAMS_ADDR 0x1000
+#define FLASH_PARAMS_LEN 4
+#define LABEL_OFFSET 8
+
+#if (FLASH_PARAMS_ADDR % WRITE_CHUNK_SIZE != 0) || \
+    WRITE_CHUNK_SIZE < FLASH_PARAMS_LEN
+#error "Don't do that"
+#endif
+
 uint32_t g_boot_status = 0;
 
 struct mgos_upd_hal_ctx {
   const char *status_msg;
+
+  struct json_token boot_file_name, boot_cs_sha1;
+  uint32_t boot_addr;
+  bool update_bootloader;
+  /*
+   * Note: Latter 8 bytes of the label are used to store flash params:
+   * 4 bytes are the current device's flash params,
+   * 4 bytes are the ones in the image. We substitute device's params
+   * during writing but use bytes fro flash image when computing the checksum.
+   */
+  esp_partition_t boot_partition;
 
   const esp_partition_t *cur_app_partition;
 
@@ -65,6 +88,8 @@ struct mgos_upd_hal_ctx {
   const esp_partition_t *fs_partition;
 
   size_t write_offset;
+  struct json_token *cs_sha1;
+  const esp_partition_t *write_partition;
 };
 
 struct mgos_upd_hal_ctx *mgos_upd_hal_ctx_create(void) {
@@ -118,15 +143,50 @@ int mgos_upd_begin(struct mgos_upd_hal_ctx *ctx, struct json_token *parts) {
     return slot;
   }
 
-  if (json_scanf(parts->ptr, parts->len,
-                 "{app: {src: %T, cs_sha1: %T}, fs: {src: %T, cs_sha1: %T}}",
-                 &ctx->app_file_name, &ctx->app_cs_sha1, &ctx->fs_file_name,
-                 &ctx->fs_cs_sha1) != 4) {
+  uint32_t boot_addr = 0;
+  int update_bootloader = false;
+  json_scanf(parts->ptr, parts->len,
+             "{boot: {src: %T, addr: %u, cs_sha1: %T, update: %B}, "
+             "app: {src: %T, cs_sha1: %T}, "
+             "fs: {src: %T, cs_sha1: %T}}",
+             &ctx->boot_file_name, &boot_addr, &ctx->boot_cs_sha1,
+             &update_bootloader, &ctx->app_file_name, &ctx->app_cs_sha1,
+             &ctx->fs_file_name, &ctx->fs_cs_sha1);
+
+  if (ctx->app_file_name.len == 0 || ctx->app_cs_sha1.len == 0 ||
+      ctx->fs_file_name.len == 0 || ctx->fs_cs_sha1.len == 0 ||
+      (ctx->update_bootloader &&
+       (ctx->boot_file_name.len == 0 || ctx->boot_cs_sha1.len == 0))) {
     ctx->status_msg = "Incomplete update package";
     return -3;
   }
 
-  LOG(LL_INFO, ("App: %.*s -> %s, FS %.*s -> %s", (int) ctx->app_file_name.len,
+  ctx->boot_addr = boot_addr;
+  ctx->update_bootloader = update_bootloader;
+  if (ctx->update_bootloader) {
+    /* Create a bootloader "partition", so esp_partition_* API can be used. */
+    ctx->boot_partition.address = 0;
+    ctx->boot_partition.size = ESP_BOOTLOADER_SIZE;
+    /* If encryption is enabled, boot loader must be encrypted. */
+    ctx->boot_partition.encrypted = esp_flash_encryption_enabled();
+    if (boot_addr > ctx->boot_partition.size) {
+      ctx->status_msg = "Invalid boot write addr";
+      return -4;
+    }
+    strcpy(ctx->boot_partition.label, "boot");
+    if (esp_partition_read(&ctx->boot_partition, FLASH_PARAMS_ADDR,
+                           ctx->boot_partition.label + LABEL_OFFSET,
+                           FLASH_PARAMS_LEN) != 0) {
+      ctx->status_msg = "Failed to read flash params";
+      return -5;
+    }
+    LOG(LL_INFO, ("Boot: %.*s -> 0x%x, current flash params: 0x%02x%02x",
+                  (int) ctx->boot_file_name.len, ctx->boot_file_name.ptr,
+                  ctx->boot_addr, ctx->boot_partition.label[LABEL_OFFSET + 2],
+                  ctx->boot_partition.label[LABEL_OFFSET + 3]));
+  }
+
+  LOG(LL_INFO, ("App: %.*s -> %s, FS: %.*s -> %s", (int) ctx->app_file_name.len,
                 ctx->app_file_name.ptr, ctx->app_partition->label,
                 (int) ctx->fs_file_name.len, ctx->fs_file_name.ptr,
                 ctx->fs_partition->label));
@@ -153,6 +213,14 @@ static bool compute_checksum(const esp_partition_t *p, size_t len,
       LOG(LL_ERROR,
           ("Error reading %s at offset %u: %d", p->label, offset, err));
       goto cleanup;
+    }
+    /* Special handling of flash params. It's a bit simpler than when writing
+     * because we know that FLASH_PARAMS_ADDR divides WRITE_CHUNK_SIZE and
+     * WRITE_CHUNK_SIZE is > FLASH_PARAMS_LEN. */
+    if (p->address + offset == FLASH_PARAMS_ADDR) {
+      LOG(LL_DEBUG,
+          ("Swapping %d @ 0x%x", FLASH_PARAMS_LEN, p->address + offset));
+      memcpy(tmp, p->label + LABEL_OFFSET + FLASH_PARAMS_LEN, FLASH_PARAMS_LEN);
     }
     mbedtls_sha1_update(&sha1_ctx, tmp, block_len);
     offset += block_len;
@@ -182,6 +250,7 @@ enum mgos_upd_file_action mgos_upd_file_begin(
     struct mgos_upd_hal_ctx *ctx, const struct mgos_upd_file_info *fi) {
   esp_err_t err;
   ctx->write_offset = 0;
+  ctx->write_partition = NULL;
   if (strncmp(fi->name, ctx->app_file_name.ptr, ctx->app_file_name.len) == 0) {
     if (verify_checksum(ctx->app_partition, fi->size, ctx->app_cs_sha1.ptr,
                         false /* critical */)) {
@@ -193,7 +262,17 @@ enum mgos_upd_file_action mgos_upd_file_begin(
       ctx->status_msg = "Failed to start app write";
       return MGOS_UPDATER_ABORT;
     }
+    ctx->cs_sha1 = &ctx->app_cs_sha1;
+    ctx->write_partition = ctx->app_partition;
     return MGOS_UPDATER_PROCESS_FILE;
+  }
+  if (ctx->update_bootloader &&
+      strncmp(fi->name, ctx->boot_file_name.ptr, ctx->boot_file_name.len) ==
+          0) {
+    LOG(LL_INFO, ("Writing boot loader @ 0x%x", ctx->boot_addr));
+    ctx->write_partition = &ctx->boot_partition;
+    ctx->write_offset = ctx->boot_addr;
+    ctx->cs_sha1 = &ctx->boot_cs_sha1;
   } else if (strncmp(fi->name, ctx->fs_file_name.ptr, ctx->fs_file_name.len) ==
              0) {
     if (verify_checksum(ctx->fs_partition, fi->size, ctx->app_cs_sha1.ptr,
@@ -202,10 +281,16 @@ enum mgos_upd_file_action mgos_upd_file_begin(
       return MGOS_UPDATER_SKIP_FILE;
     }
     LOG(LL_INFO, ("Writing FS image @ 0x%x", ctx->fs_partition->address));
-    err = esp_partition_erase_range(ctx->fs_partition, 0,
-                                    ctx->fs_partition->size);
+    ctx->write_partition = ctx->fs_partition;
+    ctx->write_offset = 0;
+    ctx->cs_sha1 = &ctx->fs_cs_sha1;
+  }
+  if (ctx->write_partition != NULL) {
+    err = esp_partition_erase_range(
+        ctx->write_partition, ctx->write_offset,
+        ctx->write_partition->size - ctx->write_offset);
     if (err != ESP_OK) {
-      ctx->status_msg = "Failed to start FS write";
+      ctx->status_msg = "Failed to start write";
       LOG(LL_ERROR, ("%s: %d", ctx->status_msg, err));
       return MGOS_UPDATER_ABORT;
     }
@@ -213,6 +298,27 @@ enum mgos_upd_file_action mgos_upd_file_begin(
   }
   LOG(LL_DEBUG, ("Not interesting: %s", fi->name));
   return MGOS_UPDATER_SKIP_FILE;
+}
+
+static void swap_flash_params(struct mgos_upd_hal_ctx *ctx, struct mg_str data,
+                              bool save) {
+  if (ctx->write_partition != &ctx->boot_partition) return;
+  int off_s = MAX(0, FLASH_PARAMS_ADDR - (int) ctx->write_offset);
+  int off_d = MAX(0, (int) ctx->write_offset - FLASH_PARAMS_ADDR);
+  if (off_s >= data.len || off_d >= FLASH_PARAMS_LEN) return;
+  int len = MIN(FLASH_PARAMS_LEN - off_d, data.len - off_s);
+  if (save) {
+    LOG(LL_DEBUG,
+        ("Swapping %d @ 0x%x %d", len, (ctx->write_offset + off_s), off_d));
+    memcpy(ctx->boot_partition.label + LABEL_OFFSET + FLASH_PARAMS_LEN + off_d,
+           data.p + off_s, len);
+    memcpy((char *) data.p + off_s,
+           ctx->boot_partition.label + LABEL_OFFSET + off_d, len);
+  } else {
+    memcpy((char *) data.p + off_s,
+           ctx->boot_partition.label + LABEL_OFFSET + FLASH_PARAMS_LEN + off_d,
+           len);
+  }
 }
 
 int mgos_upd_file_data(struct mgos_upd_hal_ctx *ctx,
@@ -224,10 +330,11 @@ int mgos_upd_file_data(struct mgos_upd_hal_ctx *ctx,
     if (strncmp(fi->name, ctx->app_file_name.ptr, ctx->app_file_name.len) ==
         0) {
       err = esp_ota_write(ctx->app_ota_handle, data.p, to_process);
-    } else if (strncmp(fi->name, ctx->fs_file_name.ptr,
-                       ctx->fs_file_name.len) == 0) {
-      err = esp_partition_write(ctx->fs_partition, ctx->write_offset, data.p,
+    } else {
+      swap_flash_params(ctx, data, true /* save */);
+      err = esp_partition_write(ctx->write_partition, ctx->write_offset, data.p,
                                 to_process);
+      swap_flash_params(ctx, data, false /* save */);
     }
     if (err != ESP_OK) {
       LOG(LL_ERROR,
@@ -242,8 +349,6 @@ int mgos_upd_file_data(struct mgos_upd_hal_ctx *ctx,
 
 int mgos_upd_file_end(struct mgos_upd_hal_ctx *ctx,
                       const struct mgos_upd_file_info *fi, struct mg_str tail) {
-  const esp_partition_t *p = NULL;
-  struct json_token *cs_sha1 = NULL;
   assert(tail.len < WRITE_CHUNK_SIZE);
   int ret = -1;
   if (tail.len > 0) {
@@ -262,20 +367,18 @@ int mgos_upd_file_end(struct mgos_upd_hal_ctx *ctx,
     if (esp_ota_end(oh) != ESP_OK) {
       ctx->app_ota_handle = 0;
       ctx->status_msg = "Failed to finalize app write";
-      return -1;
+      return -2;
     }
-    p = ctx->app_partition;
-    cs_sha1 = &ctx->app_cs_sha1;
-  } else if (strncmp(fi->name, ctx->fs_file_name.ptr, ctx->fs_file_name.len) ==
-             0) {
-    p = ctx->fs_partition;
-    cs_sha1 = &ctx->fs_cs_sha1;
-  } else {
-    return -123;
+  } else if (ctx->write_partition == &ctx->boot_partition) {
+    ctx->boot_partition.address = ctx->boot_addr;
   }
-  if (!verify_checksum(p, fi->size, cs_sha1->ptr, true /* critical */)) {
+  if (!verify_checksum(ctx->write_partition, fi->size, ctx->cs_sha1->ptr,
+                       true /* critical */)) {
     ctx->status_msg = "Digest mismatch";
     return -10;
+  } else {
+    LOG(LL_INFO, ("%s verified (%.*s)", ctx->write_partition->label,
+                  (int) ctx->cs_sha1->len, ctx->cs_sha1->ptr));
   }
   return tail.len;
 }

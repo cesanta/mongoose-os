@@ -28,6 +28,8 @@ ESP_IDF_EXTRA_COMPONENTS ?=
 # Partition will be placed after all other mOS partitions.
 ESP_IDF_EXTRA_PARTITION ?=
 
+MGOS_UPDATE_BOOT_LOADER ?= false
+
 # NOTE: those two are deprecated. Use APP_SOURCES and APP_FS_FILES instead.
 APP_MODULES ?=
 APP_FS_PATH ?=
@@ -178,7 +180,7 @@ LDFLAGS += -L$(BUILD_DIR)/src
 
 include $(MGOS_PATH)/fw/common.mk
 
-FW_PARTS = boot:type=boot,addr=0x1000,src=$(BOOTLOADER_BIN),encrypt=true \
+FW_PARTS = boot:type=boot,addr=0x1000,src=$(BOOTLOADER_BIN),encrypt=true,update=$(MGOS_UPDATE_BOOT_LOADER) \
            pt:type=pt,addr=$(PARTITION_TABLE_OFFSET),src=$(PARTITION_TABLE_BIN),encrypt=true \
            nvs:type=nvs,addr=$(NVS_ADDR),size=$(NVS_SIZE),fill=0xff,encrypt=false \
            otadata:type=otadata,addr=$(OTA_DATA_ADDR),size=$(OTA_DATA_SIZE),fill=0xff,encrypt=true \
