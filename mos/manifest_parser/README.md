@@ -1,8 +1,9 @@
 # Manifest parser
 
-Manifest parser takes an app's or lib's manifest, and generates an aggregate
-manifest which contains stuff from the app and all libs. Manifest merging is
-happening as follows:
+Manifest parser takes an app's or lib's manifest (and arch-specific submanifest
+like `mos_esp8266.yml`, if present), and generates an aggregate manifest which
+contains stuff from the app and all libs. Manifest merging is happening as
+follows:
 
   - Combine paths and absolutize them properly: `sources`, `includes`,
     `filesystem`, `binary_libs`;
@@ -27,6 +28,13 @@ And these conds should be expanded as late as possible: e.g. we could define
 `build_vars.FOO` to be `0` in some lib (and thus by default the `BAR` won't be
 defined by the cond above), but then the app can override it to `1`, and the
 `BAR` should be defined finally.
+
+**The key distinction** between an arch-specific manifest and a cond with the
+expression like `when: ${mos.platform == "esp8266"}` is this: arch-specific
+manifest is expanded right away after reading the main manifest, but conds (as
+already mentioned above) need to be expanded as late as possible. This fact has
+certain implications: e.g. conds can't contain libs. See details below for a
+thorough explanation.
 
 ## Details
 
@@ -224,3 +232,8 @@ Consider that `libA` contains a cond which adds one more library `libC` if the
 platform is esp8266. Then, cond levels for that `libC` will be shifted: what is
 root level for `libC`, will be the level 1 for all the rest of the components.
 Omg.
+
+One more possible workaround would be to check cond expressions right away, and
+if it's only about `platform`, then expand it immediately, unlike the rest of
+the conds. However, in my opinion this would only add more confusion about what
+expands when.
