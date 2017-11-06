@@ -78,7 +78,8 @@ func Serial(ctx context.Context, portName string, opts *SerialCodecOptions) (Cod
 
 	if opts.SetControlLines || opts.InvertedControlLines {
 		bFalse := opts.InvertedControlLines
-		s.SetRTSDTR(bFalse, bFalse)
+		s.SetDTR(bFalse)
+		s.SetRTS(bFalse)
 	}
 
 	// Flush any data that might be not yet read

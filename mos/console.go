@@ -84,7 +84,8 @@ func console(ctx context.Context, devConn *dev.DevConn) error {
 
 	if setControlLines || *invertedControlLines {
 		bFalse := *invertedControlLines
-		s.SetRTSDTR(bFalse, bFalse)
+		s.SetDTR(bFalse)
+		s.SetRTS(bFalse)
 	}
 
 	cctx, cancel := context.WithCancel(ctx)
