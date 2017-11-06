@@ -999,6 +999,14 @@ func ExpandManifestConds(
 
 		// Apply submanifest if present
 		if cond.Apply != nil {
+			if len(cond.Apply.Libs) > 0 {
+				return errors.Errorf(
+					"conds can't contain libs; if the lib is platform-specific, "+
+						"please add it to the arch-specific manifest instead (mos_%s.yml)",
+					refManifest.Platform,
+				)
+			}
+
 			if err := extendManifest(dstManifest, dstManifest, cond.Apply, "", "", interp, &extendManifestOptions{
 				skipFailedExpansions: true,
 			}); err != nil {
