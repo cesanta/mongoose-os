@@ -1542,7 +1542,7 @@ func (lpr *compProviderReal) GetLibLocalPath(
 					// Prebuilt binary doesn't exist; let's see if we can fetch it
 					err = fetchPrebuiltBinary(m, platform, prebuiltFilePath)
 					if err == nil {
-						ourutil.Freportf(lpr.logWriter, "Successfully fetched prebuilt binary for %s to %s", m.Location, prebuiltFilePath)
+						ourutil.Freportf(lpr.logWriter, "Successfully fetched prebuilt binary for %q to %q", name, prebuiltFilePath)
 
 						// If localDir is a git repo, then <localDir>/.git/info/exclude
 						// should exist, and we'll add the filename of the fetched binary
@@ -1561,10 +1561,10 @@ func (lpr *compProviderReal) GetLibLocalPath(
 						}
 
 					} else {
-						ourutil.Freportf(lpr.logWriter, "Failed to fetched prebuilt binary for %s: %s", m.Location, err.Error())
+						ourutil.Freportf(lpr.logWriter, "Falling back to sources for %q (failed to fetch prebuilt binary: %s)", name, err.Error())
 					}
 				} else {
-					ourutil.Freportf(lpr.logWriter, "Prebuilt binary for %s already exists", m.Location)
+					ourutil.Freportf(lpr.logWriter, "Prebuilt binary for %q already exists", name)
 				}
 			}
 
@@ -1666,7 +1666,7 @@ func fetchPrebuiltBinary(m *build.SWModule, platform, tgt string) error {
 		defer resp.Body.Close()
 
 		if resp.StatusCode != http.StatusOK {
-			return errors.Errorf("Got %d status code", resp.StatusCode)
+			return errors.Errorf("got %d status code when accessed %s", resp.StatusCode, assetUrl)
 		}
 
 		// Fetched the asset successfully
@@ -1684,7 +1684,7 @@ func fetchPrebuiltBinary(m *build.SWModule, platform, tgt string) error {
 		}
 
 	default:
-		return errors.Errorf("Unable to fetch library for swmodule of type %v", m.GetType())
+		return errors.Errorf("unable to fetch library for swmodule of type %v", m.GetType())
 	}
 
 	return nil
