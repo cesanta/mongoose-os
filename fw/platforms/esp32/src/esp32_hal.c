@@ -3,6 +3,9 @@
  * All rights reserved
  */
 
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+
 #include "esp_attr.h"
 #include "esp_heap_caps.h"
 #include "esp_system.h"
@@ -56,16 +59,15 @@ void mgos_usleep(uint32_t usecs) {
 }
 
 void mgos_wdt_feed(void) {
-  esp_task_wdt_feed();
+  esp_task_wdt_reset();
 }
 
 void mgos_wdt_disable(void) {
-  esp_task_wdt_delete();
+  esp_task_wdt_delete(xTaskGetCurrentTaskHandle());
 }
 
 void mgos_wdt_enable(void) {
-  /* Feeding the dog re-adds it back to the list if needed. */
-  esp_task_wdt_feed();
+  esp_task_wdt_add(xTaskGetCurrentTaskHandle());
 }
 
 void mgos_wdt_set_timeout(int secs) {

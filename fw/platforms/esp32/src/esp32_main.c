@@ -125,7 +125,7 @@ static enum mgos_init_result esp32_mgos_init() {
   enum mgos_init_result r;
 
   /* Enable WDT for this task. It will be fed by Mongoose polling loop. */
-  esp_task_wdt_feed();
+  mgos_wdt_enable();
 
 #if MGOS_ENABLE_UPDATER
   esp32_updater_early_init();
