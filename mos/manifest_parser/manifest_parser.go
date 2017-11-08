@@ -12,6 +12,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"runtime"
 	"sort"
 	"strings"
 	"sync"
@@ -1272,6 +1273,7 @@ func globify(srcPaths []string, globs []string) (sources []string, dirs []string
 	}
 
 	for _, p := range srcPaths {
+		p = filepath.FromSlash(p)
 		finfo, err := os.Stat(p)
 		var curDir string
 		if err == nil && finfo.IsDir() {
@@ -1283,8 +1285,10 @@ func globify(srcPaths []string, globs []string) (sources []string, dirs []string
 		} else {
 			if err != nil {
 				// Item either does not exist or is a glob
-				if !os.IsNotExist(errors.Cause(err)) {
-					// Some error other than non-existing file, return an error
+				if !os.IsNotExist(errors.Cause(err)) && runtime.GOOS != "windows" {
+					// Some error other than non-existing file, return an error (on
+					// Windows, path with glob result in some other error like malformed
+					// path, so on windows we can't distinguish kinds of errors)
 					return nil, nil, errors.Trace(err)
 				}
 
