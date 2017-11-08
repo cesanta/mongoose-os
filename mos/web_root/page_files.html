@@ -189,4 +189,5 @@
   };
   $(document).off('click', '#file-refresh-button');
   $(document).on('click', '#file-refresh-button', refreshFileList);
+  if ($('.file').length == 0) $('#file-refresh-button').trigger('click');
 </script>

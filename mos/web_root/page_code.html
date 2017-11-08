@@ -9,6 +9,7 @@
           <button style="margin-top: -5px;" class="btn btn-success btn-sm" data-toggle="modal" data-type="app" data-target="#proj-manager-modal"> <i class="fa fa-download"></i> Import</button>
         </div>
       </li>
+      <!--
       <li class="list-group-item justify-content-between title" id="libs-header">
         <strong class="header">My Libs</strong>
         <div class="pull-right">
@@ -16,6 +17,7 @@
           <button style="margin-top: -5px;" class="btn btn-success btn-sm" data-toggle="modal" data-type="lib" data-target="#proj-manager-modal"> <i class="fa fa-download"></i> Import</button>
         </div>
       </li>
+      -->
     </div>
 
   </div>
@@ -31,7 +33,7 @@
       <button class="btn btn-sm btn-success" id="toolbar-delete-button" data-toggle="tooltip" data-placement="top" title="Delete&nbsp;currently&nbsp;opened&nbsp;file"><i class="fa fa-remove"></i> </button>
       <button class="btn btn-sm btn-success" id="toolbar-new-button" data-toggle="tooltip" data-placement="top" title="Create&nbsp;new&nbsp;file"><i class="fa fa-file-o"></i> </button>
       &nbsp;|&nbsp;&nbsp;
-      <button class="btn btn-sm btn-success" id="toolbar-copy-button" data-toggle="tooltip" data-placement="top" title="Save&nbsp;file,&nbsp;copy&nbsp;to&nbsp;device,&nbsp;reboot&nbsp;device"><i class="fa fa-upload"></i> </button>
+      <button class="btn btn-sm btn-success" id="toolbar-copy-button" data-toggle="tooltip" data-placement="top" title="Save&nbsp;file,&nbsp;copy&nbsp;to&nbsp;device,&nbsp;reboot&nbsp;device&nbsp;(fast)"><i class="fa fa-upload"></i> </button>
       &nbsp;|&nbsp;&nbsp;
       <span class="form-inline">
         <select class="form-control input-sm" id="arch-dropdown">
@@ -359,7 +361,7 @@
   });
 
   $(document).off('click', '.create-project-button');
-  $(document).on('click', '.create-project-button', function() {
+  $(document).on('click', '.create-project-button', function(ev) {
     var type = $(this).closest('.title').attr('id') == 'libs-header' ? 'lib' : 'app';
     var fname = prompt('Enter project name, for example: my-' + type, '');
     if (!fname || !fname.match(/^[\w_-]+$/)) {
@@ -371,7 +373,7 @@
       url: 'https://github.com/mongoose-os-' + type + 's/empty',
       target_name: fname,
     };
-    var btn = spin(this);
+    var btn = spin(ev.target);
     console.log(d);
     $.ajax({url: '/import-project', global: false, data: d}).always(function() {
       syncImportedProjects(type).always(function() {
@@ -416,7 +418,12 @@
   });
 
   syncImportedProjects('app');
-  syncImportedProjects('lib');
+  // syncImportedProjects('lib');
+
+  $(document).off('refresh-apps');
+  $(document).on('refresh-apps', function() {
+    syncImportedProjects('app');
+  });
 
   $(document).trigger('mos-devinfo');
   $('[data-toggle="tooltip"]').tooltip();

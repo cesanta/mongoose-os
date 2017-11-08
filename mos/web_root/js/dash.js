@@ -8,6 +8,8 @@ var ui = {
   recentDevicesCookieName: 'recently_used',
   apiDocsURL: 'https://mongoose-os.com/downloads/api.json',
   apidocs: null,
+  version: 'latest',
+  maxLogMessages: 999,
   pageCache: {}
 };
 
@@ -246,7 +248,7 @@ var formatDevInfo = function(json) {
 
 var updateDeviceStatus = function() {
   var classes = ['red', 'orange', 'yellow', 'green'];
-  var titles = ['no device address', 'not connected', 'connected, no IP', 'online'];
+  var titles = ['not connected', 'connected, no app flashed', 'app flashed, offline', 'online'];
   var wifi = ui.info && ui.info.wifi && ui.info.wifi.sta_ip;
   var n = !ui.address ? 0 : !ui.connected || !ui.info ? 1 : wifi ? 3 : 2;
 
@@ -265,6 +267,7 @@ var updateDeviceStatus = function() {
   if (ui.info) $('.devinfo').html(formatDevInfo(ui.info));
   $('.devinfo, #found-device-info').toggle(n > 1);
   $('#step2').toggleClass('completed', n > 1);
+  $('#step2 input').trigger('change');
 
   // Step3
   $('#step3 a.tag, #step3').toggleClass('greyed', n < 2);
@@ -303,6 +306,7 @@ var probeDevice = function() {
       $(document).trigger('mos-devinfo');
       if (ui.connected && ui.address && ui.address.match(/^ws/)) setUDPLog();
     }
+    $('.arch-input').val(ui.info.arch);
   }).fail(function() {
     ui.info = null;
   }).always(function() {
@@ -320,13 +324,16 @@ var checkPorts = function() {
     if (ui.connected != result.IsConnected || ui.address != port) {
       ui.connected = result.IsConnected;
       ui.address = port;
-      if (ui.connected) {
+      if (ui.info) {
         ui.showWizard = false;  // Dont trigger wizard dialog from this point on
-      }
-      if (ui.connected && ui.address) probeDevice();
-      if (!ui.connected && ui.showWizard) {
-        ui.showWizard = false;
+      } else if (ui.address) {
+        probeDevice().catch(function() {
+          if (ui.showWizard) $('#splash').modal();
+          ui.showWizard = false;
+        });
+      } else {
         $('#splash').modal();
+        ui.showWizard = false;
       }
       updateDeviceStatus();
     }
@@ -358,16 +365,28 @@ $(document).on('click', '.connect-button', function() {
 });
 
 $(document).on('click', '#flash-button', function() {
-  var btn = $(this);
-  var arch = $('.builds-input').val();
-  spin(btn);
-  $.ajax({url: '/flash', global: false, data: {firmware: arch}}).then(function() {
-    setTimeout(function() {
-      probeDevice().always(function() { stopspin(btn); });
-    }, 2000);
-  }).catch(function(e) {
-    addLog('Flashing error: ' + e.responseJSON.error);
-    stopspin(btn);
+  var btn = spin(this);
+  var app =  $('.app-input').val();
+  var arch =  $('.arch-input').val();
+  var d = {
+    type: 'app',
+    url: 'https://github.com/mongoose-os-apps/' + app,
+  };
+  $.ajax({url: '/import-project', global: false, data: d}).always(function() {
+    document.cookie = 'mos-type=app';
+    document.cookie = 'mos-name=' + app;
+    $(document).trigger('refresh-apps');
+    var firmware =  'https://github.com/mongoose-os-apps/' + app +
+                   '/releases/download/' + ui.version + '/' + app + '-' +
+                   arch + '.zip';
+    $.ajax({url: '/flash', global: false, data: {firmware: firmware}}).then(function() {
+      setTimeout(function() {
+        probeDevice().always(function() { stopspin(btn); });
+      }, 2000);
+    }).catch(function(e) {
+      addLog('Flashing error: ' + e.responseJSON.error);
+      stopspin(btn);
+    });
   });
 });
 
@@ -395,6 +414,7 @@ var addLog = function(msg, type) {
   var mustScroll = diff <= 1;
   if (type != 'uart' && !msg.match(/.*\n$/)) msg += '\n';
   $('<span/>').text(msg || '').appendTo(el);
+  while (el.childNodes.length > ui.maxLogMessages) $(el).children().first().remove();
   if (mustScroll) el.scrollTop = el.scrollHeight;
 };
 
@@ -439,6 +459,7 @@ $.getJSON(ui.apiDocsURL).then(function(data) {
 // If a user has specified --port, then connect to a device automatically.
 $.ajax({url: '/getports'}).then(function(data) {
   var r = data.result || {};
+  console.log(r);
   if (!r.IsConnected && r.PortFlag != 'auto') {
     ui.showWizard = false;
     $.ajax({url: '/connect', data: {reconnect: true}}).always(function() {
@@ -449,18 +470,11 @@ $.ajax({url: '/getports'}).then(function(data) {
   }
 });
 
+$('.arch-input, .app-input').on('keyup change', function() {
+  $('#flash-button').prop('disabled', !$('.arch-input').val() || !$('.app-input').val());
+});
+
 $.ajax({url: '/version-tag'}).then(function(resp) {
-  var version_tag = resp.result;
-  var url = 'https://mongoose-os.com/downloads/builds-' + version_tag + '.json';
-  $.ajax({method: 'GET', url: url}).then(function(json) {
-    $('.avail-build').remove();
-    var builds = json.builds || [];
-    if (builds.length > 0) {
-      $.each(builds.reverse(), function(i, v) {
-        $('<li class="avail-build"><a href="#">' + v + '</a></li>').insertAfter('.dropdown-builds .avail');
-      });
-    }
-  }).catch(function(e) {
-    console.log('hey', e);
-  });
+  ui.version = resp.result;
+  $('.mos-version').text(ui.version);
 });

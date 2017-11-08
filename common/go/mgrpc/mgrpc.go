@@ -278,7 +278,11 @@ func (r *mgRPCImpl) recvLoop(ctx context.Context, c codec.Codec) {
 			glog.Infof("devConn is disconnected, breaking out of the recvLoop", err)
 			r.reqsLock.Lock()
 			for k, v := range r.reqs {
-				v.errChan <- err
+				// Use non-blocking send, otherwise we can block and lock this rpc
+				select {
+				case v.errChan <- err:
+				default:
+				}
 				delete(r.reqs, k)
 			}
 			r.reqsLock.Unlock()

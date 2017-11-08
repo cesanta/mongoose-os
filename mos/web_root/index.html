@@ -24,8 +24,8 @@
           <div id="sidebar-menu" class="main_menu_side hidden-print main_menu">
             <div class="menu_section">
               <ul class="nav side-menu">
-                <li><a tab="files"><i class="fa fa-microchip"></i> Device&nbsp;Files </a></li>
                 <li><a tab="code"><i class="fa fa-file-code-o"></i> Projects </a></li>
+                <li><a tab="files"><i class="fa fa-microchip"></i> Device&nbsp;Files </a></li>
                 <li><a tab="configuration"><i class="fa fa-gears"></i> Device&nbsp;Config </a></li>
                 <li><a tab="rpc"><i class="fa fa-puzzle-piece"></i>Device&nbsp;Services</a></li>
                 <li><a tab="terminal"><i class="fa fa-terminal"></i> Terminal</a></li>
@@ -50,10 +50,9 @@
 
             <span class="devinfo"></span>
             &nbsp;
-            <a class="link" data-toggle="modal" data-target="#splash"><i class="fa fa-circle devconn-icon"></i> device setup</a> &nbsp;|&nbsp;
+            <a class="link" data-toggle="modal" data-target="#splash"><i class="fa fa-circle devconn-icon"></i> device setup</a> &nbsp;
             <!-- <a target="_blank" href="https://forum.mongoose-os.com"><i class="fa fa-comments-o"></i> forum</a> &nbsp;|&nbsp; -->
             <!-- <a target="_blank" href="https://mongoose-os.com/docs/#/overview/"><i class="fa fa-map-o"></i> docs</a> &nbsp;|&nbsp; -->
-            <a target="_blank" href="https://mongoose-os.com"><img src="/images/logo_blue.png" xstyle="xheight: 20px;"></a>
           </div>
         </div>
 
@@ -92,7 +91,7 @@
       <div class="modal-content">
 
         <div class="modal-header">
-          <img src="images/logo_blue2.png" class="pull-left" height="32" style="filter: grayscale(100%); opacity:0.2;">
+          <img src="images/logo_blue2.png" class="pull-left hidden" height="32" style="filter: grayscale(100%); opacity:0.2;">
           <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
           <h2 class="modal-title text-center">
             Device status:
@@ -108,7 +107,7 @@
             <li>
               <div class="block" id="step1">
                 <div class="tags"><a class="tag">
-                  <center>Step 1</center></a>
+                  <center>Connect</center></a>
                   <center class="done hidden"><i class="fa fa-check"></i> done!</center></a>
                 </div>
                 <div class="block_content">
@@ -170,11 +169,11 @@
             <li>
               <div class="block" id="step2">
                 <div class="tags">
-                  <a class="tag"><center>Step 2</center></a>
+                  <a class="tag"><center>Flash</center></a>
                   <center class="done hidden"><i class="fa fa-check"></i> done!</center></a>
                 </div>
                 <div class="block_content">
-                  <h2 class="title"><a>Select firmware, click Flash</a></h2>
+                  <h2 class="title"><a>Select app, choose architecture, click Flash</a></h2>
 
                   <div class="form form-inline">
                     <div class="input-group">
@@ -186,21 +185,41 @@
                             <span class="sr-only">Toggle Dropdown</span>
                           </button>
                           <ul class="dropdown-menu dropdown-builds">
-                            <li class="dropdown-header avail">Available firmwares:</li>
+                            <li><a href="#">demo-js</a></li>
+                            <li><a href="#">iot-kit</a></li>
                           </ul>
                         </div>
                       </span>
-                      <input type="text" class="form-control builds-input" style="min-width: 17em;" placeholder="e.g. esp8266">
+                      <input type="text" class="form-control app-input" style="max-width: 12em;" placeholder="Choose app..." value="demo-js">
                     </div>
 
-                    <button class="btn btn-default btn-mos pull-right" id="flash-button">
+                    <div class="input-group">
+                      <span class="input-group-btn">
+                        <div class="btn-group dropdown">
+                          <button type="button" class="btn btn-default dropdown-toggle"
+                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <span class="caret"></span>
+                            <span class="sr-only">Toggle Dropdown</span>
+                          </button>
+                          <ul class="dropdown-menu dropdown-builds">
+                            <li><a href="#">esp32</a></li>
+                            <li><a href="#">esp8266</a></li>
+                            <li><a href="#">cc3220</a></li>
+                            <li><a href="#">cc3200</a></li>
+                          </ul>
+                        </div>
+                      </span>
+                      <input type="text" class="form-control arch-input" style="max-width: 7em;" placeholder="Platform...">
+                    </div>
+
+                    <button class="btn btn-default btn-mos pull-right" id="flash-button" disabled>
                       <i class="fa fa-download"></i> Flash
                     </button>
 
                   </div>
 
                   <div class="excerpt" id="found-device-info" style="display: none; margin-top: 5px;">
-                    Mongoose OS is installed on this device:
+                    Mongoose OS app is flashed on this device:
                     <p class="devinfo"></p>
                   </div> 
 
@@ -211,7 +230,7 @@
             <li>
               <div class="block" id="step3">
                 <div class="tags">
-                  <a class="tag"><center>Step 3</center></a>
+                  <a class="tag"><center>Set WiFi</center></a>
                   <center class="done hidden"><i class="fa fa-check"></i> done!</center></a>
                 </div>
                 <div class="block_content">
@@ -220,20 +239,18 @@
                   <div class="form form-inline">
                     <input type="text" class="form-control" id="wifi.sta.ssid" placeholder="WiFi network">
                     <input type="password" class="form-control" id="wifi.sta.pass" placeholder="WiFi password">
-                    <button class="btn btn-default btn-mos pull-right" id="wifi-button"> <i class="fa fa-save"></i> Save</button>
+                    <button class="btn btn-default btn-mos pull-right" id="wifi-button"> <i class="fa fa-save"></i> Set</button>
                   </div>
                 </div>
               </div>
             </li>
           </ul>
 
-          <center>
-            <button class="btn btn-default btn-mos btn-lg" id="prototype-button" disabled>
-              <i class="fa fa-code"></i>
-              Start coding
-            </button>                        
-          </center>
- 
+          <div style="color: #777;">
+            <img src="images/logo.png" height="32" style="filter: grayscale(100%); opacity:0.2; padding-right: 10px; margin-top: -3px;">
+            &copy; <a href="https://mongoose-os.com">mongoose-os.com</a>, mos tool
+            version <label class="mos-version"></label>
+          </div>
         </div>
 
       </div>
