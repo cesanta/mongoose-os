@@ -55,7 +55,7 @@ IRAM void mgos_hw_timers_dev_isr_bottom(struct mgos_hw_timer_info *ti) {
 }
 
 IRAM void mgos_hw_timers_dev_clear(struct mgos_hw_timer_info *ti) {
-  timer_pause(ti->dev.tgn, ti->dev.tn);
+  ti->dev.tg->hw_timer[ti->dev.tn].config.enable = 0;
 }
 
 bool mgos_hw_timers_dev_init(struct mgos_hw_timer_info *ti) {
