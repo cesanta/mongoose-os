@@ -118,17 +118,13 @@ IRAM void mgos_gpio_write(int pin, bool level) {
   WRITE_PERI_REG(reg, (1 << pin));
 }
 
-IRAM bool mgos_gpio_toggle(int pin) {
-  uint32_t cur_out;
+IRAM bool mgos_gpio_read_out(int pin) {
   if (pin >= 0 && pin < 32) {
-    cur_out = (GPIO.out & (1U << pin));
+    return (GPIO.out & (1U << pin)) != 0;
   } else if (pin == 32 || pin == 33) { /* 34 - 39 are input-only. */
-    cur_out = (GPIO.out1.val & (1U << (pin - 32)));
-  } else {
-    return false;
+    return (GPIO.out1.val & (1U << (pin - 32)));
   }
-  mgos_gpio_write(pin, !cur_out);
-  return !cur_out;
+  return false;
 }
 
 bool mgos_gpio_hal_set_int_mode(int pin, enum mgos_gpio_int_mode mode) {

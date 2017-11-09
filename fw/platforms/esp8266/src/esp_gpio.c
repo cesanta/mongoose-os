@@ -148,51 +148,36 @@ IRAM bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
 }
 
 IRAM void mgos_gpio_write(int pin, bool level) {
-  if (pin < 0 || pin > 16) {
-    return;
+  if (pin >= 0 && pin < 16) {
+    uint32_t mask = 1 << pin;
+    if (level) {
+      WRITE_PERI_REG(PERIPHS_GPIO_BASEADDR + GPIO_OUT_W1TS_ADDRESS, mask);
+    } else {
+      WRITE_PERI_REG(PERIPHS_GPIO_BASEADDR + GPIO_OUT_W1TC_ADDRESS, mask);
+    }
   } else if (pin == 16) {
     gpio16_output_set(level);
-    return;
-  }
-
-  uint32_t mask = 1 << pin;
-  if (level) {
-    WRITE_PERI_REG(PERIPHS_GPIO_BASEADDR + GPIO_OUT_W1TS_ADDRESS, mask);
-  } else {
-    WRITE_PERI_REG(PERIPHS_GPIO_BASEADDR + GPIO_OUT_W1TC_ADDRESS, mask);
   }
 }
 
 IRAM bool mgos_gpio_read(int pin) {
-  if (pin == 16) {
-    return 0x1 & gpio16_input_get();
+  if (pin >= 0 && pin < 16) {
+    return (GPIO_INPUT_GET(GPIO_ID_PIN(pin)) != 0);
+  } else if (pin == 16) {
+    return (gpio16_input_get() != 0);
   }
-
-  if (get_gpio_info(pin) == NULL) {
-    /* Just verifying pin number */
-    return -1;
-  }
-
-  return 0x1 & GPIO_INPUT_GET(GPIO_ID_PIN(pin));
+  return false;
 }
 
-IRAM bool mgos_gpio_toggle(int pin) {
-  if (pin < 0 || pin > 16) {
-    return false;
+IRAM bool mgos_gpio_read_out(int pin) {
+  if (pin >= 0 && pin < 16) {
+    return (GPIO_REG_READ(GPIO_OUT_ADDRESS) & (1U << pin)) != 0;
   } else if (pin == 16) {
     uint32_t v = (READ_PERI_REG(RTC_GPIO_OUT) ^ 1);
     WRITE_PERI_REG(RTC_GPIO_OUT, v);
-    return (v & 1);
+    return (v & 1) != 0;
   }
-  uint32_t out = GPIO_REG_READ(GPIO_OUT_ADDRESS);
-  uint32_t mask = (1U << pin);
-  if (out & (1U << pin)) {
-    GPIO_REG_WRITE(GPIO_OUT_W1TC_ADDRESS, mask);
-    return false;
-  } else {
-    GPIO_REG_WRITE(GPIO_OUT_W1TS_ADDRESS, mask);
-    return true;
-  }
+  return false;
 }
 
 IRAM static void esp8266_gpio_isr(void *arg) {

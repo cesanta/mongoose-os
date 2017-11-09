@@ -122,7 +122,7 @@ bool mgos_gpio_read(int pin) {
   if (gpio_no < 0) return false;
   uint32_t port_base = gpio_no_to_port_base(gpio_no);
   uint32_t amask = (1 << (gpio_no % 8)) << 2;
-  return (HWREG(port_base + GPIO_O_GPIO_DATA + amask)) ? 1 : 0;
+  return (HWREG(port_base + GPIO_O_GPIO_DATA + amask)) != 0;
 }
 
 void mgos_gpio_write(int pin, bool level) {
@@ -137,18 +137,10 @@ void mgos_gpio_write(int pin, bool level) {
   }
 }
 
-bool mgos_gpio_toggle(int pin) {
-  int gpio_no = pin_to_gpio_no(pin);
-  if (gpio_no < 0) return false;
-  uint32_t port_base = gpio_no_to_port_base(gpio_no);
-  uint32_t amask = (1 << (gpio_no % 8)) << 2;
-  if (HWREG(port_base + GPIO_O_GPIO_DATA + amask)) {
-    HWREG(port_base + GPIO_O_GPIO_DATA + amask) = 0;
-    return false;
-  } else {
-    HWREG(port_base + GPIO_O_GPIO_DATA + amask) = 0xFF;
-    return true;
-  }
+/* CC3200 doesn't have separate out register, in output mode reads from the data
+ * register return the status of the output. */
+bool mgos_gpio_read_out(int pin) {
+  return mgos_gpio_read(pin);
 }
 
 static void gpio_common_int_handler(uint32_t port_base, uint8_t offset) {

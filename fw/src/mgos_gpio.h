@@ -58,6 +58,9 @@ void mgos_gpio_write(int pin, bool level);
 /* Flip output pin value. Returns value that was written. */
 bool mgos_gpio_toggle(int pin);
 
+/* Read the value of the output register. */
+bool mgos_gpio_read_out(int pin);
+
 /*
  * Install a GPIO interrupt handler.
  *

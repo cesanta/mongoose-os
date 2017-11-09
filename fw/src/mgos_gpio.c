@@ -128,6 +128,12 @@ bool mgos_gpio_set_button_handler(int pin, enum mgos_gpio_pull_type pull_type,
   return mgos_gpio_enable_int(pin);
 }
 
+IRAM bool mgos_gpio_toggle(int pin) {
+  bool v = !mgos_gpio_read_out(pin);
+  mgos_gpio_write(pin, v);
+  return v;
+}
+
 enum mgos_init_result mgos_gpio_init() {
   return mgos_gpio_hal_init();
 }

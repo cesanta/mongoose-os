@@ -306,10 +306,8 @@ bool mgos_gpio_read(int pin) {
   return gpio_get_value(pin);
 }
 
-bool mgos_gpio_toggle(int pin) {
-  /* TODO */
-  (void) pin;
-  return false;
+bool mgos_gpio_read_out(int pin) {
+  return mgos_gpio_read(pin);
 }
 
 enum mgos_init_result mgos_gpio_hal_init(void) {
