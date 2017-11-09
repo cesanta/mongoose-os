@@ -16,41 +16,7 @@
     <div class="upcontrol">
       <div id="simple" style="height: 100%;" class="row">
 
-        <div class="col-md-4 col-xs-12" id="section-sntp">
-          <div class="x_panel">
-            <div class="x_title">SNTP Settings</div>
-            <div class="x_content form-horizontal">
-              <div class="form-group">
-                <label class="col-xs-4 control-label">Enable SNTP</label>
-                <div class="col-xs-8"><input type="checkbox" class="form-control" id="sntp.enable"></div>
-              </div>
-              <div class="form-group">
-                <label class="col-xs-4 control-label">SNTP server</label>
-                <div class="col-xs-8"><input type="text" class="form-control"
-                  id="sntp.server" placeholder="pool.ntp.org"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-md-4 col-xs-12" id="section-dns-sd">
-          <div class="x_panel">
-            <div class="x_title">Local Network Discovery</div>
-            <div class="x_content form-horizontal">
-              <div class="form-group">
-                <label class="col-xs-4 control-label">Enable DNS-SD</label>
-                <div class="col-xs-8"><input type="checkbox" class="form-control" id="dns_sd.enable"></div>
-              </div>
-              <div class="form-group">
-                <label class="col-xs-4 control-label">Host name</label>
-                <div class="col-xs-8"><input type="text" class="form-control"
-                  id="dns_sd.host_name" placeholder="my_device"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="col-md-4 col-xs-12" id="section-debug">
+        <div class="col-md-6 col-xs-12" id="section-debug">
           <div class="x_panel">
             <div class="x_title">Debug Settings</div>
             <div class="x_content form-horizontal">
@@ -62,6 +28,22 @@
                 <label class="col-xs-5 control-label">Log level:</label>
                 <div class="col-xs-7"><input type="text" class="form-control"
                   id="debug.level" placeholder="2"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-md-6 col-xs-12" id="section-dash">
+          <div class="x_panel">
+            <div class="x_title">Management Dashboard</div>
+            <div class="x_content form-horizontal">
+              <div class="form-group">
+                <label class="col-xs-4 control-label">Enable</label>
+                <div class="col-xs-8"><input type="checkbox" class="form-control" id="dash.enable"></div>
+              </div>
+              <div class="form-group">
+                <label class="col-xs-5 control-label">Access Token:</label>
+                <div class="col-xs-7"><input type="text" class="form-control" id="dash.token" placeholder="2"></div>
               </div>
             </div>
           </div>
@@ -222,18 +204,11 @@
         $('#section-mqtt').addClass('hidden');
       }
 
-      if (c.sntp) {
-        $('#sntp\\.enable').prop('checked', c.sntp.enable);
-        $('#sntp\\.server').val(c.sntp.server || getCookie('sntp'));
+      if (c.dash) {
+        $('#dash\\.enable').prop('checked', c.dash.enable);
+        $('#dash\\.token').val(c.dash.token || '');
       } else {
-        $('#section-sntp').addClass('hidden');
-      }
-
-      if (c.dns_sd) {
-        $('#dns_sd\\.enable').prop('checked', c.dns_sd.enable);
-        $('#dns_sd\\.host_name').val(c.dns_sd.host_name || '');
-      } else {
-        $('#section-dns-sd').addClass('hidden');
+        $('#section-dash').addClass('hidden');
       }
 
       if (c.debug) {
