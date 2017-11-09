@@ -118,7 +118,7 @@ IRAM void mgos_gpio_write(int pin, bool level) {
   WRITE_PERI_REG(reg, (1 << pin));
 }
 
-bool mgos_gpio_toggle(int pin) {
+IRAM bool mgos_gpio_toggle(int pin) {
   uint32_t cur_out;
   if (pin >= 0 && pin < 32) {
     cur_out = (GPIO.out & (1U << pin));
@@ -127,7 +127,7 @@ bool mgos_gpio_toggle(int pin) {
   } else {
     return false;
   }
-  gpio_set_level(pin, !cur_out);
+  mgos_gpio_write(pin, !cur_out);
   return !cur_out;
 }
 
