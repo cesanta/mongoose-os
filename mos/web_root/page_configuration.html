@@ -42,8 +42,8 @@
                 <div class="col-xs-8"><input type="checkbox" class="form-control" id="dash.enable"></div>
               </div>
               <div class="form-group">
-                <label class="col-xs-5 control-label">Access Token:</label>
-                <div class="col-xs-7"><input type="text" class="form-control" id="dash.token" placeholder="2"></div>
+                <label class="col-xs-4 control-label">Access Token:</label>
+                <div class="col-xs-8"><input type="text" class="form-control" id="dash.token" placeholder=""></div>
               </div>
             </div>
           </div>
@@ -251,16 +251,14 @@
 
   $(document).off('click', '#config-save-button');
   $(document).on('click', '#config-save-button', function() {
-    var config = {mqtt: {}, sntp: {}, debug: {}, dns_sd: {}};
+    var config = {mqtt: {}, debug: {}, dash: {}};
     if ($('#view1').is(':checked')) {
       config.mqtt.enable = $('#mqtt\\.enable').is(':checked');
       config.mqtt.server = $('#mqtt\\.server').val();
       config.mqtt.user = $('#mqtt\\.user').val();
       config.mqtt.pass = $('#mqtt\\.pass').val();
-      config.sntp.enable = $('#sntp\\.enable').is(':checked');
-      config.sntp.server = $('#sntp\\.server').val();
-      config.dns_sd.enable = $('#dns_sd\\.enable').is(':checked');
-      config.dns_sd.host_name = $('#dns_sd\\.host_name').val();
+      config.dash.enable = $('#dash\\.enable').is(':checked');
+      config.dash.token = $('#dash\\.token').val();
       config.debug.level = + $('#debug\\.level').val();
       config.debug.mg_mgr_hexdump_file = $('#debug\\.hexdump').is(':checked') ? '-' : '';
     } else {

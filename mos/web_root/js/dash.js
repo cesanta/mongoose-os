@@ -459,7 +459,6 @@ $.getJSON(ui.apiDocsURL).then(function(data) {
 // If a user has specified --port, then connect to a device automatically.
 $.ajax({url: '/getports'}).then(function(data) {
   var r = data.result || {};
-  console.log(r);
   if (!r.IsConnected && r.PortFlag != 'auto') {
     ui.showWizard = false;
     $.ajax({url: '/connect', data: {reconnect: true}}).always(function() {
