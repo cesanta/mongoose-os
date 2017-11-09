@@ -132,7 +132,8 @@ static enum mgos_init_result esp32_mgos_init() {
 #endif
 
   cs_log_set_level(MGOS_EARLY_DEBUG_LEVEL);
-  mongoose_init();
+  r = mongoose_init();
+  if (r != MGOS_INIT_OK) return r;
 
   r = esp32_debug_init();
   if (r != MGOS_INIT_OK) return r;

@@ -8,7 +8,8 @@
 
 #include <stdint.h>
 
-#include "driver/timer.h"
+#include "esp_intr_alloc.h"
+#include "soc/timer_group_struct.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -16,10 +17,10 @@ extern "C" {
 
 #define MGOS_NUM_HW_TIMERS 4
 
-#define MGOS_ESP32_HW_TIMER_NMI 0x10000
-#define MGOS_ESP32_HW_TIMER_IRAM 0x20000
+#define MGOS_ESP32_HW_TIMER_IRAM 0x10000
 
 struct mgos_hw_timer_dev_data {
+  intr_handle_t inth;
   timg_dev_t *tg;
   uint8_t tgn;
   uint8_t tn;

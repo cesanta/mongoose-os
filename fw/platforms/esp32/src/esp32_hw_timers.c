@@ -9,46 +9,40 @@
 
 #include "common/cs_dbg.h"
 
+#include "driver/periph_ctrl.h"
 #include "driver/timer.h"
 
 #include "mgos_hw_timers_hal.h"
 
 IRAM bool mgos_hw_timers_dev_set(struct mgos_hw_timer_info *ti, int usecs,
                                  int flags) {
-  timer_config_t config;
-  config.alarm_en = TIMER_ALARM_EN;
-  config.auto_reload =
-      (flags & MGOS_TIMER_REPEAT ? TIMER_AUTORELOAD_EN : TIMER_AUTORELOAD_DIS);
-  config.counter_dir = TIMER_COUNT_UP;
-  /* Set up divider to tick the timer every 1 uS */
-  config.divider = (TIMER_BASE_CLK / 1000000);
-  config.intr_type = TIMER_INTR_LEVEL;
-  config.counter_en = TIMER_PAUSE;
-  int tgn = ti->dev.tgn, tn = ti->dev.tn;
-  if (timer_init(tgn, tn, &config) != ESP_OK) {
-    LOG(LL_ERROR, ("failed to init timer %d/%d", tgn, tn));
-    ti->cb_arg = NULL;
-    ti->cb = NULL;
-    return false;
-  }
-  timer_set_counter_value(tgn, tn, 0);
-  timer_set_alarm_value(tgn, tn, usecs);
-  int intr_flags = 0;
-  if (flags & MGOS_ESP32_HW_TIMER_NMI) intr_flags |= ESP_INTR_FLAG_NMI;
-  if (flags & MGOS_ESP32_HW_TIMER_IRAM) intr_flags |= ESP_INTR_FLAG_IRAM;
-  timer_isr_register(tgn, tn, (void (*) (void *)) mgos_hw_timers_isr, ti,
-                     intr_flags, NULL);
-  timer_enable_intr(tgn, tn);
-  timer_start(tgn, tn);
+  timg_dev_t *tg = ti->dev.tg;
+  int tn = ti->dev.tn;
+
+  tg->hw_timer[tn].config.val =
+      (TIMG_T0_INCREASE | TIMG_T0_ALARM_EN | TIMG_T0_LEVEL_INT_EN |
+       /* Set up divider to tick the timer every 1 uS */
+       ((TIMER_BASE_CLK / 1000000) << TIMG_T0_DIVIDER_S));
+  tg->hw_timer[tn].config.autoreload = ((flags & MGOS_TIMER_REPEAT) != 0);
+
+  tg->hw_timer[tn].load_high = 0;
+  tg->hw_timer[tn].load_low = 0;
+  tg->hw_timer[tn].alarm_high = 0;
+  tg->hw_timer[tn].alarm_low = usecs;
+  tg->hw_timer[tn].reload = 1;
+
+  esp_intr_set_in_iram(ti->dev.inth, (flags & MGOS_ESP32_HW_TIMER_IRAM) != 0);
+
+  tg->int_ena.val |= (1 << tn);
+
+  /* Start the timer */
+  tg->hw_timer[tn].config.enable = true;
+
   return true;
 }
 
 IRAM void mgos_hw_timers_dev_isr_bottom(struct mgos_hw_timer_info *ti) {
-  if (ti->dev.tn == 0) {
-    ti->dev.tg->int_clr_timers.t0 = 1;
-  } else {
-    ti->dev.tg->int_clr_timers.t1 = 1;
-  }
+  ti->dev.tg->int_clr_timers.val = (1 << ti->dev.tn);
   if (ti->flags & MGOS_TIMER_REPEAT) {
     ti->dev.tg->hw_timer[ti->dev.tn].config.alarm_en = 1;
   }
@@ -66,6 +60,7 @@ bool mgos_hw_timers_dev_init(struct mgos_hw_timer_info *ti) {
       dd->tg = &TIMERG0;
       dd->tgn = 0;
       dd->tn = ti->id - 1;
+      periph_module_enable(PERIPH_TIMG0_MODULE);
       break;
     }
     case 3:
@@ -73,10 +68,13 @@ bool mgos_hw_timers_dev_init(struct mgos_hw_timer_info *ti) {
       dd->tg = &TIMERG1;
       dd->tgn = 1;
       dd->tn = ti->id - 3;
+      periph_module_enable(PERIPH_TIMG1_MODULE);
       break;
     }
     default:
       return false;
   }
-  return true;
+  return (timer_isr_register(dd->tgn, dd->tn,
+                             (void (*) (void *)) mgos_hw_timers_isr, ti, 0,
+                             &dd->inth) == ESP_OK);
 }
