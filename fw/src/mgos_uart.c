@@ -101,6 +101,7 @@ size_t mgos_uart_read(int uart_no, void *buf, size_t len) {
   struct mgos_uart_state *us = s_uart_state[uart_no];
   if (us == NULL || !us->rx_enabled) return 0;
   uart_lock();
+  mgos_uart_hal_dispatch_rx_top(us);
   size_t tr = MIN(len, us->rx_buf.len);
   if (us->cfg.tx_fc_type == MGOS_UART_FC_SW) {
     size_t i, j;
