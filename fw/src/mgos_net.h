@@ -35,6 +35,7 @@ enum mgos_net_event {
 enum mgos_net_if_type {
   MGOS_NET_IF_TYPE_WIFI,
   MGOS_NET_IF_TYPE_ETHERNET,
+  MGOS_NET_IF_TYPE_PPP,
   /* This is a sentinel in case all networking interface types are disabled. */
   MGOS_NET_IF_MAX,
 };

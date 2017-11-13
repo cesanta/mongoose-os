@@ -12,6 +12,9 @@
 #include "mgos_hal.h"
 #include "mgos_mongoose.h"
 #include "mgos_system.h"
+#ifdef MGOS_HAVE_PPPOS
+#include "mgos_pppos.h"
+#endif
 #ifdef MGOS_HAVE_WIFI
 #include "mgos_wifi_hal.h"
 #endif
@@ -57,6 +60,10 @@ static const char *get_if_name(enum mgos_net_if_type if_type, int if_instance) {
     }
     case MGOS_NET_IF_TYPE_ETHERNET: {
       name = "ETH";
+      break;
+    }
+    case MGOS_NET_IF_TYPE_PPP: {
+      name = "PPP";
       break;
     }
     case MGOS_NET_IF_MAX: {
@@ -145,6 +152,12 @@ bool mgos_net_get_ip_info(enum mgos_net_if_type if_type, int if_instance,
     case MGOS_NET_IF_TYPE_ETHERNET:
 #ifdef MGOS_HAVE_ETHERNET
       return mgos_eth_dev_get_ip_info(if_instance, ip_info);
+#else
+      return false;
+#endif
+    case MGOS_NET_IF_TYPE_PPP:
+#ifdef MGOS_HAVE_PPPOS
+      return mgos_pppos_dev_get_ip_info(if_instance, ip_info);
 #else
       return false;
 #endif
