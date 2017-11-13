@@ -277,7 +277,7 @@ func prepareLocalCopyGit(
 
 	if !repoExists {
 		freportf(logWriter, "Repository %q does not exist, cloning...\n", targetDir)
-		err := gitutils.GitClone(origin, targetDir, "")
+		err := gitutils.GitClone(origin, targetDir)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -368,27 +368,41 @@ func prepareLocalCopyGit(
 		if err != nil {
 			return errors.Trace(err)
 		}
+
+		// After fetching, refresh branchExists and tagExists
+		branchExists, err = gitutils.DoesGitBranchExist(targetDir, version)
+		if err != nil {
+			return errors.Trace(err)
+		}
+		glog.V(2).Infof("branch %q exists=%v", version, branchExists)
+
+		// Check if version is a known tag name
+		tagExists, err = gitutils.DoesGitTagExist(targetDir, version)
+		if err != nil {
+			return errors.Trace(err)
+		}
+		glog.V(2).Infof("tag %q exists=%v", version, tagExists)
+	}
+
+	refType := gitutils.RefTypeHash
+	if branchExists {
+		glog.V(2).Infof("%q is a branch", version)
+		refType = gitutils.RefTypeBranch
+	} else if tagExists {
+		glog.V(2).Infof("%q is a tag", version)
+		refType = gitutils.RefTypeTag
+	} else {
+		glog.V(2).Infof("%q is neither a branch nor a tag, assume it's a hash", version)
 	}
 
 	// Try to checkout to the requested version
 	glog.V(2).Infof("checking out..")
-	err = gitutils.GitCheckout(targetDir, version)
+	err = gitutils.GitCheckout(targetDir, version, refType)
 	if err != nil {
 		return errors.Trace(err)
 	}
 
-	// Check abbreviated rev name, and if it's not "HEAD", assume we're at the
-	// branch, and perform git pull
-	//
-	// It will fail if there's no tracking information about the branch, but
-	// it's not a supported use case anyway
-	curRevAbbr, err := gitutils.GitGetCurrentAbbrev(targetDir)
-	if err != nil {
-		return errors.Trace(err)
-	}
-	glog.V(2).Infof("rev abbr=%q", curRevAbbr)
-
-	if curRevAbbr != "HEAD" {
+	if branchExists {
 		fInfo, err := os.Stat(targetDir)
 		if err != nil {
 			return errors.Trace(err)
@@ -408,12 +422,14 @@ func prepareLocalCopyGit(
 		} else {
 			freportf(logWriter, "Repository %q is updated recently enough, don't touch it", targetDir)
 		}
+	} else {
+		glog.V(2).Infof("requested version %q is not a branch, skip pulling.", version)
 	}
 
 	// To be safe, do `git checkout .`, so that any possible corruptions
 	// of the working directory will be fixed
-	glog.V(2).Infof("doing checkout.")
-	err = gitutils.GitCheckout(targetDir, ".")
+	glog.V(2).Infof("resetting")
+	err = gitutils.GitResetHard(targetDir)
 	if err != nil {
 		return errors.Trace(err)
 	}

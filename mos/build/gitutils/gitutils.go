@@ -1,185 +1,274 @@
 package gitutils
 
 import (
-	"bytes"
-	"os/exec"
-	"runtime"
+	"encoding/hex"
+	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 
+	moscommon "cesanta.com/mos/common"
 	"github.com/cesanta/errors"
+	git "github.com/cesanta/go-git"
+	"github.com/cesanta/go-git/plumbing"
+	"github.com/cesanta/go-git/plumbing/storer"
+	"github.com/golang/glog"
 )
 
 const (
-	minHashLen = 6
+	minHashLen  = 6
+	fullHashLen = 40
 )
 
-func GitGetCurrentHash(repo string) (string, error) {
-	resp, err := git(repo, "rev-parse", "HEAD")
+func GitGetCurrentHash(localDir string) (string, error) {
+	repo, err := git.PlainOpen(localDir)
 	if err != nil {
-		return "", errors.Annotatef(err, "failed to get current hash")
+		return "", errors.Trace(err)
 	}
-	if len(resp) == 0 {
-		return "", errors.Errorf("failed to get current hash")
+
+	head, err := repo.Head()
+	if err != nil {
+		return "", errors.Trace(err)
 	}
-	return resp, nil
+
+	return head.Hash().String(), nil
 }
 
-func DoesGitBranchExist(repo string, branch string) (bool, error) {
-	resp, err := git(repo, "branch", "--list", branch)
+func doesRefExist(iter storer.ReferenceIter, name string) (bool, error) {
+	exists := false
+
+	err := iter.ForEach(func(branch *plumbing.Reference) error {
+		if branch.Name().Short() == name {
+			exists = true
+		}
+		return nil
+	})
 	if err != nil {
-		return false, errors.Annotatef(err, "failed to check if branch %q exists", branch)
+		return false, errors.Trace(err)
 	}
-	return len(resp) > 2 && resp[2:] == branch, nil
+
+	return exists, nil
 }
 
-func DoesGitTagExist(repo string, tag string) (bool, error) {
-	resp, err := git(repo, "tag", "--list", tag)
+func DoesGitBranchExist(localDir string, branchName string) (bool, error) {
+	repo, err := git.PlainOpen(localDir)
 	if err != nil {
-		return false, errors.Annotatef(err, "failed to check if tag %q exists", tag)
+		return false, errors.Trace(err)
 	}
-	return resp == tag, nil
+
+	branches, err := repo.Branches()
+	if err != nil {
+		return false, errors.Trace(err)
+	}
+
+	exists, err := doesRefExist(branches, branchName)
+	if err != nil {
+		return false, errors.Trace(err)
+	}
+
+	return exists, nil
 }
 
-func GitGetCurrentAbbrev(repo string) (string, error) {
-	resp, err := git(repo, "rev-parse", "--abbrev-ref", "HEAD")
+func DoesGitTagExist(localDir string, tagName string) (bool, error) {
+	repo, err := git.PlainOpen(localDir)
 	if err != nil {
-		return "", errors.Annotatef(err, "failed to get current git branch")
+		return false, errors.Trace(err)
 	}
-	return resp, nil
+
+	tags, err := repo.Tags()
+	if err != nil {
+		return false, errors.Trace(err)
+	}
+
+	exists, err := doesRefExist(tags, tagName)
+	if err != nil {
+		return false, errors.Trace(err)
+	}
+
+	return exists, nil
 }
 
-func GitGetToplevelDir(repo string) (string, error) {
-	resp, err := git(repo, "rev-parse", "--show-toplevel")
+func GitGetToplevelDir(localDir string) (string, error) {
+	localDir, err := filepath.Abs(localDir)
 	if err != nil {
-		return "", errors.Annotatef(err, "failed to get git toplevel dir")
+		return "", errors.Trace(err)
 	}
-	return resp, nil
+
+	for localDir != "" {
+		fmt.Println(localDir)
+		if _, err := os.Stat(filepath.Join(localDir, ".git")); err == nil {
+			return localDir, nil
+		}
+
+		localDirNew, err := filepath.Abs(filepath.Join(localDir, ".."))
+		if err != nil {
+			return "", errors.Trace(err)
+		}
+
+		if localDirNew == localDir {
+			return "", nil
+		}
+
+		localDir = localDirNew
+	}
+
+	return localDir, nil
 }
 
-func GitCheckout(repo string, id string) error {
-	_, err := git(repo, "checkout", id)
+type RefType string
+
+const (
+	RefTypeBranch RefType = "branch"
+	RefTypeTag    RefType = "tag"
+	RefTypeHash   RefType = "hash"
+)
+
+func GitCheckout(localDir string, id string, refType RefType) error {
+	repo, err := git.PlainOpen(localDir)
 	if err != nil {
-		return errors.Annotatef(err, "failed to git checkout %s", id)
+		return errors.Trace(err)
 	}
+
+	wt, err := repo.Worktree()
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	switch refType {
+	case RefTypeBranch:
+		err = wt.Checkout(&git.CheckoutOptions{
+			Branch: plumbing.ReferenceName("refs/heads/" + id),
+		})
+
+	case RefTypeTag:
+		err = wt.Checkout(&git.CheckoutOptions{
+			Branch: plumbing.ReferenceName("refs/tags/" + id),
+		})
+
+	case RefTypeHash:
+		var hash plumbing.Hash
+		hash, err = newHashSafe(id)
+		if err == nil {
+			err = wt.Checkout(&git.CheckoutOptions{
+				Hash: hash,
+			})
+		}
+	}
+	if err != nil {
+		return errors.Annotatef(err, "checking out a %s %q in %q", refType, id, localDir)
+	}
+
 	return nil
 }
 
-func GitPull(repo string) error {
-	_, err := git(repo, "pull", "--all")
+func GitResetHard(localDir string) error {
+	repo, err := git.PlainOpen(localDir)
 	if err != nil {
-		return errors.Annotatef(err, "failed to git pull")
+		return errors.Trace(err)
 	}
+
+	wt, err := repo.Worktree()
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	err = wt.Reset(&git.ResetOptions{
+		Mode: git.HardReset,
+	})
+	if err != nil {
+		return errors.Trace(err)
+	}
+
 	return nil
 }
 
-func GitFetch(repo string) error {
-	_, err := git(repo, "fetch", "--tags")
+func GitPull(localDir string) error {
+	glog.Infof("Pulling %s", localDir)
+
+	repo, err := git.PlainOpen(localDir)
 	if err != nil {
-		return errors.Annotatef(err, "failed to git fetch")
+		return errors.Trace(err)
 	}
+
+	wt, err := repo.Worktree()
+	if err != nil {
+		return errors.Trace(err)
+	}
+
+	err = wt.Pull(&git.PullOptions{})
+	if err != nil && errors.Cause(err) != git.NoErrAlreadyUpToDate {
+		return errors.Trace(err)
+	}
+
+	return nil
+}
+
+func GitFetch(localDir string) error {
+	repo, err := git.PlainOpen(localDir)
+	if err != nil {
+		return errors.Annotatef(err, "failed to open repo %s", localDir)
+	}
+
+	err = repo.Fetch(&git.FetchOptions{
+		Tags: git.AllTags,
+	})
+	if err != nil && errors.Cause(err) != git.NoErrAlreadyUpToDate {
+		return errors.Annotatef(err, "failed to git fetch %s", localDir)
+	}
+
 	return nil
 }
 
 // IsClean returns true if there are no modified, deleted or untracked files,
 // and no non-pushed commits since the given version.
-func IsClean(repo, version string) (bool, error) {
-	// First, check if there are modified, deleted or untracked files
-	resp, err := git(repo, "ls-files", "--exclude-standard", "--modified", "--others", "--deleted")
+func IsClean(localDir, version string) (bool, error) {
+	repo, err := git.PlainOpen(localDir)
 	if err != nil {
-		return false, errors.Annotatef(err, "failed to git ls-files")
+		return false, errors.Trace(err)
 	}
 
-	if resp != "" {
-		// Working dir is dirty
-		return false, nil
-	}
-
-	// Unfortunately, git ls-files is unable to show staged and uncommitted files.
-	// So, specifically for these files, we'll have to run git diff --cached:
-
-	resp, err = git(repo, "diff", "--cached", "--name-only")
+	wt, err := repo.Worktree()
 	if err != nil {
-		return false, errors.Annotatef(err, "failed to git diff --cached")
+		return false, errors.Trace(err)
 	}
 
-	if resp != "" {
-		// Working dir is dirty
-		return false, nil
-	}
-
-	// Working directory is clean, now we need to check if there are some
-	// non-pushed commits. Unfortunately there is no way (that I know of) which
-	// would work with both branches and tags. So, we do this:
-	//
-	// Invoke "git cherry". If the repo is on a branch, this command will print
-	// list of commits to be pushed to upstream. If, however, the repo is not on
-	// a branch (e.g. it's often on a tag), then this command will fail, and in
-	// that case we invoke it again, but with the version specified:
-	// "git cherry <version>". In either case, non-empty output means the
-	// precense of some commits which would not be fetched by the remote builder,
-	// so the repo is dirty.
-
-	resp, err = git(repo, "cherry")
+	status, err := wt.Status()
 	if err != nil {
-		// Apparently the repo is not on a branch, retry with the version
-		resp, err = git(repo, "cherry", version)
-		if err != nil {
-			// We can get an error at this point if given version does not exist
-			// in the repository; in this case assume the repo is clean
-			return true, nil
-		}
+		return false, errors.Trace(err)
 	}
 
-	if resp != "" {
-		// Some commits need to be pushed to upstream
-		return false, nil
-	}
-
-	// Working dir is clean
-	return true, nil
+	return isCleanWithLib(status), nil
 }
 
-func GitClone(srcURL, targetDir, referenceDir string) error {
-	args := []string{"clone"}
-	if referenceDir != "" {
-		args = append(args, "--reference", referenceDir)
-	}
-	var berr bytes.Buffer
-	args = append(args, srcURL, targetDir)
-	cmd := exec.Command("git", args...)
-
-	// By default, when the user tries to clone non-existing repo, git will
-	// ask for username/password, just in case the repo exists but is private.
-	// We want it to just fail in this case, so we're setting env variable
-	// GIT_TERMINAL_PROMPT to 0.
-	//
-	// However, git on linux goes wild in this case:
-	//   Error in GnuTLS initialization: Failed to acquire random data.
-	//   fatal: unable to access 'https://github.com/mongoose-os-apps/blynk/':
-	//   Couldn't resolve host 'github.com
-	// So we have to avoid setting GIT_TERMINAL_PROMPT on windows.
-	if runtime.GOOS != "windows" {
-		cmd.Env = []string{"GIT_TERMINAL_PROMPT=0"}
-	}
-	cmd.Stderr = &berr
-
-	err := cmd.Run()
+func GitClone(srcURL, localDir string) error {
+	_, err := git.PlainClone(localDir, false, &git.CloneOptions{
+		URL: srcURL,
+	})
 	if err != nil {
-		return errors.Annotatef(err, "cloning %s: %s", srcURL, berr.String())
+		return errors.Annotatef(err, "cloning %q to %q", srcURL, localDir)
 	}
 
 	return nil
 }
 
-func GitGetOriginUrl(repo string) (string, error) {
-	resp, err := git(repo, "remote", "get-url", "origin")
+func GitGetOriginUrl(localDir string) (string, error) {
+	repo, err := git.PlainOpen(localDir)
 	if err != nil {
-		return "", errors.Annotatef(err, "failed to get origin URL")
+		return "", errors.Trace(err)
 	}
-	if len(resp) == 0 {
-		return "", errors.Errorf("failed to get origin URL")
+
+	remotes, err := repo.Remotes()
+	if err != nil {
+		return "", errors.Trace(err)
 	}
-	return resp, nil
+
+	for _, r := range remotes {
+		if r.Config().Name == "origin" {
+			return r.Config().URLs[0], nil
+		}
+	}
+
+	return "", errors.Errorf("failed to get origin URL")
 }
 
 func HashesEqual(hash1, hash2 string) bool {
@@ -196,18 +285,39 @@ func HashesEqual(hash1, hash2 string) bool {
 	return hash1[:minLen] == hash2[:minLen]
 }
 
-func git(repo string, subcmd string, args ...string) (string, error) {
-	cmd := exec.Command("git", append([]string{subcmd}, args...)...)
-
-	var b bytes.Buffer
-	var berr bytes.Buffer
-	cmd.Dir = repo
-	cmd.Stdout = &b
-	cmd.Stderr = &berr
-	err := cmd.Run()
-	if err != nil {
-		return "", errors.Annotate(err, berr.String())
+// NewHash return a new Hash from a hexadecimal hash representation
+func newHashSafe(s string) (plumbing.Hash, error) {
+	// TODO(dfrank): at the moment (10/11/2017) git-go doesn't support partial
+	// hashes; hopefully it will be fixed in the future.
+	if len(s) != fullHashLen {
+		return plumbing.Hash{}, errors.Errorf(
+			"partial git hashes are not supported, hash should have exactly %d characters",
+			fullHashLen,
+		)
 	}
-	resp := b.String()
-	return strings.TrimRight(resp, "\r\n"), nil
+
+	b, err := hex.DecodeString(s)
+	if err != nil {
+		return plumbing.Hash{}, errors.Trace(err)
+	}
+
+	var h plumbing.Hash
+	copy(h[:], b)
+
+	return h, nil
+}
+
+// isCleanWithLib is like s.IsClean(), but ignores binary libs (i.e. files
+// under the dir returned by moscommon.GetBinaryLibsDir())
+func isCleanWithLib(s git.Status) bool {
+	for n, status := range s {
+		if strings.HasPrefix(n, fmt.Sprintf("%s%c", moscommon.GetBinaryLibsDir(""), filepath.Separator)) {
+			continue
+		}
+		if status.Worktree != git.Unmodified || status.Staging != git.Unmodified {
+			return false
+		}
+	}
+
+	return true
 }

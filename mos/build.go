@@ -1450,8 +1450,6 @@ func (lpr *compProviderReal) GetLibLocalPath(
 				return "", errors.Trace(err)
 			}
 
-			curHash := ""
-
 			if _, err := os.Stat(localDir); err == nil {
 				// lib's local dir already exists
 
@@ -1460,16 +1458,16 @@ func (lpr *compProviderReal) GetLibLocalPath(
 					libDirAbs = localDir
 					needUpdate = false
 				}
-
-				if m.GetType() == build.SWModuleTypeGithub {
-					curHash, err = gitutils.GitGetCurrentHash(localDir)
-					if err != nil {
-						return "", errors.Trace(err)
-					}
-				}
 			}
 
 			if needUpdate {
+
+				// Try to get current hash, ignoring errors
+				curHash := ""
+				if m.GetType() == build.SWModuleTypeGithub {
+					curHash, _ = gitutils.GitGetCurrentHash(localDir)
+				}
+
 				libDirAbs, err = m.PrepareLocalDir(libsDir, lpr.logWriter, true, libsDefVersion, *libsUpdateInterval)
 				if err != nil {
 					if m.Version == "" && libsDefVersion != "latest" {
@@ -1531,7 +1529,7 @@ func (lpr *compProviderReal) GetLibLocalPath(
 						// do "git checkout ." on the repo. We shouldn't be afraid of
 						// losing user's local changes, because the fact that hash has
 						// changed means that the repo was clean anyway.
-						gitutils.GitCheckout(localDir, ".")
+						gitutils.GitResetHard(localDir)
 					}
 				}
 
@@ -1543,23 +1541,6 @@ func (lpr *compProviderReal) GetLibLocalPath(
 					err = fetchPrebuiltBinary(m, platform, prebuiltFilePath)
 					if err == nil {
 						ourutil.Freportf(lpr.logWriter, "Successfully fetched prebuilt binary for %q to %q", name, prebuiltFilePath)
-
-						// If localDir is a git repo, then <localDir>/.git/info/exclude
-						// should exist, and we'll add the filename of the fetched binary
-						// there, so that the repo will stay clean
-						excludePath := getGitExcludePath(localDir)
-						if _, err := os.Stat(excludePath); err == nil {
-							f, err := os.OpenFile(excludePath, os.O_APPEND|os.O_WRONLY, 0644)
-							if err != nil {
-								return "", errors.Trace(err)
-							}
-
-							defer f.Close()
-
-							_, pfname := filepath.Split(prebuiltFilePath)
-							fmt.Fprintf(f, "%s\n", pfname)
-						}
-
 					} else {
 						ourutil.Freportf(lpr.logWriter, "Falling back to sources for %q (failed to fetch prebuilt binary: %s)", name, err.Error())
 					}
@@ -1688,10 +1669,6 @@ func fetchPrebuiltBinary(m *build.SWModule, platform, tgt string) error {
 	}
 
 	return nil
-}
-
-func getGitExcludePath(gitRepo string) string {
-	return filepath.Join(gitRepo, ".git", "info", "exclude")
 }
 
 // }}}
