@@ -13,10 +13,10 @@
 #include <stdint.h>
 
 #include "frozen/frozen.h"
-#include "mongoose/mongoose.h"
 #include "mgos_timers.h"
 #include "mgos_updater.h"
 #include "mgos_updater_hal.h"
+#include "mongoose/mongoose.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -27,6 +27,12 @@ typedef void (*mgos_updater_result_cb)(struct update_context *ctx);
 
 struct mgos_upd_hal_ctx; /* This struct is defined by HAL and is opaque to us.
                             */
+
+struct mgos_ota_status {
+  const char *state;
+  const char *msg;
+};
+
 struct update_context {
   int update_state;
   const char *status_msg;

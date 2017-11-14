@@ -20,6 +20,7 @@
 
 #include "mgos_debug.h"
 #include "mgos_sys_config.h"
+#include "mgos_updater_common.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,6 +30,7 @@ enum mgos_hook_type {
   MGOS_HOOK_INIT_DONE,
   MGOS_HOOK_DEBUG_WRITE,
   MGOS_HOOK_SYSTEM_RESTART,
+  MGOS_HOOK_OTA_STATUS,
 
   MGOS_HOOK_TYPES_CNT
 };
@@ -36,6 +38,7 @@ enum mgos_hook_type {
 struct mgos_hook_arg {
   union {
     struct mgos_debug_hook_arg debug;
+    struct mgos_ota_status ota_status;
   };
 };
 

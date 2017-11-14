@@ -13,6 +13,7 @@
 #include "common/str_util.h"
 
 #include "mgos_hal.h"
+#include "mgos_hooks.h"
 #include "mgos_sys_config.h"
 #include "mgos_timers.h"
 #include "mgos_updater_hal.h"
@@ -33,6 +34,16 @@ extern const char *build_version;
 
 static mgos_upd_event_cb s_event_cb = NULL;
 static void *s_event_cb_arg = NULL;
+
+#define CALL_HOOK(ll, _state, _fmt, ...)                               \
+  do {                                                                 \
+    char buf[100];                                                     \
+    snprintf(buf, sizeof(buf), _fmt, __VA_ARGS__);                     \
+    LOG(ll, ("%s", buf));                                              \
+    struct mgos_ota_status ota_status = {.state = _state, .msg = buf}; \
+    struct mgos_hook_arg ha = {.ota_status = ota_status};              \
+    mgos_hook_trigger(MGOS_HOOK_OTA_STATUS, &ha);                      \
+  } while (0)
 
 /*
  * --- Zip file local header structure ---
@@ -99,7 +110,8 @@ struct update_context *updater_context_create() {
   }
 
   if (!mgos_upd_is_committed()) {
-    LOG(LL_ERROR, ("Previous update has not been committed yet"));
+    CALL_HOOK(LL_ERROR, "error", "%s",
+              "Previous update has not been committed yet");
     return NULL;
   }
 
@@ -119,8 +131,8 @@ struct update_context *updater_context_create() {
 
   s_ctx->dev_ctx = mgos_upd_hal_ctx_create();
 
-  LOG(LL_INFO,
-      ("Starting update (timeout %d)", mgos_sys_config_get_update_timeout()));
+  CALL_HOOK(LL_INFO, "init", "starting, timeout %d",
+            mgos_sys_config_get_update_timeout());
   s_ctx->wdt = mgos_set_timer(mgos_sys_config_get_update_timeout() * 1000,
                               false /* repeat */, updater_abort, s_ctx);
   return s_ctx;
@@ -234,7 +246,7 @@ static int parse_zip_file_header(struct update_context *ctx) {
   LOG(LL_DEBUG, ("Compression method=%d", (int) compression_method));
   if (compression_method != 0) {
     /* Do not support compressed archives */
-    ctx->status_msg = "File is compressed";
+    ctx->status_msg = "Cannot handle compressed .zip";
     LOG(LL_ERROR, ("File is compressed)"));
     return -1;
   }
@@ -500,6 +512,9 @@ static int updater_process_int(struct update_context *ctx, const char *data,
         LOG(LL_DEBUG,
             ("Processed %d, up to %u, %u left in the buffer", num_processed,
              (unsigned int) ctx->info.current_file.processed, ctx->data_len));
+        CALL_HOOK(LL_DEBUG, "progress", "%s %d of %d",
+                  ctx->info.current_file.name, ctx->info.current_file.processed,
+                  ctx->info.current_file.size);
         if (s_event_cb != NULL) {
           s_event_cb(MGOS_UPD_EV_PROGRESS, &ctx->info, s_event_cb_arg);
         }
@@ -564,9 +579,9 @@ static int updater_process_int(struct update_context *ctx, const char *data,
       case US_FINALIZE: {
         ret = 1;
         ctx->status_msg = "Update applied, finalizing";
+        CALL_HOOK(LL_INFO, "finalizing", "commit timeout %d",
+                  ctx->fctx.commit_timeout);
         if (ctx->fctx.commit_timeout > 0) {
-          LOG(LL_INFO, ("Update requires commit, timeout: %d",
-                        ctx->fctx.commit_timeout));
           if (!mgos_upd_set_commit_timeout(ctx->fctx.commit_timeout)) {
             ctx->status_msg = "Cannot save update status";
             return -1;
@@ -611,7 +626,7 @@ void updater_finish(struct update_context *ctx) {
   if (ctx->update_state == US_FINISHED) return;
   updater_set_status(ctx, US_FINISHED);
   const char *msg = (ctx->status_msg ? ctx->status_msg : "???");
-  LOG(LL_INFO, ("Finished: %d %s", ctx->result, msg));
+  CALL_HOOK(LL_INFO, "done", "Finished: %d %s", ctx->result, msg);
   updater_process_int(ctx, NULL, 0);
   if (s_event_cb != NULL) {
     (void) s_event_cb(MGOS_UPD_EV_END, ctx, s_event_cb_arg);
@@ -727,7 +742,7 @@ out:
 
 bool mgos_upd_commit() {
   if (mgos_upd_is_committed()) return false;
-  LOG(LL_INFO, ("Committing update"));
+  CALL_HOOK(LL_INFO, "commit", "%s", "Committing update");
   mgos_upd_boot_commit();
   remove(UPDATER_CTX_FILE_NAME);
   return true;
@@ -741,7 +756,7 @@ bool mgos_upd_is_committed() {
 
 bool mgos_upd_revert(bool reboot) {
   if (mgos_upd_is_committed()) return false;
-  LOG(LL_INFO, ("Reverting update"));
+  CALL_HOOK(LL_INFO, "rollback", "%s", "Reverting update");
   mgos_upd_boot_revert();
   if (reboot) mgos_system_restart();
   return true;
