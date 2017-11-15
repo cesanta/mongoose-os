@@ -99,7 +99,7 @@ C_CXX_CFLAGS += -DMGOS_APP=\"$(APP)\" -DFW_ARCHITECTURE=$(APP_PLATFORM) \
                 #-DCS_MMAP -DSPIFFS_ON_PAGE_MOVE_HOOK=mgos_vfs_mmap_spiffs_on_page_move_hook
 
 CFLAGS += $(C_CXX_CFLAGS)
-CXXFLAGS += -std=c++11 -fno-exceptions $(C_CXX_CFLAGS)
+CXXFLAGS += $(C_CXX_CFLAGS)
 
 $(BUILD_INFO_C): $(MGOS_OBJS) $(APP_OBJS)
 	$(call gen_build_info,$@,,$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
