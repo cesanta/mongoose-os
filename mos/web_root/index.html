@@ -122,7 +122,7 @@
                             <span class="caret"></span>
                             <span class="sr-only">Toggle Dropdown</span>
                           </button>
-                          <ul class="dropdown-menu dropdown-ports">
+                          <ul class="dropdown-menu ports-dropdown">
                             <li class="dropdown-header serial">Serial ports on this machine:</li>
                             <li class="dropdown-header recent">Recently used:</li>
                           </ul>
@@ -185,17 +185,20 @@
                             <span class="caret"></span>
                             <span class="sr-only">Toggle Dropdown</span>
                           </button>
-                          <ul class="dropdown-menu dropdown-builds">
-                            <li><a href="#">esp32</a></li>
-                            <li><a href="#">esp8266</a></li>
-                            <li><a href="#">cc3220</a></li>
+                          <ul class="dropdown-menu arch-dropdown">
+                            <li><a href="#" rel="esp32">esp32</a></li>
+                            <li><a href="#" rel="cc3200">cc3220</a></li>
+                            <li><a href="#" rel="esp8266">esp8266 (4M or more flash)</a></li>
+                            <li><a href="#" rel="esp8266-1M">esp8266 (1M flash)</a></li>
+                            <li><a href="#" rel="esp8266-2M">esp8266 (2M flash)</a></li>
                           </ul>
                         </div>
                       </span>
-                      <input type="text" class="form-control arch-input" style="max-width: 7em;" placeholder="Platform...">
+                      <input type="text" class="form-control arch-input" style="max-width: 8em;" placeholder="Platform...">
                     </div>
 
                     &nbsp;&nbsp;
+
                     <div class="input-group">
                       <span class="input-group-btn">
                         <div class="btn-group dropdown">
@@ -204,13 +207,13 @@
                             <span class="caret"></span>
                             <span class="sr-only">Toggle Dropdown</span>
                           </button>
-                          <ul class="dropdown-menu dropdown-builds">
-                            <li><a href="#">demo-js</a></li>
-                            <li><a href="#">iot-kit</a></li>
+                          <ul class="dropdown-menu app-dropdown">
+                            <li><a href="#" rel="demo-js">demo-js</a></li>
+                            <li><a href="#" rel="iot-kit">iot-kit</a></li>
                           </ul>
                         </div>
                       </span>
-                      <input type="text" class="form-control app-input" style="max-width: 12em;" placeholder="App...">
+                      <input type="text" class="form-control app-input" style="max-width: 11em;" placeholder="App...">
                     </div>
 
                     <button class="btn btn-default btn-mos pull-right" id="flash-button" disabled>
@@ -251,7 +254,7 @@
           </ul>
 
           <div style="color: #aaa;">
-            <img src="images/logo_blue2.png" height="32" style="filter: grayscale(100%); opacity:0.2; padding-right: 10px; margin-top: -3px;">
+            <img src="images/logo_blue2.png" height="32" style="filter: grayscale(100%); opacity:0.4; padding-right: 10px; margin-top: -3px;">
             mos tool version <label class="mos-version"></label>
 
             <button class="btn btn-sm btn-default btn-mos pull-right" style="margin-right: 0px;" data-dismiss="modal">

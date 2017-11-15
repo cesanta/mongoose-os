@@ -340,7 +340,7 @@ var checkPorts = function() {
     }
     if (ports.length > 0) {
       $.each(ports.reverse(), function(i, v) {
-        $('<li class="device-address"><a href="#">' + v + '</a></li>').insertAfter('.dropdown-ports .serial');
+        $('<li class="device-address"><a href="#">' + v + '</a></li>').insertAfter('.ports-dropdown .serial');
       });
       $('#noports-warning').hide();
     } else {
@@ -441,7 +441,7 @@ function b64enc(str) {
 var initRecentlyUsedDeviceAddresses = function() {
   var list = getCookie(ui.recentDevicesCookieName).split(',');
   $.each(list.reverse(), function(i, v) {
-    $('<li><a href="#">' + v + '</a></li>').insertAfter('.dropdown-ports .recent');
+    $('<li><a href="#">' + v + '</a></li>').insertAfter('.ports-dropdown .recent');
   });
 };
 
@@ -483,6 +483,29 @@ $.ajax({url: '/getports'}).then(function(data) {
 
 $('.arch-input, .app-input').on('keyup change', function() {
   $('#flash-button').prop('disabled', !$('.arch-input').val() || !$('.app-input').val());
+});
+
+$('.arch-dropdown a').on('click', function(ev) {
+  var el = $(ev.target);
+  var v = el.attr('rel');
+  $('.arch-input').val(v);
+  $('.app-input').val('').trigger('change');
+  $('#app-info').hide();
+  el.closest('.dropdown').removeClass('open');
+
+  // In the apps dropdown, enable only apps that supported by the selected arch.
+  // TODO(lsm): fetch that information automatically by traversing github repos.
+  var apps = { 'esp32': ['demo-js', 'iot-kit'], '': ['demo-js'] };
+  for (var k in apps) {
+    if (v != k && k) continue;
+    $('.app-dropdown li').addClass('hidden');
+    $.each(apps[k], function(i, v) {
+      $('.app-dropdown [rel="' + v + '"]').parent().removeClass('hidden');
+    });
+    break;
+  }
+
+  return false;
 });
 
 $.getJSON('https://mongoose-os.com/downloads/apps.json').then(function(data) {
