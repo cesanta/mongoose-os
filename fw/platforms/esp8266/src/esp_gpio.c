@@ -44,12 +44,6 @@ void gpio16_output_conf(void) {
                      (uint32_t) 0x1);
 }
 
-void gpio16_output_set(uint8_t value) {
-  WRITE_PERI_REG(RTC_GPIO_OUT,
-                 (READ_PERI_REG(RTC_GPIO_OUT) & (uint32_t) 0xfffffffe) |
-                     (uint32_t)(value & 1));
-}
-
 void gpio16_input_conf(void) {
   WRITE_PERI_REG(
       PAD_XPD_DCDC_CONF,
@@ -61,10 +55,6 @@ void gpio16_input_conf(void) {
 
   WRITE_PERI_REG(RTC_GPIO_ENABLE,
                  READ_PERI_REG(RTC_GPIO_ENABLE) & (uint32_t) 0xfffffffe);
-}
-
-uint8_t gpio16_input_get(void) {
-  return (uint8_t)(READ_PERI_REG(RTC_GPIO_IN_DATA) & 1);
 }
 
 IRAM bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
@@ -156,7 +146,8 @@ IRAM void mgos_gpio_write(int pin, bool level) {
       WRITE_PERI_REG(PERIPHS_GPIO_BASEADDR + GPIO_OUT_W1TC_ADDRESS, mask);
     }
   } else if (pin == 16) {
-    gpio16_output_set(level);
+    const uint32_t v = READ_PERI_REG(RTC_GPIO_OUT);
+    WRITE_PERI_REG(RTC_GPIO_OUT, (v & 0xfffffffe) | level);
   }
 }
 
@@ -164,7 +155,7 @@ IRAM bool mgos_gpio_read(int pin) {
   if (pin >= 0 && pin < 16) {
     return (GPIO_INPUT_GET(GPIO_ID_PIN(pin)) != 0);
   } else if (pin == 16) {
-    return (gpio16_input_get() != 0);
+    return (READ_PERI_REG(RTC_GPIO_IN_DATA) & 1);
   }
   return false;
 }
@@ -173,9 +164,7 @@ IRAM bool mgos_gpio_read_out(int pin) {
   if (pin >= 0 && pin < 16) {
     return (GPIO_REG_READ(GPIO_OUT_ADDRESS) & (1U << pin)) != 0;
   } else if (pin == 16) {
-    uint32_t v = (READ_PERI_REG(RTC_GPIO_OUT) ^ 1);
-    WRITE_PERI_REG(RTC_GPIO_OUT, v);
-    return (v & 1) != 0;
+    return (READ_PERI_REG(RTC_GPIO_OUT) & 1);
   }
   return false;
 }
