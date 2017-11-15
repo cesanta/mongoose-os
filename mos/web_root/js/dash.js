@@ -10,6 +10,7 @@ var ui = {
   apidocs: null,
   version: 'latest',
   maxLogMessages: 999,
+  apps: {},
   pageCache: {}
 };
 
@@ -364,6 +365,17 @@ $(document).on('click', '.connect-button', function() {
   });
 });
 
+$(document).on('change', '.app-input', function(ev) {
+  var name = $(ev.target).val();
+  var ai = $('#app-info').hide();
+  if (name && ui.apps[name]) {
+    var href = 'https://github.com/mongoose-os-apps/' + name;
+    var html = ui.apps[name].description + '<br>See app sources at ' +
+      '<a target="_blank" href="' + href + '">' + href + '</a>';
+    ai.html(html).fadeIn(300);
+  }
+});
+
 $(document).on('click', '#flash-button', function() {
   var btn = spin(this);
   var app =  $('.app-input').val();
@@ -471,6 +483,10 @@ $.ajax({url: '/getports'}).then(function(data) {
 
 $('.arch-input, .app-input').on('keyup change', function() {
   $('#flash-button').prop('disabled', !$('.arch-input').val() || !$('.app-input').val());
+});
+
+$.getJSON('https://mongoose-os.com/downloads/apps.json').then(function(data) {
+  ui.apps = data || {};
 });
 
 $.ajax({url: '/version-tag'}).then(function(resp) {

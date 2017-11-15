@@ -173,9 +173,29 @@
                   <center class="done hidden"><i class="fa fa-check"></i> done!</center></a>
                 </div>
                 <div class="block_content">
-                  <h2 class="title"><a>Select app, choose architecture, click Flash</a></h2>
+                  <h2 class="title"><a>Choose platform, select app, click Flash</a></h2>
 
                   <div class="form form-inline">
+
+                    <div class="input-group">
+                      <span class="input-group-btn">
+                        <div class="btn-group dropdown">
+                          <button type="button" class="btn btn-default dropdown-toggle"
+                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                            <span class="caret"></span>
+                            <span class="sr-only">Toggle Dropdown</span>
+                          </button>
+                          <ul class="dropdown-menu dropdown-builds">
+                            <li><a href="#">esp32</a></li>
+                            <li><a href="#">esp8266</a></li>
+                            <li><a href="#">cc3220</a></li>
+                          </ul>
+                        </div>
+                      </span>
+                      <input type="text" class="form-control arch-input" style="max-width: 7em;" placeholder="Platform...">
+                    </div>
+
+                    &nbsp;&nbsp;
                     <div class="input-group">
                       <span class="input-group-btn">
                         <div class="btn-group dropdown">
@@ -190,26 +210,7 @@
                           </ul>
                         </div>
                       </span>
-                      <input type="text" class="form-control app-input" style="max-width: 12em;" placeholder="Choose app..." value="demo-js">
-                    </div>
-
-                    <div class="input-group">
-                      <span class="input-group-btn">
-                        <div class="btn-group dropdown">
-                          <button type="button" class="btn btn-default dropdown-toggle"
-                            data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
-                            <span class="caret"></span>
-                            <span class="sr-only">Toggle Dropdown</span>
-                          </button>
-                          <ul class="dropdown-menu dropdown-builds">
-                            <li><a href="#">esp32</a></li>
-                            <li><a href="#">esp8266</a></li>
-                            <li><a href="#">cc3220</a></li>
-                            <li><a href="#">cc3200</a></li>
-                          </ul>
-                        </div>
-                      </span>
-                      <input type="text" class="form-control arch-input" style="max-width: 7em;" placeholder="Platform...">
+                      <input type="text" class="form-control app-input" style="max-width: 12em;" placeholder="App...">
                     </div>
 
                     <button class="btn btn-default btn-mos pull-right" id="flash-button" disabled>
@@ -217,6 +218,9 @@
                     </button>
 
                   </div>
+
+                  <div class="excerpt" id="app-info" style="display: none; margin-top: 5px;">
+                  </div> 
 
                   <div class="excerpt" id="found-device-info" style="display: none; margin-top: 5px;">
                     Mongoose OS app is flashed on this device:
@@ -246,10 +250,13 @@
             </li>
           </ul>
 
-          <div style="color: #777;">
-            <img src="images/logo.png" height="32" style="filter: grayscale(100%); opacity:0.2; padding-right: 10px; margin-top: -3px;">
-            &copy; <a href="https://mongoose-os.com">mongoose-os.com</a>, mos tool
-            version <label class="mos-version"></label>
+          <div style="color: #aaa;">
+            <img src="images/logo_blue2.png" height="32" style="filter: grayscale(100%); opacity:0.2; padding-right: 10px; margin-top: -3px;">
+            mos tool version <label class="mos-version"></label>
+
+            <button class="btn btn-sm btn-default btn-mos pull-right" style="margin-right: 0px;" data-dismiss="modal">
+              <i class="fa fa-check"></i> Done
+            </button>
           </div>
         </div>
 
