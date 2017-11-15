@@ -31,13 +31,13 @@ import (
 	"cesanta.com/common/go/ourutil"
 	"cesanta.com/mos/build"
 	"cesanta.com/mos/build/archive"
-	"cesanta.com/mos/build/gitutils"
 	moscommon "cesanta.com/mos/common"
 	"cesanta.com/mos/common/paths"
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/flash/common"
 	"cesanta.com/mos/interpreter"
 	"cesanta.com/mos/manifest_parser"
+	"cesanta.com/mos/mosgit"
 	"cesanta.com/mos/update"
 	"cesanta.com/mos/version"
 	"github.com/cesanta/errors"
@@ -250,6 +250,8 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 	if isInDockerToolbox() {
 		freportf(logWriterStderr, "Docker Toolbox detected")
 	}
+
+	gitinst := mosgit.NewOurGit()
 
 	buildDir := moscommon.GetBuildDir(projectDir)
 
@@ -491,7 +493,7 @@ func buildLocal(ctx context.Context, bParams *buildParams) (err error) {
 
 		dockerRunArgs := []string{"--rm", "-i"}
 
-		gitToplevelDir, _ := gitutils.GitGetToplevelDir(appPath)
+		gitToplevelDir, _ := gitinst.GetToplevelDir(appPath)
 
 		appMountPath := ""
 		appSubdir := ""
@@ -1425,6 +1427,8 @@ type compProviderReal struct {
 func (lpr *compProviderReal) GetLibLocalPath(
 	m *build.SWModule, rootAppDir, libsDefVersion, platform string,
 ) (string, error) {
+	gitinst := mosgit.NewOurGit()
+
 	name, err := m.GetName()
 	if err != nil {
 		return "", errors.Trace(err)
@@ -1465,7 +1469,7 @@ func (lpr *compProviderReal) GetLibLocalPath(
 				// Try to get current hash, ignoring errors
 				curHash := ""
 				if m.GetType() == build.SWModuleTypeGithub {
-					curHash, _ = gitutils.GitGetCurrentHash(localDir)
+					curHash, _ = gitinst.GetCurrentHash(localDir)
 				}
 
 				libDirAbs, err = m.PrepareLocalDir(libsDir, lpr.logWriter, true, libsDefVersion, *libsUpdateInterval)
@@ -1514,7 +1518,7 @@ func (lpr *compProviderReal) GetLibLocalPath(
 				}
 
 				if m.GetType() == build.SWModuleTypeGithub {
-					newHash, err := gitutils.GitGetCurrentHash(localDir)
+					newHash, err := gitinst.GetCurrentHash(localDir)
 					if err != nil {
 						return "", errors.Trace(err)
 					}
@@ -1529,7 +1533,7 @@ func (lpr *compProviderReal) GetLibLocalPath(
 						// do "git checkout ." on the repo. We shouldn't be afraid of
 						// losing user's local changes, because the fact that hash has
 						// changed means that the repo was clean anyway.
-						gitutils.GitResetHard(localDir)
+						gitinst.ResetHard(localDir)
 					}
 				}
 

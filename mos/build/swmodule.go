@@ -11,9 +11,10 @@ import (
 	"strings"
 	"time"
 
+	"cesanta.com/common/go/ourgit"
 	"cesanta.com/common/go/ourutil"
-	"cesanta.com/mos/build/gitutils"
 	moscommon "cesanta.com/mos/common"
+	"cesanta.com/mos/mosgit"
 
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
@@ -56,6 +57,8 @@ func (m *SWModule) Normalize() {
 // IsClean returns whether the local library repo is clean. Non-existing
 // dir is considered clean.
 func (m *SWModule) IsClean(libsDir, defaultVersion string) (bool, error) {
+	gitinst := mosgit.NewOurGit()
+
 	name, err := m.GetName()
 	if err != nil {
 		return false, errors.Trace(err)
@@ -78,7 +81,7 @@ func (m *SWModule) IsClean(libsDir, defaultVersion string) (bool, error) {
 		}
 
 		// Dir exists, check if it's clean
-		isClean, err := gitutils.IsClean(lp, m.getVersionGit(defaultVersion))
+		isClean, err := gitinst.IsClean(lp, m.getVersionGit(defaultVersion))
 		if err != nil {
 			return false, errors.Trace(err)
 		}
@@ -243,6 +246,8 @@ func prepareLocalCopyGit(
 	logWriter io.Writer, deleteIfFailed bool,
 	pullInterval time.Duration,
 ) error {
+	gitinst := mosgit.NewOurGit()
+
 	// version is already converted from "" or "latest" to "master" here.
 
 	// Check if we should clone or pull git repo inside of targetDir.
@@ -277,14 +282,14 @@ func prepareLocalCopyGit(
 
 	if !repoExists {
 		freportf(logWriter, "Repository %q does not exist, cloning...\n", targetDir)
-		err := gitutils.GitClone(origin, targetDir)
+		err := gitinst.Clone(origin, targetDir)
 		if err != nil {
 			return errors.Trace(err)
 		}
 	} else {
 		// Repo exists, let's check if the working dir is clean. If not, we'll
 		// not do anything.
-		isClean, err := gitutils.IsClean(targetDir, version)
+		isClean, err := gitinst.IsClean(targetDir, version)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -307,7 +312,7 @@ func prepareLocalCopyGit(
 	// another version.
 
 	// First of all, get current SHA
-	curHash, err := gitutils.GitGetCurrentHash(targetDir)
+	curHash, err := gitinst.GetCurrentHash(targetDir)
 	if err != nil {
 		if deleteIfFailed {
 			// Instead of returning an error, try to delete the directory and
@@ -336,7 +341,7 @@ func prepareLocalCopyGit(
 	glog.V(2).Infof("hash: %q", curHash)
 
 	// Check if it's equal to the desired one
-	if gitutils.HashesEqual(curHash, version) {
+	if ourgit.HashesEqual(curHash, version) {
 		glog.V(2).Infof("hashes are equal %q, %q", curHash, version)
 		// Desired mongoose iot version is a fixed SHA, and it's equal to the
 		// current commit: we're all set.
@@ -346,7 +351,7 @@ func prepareLocalCopyGit(
 	var branchExists, tagExists bool
 
 	// Check if MongooseOsVersion is a known branch name
-	branchExists, err = gitutils.DoesGitBranchExist(targetDir, version)
+	branchExists, err = gitinst.DoesBranchExist(targetDir, version)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -354,7 +359,7 @@ func prepareLocalCopyGit(
 	glog.V(2).Infof("branch %q exists=%v", version, branchExists)
 
 	// Check if MongooseOsVersion is a known tag name
-	tagExists, err = gitutils.DoesGitTagExist(targetDir, version)
+	tagExists, err = gitinst.DoesTagExist(targetDir, version)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -364,40 +369,40 @@ func prepareLocalCopyGit(
 	// If the desired mongoose-os version isn't a known branch, do git fetch
 	if !branchExists && !tagExists {
 		glog.V(2).Infof("neither branch nor tag exists, fetching..")
-		err = gitutils.GitFetch(targetDir)
+		err = gitinst.Fetch(targetDir)
 		if err != nil {
 			return errors.Trace(err)
 		}
 
 		// After fetching, refresh branchExists and tagExists
-		branchExists, err = gitutils.DoesGitBranchExist(targetDir, version)
+		branchExists, err = gitinst.DoesBranchExist(targetDir, version)
 		if err != nil {
 			return errors.Trace(err)
 		}
 		glog.V(2).Infof("branch %q exists=%v", version, branchExists)
 
 		// Check if version is a known tag name
-		tagExists, err = gitutils.DoesGitTagExist(targetDir, version)
+		tagExists, err = gitinst.DoesTagExist(targetDir, version)
 		if err != nil {
 			return errors.Trace(err)
 		}
 		glog.V(2).Infof("tag %q exists=%v", version, tagExists)
 	}
 
-	refType := gitutils.RefTypeHash
+	refType := ourgit.RefTypeHash
 	if branchExists {
 		glog.V(2).Infof("%q is a branch", version)
-		refType = gitutils.RefTypeBranch
+		refType = ourgit.RefTypeBranch
 	} else if tagExists {
 		glog.V(2).Infof("%q is a tag", version)
-		refType = gitutils.RefTypeTag
+		refType = ourgit.RefTypeTag
 	} else {
 		glog.V(2).Infof("%q is neither a branch nor a tag, assume it's a hash", version)
 	}
 
 	// Try to checkout to the requested version
 	glog.V(2).Infof("checking out..")
-	err = gitutils.GitCheckout(targetDir, version, refType)
+	err = gitinst.Checkout(targetDir, version, refType)
 	if err != nil {
 		return errors.Trace(err)
 	}
@@ -410,7 +415,7 @@ func prepareLocalCopyGit(
 
 		if fInfo.ModTime().Add(pullInterval).Before(time.Now()) {
 			glog.V(2).Infof("pulling..")
-			err = gitutils.GitPull(targetDir)
+			err = gitinst.Pull(targetDir)
 			if err != nil {
 				return errors.Trace(err)
 			}
@@ -429,7 +434,7 @@ func prepareLocalCopyGit(
 	// To be safe, do `git checkout .`, so that any possible corruptions
 	// of the working directory will be fixed
 	glog.V(2).Infof("resetting")
-	err = gitutils.GitResetHard(targetDir)
+	err = gitinst.ResetHard(targetDir)
 	if err != nil {
 		return errors.Trace(err)
 	}

@@ -17,13 +17,14 @@ import (
 
 	"golang.org/x/net/context"
 
+	"cesanta.com/common/go/ourgit"
 	"cesanta.com/common/go/ourio"
 	"cesanta.com/common/go/ourutil"
 	"cesanta.com/mos/build"
-	"cesanta.com/mos/build/gitutils"
 	moscommon "cesanta.com/mos/common"
 	"cesanta.com/mos/common/paths"
 	"cesanta.com/mos/common/state"
+	"cesanta.com/mos/mosgit"
 	"cesanta.com/mos/version"
 	"github.com/cesanta/errors"
 	"github.com/golang/glog"
@@ -437,6 +438,8 @@ func migrateProjects(dirTpl, oldVer, newVer string) error {
 func migrateProj(oldDir, newDir, oldVer string, wg *sync.WaitGroup) {
 	defer wg.Done()
 
+	gitinst := mosgit.NewOurGit()
+
 	glog.Infof("Copying %s as %s...", oldDir, newDir)
 	if err := ourio.CopyDir(oldDir, newDir, nil); err != nil {
 		ourutil.Reportf("Error copying %s as %s: %s", oldDir, newDir, err)
@@ -448,7 +451,7 @@ func migrateProj(oldDir, newDir, oldVer string, wg *sync.WaitGroup) {
 	basename, projectVersion, _ := parseProjectDirname(projBase)
 
 	if projectVersion == oldVer {
-		originURL, err := gitutils.GitGetOriginUrl(newDir)
+		originURL, err := gitinst.GetOriginUrl(newDir)
 		if err != nil {
 			ourutil.Reportf("Failed to get git origin for %s", newDir)
 			return
@@ -492,6 +495,8 @@ func migrateProj(oldDir, newDir, oldVer string, wg *sync.WaitGroup) {
 // dirVersion might differ from projectVersion if only the suffix is a valid
 // git SHA, in which case dirVersion will be "latest".
 func parseProjectDirname(projectDir string) (basename, projectVersion, dirVersion string) {
+	gitinst := mosgit.NewOurGit()
+
 	projectDirBase := filepath.Base(projectDir)
 	parts := strings.Split(projectDirBase, "-")
 
@@ -509,9 +514,9 @@ func parseProjectDirname(projectDir string) (basename, projectVersion, dirVersio
 
 		if !version.LooksLikeVersionNumber(projectVersion) && projectVersion != "latest" && projectVersion != "release" {
 			// Suffix does not look like a version, but let's check if it's a SHA
-			sha, err := gitutils.GitGetCurrentHash(projectDir)
+			sha, err := gitinst.GetCurrentHash(projectDir)
 			if err == nil {
-				if gitutils.HashesEqual(projectVersion, sha) {
+				if ourgit.HashesEqual(projectVersion, sha) {
 					// Yes it's a SHA. We don't really know in which dir to put it,
 					// so we'll put in latest
 					dirVersion = "latest"

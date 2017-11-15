@@ -1,4 +1,7 @@
-package gitutils
+// Copyright (c) 2014-2017 Cesanta Software Limited
+// All rights reserved
+
+package ourgit
 
 import (
 	"encoding/hex"
@@ -15,12 +18,9 @@ import (
 	"github.com/golang/glog"
 )
 
-const (
-	minHashLen  = 6
-	fullHashLen = 40
-)
+type ourGitGoGit struct{}
 
-func GitGetCurrentHash(localDir string) (string, error) {
+func (m *ourGitGoGit) GetCurrentHash(localDir string) (string, error) {
 	repo, err := git.PlainOpen(localDir)
 	if err != nil {
 		return "", errors.Trace(err)
@@ -50,7 +50,7 @@ func doesRefExist(iter storer.ReferenceIter, name string) (bool, error) {
 	return exists, nil
 }
 
-func DoesGitBranchExist(localDir string, branchName string) (bool, error) {
+func (m *ourGitGoGit) DoesBranchExist(localDir string, branchName string) (bool, error) {
 	repo, err := git.PlainOpen(localDir)
 	if err != nil {
 		return false, errors.Trace(err)
@@ -69,7 +69,7 @@ func DoesGitBranchExist(localDir string, branchName string) (bool, error) {
 	return exists, nil
 }
 
-func DoesGitTagExist(localDir string, tagName string) (bool, error) {
+func (m *ourGitGoGit) DoesTagExist(localDir string, tagName string) (bool, error) {
 	repo, err := git.PlainOpen(localDir)
 	if err != nil {
 		return false, errors.Trace(err)
@@ -88,7 +88,7 @@ func DoesGitTagExist(localDir string, tagName string) (bool, error) {
 	return exists, nil
 }
 
-func GitGetToplevelDir(localDir string) (string, error) {
+func (m *ourGitGoGit) GetToplevelDir(localDir string) (string, error) {
 	localDir, err := filepath.Abs(localDir)
 	if err != nil {
 		return "", errors.Trace(err)
@@ -115,15 +115,7 @@ func GitGetToplevelDir(localDir string) (string, error) {
 	return localDir, nil
 }
 
-type RefType string
-
-const (
-	RefTypeBranch RefType = "branch"
-	RefTypeTag    RefType = "tag"
-	RefTypeHash   RefType = "hash"
-)
-
-func GitCheckout(localDir string, id string, refType RefType) error {
+func (m *ourGitGoGit) Checkout(localDir string, id string, refType RefType) error {
 	repo, err := git.PlainOpen(localDir)
 	if err != nil {
 		return errors.Trace(err)
@@ -161,7 +153,7 @@ func GitCheckout(localDir string, id string, refType RefType) error {
 	return nil
 }
 
-func GitResetHard(localDir string) error {
+func (m *ourGitGoGit) ResetHard(localDir string) error {
 	repo, err := git.PlainOpen(localDir)
 	if err != nil {
 		return errors.Trace(err)
@@ -182,7 +174,7 @@ func GitResetHard(localDir string) error {
 	return nil
 }
 
-func GitPull(localDir string) error {
+func (m *ourGitGoGit) Pull(localDir string) error {
 	glog.Infof("Pulling %s", localDir)
 
 	repo, err := git.PlainOpen(localDir)
@@ -203,7 +195,7 @@ func GitPull(localDir string) error {
 	return nil
 }
 
-func GitFetch(localDir string) error {
+func (m *ourGitGoGit) Fetch(localDir string) error {
 	repo, err := git.PlainOpen(localDir)
 	if err != nil {
 		return errors.Annotatef(err, "failed to open repo %s", localDir)
@@ -221,7 +213,7 @@ func GitFetch(localDir string) error {
 
 // IsClean returns true if there are no modified, deleted or untracked files,
 // and no non-pushed commits since the given version.
-func IsClean(localDir, version string) (bool, error) {
+func (m *ourGitGoGit) IsClean(localDir, version string) (bool, error) {
 	repo, err := git.PlainOpen(localDir)
 	if err != nil {
 		return false, errors.Trace(err)
@@ -240,7 +232,7 @@ func IsClean(localDir, version string) (bool, error) {
 	return isCleanWithLib(status), nil
 }
 
-func GitClone(srcURL, localDir string) error {
+func (m *ourGitGoGit) Clone(srcURL, localDir string) error {
 	_, err := git.PlainClone(localDir, false, &git.CloneOptions{
 		URL: srcURL,
 	})
@@ -251,7 +243,11 @@ func GitClone(srcURL, localDir string) error {
 	return nil
 }
 
-func GitGetOriginUrl(localDir string) (string, error) {
+func (m *ourGitGoGit) CloneReferenced(srcURL, targetDir, referenceDir string) error {
+	return errors.Errorf("not implemented")
+}
+
+func (m *ourGitGoGit) GetOriginUrl(localDir string) (string, error) {
 	repo, err := git.PlainOpen(localDir)
 	if err != nil {
 		return "", errors.Trace(err)
@@ -269,20 +265,6 @@ func GitGetOriginUrl(localDir string) (string, error) {
 	}
 
 	return "", errors.Errorf("failed to get origin URL")
-}
-
-func HashesEqual(hash1, hash2 string) bool {
-	minLen := len(hash1)
-	if len(hash2) < minLen {
-		minLen = len(hash2)
-	}
-
-	// Check if at least one of the hashes is too short
-	if minLen < minHashLen {
-		return false
-	}
-
-	return hash1[:minLen] == hash2[:minLen]
 }
 
 // NewHash return a new Hash from a hexadecimal hash representation
