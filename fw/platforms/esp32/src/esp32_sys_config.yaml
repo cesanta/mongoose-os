@@ -1,4 +1,5 @@
 [
   ["device.id", "esp32_??????"],
+  ["debug.mbedtls_level", "i", 0, {title: "mbedTLS debug level"}],
   ["sys.tz_spec", "s", "", {title: "See formats for the TZ env var: \"man tzset\". Formats like \":/path/to/file\" are not supported"}],
 ]

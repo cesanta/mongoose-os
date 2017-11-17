@@ -1,9 +1,7 @@
 #include "stm32_lwip.h"
-#include "mgos_wifi.h"
 #include "common/platform.h"
 #include "common/cs_dbg.h"
 #include "mongoose/mongoose.h"
-#include "mgos_wifi.h"
 #include <lwip/igmp.h>
 #include <lwip/inet.h>
 #include <lwip/netif.h>
@@ -19,13 +17,8 @@ char *stm32_get_ip_address() {
 }
 
 void stm32_finish_net_init() {
-  /*
-   * Temporary solution to get c_mqtt working
-   * TODO(alashkin): write DD about ETH
-   * and remove (modify) this
-   */
-  mgos_wifi_on_change_cb(MGOS_WIFI_CONNECTED);
-  mgos_wifi_on_change_cb(MGOS_WIFI_IP_ACQUIRED);
+  //  mgos_wifi_on_change_cb(MGOS_WIFI_CONNECTED);
+  //  mgos_wifi_on_change_cb(MGOS_WIFI_IP_ACQUIRED);
 }
 
 void mgos_mdns_hal_join_group(const char *iface_ip, const char *group) {

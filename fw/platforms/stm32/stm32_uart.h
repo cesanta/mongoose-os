@@ -14,4 +14,4 @@ extern "C" {
 }
 #endif
 
-#endif
+#endif /* CS_FW_PLATFORMS_STM32_STM32_UART_H_ */

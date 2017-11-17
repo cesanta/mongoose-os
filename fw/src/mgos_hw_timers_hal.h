@@ -19,6 +19,8 @@
 #include "esp32_hw_timers.h"
 #elif CS_PLATFORM == CS_P_CC3200 || CS_PLATFORM == CS_P_CC3220
 #include "cc32xx_hw_timers.h"
+#elif CS_PLATFORM == CS_P_STM32
+#include "stm32_hw_timers.h"
 #endif
 
 #ifdef __cplusplus

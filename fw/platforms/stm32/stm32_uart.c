@@ -106,12 +106,12 @@ void mgos_uart_hal_flush_fifo(struct mgos_uart_state *us) {
 }
 
 bool mgos_uart_hal_init(struct mgos_uart_state *us) {
-  if (us->uart_no == 0 || us->uart_no == 1) {
-    /* TODO(alashkin): reinit UART if cfg was changed */
-    us->dev_data = (void *) s_huarts[us->uart_no];
-    return true;
-  }
-  return false;
+  if (us->uart_no != 0 && us->uart_no != 1) return false;
+  /* TODO(alashkin): reinit UART if cfg was changed */
+  us->dev_data = (void *) s_huarts[us->uart_no];
+  cs_rbuf_init(&s_uarts_state[us->uart_no].rx_buf, UART_BUF_SIZE);
+  cs_rbuf_init(&s_uarts_state[us->uart_no].tx_buf, UART_BUF_SIZE);
+  return true;
 }
 
 void mgos_uart_hal_deinit(struct mgos_uart_state *us) {
@@ -135,15 +135,6 @@ void mgos_uart_hal_set_rx_enabled(struct mgos_uart_state *us, bool enabled) {
    * We do not need to handle enabled = false here, it is
    * handled in HAL_UART_RxCpltCallback
    */
-}
-
-void mgos_uart_hal_set_defaults(struct mgos_uart_config *cfg) {
-  (void) cfg;
-  int i;
-  for (i = 0; i < ARRAY_SIZE(s_uarts_state); i++) {
-    cs_rbuf_init(&s_uarts_state[i].rx_buf, UART_BUF_SIZE);
-    cs_rbuf_init(&s_uarts_state[i].tx_buf, UART_BUF_SIZE);
-  }
 }
 
 void HAL_UART_RxCpltCallback(UART_Handle *huart) {
@@ -184,7 +175,21 @@ void HAL_UART_TxCpltCallback(UART_Handle *huart) {
 
 void HAL_UART_ErrorCallback(UART_Handle *huart) {
   if (huart->ErrorCode != 0) {
-    LOG(LL_ERROR, ("UART error: %d\n", huart->ErrorCode));
+    LOG(LL_ERROR, ("UART error: %d\n", (int) huart->ErrorCode));
     /* TODO(alashkin): do something here */
   }
+}
+
+void mgos_uart_hal_config_set_defaults(int uart_no,
+                                       struct mgos_uart_config *cfg) {
+  (void) uart_no;
+  (void) cfg;
+}
+
+bool mgos_uart_hal_configure(struct mgos_uart_state *us,
+                             const struct mgos_uart_config *cfg) {
+  /* TODO(rojer) */
+  (void) us;
+  (void) cfg;
+  return true;
 }

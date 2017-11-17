@@ -1,11 +1,11 @@
 .PHONY: all clean
 .DEFAULT_GOAL := all
 
-MGOS_ENABLE_BITBANG ?= 0
+MGOS_ENABLE_BITBANG = 0
 MGOS_ENABLE_DEBUG_UDP = 0
-MGOS_ENABLE_UPDATER ?= 0
+MGOS_ENABLE_SNTP = 0
+MGOS_ENABLE_UPDATER = 0
 
-CREATE_SPIFFS_FS ?= 1
 USE_LWIP ?= 1
 
 include $(MGOS_PATH)/fw/src/mgos_features.mk
@@ -88,9 +88,10 @@ SDK_INCLUDES = $(shell find $(PLATFORM_SDK_PATH)/STM -type d)
 LDSCRIPT = $(shell find $(PLATFORM_SDK_PATH)/STM -name '*.ld')
 
 # Platform support files
-ADD_SRCS = stm32_mgos_main.c stm32_gpio.c stm32_hal.c stm32_uart.c \
-           stm32_libc.c stm32_wifi.c stm32_fs.c stm32_i2c.c \
-           stm32_lwip.c
+ADD_SRCS = stm32_fs.c stm32_gpio.c stm32_hal.c stm32_hw_timers.c \
+           stm32_libc.c stm32_lwip.c \
+           stm32_main.c stm32_uart.c
+# stm32_i2c.c
 
 # Additional files from SDK
 ADD_SRCS += stm32_gpio_defs.c
@@ -100,16 +101,18 @@ APP_BIN = $(BUILD_DIR)/$(APP).bin
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 FS_IMG = ?
 # 256K is minimum size, because sector size is 128K and we need at least two
-FS_SIZE = 262144
-FS_HEADER=$(GEN_DIR)/fs_data.h
+FS_SIZE = 131072
+FS_BLOCK_SIZE = 4096
+FS_PAGE_SIZE = 256
+FS_ERASE_SIZE = 4096
+MKSPIFFS = /usr/local/bin/mkspiffs8
+FS_HEADER = $(GEN_DIR)/fs_data.h
 FS_STAGING_DIR = $(BUILD_DIR)/fs
 # Let's have FS in sectors 6 & 7 (seems all STM boards have 7 sectors)
 # TODO(alashkin): uncomment line below to allow spiffs writing
-FS_ATTRIBUTES = '__attribute__((section(".rodata.__at_0x08040000"))) __attribute__ ((aligned (131072)))'
+FS_ATTRIBUTES = '__attribute__((section(".rodata.__at_0x08020000"))) __attribute__ ((aligned ($(FS_SIZE))))'
 
-ifeq "${CREATE_SPIFFS_FS}" "1"
-  FS_IMG = $(FW_STAGING_DIR)/fs.bin
-endif
+FS_IMG = $(FW_STAGING_DIR)/fs.bin
 
 include $(MGOS_PATH)/fw/src/spiffs.mk
 
@@ -122,18 +125,21 @@ MGOS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/mgos_config_schema.json
 MGOS_RO_VARS_C = $(GEN_DIR)/mgos_ro_vars.c
 MGOS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/mgos_ro_vars_schema.json
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
-GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C) $(FS_HEADER)
+GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C) $(FS_HEADER) $(FFI_EXPORTS_C)
 SYMBOLS_DUMP = $(GEN_DIR)/symbols_dump.txt
 FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
 FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.c.o
-SRCS = $(SDK_SRCS) $(ADD_SRCS) $(APP_SRCS) $(MGOS_SRCS)
+SRCS = $(notdir $(SDK_SRCS) $(ADD_SRCS) $(APP_SRCS) $(MGOS_SRCS))
 
-MGOS_SRCS +=  $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
-			 $(notdir $(MG_BUILD_INFO_C)) $(notdir $(BUILD_INFO_C)) \
-             mgos_gpio.c mgos_sys_config.c mgos_config.c mongoose.c \
-             mgos_timers_mongoose.c cs_crc32.c cs_file.c mgos_mongoose.c \
+MGOS_SRCS += $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
+             $(notdir $(MG_BUILD_INFO_C)) $(notdir $(BUILD_INFO_C)) \
+             mgos_config_util.c mgos_gpio.c mgos_hooks.c mgos_hw_timers.c \
+             mgos_sys_config.c \
+             mgos_timers.c cs_crc32.c cs_file.c mgos_mongoose.c \
+             mongoose.c \
              json_utils.c frozen.c mgos_uart.c cs_rbuf.c mgos_init.c \
-             cs_dbg.c mgos_dlsym.c mgos_utils.c
+             cs_dbg.c mgos_dlsym.c mgos_system.c mgos_utils.c \
+             mgos_vfs.c mgos_vfs_dev.c mgos_vfs_fs_spiffs.c
 
 MGOS_SRCS += $(notdir $(foreach m, $(SPIFFS_PATH),$(wildcard $(m)/*.c)))
 
@@ -141,7 +147,17 @@ APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_S
 
 VPATH += $(MGOS_PATH)/fw/platforms/stm32 $(GEN_DIR) $(APP_SOURCE_DIRS) \
          $(MGOS_SRC_PATH) $(MONGOOSE_PATH) $(COMMON_PATH) $(FROZEN_PATH) \
-         $(SPIFFS_PATH) $(COMMON_PATH)/mg_rpc $(PLATFORM_SDK_PATH)/CS/extras
+         $(SPIFFS_PATH) $(COMMON_PATH)/mg_rpc \
+         $(PLATFORM_SDK_PATH)/CS/mbedtls/library \
+         $(PLATFORM_SDK_PATH)/STM/Src $(PLATFORM_SDK_PATH)/CS/extras \
+         $(PLATFORM_SDK_PATH)/STM/Drivers/STM32F7xx_HAL_Driver/Src \
+         $(PLATFORM_SDK_PATH)/STM/Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/gcc \
+         $(PLATFORM_SDK_PATH)/STM/Middlewares/Third_Party/LwIP/src/api \
+         $(PLATFORM_SDK_PATH)/STM/Middlewares/Third_Party/LwIP/src/core \
+         $(PLATFORM_SDK_PATH)/STM/Middlewares/Third_Party/LwIP/src/core/ipv4 \
+         $(PLATFORM_SDK_PATH)/STM/Middlewares/Third_Party/LwIP/src/core/ipv6 \
+         $(PLATFORM_SDK_PATH)/STM/Middlewares/Third_Party/LwIP/src/netif \
+         $(PLATFORM_SDK_PATH)/STM/Middlewares/Third_Party/LwIP/src/netif/ppp
 
 FW_PARTS = boot:src=$(APP_BIN),addr=0
 
@@ -150,7 +166,10 @@ include $(MGOS_PATH)/common/scripts/fw_meta.mk
 OBJECTS := $(addprefix $(BUILD_DIR)/,$(SRCS:=.o))
 CFLAGS ?= -DSTM32 -Os -fno-common -ffunction-sections -fdata-sections \
           $(PLATFORM_CFLAGS) $(MGOS_FEATURES) \
+          -DLWIP_POSIX_SOCKETS_IO_NAMES=0 \
           -DMGOS_MAX_NUM_UARTS=2 -DFS_SIZE=${FS_SIZE} \
+          -DMGOS_VFS_DEFINE_LIBC_DIR_API \
+          -DMGOS_VFS_DEFINE_DIRENT \
           -Wall -Werror ${MG_FEATURES_TINY} -DMG_ENABLE_DIRECTORY_LISTING
 
 LDFLAGS ?=
@@ -168,10 +187,10 @@ endif
 LDLIBS += -lc -lgcc -lnosys -Wl,--end-group
 
 IPATH += $(addprefix -I, $(SDK_INCLUDES) $(APP_SOURCE_DIRS))
-IPATH += -I$(MGOS_PATH) -I$(GEN_DIR) -I$(PLATFORM_SDK_PATH) \
-		 -I$(SPIFFS_PATH) -I$(MGOS_PLATFORM_PATH) \
-		 -I$(PLATFORM_SDK_PATH)/CS/mbedtls/include \
-		 -I$(PLATFORM_SDK_PATH)/CS/extras
+IPATH += -I$(MGOS_PATH) -I$(MGOS_SRC_PATH) -I$(GEN_DIR) -I$(PLATFORM_SDK_PATH) \
+         -I$(SPIFFS_PATH) -I$(MGOS_PLATFORM_PATH) \
+         -I$(PLATFORM_SDK_PATH)/CS/mbedtls/include \
+         -I$(PLATFORM_SDK_PATH)/CS/extras
 
 all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(APP_BIN) $(FW_ZIP)
 
@@ -181,22 +200,18 @@ $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR):
 	$(vecho) MKDIR $@
 	$(Q) mkdir -p $@
 
-$(BUILD_DIR)/%.c.o: %.c $(BUILD_DIR) $(GENFILES_FLAG)
-	$(vecho) CC $(notdir $<)
+$(BUILD_DIR)/%.c.o: %.c $(GENFILES_FLAG)
+	$(vecho) CC $<
 	$(Q) mkdir -p $(basename $@)
 	$(Q) $(CC) $(CFLAGS) $(IPATH) -c $< -o $@
 
-$(BUILD_DIR)/%.s.o: %.s $(BUILD_DIR) $(GENFILES_FLAG)
-	$(vecho) CC $(notdir $<)
-	$(Q) mkdir -p $(basename $@)
-	$(Q) $(CC) $(CFLAGS) $(IPATH) -c $< -o $@
-
-$(BUILD_DIR)/%.c.o: $(GEN_DIR)/%.c $(GENFILES_FLAG)
+$(BUILD_DIR)/%.s.o: %.s $(GENFILES_FLAG)
 	$(vecho) CC $(notdir $<)
 	$(Q) mkdir -p $(basename $@)
 	$(Q) $(CC) $(CFLAGS) $(IPATH) -c $< -o $@
 
 $(GENFILES_FLAG): $(GENFILES_LIST)
+	$(vecho) CLICK
 	$(Q) touch $@
 
 $(APP_ELF): $(OBJECTS) $(FFI_EXPORTS_O)
@@ -211,32 +226,28 @@ include $(MGOS_PATH)/common/scripts/build_info.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
 include $(MGOS_PATH)/fw/src/mgos_config.mk
 
-MGOS_CONF_SCHEMA += $(MGOS_PLATFORM_PATH)/stm32_config.yaml
+MGOS_CONF_SCHEMA += $(MGOS_PLATFORM_PATH)/stm32_sys_config.yaml
 
-$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(FW_STAGING_DIR)
+$(BUILD_INFO_C) $(BUILD_INFO_JSON):
 	$(call gen_build_info,$@,,$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
 
-$(MG_BUILD_INFO_C): $(FW_STAGING_DIR)
+$(MG_BUILD_INFO_C):
 	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
 
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)
 
 $(FS_IMG): $(APP_FS_DIRS) $(FS_FILES) $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
-	$(call mkspiffs,$(FS_SIZE))
+	$(call mkspiffs,$(FS_SIZE),$(FS_BLOCK_SIZE),$(FS_PAGE_SIZE),$(FS_ERASE_SIZE))
 
-$(FS_HEADER) : $(FS_IMG)
+$(FS_HEADER): $(FS_IMG)
 	$(vecho) Preparing FS
 	$(Q) (cd $(dir $(FS_IMG)) && xxd -i  $(notdir $(FS_IMG)) $(FS_HEADER).tmp && \
 	      echo $(FS_ATTRIBUTES) > $(FS_HEADER) && \
-		  cat  $(FS_HEADER).tmp >> $(FS_HEADER))
+	      cat  $(FS_HEADER).tmp >> $(FS_HEADER))
 
-$(SYMBOLS_DUMP): $(OBJECTS)
-	$(vecho) "GEN   $@"
-	$(Q) $(NM) --defined-only --print-file-name -g $^ > $@
-
-$(FFI_EXPORTS_C): $(SYMBOLS_DUMP) $(FS_FILES)
-	$(call gen_ffi_exports,$<,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))
+$(FFI_EXPORTS_C): $(FS_FILES)
+	$(call gen_ffi_exports,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))
 
 # In ffi exports file we use fake signatures: void func(void), and it conflicts
 # with the builtin functions like fopen, etc.

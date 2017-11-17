@@ -45,8 +45,6 @@ MGOS_SRCS += mgos_config_util.c mgos_dlsym.c mgos_gpio.c mgos_hooks.c mgos_init.
 include $(MGOS_PATH)/fw/common.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
 
-MGOS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_config.yaml
-
 ifeq "$(MGOS_ENABLE_UPDATER)" "1"
   MGOS_SRCS += esp32_updater.c
 endif

@@ -16,4 +16,4 @@ int stm32_spiffs_init();
 }
 #endif /* __cplusplus */
 
-#endif
+#endif /* CS_FW_PLATFORMS_STM32_STM32_SPIFFS_H_ */

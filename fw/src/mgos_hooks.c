@@ -3,6 +3,7 @@
  * All rights reserved
  */
 
+#include <assert.h>
 #include <stdlib.h>
 #include <stdbool.h>
 

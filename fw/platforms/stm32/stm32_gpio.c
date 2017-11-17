@@ -40,18 +40,20 @@ enum mgos_init_result mgos_gpio_hal_init(void) {
   return MGOS_INIT_OK;
 }
 
-bool mgos_gpio_toggle(int pin) {
-  bool value = mgos_gpio_read(pin);
-  mgos_gpio_write(pin, !value);
-  return !value;
-}
-
 bool mgos_gpio_read(int pin) {
   struct stm32_gpio_def *def = get_pin_def(pin);
   if (def == NULL) {
     return false;
   }
   return (bool) HAL_GPIO_ReadPin(def->port, def->gpio);
+}
+
+bool mgos_gpio_read_out(int pin) {
+  struct stm32_gpio_def *def = get_pin_def(pin);
+  if (def == NULL) {
+    return false;
+  }
+  return ((def->port->ODR & def->gpio) != 0);
 }
 
 void mgos_gpio_write(int pin, bool level) {

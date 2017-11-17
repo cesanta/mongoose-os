@@ -2,7 +2,6 @@
 #include "mgos_hal.h"
 #include "mgos_sys_config.h"
 #include "mgos_mongoose.h"
-#include "mgos_wifi.h"
 #include "mgos_timers.h"
 
 static int s_mongoose_poll_scheduled;
@@ -34,8 +33,7 @@ bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
   return true;
 }
 
-void mgos_system_restart(int exit_code) {
-  (void) exit_code;
+void mgos_dev_system_restart(void) {
   HAL_NVIC_SystemReset();
 }
 
@@ -136,4 +134,25 @@ void mgos_bitbang_write_bits_js(void) {
 uint32_t mgos_get_cpu_freq(void) {
   /* TODO */
   return 0;
+}
+
+void mgos_ints_disable(void) {
+  /* TODO(rojer) */
+}
+
+void mgos_ints_enable(void) {
+  /* TODO(rojer) */
+}
+
+/* TODO(rojer) */
+struct mgos_rlock_type *mgos_new_rlock(void) {
+  return NULL;
+}
+
+void mgos_rlock(struct mgos_rlock_type *l) {
+  (void) l;
+}
+
+void mgos_runlock(struct mgos_rlock_type *l) {
+  (void) l;
 }

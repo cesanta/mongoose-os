@@ -1,5 +1,0 @@
-[
-  ["device.id", "stm32_??????"],
-  ["debug.mbedtls_level", "i", 0, {title: "mbedTLS debug level"}],
-  ["dns_sd.enable", false]
-]
