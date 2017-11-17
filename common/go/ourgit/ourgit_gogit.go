@@ -95,7 +95,6 @@ func (m *ourGitGoGit) GetToplevelDir(localDir string) (string, error) {
 	}
 
 	for localDir != "" {
-		fmt.Println(localDir)
 		if _, err := os.Stat(filepath.Join(localDir, ".git")); err == nil {
 			return localDir, nil
 		}
