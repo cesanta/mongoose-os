@@ -1518,13 +1518,8 @@ func (lpr *compProviderReal) GetLibLocalPath(
 				}
 
 				if m.GetType() == build.SWModuleTypeGithub {
-					newHash, err := gitinst.GetCurrentHash(localDir)
-					if err != nil {
-						return "", errors.Trace(err)
-					}
-
-					if newHash != curHash {
-						freportf(logWriter, "Hash is updated: %s -> %s", curHash, newHash)
+					if newHash, err := gitinst.GetCurrentHash(localDir); err == nil && newHash != curHash {
+						freportf(logWriter, "Hash is updated: %q -> %q", curHash, newHash)
 						// The current repo hash has changed after the pull, so we need to
 						// vanish the lib we might have downloaded before
 						os.RemoveAll(moscommon.GetBinaryLibsDir(localDir))
