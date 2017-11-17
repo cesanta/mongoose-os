@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"mime/multipart"
 	"net/http"
 	"net/url"
@@ -1367,7 +1368,7 @@ func getPathsForDocker(p []string) []string {
 // Docker build {{{
 func runDockerBuild(dockerRunArgs []string) error {
 	containerName := fmt.Sprintf(
-		"mos_build_%s_%d", time.Now().Format("2006-01-02T15-04-05-00"), os.Getpid(),
+		"mos_build_%s_%d", time.Now().Format("2006-01-02T15-04-05-00"), rand.Int(),
 	)
 
 	dockerArgs := append(
