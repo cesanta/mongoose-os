@@ -128,13 +128,13 @@ func reportConsoleLogs() {
 	}
 }
 
-func httpReply(w http.ResponseWriter, result interface{}, err error) {
+func httpReplyExt(w http.ResponseWriter, result interface{}, err error, asJSON bool) {
 	var msg []byte
 	if err != nil {
 		msg, _ = json.Marshal(errmessage{err.Error()})
 	} else {
-		s, ok := result.(string)
-		if ok && isJSON(s) {
+		if asJSON {
+			s := result.(string)
 			msg = []byte(fmt.Sprintf(`{"result": %s}`, s))
 		} else {
 			r := map[string]interface{}{
@@ -151,6 +151,12 @@ func httpReply(w http.ResponseWriter, result interface{}, err error) {
 		w.WriteHeader(http.StatusOK)
 		io.WriteString(w, string(msg))
 	}
+}
+
+func httpReply(w http.ResponseWriter, result interface{}, err error) {
+	s, ok := result.(string)
+	asJSON := ok && isJSON(s)
+	httpReplyExt(w, result, err, asJSON)
 }
 
 func init() {
@@ -377,7 +383,7 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 
 	http.HandleFunc("/version-tag", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		httpReply(w, version.GetMosVersion(), nil)
+		httpReplyExt(w, version.GetMosVersion(), nil, false /* not as JSON */)
 	})
 
 	http.HandleFunc("/version", func(w http.ResponseWriter, r *http.Request) {
