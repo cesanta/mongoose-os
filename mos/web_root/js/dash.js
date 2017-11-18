@@ -495,7 +495,7 @@ $('.arch-dropdown a').on('click', function(ev) {
 
   // In the apps dropdown, enable only apps that supported by the selected arch.
   // TODO(lsm): fetch that information automatically by traversing github repos.
-  var apps = { 'esp32': ['demo-js', 'iot-kit'], '': ['demo-js'] };
+  var apps = { 'esp32': ['demo-js', 'demo-c', 'iot-kit'], '': ['demo-js', 'demo-c'] };
   for (var k in apps) {
     if (v != k && k) continue;
     $('.app-dropdown li').addClass('hidden');
