@@ -743,6 +743,7 @@ out:
 bool mgos_upd_commit() {
   if (mgos_upd_is_committed()) return false;
   CALL_HOOK(LL_INFO, "commit", "%s", "Committing update");
+  if (s_event_cb) (void) s_event_cb(MGOS_UPD_EV_COMMIT, NULL, s_event_cb_arg);
   mgos_upd_boot_commit();
   remove(UPDATER_CTX_FILE_NAME);
   return true;
@@ -757,6 +758,7 @@ bool mgos_upd_is_committed() {
 bool mgos_upd_revert(bool reboot) {
   if (mgos_upd_is_committed()) return false;
   CALL_HOOK(LL_INFO, "rollback", "%s", "Reverting update");
+  if (s_event_cb) (void) s_event_cb(MGOS_UPD_EV_ROLLBACK, NULL, s_event_cb_arg);
   mgos_upd_boot_revert();
   if (reboot) mgos_system_restart();
   return true;
@@ -805,6 +807,8 @@ void mgos_upd_boot_finish(bool is_successful, bool is_first) {
   LOG(LL_DEBUG, ("%d %d", is_successful, is_first));
   if (!is_first) return;
   if (!is_successful) {
+    if (s_event_cb)
+      (void) s_event_cb(MGOS_UPD_EV_ROLLBACK, NULL, s_event_cb_arg);
     mgos_upd_boot_revert(true /* reboot */);
     /* Not reached */
     return;

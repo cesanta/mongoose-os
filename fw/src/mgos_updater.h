@@ -48,6 +48,10 @@ enum mgos_upd_event {
   MGOS_UPD_EV_PROGRESS = 3,
   /* ev_data = struct update_context *; return: ignored */
   MGOS_UPD_EV_END = 4,
+  /* ev_data = NULL, return: ignored */
+  MGOS_UPD_EV_ROLLBACK = 5,
+  /* ev_data = NULL, return: ignored */
+  MGOS_UPD_EV_COMMIT = 6,
 };
 
 /*
