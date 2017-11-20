@@ -17,7 +17,6 @@ import (
 	"cesanta.com/mos/flash/esp"
 	espFlasher "cesanta.com/mos/flash/esp/flasher"
 	"cesanta.com/mos/flash/stm32"
-	"cesanta.com/mos/version"
 	"github.com/cesanta/errors"
 	flag "github.com/spf13/pflag"
 )
@@ -91,7 +90,7 @@ func flash(ctx context.Context, devConn *dev.DevConn) error {
 		fwname = args[1]
 	}
 
-	fw, err := common.NewZipFirmwareBundle(fwname, version.GetMosVersionSuffix())
+	fw, err := common.NewZipFirmwareBundle(fwname)
 	if err != nil {
 		return errors.Annotatef(err, "failed to load %s", fwname)
 	}

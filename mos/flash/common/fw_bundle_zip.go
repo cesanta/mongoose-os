@@ -11,6 +11,8 @@ import (
 	"path"
 	"strings"
 
+	"cesanta.com/mos/version"
+
 	"github.com/cesanta/errors"
 )
 
@@ -18,7 +20,22 @@ const (
 	manifestFileName = "manifest.json"
 )
 
-func NewZipFirmwareBundle(fname, versionSuffix string) (*FirmwareBundle, error) {
+func getFirmwareURL(appName, platformWithVariation string) string {
+	return fmt.Sprintf(
+		"https://github.com/mongoose-os-apps/%s/releases/download/%s/%s-%s.zip",
+		appName, version.GetMosVersion(), appName, platformWithVariation,
+	)
+}
+
+func getDemoAppName(platformWithVariation string) string {
+	appName := "demo-js"
+	if strings.HasPrefix(platformWithVariation, "cc3200") {
+		appName = "demo-c"
+	}
+	return appName
+}
+
+func NewZipFirmwareBundle(fname string) (*FirmwareBundle, error) {
 	var r *zip.Reader
 	var err error
 
@@ -26,14 +43,10 @@ func NewZipFirmwareBundle(fname, versionSuffix string) (*FirmwareBundle, error) 
 	// a shortcut for `mos flash esp32`. Transform that into the canonical URL
 	_, err2 := os.Stat(fname)
 	if fname != "" && !strings.HasSuffix(fname, ".zip") && os.IsNotExist(err2) && !strings.Contains(fname, "/") {
-		switch fname {
-		case "esp8266", "esp32", "cc3200":
-			fname = fmt.Sprint("mos-", fname, versionSuffix)
-		}
+		platforWithVariation := fname
+		appName := getDemoAppName(platforWithVariation)
 
-		fname = fmt.Sprintf(
-			"https://mongoose-os.com/downloads/%s.zip", fname,
-		)
+		fname = getFirmwareURL(appName, platforWithVariation)
 	}
 
 	if strings.HasPrefix(fname, "http://") || strings.HasPrefix(fname, "https://") {

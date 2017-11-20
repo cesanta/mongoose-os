@@ -191,7 +191,7 @@ func doBuild(ctx context.Context, bParams *buildParams) error {
 		// firmware around, etc.
 		fwFilename := moscommon.GetFirmwareZipFilePath(buildDir)
 
-		fw, err := common.NewZipFirmwareBundle(fwFilename, "")
+		fw, err := common.NewZipFirmwareBundle(fwFilename)
 		if err != nil {
 			return errors.Trace(err)
 		}
