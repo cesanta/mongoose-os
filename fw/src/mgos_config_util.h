@@ -54,15 +54,34 @@ bool mgos_conf_parse(const struct mg_str json, const char *acl,
                      const struct mgos_conf_entry *schema, void *cfg);
 
 /*
+ * Callback for `mgos_conf_emit_cb` (see below); `data` is the emitted data and
+ * `param` is user-defined param given to `mgos_conf_emit_cb`.
+ */
+typedef void (*mgos_conf_emit_cb_t)(struct mbuf *data, void *param);
+
+/*
  * Emit config in `cfg` according to rules in `schema`.
  * Keys are only emitted if their values are different from `base`.
  * If `base` is NULL then all keys are emitted.
+ *
+ * If `pretty` is true, the output is prettified.
+ *
+ * If `out` is not NULL, output will be written there; otherwise an internal
+ * mbuf will be allocated.
+ *
+ * If `cb` is not `NULL`, it'll be called with the resulting output and
+ * `cb_param`.
  */
-typedef void (*mgos_conf_emit_cb_t)(struct mbuf *data, void *param);
 void mgos_conf_emit_cb(const void *cfg, const void *base,
                        const struct mgos_conf_entry *schema, bool pretty,
                        struct mbuf *out, mgos_conf_emit_cb_t cb,
                        void *cb_param);
+
+/*
+ * Like mgos_conf_emit_cb, but instead of writing the output in the provided
+ * mbuf and/or calling user-provided callback, it writes the result into the
+ * file with the given name `fname`.
+ */
 bool mgos_conf_emit_f(const void *cfg, const void *base,
                       const struct mgos_conf_entry *schema, bool pretty,
                       const char *fname);
@@ -72,9 +91,18 @@ bool mgos_conf_emit_f(const void *cfg, const void *base,
  */
 void mgos_conf_free(const struct mgos_conf_entry *schema, void *cfg);
 
+/*
+ * Finds a config schema entry by the "outer" entry (which has to describe an
+ * object) and a path like "foo.bar.baz". If matching entry is not found,
+ * returns `NULL`.
+ */
 const struct mgos_conf_entry *mgos_conf_find_schema_entry(
     const char *path, const struct mgos_conf_entry *obj);
 
+/*
+ * Like `mgos_conf_find_schema_entry()`, but takes the path as a `strct
+ * mg_str`.
+ */
 const struct mgos_conf_entry *mgos_conf_find_schema_entry_s(
     const struct mg_str path, const struct mgos_conf_entry *obj);
 
