@@ -1,15 +1,25 @@
+/*
+ * Copyright (c) 2014-2017 Cesanta Software Limited
+ * All rights reserved
+ */
+
+#include <stdio.h>
+
 #include <stm32_sdk_hal.h>
-#include "mgos_init.h"
-#include "mgos_mongoose.h"
-#include "stm32_spiffs.h"
-#include "stm32_uart.h"
-#include "stm32_hal.h"
+
 #include "common/cs_dbg.h"
-#include "stm32_lwip.h"
+
 #include "mgos_app.h"
+#include "mgos_init.h"
 #include "mgos_debug.h"
+#include "mgos_mongoose.h"
 #include "mgos_sys_config.h"
 #include "mgos_uart.h"
+
+#include "stm32_fs.h"
+#include "stm32_hal.h"
+#include "stm32_uart.h"
+#include "stm32_lwip.h"
 
 extern const char *build_version, *build_id;
 extern const char *mg_build_version, *mg_build_id;
@@ -20,12 +30,12 @@ static int s_net_initialized = 0;
 #define LOOP_DELAY_TICK 10
 
 void mgos_main() {
-  cs_log_set_level(LL_INFO);
+  mgos_app_preinit();
 
-  if (stm32_spiffs_init() != 0) {
-    return;
-  }
+  setvbuf(stdout, NULL, _IOLBF, 256);
+  setvbuf(stderr, NULL, _IOLBF, 256);
 
+  cs_log_set_level(MGOS_EARLY_DEBUG_LEVEL);
   mongoose_init();
 
   if (mgos_debug_uart_init() != MGOS_INIT_OK) {
@@ -35,9 +45,11 @@ void mgos_main() {
   if (strcmp(MGOS_APP, "mongoose-os") != 0) {
     LOG(LL_INFO, ("%s %s (%s)", MGOS_APP, build_version, build_id));
   }
-  LOG(LL_INFO, ("Mongoose OS Firmware %s (%s)", mg_build_version, mg_build_id));
+  LOG(LL_INFO, ("Mongoose OS %s (%s)", mg_build_version, mg_build_id));
 
-  mgos_app_preinit();
+  if (stm32_fs_init() != 0) {
+    return;
+  }
 
   if (mgos_init() != MGOS_INIT_OK) {
     return;

@@ -85,12 +85,14 @@ include $(MGOS_PATH)/fw/common.mk
 
 SDK_SRCS = $(shell find $(PLATFORM_SDK_PATH)/STM -name '*.[cs]')
 SDK_INCLUDES = $(shell find $(PLATFORM_SDK_PATH)/STM -type d)
-LDSCRIPT = $(shell find $(PLATFORM_SDK_PATH)/STM -name '*.ld')
+LDSCRIPT = $(MGOS_PLATFORM_PATH)/ld/stm32.ld
 
 # Platform support files
 ADD_SRCS = stm32_fs.c stm32_gpio.c stm32_hal.c stm32_hw_timers.c \
            stm32_libc.c stm32_lwip.c \
-           stm32_main.c stm32_uart.c
+           stm32_main.c stm32_uart.c \
+           stm32_vfs_dev_flash.c \
+           $(notdir $(FS_BIN_C))
 # stm32_i2c.c
 
 # Additional files from SDK
@@ -99,18 +101,16 @@ ADD_SRCS += stm32_gpio_defs.c
 APP_ELF = $(BUILD_DIR)/$(APP).elf
 APP_BIN = $(BUILD_DIR)/$(APP).bin
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
-FS_IMG = ?
-# 256K is minimum size, because sector size is 128K and we need at least two
-FS_SIZE = 131072
+FLASH_BASE = 0x8000000
+FLASH_SIZE = 1048576
+FS_SIZE = 262144
+FS_ADDR = $(shell echo $$(($(FLASH_SIZE) - $(FS_SIZE))))
 FS_BLOCK_SIZE = 4096
 FS_PAGE_SIZE = 256
 FS_ERASE_SIZE = 4096
 MKSPIFFS = /usr/local/bin/mkspiffs8
-FS_HEADER = $(GEN_DIR)/fs_data.h
+FS_BIN_C = $(GEN_DIR)/fs_bin.c
 FS_STAGING_DIR = $(BUILD_DIR)/fs
-# Let's have FS in sectors 6 & 7 (seems all STM boards have 7 sectors)
-# TODO(alashkin): uncomment line below to allow spiffs writing
-FS_ATTRIBUTES = '__attribute__((section(".rodata.__at_0x08020000"))) __attribute__ ((aligned ($(FS_SIZE))))'
 
 FS_IMG = $(FW_STAGING_DIR)/fs.bin
 
@@ -125,7 +125,7 @@ MGOS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/mgos_config_schema.json
 MGOS_RO_VARS_C = $(GEN_DIR)/mgos_ro_vars.c
 MGOS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/mgos_ro_vars_schema.json
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
-GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C) $(FS_HEADER) $(FFI_EXPORTS_C)
+GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C) $(FS_BIN_C) $(FFI_EXPORTS_C)
 SYMBOLS_DUMP = $(GEN_DIR)/symbols_dump.txt
 FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
 FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.c.o
@@ -167,12 +167,20 @@ OBJECTS := $(addprefix $(BUILD_DIR)/,$(SRCS:=.o))
 CFLAGS ?= -DSTM32 -Os -fno-common -ffunction-sections -fdata-sections \
           $(PLATFORM_CFLAGS) $(MGOS_FEATURES) \
           -DLWIP_POSIX_SOCKETS_IO_NAMES=0 \
-          -DMGOS_MAX_NUM_UARTS=2 -DFS_SIZE=${FS_SIZE} \
+          -DMGOS_MAX_NUM_UARTS=2 \
+          -DMGOS_VFS_DEFINE_LIBC_REENT_API \
           -DMGOS_VFS_DEFINE_LIBC_DIR_API \
           -DMGOS_VFS_DEFINE_DIRENT \
           -Wall -Werror ${MG_FEATURES_TINY} -DMG_ENABLE_DIRECTORY_LISTING
 
-LDFLAGS ?=
+CFLAGS  += -DFLASH_BASE_ADDR=$(FLASH_BASE) \
+           -DFLASH_SIZE=$(FLASH_SIZE) \
+           -DFS_ADDR=$(FS_ADDR) \
+           -DFS_SIZE=$(FS_SIZE)
+LDFLAGS += -Wl,--defsym=FLASH_BASE=$(FLASH_BASE) \
+           -Wl,--defsym=FLASH_SIZE=$(FLASH_SIZE) \
+           -Wl,--defsym=FS_ADDR=$(FS_ADDR) \
+           -Wl,--defsym=FS_SIZE=$(FS_SIZE)
 
 LDLIBS = -Wl,--start-group
 
@@ -211,10 +219,9 @@ $(BUILD_DIR)/%.s.o: %.s $(GENFILES_FLAG)
 	$(Q) $(CC) $(CFLAGS) $(IPATH) -c $< -o $@
 
 $(GENFILES_FLAG): $(GENFILES_LIST)
-	$(vecho) CLICK
 	$(Q) touch $@
 
-$(APP_ELF): $(OBJECTS) $(FFI_EXPORTS_O)
+$(APP_ELF): $(OBJECTS) $(FFI_EXPORTS_O) $(LDSCRIPT)
 	$(vecho) LD $(notdir $@)
 	$(Q) $(CC) $(CFLAGS) $(LDFLAGS) $(OBJECTS) $(FFI_EXPORTS_O) $(LDLIBS) -T$(LDSCRIPT) -o $@
 
@@ -234,17 +241,19 @@ $(BUILD_INFO_C) $(BUILD_INFO_JSON):
 $(MG_BUILD_INFO_C):
 	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
 
+$(MGOS_CONFIG_C): $(MANIFEST_FINAL)
+
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)
 
 $(FS_IMG): $(APP_FS_DIRS) $(FS_FILES) $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
 	$(call mkspiffs,$(FS_SIZE),$(FS_BLOCK_SIZE),$(FS_PAGE_SIZE),$(FS_ERASE_SIZE))
 
-$(FS_HEADER): $(FS_IMG)
-	$(vecho) Preparing FS
-	$(Q) (cd $(dir $(FS_IMG)) && xxd -i  $(notdir $(FS_IMG)) $(FS_HEADER).tmp && \
-	      echo $(FS_ATTRIBUTES) > $(FS_HEADER) && \
-	      cat  $(FS_HEADER).tmp >> $(FS_HEADER))
+$(FS_BIN_C): $(FS_IMG)
+	$(vecho) "GEN   $@"
+	$(Q) (cd $(dir $(FS_IMG)) && xxd -i  $(notdir $(FS_IMG)) $(FS_BIN_C).tmp && \
+	      echo 'const __attribute((section(".fs_bin")))' > $(FS_BIN_C) && \
+	      cat  $(FS_BIN_C).tmp >> $(FS_BIN_C))
 
 $(FFI_EXPORTS_C): $(FS_FILES)
 	$(call gen_ffi_exports,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))

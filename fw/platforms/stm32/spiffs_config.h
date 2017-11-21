@@ -6,6 +6,8 @@
 #ifndef CS_FW_PLATFORMS_STM32_SPIFFS_CONFIG_H_
 #define CS_FW_PLATFORMS_STM32_SPIFFS_CONFIG_H_
 
+#define CS_SPIFFS_ENABLE_METADATA 1
+
 #include <stdint.h>
 #include <string.h>
 
