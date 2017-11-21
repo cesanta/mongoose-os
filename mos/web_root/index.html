@@ -59,24 +59,23 @@
 
         <div id="d1" class="col-xs-12" style="border: 1px solid transparent;">
           <div id="app_view"></div>
+<!-- 
           <div class="splitter-horizontal">
             <div class="text-center"><i class="fa fa-bars"></i></div>
           </div>
-
-          <div id="device-logs-panel" style="position: relative;">
-            <div class="col-xs-6" style="height: 100%; margin: 0; padding: 0;">
-              <div style="margin: 5px 0; padding: 0;">
-                <label style="margin-right: 2em;">Device logs</label>
-                <button class="btn btn-xs btn-success pull-right clear-logs-button"><i class="fa fa-trash"></i> Clear logs</button>
+ -->
+          <div id="logs-panel" style="position: relative;">
+            <div class="col-xs-12" style="height: 100%; margin: 0; padding: 0;">
+              <div id="splitter">
+                <label>&nbsp;Device Logs</label>
+                <span class="text-center" style="position: absolute; left: 45%;"><i class="fa fa-bars"></i></span>
+                <span class="pull-right">
+                <label>autoscroll <input type="checkbox" checked id="autoscroll"></label></small>
+                &nbsp;&nbsp;
+                <button class="btn btn-xs btn-success clear-logs-button"><i class="fa fa-trash"></i> Clear logs</button>
+              </span>
               </div>
-              <pre class="logs" id="device-logs"></pre>
-            </div>
-            <div class="col-xs-6" style="height: 100%; margin:0; padding: 0;">
-              <div style="margin: 5px 0; padding: 0;">
-                <label style="margin-right: 2em;">MOS tool logs</label>
-                <button class="btn btn-xs btn-success pull-right clear-logs-button"><i class="fa fa-trash"></i> Clear logs</button>
-              </div>
-              <pre class="logs" id="mos-logs"></pre>
+              <pre class="logs" id="logs"></pre>
             </div>
           </div>
 
@@ -211,7 +210,6 @@
                           <ul class="dropdown-menu app-dropdown">
                             <li><a href="#" rel="demo-js">demo-js</a></li>
                             <li><a href="#" rel="demo-c">demo-c</a></li>
-                            <li><a href="#" rel="iot-kit">iot-kit</a></li>
                           </ul>
                         </div>
                       </span>
@@ -272,6 +270,7 @@
   <script src="js/jquery.min.js"></script>
   <script src="js/jquery-resizable.js"></script>
   <script src="js/bootstrap.min.js"></script>
+  <script src="http://nathancahill.github.io/Split.js/split.js"></script>
   <script src="js/moment.min.js"></script>
   <script src="js/pnotify.min.js"></script>
   <script src="js/icheck.min.js"></script>

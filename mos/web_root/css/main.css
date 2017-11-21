@@ -21,18 +21,18 @@ code { color: green; white-space: pre !important;}
 .tooltip-inner { max-width: 40em !important; }
 .left_col.menu_fixed { top: 0; overflow-y: auto; }
 .side-menu { margin-top: 0 !important;}
+.tool-log { color: silver; }
 #top_nav { line-height: 32px; height: 32px; margin: 0 10px; border-bottom: 1px solid #ccc; position: relative; }
 #breadcrumb { font-size: 20px; text-transform: capitalize !important; }
 #devinfo { min-width: 15em; display: inline-block; }
 #page { margin-left: 80px; margin-right: 1em; }
 #d1 { display: flex; flex-direction: column; }
 #app_view { flex: 0 0 auto; min-height: 200px; position: relative; }
-#device-logs-panel { flex: 1 1 auto; }
-.splitter-horizontal { height: 18px; background: #ccc; cursor: row-resize; margin: 0; }
+#logs-panel { flex: 1 1 auto; }
+#splitter { cursor: row-resize; background: #ccc; margin: 0 !important; padding: 0 !important; position: relative; line-height: 18px; }
 .panel-title { margin: 5px 10px; }
 #app_view .panel { padding: 0 1em; }
-.main-left-column { height: 100%; padding: 0; margin: 0; }
-.main-right-column { height: 100%; padding: 0; margin: 0; }
+.main-left-column, .main-right-column { height: 100%; padding: 0; margin: 0; position: relative; }
 .stderr { color: #77e; font-weight: bold; }
 .ui-pnotify { right: 22px; top: 82px; }
 input.form-control { box-shadow: none !important; }
@@ -71,8 +71,8 @@ input.form-control { box-shadow: none !important; }
 /* FILE MANAGER PAGE */
 #file-list { overflow-y: auto; }
 #file-textarea { font-family: Consolas, Menlo, Monaco, monospace; }
-.upcontrol { position: absolute; top: 40px; bottom: 0; overflow-y: auto; width: 100%; left: 0; right: 0;}
-.logs { height: 100%; font-size: 95%; overflow-y: auto; line-height: 1.2em; background: #fff; width: 100%; top: 0px !important;}
+.upcontrol { position: absolute; top: 40px; bottom: 0; overflow-y: auto; width: 100%; left: 0; right: 0; margin: 0; padding-bottom: 5px;}
+.logs { height: 100%; font-size: 95%; overflow-y: auto; line-height: 1.2em; background: #fff; width: 100%; }
 .editor { height: 100%; background: #fff; border-radius: 0.3em; }
 .file .file-size { color: silver; }
 .file.is_js { color: #ffa500; }
