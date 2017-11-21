@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sort"
 	"strings"
 
 	zwebview "github.com/zserge/webview"
@@ -18,6 +19,7 @@ func enumerateSerialPorts() []string {
 			filteredList = append(filteredList, s)
 		}
 	}
+	sort.Strings(filteredList)
 	return filteredList
 }
 

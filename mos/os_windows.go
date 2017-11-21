@@ -41,6 +41,7 @@ func enumerateSerialPorts() []string {
 		val, _, _ := k.GetStringValue(v)
 		vsm[i] = val
 	}
+	sort.Strings(vsm)
 	return vsm
 }
 
@@ -80,7 +81,6 @@ func getDefaultPort() string {
 	if len(filteredPorts) == 0 {
 		return ""
 	}
-	sort.Strings(filteredPorts)
 	return filteredPorts[0]
 }
 
