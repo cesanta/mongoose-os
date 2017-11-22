@@ -30,6 +30,21 @@ static int s_net_initialized = 0;
 #define LOOP_DELAY_TICK 10
 
 void mgos_main() {
+  GPIO_InitTypeDef info;
+  info.Pin = LD1_Pin;
+  info.Mode = GPIO_MODE_OUTPUT_PP;
+  info.Pull = GPIO_NOPULL;
+  info.Speed = GPIO_SPEED_FREQ_LOW;
+  HAL_GPIO_Init(LD1_GPIO_Port, &info);
+  info.Pin = LD2_Pin;
+  HAL_GPIO_Init(LD2_GPIO_Port, &info);
+  info.Pin = LD3_Pin;
+  HAL_GPIO_Init(LD3_GPIO_Port, &info);
+
+  HAL_GPIO_WritePin(LD1_GPIO_Port, LD1_Pin, 1);
+
+  SystemCoreClockUpdate();
+
   mgos_app_preinit();
 
   setvbuf(stdout, NULL, _IOLBF, 256);
@@ -50,6 +65,8 @@ void mgos_main() {
   if (stm32_fs_init() != 0) {
     return;
   }
+
+  MX_LWIP_Init();
 
   if (mgos_init() != MGOS_INIT_OK) {
     return;
@@ -72,5 +89,6 @@ void mgos_loop() {
     s_net_initialized = 1;
   }
 
+  MX_LWIP_Process();
   mongoose_poll(0);
 }

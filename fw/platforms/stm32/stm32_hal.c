@@ -1,3 +1,8 @@
+/*
+ * Copyright (c) 2014-2017 Cesanta Software Limited
+ * All rights reserved
+ */
+
 #include <stm32_sdk_hal.h>
 #include "mgos_hal.h"
 #include "mgos_sys_config.h"

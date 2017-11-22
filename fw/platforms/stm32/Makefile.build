@@ -49,21 +49,21 @@ COMMON_PATH ?= $(MGOS_PATH)/common
 MONGOOSE_PATH ?= $(MGOS_PATH)/mongoose
 FROZEN_PATH ?= $(MGOS_PATH)/frozen
 MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
+LWIP_PATH ?= $(STM32CUBE_PATH)/Middlewares/Third_Party/LwIP
+MBEDTLS_PATH ?= $(STM32CUBE_PATH)/Middlewares/Third_Party/mbedTLS
 MGOS_PLATFORM_PATH ?= $(MGOS_PATH)/fw/platforms/stm32
 MGOS_FEATURES ?=
 
-# Normal (docker) version
-PLATFORM_SDK_ROOT ?= /opt/stm32-sdks/
-# Debug (local) version
-# PLATFORM_SDK_ROOT ?= $(MGOS_PATH)/docker/stm32/stm32-sdks/
+PLATFORM_CFLAGS ?= -mthumb -mcpu=cortex-m7 -DSTM32 -DSTM32F746xx
+STM32CUBE_PATH = $(STM32CUBE_F7_PATH)
 
-PLATFORM_SDK_PATH = ${PLATFORM_SDK_ROOT}/${TARGET}
-
-ifeq "$(wildcard $(PLATFORM_SDK_PATH))" ""
-$(error Invalid TARGET. Possible values are NUCLEO-F746ZG or DISCO-F746G)
+ifeq ("$(TARGET)", "NUCLEO-F746ZG")
+PLATFORM_CFLAGS += -DMGOS_NUM_GPIO=114 -DHSE_VALUE=8000000
+else
+ifeq ("$(TARGET)", "DISCO-F746G")
+PLATFORM_CFLAGS += -DMGOS_NUM_GPIO=176 -DHSE_VALUE=25000000
 endif
-
-PLATFORM_CFLAGS = $(shell cat $(PLATFORM_SDK_PATH)/cflags)
+endif
 
 CC = arm-none-eabi-gcc
 OBJCOPY = arm-none-eabi-objcopy
@@ -83,20 +83,18 @@ override BUILD_DIR := $(abspath $(BUILD_DIR))
 
 include $(MGOS_PATH)/fw/common.mk
 
-SDK_SRCS = $(shell find $(PLATFORM_SDK_PATH)/STM -name '*.[cs]')
-SDK_INCLUDES = $(shell find $(PLATFORM_SDK_PATH)/STM -type d)
-LDSCRIPT = $(MGOS_PLATFORM_PATH)/ld/stm32.ld
-
 # Platform support files
-ADD_SRCS = stm32_fs.c stm32_gpio.c stm32_hal.c stm32_hw_timers.c \
+ADD_SRCS = stm32_fs.c stm32_gpio.c stm32_gpio_defs.c \
+           stm32_eth.c stm32_hal.c stm32_hw_timers.c \
            stm32_libc.c stm32_lwip.c \
            stm32_main.c stm32_uart.c \
            stm32_vfs_dev_flash.c \
+           stm32f7xx_hal_msp.c \
+           stm32f7xx_it.c \
+           stm32f7xx_main.c \
+           stm32f7xx_system.c \
            $(notdir $(FS_BIN_C))
 # stm32_i2c.c
-
-# Additional files from SDK
-ADD_SRCS += stm32_gpio_defs.c
 
 APP_ELF = $(BUILD_DIR)/$(APP).elf
 APP_BIN = $(BUILD_DIR)/$(APP).bin
@@ -129,7 +127,49 @@ GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(BUILD_INFO_C) $(MG_BUILD_IN
 SYMBOLS_DUMP = $(GEN_DIR)/symbols_dump.txt
 FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
 FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.c.o
-SRCS = $(notdir $(SDK_SRCS) $(ADD_SRCS) $(APP_SRCS) $(MGOS_SRCS))
+
+SDK_SRCS = $(wildcard $(LWIP_PATH)/src/core/*.c) \
+           $(wildcard $(LWIP_PATH)/src/core/ipv4/*.c) \
+           $(wildcard $(LWIP_PATH)/src/core/ipv6/*.c) \
+           $(wildcard $(LWIP_PATH)/src/netif/ethernet.c) \
+           $(wildcard $(MBEDTLS_PATH)/library/*.c) \
+startup_stm32f746xx.s \
+stm32f7xx_hal_adc.c stm32f7xx_hal_adc_ex.c stm32f7xx_hal.c \
+stm32f7xx_hal_can.c stm32f7xx_hal_cec.c stm32f7xx_hal_cortex.c \
+stm32f7xx_hal_crc.c stm32f7xx_hal_crc_ex.c stm32f7xx_hal_cryp.c \
+stm32f7xx_hal_cryp_ex.c stm32f7xx_hal_dac.c stm32f7xx_hal_dac_ex.c \
+stm32f7xx_hal_dcmi.c stm32f7xx_hal_dcmi_ex.c stm32f7xx_hal_dfsdm.c \
+stm32f7xx_hal_dma2d.c stm32f7xx_hal_dma.c stm32f7xx_hal_dma_ex.c \
+stm32f7xx_hal_dsi.c stm32f7xx_hal_eth.c stm32f7xx_hal_flash.c \
+stm32f7xx_hal_flash_ex.c stm32f7xx_hal_gpio.c stm32f7xx_hal_hash.c \
+stm32f7xx_hal_hash_ex.c stm32f7xx_hal_hcd.c stm32f7xx_hal_i2c.c \
+stm32f7xx_hal_i2c_ex.c stm32f7xx_hal_i2s.c stm32f7xx_hal_irda.c \
+stm32f7xx_hal_iwdg.c stm32f7xx_hal_jpeg.c stm32f7xx_hal_lptim.c \
+stm32f7xx_hal_ltdc.c stm32f7xx_hal_ltdc_ex.c stm32f7xx_hal_mdios.c \
+stm32f7xx_hal_mmc.c stm32f7xx_hal_nand.c stm32f7xx_hal_nor.c \
+stm32f7xx_hal_pcd.c stm32f7xx_hal_pcd_ex.c stm32f7xx_hal_pwr.c \
+stm32f7xx_hal_pwr_ex.c stm32f7xx_hal_qspi.c stm32f7xx_hal_rcc.c \
+stm32f7xx_hal_rcc_ex.c stm32f7xx_hal_rng.c stm32f7xx_hal_rtc.c \
+stm32f7xx_hal_rtc_ex.c stm32f7xx_hal_sai.c stm32f7xx_hal_sai_ex.c \
+stm32f7xx_hal_sd.c stm32f7xx_hal_sdram.c stm32f7xx_hal_smartcard.c \
+stm32f7xx_hal_smartcard_ex.c stm32f7xx_hal_smbus.c stm32f7xx_hal_spdifrx.c \
+stm32f7xx_hal_spi.c stm32f7xx_hal_sram.c stm32f7xx_hal_tim.c \
+stm32f7xx_hal_tim_ex.c stm32f7xx_hal_uart.c stm32f7xx_hal_usart.c \
+stm32f7xx_hal_wwdg.c \
+stm32f7xx_ll_adc.c stm32f7xx_ll_crc.c stm32f7xx_ll_dac.c stm32f7xx_ll_dma2d.c \
+stm32f7xx_ll_dma.c stm32f7xx_ll_exti.c stm32f7xx_ll_fmc.c stm32f7xx_ll_gpio.c \
+stm32f7xx_ll_i2c.c stm32f7xx_ll_lptim.c stm32f7xx_ll_pwr.c stm32f7xx_ll_rcc.c \
+stm32f7xx_ll_rng.c stm32f7xx_ll_rtc.c stm32f7xx_ll_sdmmc.c stm32f7xx_ll_spi.c \
+stm32f7xx_ll_tim.c stm32f7xx_ll_usart.c stm32f7xx_ll_usb.c stm32f7xx_ll_utils.c
+
+SDK_INCLUDES = $(STM32CUBE_PATH) \
+               $(STM32CUBE_PATH)/Drivers/CMSIS/Include \
+               $(STM32CUBE_PATH)/Drivers/CMSIS/Device/ST/STM32F7xx/Include \
+               $(STM32CUBE_PATH)/Drivers/STM32F7xx_HAL_Driver/Inc \
+               $(LWIP_PATH)/src/include \
+               $(LWIP_PATH)/system \
+               $(MBEDTLS_PATH)/include
+LDSCRIPT = $(MGOS_PLATFORM_PATH)/ld/stm32.ld
 
 MGOS_SRCS += $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
              $(notdir $(MG_BUILD_INFO_C)) $(notdir $(BUILD_INFO_C)) \
@@ -145,33 +185,36 @@ MGOS_SRCS += $(notdir $(foreach m, $(SPIFFS_PATH),$(wildcard $(m)/*.c)))
 
 APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 
-VPATH += $(MGOS_PATH)/fw/platforms/stm32 $(GEN_DIR) $(APP_SOURCE_DIRS) \
+VPATH += $(MGOS_PLATFORM_PATH) $(MGOS_PLATFORM_PATH)/$(TARGET) $(GEN_DIR) $(APP_SOURCE_DIRS) \
          $(MGOS_SRC_PATH) $(MONGOOSE_PATH) $(COMMON_PATH) $(FROZEN_PATH) \
          $(SPIFFS_PATH) $(COMMON_PATH)/mg_rpc \
-         $(PLATFORM_SDK_PATH)/CS/mbedtls/library \
-         $(PLATFORM_SDK_PATH)/STM/Src $(PLATFORM_SDK_PATH)/CS/extras \
-         $(PLATFORM_SDK_PATH)/STM/Drivers/STM32F7xx_HAL_Driver/Src \
-         $(PLATFORM_SDK_PATH)/STM/Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/gcc \
-         $(PLATFORM_SDK_PATH)/STM/Middlewares/Third_Party/LwIP/src/api \
-         $(PLATFORM_SDK_PATH)/STM/Middlewares/Third_Party/LwIP/src/core \
-         $(PLATFORM_SDK_PATH)/STM/Middlewares/Third_Party/LwIP/src/core/ipv4 \
-         $(PLATFORM_SDK_PATH)/STM/Middlewares/Third_Party/LwIP/src/core/ipv6 \
-         $(PLATFORM_SDK_PATH)/STM/Middlewares/Third_Party/LwIP/src/netif \
-         $(PLATFORM_SDK_PATH)/STM/Middlewares/Third_Party/LwIP/src/netif/ppp
+         $(STM32CUBE_PATH)/Middlewares/Third_Party/mbedTLS \
+         $(STM32CUBE_PATH)/Drivers/STM32F7xx_HAL_Driver/Src \
+         $(STM32CUBE_PATH)/Drivers/CMSIS/Device/ST/STM32F7xx/Source/Templates/gcc \
+         $(LWIP_PATH)/src/api \
+         $(LWIP_PATH)/src/core \
+         $(LWIP_PATH)/src/core/ipv4 \
+         $(LWIP_PATH)/src/core/ipv6 \
+         $(LWIP_PATH)/src/netif \
+         $(MBEDTLS_PATH)/library
+
+SRCS = $(notdir $(SDK_SRCS) $(ADD_SRCS) $(APP_SRCS) $(MGOS_SRCS))
 
 FW_PARTS = boot:src=$(APP_BIN),addr=0
 
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
 
 OBJECTS := $(addprefix $(BUILD_DIR)/,$(SRCS:=.o))
-CFLAGS ?= -DSTM32 -Os -fno-common -ffunction-sections -fdata-sections \
+CFLAGS ?= -Os -ggdb -MD -Wall -Werror -fno-common -ffunction-sections -fdata-sections \
           $(PLATFORM_CFLAGS) $(MGOS_FEATURES) \
           -DLWIP_POSIX_SOCKETS_IO_NAMES=0 \
           -DMGOS_MAX_NUM_UARTS=2 \
           -DMGOS_VFS_DEFINE_LIBC_REENT_API \
           -DMGOS_VFS_DEFINE_LIBC_DIR_API \
           -DMGOS_VFS_DEFINE_DIRENT \
-          -Wall -Werror ${MG_FEATURES_TINY} -DMG_ENABLE_DIRECTORY_LISTING
+          -DCS_ENABLE_STDIO \
+          -DMBEDTLS_CONFIG_FILE=\"mbedtls/config.h\" \
+          ${MG_FEATURES_TINY} -DMG_ENABLE_DIRECTORY_LISTING
 
 CFLAGS  += -DFLASH_BASE_ADDR=$(FLASH_BASE) \
            -DFLASH_SIZE=$(FLASH_SIZE) \
@@ -188,17 +231,14 @@ ifeq "${USE_LWIP}" "1"
 CFLAGS += -DMG_NET_IF=3 -D__CPU_H__ -DMG_LWIP=1 -DLWIP_TIMEVAL_PRIVATE=0 \
           -DLWIP_TCP_KEEPALIVE=1 -DMG_SSL_IF=MG_SSL_IF_MBEDTLS \
           -DMGOS_APP=\"$(APP)\" -DMG_ENABLE_SSL
-LDFLAGS += -L$(PLATFORM_SDK_PATH)/CS/mbedtls/library
-LDLIBS += -lmbedcrypto -lmbedtls -lmbedx509
 endif
 
 LDLIBS += -lc -lgcc -lnosys -Wl,--end-group
 
-IPATH += $(addprefix -I, $(SDK_INCLUDES) $(APP_SOURCE_DIRS))
-IPATH += -I$(MGOS_PATH) -I$(MGOS_SRC_PATH) -I$(GEN_DIR) -I$(PLATFORM_SDK_PATH) \
-         -I$(SPIFFS_PATH) -I$(MGOS_PLATFORM_PATH) \
-         -I$(PLATFORM_SDK_PATH)/CS/mbedtls/include \
-         -I$(PLATFORM_SDK_PATH)/CS/extras
+IPATH += $(MGOS_PLATFORM_PATH) $(MGOS_PLATFORM_PATH)/include $(MGOS_PLATFORM_PATH)/$(TARGET)/include \
+         $(MGOS_PATH) $(MGOS_SRC_PATH) $(GEN_DIR) \
+         $(SPIFFS_PATH)
+IPATH += $(SDK_INCLUDES) $(APP_SOURCE_DIRS)
 
 all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(APP_BIN) $(FW_ZIP)
 
@@ -210,13 +250,11 @@ $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR):
 
 $(BUILD_DIR)/%.c.o: %.c $(GENFILES_FLAG)
 	$(vecho) CC $<
-	$(Q) mkdir -p $(basename $@)
-	$(Q) $(CC) $(CFLAGS) $(IPATH) -c $< -o $@
+	$(Q) $(CC) $(CFLAGS) $(addprefix -I, $(IPATH)) -c $< -o $@
 
 $(BUILD_DIR)/%.s.o: %.s $(GENFILES_FLAG)
 	$(vecho) CC $(notdir $<)
-	$(Q) mkdir -p $(basename $@)
-	$(Q) $(CC) $(CFLAGS) $(IPATH) -c $< -o $@
+	$(Q) $(CC) $(CFLAGS) $(addprefix -I, $(IPATH)) -c $< -o $@
 
 $(GENFILES_FLAG): $(GENFILES_LIST)
 	$(Q) touch $@

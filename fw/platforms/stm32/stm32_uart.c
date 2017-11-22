@@ -32,16 +32,16 @@ static struct UART_State *get_state_by_huart(UART_Handle *huart) {
 }
 
 /*
- * Debug helper, prints to UART2 even if mgos_uart_write is disabled
+ * Debug helper, prints to UART_USB even if mgos_uart_write is disabled
  * Ex: RPC-UART activated
  */
-void uart_dprintf(char *fmt, ...) {
+void stm32_uart_dprintf(const char *fmt, ...) {
   va_list ap;
-  char buf[512];
+  char buf[100];
   va_start(ap, fmt);
   int result = vsnprintf(buf, sizeof(buf), fmt, ap);
   va_end(ap);
-  UART_Transmit(&UART_2, (uint8_t *) buf, result, UART_TRANSMIT_TIMEOUT);
+  HAL_UART_Transmit(&UART_USB, (uint8_t *) buf, result, UART_TRANSMIT_TIMEOUT);
 }
 
 static void move_rbuf_data(cs_rbuf_t *dst, struct mbuf *src) {
@@ -103,19 +103,6 @@ void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us) {
 
 void mgos_uart_hal_flush_fifo(struct mgos_uart_state *us) {
   /* TODO(alashkin): Implement. */
-}
-
-bool mgos_uart_hal_init(struct mgos_uart_state *us) {
-  if (us->uart_no != 0 && us->uart_no != 1) return false;
-  /* TODO(alashkin): reinit UART if cfg was changed */
-  us->dev_data = (void *) s_huarts[us->uart_no];
-  cs_rbuf_init(&s_uarts_state[us->uart_no].rx_buf, UART_BUF_SIZE);
-  cs_rbuf_init(&s_uarts_state[us->uart_no].tx_buf, UART_BUF_SIZE);
-  return true;
-}
-
-void mgos_uart_hal_deinit(struct mgos_uart_state *us) {
-  us->dev_data = NULL;
 }
 
 void mgos_uart_hal_set_rx_enabled(struct mgos_uart_state *us, bool enabled) {
@@ -188,8 +175,60 @@ void mgos_uart_hal_config_set_defaults(int uart_no,
 
 bool mgos_uart_hal_configure(struct mgos_uart_state *us,
                              const struct mgos_uart_config *cfg) {
-  /* TODO(rojer) */
-  (void) us;
-  (void) cfg;
+  UART_Handle *huart = (UART_Handle *) us->dev_data;
+  huart->Init.Mode = UART_MODE_TX; /* Start with RX disabled */
+  huart->Init.BaudRate = cfg->baud_rate;
+  switch (cfg->num_data_bits) {
+    case 7:
+      huart->Init.WordLength = UART_WORDLENGTH_7B;
+      break;
+    case 8:
+      huart->Init.WordLength = UART_WORDLENGTH_8B;
+      break;
+    case 9:
+      huart->Init.WordLength = UART_WORDLENGTH_9B;
+      break;
+    default:
+      return false;
+  }
+  switch (cfg->parity) {
+    case MGOS_UART_PARITY_NONE:
+      huart->Init.Parity = UART_PARITY_NONE;
+      break;
+    case MGOS_UART_PARITY_EVEN:
+      huart->Init.Parity = UART_PARITY_EVEN;
+      break;
+    case MGOS_UART_PARITY_ODD:
+      huart->Init.Parity = UART_PARITY_ODD;
+      break;
+    default:
+      return false;
+  }
+  switch (cfg->stop_bits) {
+    case 1:
+      huart->Init.StopBits = UART_STOPBITS_1;
+      break;
+    case 2:
+      huart->Init.StopBits = UART_STOPBITS_2;
+      break;
+    default:
+      return false;
+  }
+  uint32_t hwfc = UART_HWCONTROL_NONE;
+  if (cfg->rx_fc_type == MGOS_UART_FC_HW) hwfc |= UART_HWCONTROL_CTS;
+  if (cfg->tx_fc_type == MGOS_UART_FC_HW) hwfc |= UART_HWCONTROL_RTS;
+  huart->AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
+  return HAL_UART_Init(huart) == HAL_OK;
+}
+
+bool mgos_uart_hal_init(struct mgos_uart_state *us) {
+  if (us->uart_no != 0 && us->uart_no != 1) return false;
+  us->dev_data = (void *) s_huarts[us->uart_no];
+  cs_rbuf_init(&s_uarts_state[us->uart_no].rx_buf, UART_BUF_SIZE);
+  cs_rbuf_init(&s_uarts_state[us->uart_no].tx_buf, UART_BUF_SIZE);
   return true;
+}
+
+void mgos_uart_hal_deinit(struct mgos_uart_state *us) {
+  us->dev_data = NULL;
 }

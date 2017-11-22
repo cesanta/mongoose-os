@@ -10,6 +10,8 @@
 extern "C" {
 #endif
 
+void stm32_uart_dprintf(const char *fmt, ...);
+
 #ifdef __cplusplus
 }
 #endif
