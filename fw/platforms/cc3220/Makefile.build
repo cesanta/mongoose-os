@@ -159,7 +159,7 @@ VPATH += $(COMMON_PATH)/umm_malloc
 
 FREERTOS_SRCS = heap_3.c list.c port.c queue.c tasks.c timers.c
 FREERTOS_SRCS += ClockP_freertos.c HwiPCC32XX_freertos.c MutexP_freertos.c PowerCC32XX_freertos.c SemaphoreP_freertos.c SystemP_freertos.c
-DRIVER_SRCS = GPIOCC32XX.c List.c PowerCC32XX.c SPI.c SPICC32XXDMA.c UDMACC32XX.c
+DRIVER_SRCS = GPIOCC32XX.c ListUtils.c PowerCC32XX.c SPI.c SPICC32XXDMA.c UDMACC32XX.c
 DRIVERLIB_SRCS = cpu.c flash.c interrupt.c pin.c prcm.c utils.c
 SL_SRCS = sl_socket.c wlan.c driver.c device.c eventreg.c flowcont.c netapp.c netcfg.c netutil.c cc_pal.c fs.c
 SDK_SRCS = $(FREERTOS_SRCS) $(DRIVER_SRCS) $(DRIVERLIB_SRCS) $(SL_SRCS)
