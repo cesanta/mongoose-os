@@ -112,6 +112,15 @@ static const char *test_mg_match_prefix(void) {
   ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a*f|de*,xy"), mg_mk_str("defgh")), 5);
   ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a*f,de*,xy"), mg_mk_str("defgh")), 5);
   ASSERT_EQ(mg_match_prefix_n(mg_mk_str("/a/b/*/d"), mg_mk_str("/a/b/c/d")), 8);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("?"), mg_mk_str("a")), 1);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("?"), mg_mk_str("abc")), 1);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("?*"), mg_mk_str("abc")), 3);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("?*"), mg_mk_str("abcdef")), 6);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("?*"), mg_mk_str("")), -1);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a?c"), mg_mk_str("abc")), 3);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a?c"), mg_mk_str("adc")), 3);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a?c"), mg_mk_str("ab")), -1);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a?c"), mg_mk_str("a")), -1);
   return NULL;
 }
 
