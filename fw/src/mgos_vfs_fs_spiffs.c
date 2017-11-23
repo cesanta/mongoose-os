@@ -17,6 +17,7 @@
 
 #include "frozen/frozen.h"
 
+#include "mgos_hal.h"
 #include "mgos_vfs.h"
 
 #if CS_SPIFFS_ENABLE_ENCRYPTION
@@ -183,10 +184,12 @@ static bool mgos_vfs_fs_spiffs_mount(struct mgos_vfs_fs *fs, const char *opts) {
   spiffs *spfs = NULL;
   if (ret) {
     spfs = &fsd->fs;
+    mgos_wdt_feed();
     if (check && SPIFFS_check(spfs) != SPIFFS_OK) {
       LOG(LL_ERROR, ("Filesystem is corrupted, continuing anyway"));
     }
 #if CS_SPIFFS_ENABLE_ENCRYPTION
+    mgos_wdt_feed();
     if (fsd->encrypt && !mgos_vfs_fs_spiffs_enc_fs(spfs)) {
       ret = false;
     }

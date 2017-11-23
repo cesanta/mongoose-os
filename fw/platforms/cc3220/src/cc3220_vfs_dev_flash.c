@@ -111,6 +111,7 @@ static bool cc3220_vfs_dev_flash_open(struct mgos_vfs_dev *dev,
                                       buf)) {
         goto out;
       }
+      mgos_wdt_feed();
     }
     sl_FsClose(fh, NULL, NULL, 0);
     /* Wipe the source image: overwrite with zeroes. */
@@ -124,6 +125,7 @@ static bool cc3220_vfs_dev_flash_open(struct mgos_vfs_dev *dev,
           LOG(LL_INFO, ("Failed to zero source image @ %d: %d", offset, nw));
           break;
         }
+        mgos_wdt_feed();
       }
       sl_FsClose(fh, NULL, NULL, 0);
     }

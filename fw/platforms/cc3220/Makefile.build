@@ -63,6 +63,7 @@ MBEDTLS_PATH ?= /opt/cs_mbedtls
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 MONGOOSE_PATH ?= $(MGOS_PATH)/mongoose
 FROZEN_PATH ?= $(MGOS_PATH)/frozen
+MKSPIFFS = /usr/local/bin/mkspiffs8
 
 # Binary images must be signed. By default, we sign with dummy "playground" keys from the SDK.
 SIG_CERT ?= $(SDK_PATH)/tools/cc32xx_tools/certificate-playground/dummy-root-ca-cert
@@ -113,7 +114,8 @@ MGOS_CC3220_FEATURES ?= -DMGOS_NUM_GPIO=65 '-DUMM_ONFREE(ptr, size)=memset(ptr, 
                         -DMGOS_FS_BLOCK_SIZE=$(FS_BLOCK_SIZE) \
                         -DMGOS_FS_PAGE_SIZE=$(FS_PAGE_SIZE) \
                         -DMGOS_FS_ERASE_SIZE=$(FS_ERASE_SIZE) \
-                        -DMGOS_FS_IMG=\"$(notdir $(FS_IMG))\"
+                        -DMGOS_FS_IMG=\"$(notdir $(FS_IMG))\" \
+                        -DCS_SPIFFS_ENABLE_METADATA=1
 
 MG_FEATURES ?= $(MG_FEATURES_TINY) \
                -DMG_LOCALS -DMG_ENABLE_SSL \
@@ -271,6 +273,8 @@ MGOS_OBJS += $(BUILD_DIR)/portasm.asm.o
 include $(MGOS_PATH)/common/scripts/build_info.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
 include $(MGOS_PATH)/fw/src/mgos_config.mk
+
+$(MGOS_CONFIG_C): $(MANIFEST_FINAL)
 
 $(FS_IMG): $(APP_FS_DIRS) $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(FS_FILES)
 	$(call mkspiffs,$(FS_SIZE),$(FS_BLOCK_SIZE),$(FS_PAGE_SIZE),$(FS_ERASE_SIZE))
