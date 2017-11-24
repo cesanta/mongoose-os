@@ -247,6 +247,7 @@ func ReadManifestFinal(
 		for k, lcur := range manifest.LibsHandled {
 			libSourceDirs := []string{}
 
+			origSources := lcur.Sources
 			// Convert dirs and globs to actual files
 			manifest.LibsHandled[k].Sources, libSourceDirs, err = resolvePaths(lcur.Sources, *sourceGlobs)
 			if err != nil {
@@ -276,6 +277,16 @@ func ReadManifestFinal(
 				manifest.BinaryLibs = append(manifest.BinaryLibs, binaryLib)
 			} else {
 				// Use lib sources, not prebuilt binary
+				if len(manifest.LibsHandled[k].Sources) == 0 && len(origSources) != 0 {
+					// Originally the lib had some sources in its mos.yml, but turns out
+					// that they don't exist, and we have failed to fetch a prebuilt
+					// binary for it. Error out with a descriptive message.
+					return nil, nil, errors.Errorf(
+						"neither sources nor prebuilt binary exists for the lib %q "+
+							"(or, if a library doesn't have any code by design, its mos.yml "+
+							"shouldn't contain \"sources\")", manifest.LibsHandled[k].Name,
+					)
+				}
 				manifest.Sources = append(manifest.Sources, manifest.LibsHandled[k].Sources...)
 			}
 
