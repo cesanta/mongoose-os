@@ -5,7 +5,7 @@
 
 #ifndef EXCLUDE_COMMON
 
-#include "common/base64.h"
+#include "common/cs_base64.h"
 
 #include <string.h>
 

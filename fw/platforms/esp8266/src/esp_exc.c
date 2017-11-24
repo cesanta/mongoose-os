@@ -16,7 +16,7 @@
 #include <user_interface.h>
 #endif
 
-#include "common/base64.h"
+#include "common/cs_base64.h"
 #include "common/cs_dbg.h"
 #include "common/platforms/esp8266/esp_missing_includes.h"
 

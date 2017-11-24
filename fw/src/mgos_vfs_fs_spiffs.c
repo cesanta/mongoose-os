@@ -11,7 +11,7 @@
 #include <spiffs.h>
 #include <spiffs_nucleus.h>
 
-#include "common/base64.h"
+#include "common/cs_base64.h"
 #include "common/cs_dbg.h"
 #include "common/mbuf.h"
 

@@ -11,12 +11,11 @@
 #include <user_interface.h>
 #include <xtensa/corebits.h>
 
+#include "common/cs_base64.h"
 #include "common/cs_crc32.h"
 #include "common/platforms/esp8266/esp_missing_includes.h"
 
-#include "fw/platforms/esp8266/src/esp_exc.h"
-
-#include "common/base64.h"
+#include "esp_exc.h"
 
 struct section_ctx {
   struct cs_base64_ctx b64_ctx;
