@@ -61,7 +61,7 @@ void mgos_msleep(uint32_t msecs) {
 }
 
 #ifdef RTOS_SDK
-void mgos_usleep(uint32_t usecs) {
+IRAM void mgos_usleep(uint32_t usecs) {
 /*
  * configTICK_RATE_HZ is 100, implying 10 ms ticks.
  * But we run CPU at 160 and tick timer is not updated, hence / 2 below.
