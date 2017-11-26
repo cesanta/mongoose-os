@@ -2,6 +2,7 @@ var ui = {
   connected: null,    // Whether the device is connected
   address: null,      // Serial port, or RPC address of the device
   info: null,         // Result of the Sys.GetInfo call
+  config: null,
   showWizard: true,
   checkPortsTimer: null,
   checkPortsFreq: 3000,
@@ -239,19 +240,19 @@ var formatSize = function(free, max) {
   return tostr(free, i) + '/' + tostr(max, i);
 };
 
-var formatDevInfo = function(json) {
+var formatDevInfo = function() {
+  var json = ui.info || {};
+  var id = ((ui.config || {}).device || {}).id || json.arch;
   var ip = json.wifi.sta_ip || json.wifi.ap_ip;
-  var id = '', m = json.fw_id.match(/(....)(..)(..)-/);
+  var date = '', m = json.fw_id.match(/(....)(..)(..)-/);
   if (m) {
-    id = moment(m[1] + '-' + m[2] + '-' + m[3]).format('MMMDD');
+    date = moment(m[1] + '-' + m[2] + '-' + m[3]).format('MMMDD');
   }
   var link = 'n/a';
   if (ip) link = '<a target="_blank" href=http://' + ip + '>' + ip + '</a>';
-  let html = '<i class="fa fa-microchip" title="Hardware architecture"></i> ' + json.arch +
-              ' | <i class="fa fa-wrench" title="Build date"></i> ' + id +
-              ' | <i class="fa fa-wifi" title="IP address"></i> ' + link +
-              ' | <i class="fa fa-hdd-o" title="FLASH size"></i> ' + formatSize(json.fs_free || 0, json.fs_size || 0) +
-              ' | <i class="fa fa-square-o" title="RAM size"></i> ' + formatSize(json.ram_free || 0, json.ram_size || 0);
+  let html = '<i class="fa fa-microchip" title="Hardware architecture"></i> ' + id +
+              ' | <i class="fa fa-calendar" title="Build date"></i> ' + date +
+              ' | <i class="fa fa-wifi" title="IP address"></i> ' + link;
   return html;
 };
 
@@ -273,7 +274,7 @@ var updateDeviceStatus = function() {
   $('#step2 a.tag, #step2').toggleClass('greyed', n == 0);
   $('#step2 .btn, #step2 input').prop('disabled', n == 0);
   $('#step2 .done').toggleClass('hidden', n < 2);
-  if (ui.info) $('.devinfo').html(formatDevInfo(ui.info));
+  if (ui.info) $('.devinfo').html(formatDevInfo());
   $('.devinfo, #found-device-info').toggle(n > 1);
   $('#step2').toggleClass('completed', n > 1);
   $('#step2 input').trigger('change');
@@ -307,6 +308,14 @@ var probeDevice = function() {
   var data = {method: 'Sys.GetInfo', timeout: 3};
   return $.ajax({url: '/call', global: false, data: data}).then(function(data) {
     ui.info = data.result;
+  }).fail(function() {
+    ui.info = null;
+  }).then(function() {
+    var d = {method: 'Config.Get', timeout: 3};
+    return $.ajax({url: '/call', global: false, data: d}).then(function(data) {
+      ui.config = data.result;
+    });
+  }).always(function() {
     // Let other pages know that the device info has changed
     var infostr = JSON.stringify(ui.info);
     if (ui.infostr != infostr) {
@@ -316,9 +325,7 @@ var probeDevice = function() {
       if (ui.connected && ui.address && ui.address.match(/^ws/)) setUDPLog();
     }
     $('.arch-input').val(ui.info.arch);
-  }).fail(function() {
-    ui.info = null;
-  }).always(function() {
+    $('.app-input').val(ui.info.app);
     updateDeviceStatus();
   });
 };
