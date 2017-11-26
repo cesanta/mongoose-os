@@ -274,6 +274,8 @@ include $(MGOS_PATH)/common/scripts/build_info.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
 include $(MGOS_PATH)/fw/src/mgos_config.mk
 
+MGOS_CONF_SCHEMA += $(MGOS_CC3220_PATH)/src/cc3220_sys_config.yaml
+
 $(MGOS_CONFIG_C): $(MANIFEST_FINAL)
 
 $(FS_IMG): $(APP_FS_DIRS) $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(FS_FILES)
