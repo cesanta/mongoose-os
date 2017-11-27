@@ -47,7 +47,8 @@
 extern "C" {
 #endif
 
-//#include "main.h"
+#include <assert.h>
+
 /* Exported types ------------------------------------------------------------*/
 /* Exported constants --------------------------------------------------------*/
 
@@ -175,7 +176,7 @@ extern "C" {
 #define TICK_INT_PRIORITY ((uint32_t) 0U) /*!< tick interrupt priority */
 #define USE_RTOS 0U
 #define PREFETCH_ENABLE 0U
-#define ART_ACCLERATOR_ENABLE 0U /* To enable instr cache and prefetch */
+#define ART_ACCLERATOR_ENABLE 1U /* To enable instr cache and prefetch */
 
 /* ########################## Assert Selection ############################## */
 /**
@@ -449,23 +450,8 @@ extern "C" {
 #ifdef HAL_MDIOS_MODULE_ENABLED
 #include "stm32f7xx_hal_mdios.h"
 #endif /* HAL_MDIOS_MODULE_ENABLED */
-/* Exported macro ------------------------------------------------------------*/
-#ifdef USE_FULL_ASSERT
-/**
-  * @brief  The assert_param macro is used for function's parameters check.
-  * @param  expr: If expr is false, it calls assert_failed function
-  *         which reports the name of the source file and the source
-  *         line number of the call that failed.
-  *         If expr is true, it returns no value.
-  * @retval None
-  */
-#define assert_param(expr) \
-  ((expr) ? (void) 0U : assert_failed((uint8_t *) __FILE__, __LINE__))
-/* Exported functions ------------------------------------------------------- */
-void assert_failed(uint8_t *file, uint32_t line);
-#else
-#define assert_param(expr) ((void) 0U)
-#endif /* USE_FULL_ASSERT */
+
+#define assert_param(expr) assert(expr)
 
 #ifdef __cplusplus
 }

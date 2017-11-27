@@ -101,7 +101,7 @@ void MX_LWIP_Process(void) {
   ethernetif_input(&gnetif);
 
 /* Handle timeouts */
-#if !NO_SYS_NO_TIMERS && NO_SYS
+#if LWIP_TIMERS
   sys_check_timeouts();
 #endif
 }

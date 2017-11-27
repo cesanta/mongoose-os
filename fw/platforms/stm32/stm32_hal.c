@@ -3,7 +3,13 @@
  * All rights reserved
  */
 
+#include <sys/time.h>
+
 #include <stm32_sdk_hal.h>
+
+#include "FreeRTOS.h"
+#include "semphr.h"
+
 #include "mgos_hal.h"
 #include "mgos_sys_config.h"
 #include "mgos_mongoose.h"
@@ -122,12 +128,6 @@ void mgos_wdt_set_timeout(int secs) {
   (void) secs;
 }
 
-void mgos_lock(void) {
-}
-
-void mgos_unlock(void) {
-}
-
 void mgos_bitbang_write_bits_js(void) {
   /* TODO */
 }
@@ -138,22 +138,35 @@ uint32_t mgos_get_cpu_freq(void) {
 }
 
 void mgos_ints_disable(void) {
-  /* TODO(rojer) */
+  portENTER_CRITICAL();
 }
 
 void mgos_ints_enable(void) {
-  /* TODO(rojer) */
+  portEXIT_CRITICAL();
 }
 
-/* TODO(rojer) */
+SemaphoreHandle_t s_mgos_mux = NULL;
+
+void mgos_lock_init(void) {
+  s_mgos_mux = xSemaphoreCreateRecursiveMutex();
+}
+
+void mgos_lock(void) {
+  xSemaphoreTakeRecursive(s_mgos_mux, portMAX_DELAY);
+}
+
+void mgos_unlock(void) {
+  xSemaphoreGiveRecursive(s_mgos_mux);
+}
+
 struct mgos_rlock_type *mgos_new_rlock(void) {
-  return NULL;
+  return (struct mgos_rlock_type *) xSemaphoreCreateRecursiveMutex();
 }
 
 void mgos_rlock(struct mgos_rlock_type *l) {
-  (void) l;
+  xSemaphoreTakeRecursive((SemaphoreHandle_t) l, portMAX_DELAY);
 }
 
 void mgos_runlock(struct mgos_rlock_type *l) {
-  (void) l;
+  xSemaphoreGiveRecursive((SemaphoreHandle_t) l);
 }

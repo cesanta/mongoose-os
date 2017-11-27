@@ -29,5 +29,5 @@ bool stm32_fs_mount(const char *path, uint32_t addr, uint32_t size) {
 bool stm32_fs_init(void) {
   return stm32_vfs_dev_flash_register_type() &&
          mgos_vfs_fs_spiffs_register_type() &&
-         stm32_fs_mount("/", FS_ADDR, FS_SIZE);
+         stm32_fs_mount("/", FS_BASE_ADDR, FS_SIZE);
 }

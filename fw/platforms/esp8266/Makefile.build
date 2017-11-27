@@ -111,6 +111,7 @@ MGOS_ESP_SRC_PATH = $(MGOS_ESP8266_PATH)/src
 
 MGOS_SRCS = cs_file.c cs_rbuf.c \
             mgos_config_util.c \
+            mgos_core_dump.c \
             mgos_dlsym.c \
             mgos_event.c \
             mgos_gpio.c \
@@ -209,8 +210,7 @@ MEMORY_FLAGS = -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5
 MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" \
               -DMGOS_MAX_NUM_UARTS=2 \
               -DMGOS_NUM_GPIO=16 \
-              -DC_DISABLE_BUILTIN_SNPRINTF \
-              -DESP_COREDUMP
+              -DC_DISABLE_BUILTIN_SNPRINTF
 
 MGOS_LIB = $(BUILD_DIR)/mongoose-os.a
 MGOS_CONFIG_C = $(GEN_DIR)/mgos_config.c

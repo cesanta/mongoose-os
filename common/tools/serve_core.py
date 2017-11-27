@@ -27,13 +27,11 @@ import sys
 
 import elftools.elf.elffile  # apt install python-pyelftools
 
-ROM_BASE= 0x40000000
-
 parser = argparse.ArgumentParser(description='Serve ESP core dump to GDB')
 parser.add_argument('--port', dest='port', default=1234, type=int, help='listening port')
 parser.add_argument('--rom', dest='rom', required=False, help='rom section')
-parser.add_argument('--rom_addr', dest='rom_addr', default=ROM_BASE,
-                    type=lambda x: int(x,16), help='rom section')
+parser.add_argument('--rom_addr', dest='rom_addr', required=False, type=lambda x: int(x,16), help='rom map addr')
+parser.add_argument('--xtensa_addr_fixup', dest='xtensa_addr_fixup', default=False, type=bool)
 parser.add_argument('elf', help='Program executable')
 parser.add_argument('log', help='serial log containing core dump snippet')
 
@@ -75,8 +73,8 @@ class Core(object):
     def __init__(self, filename):
         self._dump = self._read(filename)
         self.mem = self._map_core(self._dump)
-        if args.rom_addr:
-            self.mem.extend(self._map_firmware(args.rom_addr, args.rom, ROM_BASE))
+        if args.rom:
+            self.mem.extend(self._map_firmware(args.rom_addr, args.rom))
         self.mem.extend(self._map_elf(args.elf))
         self.regs = base64.decodestring(self._dump['REGS']['data'])
         self.tasks = dict((a, self._parse_tcb(a)) for a in self._dump.get('tasks', []))
@@ -146,10 +144,7 @@ class Core(object):
             mem.append((v["addr"], v["addr"] + len(data), data))
         return mem
 
-    def _map_firmware(self, addr, filename, base):
-        if addr is None:
-            name = os.path.splitext(os.path.basename(filename))[0]
-            addr = base + int(name, 16)
+    def _map_firmware(self, addr, filename):
         with open(filename) as f:
             data = f.read()
             result = []
@@ -173,7 +168,7 @@ class Core(object):
         for i, sec in enumerate(ef.iter_sections()):
             addr, size, off = sec["sh_addr"], sec["sh_size"], sec["sh_offset"]
             if addr > 0 and size > 0:
-                print >>sys.stderr, "Mapping {0}: {1} @ {2:#02x}".format(sec.name, size, addr)
+                print >>sys.stderr, "Mapping {0} {1}: {2} @ {3:#02x}".format(elf_file_name, sec.name, size, addr)
                 f.seek(off)
                 assert f.tell() == off
                 data = f.read(size)
@@ -228,7 +223,7 @@ class GDBHandler(SocketServer.BaseRequestHandler):
                 self.send_str("OK")
             elif pkt[0] == "m": # read memory
                 addr, size = [int(n, 16) for n in pkt[1:].split(',')]
-                if addr < 0x10000000 and addr > 0x80000:
+                if args.xtensa_addr_fixup and addr < 0x10000000 and addr > 0x80000:
                     print >>sys.stderr, 'fixup %08x' % addr
                     addr |= 0x40000000
                 bs = core.read(addr, size)

@@ -38,7 +38,7 @@ void esp_exception_handler(UserFrame *frame);
 void esp_exception_handler_init(void);
 void esp_print_reset_info(void);
 void esp_print_exc_info(uint32_t cause, struct regfile *regs);
-void esp_exc_putc(char c);
+void esp_exc_putc(int c);
 void esp_exc_puts(const char *s);
 void esp_exc_printf(const char *fmt, ...); /* Note: uses 100-byte buffer */
 

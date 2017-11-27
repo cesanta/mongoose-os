@@ -88,5 +88,5 @@ SECTIONS
         . = ALIGN(8);
         _eheap = .;
 
-    }
+    } > SRAM
 }

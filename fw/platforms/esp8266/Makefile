@@ -7,10 +7,7 @@ endif
 # This defines "all" and "clean" targets.
 include $(MGOS_PATH)/fw/docker_common.mk
 
-DOCKER_MGOS_ESP_PATH = $(DOCKER_MGOS_PATH)/fw/platforms/esp8266
-
-IROM_MAP_ADDR = 0x40208000
 GDB = xtensa-lx106-elf-gdb
-BIN_FILE ?= .build/$(APP).bin
-ELF_FILE ?= .build/$(APP).elf
-include $(MGOS_PATH)/common/platforms/esp/debug_coredump.mk
+EXTRA_GDB_ARGS = -ex 'add-symbol-file $(DOCKER_MGOS_PATH)/common/platforms/$(APP_PLATFORM)/rom/rom.elf 0x40000000'
+EXTRA_SERVE_CORE_ARGS = --rom=$(DOCKER_MGOS_PATH)/common/platforms/esp8266/rom/rom.bin --rom_addr=0x40000000
+include $(MGOS_PATH)/common/scripts/debug_coredump.mk

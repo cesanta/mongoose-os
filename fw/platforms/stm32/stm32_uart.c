@@ -35,13 +35,20 @@ static struct UART_State *get_state_by_huart(UART_Handle *huart) {
  * Debug helper, prints to UART_USB even if mgos_uart_write is disabled
  * Ex: RPC-UART activated
  */
+void stm32_uart_dputc(int c) {
+  UART_HandleTypeDef *huart = &UART_USB;
+  while (!__HAL_UART_GET_FLAG(huart, UART_FLAG_TXE)) {
+  }
+  huart->Instance->TDR = (uint8_t) c;
+}
+
 void stm32_uart_dprintf(const char *fmt, ...) {
   va_list ap;
   char buf[100];
   va_start(ap, fmt);
   int result = vsnprintf(buf, sizeof(buf), fmt, ap);
   va_end(ap);
-  HAL_UART_Transmit(&UART_USB, (uint8_t *) buf, result, UART_TRANSMIT_TIMEOUT);
+  for (int i = 0; i < result; i++) stm32_uart_dputc(buf[i]);
 }
 
 static void move_rbuf_data(cs_rbuf_t *dst, struct mbuf *src) {
@@ -102,7 +109,13 @@ void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us) {
 }
 
 void mgos_uart_hal_flush_fifo(struct mgos_uart_state *us) {
-  /* TODO(alashkin): Implement. */
+  UART_Handle *huart = (UART_Handle *) us->dev_data;
+  struct UART_State *state = get_state_by_huart(huart);
+  while (state->tx_buf.used > 0) {
+    mgos_uart_hal_dispatch_tx_top(us);
+  }
+  while (!__HAL_UART_GET_FLAG(huart, UART_FLAG_TXE)) {
+  }
 }
 
 void mgos_uart_hal_set_rx_enabled(struct mgos_uart_state *us, bool enabled) {

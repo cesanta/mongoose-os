@@ -20,6 +20,7 @@
 #include "common/cs_dbg.h"
 #include "common/platforms/esp8266/esp_missing_includes.h"
 
+#include "mgos_core_dump.h"
 #include "mgos_debug.h"
 #include "mgos_hal.h"
 #include "mgos_vfs.h"
@@ -35,7 +36,7 @@ extern void esp_system_restart_low_level(void);
 bool s_rebooting = false;
 struct regfile g_exc_regs;
 
-void esp_exc_putc(char c) {
+void esp_exc_putc(int c) {
   int uart_no = mgos_get_stderr_uart();
   if (uart_no < 0) return;
   while (esp_uart_tx_fifo_len(uart_no) > 125) {

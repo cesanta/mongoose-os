@@ -38,6 +38,6 @@ void cc32xx_usage_fault_handler_top(void);
 
 #ifdef __cplusplus
 }
-#endif  // __cplusplus
+#endif
 
 #endif /* CS_FW_PLATFORMS_CC32XX_SRC_CC32XX_EXC_H_ */
