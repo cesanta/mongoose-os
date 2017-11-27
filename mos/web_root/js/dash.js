@@ -251,6 +251,7 @@ var formatDevInfo = function() {
   var link = 'n/a';
   if (ip) link = '<a target="_blank" href=http://' + ip + '>' + ip + '</a>';
   let html = '<i class="fa fa-microchip" title="Hardware architecture"></i> ' + id +
+              ' | <i class="fa fa-id-card-o" title="App"></i> ' + json.app +
               ' | <i class="fa fa-calendar" title="Build date"></i> ' + date +
               ' | <i class="fa fa-wifi" title="IP address"></i> ' + link;
   return html;
@@ -274,7 +275,13 @@ var updateDeviceStatus = function() {
   $('#step2 a.tag, #step2').toggleClass('greyed', n == 0);
   $('#step2 .btn, #step2 input').prop('disabled', n == 0);
   $('#step2 .done').toggleClass('hidden', n < 2);
-  if (ui.info) $('.devinfo').html(formatDevInfo());
+  if (ui.info) {
+    $('.devinfo').html(formatDevInfo());
+    $('.devinfo-loading').hide();
+  } else {
+    $('#not-found-device-info').fadeIn(300);
+    $('#step2 .devinfo-loading').hide();
+  }
   $('.devinfo, #found-device-info').toggle(n > 1);
   $('#step2').toggleClass('completed', n > 1);
   $('#step2 input').trigger('change');
@@ -374,6 +381,8 @@ $(document).on('click', '.connect-button', function() {
   if (!port || port.match(/^\s*$/)) return;
   spin(btn);
   $.ajax({url: '/connect', global: false, data: {port: port, reconnect: true}}).always(function() {
+    $('#not-found-device-info').hide();
+    $('#step2 .devinfo-loading').show();
     checkPorts().always(function() {
       stopspin(btn);
     });
@@ -406,7 +415,8 @@ $(document).on('click', '#flash-button', function() {
     var firmware =  'https://github.com/mongoose-os-apps/' + app +
                    '/releases/download/' + ui.version + '/' + app + '-' +
                    arch + '.zip';
-    $.ajax({url: '/flash', global: false, data: {firmware: firmware}}).then(function() {
+    var d = {firmware: firmware, timeout: 300};
+    $.ajax({url: '/flash', global: false, data: d}).then(function() {
       setTimeout(function() {
         probeDevice().always(function() { stopspin(btn); });
       }, 2000);

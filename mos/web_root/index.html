@@ -50,10 +50,12 @@
 
             <button id="version-update" class="hidden btn btn-xs btn-warning"><i class="fa fa-refresh"></i> Update mos tool...</button>
 
+            <span class="devinfo-loading"><i class="fa fa-refresh fa-spin"></i> loading device info...</span>
             <span class="devinfo"></span>
-            &nbsp;
+            &nbsp;&nbsp;&nbsp;
             <a class="link" data-toggle="modal" data-target="#splash"><i class="fa fa-circle devconn-icon"></i> device setup</a> &nbsp;
-            | &nbsp; <a target="_blank" href="https://forum.mongoose-os.com"><i class="fa fa-comments-o"></i> forum</a> &nbsp;
+            | &nbsp; <a target="_blank" href="https://forum.mongoose-os.com"><i class="fa fa-users"></i> forum</a> &nbsp;
+            | &nbsp; <a target="_blank" href="https://gitter.im/cesanta/mongoose-os"><i class="fa fa-comments-o"></i> chat</a> &nbsp;
             | &nbsp; <a target="_blank" href="https://mongoose-os.com/docs/reference/api.html"><i class="fa fa-book"></i> api ref </a> &nbsp;
             | &nbsp; <a target="_blank" href="https://mongoose-os.com/dashboard/"><i class="fa fa-bar-chart"></i> dashboard</a> &nbsp;
           </div>
@@ -175,7 +177,13 @@
                   <center class="done hidden"><i class="fa fa-check"></i> done!</center></a>
                 </div>
                 <div class="block_content">
-                  <h2 class="title"><a>Choose platform, select app, click Flash</a></h2>
+                  <h2 class="title"><a>Choose platform, select app, click Flash</a>
+                    &nbsp;&nbsp;
+<!--
+                    <small class="excerpt devinfo-loading" style="display: none;"><i class="fa fa-refresh fa-spin"></i> loading device info...</small>
+                    <small class="excerpt" id="not-found-device-info" style="display: none;">no app flashed yet...</small> 
+ -->
+                  </h2>
 
                   <div class="form form-inline">
 
