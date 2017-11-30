@@ -219,6 +219,18 @@
       }
 
       if (c.aws) {
+        $(document).off('change', '#input-region');
+        $(document).on('change', '#input-region', function() {
+          var region = $('#input-region').val();
+          $.ajax({url: '/policies', data: {region: region }}).then(function(json) {
+            if (!json.result) return;
+            $('#dropdown-policies').empty();
+            $.each(json.result, function(i, v) {
+              $('<li><a href="#">' + v + '</a></li>').appendTo('#dropdown-policies');
+            });
+          });
+        });
+
         $.ajax({url: '/check-aws-credentials'}).then(function(json) {
           var hasAwsCredentials = json.result;
           $('#aws-setup').toggleClass('hidden', !hasAwsCredentials);
@@ -230,14 +242,7 @@
               $.each(json.result, function(i, v) {
                 $('<li><a href="#">' + v + '</a></li>').appendTo('#dropdown-regions');
               });
-              var region = $('#input-region').val();
-              $.ajax({url: '/policies', data: {region: region }}).then(function(json) {
-                if (!json.result) return;
-                $('#dropdown-policies').empty();
-                $.each(json.result, function(i, v) {
-                  $('<li><a href="#">' + v + '</a></li>').appendTo('#dropdown-policies');
-                });
-              });
+              $('#dropdown-regions').trigger('change');
             });
           }
         });
