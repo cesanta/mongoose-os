@@ -110,7 +110,7 @@ struct update_context *updater_context_create() {
   }
 
   if (!mgos_upd_is_committed()) {
-    CALL_HOOK(LL_ERROR, "error", "%s",
+    CALL_HOOK(LL_ERROR, MGOS_OTA_STATE_ERROR, "%s",
               "Previous update has not been committed yet");
     return NULL;
   }
@@ -131,7 +131,7 @@ struct update_context *updater_context_create() {
 
   s_ctx->dev_ctx = mgos_upd_hal_ctx_create();
 
-  CALL_HOOK(LL_INFO, "init", "starting, timeout %d",
+  CALL_HOOK(LL_INFO, MGOS_OTA_STATE_INIT, "starting, timeout %d",
             mgos_sys_config_get_update_timeout());
   s_ctx->wdt = mgos_set_timer(mgos_sys_config_get_update_timeout() * 1000,
                               false /* repeat */, updater_abort, s_ctx);
@@ -512,7 +512,7 @@ static int updater_process_int(struct update_context *ctx, const char *data,
         LOG(LL_DEBUG,
             ("Processed %d, up to %u, %u left in the buffer", num_processed,
              (unsigned int) ctx->info.current_file.processed, ctx->data_len));
-        CALL_HOOK(LL_DEBUG, "progress", "%s %d of %d",
+        CALL_HOOK(LL_DEBUG, MGOS_OTA_STATE_PROGRESS, "%s %d of %d",
                   ctx->info.current_file.name, ctx->info.current_file.processed,
                   ctx->info.current_file.size);
         if (s_event_cb != NULL) {
@@ -579,7 +579,7 @@ static int updater_process_int(struct update_context *ctx, const char *data,
       case US_FINALIZE: {
         ret = 1;
         ctx->status_msg = "Update applied, finalizing";
-        CALL_HOOK(LL_INFO, "finalizing", "commit timeout %d",
+        CALL_HOOK(LL_INFO, MGOS_OTA_STATE_FINALIZING, "commit timeout %d",
                   ctx->fctx.commit_timeout);
         if (ctx->fctx.commit_timeout > 0) {
           if (!mgos_upd_set_commit_timeout(ctx->fctx.commit_timeout)) {
@@ -626,7 +626,7 @@ void updater_finish(struct update_context *ctx) {
   if (ctx->update_state == US_FINISHED) return;
   updater_set_status(ctx, US_FINISHED);
   const char *msg = (ctx->status_msg ? ctx->status_msg : "???");
-  CALL_HOOK(LL_INFO, "done", "Finished: %d %s", ctx->result, msg);
+  CALL_HOOK(LL_INFO, MGOS_OTA_STATE_DONE, "Finished: %d %s", ctx->result, msg);
   updater_process_int(ctx, NULL, 0);
   if (s_event_cb != NULL) {
     (void) s_event_cb(MGOS_UPD_EV_END, ctx, s_event_cb_arg);
@@ -742,7 +742,7 @@ out:
 
 bool mgos_upd_commit() {
   if (mgos_upd_is_committed()) return false;
-  CALL_HOOK(LL_INFO, "commit", "%s", "Committing update");
+  CALL_HOOK(LL_INFO, MGOS_OTA_STATE_COMMIT, "%s", "Committing update");
   if (s_event_cb) (void) s_event_cb(MGOS_UPD_EV_COMMIT, NULL, s_event_cb_arg);
   mgos_upd_boot_commit();
   remove(UPDATER_CTX_FILE_NAME);
@@ -757,7 +757,7 @@ bool mgos_upd_is_committed() {
 
 bool mgos_upd_revert(bool reboot) {
   if (mgos_upd_is_committed()) return false;
-  CALL_HOOK(LL_INFO, "rollback", "%s", "Reverting update");
+  CALL_HOOK(LL_INFO, MGOS_OTA_STATE_ROLLBACK, "%s", "Reverting update");
   if (s_event_cb) (void) s_event_cb(MGOS_UPD_EV_ROLLBACK, NULL, s_event_cb_arg);
   mgos_upd_boot_revert();
   if (reboot) mgos_system_restart();
@@ -827,4 +827,26 @@ void mgos_upd_boot_finish(bool is_successful, bool is_first) {
 void mgos_upd_set_event_cb(mgos_upd_event_cb cb, void *cb_arg) {
   s_event_cb = cb;
   s_event_cb_arg = cb_arg;
+}
+
+const char *mgos_ota_state_str(enum mgos_ota_state state) {
+  switch (state) {
+    case MGOS_OTA_STATE_NONE:
+      return "";
+    case MGOS_OTA_STATE_INIT:
+      return "init";
+    case MGOS_OTA_STATE_PROGRESS:
+      return "progress";
+    case MGOS_OTA_STATE_FINALIZING:
+      return "finalizing";
+    case MGOS_OTA_STATE_DONE:
+      return "done";
+    case MGOS_OTA_STATE_ERROR:
+      return "error";
+    case MGOS_OTA_STATE_COMMIT:
+      return "commit";
+    case MGOS_OTA_STATE_ROLLBACK:
+      return "rollback";
+  }
+  return "";
 }
