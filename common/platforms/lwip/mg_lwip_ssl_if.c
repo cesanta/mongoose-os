@@ -15,14 +15,6 @@
 #define MG_LWIP_SSL_IO_SIZE 1024
 #endif
 
-/*
- * Stop processing incoming SSL traffic when recv_mbuf.size is this big.
- * It'a a uick solution for SSL recv pushback.
- */
-#ifndef MG_LWIP_SSL_RECV_MBUF_LIMIT
-#define MG_LWIP_SSL_RECV_MBUF_LIMIT 3072
-#endif
-
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
@@ -103,7 +95,7 @@ void mg_lwip_ssl_recv(struct mg_connection *nc) {
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
   /* Don't deliver data before connect callback */
   if (nc->flags & MG_F_CONNECTING) return;
-  while (nc->recv_mbuf.len < MG_LWIP_SSL_RECV_MBUF_LIMIT) {
+  while (nc->recv_mbuf.len < nc->recv_mbuf_limit) {
     char *buf = (char *) MG_MALLOC(MG_LWIP_SSL_IO_SIZE);
     if (buf == NULL) return;
     int ret = mg_ssl_if_read(nc, buf, MG_LWIP_SSL_IO_SIZE);

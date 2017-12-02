@@ -19,6 +19,10 @@
 
 #include "mgos_init.h"
 
+#ifndef MGOS_RECV_MBUF_LIMIT
+#define MGOS_RECV_MBUF_LIMIT 3072
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
