@@ -27,9 +27,27 @@ extern "C" {
 #endif /* __cplusplus */
 
 enum mgos_hook_type {
+  /*
+   * Fired when all core modules and libs are initialized (Right after printing
+   * `Init done` to the console).
+   */
   MGOS_HOOK_INIT_DONE,
+
+  /*
+   * Fired when anything is printed to the debug console, see `struct
+   * mgos_debug_hook_arg`
+   */
   MGOS_HOOK_DEBUG_WRITE,
+
+  /*
+   * Fired right before restarting the system (but also before unmounting
+   * filesystems, disconnecting from the wifi, etc)
+   */
   MGOS_HOOK_SYSTEM_RESTART,
+
+  /*
+   * Fired when OTA status is changed; see `struct mgos_ota_status`
+   */
   MGOS_HOOK_OTA_STATUS,
 
   MGOS_HOOK_TYPES_CNT
@@ -37,7 +55,9 @@ enum mgos_hook_type {
 
 struct mgos_hook_arg {
   union {
+    /* Arguments for the `MGOS_HOOK_DEBUG_WRITE` event */
     struct mgos_debug_hook_arg debug;
+    /* Arguments for the `MGOS_HOOK_OTA_STATUS` event */
     struct mgos_ota_status ota_status;
   };
 };

@@ -36,18 +36,21 @@ struct mgos_uart_dev_config {};
 extern "C" {
 #endif /* __cplusplus */
 
+/* UART flow control type */
 enum mgos_uart_fc_type {
   MGOS_UART_FC_NONE = 0,
   MGOS_UART_FC_HW = 1, /* CTS/RTS */
   MGOS_UART_FC_SW = 2, /* XON/XOFF */
 };
 
+/* UART parity */
 enum mgos_uart_parity {
   MGOS_UART_PARITY_NONE = 0,
   MGOS_UART_PARITY_EVEN = 1,
   MGOS_UART_PARITY_ODD = 2,
 };
 
+/* UART stop bits mode */
 enum mgos_uart_stop_bits {
   MGOS_UART_STOP_BITS_1 = 1, /* So that 1 means 1 bit and 2 means 2. */
   MGOS_UART_STOP_BITS_2 = 2,
@@ -98,11 +101,13 @@ void mgos_uart_config_set_defaults(int uart_no, struct mgos_uart_config *cfg);
  */
 bool mgos_uart_config_get(int uart_no, struct mgos_uart_config *cfg);
 
+/* UART dispatcher signature, see `mgos_uart_set_dispatcher()` */
+typedef void (*mgos_uart_dispatcher_t)(int uart_no, void *arg);
+
 /*
  * UART dispatcher gets when there is data in the input buffer
  * or space available in the output buffer.
  */
-typedef void (*mgos_uart_dispatcher_t)(int uart_no, void *arg);
 void mgos_uart_set_dispatcher(int uart_no, mgos_uart_dispatcher_t cb,
                               void *arg);
 
@@ -113,6 +118,7 @@ void mgos_uart_set_dispatcher(int uart_no, mgos_uart_dispatcher_t cb,
  * If you want the call to not block, check mgos_uart_write_avail() first.
  */
 size_t mgos_uart_write(int uart_no, const void *buf, size_t len);
+
 /* Returns amount of space availabe in the output buffer. */
 size_t mgos_uart_write_avail(int uart_no);
 
@@ -126,24 +132,30 @@ int mgos_uart_printf(int uart_no, const char *fmt, ...);
 
 /*
  * Read data from UART input buffer.
- * The _mbuf variant is a convenice function that reads into an mbuf.
  * Note: unlike write, read will not block if there are not enough bytes in the
  * input buffer.
  */
 size_t mgos_uart_read(int uart_no, void *buf, size_t len);
+
+/* Like `mgos_uart_read`, but reads into an mbuf. */
 size_t mgos_uart_read_mbuf(int uart_no, struct mbuf *mb, size_t len);
+
 /* Returns the number of bytes available for reading. */
 size_t mgos_uart_read_avail(int uart_no);
 
 /* Controls whether UART receiver is enabled. */
 void mgos_uart_set_rx_enabled(int uart_no, bool enabled);
+
+/* Returns whether UART receiver is enabled. */
 bool mgos_uart_is_rx_enabled(int uart_no);
 
 /* Flush the UART output buffer - waits for data to be sent. */
 void mgos_uart_flush(int uart_no);
 
+/* Schedule a call to dispatcher on the next `mongoose_poll` */
 void mgos_uart_schedule_dispatcher(int uart_no, bool from_isr);
 
+/* UART statistics */
 struct mgos_uart_stats {
   uint32_t ints;
 
@@ -159,6 +171,7 @@ struct mgos_uart_stats {
   void *dev_data;
 };
 
+/* Get UART statistics */
 const struct mgos_uart_stats *mgos_uart_get_stats(int uart_no);
 
 enum mgos_init_result mgos_uart_init(void);

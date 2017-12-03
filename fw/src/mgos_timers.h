@@ -82,6 +82,8 @@ enum mgos_init_result mgos_timers_init(void);
 
 /* Get number of seconds since last reboot */
 double mgos_uptime(void);
+
+/* Initialize uptime */
 void mgos_uptime_init(void);
 
 /*

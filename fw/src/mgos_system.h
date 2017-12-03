@@ -39,6 +39,7 @@ size_t mgos_get_fs_size(void);
 /* Get filesystem free space. */
 size_t mgos_get_free_fs_size(void);
 
+/* Garbage-collect filesystem */
 void mgos_fs_gc(void);
 
 /* Feed watchdog */
@@ -56,19 +57,27 @@ void mgos_wdt_disable(void);
 /* Restart system */
 void mgos_system_restart(void);
 
-/* Delay routines */
-void mgos_msleep(uint32_t secs);
+/* Delay given number of milliseconds */
+void mgos_msleep(uint32_t msecs);
+
+/* Delay given number of nanoseconds */
 void mgos_usleep(uint32_t usecs);
+
 extern void (*mgos_nsleep100)(uint32_t n);
 
+/* Disable interrupts */
 void mgos_ints_disable(void);
+
+/* Enable interrupts */
 void mgos_ints_enable(void);
+
+/* Callback for `mgos_invoke_cb()` */
+typedef void (*mgos_cb_t)(void *arg);
 
 /*
  * Invoke a callback in the main MGOS event loop.
  * Returns true if the callback has been scheduled for execution.
  */
-typedef void (*mgos_cb_t)(void *arg);
 bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr);
 
 /* Get the CPU frequency in Hz */

@@ -22,6 +22,10 @@ extern "C" {
 char *cs_read_file(const char *path, size_t *size);
 
 #ifdef CS_MMAP
+/*
+ * Only on platforms which support mmapping: mmap file `path` to the returned
+ * address. File size is written to `*size`.
+ */
 char *cs_mmap_file(const char *path, size_t *size);
 #endif
 

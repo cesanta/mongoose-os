@@ -52,7 +52,10 @@ struct mgos_net_event_data {
   struct mgos_net_ip_info ip_info;
 };
 
-/* Event handler signature. */
+/*
+ * Event handler signature: `ev` is an event, `ev_data` is event-specific data,
+ * `arg` is an arbitrary pointer provided to `mgos_net_add_event_handler()`.
+ */
 typedef void (*mgos_net_event_handler_t)(
     enum mgos_net_event ev, const struct mgos_net_event_data *ev_data,
     void *arg);
@@ -63,13 +66,17 @@ void mgos_net_add_event_handler(mgos_net_event_handler_t eh, void *arg);
 /* Unregister network configuration event handler. */
 void mgos_net_remove_event_handler(mgos_net_event_handler_t eh, void *arg);
 
-/* Retrieve IP configuration. */
+/*
+ * Retrieve IP configuration of the provided interface type and instance
+ * number, and fill provided `ip_info` with it. Returns `true` in case of
+ * success, false otherwise.
+ */
 bool mgos_net_get_ip_info(enum mgos_net_if_type if_type, int if_instance,
                           struct mgos_net_ip_info *ip_info);
 
 /*
  * Converts address to dotted-quad NUL-terminated string.
- * out must be at least 16 bytes long.
+ * `out` must be at least 16 bytes long.
  */
 void mgos_net_ip_to_str(const struct sockaddr_in *sin, char *out);
 

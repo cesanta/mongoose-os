@@ -27,22 +27,55 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/*
+ * Initialize global event manager
+ */
+enum mgos_init_result mongoose_init(void);
+
 /* Return global event manager */
 struct mg_mgr *mgos_get_mgr(void);
 
-enum mgos_init_result mongoose_init(void);
-
+/*
+ * If there are active connections, calls `mg_mgr_poll` on global event
+ * manager. Also calls all registered on-poll callbacks (see
+ * `mgos_add_poll_cb()` and friends). Also feeds watchdog if that feature is
+ * enabled (see `mgos_wdt_set_feed_on_poll()`). Also reports min free heap size
+ * if that feature is enabled (see `mgos_set_enable_min_heap_free_reporting()`)
+ */
 int mongoose_poll(int ms);
+
+/* Free global event manager */
 void mongoose_destroy(void);
 
+/*
+ * On-poll callback; `cb_arg` is an arbitrary pointer given to
+ * `mgos_add_poll_cb()`
+ */
 typedef void (*mgos_poll_cb_t)(void *cb_arg);
+
+/*
+ * Add an on-poll callback with an arbitrary argument.
+ */
 void mgos_add_poll_cb(mgos_poll_cb_t cb, void *cb_arg);
+
+/*
+ * Remove an on-poll callback.
+ */
 void mgos_remove_poll_cb(mgos_poll_cb_t cb, void *cb_arg);
 
+/*
+ * Set whether wdt should be fed on each `mongoose_poll`.
+ */
 void mgos_wdt_set_feed_on_poll(bool enable);
 
+/*
+ * Set whether min free heap size should be reported on each `mongoose_poll`.
+ */
 void mgos_set_enable_min_heap_free_reporting(bool enable);
 
+/*
+ * Returns nameserver address. The caller should `free()` it.
+ */
 char *mgos_get_nameserver(void);
 
 /* HAL */
