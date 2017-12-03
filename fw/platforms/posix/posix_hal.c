@@ -157,3 +157,6 @@ bool mgos_hw_timers_init(void *ti) {
   (void) ti;
   return true;
 }
+
+void mgos_hw_timers_deinit(void) {
+}

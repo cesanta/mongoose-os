@@ -21,6 +21,8 @@
 #include "cc32xx_hw_timers.h"
 #elif CS_PLATFORM == CS_P_STM32
 #include "stm32_hw_timers.h"
+#else
+struct mgos_hw_timer_dev_data {};
 #endif
 
 #ifdef __cplusplus
@@ -48,6 +50,9 @@ void mgos_hw_timers_dev_isr_bottom(struct mgos_hw_timer_info *ti);
 void mgos_hw_timers_dev_clear(struct mgos_hw_timer_info *ti);
 
 bool mgos_hw_timers_dev_init(struct mgos_hw_timer_info *ti);
+
+enum mgos_init_result mgos_hw_timers_init(void);
+void mgos_hw_timers_deinit(void);
 
 #ifdef __cplusplus
 }

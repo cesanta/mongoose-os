@@ -60,9 +60,11 @@ mgos_set_hw_timer(int usecs, int flags, timer_callback cb, void *cb_arg) {
 IRAM void mgos_clear_hw_timer(mgos_timer_id id) {
   if (id < 1 || id > MGOS_NUM_HW_TIMERS) return;
   struct mgos_hw_timer_info *ti = &s_timers[id - 1];
-  mgos_hw_timers_dev_clear(ti);
-  ti->cb_arg = NULL;
-  ti->cb = NULL;
+  if (ti->cb != NULL) {
+    mgos_hw_timers_dev_clear(ti);
+    ti->cb_arg = NULL;
+    ti->cb = NULL;
+  }
 }
 
 enum mgos_init_result mgos_hw_timers_init(void) {
@@ -73,4 +75,10 @@ enum mgos_init_result mgos_hw_timers_init(void) {
     }
   }
   return MGOS_INIT_OK;
+}
+
+void mgos_hw_timers_deinit(void) {
+  for (int i = 0; i < MGOS_NUM_HW_TIMERS; i++) {
+    mgos_clear_hw_timer(s_timers[i].id);
+  }
 }
