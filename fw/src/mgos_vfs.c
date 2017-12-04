@@ -358,7 +358,7 @@ ssize_t mgos_vfs_read(int vfd, void *dst, size_t len) {
   fs = me->fs;
   ret = fs->ops->read(fs, fs_fd, dst, len);
 out:
-  LOG(LL_DEBUG,
+  LOG(LL_VERBOSE_DEBUG,
       ("%d %u => %p:%d => %d", vfd, (unsigned int) len, fs, fs_fd, ret));
   return ret;
 }
