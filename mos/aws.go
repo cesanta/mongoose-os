@@ -458,7 +458,6 @@ func awsIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	}
 	devArch, devMAC := *devInfo.Arch, *devInfo.Mac
 	reportf("  %s %s running %s", devArch, devMAC, *devInfo.App)
-	devID := fmt.Sprintf("%s_%s", devArch, devMAC[6:])
 
 	devConf, err := devConn.GetConfig(ctx)
 	if err != nil {
@@ -473,6 +472,11 @@ func awsIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	awsGGConf, err := devConf.Get("aws.greengrass")
 	if err == nil {
 		reportf("Current AWS Greengrass config: %+v", awsGGConf)
+	}
+
+	devID, err := devConf.Get("device.id")
+	if err != nil {
+		return errors.Annotatef(err, "failed to get device.id from config")
 	}
 
 	if certCN == "" {
