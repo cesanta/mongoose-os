@@ -155,7 +155,7 @@ bool mgos_gpio_hal_set_int_mode(int pin, enum mgos_gpio_int_mode mode) {
   return (gpio_set_intr_type(pin, it) == ESP_OK);
 }
 
-bool mgos_gpio_enable_int(int pin) {
+IRAM bool mgos_gpio_enable_int(int pin) {
   esp_intr_disable(s_int_handle);
   esp_err_t r = gpio_intr_enable(pin);
   if (r == ESP_OK) {
@@ -165,7 +165,7 @@ bool mgos_gpio_enable_int(int pin) {
   return (r == ESP_OK);
 }
 
-bool mgos_gpio_disable_int(int pin) {
+IRAM bool mgos_gpio_disable_int(int pin) {
   if (gpio_intr_disable(pin) != ESP_OK) return false;
   s_int_ena[pin] = 0;
   return true;

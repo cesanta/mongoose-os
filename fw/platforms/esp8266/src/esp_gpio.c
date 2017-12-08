@@ -234,15 +234,15 @@ bool mgos_gpio_hal_set_int_mode(int pin, enum mgos_gpio_int_mode mode) {
   return true;
 }
 
-bool mgos_gpio_enable_int(int pin) {
-  if (get_gpio_info(pin) == NULL) return false;
+IRAM bool mgos_gpio_enable_int(int pin) {
+  if (pin < 0 || pin > 15) return false;
   s_int_config[pin] |= INT_ENA;
   gpio_pin_intr_state_set(GPIO_ID_PIN(pin), s_int_config[pin] & INT_TYPE_MASK);
   return true;
 }
 
-bool mgos_gpio_disable_int(int pin) {
-  if (get_gpio_info(pin) == NULL) return false;
+IRAM bool mgos_gpio_disable_int(int pin) {
+  if (pin < 0 || pin > 15) return false;
   s_int_config[pin] &= INT_TYPE_MASK;
   gpio_pin_intr_state_set(GPIO_ID_PIN(pin), GPIO_PIN_INTR_DISABLE);
   return true;
