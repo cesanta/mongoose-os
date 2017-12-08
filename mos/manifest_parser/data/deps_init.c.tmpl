@@ -3,7 +3,7 @@
 
 #include "common/cs_dbg.h"
 
-#include "fw/src/mgos_app.h"
+#include "mgos_app.h"
 
 {{range .Libs}}
 extern bool mgos_{{.Name}}_init(void);{{end}}

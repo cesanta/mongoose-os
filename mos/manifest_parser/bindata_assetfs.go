@@ -52,7 +52,7 @@ var _dataDeps_initCTmpl = []byte(`#include <stdbool.h>
 
 #include "common/cs_dbg.h"
 
-#include "fw/src/mgos_app.h"
+#include "mgos_app.h"
 
 {{range .Libs}}
 extern bool mgos_{{.Name}}_init(void);{{end}}
@@ -94,7 +94,7 @@ func dataDeps_initCTmpl() (*asset, error) {
 		return nil, err
 	}
 
-	info := bindataFileInfo{name: "data/deps_init.c.tmpl", size: 701, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
+	info := bindataFileInfo{name: "data/deps_init.c.tmpl", size: 694, mode: os.FileMode(420), modTime: time.Unix(1, 0)}
 	a := &asset{bytes: bytes, info: info}
 	return a, nil
 }
