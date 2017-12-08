@@ -49,6 +49,7 @@ MGOS_PATH ?= ../../..
 COMMON_PATH ?= $(MGOS_PATH)/common
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
+MGOS_INCLUDE_PATH ?= $(MGOS_PATH)/fw/include
 MGOS_ESP_PATH ?= $(MGOS_PATH)/fw/platforms/esp32
 MGOS_ESP_SRC_PATH ?= $(MGOS_PATH)/fw/platforms/esp32/src
 
@@ -106,6 +107,7 @@ export _FS_FILES = $(FS_FILES)
 export _FW_DIR := $(FW_DIR)
 export _GEN_DIR := $(GEN_DIR)
 export MGOS_SRC_PATH
+export MGOS_INCLUDE_PATH
 export MGOS_ESP_PATH
 export MGOS_ESP_SRC_PATH
 export _MGOS_PATH
@@ -128,7 +130,7 @@ export VPATH
 
 # Flags for other component builds, including SPIFFS, go here.
 CFLAGS += -Wall -Werror -mtext-section-literals \
-          -I$(MGOS_PATH) -I$(MGOS_SRC_PATH) \
+          -I$(MGOS_PATH) -I$(MGOS_SRC_PATH) -I$(MGOS_INCLUDE_PATH) \
           -DMBEDTLS_X509_CA_CHAIN_ON_DISK \
           $(APP_CFLAGS)
 CXXFLAGS += $(APP_CXXFLAGS)

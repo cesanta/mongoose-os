@@ -49,6 +49,7 @@ COMMON_PATH ?= $(MGOS_PATH)/common
 MONGOOSE_PATH ?= $(MGOS_PATH)/mongoose
 FROZEN_PATH ?= $(MGOS_PATH)/frozen
 MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
+MGOS_INCLUDE_PATH ?= $(MGOS_PATH)/fw/include
 LWIP_PATH ?= $(STM32CUBE_PATH)/Middlewares/Third_Party/LwIP
 MBEDTLS_PATH ?= $(STM32CUBE_PATH)/Middlewares/Third_Party/mbedTLS
 MGOS_PLATFORM_PATH ?= $(MGOS_PATH)/fw/platforms/stm32
@@ -236,7 +237,7 @@ endif
 LDLIBS += -lc -lgcc -lnosys -Wl,--end-group
 
 IPATH += $(MGOS_PLATFORM_PATH) $(MGOS_PLATFORM_PATH)/include $(MGOS_PLATFORM_PATH)/$(TARGET)/include \
-         $(MGOS_PATH) $(MGOS_SRC_PATH) $(GEN_DIR) \
+         $(MGOS_PATH) $(MGOS_SRC_PATH) $(MGOS_INCLUDE_PATH) $(GEN_DIR) \
          $(SPIFFS_PATH)
 IPATH += $(SDK_INCLUDES) $(APP_SOURCE_DIRS)
 

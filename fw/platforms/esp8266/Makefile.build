@@ -57,6 +57,7 @@ COMMON_ESP_PATH ?= $(COMMON_PATH)/platforms/esp/src
 COMMON_ESP8266_PATH ?= $(COMMON_PATH)/platforms/esp8266
 MGOS_ESP8266_PATH ?= $(MGOS_PATH)/fw/platforms/esp8266
 MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
+MGOS_INCLUDE_PATH ?= $(MGOS_PATH)/fw/include
 MBEDTLS_PATH ?= /opt/cs_mbedtls
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 UMM_MALLOC_PATH ?= $(COMMON_PATH)/umm_malloc
@@ -160,7 +161,9 @@ VPATH = $(APP_SOURCE_DIRS) $(MGOS_SRC_PATH) $(MONGOOSE_PATH) \
         $(BOOTLOADER_PATH)/rboot/appcode $(COMMON_PATH) $(COMMON_PATH)/mg_rpc \
         $(MGOS_ESP_SRC_PATH) $(SPIFFS_PATH) $(COMMON_ESP8266_PATH) \
         $(COMMON_ESP_PATH)
-IPATH = $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) $(MGOS_PATH) $(MGOS_SRC_PATH) $(MGOS_ESP8266_PATH)/include $(SPIFFS_PATH) \
+IPATH = $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) $(MGOS_PATH) \
+        $(MGOS_INCLUDE_PATH) $(MGOS_SRC_PATH) $(MGOS_ESP8266_PATH)/include \
+        $(SPIFFS_PATH) \
         $(BOOTLOADER_PATH)/rboot $(SDK_PATH)/include/lwip \
         $(SDK_PATH) $(SDK_PATH)/include \
         $(COMMON_ESP8266_PATH) $(COMMON_ESP_PATH) \

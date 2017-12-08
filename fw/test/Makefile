@@ -14,6 +14,7 @@ SOURCES = unit_test.c \
           $(REPO_ROOT)/common/test_util.c
 
 INCS = -I$(REPO_ROOT)/fw/src \
+       -I$(REPO_ROOT)/fw/include \
        -I$(REPO_ROOT) \
        -I$(REPO_ROOT)/common \
        -I. \

@@ -8,6 +8,7 @@ MAKEFLAGS += --warn-undefined-variables
 MGOS_PATH ?= ../../..
 COMMON_PATH ?= $(MGOS_PATH)/common
 MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
+MGOS_INCLUDE_PATH ?= $(MGOS_PATH)/fw/include
 SRC_PATH ?= ../../src
 MONGOOSE_PATH ?= ../../../mongoose
 BIN_DIR ?= ./bin
@@ -42,7 +43,7 @@ MONGOOSE_FEATURES = \
   -DMG_MODULE_LINES
 
 
-INCLUDES = $(MGOS_PATH) $(SRC_PATH) $(BUILD_DIR)
+INCLUDES = $(MGOS_PATH) $(SRC_PATH) $(MGOS_INCLUDE_PATH) $(BUILD_DIR)
 MGOS_SRCS = $(notdir $(wildcard *.c)) mgos_init.c  \
             mongoose.c frozen.c mgos_mongoose.c mgos_gpio.c mgos_hooks.c \
             mgos_system.c mgos_timers.c \
