@@ -16,8 +16,8 @@
  * JavaScript based apps do - they do not contain C code at all.
  */
 
-#ifndef CS_FW_SRC_MGOS_APP_H_
-#define CS_FW_SRC_MGOS_APP_H_
+#ifndef CS_FW_INCLUDE_MGOS_APP_H_
+#define CS_FW_INCLUDE_MGOS_APP_H_
 
 #include "mgos_features.h"
 
@@ -50,4 +50,4 @@ void mgos_app_preinit(void);
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_SRC_MGOS_APP_H_ */
+#endif /* CS_FW_INCLUDE_MGOS_APP_H_ */
