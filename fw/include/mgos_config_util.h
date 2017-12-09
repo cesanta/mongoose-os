@@ -21,7 +21,26 @@
 extern "C" {
 #endif /* __cplusplus */
 
-/* Return `true` if a given ACL allows `key` modification. */
+/*
+ * Return `true` if a given ACL allows `key` modification.
+ *
+ * ACL is a comma-separated list of globs, each glob might be additionally
+ * prefixed with `+` (which is a no-op) or `-` (which means that matching keys
+ * are NOT allowed).
+ *
+ * For glob syntax details, see `mg_match_prefix()`.
+ *
+ * Example:
+ *
+ * ```c
+ * // Allow everything starting from "foo.", except "foo.bar":
+ * const char *acl = "-foo.bar,+foo.*,-*";
+ * mgos_conf_check_access(mg_mk_str("foo.bar"), acl); // false
+ * mgos_conf_check_access(mg_mk_str("foo.qwe"), acl); // true
+ * mgos_conf_check_access(mg_mk_str("foo.rty"), acl); // true
+ * mgos_conf_check_access(mg_mk_str("hey"), acl);     // false
+ * ```
+ */
 bool mgos_conf_check_access(const struct mg_str key, const char *acl);
 
 /* Same as `mgos_conf_check_access()`, but `acl` is `struct mg_str`. */

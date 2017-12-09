@@ -14,8 +14,6 @@
 
 #include <stdbool.h>
 
-#include "mgos_init.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -119,8 +117,6 @@ bool mgos_gpio_set_button_handler(int pin, enum mgos_gpio_pull_type pull_type,
                                   enum mgos_gpio_int_mode int_mode,
                                   int debounce_ms, mgos_gpio_int_handler_f cb,
                                   void *arg);
-
-enum mgos_init_result mgos_gpio_init();
 
 #ifdef __cplusplus
 }

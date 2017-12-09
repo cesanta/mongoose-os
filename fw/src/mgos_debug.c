@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "mgos_debug.h"
+#include "mgos_debug_internal.h"
 #include "mgos_debug_hal.h"
 
 #include "common/cs_dbg.h"

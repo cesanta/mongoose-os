@@ -6,7 +6,7 @@
 #include <stdio.h>
 #include "common/cs_dbg.h"
 
-#include "mgos_gpio.h"
+#include "mgos_gpio_internal.h"
 #include "mgos_gpio_hal.h"
 #include "mgos_hal.h"
 #include "mgos_timers.h"

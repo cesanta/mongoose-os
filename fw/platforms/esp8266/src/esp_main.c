@@ -19,7 +19,7 @@
 
 #include "common/cs_dbg.h"
 #include "mgos_app.h"
-#include "mgos_debug.h"
+#include "mgos_debug_internal.h"
 #include "mgos_hal.h"
 #include "mgos_init.h"
 #include "mgos_mongoose.h"

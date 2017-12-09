@@ -4,6 +4,7 @@
  */
 
 #include "mgos.h"
+#include "mgos_gpio_internal.h"
 
 enum mgos_init_result mgos_init(void) {
   enum mgos_init_result r;
