@@ -6,8 +6,8 @@
  * Driven externaly by data source - mg_rpc or POST file upload.
  */
 
-#ifndef CS_FW_SRC_MGOS_UPDATER_COMMON_H_
-#define CS_FW_SRC_MGOS_UPDATER_COMMON_H_
+#ifndef CS_FW_INCLUDE_MGOS_UPDATER_COMMON_H_
+#define CS_FW_INCLUDE_MGOS_UPDATER_COMMON_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -110,4 +110,4 @@ bool mgos_upd_set_commit_timeout(int commit_timeout);
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_SRC_MGOS_UPDATER_COMMON_H_ */
+#endif /* CS_FW_INCLUDE_MGOS_UPDATER_COMMON_H_ */

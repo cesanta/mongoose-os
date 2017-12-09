@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_SRC_MGOS_FFI_H_
-#define CS_FW_SRC_MGOS_FFI_H_
+#ifndef CS_FW_INCLUDE_MGOS_DLSYM_H_
+#define CS_FW_INCLUDE_MGOS_DLSYM_H_
 
 #include "mgos_features.h"
 
@@ -23,4 +23,4 @@ void *mgos_dlsym(void *handle, const char *name);
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_SRC_MGOS_FFI_H_ */
+#endif /* CS_FW_INCLUDE_MGOS_DLSYM_H_ */

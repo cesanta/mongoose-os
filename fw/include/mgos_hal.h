@@ -10,8 +10,8 @@
  * These interfaces need to be implemented for each hardware platform.
  */
 
-#ifndef CS_FW_SRC_MGOS_HAL_H_
-#define CS_FW_SRC_MGOS_HAL_H_
+#ifndef CS_FW_INCLUDE_MGOS_HAL_H_
+#define CS_FW_INCLUDE_MGOS_HAL_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -38,4 +38,4 @@ void mgos_runlock(struct mgos_rlock_type *l);
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_SRC_MGOS_HAL_H_ */
+#endif /* CS_FW_INCLUDE_MGOS_HAL_H_ */

@@ -11,8 +11,8 @@
  * a detailed information.
  */
 
-#ifndef CS_FW_SRC_MGOS_BITBANG_H_
-#define CS_FW_SRC_MGOS_BITBANG_H_
+#ifndef CS_FW_INCLUDE_MGOS_BITBANG_H_
+#define CS_FW_INCLUDE_MGOS_BITBANG_H_
 
 #include "mgos_features.h"
 
@@ -69,4 +69,4 @@ extern "C" {
 
 #endif /* MGOS_ENABLE_BITBANG */
 
-#endif /* CS_FW_SRC_MGOS_BITBANG_H_ */
+#endif /* CS_FW_INCLUDE_MGOS_BITBANG_H_ */

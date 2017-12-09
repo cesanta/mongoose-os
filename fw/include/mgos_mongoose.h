@@ -10,8 +10,8 @@
  * for the detailed explanation.
  */
 
-#ifndef CS_FW_SRC_MGOS_MONGOOSE_H_
-#define CS_FW_SRC_MGOS_MONGOOSE_H_
+#ifndef CS_FW_INCLUDE_MGOS_MONGOOSE_H_
+#define CS_FW_INCLUDE_MGOS_MONGOOSE_H_
 
 #include <stdbool.h>
 
@@ -106,4 +106,4 @@ struct mg_connection *mgos_connect_http_ssl(const char *addr,
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_SRC_MGOS_MONGOOSE_H_ */
+#endif /* CS_FW_INCLUDE_MGOS_MONGOOSE_H_ */

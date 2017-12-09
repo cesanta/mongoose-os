@@ -10,8 +10,8 @@
  * These interfaces need to be implemented for each hardware platform.
  */
 
-#ifndef CS_FW_SRC_MGOS_SYSTEM_H_
-#define CS_FW_SRC_MGOS_SYSTEM_H_
+#ifndef CS_FW_INCLUDE_MGOS_SYSTEM_H_
+#define CS_FW_INCLUDE_MGOS_SYSTEM_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -87,4 +87,4 @@ uint32_t mgos_get_cpu_freq(void);
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_SRC_MGOS_SYSTEM_H_ */
+#endif /* CS_FW_INCLUDE_MGOS_SYSTEM_H_ */

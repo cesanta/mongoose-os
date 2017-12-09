@@ -10,8 +10,8 @@
  * for more information about UART.
  */
 
-#ifndef CS_FW_SRC_MGOS_UART_H_
-#define CS_FW_SRC_MGOS_UART_H_
+#ifndef CS_FW_INCLUDE_MGOS_UART_H_
+#define CS_FW_INCLUDE_MGOS_UART_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -213,4 +213,4 @@ void mgos_uart_config_set_tx_params(struct mgos_uart_config *cfg,
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_SRC_MGOS_UART_H_ */
+#endif /* CS_FW_INCLUDE_MGOS_UART_H_ */

@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_SRC_MGOS_H_
-#define CS_FW_SRC_MGOS_H_
+#ifndef CS_FW_INCLUDE_MGOS_H_
+#define CS_FW_INCLUDE_MGOS_H_
 
 #include <stdbool.h>
 
@@ -45,4 +45,4 @@
 #endif
 
 /* no_extern_c_check */
-#endif
+#endif /* CS_FW_INCLUDE_MGOS_H_ */

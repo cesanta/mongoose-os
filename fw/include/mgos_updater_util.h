@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_SRC_MGOS_UPDATER_UTIL_H_
-#define CS_FW_SRC_MGOS_UPDATER_UTIL_H_
+#ifndef CS_FW_INCLUDE_MGOS_UPDATER_UTIL_H_
+#define CS_FW_INCLUDE_MGOS_UPDATER_UTIL_H_
 
 #include <stdbool.h>
 
@@ -19,4 +19,4 @@ bool mgos_upd_merge_fs(const char *old_fs_path, const char *new_fs_path);
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_SRC_MGOS_UPDATER_UTIL_H_ */
+#endif /* CS_FW_INCLUDE_MGOS_UPDATER_UTIL_H_ */

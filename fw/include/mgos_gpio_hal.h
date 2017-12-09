@@ -7,8 +7,8 @@
  * TODO(lsm): merge this file with `mgos_gpio.h`.
  */
 
-#ifndef CS_FW_SRC_MGOS_GPIO_HAL_H_
-#define CS_FW_SRC_MGOS_GPIO_HAL_H_
+#ifndef CS_FW_INCLUDE_MGOS_GPIO_HAL_H_
+#define CS_FW_INCLUDE_MGOS_GPIO_HAL_H_
 
 #include "mgos_gpio.h"
 #include "mgos_init.h"
@@ -55,4 +55,4 @@ enum mgos_init_result mgos_gpio_hal_init(void);
 }
 #endif /* __cplusplus */
 
-#endif
+#endif /* CS_FW_INCLUDE_MGOS_GPIO_HAL_H_ */

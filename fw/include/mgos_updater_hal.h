@@ -5,8 +5,8 @@
  * Updater HAL. Devices need to implement this interface.
  */
 
-#ifndef CS_FW_SRC_MGOS_UPDATER_HAL_H_
-#define CS_FW_SRC_MGOS_UPDATER_HAL_H_
+#ifndef CS_FW_INCLUDE_MGOS_UPDATER_HAL_H_
+#define CS_FW_INCLUDE_MGOS_UPDATER_HAL_H_
 
 #include <inttypes.h>
 
@@ -97,4 +97,4 @@ void mgos_upd_boot_revert();
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_SRC_MGOS_UPDATER_HAL_H_ */
+#endif /* CS_FW_INCLUDE_MGOS_UPDATER_HAL_H_ */

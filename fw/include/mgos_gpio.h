@@ -9,8 +9,8 @@
  * for the background information.
  */
 
-#ifndef CS_FW_SRC_MGOS_GPIO_H_
-#define CS_FW_SRC_MGOS_GPIO_H_
+#ifndef CS_FW_INCLUDE_MGOS_GPIO_H_
+#define CS_FW_INCLUDE_MGOS_GPIO_H_
 
 #include <stdbool.h>
 
@@ -126,4 +126,4 @@ enum mgos_init_result mgos_gpio_init();
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_SRC_MGOS_GPIO_H_ */
+#endif /* CS_FW_INCLUDE_MGOS_GPIO_H_ */

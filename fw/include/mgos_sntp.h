@@ -13,8 +13,8 @@
  * time via some other way.
  */
 
-#ifndef CS_FW_SRC_MGOS_SNTP_H_
-#define CS_FW_SRC_MGOS_SNTP_H_
+#ifndef CS_FW_INCLUDE_MGOS_SNTP_H_
+#define CS_FW_INCLUDE_MGOS_SNTP_H_
 
 #include "mgos_features.h"
 #include "mgos_init.h"
@@ -39,4 +39,4 @@ enum mgos_init_result mgos_sntp_init(void);
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_SRC_MGOS_SNTP_H_ */
+#endif /* CS_FW_INCLUDE_MGOS_SNTP_H_ */

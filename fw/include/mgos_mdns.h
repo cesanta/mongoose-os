@@ -10,8 +10,8 @@
  * about the multicast DNS.
  */
 
-#ifndef CS_FW_SRC_MGOS_MDNS_H_
-#define CS_FW_SRC_MGOS_MDNS_H_
+#ifndef CS_FW_INCLUDE_MGOS_MDNS_H_
+#define CS_FW_INCLUDE_MGOS_MDNS_H_
 
 #include "mgos_init.h"
 #include "mgos_mongoose.h"
@@ -45,4 +45,4 @@ void mgos_mdns_hal_leave_group(const char *mcast_ip);
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_SRC_MGOS_MDNS_H_ */
+#endif /* CS_FW_INCLUDE_MGOS_MDNS_H_ */

@@ -23,8 +23,8 @@
  *   calling to JS requires switching to Mongoose task context.
  */
 
-#ifndef CS_FW_SRC_MGOS_TIMERS_H_
-#define CS_FW_SRC_MGOS_TIMERS_H_
+#ifndef CS_FW_INCLUDE_MGOS_TIMERS_H_
+#define CS_FW_INCLUDE_MGOS_TIMERS_H_
 
 #include <stdint.h>
 
@@ -96,4 +96,4 @@ int mgos_strftime(char *s, int size, char *fmt, int time);
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_SRC_MGOS_TIMERS_H_ */
+#endif /* CS_FW_INCLUDE_MGOS_TIMERS_H_ */

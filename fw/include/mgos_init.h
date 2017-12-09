@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_SRC_MGOS_INIT_H_
-#define CS_FW_SRC_MGOS_INIT_H_
+#ifndef CS_FW_INCLUDE_MGOS_INIT_H_
+#define CS_FW_INCLUDE_MGOS_INIT_H_
 
 #include "mgos_features.h"
 
@@ -51,4 +51,4 @@ enum mgos_init_result mgos_init(void);
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_SRC_MGOS_INIT_H_ */
+#endif /* CS_FW_INCLUDE_MGOS_INIT_H_ */

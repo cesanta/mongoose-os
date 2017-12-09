@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_SRC_MGOS_DEBUG_HAL_H_
-#define CS_FW_SRC_MGOS_DEBUG_HAL_H_
+#ifndef CS_FW_INCLUDE_MGOS_DEBUG_HAL_H_
+#define CS_FW_INCLUDE_MGOS_DEBUG_HAL_H_
 
 #include <stdlib.h>
 
@@ -24,4 +24,4 @@ void mgos_debug_udp_send(const struct mg_str prefix, const struct mg_str data);
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_SRC_MGOS_DEBUG_HAL_H_ */
+#endif /* CS_FW_INCLUDE_MGOS_DEBUG_HAL_H_ */

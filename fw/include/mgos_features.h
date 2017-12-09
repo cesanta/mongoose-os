@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_SRC_MGOS_FEATURES_H_
-#define CS_FW_SRC_MGOS_FEATURES_H_
+#ifndef CS_FW_INCLUDE_MGOS_FEATURES_H_
+#define CS_FW_INCLUDE_MGOS_FEATURES_H_
 
 #ifndef MGOS_ENABLE_BITBANG
 #define MGOS_ENABLE_BITBANG 0
@@ -36,4 +36,4 @@
 
 /* no_extern_c_check */
 
-#endif /* CS_FW_SRC_MGOS_FEATURES_H_ */
+#endif /* CS_FW_INCLUDE_MGOS_FEATURES_H_ */

@@ -10,8 +10,8 @@
  * Mongoose OS OTA mechanism.
  */
 
-#ifndef CS_FW_SRC_MGOS_UPDATER_H_
-#define CS_FW_SRC_MGOS_UPDATER_H_
+#ifndef CS_FW_INCLUDE_MGOS_UPDATER_H_
+#define CS_FW_INCLUDE_MGOS_UPDATER_H_
 
 #include <stdbool.h>
 
@@ -109,4 +109,4 @@ void mgos_upd_set_event_cb(mgos_upd_event_cb cb, void *cb_arg);
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_SRC_MGOS_UPDATER_H_ */
+#endif /* CS_FW_INCLUDE_MGOS_UPDATER_H_ */

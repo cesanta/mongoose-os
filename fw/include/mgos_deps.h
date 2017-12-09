@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_SRC_MGOS_DEPS_H_
-#define CS_FW_SRC_MGOS_DEPS_H_
+#ifndef CS_FW_INCLUDE_MGOS_DEPS_H_
+#define CS_FW_INCLUDE_MGOS_DEPS_H_
 
 #include "mgos_features.h"
 
@@ -22,4 +22,4 @@ bool mgos_deps_init(void);
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_SRC_MGOS_DEPS_H_ */
+#endif /* CS_FW_INCLUDE_MGOS_DEPS_H_ */

@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_SRC_MGOS_DEBUG_H_
-#define CS_FW_SRC_MGOS_DEBUG_H_
+#ifndef CS_FW_INCLUDE_MGOS_DEBUG_H_
+#define CS_FW_INCLUDE_MGOS_DEBUG_H_
 
 #include <stdbool.h>
 #include <stdlib.h>
@@ -47,4 +47,4 @@ bool mgos_debug_uart_is_suspended(void);
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_SRC_MGOS_DEBUG_H_ */
+#endif /* CS_FW_INCLUDE_MGOS_DEBUG_H_ */

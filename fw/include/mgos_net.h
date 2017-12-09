@@ -11,8 +11,8 @@
  * is lost, established, etc.
  */
 
-#ifndef CS_FW_SRC_MGOS_NET_H_
-#define CS_FW_SRC_MGOS_NET_H_
+#ifndef CS_FW_INCLUDE_MGOS_NET_H_
+#define CS_FW_INCLUDE_MGOS_NET_H_
 
 #include <stdbool.h>
 
@@ -86,4 +86,4 @@ enum mgos_init_result mgos_net_init(void);
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_SRC_MGOS_NET_H_ */
+#endif /* CS_FW_INCLUDE_MGOS_NET_H_ */

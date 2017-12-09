@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_SRC_MGOS_SYS_CONFIG_H_
-#define CS_FW_SRC_MGOS_SYS_CONFIG_H_
+#ifndef CS_FW_INCLUDE_MGOS_SYS_CONFIG_H_
+#define CS_FW_INCLUDE_MGOS_SYS_CONFIG_H_
 
 #include <stdbool.h>
 
@@ -85,4 +85,4 @@ bool mgos_config_apply_s(const struct mg_str, bool save);
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_SRC_MGOS_SYS_CONFIG_H_ */
+#endif /* CS_FW_INCLUDE_MGOS_SYS_CONFIG_H_ */

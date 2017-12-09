@@ -13,8 +13,8 @@
  * depends on an event type.
  */
 
-#ifndef CS_FW_SRC_MGOS_HOOKS_H_
-#define CS_FW_SRC_MGOS_HOOKS_H_
+#ifndef CS_FW_INCLUDE_MGOS_HOOKS_H_
+#define CS_FW_INCLUDE_MGOS_HOOKS_H_
 
 #include <stdbool.h>
 
@@ -81,4 +81,4 @@ void mgos_hook_trigger(enum mgos_hook_type type,
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_SRC_MGOS_HOOKS_H_ */
+#endif /* CS_FW_INCLUDE_MGOS_HOOKS_H_ */

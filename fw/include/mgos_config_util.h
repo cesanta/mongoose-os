@@ -7,8 +7,8 @@
  * Low-level interface to the configuration infrastructure.
  */
 
-#ifndef CS_FW_SRC_MGOS_CONFIG_H_
-#define CS_FW_SRC_MGOS_CONFIG_H_
+#ifndef CS_FW_INCLUDE_MGOS_CONFIG_UTIL_H_
+#define CS_FW_INCLUDE_MGOS_CONFIG_UTIL_H_
 
 #include <stdbool.h>
 
@@ -144,4 +144,4 @@ double mgos_conf_value_double(const void *cfg, const struct mgos_conf_entry *e);
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_SRC_MGOS_CONFIG_H_ */
+#endif /* CS_FW_INCLUDE_MGOS_CONFIG_UTIL_H_ */

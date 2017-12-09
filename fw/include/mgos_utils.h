@@ -7,8 +7,8 @@
  * Misc utility functions.
  */
 
-#ifndef CS_FW_SRC_MGOS_UTILS_H_
-#define CS_FW_SRC_MGOS_UTILS_H_
+#ifndef CS_FW_INCLUDE_MGOS_UTILS_H_
+#define CS_FW_INCLUDE_MGOS_UTILS_H_
 
 #include "mgos_features.h"
 
@@ -33,4 +33,4 @@ float mgos_rand_range(float from, float to);
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_SRC_MGOS_UTILS_H_ */
+#endif /* CS_FW_INCLUDE_MGOS_UTILS_H_ */
