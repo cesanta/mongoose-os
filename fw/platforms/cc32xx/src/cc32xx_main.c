@@ -22,9 +22,9 @@
 #include "mgos_debug_internal.h"
 #include "mgos_features.h"
 #include "mgos_hal.h"
-#include "mgos_init.h"
-#include "mgos_mongoose.h"
-#include "mgos_uart.h"
+#include "mgos_init_internal.h"
+#include "mgos_mongoose_internal.h"
+#include "mgos_uart_internal.h"
 #include "mgos_updater_common.h"
 
 #include "cc32xx_exc.h"

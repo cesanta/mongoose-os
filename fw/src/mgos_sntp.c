@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include "mgos_sntp.h"
+#include "mgos_sntp_internal.h"
 
 #include <stdbool.h>
 #include <stdlib.h>

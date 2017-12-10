@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include "mgos_net.h"
+#include "mgos_net_internal.h"
 #include "mgos_net_hal.h"
 
 #include "common/cs_dbg.h"

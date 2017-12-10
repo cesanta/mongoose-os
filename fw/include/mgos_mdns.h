@@ -13,7 +13,7 @@
 #ifndef CS_FW_INCLUDE_MGOS_MDNS_H_
 #define CS_FW_INCLUDE_MGOS_MDNS_H_
 
-#include "mgos_init.h"
+#include "mgos_features.h"
 #include "mgos_mongoose.h"
 
 #ifdef __cplusplus
@@ -21,8 +21,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 #if MGOS_ENABLE_MDNS
-
-enum mgos_init_result mgos_mdns_init(void);
 
 /* Register a mDNS event handler. */
 void mgos_mdns_add_handler(mg_event_handler_t handler, void *ud);

@@ -27,13 +27,13 @@
 #include "mgos_debug_internal.h"
 #include "mgos_hal.h"
 #include "mgos_hooks.h"
-#include "mgos_init.h"
-#include "mgos_mongoose.h"
+#include "mgos_init_internal.h"
+#include "mgos_mongoose_internal.h"
 #include "mgos_net_hal.h"
 #include "mgos_sys_config.h"
-#include "mgos_uart.h"
+#include "mgos_uart_internal.h"
 #include "mgos_updater_common.h"
-#include "mgos_vfs.h"
+#include "mgos_vfs_internal.h"
 #ifdef MGOS_HAVE_WIFI
 #include "esp32_wifi.h"
 #endif

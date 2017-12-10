@@ -7,7 +7,7 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-#include "mgos_mmap_esp.h"
+#include "mgos_mmap_esp_internal.h"
 #include "mgos_vfs.h"
 
 #include "common/cs_dbg.h"

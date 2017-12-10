@@ -18,15 +18,16 @@
 #endif
 
 #include "common/cs_dbg.h"
+#include "common/platforms/esp8266/esp_umm_malloc.h"
 #include "mgos_app.h"
 #include "mgos_debug_internal.h"
 #include "mgos_hal.h"
-#include "mgos_init.h"
-#include "mgos_mongoose.h"
-#include "mgos_uart.h"
+#include "mgos_init_internal.h"
+#include "mgos_mongoose_internal.h"
+#include "mgos_uart_internal.h"
 #include "mgos_updater_common.h"
 #include "mgos_updater_hal.h"
-#include "common/platforms/esp8266/esp_umm_malloc.h"
+#include "mgos_vfs_internal.h"
 
 #ifdef MGOS_HAVE_ADC
 #include "esp_adc.h"

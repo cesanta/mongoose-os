@@ -3,10 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_INCLUDE_MGOS_DEPS_H_
-#define CS_FW_INCLUDE_MGOS_DEPS_H_
-
-#include "mgos_features.h"
+#ifndef CS_FW_SRC_MGOS_DEPS_INTERNAL_H_
+#define CS_FW_SRC_MGOS_DEPS_INTERNAL_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -22,4 +20,4 @@ bool mgos_deps_init(void);
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_INCLUDE_MGOS_DEPS_H_ */
+#endif /* CS_FW_SRC_MGOS_DEPS_INTERNAL_H_ */

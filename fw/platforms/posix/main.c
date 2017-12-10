@@ -12,7 +12,7 @@
 #include "common/cs_dbg.h"
 
 #include "mgos_init.h"
-#include "mgos_mongoose.h"
+#include "mgos_mongoose_internal.h"
 #include "mgos_sys_config.h"
 #include "mgos_uart_hal.h"
 

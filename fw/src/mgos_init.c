@@ -4,7 +4,13 @@
  */
 
 #include "mgos.h"
+#include "mgos_deps_internal.h"
 #include "mgos_gpio_internal.h"
+#include "mgos_mdns_internal.h"
+#include "mgos_net_internal.h"
+#include "mgos_sntp_internal.h"
+#include "mgos_sys_config_internal.h"
+#include "mgos_timers_internal.h"
 
 enum mgos_init_result mgos_init(void) {
   enum mgos_init_result r;

@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include "mgos_uart.h"
+#include "mgos_uart_internal.h"
 
 #include <stdlib.h>
 

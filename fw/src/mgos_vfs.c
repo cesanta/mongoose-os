@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include "mgos_vfs.h"
+#include "mgos_vfs_internal.h"
 
 #include <string.h>
 #if MGOS_VFS_DEFINE_LIBC_REENT_API

@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include <mgos_timers.h>
+#include "mgos_timers_internal.h"
 
 #include "common/queue.h"
 

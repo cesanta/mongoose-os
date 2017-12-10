@@ -6,8 +6,6 @@
 #ifndef CS_FW_INCLUDE_MGOS_INIT_H_
 #define CS_FW_INCLUDE_MGOS_INIT_H_
 
-#include "mgos_features.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -44,8 +42,6 @@ enum mgos_init_result {
   MGOS_INIT_DEPS_FAILED = -32,
   MGOS_INIT_MOUNT_FAILED = -33,
 };
-
-enum mgos_init_result mgos_init(void);
 
 #ifdef __cplusplus
 }

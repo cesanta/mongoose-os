@@ -3,14 +3,14 @@
  * All rights reserved
  */
 
-#include "mgos_mongoose.h"
+#include "mgos_mongoose_internal.h"
 
 #include "common/cs_dbg.h"
 #include "common/queue.h"
 
 #include "mgos_hal.h"
 #include "mgos_sys_config.h"
-#include "mgos_timers.h"
+#include "mgos_timers_internal.h"
 #include "mgos_utils.h"
 #ifdef MGOS_HAVE_WIFI
 #include "mgos_wifi.h"

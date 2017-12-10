@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include "mgos_mdns.h"
+#include "mgos_mdns_internal.h"
 
 #include <stdlib.h>
 

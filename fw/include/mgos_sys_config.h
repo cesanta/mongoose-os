@@ -10,7 +10,6 @@
 
 #include "mgos_config.h"
 #include "mgos_ro_vars.h"
-#include "mgos_init.h"
 #include "common/cs_dbg.h"
 
 #include "mongoose/mongoose.h"
@@ -72,8 +71,6 @@ void device_get_mac_address(uint8_t mac[6]);
 
 /* Expands question marks in "str" with digits from the MAC address. */
 void mgos_expand_mac_address_placeholders(char *str);
-
-enum mgos_init_result mgos_sys_config_init(void);
 
 /* Apply a subset of system configuration. Return true on success. */
 bool mgos_config_apply(const char *sys_config_subset_json, bool save);

@@ -17,7 +17,6 @@
 #define CS_FW_INCLUDE_MGOS_SNTP_H_
 
 #include "mgos_features.h"
-#include "mgos_init.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,8 +29,6 @@ typedef void (*mgos_sntp_time_change_cb)(void *arg, double delta);
 
 /* Register callback for time change. */
 void mgos_sntp_add_time_change_cb(mgos_sntp_time_change_cb cb, void *arg);
-
-enum mgos_init_result mgos_sntp_init(void);
 
 #endif /* MGOS_ENABLE_SNTP */
 

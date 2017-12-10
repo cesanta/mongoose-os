@@ -19,7 +19,6 @@
 #include "mongoose/mongoose.h"
 
 #include "mgos_config.h"
-#include "mgos_init.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -79,8 +78,6 @@ bool mgos_net_get_ip_info(enum mgos_net_if_type if_type, int if_instance,
  * `out` must be at least 16 bytes long.
  */
 void mgos_net_ip_to_str(const struct sockaddr_in *sin, char *out);
-
-enum mgos_init_result mgos_net_init(void);
 
 #ifdef __cplusplus
 }

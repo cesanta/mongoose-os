@@ -28,8 +28,6 @@
 
 #include <stdint.h>
 
-#include "mgos_init.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -78,13 +76,8 @@ mgos_timer_id mgos_set_hw_timer(int usecs, int flags, timer_callback cb,
  */
 void mgos_clear_timer(mgos_timer_id id);
 
-enum mgos_init_result mgos_timers_init(void);
-
 /* Get number of seconds since last reboot */
 double mgos_uptime(void);
-
-/* Initialize uptime */
-void mgos_uptime_init(void);
 
 /*
  * Format `time` according to a `strftime()`-conformant format.

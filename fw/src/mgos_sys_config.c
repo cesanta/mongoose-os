@@ -2,7 +2,7 @@
  * Copyright (c) 2014-2016 Cesanta Software Limited
  * All rights reserved
  */
-#include "mgos_sys_config.h"
+#include "mgos_sys_config_internal.h"
 
 #include <stdbool.h>
 #include <stdio.h>

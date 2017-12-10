@@ -18,7 +18,6 @@
 #include "mgos_bitbang.h"
 #include "mgos_config_util.h"
 #include "mgos_debug.h"
-#include "mgos_deps.h"
 #include "mgos_dlsym.h"
 #include "mgos_features.h"
 #include "mgos_gpio.h"

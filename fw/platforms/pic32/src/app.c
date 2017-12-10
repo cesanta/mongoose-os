@@ -10,8 +10,8 @@
 #include "pic32_uart.h"
 #include "pic32_ethernet.h"
 #include "common/cs_dbg.h"
-#include "mgos_init.h"
-#include "mgos_mongoose.h"
+#include "mgos_init_internal.h"
+#include "mgos_mongoose_internal.h"
 #include "mgos_sys_config.h"
 
 void APP_Initialize(void) {

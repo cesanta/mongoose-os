@@ -17,8 +17,6 @@
 
 #include "mongoose/mongoose.h"
 
-#include "mgos_init.h"
-
 #ifndef MGOS_RECV_MBUF_LIMIT
 #define MGOS_RECV_MBUF_LIMIT 3072
 #endif
@@ -26,11 +24,6 @@
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
-
-/*
- * Initialize global event manager
- */
-enum mgos_init_result mongoose_init(void);
 
 /* Return global event manager */
 struct mg_mgr *mgos_get_mgr(void);
