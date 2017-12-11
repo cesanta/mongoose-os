@@ -9,6 +9,8 @@
 #include <stdbool.h>
 #include <stdlib.h>
 
+#include "mgos_init.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
