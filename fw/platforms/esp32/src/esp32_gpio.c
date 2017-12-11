@@ -33,19 +33,29 @@ IRAM static void esp32_gpio_isr(void *arg) {
   for (uint32_t i = 0, mask = 1; i < 32; i++, mask <<= 1) {
     if (s_int_ena[i] == 0 || !(int_st & mask)) continue;
     GPIO.pin[i].int_ena = 0;
+    mgos_gpio_hal_int_clr(i);
     mgos_gpio_hal_int_cb(i);
   }
-  GPIO.status_w1tc = int_st;
   int_st = GPIO.status1.intr_st;
   for (uint32_t i = 32, mask = 1; i < MGOS_NUM_GPIO; i++, mask <<= 1) {
     if (s_int_ena[i] == 0 || !(int_st & mask)) continue;
     GPIO.pin[i].int_ena = 0;
+    mgos_gpio_hal_int_clr(i);
     mgos_gpio_hal_int_cb(i);
   }
-  GPIO.status1_w1tc.intr_st = int_st;
+}
+
+IRAM void mgos_gpio_hal_int_clr(int pin) {
+  uint32_t reg = GPIO_STATUS_W1TC_REG;
+  if (pin >= 32) {
+    pin -= 32;
+    reg += 4; /* GPIO_STATUS_W1TC -> GPIO_STATUS1_W1TC */
+  }
+  WRITE_PERI_REG(reg, (1 << pin));
 }
 
 IRAM void mgos_gpio_hal_int_done(int pin) {
+  mgos_gpio_hal_int_clr(pin);
   GPIO.pin[pin].int_ena = s_int_ena[pin];
 }
 

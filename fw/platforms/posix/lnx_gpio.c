@@ -310,6 +310,10 @@ bool mgos_gpio_read_out(int pin) {
   return mgos_gpio_read(pin);
 }
 
+void mgos_gpio_hal_int_clr(int pin) {
+  (void) pin;
+}
+
 enum mgos_init_result mgos_gpio_hal_init(void) {
   return MGOS_INIT_OK;
 }

@@ -29,7 +29,7 @@ struct mgos_gpio_state {
 static struct mgos_gpio_state s_state[MGOS_NUM_GPIO];
 
 static void mgos_gpio_int_cb(void *arg);
-static void mgos_gpio_int_done_cb(void *arg);
+static void mgos_gpio_dbnc_done_cb(void *arg);
 
 /* In ISR context */
 IRAM void mgos_gpio_hal_int_cb(int pin) {
@@ -58,19 +58,22 @@ static void mgos_gpio_int_cb(void *arg) {
   int pin = (intptr_t) arg;
   struct mgos_gpio_state *s = (struct mgos_gpio_state *) &s_state[pin];
   if (!s->cb_pending || s->cb == NULL) return;
+  s->cb(pin, s->cb_arg);
   if (s->debounce_ms == 0) {
-    mgos_gpio_int_done_cb(arg);
+    s->cb_pending = false;
+    mgos_gpio_hal_int_done(pin);
   } else {
-    mgos_set_timer(s->debounce_ms, false, mgos_gpio_int_done_cb, arg);
+    /* Keep the int disabled for the duration of the debounce time */
+    mgos_set_timer(s->debounce_ms, false, mgos_gpio_dbnc_done_cb, arg);
   }
 }
 
-static void mgos_gpio_int_done_cb(void *arg) {
+static void mgos_gpio_dbnc_done_cb(void *arg) {
   int pin = (intptr_t) arg;
   struct mgos_gpio_state *s = (struct mgos_gpio_state *) &s_state[pin];
-  if (!s->cb_pending) return;
-  s->cb(pin, s->cb_arg);
   s->cb_pending = false;
+  /* Clear any noise taht happened during debounce timer. */
+  mgos_gpio_hal_int_clr(pin);
   mgos_gpio_hal_int_done(pin);
 }
 

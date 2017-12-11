@@ -84,6 +84,10 @@ bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
   return true;
 }
 
+void mgos_gpio_hal_int_clr(int pin) {
+  /* TODO(rojer) */
+}
+
 void mgos_gpio_hal_int_done(int pin) {
   struct stm32_gpio_def *def = get_pin_def(pin);
   if (def == NULL) {

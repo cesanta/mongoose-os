@@ -159,6 +159,14 @@ static void gpio_common_int_handler(uint32_t port_base, uint8_t offset) {
   HWREG(port_base + GPIO_O_GPIO_ICR) = ints; /* Clear all ints. */
 }
 
+void mgos_gpio_hal_int_clr(int pin) {
+  int gpio_no = pin_to_gpio_no(pin);
+  uint32_t port_base = gpio_no_to_port_base(gpio_no);
+  uint32_t port_bit_no = (gpio_no % 8);
+  uint32_t port_bit_mask = (1U << port_bit_no);
+  HWREG(port_base + GPIO_O_GPIO_ICR) = port_bit_mask;
+}
+
 void mgos_gpio_hal_int_done(int pin) {
   int gpio_no = pin_to_gpio_no(pin);
   if (!(s_enabled_ints & (1U << gpio_no))) return;

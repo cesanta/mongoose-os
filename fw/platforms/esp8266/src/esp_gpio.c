@@ -180,6 +180,10 @@ IRAM static void esp8266_gpio_isr(void *arg) {
   (void) arg;
 }
 
+IRAM void mgos_gpio_hal_int_clr(int pin) {
+  GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, 1 << pin);
+}
+
 IRAM void mgos_gpio_hal_int_done(int pin) {
   if (s_int_config[pin] & INT_ENA) {
     gpio_pin_intr_state_set(pin, (s_int_config[pin] & INT_TYPE_MASK));
