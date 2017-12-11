@@ -100,7 +100,7 @@ CFLAGS += $(C_CXX_CFLAGS)
 CXXFLAGS += $(C_CXX_CFLAGS)
 
 $(BUILD_INFO_C): $(MGOS_OBJS) $(APP_OBJS)
-	$(call gen_build_info,$@,,$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
+	$(call gen_build_info,$@,$(APP_PATH),$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
 
 $(MG_BUILD_INFO_C): $(MGOS_OBJS)
 	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)

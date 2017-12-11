@@ -52,6 +52,7 @@ RAM_SIZE = 0x40000
 FLASH_SIZE = 0x100000
 APP_IMAGE_MAX_SIZE ?= 262144
 
+APP_PATH := $(CURDIR)
 SDK_PATH ?=
 FREERTOS_PATH ?=
 MGOS_PATH ?= ../../..
@@ -344,7 +345,7 @@ $(FFI_EXPORTS_C): $(APP_FS_FILES)
 
 # Regenerate build info if there are changes in objects.
 $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MGOS_OBJS)
-	$(call gen_build_info,$@,,$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
+	$(call gen_build_info,$@,$(APP_PATH),$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
 
 $(MG_BUILD_INFO_C): $(MGOS_OBJS)
 	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)

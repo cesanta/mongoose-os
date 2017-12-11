@@ -45,6 +45,7 @@ endif
 
 APP_FS_DIRS = $(sort $(dir $(APP_FS_FILES)))
 
+APP_PATH := $(CURDIR)
 MGOS_PATH ?= ../../..
 COMMON_PATH ?= $(MGOS_PATH)/common
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
@@ -97,6 +98,7 @@ export _APP_CONF_SCHEMA = $(APP_CONF_SCHEMA)
 export _APP_EXTRA_SRCS = $(APP_EXTRA_SRCS)
 export _APP_FS_FILES = $(APP_FS_FILES)
 export _APP_BIN_LIBS = $(APP_BIN_LIBS)
+export APP_PATH
 export APP_PLATFORM
 export _APP_SOURCES = $(APP_SOURCES)
 export _APP_INCLUDES = $(APP_INCLUDES)
