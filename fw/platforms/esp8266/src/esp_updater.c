@@ -35,6 +35,8 @@
 
 #define FLASH_PARAMS_ADDR 0
 
+#define WRITE_CHUNK_SIZE 4
+
 struct slot_info {
   int id;
   uint32_t fw_addr;
@@ -256,6 +258,11 @@ enum mgos_upd_file_action mgos_upd_file_begin(
 int mgos_upd_file_data(struct mgos_upd_hal_ctx *ctx,
                        const struct mgos_upd_file_info *fi,
                        struct mg_str data) {
+  int to_process = (data.len / WRITE_CHUNK_SIZE) * WRITE_CHUNK_SIZE;
+  if (to_process == 0) {
+    return 0;
+  }
+
   int num_written = esp_flash_write(&ctx->wctx, data);
   if (num_written < 0) {
     ctx->status_msg = "Write failed";
@@ -266,7 +273,7 @@ int mgos_upd_file_data(struct mgos_upd_hal_ctx *ctx,
 
 int mgos_upd_file_end(struct mgos_upd_hal_ctx *ctx,
                       const struct mgos_upd_file_info *fi, struct mg_str tail) {
-  assert(tail.len < 4);
+  assert(tail.len < WRITE_CHUNK_SIZE);
   if (tail.len > 0 && esp_flash_write(&ctx->wctx, tail) != (int) tail.len) {
     ctx->status_msg = "Tail write failed";
     return -1;
