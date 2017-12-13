@@ -38,6 +38,10 @@
 extern struct boot_cfg g_boot_cfg;
 #endif
 
+#if SL_MAJOR_VERSION_NUM < 2
+#define SL_NETAPP_HTTP_SERVER_ID SL_NET_APP_HTTP_SERVER_ID
+#endif
+
 struct mgos_event {
   mgos_cb_t cb;
   void *arg;
@@ -52,9 +56,9 @@ void mgos_lock_init(void);
 
 static int cc32xx_start_nwp(void) {
   int r = sl_Start(NULL, NULL, NULL);
-  if (r < 0) {
-    return r;
-  }
+  if (r < 0) return r;
+  /* Stop the HTTP server in case WiFi is disabled and never inited. */
+  sl_NetAppStop(SL_NETAPP_HTTP_SERVER_ID);
   SlDeviceVersion_t ver;
   _u8 opt = SL_DEVICE_GENERAL_VERSION;
   SL_LEN_TYPE len = sizeof(ver);
