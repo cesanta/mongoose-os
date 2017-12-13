@@ -159,7 +159,8 @@ GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
 
 .PHONY: all clean
 
-MGOS_SRCS = mgos_gpio.c \
+MGOS_SRCS = mgos_event.c \
+            mgos_gpio.c \
             mgos_hooks.c \
             mgos_init.c \
             mgos_mongoose.c \

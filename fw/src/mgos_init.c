@@ -15,6 +15,7 @@
 enum mgos_init_result mgos_init(void) {
   enum mgos_init_result r;
 
+  mgos_event_register_base(MGOS_EVENT_SYS, "mos");
   mgos_uptime_init();
 
   r = mgos_net_init();
@@ -51,6 +52,7 @@ enum mgos_init_result mgos_init(void) {
 
   /* Invoke all registered init_done hooks */
   mgos_hook_trigger(MGOS_HOOK_INIT_DONE, NULL);
+  mgos_event_trigger(MGOS_EVENT_INIT_DONE, NULL);
 
   return MGOS_INIT_OK;
 }

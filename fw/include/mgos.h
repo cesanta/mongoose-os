@@ -19,6 +19,7 @@
 #include "mgos_config_util.h"
 #include "mgos_debug.h"
 #include "mgos_dlsym.h"
+#include "mgos_event.h"
 #include "mgos_features.h"
 #include "mgos_gpio.h"
 #include "mgos_hooks.h"
