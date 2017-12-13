@@ -156,6 +156,11 @@ static enum mgos_init_result esp32_mgos_init() {
        esp_ota_get_boot_partition()->label, g_rom_flashchip.chip_size / 1048576,
        mgos_get_heap_size(), mgos_get_free_heap_size()));
 
+  /* Disable WDT on idle task(s), mgos task WDT should do fine. */
+  TaskHandle_t h;
+  if ((h = xTaskGetIdleTaskHandleForCPU(0)) != NULL) esp_task_wdt_delete(h);
+  if ((h = xTaskGetIdleTaskHandleForCPU(1)) != NULL) esp_task_wdt_delete(h);
+
   if (!esp32_fs_init()) {
     LOG(LL_ERROR, ("Failed to mount FS"));
     return MGOS_INIT_FS_INIT_FAILED;
