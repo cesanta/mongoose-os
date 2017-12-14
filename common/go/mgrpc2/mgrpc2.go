@@ -1,7 +1,6 @@
 package mgrpc2
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -10,6 +9,8 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"golang.org/x/net/context"
 
 	"golang.org/x/net/websocket"
 )

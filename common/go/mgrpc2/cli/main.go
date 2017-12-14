@@ -1,11 +1,12 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
+
+	"golang.org/x/net/context"
 
 	"cesanta.com/common/go/mgrpc2"
 )
