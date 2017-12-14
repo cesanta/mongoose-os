@@ -15,7 +15,7 @@
 
 #include "mgos_features.h"
 #include "mgos_hal.h"
-#include "mgos_hooks.h"
+#include "mgos_event.h"
 #include "mgos_sys_config.h"
 #include "mgos_uart.h"
 
@@ -84,10 +84,10 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
 
   /* Invoke all registered debug_write hooks */
   {
-    struct mgos_hook_arg arg = {
-        {.debug = {
-             .buf = buf, .fd = fd, .data = data, .len = len, }}};
-    mgos_hook_trigger(MGOS_HOOK_DEBUG_WRITE, &arg);
+    struct mgos_debug_hook_arg arg = {
+        .buf = buf, .fd = fd, .data = data, .len = len,
+    };
+    mgos_event_trigger(MGOS_EVENT_LOG, &arg);
   }
 
   s_in_debug = false;

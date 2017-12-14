@@ -22,7 +22,7 @@ extern "C" {
 #define MGOS_DEBUG_TMP_BUF_SIZE 256
 
 /*
- * Arguments for the `MGOS_HOOK_DEBUG_WRITE` hook, see `mgos_hook_register()`.
+ * Arguments for the `MGOS_EVENT_LOG` event, see `mgos_event_add_handler()`.
  */
 struct mgos_debug_hook_arg {
   int fd;

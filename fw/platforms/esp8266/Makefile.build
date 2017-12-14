@@ -114,7 +114,6 @@ MGOS_SRCS = cs_file.c cs_rbuf.c \
             mgos_dlsym.c \
             mgos_event.c \
             mgos_gpio.c \
-            mgos_hooks.c \
             mgos_hw_timers.c \
             mgos_init.c \
             mgos_timers.c \

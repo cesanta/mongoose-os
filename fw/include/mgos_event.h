@@ -35,9 +35,36 @@ extern "C" {
 #define MGOS_EVENT_SYS MGOS_EVENT_BASE('M', 'O', 'S')
 
 enum {
-  MGOS_EVENT_INIT_DONE = MGOS_EVENT_SYS, /* ev_data: NULL*/
-  MGOS_EVENT_LOG,    /* ev_data: struct mgos_debug_hook_arg */
-  MGOS_EVENT_REBOOT, /* ev_data: NULL */
+  /*
+   * Fired when all core modules and libs are initialized (Right after printing
+   * `Init done` to the console).
+   *
+   * ev_data: NULL
+   */
+  MGOS_EVENT_INIT_DONE = MGOS_EVENT_SYS,
+
+  /*
+   * Fired when anything is printed to the debug console, see `struct
+   * mgos_debug_hook_arg`
+   *
+   * ev_data: struct mgos_debug_hook_arg
+   */
+  MGOS_EVENT_LOG, /* ev_data: struct mgos_debug_hook_arg */
+
+  /*
+   * Fired right before restarting the system (but also before unmounting
+   * filesystems, disconnecting from the wifi, etc)
+   *
+   * ev_data: NULL
+   */
+  MGOS_EVENT_REBOOT,
+
+  /*
+   * Fired on OTA status changes.
+   *
+   * ev_data: struct mgos_ota_status
+   */
+  MGOS_EVENT_OTA_STATUS,
 };
 
 /* Register a base event number in order to prevent event number conflicts. */

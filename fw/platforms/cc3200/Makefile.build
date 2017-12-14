@@ -161,7 +161,6 @@ GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
 
 MGOS_SRCS = mgos_event.c \
             mgos_gpio.c \
-            mgos_hooks.c \
             mgos_init.c \
             mgos_mongoose.c \
             mgos_hw_timers.c mgos_timers.c \

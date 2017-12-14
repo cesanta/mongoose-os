@@ -175,7 +175,7 @@ LDSCRIPT = $(MGOS_PLATFORM_PATH)/ld/stm32.ld
 
 MGOS_SRCS += $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
              $(notdir $(MG_BUILD_INFO_C)) $(notdir $(BUILD_INFO_C)) \
-             mgos_config_util.c mgos_event.c mgos_gpio.c mgos_hooks.c mgos_hw_timers.c \
+             mgos_config_util.c mgos_event.c mgos_gpio.c mgos_hw_timers.c \
              mgos_sys_config.c \
              mgos_timers.c cs_crc32.c cs_file.c mgos_mongoose.c \
              mongoose.c \

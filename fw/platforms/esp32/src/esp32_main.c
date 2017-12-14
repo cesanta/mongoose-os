@@ -25,8 +25,8 @@
 #include "common/cs_dbg.h"
 #include "mgos_app.h"
 #include "mgos_debug_internal.h"
+#include "mgos_event.h"
 #include "mgos_hal.h"
-#include "mgos_hooks.h"
 #include "mgos_init_internal.h"
 #include "mgos_mongoose_internal.h"
 #include "mgos_net_hal.h"
@@ -105,8 +105,7 @@ struct mgos_event {
   void *arg;
 };
 
-static void s_init_done_hook(enum mgos_hook_type type,
-                             const struct mgos_hook_arg *arg, void *userdata) {
+static void s_init_done_cb(int ev, void *ev_data, void *userdata) {
   /* initialize TZ env variable with the sys.tz_spec config value */
   const char *tz_spec = mgos_sys_config_get_sys_tz_spec();
   if (tz_spec == NULL) {
@@ -116,8 +115,8 @@ static void s_init_done_hook(enum mgos_hook_type type,
   setenv("TZ", tz_spec, 1);
   tzset();
 
-  (void) type;
-  (void) arg;
+  (void) ev;
+  (void) ev_data;
   (void) userdata;
 }
 
@@ -183,9 +182,9 @@ static enum mgos_init_result esp32_mgos_init() {
   /*
    * We also need to initialize TZ env variable with the sys.tz_spec config
    * value, but we can't do that here because sys_config is not yet
-   * initialized, so we register the INIT_DONE hook.
+   * initialized, so we register the INIT_DONE event handler.
    */
-  mgos_hook_register(MGOS_HOOK_INIT_DONE, s_init_done_hook, NULL);
+  mgos_event_add_handler(MGOS_EVENT_INIT_DONE, s_init_done_cb, NULL);
 
   if ((r = mgos_init()) != MGOS_INIT_OK) return r;
 

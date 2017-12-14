@@ -13,7 +13,7 @@
 #include "common/str_util.h"
 
 #include "mgos_hal.h"
-#include "mgos_hooks.h"
+#include "mgos_event.h"
 #include "mgos_sys_config.h"
 #include "mgos_timers.h"
 #include "mgos_updater_hal.h"
@@ -41,8 +41,7 @@ static void *s_event_cb_arg = NULL;
     snprintf(buf, sizeof(buf), _fmt, __VA_ARGS__);                     \
     LOG(ll, ("%s", buf));                                              \
     struct mgos_ota_status ota_status = {.state = _state, .msg = buf}; \
-    struct mgos_hook_arg ha = {.ota_status = ota_status};              \
-    mgos_hook_trigger(MGOS_HOOK_OTA_STATUS, &ha);                      \
+    mgos_event_trigger(MGOS_EVENT_OTA_STATUS, &ota_status);            \
   } while (0)
 
 /*
