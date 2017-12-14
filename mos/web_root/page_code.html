@@ -310,7 +310,7 @@
   $(document).off('click', '#toolbar-copy-button');
   $(document).on('click', '#toolbar-copy-button', function() {
     var btn = $(this);
-    var fileName = $('#file-dropdown').val().replace(/^.*\//, '');
+    var fileName = $('#file-dropdown').val().replace(/^.*[\\\/]/, '');
     var text = code_editor.getValue();
     if (!fileName) return;
     spin(btn);
