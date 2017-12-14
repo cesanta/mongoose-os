@@ -22,6 +22,7 @@ void mgos_system_restart(void) {
   mgos_hw_timers_deinit();
 #ifdef MGOS_HAVE_WIFI
   mgos_wifi_disconnect();
+  mgos_wifi_deinit();
 #endif
   LOG(LL_INFO, ("Restarting"));
   mgos_debug_flush();
