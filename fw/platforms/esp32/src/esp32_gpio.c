@@ -188,6 +188,10 @@ void (*mgos_nsleep100)(uint32_t n);
 uint32_t mgos_bitbang_n100_cal;
 
 enum mgos_init_result mgos_gpio_hal_init() {
+  /* Soft reset does not clear GPIO_PINn_INT_ENA, we have to do it ourselves. */
+  for (int i = 0; i < MGOS_NUM_GPIO; i++) {
+    if (GPIO_IS_VALID_GPIO(i)) gpio_intr_disable(i);
+  }
   esp_err_t r = gpio_isr_register(esp32_gpio_isr, NULL, 0, &s_int_handle);
   if (r != ESP_OK) return MGOS_INIT_GPIO_INIT_FAILED;
   r = esp_intr_enable(s_int_handle);
