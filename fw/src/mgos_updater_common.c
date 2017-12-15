@@ -849,3 +849,8 @@ const char *mgos_ota_state_str(enum mgos_ota_state state) {
   }
   return "";
 }
+
+/* For FFI */
+const char *mgos_ota_status_get_msg(struct mgos_ota_status *s) {
+  return s->msg;
+}

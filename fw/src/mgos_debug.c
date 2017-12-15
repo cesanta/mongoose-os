@@ -161,3 +161,13 @@ enum mgos_init_result mgos_debug_uart_init(void) {
   }
   return res;
 }
+
+/* For FFI */
+const void *mgos_debug_event_get_ptr(struct mgos_debug_hook_arg *arg) {
+  return arg->data;
+}
+
+/* For FFI */
+int mgos_debug_event_get_len(struct mgos_debug_hook_arg *arg) {
+  return arg->len;
+}
