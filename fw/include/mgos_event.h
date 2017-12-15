@@ -34,7 +34,10 @@ extern "C" {
  */
 #define MGOS_EVENT_SYS MGOS_EVENT_BASE('M', 'O', 'S')
 
-enum {
+/*
+ * System mos events
+ */
+enum mgos_event_sys {
   /*
    * Fired when all core modules and libs are initialized (Right after printing
    * `Init done` to the console).
@@ -67,16 +70,50 @@ enum {
   MGOS_EVENT_OTA_STATUS,
 };
 
-/* Register a base event number in order to prevent event number conflicts. */
+/*
+ * Register a base event number in order to prevent event number conflicts.
+ * Use `MGOS_EVENT_BASE()` macro to get `base_event_number`; `name` is an
+ * arbitrary name of the module who registers the base number.
+ *
+ * Example:
+ * ```c
+ * #define MY_EVENT_BASE MGOS_EVENT_BASE('F', 'O', 'O')
+ *
+ * enum my_event {
+ *   MY_EVENT_AAA = MY_EVENT_BASE,
+ *   MY_EVENT_BBB,
+ *   MY_EVENT_CCC,
+ * };
+ *
+ * // And somewhere else:
+ * mgos_event_register_base(MY_EVENT_BASE, "my module foo");
+ * ```
+ */
 bool mgos_event_register_base(int base_event_number, const char *name);
 
-/* Trigger an event. Return number of event handlers invoked. */
+/* Trigger an event `ev` with the event data `ev_data`. Return number of event
+ * handlers invoked. */
 int mgos_event_trigger(int ev, void *ev_data);
 
 /* Event handler signature. */
 typedef void (*mgos_event_handler_t)(int ev, void *ev_data, void *userdata);
 
-/* Add an event handler. Return true on success, false on error (e.g. OOM). */
+/*
+ * Add an event handler. Return true on success, false on error (e.g. OOM).
+ *
+ * Example:
+ * ```c
+ * static void system_restart_cb(int ev, void *ev_data, void *userdata) {
+ *   LOG(LL_INFO, ("Going to reboot!"));
+ *   (void) ev;
+ *   (void) ev_data;
+ *   (void) userdata;
+ * }
+ *
+ * // And somewhere else:
+ * mgos_event_add_handler(MGOS_EVENT_REBOOT, system_restart_cb, NULL);
+ * ```
+ */
 bool mgos_event_add_handler(int ev, mgos_event_handler_t cb, void *userdata);
 
 #ifdef __cplusplus
