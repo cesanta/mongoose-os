@@ -40,10 +40,6 @@ enum mgos_init_result mongoose_init(void) {
   return mgos_timers_init();
 }
 
-void mongoose_destroy(void) {
-  mg_mgr_free(&s_mgr);
-}
-
 int mongoose_poll(int ms) {
   int ret;
   {

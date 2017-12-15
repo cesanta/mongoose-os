@@ -37,9 +37,6 @@ struct mg_mgr *mgos_get_mgr(void);
  */
 int mongoose_poll(int ms);
 
-/* Free global event manager */
-void mongoose_destroy(void);
-
 /*
  * On-poll callback; `cb_arg` is an arbitrary pointer given to
  * `mgos_add_poll_cb()`

@@ -25,7 +25,6 @@ int main(int argc, char *argv[]) {
   for (;;) {
     mongoose_poll(1000);
   }
-  mongoose_destroy();
   return EXIT_SUCCESS;
 }
 
