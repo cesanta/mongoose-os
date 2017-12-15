@@ -20,6 +20,12 @@ extern "C" {
 
 enum mgos_init_result mgos_mdns_init(void);
 
+/* Join multicast group. */
+void mgos_mdns_hal_join_group(const char *mcast_ip);
+
+/* Leave multicast group. */
+void mgos_mdns_hal_leave_group(const char *mcast_ip);
+
 #endif /* MGOS_ENABLE_MDNS */
 
 #ifdef __cplusplus

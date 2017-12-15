@@ -22,20 +22,41 @@ extern "C" {
 
 #if MGOS_ENABLE_MDNS
 
-/* Register a mDNS event handler. */
+/*
+ * Register a mDNS event handler `handler` with the arbitrary userdata `ud`.
+ *
+ * Example:
+ *
+ * ```c
+ * static void handler(struct mg_connection *nc, int ev, void *ev_data,
+ *                     void *user_data) {
+ *   if (ev == MG_DNS_MESSAGE) {
+ *     struct mg_dns_message *msg = (struct mg_dns_message *) ev_data;
+ *     char *peer = inet_ntoa(nc->sa.sin.sin_addr);
+ *     LOG(LL_DEBUG, ("---- DNS packet from %s (%d questions, %d answers)",
+ *peer,
+ *           msg->num_questions, msg->num_answers));
+ *   }
+ *
+ *   (void) user_data;
+ * }
+ *
+ * ....
+ *
+ * // Somewhere else:
+ * mgos_mdns_add_handler(handler, NULL)
+ * ```
+ */
 void mgos_mdns_add_handler(mg_event_handler_t handler, void *ud);
 
-/* Unregister an event handler. */
+/*
+ * Unregister a previously registered event handler with the given userdata
+ * `ud`.
+ */
 void mgos_mdns_remove_handler(mg_event_handler_t handler, void *ud);
 
-/* Returns mDNS connection. */
+/* Return global mDNS connection. */
 struct mg_connection *mgos_mdns_get_listener(void);
-
-/* Join multicast group. */
-void mgos_mdns_hal_join_group(const char *mcast_ip);
-
-/* Leave multicast group. */
-void mgos_mdns_hal_leave_group(const char *mcast_ip);
 
 #endif /* MGOS_ENABLE_MDNS */
 
