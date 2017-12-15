@@ -10,8 +10,8 @@
  * A filesystem is backed by a device which supports block reads and writes.
  */
 
-#ifndef CS_FW_INCLUDE_MGOS_VFS_H_
-#define CS_FW_INCLUDE_MGOS_VFS_H_
+#ifndef CS_FW_SRC_MGOS_VFS_H_
+#define CS_FW_SRC_MGOS_VFS_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -280,4 +280,4 @@ int mgos_vfs_closedir(DIR *pdir);
 }
 #endif
 
-#endif /* CS_FW_INCLUDE_MGOS_VFS_H_ */
+#endif /* CS_FW_SRC_MGOS_VFS_H_ */
