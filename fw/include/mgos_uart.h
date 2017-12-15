@@ -85,11 +85,27 @@ struct mgos_uart_config {
 
 /*
  * Apply given UART configuration.
+ *
+ * Example:
+ * ```c
+ * int uart_no = 0;
+ *
+ * struct mgos_uart_config ucfg;
+ * mgos_uart_config_set_defaults(uart_no, &ucfg);
+ *
+ * ucfg.baud_rate = 115200;
+ * ucfg.rx_buf_size = 1500;
+ * ucfg.tx_buf_size = 1500;
+ *
+ * if (!mgos_uart_configure(uart_no, &ucfg)) {
+ *   LOG(LL_ERROR, ("Failed to configure UART%d", uart_no));
+ * }
+ * ```
  */
 bool mgos_uart_configure(int uart_no, const struct mgos_uart_config *cfg);
 
 /*
- * Fill provided `cfg` structure with the default values.
+ * Fill provided `cfg` structure with the default values. See example above.
  */
 void mgos_uart_config_set_defaults(int uart_no, struct mgos_uart_config *cfg);
 
@@ -103,8 +119,8 @@ bool mgos_uart_config_get(int uart_no, struct mgos_uart_config *cfg);
 typedef void (*mgos_uart_dispatcher_t)(int uart_no, void *arg);
 
 /*
- * UART dispatcher gets when there is data in the input buffer
- * or space available in the output buffer.
+ * Set UART dispatcher: a callback which gets called when there is data in the
+ * input buffer or space available in the output buffer.
  */
 void mgos_uart_set_dispatcher(int uart_no, mgos_uart_dispatcher_t cb,
                               void *arg);
