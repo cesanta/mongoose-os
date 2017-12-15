@@ -24,6 +24,10 @@
 extern "C" {
 #endif /* __cplusplus */
 
+/*
+ * Event types which are delivered to the callback registered with
+ * `mgos_net_add_event_handler()`.
+ */
 enum mgos_net_event {
   MGOS_NET_EV_DISCONNECTED = 0,
   MGOS_NET_EV_CONNECTING = 1,
@@ -31,6 +35,9 @@ enum mgos_net_event {
   MGOS_NET_EV_IP_ACQUIRED = 3,
 };
 
+/*
+ * Interface type
+ */
 enum mgos_net_if_type {
   MGOS_NET_IF_TYPE_WIFI,
   MGOS_NET_IF_TYPE_ETHERNET,
@@ -59,7 +66,27 @@ typedef void (*mgos_net_event_handler_t)(
     enum mgos_net_event ev, const struct mgos_net_event_data *ev_data,
     void *arg);
 
-/* Register network configuration event handler. */
+/*
+ * Register network configuration event handler. See `mgos_net_event_handler_t`
+ * above for the details on callback arguments.
+ *
+ * Example:
+ * ```c
+ * static void my_net_ev_handler(enum mgos_net_event ev,
+ *                               const struct mgos_net_event_data *ev_data,
+ *                               void *arg) {
+ *   if (ev == MGOS_NET_EV_IP_ACQUIRED) {
+ *     LOG(LL_INFO, ("Just got IP!"));
+ *     // Fetch something very useful from somewhere
+ *   }
+ *   (void) ev_data;
+ *   (void) arg;
+ * }
+ *
+ * // Somewhere else:
+ * mgos_net_add_event_handler(my_net_ev_handler, NULL);
+ * ```
+ */
 void mgos_net_add_event_handler(mgos_net_event_handler_t eh, void *arg);
 
 /* Unregister network configuration event handler. */
