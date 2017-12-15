@@ -42,18 +42,38 @@ typedef void (*timer_callback)(void *param);
 /* Timer ID type */
 typedef uintptr_t mgos_timer_id;
 
-/* Flag for mgos_set*_timer() */
-#define MGOS_TIMER_REPEAT 1
+/*
+ * Flag for mgos_set*_timer().
+ *
+ * When it's set, the call is repeated indefinitely; otherwise the call is a
+ * one-off.
+ */
+#define MGOS_TIMER_REPEAT (1 << 0)
 
 /*
  * Setup a timer with `msecs` timeout and `cb` as a callback.
  *
- * `flags` set to 1 will repeat a call infinitely, otherwise it's a one-off.
- * `arg` is a parameter to pass to `cb`. Return numeric timer ID.
+ * `flags` is a bitmask, currently there's only one flag available:
+ * `MGOS_TIMER_REPEAT` (see above). `arg` is a parameter to pass to `cb`.
+ * Return numeric timer ID.
  *
  * Note that this is a software timer, with fairly low accuracy and high jitter.
  * However, number of software timers is not limited.
  * If you need intervals < 10ms, use mgos_set_hw_timer.
+ *
+ * Example:
+ * ```c
+ * static void my_timer_cb(void *arg) {
+ *   bool val = mgos_gpio_toggle(mgos_sys_config_get_pins_led());
+ *   LOG(LL_INFO, ("uptime: %.2lf", mgos_uptime());
+ *   (void) arg;
+ * }
+ *
+ * enum mgos_app_init_result mgos_app_init(void) {
+ *   mgos_set_timer(1000, MGOS_TIMER_REPEAT, my_timer_cb, NULL);
+ *   return MGOS_APP_INIT_SUCCESS;
+ * }
+ * ```
  */
 mgos_timer_id mgos_set_timer(int msecs, int flags, timer_callback cb,
                              void *cb_arg);
