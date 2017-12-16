@@ -64,8 +64,13 @@ type dispImpl struct {
 func (d *dispImpl) Connect(address string) (io.ReadWriteCloser, error) {
 	if strings.HasPrefix(address, "ws://") || strings.HasPrefix(address, "wss://") {
 		ws, err := websocket.Dial(address, "", "http://localhost")
-		d.channels[address] = ws
-		return ws, err
+		if err != nil {
+			fmt.Println(fmt.Errorf("Error connecting: %v", err))
+			return nil, err
+		} else {
+			d.channels[address] = ws
+			return ws, err
+		}
 	} else {
 		return nil, fmt.Errorf("Unknown address type: %s", address)
 	}
