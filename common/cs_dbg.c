@@ -32,12 +32,12 @@ double cs_log_ts WEAK;
 
 enum cs_log_level cs_log_cur_msg_level WEAK = LL_NONE;
 
-void cs_log_set_filter(const char *str) WEAK;
-void cs_log_set_filter(const char *str) {
+void cs_log_set_filter(const char *pattern) WEAK;
+void cs_log_set_filter(const char *pattern) {
   free(s_filter_pattern);
-  if (str != NULL) {
-    s_filter_pattern = strdup(str);
-    s_filter_pattern_len = strlen(str);
+  if (pattern != NULL) {
+    s_filter_pattern = strdup(pattern);
+    s_filter_pattern_len = strlen(pattern);
   } else {
     s_filter_pattern = NULL;
     s_filter_pattern_len = 0;
