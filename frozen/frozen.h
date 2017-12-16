@@ -180,7 +180,7 @@ int json_printf_array(struct json_out *, va_list *ap);
  * 1. Object keys in the format string may be not quoted, e.g. "{key: %d}"
  * 2. Order of keys in an object is irrelevant.
  * 3. Several extra format specifiers are supported:
- *    - %B: consumes `int *` (or 'char *', if sizeof(bool) == sizeof(char)),
+ *    - %B: consumes `int *` (or `char *`, if `sizeof(bool) == sizeof(char)`),
  *       expects boolean `true` or `false`.
  *    - %Q: consumes `char **`, expects quoted, JSON-encoded string. Scanned
  *       string is malloc-ed, caller must free() the string.
