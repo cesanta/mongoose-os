@@ -7,10 +7,11 @@
 
 #include "common/queue.h"
 
-#include <mgos_features.h>
-#include <mgos_hal.h>
-#include <mgos_mongoose.h>
-#include <mgos_sntp.h>
+#include "mgos_features.h"
+#include "mgos_hal.h"
+#include "mgos_mongoose.h"
+#include "mgos_mongoose_internal.h"
+#include "mgos_sntp.h"
 
 #define MGOS_SW_TIMER_MASK 0xffff0000
 

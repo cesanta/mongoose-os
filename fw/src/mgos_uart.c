@@ -11,6 +11,7 @@
 
 #include "mgos_hal.h"
 #include "mgos_mongoose.h"
+#include "mgos_mongoose_internal.h"
 #include "mgos_uart_hal.h"
 #include "mgos_utils.h"
 
