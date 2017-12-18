@@ -583,6 +583,12 @@
 			"revisionTime": "2015-12-15T15:34:51Z"
 		},
 		{
+			"checksumSHA1": "74sbkQfq4PgcfClChxNZgKLd3zk=",
+			"path": "github.com/zserge/webview",
+			"revision": "379a92f9055d6371daac45a136b673adaba133e4",
+			"revisionTime": "2017-12-08T16:38:17Z"
+		},
+		{
 			"checksumSHA1": "IQkUIOnvlf0tYloFx9mLaXSvXWQ=",
 			"path": "golang.org/x/crypto/curve25519",
 			"revision": "9f005a07e0d31d45e6656d241bb5c0f2efd4bc94",
