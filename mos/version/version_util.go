@@ -4,7 +4,9 @@ package version
 
 import (
 	"regexp"
+	"strings"
 
+	"cesanta.com/common/go/ourutil"
 	moscommon "cesanta.com/mos/common"
 )
 
@@ -14,14 +16,20 @@ type VersionJson struct {
 	BuildVersion   string `json:"build_version"`
 }
 
+const (
+	brewDistrName = "brew"
+)
+
 var (
 	regexpVersionNumber = regexp.MustCompile(`^\d+\.[0-9.]*$`)
 	regexpBuildId       = regexp.MustCompile(
 		`^(?P<datetime>[^/]+)\/(?P<symbolic>[^@]+)\@(?P<hash>.+)$`,
 	)
-	regexpBuildIdDebian = regexp.MustCompile(
+	regexpBuildIdDistr = regexp.MustCompile(
 		`^(?P<version>[^+]+)\+(?P<hash>[^~]+)\~(?P<distr>.+)$`,
 	)
+
+	debianDistrNames = []string{"xenial", "zesty", "artful"}
 )
 
 // GetMosVersion returns this binary's version, or "latest" if it's not a release build.
@@ -55,19 +63,31 @@ func LooksLikeDebianBuildId(s string) bool {
 	return GetDebianPackageName(s) != ""
 }
 
+func LooksLikeBrewBuildId(s string) bool {
+	matches := ourutil.FindNamedSubmatches(regexpBuildIdDistr, s)
+	return matches != nil && matches["distr"] == brewDistrName
+}
+
 // GetDebianPackageName parses given build id string, and if it looks like a
 // debian build id, returns either "mos-latest" or "mos". Otherwise, returns
 // an empty string.
 func GetDebianPackageName(buildId string) string {
-	matches := regexpBuildIdDebian.FindStringSubmatch(buildId)
+	matches := ourutil.FindNamedSubmatches(regexpBuildIdDistr, buildId)
 	if matches != nil {
-		if LooksLikeVersionNumber(matches[1]) {
-			return "mos"
-		} else {
-			return "mos-latest"
+		for _, v := range debianDistrNames {
+			if strings.HasPrefix(matches["distr"], v) {
+				if LooksLikeVersionNumber(matches["version"]) {
+					return "mos"
+				} else {
+					return "mos-latest"
+				}
+			}
 		}
+
+		// Some non-debian distro name
+		return ""
 	} else {
-		// Doesn't look like debian build id
+		// Doesn't look like distro build id
 		return ""
 	}
 }

@@ -7,6 +7,7 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"regexp"
 	"strings"
 
 	"github.com/cesanta/errors"
@@ -74,4 +75,20 @@ func RunCmd(outMode CmdOutMode, args ...string) error {
 	}
 
 	return nil
+}
+
+// Returns a map from regexp capture group name to the corresponding matched
+// string.
+// A return value of nil indicates no match.
+func FindNamedSubmatches(r *regexp.Regexp, s string) map[string]string {
+	matches := r.FindStringSubmatch(s)
+	if matches == nil {
+		return nil
+	}
+
+	result := make(map[string]string)
+	for i, name := range r.SubexpNames()[1:] {
+		result[name] = matches[i+1]
+	}
+	return result
 }
