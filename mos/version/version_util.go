@@ -59,6 +59,12 @@ func LooksLikeVersionNumber(s string) bool {
 	return regexpVersionNumber.MatchString(s)
 }
 
+// Returns whether the build id looks like the mos was built in some distro
+// environment (like, ubuntu or brew), and thus it shouldn't update itself.
+func LooksLikeDistrBuildId(s string) bool {
+	return ourutil.FindNamedSubmatches(regexpBuildIdDistr, s) != nil
+}
+
 func LooksLikeDebianBuildId(s string) bool {
 	return GetDebianPackageName(s) != ""
 }

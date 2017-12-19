@@ -394,9 +394,9 @@ func startUI(ctx context.Context, devConn *dev.DevConn) error {
 	http.HandleFunc("/server-version", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		if version.LooksLikeDebianBuildId(version.BuildId) {
-			// In deb-packed mos, don't check server-version because the update is
-			// done via apt
+		if version.LooksLikeDistrBuildId(version.BuildId) {
+			// In distro-built mos, don't check server-version because the update is
+			// done via other means
 			httpReply(w, false, nil)
 			return
 		}

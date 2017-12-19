@@ -95,7 +95,7 @@ func usage() {
 
 	fmt.Fprintf(w, "The Mongoose OS command line tool, v. %s.\n", version.BuildId)
 
-	if !version.LooksLikeDebianBuildId(version.BuildId) {
+	if !version.LooksLikeDistrBuildId(version.BuildId) {
 		fmt.Fprintf(w, "Update channel: %q. Checking updates... ", update.GetUpdateChannel())
 		w.Flush()
 
