@@ -16,8 +16,9 @@
 
 IRAM bool mgos_hw_timers_dev_set(struct mgos_hw_timer_info *ti, int usecs,
                                  int flags) {
-  timg_dev_t *tg = ti->dev.tg;
-  int tn = ti->dev.tn;
+  struct mgos_hw_timer_dev_data *dd = &ti->dev;
+  timg_dev_t *tg = dd->tg;
+  int tn = dd->tn;
 
   tg->hw_timer[tn].config.val =
       (TIMG_T0_INCREASE | TIMG_T0_ALARM_EN | TIMG_T0_LEVEL_INT_EN |
@@ -31,7 +32,25 @@ IRAM bool mgos_hw_timers_dev_set(struct mgos_hw_timer_info *ti, int usecs,
   tg->hw_timer[tn].alarm_low = usecs;
   tg->hw_timer[tn].reload = 1;
 
-  esp_intr_set_in_iram(ti->dev.inth, (flags & MGOS_ESP32_HW_TIMER_IRAM) != 0);
+  /*
+   * Note: timer_isr_register is not IRAM safe and this makes the first
+   * invocation of mgos_set_hw_timer not IRAM-safe as well.
+   * Hopefully this is not a big deal, and the fix is not trivial because of
+   * interrupt shortage. Ideally, we'd use a single shared interrupt for all
+   * the timers but esp_intr_set_in_iram does not work with shared ints yet.
+   */
+  if (dd->inth == NULL &&
+      timer_isr_register(dd->tgn, dd->tn,
+                         (void (*) (void *)) mgos_hw_timers_isr, ti, 0,
+                         &dd->inth) != ESP_OK) {
+    LOG(LL_ERROR, ("Couldn't allocate into for HW timer"));
+    return false;
+  }
+
+  if (esp_intr_set_in_iram(dd->inth, (flags & MGOS_ESP32_HW_TIMER_IRAM) != 0) !=
+      ESP_OK) {
+    return false;
+  }
 
   tg->int_ena.val |= (1 << tn);
 
@@ -74,7 +93,5 @@ bool mgos_hw_timers_dev_init(struct mgos_hw_timer_info *ti) {
     default:
       return false;
   }
-  return (timer_isr_register(dd->tgn, dd->tn,
-                             (void (*) (void *)) mgos_hw_timers_isr, ti, 0,
-                             &dd->inth) == ESP_OK);
+  return true;
 }
