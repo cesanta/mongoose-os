@@ -219,7 +219,7 @@ func getAWSIoTPolicyNames() ([]string, error) {
 	return policies, nil
 }
 
-func genCert(ctx context.Context, iotSvc *iot.IoT, devConn *dev.DevConn, devConf *dev.DevConf, devInfo *fwsys.GetInfoResult, cn string) (string, string, error) {
+func genCert(ctx context.Context, iotSvc *iot.IoT, devConn *dev.DevConn, devConf *dev.DevConf, devInfo *fwsys.GetInfoResult, cn, thingName string) (string, string, error) {
 	var err error
 	var pk crypto.Signer
 	var pkFile, pkPEMBlockType string
@@ -372,13 +372,10 @@ func genCert(ctx context.Context, iotSvc *iot.IoT, devConn *dev.DevConn, devConf
 		}
 	}
 
-	if awsIoTThing != "-" {
-		if awsIoTThing == "" {
-			awsIoTThing = cn
-		}
+	if thingName != "-" {
 		/* Try creating the thing, in case it doesn't exist. */
 		_, err := iotSvc.CreateThing(&iot.CreateThingInput{
-			ThingName: aws.String(awsIoTThing),
+			ThingName: aws.String(thingName),
 		})
 		if err != nil && err.Error() != iot.ErrCodeResourceAlreadyExistsException {
 			reportf("Error creating thing: %s", err)
@@ -388,13 +385,13 @@ func genCert(ctx context.Context, iotSvc *iot.IoT, devConn *dev.DevConn, devConf
 			 * If the thing does not exist, attaching will fail.
 			 */
 		}
-		reportf("Attaching the certificate to %q...", awsIoTThing)
+		reportf("Attaching the certificate to %q...", thingName)
 		_, err = iotSvc.AttachThingPrincipal(&iot.AttachThingPrincipalInput{
-			ThingName: aws.String(awsIoTThing),
+			ThingName: aws.String(thingName),
 			Principal: ccResp.CertificateArn,
 		})
 		if err != nil {
-			return "", "", errors.Annotatef(err, "failed to attach certificate to %q", awsIoTThing)
+			return "", "", errors.Annotatef(err, "failed to attach certificate to %q", thingName)
 		}
 	}
 
@@ -483,8 +480,12 @@ func awsIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 		certCN = devID
 	}
 
+	if awsIoTThing == "" {
+		awsIoTThing = certCN
+	}
+
 	if certFile == "" {
-		certFile, keyFile, err = genCert(ctx, iotSvc, devConn, devConf, devInfo, certCN)
+		certFile, keyFile, err = genCert(ctx, iotSvc, devConn, devConf, devInfo, certCN, awsIoTThing)
 		if err != nil {
 			return errors.Annotatef(err, "failed to generate certificate")
 		}
@@ -548,6 +549,10 @@ func awsIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	devId, err := devConf.Get("device.id")
 	if devId == "" {
 		settings["device.id"] = certCN
+	}
+
+	if awsIoTThing != "-" {
+		settings["aws.thing_name"] = awsIoTThing
 	}
 
 	if awsGGEnable && awsGGConf != "" {
