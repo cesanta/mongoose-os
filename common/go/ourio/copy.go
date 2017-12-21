@@ -15,42 +15,66 @@ import (
 // by dst. The file will be created if it does not already exist. If the
 // destination file exists, all it's contents will be replaced by the contents
 // of the source file. The file mode will be copied from the source.
+//
+// If src is a symlink, dst will be a symlink with the same target as src.
 func CopyFile(src, dst string) (err error) {
 	glog.Infof("CopyFile %q -> %q", src, dst)
-	in, err := os.Open(src)
-	if err != nil {
-		err = errors.Trace(err)
-		return
-	}
-	defer in.Close()
 
-	out, err := os.Create(dst)
+	var si os.FileInfo
+	si, err = os.Lstat(src)
 	if err != nil {
 		err = errors.Trace(err)
 		return
 	}
-	defer func() {
-		if e := out.Close(); e != nil {
-			err = e
+
+	if si.Mode()&os.ModeSymlink != 0 {
+		// Source file is a symlink
+		var linkTgt string
+		linkTgt, err = os.Readlink(src)
+		if err != nil {
+			err = errors.Trace(err)
+			return
 		}
-	}()
 
-	si, err := os.Stat(src)
-	if err != nil {
-		err = errors.Trace(err)
-		return
-	}
+		err = os.Symlink(linkTgt, dst)
+		if err != nil {
+			err = errors.Trace(err)
+			return
+		}
+	} else {
+		// Source file is not a symlink
 
-	err = os.Chmod(dst, si.Mode())
-	if err != nil {
-		err = errors.Trace(err)
-		return
-	}
+		var in *os.File
+		in, err = os.Open(src)
+		if err != nil {
+			err = errors.Trace(err)
+			return
+		}
+		defer in.Close()
 
-	_, err = io.Copy(out, in)
-	if err != nil {
-		err = errors.Trace(err)
-		return
+		var out *os.File
+		out, err = os.Create(dst)
+		if err != nil {
+			err = errors.Trace(err)
+			return
+		}
+		defer func() {
+			if e := out.Close(); e != nil {
+				err = e
+			}
+		}()
+
+		err = os.Chmod(dst, si.Mode())
+		if err != nil {
+			err = errors.Trace(err)
+			return
+		}
+
+		_, err = io.Copy(out, in)
+		if err != nil {
+			err = errors.Trace(err)
+			return
+		}
 	}
 
 	return
@@ -147,11 +171,6 @@ entriesLoop:
 				return
 			}
 		} else {
-			// Skip symlinks.
-			if entry.Mode()&os.ModeSymlink != 0 {
-				continue
-			}
-
 			err = CopyFile(srcPath, dstPath)
 			if err != nil {
 				err = errors.Trace(err)
