@@ -7,11 +7,12 @@
 
 #include "common/queue.h"
 
+#include "mgos_event.h"
 #include "mgos_features.h"
 #include "mgos_hal.h"
 #include "mgos_mongoose.h"
 #include "mgos_mongoose_internal.h"
-#include "mgos_sntp.h"
+#include "mgos_time.h"
 
 #define MGOS_SW_TIMER_MASK 0xffff0000
 
@@ -34,7 +35,6 @@ struct timer_data {
 };
 
 static struct timer_data *s_timer_data = NULL;
-static double start_time = 0;
 
 static void schedule_next_timer(struct timer_data *td) {
   struct timer_info *ti;
@@ -130,18 +130,18 @@ IRAM void mgos_clear_timer(mgos_timer_id id) {
   }
 }
 
-#if MGOS_ENABLE_SNTP
-static void mgos_time_change_cb(void *arg, double delta) {
+static void mgos_time_change_cb(int ev, void *evd, void *arg) {
   struct timer_data *td = (struct timer_data *) arg;
+  struct mgos_time_changed_arg *ev_data = (struct mgos_time_changed_arg *) evd;
   mgos_lock();
   struct timer_info *ti;
   LIST_FOREACH(ti, &td->timers, entries) {
-    ti->next_invocation += delta;
+    ti->next_invocation += ev_data->delta;
   }
-  start_time += delta;
   mgos_unlock();
+
+  (void) ev;
 }
-#endif
 
 enum mgos_init_result mgos_hw_timers_init(void);
 
@@ -155,22 +155,6 @@ enum mgos_init_result mgos_timers_init(void) {
     return MGOS_INIT_TIMERS_INIT_FAILED;
   }
   s_timer_data = td;
-#if MGOS_ENABLE_SNTP
-  mgos_sntp_add_time_change_cb(mgos_time_change_cb, td);
-#endif
+  mgos_event_add_handler(MGOS_EVENT_TIME_CHANGED, mgos_time_change_cb, td);
   return mgos_hw_timers_init();
-}
-
-double mgos_uptime(void) {
-  return mg_time() - start_time;
-}
-
-void mgos_uptime_init(void) {
-  start_time = mg_time();
-}
-
-int mgos_strftime(char *s, int size, char *fmt, int time) {
-  time_t t = (time_t) time;
-  struct tm *tmp = localtime(&t);
-  return tmp == NULL ? -1 : (int) strftime(s, size, fmt, tmp);
 }

@@ -52,7 +52,7 @@ enum mgos_event_sys {
    *
    * ev_data: struct mgos_debug_hook_arg
    */
-  MGOS_EVENT_LOG, /* ev_data: struct mgos_debug_hook_arg */
+  MGOS_EVENT_LOG,
 
   /*
    * Fired right before restarting the system (but also before unmounting
@@ -68,6 +68,29 @@ enum mgos_event_sys {
    * ev_data: struct mgos_ota_status
    */
   MGOS_EVENT_OTA_STATUS,
+
+  /*
+   * Fired when time is changed with `mgos_settimeofday()`.
+   *
+   * ev_data: `struct mgos_time_changed_arg`.
+   *
+   * Example:
+   * ```c
+   * static void my_time_change_cb(int ev, void *evd, void *arg) {
+   *   struct mgos_time_changed_arg *ev_data = (struct mgos_time_changed_arg *)
+   *evd;
+   *   LOG(LL_INFO, ("Time has changed by %d", ev_data->delta));
+   *
+   *   (void) ev;
+   *   (void) arg;
+   * }
+   *
+   * // ...
+   *
+   * mgos_event_add_handler(MGOS_EVENT_TIME_CHANGED, my_time_change_cb, NULL);
+   * ```
+   */
+  MGOS_EVENT_TIME_CHANGED,
 };
 
 /*

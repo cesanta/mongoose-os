@@ -163,7 +163,7 @@ MGOS_SRCS = mgos_event.c \
             mgos_gpio.c \
             mgos_init.c \
             mgos_mongoose.c \
-            mgos_hw_timers.c mgos_timers.c \
+            mgos_time.c mgos_hw_timers.c mgos_timers.c \
             mgos_config_util.c mgos_sys_config.c \
             mgos_dlsym.c mgos_system.c \
             mgos_vfs.c mgos_vfs_dev.c mgos_vfs_fs_spiffs.c \

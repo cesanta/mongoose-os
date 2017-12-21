@@ -8,7 +8,6 @@
 #include "mgos_gpio_internal.h"
 #include "mgos_mdns_internal.h"
 #include "mgos_net_internal.h"
-#include "mgos_sntp_internal.h"
 #include "mgos_sys_config_internal.h"
 #include "mgos_timers_internal.h"
 
@@ -30,10 +29,6 @@ enum mgos_init_result mgos_init(void) {
 #if MGOS_ENABLE_MDNS
   r = mgos_mdns_init(); /* Before dns_sd init, after
                            mgos_sys_config_init_platform */
-  if (r != MGOS_INIT_OK) return r;
-#endif
-#if MGOS_ENABLE_SNTP
-  r = mgos_sntp_init();
   if (r != MGOS_INIT_OK) return r;
 #endif
 

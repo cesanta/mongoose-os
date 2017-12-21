@@ -1,7 +1,6 @@
 MGOS_ENABLE_BITBANG ?= 1
 MGOS_ENABLE_DEBUG_UDP ?= 1
 MGOS_ENABLE_MDNS ?= 0
-MGOS_ENABLE_SNTP ?= 1
 MGOS_ENABLE_SYS_SERVICE ?= 1
 MGOS_ENABLE_UPDATER ?= 0
 
@@ -50,12 +49,6 @@ ifeq "$(MGOS_ENABLE_MDNS)" "1"
   MGOS_FEATURES += -DMG_ENABLE_DNS -DMG_ENABLE_DNS_SERVER -DMGOS_ENABLE_MDNS
 endif
 
-ifeq "$(MGOS_ENABLE_SNTP)" "1"
-  MGOS_SRCS += mgos_sntp.c
-  MGOS_FEATURES += -DMG_ENABLE_SNTP -DMGOS_ENABLE_SNTP
-  MGOS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_sntp_config.yaml
-endif
-
 ifeq "$(MGOS_ENABLE_UPDATER)" "1"
   MGOS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_updater_config.yaml
   MGOS_SRCS += mgos_updater_common.c
@@ -66,6 +59,5 @@ endif
 # This is required for needed make invocations (i.e. ESP32 IDF)
 export MGOS_ENABLE_BITBANG
 export MGOS_ENABLE_DEBUG_UDP
-export MGOS_ENABLE_SNTP
 export MGOS_ENABLE_SYS_SERVICE
 export MGOS_ENABLE_UPDATER

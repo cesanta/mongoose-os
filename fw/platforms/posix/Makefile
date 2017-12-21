@@ -46,7 +46,7 @@ MONGOOSE_FEATURES = \
 INCLUDES = $(MGOS_PATH) $(SRC_PATH) $(MGOS_INCLUDE_PATH) $(BUILD_DIR)
 MGOS_SRCS = $(notdir $(wildcard *.c)) mgos_init.c  \
             mongoose.c frozen.c mgos_mongoose.c mgos_event.c mgos_gpio.c \
-            mgos_system.c mgos_timers.c \
+            mgos_system.c mgos_time.c mgos_timers.c \
             mgos_config_util.c mgos_sys_config.c mgos_vfs.c mgos_vfs_dev.c \
             $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
             json_utils.c cs_rbuf.c mgos_uart.c \

@@ -3,7 +3,6 @@
 
 MGOS_ENABLE_BITBANG = 0
 MGOS_ENABLE_DEBUG_UDP = 0
-MGOS_ENABLE_SNTP = 0
 MGOS_ENABLE_UPDATER = 0
 
 USE_LWIP ?= 1
@@ -177,7 +176,7 @@ MGOS_SRCS += $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
              $(notdir $(MG_BUILD_INFO_C)) $(notdir $(BUILD_INFO_C)) \
              mgos_config_util.c mgos_event.c mgos_gpio.c mgos_hw_timers.c \
              mgos_sys_config.c \
-             mgos_timers.c cs_crc32.c cs_file.c mgos_mongoose.c \
+             mgos_time.c mgos_timers.c cs_crc32.c cs_file.c mgos_mongoose.c \
              mongoose.c \
              json_utils.c frozen.c mgos_uart.c cs_rbuf.c mgos_init.c \
              cs_dbg.c mgos_dlsym.c mgos_system.c mgos_utils.c \

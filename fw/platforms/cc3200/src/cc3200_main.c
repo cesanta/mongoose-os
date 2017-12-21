@@ -148,6 +148,26 @@ static int cc3200_init(bool pre) {
   return CC3200_INIT_OK;
 }
 
+/*
+ * TODO(dfrank): figure what's going on here, and fix.
+ *
+ * Without it, when compiling with GCC without sntp lib, we're getting the
+ * following linking error:
+ *
+ * LD    /app/fw/platforms/cc3200/.build/mongoose-os.elf
+ * /usr/lib/gcc/arm-none-eabi/4.9.3/../../../arm-none-eabi/lib/armv7e-m/libc.a(lib_a-gettimeofdayr.o):
+ * In function `_gettimeofday_r':
+ * /build/newlib-5zwpxE/newlib-2.2.0+git20150830.5a3d536/build/arm-none-eabi/armv7e-m/newlib/libc/reent/../../../../../../newlib/libc/reent/gettimeofdayr.c:71:
+ * undefined reference to `_gettimeofday'*
+ *
+ * The command to reproduce:
+ *
+ * $ make -C fw/platforms/cc3200 clean all TOOLCHAIN=gcc
+ *
+ * It's so weird, but it is what it is; need to fix sooner or later.
+ */
+void *cc3200_tmp_gettimeofday_workaround = settimeofday;
+
 int main(void) {
   MAP_IntVTableBaseSet((unsigned long) &g_pfnVectors[0]);
 
