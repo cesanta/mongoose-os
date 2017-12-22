@@ -9,6 +9,7 @@
 #include "common/cs_dbg.h"
 #include "common/queue.h"
 
+#include "mgos_event.h"
 #include "mgos_hal.h"
 #include "mgos_mongoose.h"
 #include "mgos_system.h"
@@ -19,28 +20,11 @@
 #include "mgos_wifi_hal.h"
 #endif
 
-struct cb_info {
-  mgos_net_event_handler_t cb;
-  void *arg;
-  SLIST_ENTRY(cb_info) next;
-};
-static SLIST_HEAD(s_cbs, cb_info) s_cbs;
-
 struct net_ev_info {
   enum mgos_net_if_type if_type;
   int if_instance;
   enum mgos_net_event ev;
 };
-
-struct mgos_rlock_type *s_net_lock = NULL;
-
-static inline void net_lock(void) {
-  mgos_rlock(s_net_lock);
-}
-
-static inline void net_unlock(void) {
-  mgos_runlock(s_net_lock);
-}
 
 static const char *get_if_name(enum mgos_net_if_type if_type, int if_instance) {
   const char *name = "";
@@ -109,14 +93,9 @@ static void mgos_net_on_change_cb(void *arg) {
       break;
     }
   }
-  net_lock();
-  struct cb_info *e, *te;
-  SLIST_FOREACH_SAFE(e, &s_cbs, next, te) {
-    net_unlock();
-    e->cb(ei->ev, &evd, e->arg);
-    net_lock();
-  }
-  net_unlock();
+
+  mgos_event_trigger(ei->ev, &evd);
+
   free(ei);
 }
 
@@ -128,16 +107,6 @@ void mgos_net_dev_event_cb(enum mgos_net_if_type if_type, int if_instance,
   ei->if_instance = if_instance;
   ei->ev = ev;
   mgos_invoke_cb(mgos_net_on_change_cb, ei, false /* from_isr */);
-}
-
-void mgos_net_add_event_handler(mgos_net_event_handler_t eh, void *arg) {
-  struct cb_info *e = (struct cb_info *) calloc(1, sizeof(*e));
-  if (e == NULL) return;
-  e->cb = eh;
-  e->arg = arg;
-  net_lock();
-  SLIST_INSERT_HEAD(&s_cbs, e, next);
-  net_unlock();
 }
 
 bool mgos_net_get_ip_info(enum mgos_net_if_type if_type, int if_instance,
@@ -179,6 +148,9 @@ void mgos_net_ip_to_str(const struct sockaddr_in *sin, char *out) {
 }
 
 enum mgos_init_result mgos_net_init(void) {
-  s_net_lock = mgos_new_rlock();
+  if (!mgos_event_register_base(MGOS_EVENT_GRP_NET, "net")) {
+    return MGOS_INIT_NET_INIT_FAILED;
+  }
+
   return MGOS_INIT_OK;
 }

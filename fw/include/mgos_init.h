@@ -41,6 +41,7 @@ enum mgos_init_result {
   MGOS_INIT_GCP_INIT_FAILED_INVALID_KEY = -31,
   MGOS_INIT_DEPS_FAILED = -32,
   MGOS_INIT_MOUNT_FAILED = -33,
+  MGOS_INIT_NET_INIT_FAILED = -34,
 };
 
 #ifdef __cplusplus

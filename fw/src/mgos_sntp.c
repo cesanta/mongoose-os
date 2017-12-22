@@ -146,12 +146,10 @@ static void mgos_time_change_cb(void *arg, double delta) {
   }
 }
 
-static void mgos_sntp_net_ev(enum mgos_net_event ev,
-                             const struct mgos_net_event_data *ev_data,
-                             void *arg) {
+static void mgos_sntp_net_ev(int ev, void *evd, void *arg) {
   if (ev != MGOS_NET_EV_IP_ACQUIRED) return;
   mgos_sntp_retry();
-  (void) ev_data;
+  (void) evd;
   (void) arg;
 }
 
@@ -162,6 +160,6 @@ enum mgos_init_result mgos_sntp_init(void) {
     return MGOS_INIT_SNTP_INIT_FAILED;
   }
   mgos_sntp_add_time_change_cb(mgos_time_change_cb, mgos_get_mgr());
-  mgos_net_add_event_handler(mgos_sntp_net_ev, NULL);
+  mgos_event_add_group_handler(MGOS_EVENT_GRP_NET, mgos_sntp_net_ev, NULL);
   return MGOS_INIT_OK;
 }

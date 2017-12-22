@@ -19,20 +19,43 @@
 #include "mongoose/mongoose.h"
 
 #include "mgos_config.h"
+#include "mgos_event.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
 /*
+ * Event group which should be given to `mgos_event_add_group_handler()`
+ * in order to subscribe to network events.
+ *
+ * Example:
+ * ```c
+ * static void my_net_ev_handler(int ev, void *evd, void *arg) {
+ *   if (ev == MGOS_NET_EV_IP_ACQUIRED) {
+ *     LOG(LL_INFO, ("Just got IP!"));
+ *     // Fetch something very useful from somewhere
+ *   }
+ *   (void) evd;
+ *   (void) arg;
+ * }
+ *
+ * // Somewhere else:
+ * mgos_event_add_group_handler(MGOS_EVENT_GRP_NET, my_net_ev_handler, NULL);
+ * ```
+ */
+#define MGOS_EVENT_GRP_NET MGOS_EVENT_BASE('N', 'E', 'T')
+
+/*
  * Event types which are delivered to the callback registered with
- * `mgos_net_add_event_handler()`.
+ * `mgos_event_add_handler()` or `mgos_event_add_group_handler()`, see
+ * example in the documentation for `MGOS_EVENT_GRP_NET`.
  */
 enum mgos_net_event {
-  MGOS_NET_EV_DISCONNECTED = 0,
-  MGOS_NET_EV_CONNECTING = 1,
-  MGOS_NET_EV_CONNECTED = 2,
-  MGOS_NET_EV_IP_ACQUIRED = 3,
+  MGOS_NET_EV_DISCONNECTED = MGOS_EVENT_GRP_NET,
+  MGOS_NET_EV_CONNECTING,
+  MGOS_NET_EV_CONNECTED,
+  MGOS_NET_EV_IP_ACQUIRED,
 };
 
 /*
@@ -57,40 +80,6 @@ struct mgos_net_event_data {
   int if_instance;
   struct mgos_net_ip_info ip_info;
 };
-
-/*
- * Event handler signature: `ev` is an event, `ev_data` is event-specific data,
- * `arg` is an arbitrary pointer provided to `mgos_net_add_event_handler()`.
- */
-typedef void (*mgos_net_event_handler_t)(
-    enum mgos_net_event ev, const struct mgos_net_event_data *ev_data,
-    void *arg);
-
-/*
- * Register network configuration event handler. See `mgos_net_event_handler_t`
- * above for the details on callback arguments.
- *
- * Example:
- * ```c
- * static void my_net_ev_handler(enum mgos_net_event ev,
- *                               const struct mgos_net_event_data *ev_data,
- *                               void *arg) {
- *   if (ev == MGOS_NET_EV_IP_ACQUIRED) {
- *     LOG(LL_INFO, ("Just got IP!"));
- *     // Fetch something very useful from somewhere
- *   }
- *   (void) ev_data;
- *   (void) arg;
- * }
- *
- * // Somewhere else:
- * mgos_net_add_event_handler(my_net_ev_handler, NULL);
- * ```
- */
-void mgos_net_add_event_handler(mgos_net_event_handler_t eh, void *arg);
-
-/* Unregister network configuration event handler. */
-void mgos_net_remove_event_handler(mgos_net_event_handler_t eh, void *arg);
 
 /*
  * Retrieve IP configuration of the provided interface type and instance

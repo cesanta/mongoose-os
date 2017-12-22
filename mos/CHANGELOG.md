@@ -3,8 +3,17 @@ Mos tool changelog
 
 ## Latest (pending release)
 
+Mos tool:
+
 - Fix brew build: mos shouldn't check for updates because when installed via
   brew it should be updated also via brew
+
+Firmware:
+
+- Implement `mgos_event_add_group_handler()` in C and `Event.addGroupHandler()`
+  in mJS
+- `mgos_net_add_event_handler()` is deprecated in favor of `mgos_event`-based
+  API. See comment for `MGOS_EVENT_GRP_NET` for the example.
 
 ## 1.22.1
 
