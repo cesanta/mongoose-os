@@ -13,8 +13,16 @@
 
 struct handler {
   int ev;
+
   mgos_event_handler_t cb;
   void *userdata;
+
+  /*
+   * If set, the event handler is intended for all events from
+   * `ev & ~0xff` to `ev | 0xff`
+   */
+  bool group;
+
   SLIST_ENTRY(handler) next;
 };
 
@@ -44,23 +52,40 @@ bool mgos_event_register_base(int ev, const char *name) {
   return true;
 }
 
-bool mgos_event_add_handler(int ev, mgos_event_handler_t cb, void *userdata) {
+static bool add_handler(int ev, mgos_event_handler_t cb, void *userdata,
+                        bool group) {
   struct handler *h = calloc(1, sizeof(*h));
   if (h == NULL) return false;
   h->ev = ev;
   h->cb = cb;
   h->userdata = userdata;
+  h->group = group;
+
+  /* When adding a group handler, make sure `ev` is a base event number */
+  if (group) {
+    h->ev &= ~0xff;
+  }
   SLIST_INSERT_HEAD(&s_handlers, h, next);
   return true;
+}
+
+bool mgos_event_add_handler(int ev, mgos_event_handler_t cb, void *userdata) {
+  return add_handler(ev, cb, userdata, false);
+}
+
+bool mgos_event_add_group_handler(int evgrp, mgos_event_handler_t cb,
+                                  void *userdata) {
+  return add_handler(evgrp, cb, userdata, true);
 }
 
 int mgos_event_trigger(int ev, void *ev_data) {
   struct handler *h, *te;
   int count = 0;
   SLIST_FOREACH_SAFE(h, &s_handlers, next, te) {
-    if (h->ev != ev) continue;
-    h->cb(ev, ev_data, h->userdata);
-    count++;
+    if (h->ev == ev || (h->group && ev >= h->ev && ev <= (h->ev | 0xff))) {
+      h->cb(ev, ev_data, h->userdata);
+      count++;
+    }
   }
   if (ev != MGOS_EVENT_LOG) {
     LOG(LL_DEBUG, ("ev %x triggered %d handlers", ev, count));

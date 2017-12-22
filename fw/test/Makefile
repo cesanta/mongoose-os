@@ -8,6 +8,7 @@ SOURCES = unit_test.c \
           $(SYS_CONF_C) \
           $(REPO_ROOT)/frozen/frozen.c \
           $(REPO_ROOT)/fw/src/mgos_config_util.c \
+          $(REPO_ROOT)/fw/src/mgos_event.c \
           $(REPO_ROOT)/mongoose/mongoose.c \
           $(REPO_ROOT)/common/json_utils.c \
           $(REPO_ROOT)/common/cs_file.c \

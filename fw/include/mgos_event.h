@@ -116,6 +116,27 @@ typedef void (*mgos_event_handler_t)(int ev, void *ev_data, void *userdata);
  */
 bool mgos_event_add_handler(int ev, mgos_event_handler_t cb, void *userdata);
 
+/*
+ * Like `mgos_event_add_handler()`, but subscribes on all events in the given
+ * group `evgrp`. Event group includes all events from `evgrp & ~0xff` to
+ * `evgrp | 0xff`.
+ *
+ * Example:
+ * ```c
+ * static void sys_event_cb(int ev, void *ev_data, void *userdata) {
+ *   LOG(LL_INFO, ("Got system event %d", ev));
+ *   (void) ev;
+ *   (void) ev_data;
+ *   (void) userdata;
+ * }
+ *
+ * // And somewhere else:
+ * mgos_event_add_handler(MGOS_EVENT_SYS, sys_event_cb, NULL);
+ * ```
+ */
+bool mgos_event_add_group_handler(int evgrp, mgos_event_handler_t cb,
+                                  void *userdata);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

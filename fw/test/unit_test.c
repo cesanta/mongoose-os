@@ -3,11 +3,12 @@
  * All rights reserved
  */
 
-#include "test_util.h"
-#include "mgos_config_util.h"
 #include "cs_dbg.h"
 #include "cs_file.h"
+#include "mgos_config_util.h"
+#include "mgos_event.h"
 #include "sys_conf.h"
+#include "test_util.h"
 
 static const char *test_config(void) {
   size_t size;
@@ -62,9 +63,143 @@ static const char *test_json_scanf(void) {
   return NULL;
 }
 
+#define GRP1 MGOS_EVENT_BASE('G', '0', '1')
+#define GRP2 MGOS_EVENT_BASE('G', '0', '2')
+#define GRP3 MGOS_EVENT_BASE('G', '0', '3')
+
+enum grp1_ev {
+  GRP1_EV0 = GRP1,
+  GRP1_EV1,
+  GRP1_EV2,
+};
+
+enum grp2_ev {
+  GRP2_EV0 = GRP2,
+  GRP2_EV1,
+  GRP2_EV2,
+};
+
+enum grp3_ev {
+  GRP3_EV0 = GRP3,
+  GRP3_EV1,
+  GRP3_EV2,
+};
+
+#define EV_FLAG_GRP1_EV0 (1 << 0)
+#define EV_FLAG_GRP1_EV1 (1 << 1)
+#define EV_FLAG_GRP1_EV2 (1 << 2)
+
+#define EV_FLAG_GRP2_EV0 (1 << 3)
+#define EV_FLAG_GRP2_EV1 (1 << 4)
+#define EV_FLAG_GRP2_EV2 (1 << 5)
+
+#define EV_FLAG_GRP3_EV0 (1 << 6)
+#define EV_FLAG_GRP3_EV1 (1 << 7)
+#define EV_FLAG_GRP3_EV2 (1 << 8)
+
+static void ev_cb(int ev, void *ev_data, void *userdata) {
+  uint32_t *pflags = (uint32_t *) userdata;
+  uint32_t flag = 0;
+
+  switch (ev) {
+    case GRP1_EV0:
+      flag = EV_FLAG_GRP1_EV0;
+      break;
+    case GRP1_EV1:
+      flag = EV_FLAG_GRP1_EV1;
+      break;
+    case GRP1_EV2:
+      flag = EV_FLAG_GRP1_EV2;
+      break;
+
+    case GRP2_EV0:
+      flag = EV_FLAG_GRP2_EV0;
+      break;
+    case GRP2_EV1:
+      flag = EV_FLAG_GRP2_EV1;
+      break;
+    case GRP2_EV2:
+      flag = EV_FLAG_GRP2_EV2;
+      break;
+
+    case GRP3_EV0:
+      flag = EV_FLAG_GRP3_EV0;
+      break;
+    case GRP3_EV1:
+      flag = EV_FLAG_GRP3_EV1;
+      break;
+    case GRP3_EV2:
+      flag = EV_FLAG_GRP3_EV2;
+      break;
+  }
+
+  *pflags |= flag;
+
+  (void) ev_data;
+  (void) userdata;
+}
+
+static const char *test_events(void) {
+  ASSERT(mgos_event_register_base(GRP1, "grp1") == true);
+  ASSERT(mgos_event_register_base(GRP2, "grp2") == true);
+  ASSERT(mgos_event_register_base(GRP3, "grp3") == true);
+
+  uint32_t flags1 = 0;
+  uint32_t flags2 = 0;
+  uint32_t flags3 = 0;
+
+  ASSERT(mgos_event_add_handler(GRP1_EV1, ev_cb, &flags1));
+  ASSERT(mgos_event_add_handler(GRP1_EV2, ev_cb, &flags1));
+  ASSERT(mgos_event_add_handler(GRP2_EV2, ev_cb, &flags1));
+
+  ASSERT(mgos_event_add_group_handler(GRP2_EV1, ev_cb, &flags2));
+
+  ASSERT(mgos_event_add_handler(GRP3_EV0, ev_cb, &flags3));
+  ASSERT(mgos_event_add_group_handler(GRP3_EV0, ev_cb, &flags3));
+
+  flags1 = flags2 = flags3 = 0;
+  mgos_event_trigger(GRP1_EV0, NULL);
+  ASSERT_EQ(flags1, 0);
+  ASSERT_EQ(flags2, 0);
+  ASSERT_EQ(flags3, 0);
+
+  flags1 = flags2 = flags3 = 0;
+  mgos_event_trigger(GRP1_EV1, NULL);
+  ASSERT_EQ(flags1, EV_FLAG_GRP1_EV1);
+  ASSERT_EQ(flags2, 0);
+  ASSERT_EQ(flags3, 0);
+
+  flags1 = flags2 = flags3 = 0;
+  mgos_event_trigger(GRP1_EV2, NULL);
+  ASSERT_EQ(flags1, EV_FLAG_GRP1_EV2);
+  ASSERT_EQ(flags2, 0);
+  ASSERT_EQ(flags3, 0);
+
+  flags1 = flags2 = flags3 = 0;
+  mgos_event_trigger(GRP2_EV0, NULL);
+  ASSERT_EQ(flags1, 0);
+  ASSERT_EQ(flags2, EV_FLAG_GRP2_EV0);
+  ASSERT_EQ(flags3, 0);
+
+  flags1 = flags2 = flags3 = 0;
+  mgos_event_trigger(GRP2_EV1, NULL);
+  ASSERT_EQ(flags1, 0);
+  ASSERT_EQ(flags2, EV_FLAG_GRP2_EV1);
+  ASSERT_EQ(flags3, 0);
+
+  flags1 = flags2 = flags3 = 0;
+  mgos_event_trigger(GRP2_EV2, NULL);
+  ASSERT_EQ(flags1, EV_FLAG_GRP2_EV2);
+  ASSERT_EQ(flags2, EV_FLAG_GRP2_EV2);
+  ASSERT_EQ(flags3, 0);
+
+  return NULL;
+}
+
 static const char *run_tests(const char *filter, double *total_elapsed) {
   RUN_TEST(test_config);
   RUN_TEST(test_json_scanf);
+  RUN_TEST(test_events);
   return NULL;
 }
 
