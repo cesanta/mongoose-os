@@ -46,29 +46,32 @@ type FrameAuth struct {
 
 type Handler func(Dispatcher, *Frame) *Frame
 
+type Channel io.ReadWriteCloser
+
 type Dispatcher interface {
-	Connect(address string) (io.ReadWriteCloser, error)
+	Connect(address string) (Channel, error)
 	Call(ctx context.Context, request *Frame) (*Frame, error)
 	AddHandler(method string, handler Handler)
+	AddChannel(channel Channel)
 }
 
 type dispImpl struct {
-	channels     map[string]io.ReadWriteCloser
-	channelsLock sync.Mutex
+	addrMap      map[string]Channel
+	addrMapLock  sync.Mutex
 	handlers     map[string]Handler
 	handlersLock sync.Mutex
-	src          string
+	address      string
 	nextId       int64
 }
 
-func (d *dispImpl) Connect(address string) (io.ReadWriteCloser, error) {
+func (d *dispImpl) Connect(address string) (Channel, error) {
 	if strings.HasPrefix(address, "ws://") || strings.HasPrefix(address, "wss://") {
 		ws, err := websocket.Dial(address, "", "http://localhost")
 		if err != nil {
 			fmt.Println(fmt.Errorf("Error connecting: %v", err))
 			return nil, err
 		} else {
-			d.channels[address] = ws
+			d.addrMap[address] = ws
 			return ws, err
 		}
 	} else {
@@ -77,15 +80,75 @@ func (d *dispImpl) Connect(address string) (io.ReadWriteCloser, error) {
 }
 
 func (d *dispImpl) AddHandler(method string, handler Handler) {
-	// TODO(lsm): implement
+	d.handlersLock.Lock()
+	defer d.handlersLock.Unlock()
+	d.handlers[method] = handler
 }
 
-func (d *dispImpl) lookupChannel(address string) io.ReadWriteCloser {
-	c := d.channels[address]
+func (d *dispImpl) lookupChannel(address string) Channel {
+	d.addrMapLock.Lock()
+	defer d.addrMapLock.Unlock()
+	c := d.addrMap[address]
 	if c == nil && address != "" {
 		c, _ = d.Connect(address)
 	}
 	return c
+}
+
+func (d *dispImpl) AddChannel(channel Channel) {
+	addrMap := make(map[string]bool)
+
+	// TODO(lsm): refactor this blocking thing
+	for {
+		log.Printf("Reading request from channel [%p]...", channel)
+		buf := make([]byte, 1024*16)
+		n, err := channel.Read(buf)
+		if err != nil {
+			log.Printf("Read error: %p", channel)
+			break
+		}
+		frame := Frame{}
+		err = json.Unmarshal(buf[:n], &frame)
+		if err != nil {
+			log.Printf("Invalid frame from %p: [%s]", channel, buf[:n])
+			continue
+		}
+
+		if frame.Src != "" {
+			// Associate the address of the peer with this channel
+			addrMap[frame.Src] = true
+			d.addrMapLock.Lock()
+			d.addrMap[frame.Src] = channel
+			d.addrMapLock.Unlock()
+			log.Printf("Associating address [%s] with channel %p", frame.Src, channel)
+		}
+
+		log.Printf("Got: [%s]", buf[:n])
+		var response *Frame
+		callback, _ := d.handlers[frame.Method]
+		if callback == nil {
+			// Try to lookup the catch-all handler
+			callback, _ = d.handlers["*"]
+		}
+		if callback != nil {
+			response = callback(d, &frame)
+		} else {
+			response = &Frame{Error: &FrameError{Code: 404, Message: "Method not found"}}
+		}
+		response.ID = frame.ID
+		response.Tag = frame.Tag
+		response.Dst = frame.Src
+		str, _ := json.Marshal(response)
+		log.Printf("Reply: [%s]", string(str))
+		channel.Write(str)
+	}
+
+	// Channel is closing, delete all associated addresses
+	d.addrMapLock.Lock()
+	for address, _ := range addrMap {
+		delete(d.addrMap, address)
+	}
+	d.addrMapLock.Unlock()
 }
 
 func (d *dispImpl) Call(ctx context.Context, request *Frame) (*Frame, error) {
@@ -97,21 +160,25 @@ func (d *dispImpl) Call(ctx context.Context, request *Frame) (*Frame, error) {
 		d.nextId++
 		request.ID = d.nextId
 	}
-	request.Dst = ""
 	if request.Src == "" {
-		request.Src = d.src
+		request.Src = d.address
 	}
 	s, _ := json.Marshal(request)
-	log.Printf("Sending: %s", string(s))
-	c.Write(s)
+	log.Printf("Sending: [%s]", string(s))
+	n, werr := c.Write(s)
+	if werr != nil {
+		return nil, fmt.Errorf("Write error %p", werr)
+	}
+	log.Printf("Sent %d out of %d bytes, reading reply...", n, len(s))
 
 	// TODO(lsm): do it properly. We may get a reply to a different request.
 	var msg = make([]byte, 100*1024)
 	n, err := c.Read(msg)
+	log.Printf("Got reply: [%s], err %p", msg[:n], err)
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Received: %s", msg[:n])
+	log.Printf("Received: [%s]", msg[:n])
 	var res Frame
 	err = json.Unmarshal(msg[:n], &res)
 	if err != nil {
@@ -123,9 +190,9 @@ func (d *dispImpl) Call(ctx context.Context, request *Frame) (*Frame, error) {
 func CreateDispatcher() Dispatcher {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	d := dispImpl{
-		channels: make(map[string]io.ReadWriteCloser),
+		addrMap:  make(map[string]Channel),
 		handlers: make(map[string]Handler),
-		src:      fmt.Sprintf("rpc_%.4d", r.Int31()),
+		address:  fmt.Sprintf("rpc_%.4d", r.Int31()),
 		nextId:   int64(r.Int31()),
 	}
 	return &d
