@@ -14,7 +14,7 @@ import (
 
 func TestRPC(t *testing.T) {
 	dispatcher := CreateDispatcher()
-	dispatcher.AddHandler("Boo", func(d Dispatcher, req *Frame) *Frame {
+	dispatcher.AddHandler("Boo", func(d Dispatcher, c Channel, req *Frame) *Frame {
 		return &Frame{Error: &FrameError{Code: 500, Message: "Random error"}}
 	})
 
@@ -30,7 +30,7 @@ func TestRPC(t *testing.T) {
 
 	// Create a second server with its own dispatcher
 	d2 := CreateDispatcher()
-	d2.AddHandler("Foo", func(d Dispatcher, req *Frame) *Frame {
+	d2.AddHandler("Foo", func(d Dispatcher, c Channel, req *Frame) *Frame {
 		return &Frame{Result: json.RawMessage(`true`)}
 	})
 	mux2 := http.NewServeMux()

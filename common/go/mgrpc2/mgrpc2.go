@@ -44,9 +44,9 @@ type FrameAuth struct {
 	Response string `json:"response"`
 }
 
-type Handler func(Dispatcher, *Frame) *Frame
-
 type Channel io.ReadWriteCloser
+
+type Handler func(Dispatcher, Channel, *Frame) *Frame
 
 type Dispatcher interface {
 	Connect(address string) (Channel, error)
@@ -150,7 +150,7 @@ func (d *dispImpl) AddChannel(channel Channel) {
 				callback, _ = d.handlers["*"]
 			}
 			if callback != nil {
-				response = callback(d, &frame)
+				response = callback(d, channel, &frame)
 			} else {
 				response = &Frame{Error: &FrameError{Code: 404, Message: "Method not found"}}
 			}
@@ -161,7 +161,10 @@ func (d *dispImpl) AddChannel(channel Channel) {
 			if !d.Dispatch(response) {
 				str, _ := json.Marshal(response)
 				log.Printf("Response (io): [%s]", string(str))
-				channel.Write(str)
+				if _, err := channel.Write(str); err != nil {
+					log.Printf("Write error: %v", err)
+					break
+				}
 			}
 		}
 	}
