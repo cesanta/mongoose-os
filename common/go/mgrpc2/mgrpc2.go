@@ -199,12 +199,19 @@ func (d *dispImpl) Call(ctx context.Context, request *Frame) (*Frame, error) {
 	d.calls[request.ID] = ch
 	d.lock.Unlock()
 
-	res := <-ch
-	d.lock.Lock()
-	delete(d.calls, request.ID)
-	d.lock.Unlock()
+	defer func() {
+		d.lock.Lock()
+		delete(d.calls, request.ID)
+		d.lock.Unlock()
+	}()
+
 	log.Printf("Sent %d out of %d bytes, ID %d, waiting for reply...", n, len(s), request.ID)
-	return res, nil
+	select {
+	case res := <-ch:
+		return res, nil
+	case <-ctx.Done():
+		return nil, ctx.Err()
+	}
 }
 
 func CreateDispatcher() Dispatcher {
