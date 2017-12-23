@@ -56,12 +56,12 @@ type Dispatcher interface {
 }
 
 type dispImpl struct {
-	addrMap      map[string]Channel
-	addrMapLock  sync.Mutex
-	handlers     map[string]Handler
-	handlersLock sync.Mutex
-	address      string
-	nextId       int64
+	lock     sync.Mutex
+	addrMap  map[string]Channel
+	handlers map[string]Handler
+	calls    map[int64]chan *Frame
+	address  string
+	nextId   int64
 }
 
 func (d *dispImpl) Connect(address string) (Channel, error) {
@@ -72,6 +72,7 @@ func (d *dispImpl) Connect(address string) (Channel, error) {
 			return nil, err
 		} else {
 			d.addrMap[address] = ws
+			go d.AddChannel(ws)
 			return ws, err
 		}
 	} else {
@@ -80,19 +81,31 @@ func (d *dispImpl) Connect(address string) (Channel, error) {
 }
 
 func (d *dispImpl) AddHandler(method string, handler Handler) {
-	d.handlersLock.Lock()
-	defer d.handlersLock.Unlock()
+	d.lock.Lock()
+	defer d.lock.Unlock()
 	d.handlers[method] = handler
 }
 
 func (d *dispImpl) lookupChannel(address string) Channel {
-	d.addrMapLock.Lock()
-	defer d.addrMapLock.Unlock()
+	d.lock.Lock()
+	defer d.lock.Unlock()
 	c := d.addrMap[address]
 	if c == nil && address != "" {
 		c, _ = d.Connect(address)
 	}
 	return c
+}
+
+func (d *dispImpl) Dispatch(frame *Frame) bool {
+	d.lock.Lock()
+	ch, ok := d.calls[frame.ID]
+	d.lock.Unlock()
+	if ok {
+		str, _ := json.Marshal(frame)
+		log.Printf("Response (ch): [%s]", string(str))
+		ch <- frame
+	}
+	return ok
 }
 
 func (d *dispImpl) AddChannel(channel Channel) {
@@ -114,41 +127,51 @@ func (d *dispImpl) AddChannel(channel Channel) {
 			continue
 		}
 
-		if frame.Src != "" {
-			// Associate the address of the peer with this channel
-			addrMap[frame.Src] = true
-			d.addrMapLock.Lock()
-			d.addrMap[frame.Src] = channel
-			d.addrMapLock.Unlock()
-			log.Printf("Associating address [%s] with channel %p", frame.Src, channel)
-		}
-
 		log.Printf("Got: [%s]", buf[:n])
-		var response *Frame
-		callback, _ := d.handlers[frame.Method]
-		if callback == nil {
-			// Try to lookup the catch-all handler
-			callback, _ = d.handlers["*"]
-		}
-		if callback != nil {
-			response = callback(d, &frame)
+
+		if frame.Method == "" {
+			// Reply
+			d.Dispatch(&frame)
 		} else {
-			response = &Frame{Error: &FrameError{Code: 404, Message: "Method not found"}}
+			// Request
+			if frame.Src != "" {
+				// Associate the address of the peer with this channel
+				addrMap[frame.Src] = true
+				d.lock.Lock()
+				d.addrMap[frame.Src] = channel
+				d.lock.Unlock()
+				log.Printf("Associating address [%s] with channel %p", frame.Src, channel)
+			}
+
+			var response *Frame
+			callback, _ := d.handlers[frame.Method]
+			if callback == nil {
+				// Try to lookup the catch-all handler
+				callback, _ = d.handlers["*"]
+			}
+			if callback != nil {
+				response = callback(d, &frame)
+			} else {
+				response = &Frame{Error: &FrameError{Code: 404, Message: "Method not found"}}
+			}
+			response.ID = frame.ID
+			response.Tag = frame.Tag
+			response.Dst = frame.Src
+
+			if !d.Dispatch(response) {
+				str, _ := json.Marshal(response)
+				log.Printf("Response (io): [%s]", string(str))
+				channel.Write(str)
+			}
 		}
-		response.ID = frame.ID
-		response.Tag = frame.Tag
-		response.Dst = frame.Src
-		str, _ := json.Marshal(response)
-		log.Printf("Reply: [%s]", string(str))
-		channel.Write(str)
 	}
 
 	// Channel is closing, delete all associated addresses
-	d.addrMapLock.Lock()
+	d.lock.Lock()
 	for address, _ := range addrMap {
 		delete(d.addrMap, address)
 	}
-	d.addrMapLock.Unlock()
+	d.lock.Unlock()
 }
 
 func (d *dispImpl) Call(ctx context.Context, request *Frame) (*Frame, error) {
@@ -165,26 +188,23 @@ func (d *dispImpl) Call(ctx context.Context, request *Frame) (*Frame, error) {
 	}
 	s, _ := json.Marshal(request)
 	log.Printf("Sending: [%s]", string(s))
-	n, werr := c.Write(s)
-	if werr != nil {
-		return nil, fmt.Errorf("Write error %p", werr)
+	n, err := c.Write(s)
+	if err != nil {
+		return nil, fmt.Errorf("Write error %p", err)
 	}
-	log.Printf("Sent %d out of %d bytes, reading reply...", n, len(s))
+	log.Printf("Sent %d out of %d bytes, ID %d, waiting for reply...", n, len(s), request.ID)
 
-	// TODO(lsm): do it properly. We may get a reply to a different request.
-	var msg = make([]byte, 100*1024)
-	n, err := c.Read(msg)
-	log.Printf("Got reply: [%s], err %p", msg[:n], err)
-	if err != nil {
-		return nil, err
-	}
-	log.Printf("Received: [%s]", msg[:n])
-	var res Frame
-	err = json.Unmarshal(msg[:n], &res)
-	if err != nil {
-		return nil, err
-	}
-	return &res, nil
+	ch := make(chan *Frame)
+	d.lock.Lock()
+	d.calls[request.ID] = ch
+	d.lock.Unlock()
+
+	res := <-ch
+	d.lock.Lock()
+	delete(d.calls, request.ID)
+	d.lock.Unlock()
+	log.Printf("Sent %d out of %d bytes, ID %d, waiting for reply...", n, len(s), request.ID)
+	return res, nil
 }
 
 func CreateDispatcher() Dispatcher {
@@ -194,6 +214,7 @@ func CreateDispatcher() Dispatcher {
 		handlers: make(map[string]Handler),
 		address:  fmt.Sprintf("rpc_%.4d", r.Int31()),
 		nextId:   int64(r.Int31()),
+		calls:    make(map[int64]chan *Frame),
 	}
 	return &d
 }
