@@ -114,20 +114,14 @@ func (d *dispImpl) AddChannel(channel Channel) {
 	// TODO(lsm): refactor this blocking thing
 	for {
 		log.Printf("Reading request from channel [%p]...", channel)
-		buf := make([]byte, 1024*16)
-		n, err := channel.Read(buf)
-		if err != nil {
-			log.Printf("Read error: %p", channel)
-			break
-		}
 		frame := Frame{}
-		err = json.Unmarshal(buf[:n], &frame)
+		err := json.NewDecoder(channel).Decode(&frame)
 		if err != nil {
-			log.Printf("Invalid frame from %p: [%s]", channel, buf[:n])
+			log.Printf("Invalid frame from %p: [%s]", channel)
 			continue
 		}
-
-		log.Printf("Got: [%s]", buf[:n])
+		s, _ := json.Marshal(frame)
+		log.Printf("Got: [%s]", string(s))
 
 		if frame.Method == "" {
 			// Reply
