@@ -143,6 +143,11 @@ func (d *dispImpl) AddChannel(channel Channel) {
 				log.Printf("Associating address [%s] with channel %p", frame.Src, channel)
 			}
 
+			// Do not send any response if we're told
+			if frame.NoResponse {
+				continue
+			}
+
 			var response *Frame
 			callback, _ := d.handlers[frame.Method]
 			if callback == nil {
