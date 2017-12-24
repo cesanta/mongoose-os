@@ -118,7 +118,7 @@ func (d *dispImpl) AddChannel(channel Channel) {
 		err := json.NewDecoder(channel).Decode(&frame)
 		if err != nil {
 			log.Printf("Invalid frame from %p: [%s]", channel)
-			continue
+			break
 		}
 		s, _ := json.Marshal(frame)
 		log.Printf("Got: [%s]", string(s))
