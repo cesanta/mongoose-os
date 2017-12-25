@@ -1,0 +1,31 @@
+type: app
+version: "1.0"
+platform: esp8266
+platforms:
+__ALL_PLATFORMS__
+author: mongoose-os
+description: My test app
+sources:
+- __APP_ROOT__/app/src/app_src1.c
+- __APP_ROOT__/app/src/app_src3.c
+- __APP_ROOT__/app/build/gen/deps_init.c
+- __APP_ROOT__/libs/mylib1/src/mylib1_src1.c
+filesystem:
+- __APP_ROOT__/libs/mylib1/fs/mylib1_file1
+- __APP_ROOT__/libs/mylib1/fs/mylib1_file_b1
+- __APP_ROOT__/libs/mylib1/fs/mylib1_file_b2
+config_schema:
+- - mylib1
+  - o
+  - title: mylib1 settings
+- - myapp
+  - o
+  - title: Myapp settings
+build_vars:
+  MGOS_HAVE_MYLIB1: "1"
+cdefs:
+  MGOS_HAVE_MYLIB1: "1"
+libs_version: "0.01"
+modules_version: "0.01"
+mongoose_os_version: "0.01"
+manifest_version: 2017-09-29

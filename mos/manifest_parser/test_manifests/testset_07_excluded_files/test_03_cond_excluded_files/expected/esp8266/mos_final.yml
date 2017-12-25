@@ -1,0 +1,16 @@
+type: app
+version: "1.0"
+platform: esp8266
+platforms:
+__ALL_PLATFORMS__
+author: mongoose-os
+description: My test app
+sources:
+- __APP_ROOT__/app/src/app_src1.c
+- __APP_ROOT__/app/src/app_src3.c
+build_vars:
+  FOO: bar
+libs_version: "0.01"
+modules_version: "0.01"
+mongoose_os_version: "0.01"
+manifest_version: 2017-09-29

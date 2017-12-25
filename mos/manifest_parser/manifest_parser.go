@@ -1136,12 +1136,18 @@ type extendManifestOptions struct {
 func prependPaths(items []string, dir string) []string {
 	ret := []string{}
 	for _, s := range items {
+		prefix := ""
+		if s[0] == '-' || s[0] == '+' {
+			prefix = fmt.Sprintf("%c", s[0])
+			s = s[1:]
+		}
+
 		// If the path is not absolute, and does not start with the variable,
 		// prepend it with the library's path
 		if dir != "" && s[0] != '$' && s[0] != '@' && !filepath.IsAbs(s) {
 			s = filepath.Join(dir, s)
 		}
-		ret = append(ret, s)
+		ret = append(ret, prefix+s)
 	}
 	return ret
 }
@@ -1255,7 +1261,72 @@ func getDepsInitCCode(manifest *build.FWAppManifest) ([]byte, error) {
 // - Paths to dirs. Those get appended all the given globs, and then treated
 //   as the globs above
 // - Paths to concrete files. Those stay unchanged.
+//
+// Paths in srcPaths can be prefixed with a `+` (which is a no-op) or with `-`
+// (which excludes matching files from the result). E.g. []string{"foo",
+// "-foo/bar"} means "all files under foo, except foo/bar".
 func resolvePaths(srcPaths []string, globs []string) (files []string, dirs []string, err error) {
+	// Get separate slices of paths to add and paths to remove
+	add := []string{}
+	remove := []string{}
+
+	for _, g := range srcPaths {
+		if g[0] == '-' {
+			remove = append(remove, g[1:])
+		} else if g[0] == '+' {
+			add = append(add, g[1:])
+		} else {
+			add = append(add, g)
+		}
+	}
+
+	// Get slice of concrete files to add and to remove
+	addFiles, addDirs, err := resolvePathsUnprefixed(add, globs)
+	if err != nil {
+		return nil, nil, errors.Trace(err)
+	}
+
+	removeFiles, removeDirs, err := resolvePathsUnprefixed(remove, globs)
+	if err != nil {
+		return nil, nil, errors.Trace(err)
+	}
+
+	// Actually remove files-to-remove from files-to-add
+	removeFilesMap := map[string]struct{}{}
+	removeDirsMap := map[string]struct{}{}
+
+	for _, v := range removeFiles {
+		removeFilesMap[v] = struct{}{}
+	}
+
+	for _, v := range removeDirs {
+		removeDirsMap[v] = struct{}{}
+	}
+
+	addFilesOrig := addFiles
+	addDirsOrig := addDirs
+
+	addFiles = []string{}
+	addDirs = []string{}
+
+	for _, v := range addFilesOrig {
+		if _, ok := removeFilesMap[v]; !ok {
+			addFiles = append(addFiles, v)
+		}
+	}
+
+	for _, v := range addDirsOrig {
+		if _, ok := removeDirsMap[v]; !ok {
+			addDirs = append(addDirs, v)
+		}
+	}
+
+	return addFiles, addDirs, nil
+}
+
+// resolvePathsUnprefixed is like resolvePaths, but doesn't support
+// `-` and `+` as filename prefixes.
+func resolvePathsUnprefixed(srcPaths []string, globs []string) (files []string, dirs []string, err error) {
 	var fileGlobs []string
 	fileGlobs, dirs, err = globify(srcPaths, globs)
 	if err != nil {
