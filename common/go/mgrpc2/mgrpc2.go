@@ -137,11 +137,6 @@ func (d *dispImpl) AddChannel(channel Channel) {
 				log.Printf("Associating address [%s] with channel %p", frame.Src, channel)
 			}
 
-			// Do not send any response if we're told
-			if frame.NoResponse {
-				continue
-			}
-
 			var response *Frame
 			callback, _ := d.handlers[frame.Method]
 			if callback == nil {
@@ -153,6 +148,11 @@ func (d *dispImpl) AddChannel(channel Channel) {
 			} else {
 				response = &Frame{Error: &FrameError{Code: 404, Message: "Method not found"}}
 			}
+			// Do not send any response if we're told
+			if frame.NoResponse {
+				continue
+			}
+
 			response.ID = frame.ID
 			response.Tag = frame.Tag
 			response.Dst = frame.Src
