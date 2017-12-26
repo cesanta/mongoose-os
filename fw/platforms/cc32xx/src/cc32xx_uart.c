@@ -28,8 +28,8 @@
 #define UART_TX_INTS (UART_INT_TX)
 #define UART_INFO_INTS (UART_INT_OE)
 
-#define CC32xx_UART_ISR_RX_BUF_SIZE 64
-#define CC32xx_UART_ISR_RX_BUF_FC_THRESH 32
+#define CC32xx_UART_ISR_RX_BUF_SIZE 128
+#define CC32xx_UART_ISR_RX_BUF_FC_THRESH 64
 
 struct cc32xx_uart_state {
   uint32_t base;
@@ -286,7 +286,7 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
     }
     HWREG(base + UART_O_CTL) = ctl;
   }
-  MAP_UARTFIFOLevelSet(base, UART_FIFO_TX1_8, UART_FIFO_RX6_8);
+  MAP_UARTFIFOLevelSet(base, UART_FIFO_TX1_8, UART_FIFO_RX4_8);
   MAP_UARTFIFOEnable(base);
   return true;
 }
