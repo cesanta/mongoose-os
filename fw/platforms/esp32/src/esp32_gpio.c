@@ -49,7 +49,7 @@ IRAM void mgos_gpio_hal_int_clr(int pin) {
   uint32_t reg = GPIO_STATUS_W1TC_REG;
   if (pin >= 32) {
     pin -= 32;
-    reg += 4; /* GPIO_STATUS_W1TC -> GPIO_STATUS1_W1TC */
+    reg += 12; /* GPIO_STATUS_W1TC -> GPIO_STATUS1_W1TC */
   }
   WRITE_PERI_REG(reg, (1 << pin));
 }
