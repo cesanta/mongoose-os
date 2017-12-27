@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"math/rand"
 	"strings"
 	"sync"
 	"time"
 
-	"golang.org/x/net/context"
+	"github.com/golang/glog"
 
+	"golang.org/x/net/context"
 	"golang.org/x/net/websocket"
 )
 
@@ -68,7 +68,7 @@ func (d *dispImpl) Connect(address string) (Channel, error) {
 	if strings.HasPrefix(address, "ws://") || strings.HasPrefix(address, "wss://") {
 		ws, err := websocket.Dial(address, "", "http://localhost")
 		if err != nil {
-			fmt.Println(fmt.Errorf("Error connecting: %v", err))
+			glog.V(2).Infof("Error connecting: %v", err)
 			return nil, err
 		} else {
 			d.addrMap[address] = ws
@@ -102,7 +102,7 @@ func (d *dispImpl) Dispatch(frame *Frame) bool {
 	d.lock.Unlock()
 	if ok {
 		str, _ := json.Marshal(frame)
-		log.Printf("Response (ch): [%s]", string(str))
+		glog.V(3).Infof("Response (ch): [%s]", string(str))
 		ch <- frame
 	}
 	return ok
@@ -113,15 +113,15 @@ func (d *dispImpl) AddChannel(channel Channel) {
 
 	// TODO(lsm): refactor this blocking thing
 	for {
-		log.Printf("Reading request from channel [%p]...", channel)
+		glog.V(3).Infof("Reading request from channel [%p]...", channel)
 		frame := Frame{}
 		err := json.NewDecoder(channel).Decode(&frame)
 		if err != nil {
-			log.Printf("Invalid frame from %p: [%s]", channel)
+			glog.V(2).Infof("Invalid frame from %p: [%s]", channel)
 			break
 		}
 		s, _ := json.Marshal(frame)
-		log.Printf("Got: [%s]", string(s))
+		glog.V(3).Infof("Got: [%s]", string(s))
 
 		if frame.Method == "" {
 			// Reply
@@ -134,7 +134,7 @@ func (d *dispImpl) AddChannel(channel Channel) {
 				d.lock.Lock()
 				d.addrMap[frame.Src] = channel
 				d.lock.Unlock()
-				log.Printf("Associating address [%s] with channel %p", frame.Src, channel)
+				glog.V(3).Infof("Associating address [%s] with channel %p", frame.Src, channel)
 			}
 
 			var response *Frame
@@ -159,9 +159,9 @@ func (d *dispImpl) AddChannel(channel Channel) {
 
 			if !d.Dispatch(response) {
 				str, _ := json.Marshal(response)
-				log.Printf("Response (io): [%s]", string(str))
+				glog.V(3).Infof("Response (io): [%s]", string(str))
 				if _, err := channel.Write(str); err != nil {
-					log.Printf("Write error: %v", err)
+					glog.V(3).Infof("Write error: %v", err)
 					break
 				}
 			}
@@ -189,12 +189,12 @@ func (d *dispImpl) Call(ctx context.Context, request *Frame) (*Frame, error) {
 		request.Src = d.address
 	}
 	s, _ := json.Marshal(request)
-	log.Printf("Sending: [%s]", string(s))
+	glog.V(3).Infof("Sending: [%s]", string(s))
 	n, err := c.Write(s)
 	if err != nil {
 		return nil, fmt.Errorf("Write error %p", err)
 	}
-	log.Printf("Sent %d out of %d bytes, ID %d, waiting for reply...", n, len(s), request.ID)
+	glog.V(3).Infof("Sent %d out of %d bytes, ID %d, waiting for reply...", n, len(s), request.ID)
 
 	ch := make(chan *Frame)
 	d.lock.Lock()
@@ -207,7 +207,7 @@ func (d *dispImpl) Call(ctx context.Context, request *Frame) (*Frame, error) {
 		d.lock.Unlock()
 	}()
 
-	log.Printf("Sent %d out of %d bytes, ID %d, waiting for reply...", n, len(s), request.ID)
+	glog.V(3).Infof("Sent %d out of %d bytes, ID %d, waiting for reply...", n, len(s), request.ID)
 	select {
 	case res := <-ch:
 		return res, nil
