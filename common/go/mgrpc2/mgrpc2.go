@@ -194,6 +194,9 @@ func (d *dispImpl) Call(ctx context.Context, request *Frame) (*Frame, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Write error %p", err)
 	}
+	if request.NoResponse {
+		return nil, nil
+	}
 	glog.V(3).Infof("Sent %d out of %d bytes, ID %d, waiting for reply...", n, len(s), request.ID)
 
 	ch := make(chan *Frame)
