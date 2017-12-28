@@ -135,7 +135,16 @@ static err_t mg_lwip_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb,
   DBG(("%p %p %u %d", nc, tpcb, (p != NULL ? p->tot_len : 0), err));
   if (p == NULL) {
     if (nc != NULL && !(nc->flags & MG_F_CLOSE_IMMEDIATELY)) {
-      mg_lwip_post_signal(MG_SIG_CLOSE_CONN, nc);
+      struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
+      if (cs->rx_chain != NULL) {
+        /*
+         * rx_chain still contains non-consumed data, don't close the
+         * connection
+         */
+        cs->draining_rx_chain = 1;
+      } else {
+        mg_lwip_post_signal(MG_SIG_CLOSE_CONN, nc);
+      }
     } else {
       /* Tombstoned connection, do nothing. */
     }
@@ -172,23 +181,12 @@ static err_t mg_lwip_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb,
   return ERR_OK;
 }
 
-static void mg_lwip_handle_recv_tcp(struct mg_connection *nc) {
+static void mg_lwip_consume_rx_chain_tcp(struct mg_connection *nc) {
   struct mg_lwip_conn_state *cs = (struct mg_lwip_conn_state *) nc->sock;
-
-#if MG_ENABLE_SSL
-  if (nc->flags & MG_F_SSL) {
-    if (nc->flags & MG_F_SSL_HANDSHAKE_DONE) {
-      mg_lwip_ssl_recv(nc);
-    } else {
-      mg_lwip_ssl_do_hs(nc);
-    }
-    return;
-  }
-#endif
-
   mgos_lock();
   while (cs->rx_chain != NULL && nc->recv_mbuf.len < nc->recv_mbuf_limit) {
     struct pbuf *seg = cs->rx_chain;
+
     size_t seg_len = (seg->len - cs->rx_offset);
     size_t buf_avail = (nc->recv_mbuf_limit - nc->recv_mbuf.len);
     size_t len = MIN(seg_len, buf_avail);
@@ -211,6 +209,21 @@ static void mg_lwip_handle_recv_tcp(struct mg_connection *nc) {
     mgos_lock();
   }
   mgos_unlock();
+}
+
+static void mg_lwip_handle_recv_tcp(struct mg_connection *nc) {
+#if MG_ENABLE_SSL
+  if (nc->flags & MG_F_SSL) {
+    if (nc->flags & MG_F_SSL_HANDSHAKE_DONE) {
+      mg_lwip_ssl_recv(nc);
+    } else {
+      mg_lwip_ssl_do_hs(nc);
+    }
+    return;
+  }
+#endif
+
+  mg_lwip_consume_rx_chain_tcp(nc);
 
   if (nc->send_mbuf.len > 0) {
     mg_lwip_mgr_schedule_poll(nc->mgr);

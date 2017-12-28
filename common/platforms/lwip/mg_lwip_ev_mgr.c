@@ -62,7 +62,7 @@ void mg_ev_mgr_lwip_process_signals(struct mg_mgr *mgr) {
         break;
       }
       case MG_SIG_CLOSE_CONN: {
-        nc->flags |= MG_F_CLOSE_IMMEDIATELY;
+        nc->flags |= MG_F_SEND_AND_CLOSE;
         mg_close_conn(nc);
         break;
       }
@@ -172,6 +172,19 @@ time_t mg_lwip_if_poll(struct mg_iface *iface, int timeout_ms) {
         min_timer = nc->ev_timer_time;
       }
       num_timers++;
+    }
+
+    if (nc->sock != INVALID_SOCKET) {
+      /* Try to consume data from cs->rx_chain */
+      mg_lwip_consume_rx_chain_tcp(nc);
+
+      /*
+       * If the connection is about to close, and rx_chain is finally empty,
+       * send the MG_SIG_CLOSE_CONN signal
+       */
+      if (cs->draining_rx_chain && cs->rx_chain == NULL) {
+        mg_lwip_post_signal(MG_SIG_CLOSE_CONN, nc);
+      }
     }
   }
 #if 0
