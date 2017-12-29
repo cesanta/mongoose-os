@@ -3,7 +3,7 @@ class Mos < Formula
 
   desc "Mongoose OS command-line tool"
   homepage "https://mongoose-os.com/"
-  url "https://github.com/cesanta/mongoose-os/archive/1.22.1.tar.gz"
+  url "https://github.com/cesanta/mongoose-os/archive/1.23.tar.gz"
   sha256 "0edff29a6d3b67ee6e7868071be6bb96aab270af4ea4016f19b23ae13720043f"
   head ""
 
