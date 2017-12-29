@@ -35,7 +35,17 @@ IRAM int esp32_uart_rx_fifo_len(int uart_no) {
 }
 
 IRAM static int rx_byte(int uart_no) {
-  return (READ_PERI_REG(UART_FIFO_REG(uart_no)) >> UART_RXFIFO_RD_BYTE_S) &
+  /*
+   * Use AHB FIFO register; otherwise STATUS and FIFO registers get out of
+   * sync: STATUS shows that the FIFO is empty while it's not.
+   *
+   * One of the reports:
+   *https://forum.mongoose-os.com/discussion/1775/glitch-in-uart-code
+   *
+   * Also, errata says to use AHB addresses:
+   *https://espressif.com/sites/default/files/documentation/eco_and_workarounds_for_bugs_in_esp32_en.pdf
+   */
+  return (READ_PERI_REG(UART_FIFO_AHB_REG(uart_no)) >> UART_RXFIFO_RD_BYTE_S) &
          UART_RXFIFO_RD_BYTE_V;
 }
 
