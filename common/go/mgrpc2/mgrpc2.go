@@ -98,8 +98,8 @@ func (d *dispImpl) lookupChannel(address string) Channel {
 
 func (d *dispImpl) Dispatch(frame *Frame) bool {
 	d.lock.Lock()
+	defer d.lock.Unlock()
 	ch, ok := d.calls[frame.ID]
-	d.lock.Unlock()
 	if ok {
 		str, _ := json.Marshal(frame)
 		glog.V(3).Infof("Response (ch): [%s]", string(str))
@@ -148,7 +148,7 @@ func (d *dispImpl) AddChannel(channel Channel) {
 			} else {
 				response = &Frame{Error: &FrameError{Code: 404, Message: "Method not found"}}
 			}
-			// Do not send any response if we're told
+			// Do not send any response if we're told so
 			if frame.NoResponse {
 				continue
 			}

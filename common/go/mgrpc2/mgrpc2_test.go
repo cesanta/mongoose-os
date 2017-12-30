@@ -6,43 +6,104 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"reflect"
 	"strings"
+	"sync"
 	"testing"
 
 	"golang.org/x/net/websocket"
 )
 
+type serverCloser func()
+
+func mkdispatcher() (Dispatcher, string, serverCloser) {
+	d := CreateDispatcher()
+	mux := http.NewServeMux()
+	mux.Handle("/rpc", websocket.Handler(func(ws *websocket.Conn) {
+		d.AddChannel(ws)
+	}))
+	srv := httptest.NewServer(mux)
+	rpcAddr := strings.Replace(srv.URL, "http://", "ws://", 1) + "/rpc"
+	log.Println("Created server @ ", rpcAddr)
+	return d, rpcAddr, srv.Close
+}
+
+func TestUnorderedRPC(t *testing.T) {
+	actionsOrder := []int{}
+	d, rpcAddr, done := mkdispatcher()
+	defer done()
+
+	// Simulate two devices that make requests in one order, but receive replies
+	// in the opposite order. First device runs in this thread, and second one
+	// runs in goroutine. First device calls Foo, second device calls Boo.
+	m1 := &sync.Mutex{}
+	m2 := &sync.Mutex{}
+	m1.Lock()
+	m2.Lock()
+
+	d.AddHandler("Foo", func(d Dispatcher, c Channel, req *Frame) *Frame {
+		m2.Unlock() // Let the goroutine (second device) unlock and proceed
+		m1.Lock()   // and wait until the second device finishes
+		actionsOrder = append(actionsOrder, 5)
+		return &Frame{Result: json.RawMessage("1")}
+	})
+	d.AddHandler("Boo", func(d Dispatcher, c Channel, req *Frame) *Frame {
+		actionsOrder = append(actionsOrder, 3)
+		return &Frame{Result: json.RawMessage("2")}
+	})
+
+	go func() {
+		m2.Lock() // Wait until first device makes a call and triggers a handler
+		d2, _, done2 := mkdispatcher()
+		defer done2()
+		actionsOrder = append(actionsOrder, 2)
+		req := &Frame{Tag: "xyz", Dst: rpcAddr, Method: "Boo", ID: 888}
+		res, err := d2.Call(context.Background(), req)
+		actionsOrder = append(actionsOrder, 4)
+		if err != nil {
+			t.Error("call error:", err)
+		} else if res.ID != req.ID {
+			t.Error("invalid frame ID")
+		} else if res.Error != nil {
+			t.Error("expecting success")
+		} else if string(res.Result) != "2" {
+			t.Error("wrong result")
+		}
+		m1.Unlock() // Unlock first device handler
+	}()
+
+	actionsOrder = append(actionsOrder, 1)
+	req := &Frame{Tag: "xyz", Dst: rpcAddr, Method: "Foo", ID: 777}
+	res, err := d.Call(context.Background(), req)
+	actionsOrder = append(actionsOrder, 6)
+	if err != nil {
+		t.Error("call error:", err)
+	} else if res.ID != req.ID {
+		t.Error("invalid frame ID")
+	} else if res.Error != nil {
+		t.Error("expecting success")
+	} else if string(res.Result) != "1" {
+		t.Error("wrong result")
+	}
+
+	expectedOrder := []int{1, 2, 3, 4, 5, 6}
+	if !reflect.DeepEqual(actionsOrder, expectedOrder) {
+		t.Error("Wrong actions order:", actionsOrder, " expecting ", expectedOrder)
+	}
+}
+
 func TestRPC(t *testing.T) {
-	dispatcher := CreateDispatcher()
+	dispatcher, rpcAddr, done := mkdispatcher()
+	defer done()
 	dispatcher.AddHandler("Boo", func(d Dispatcher, c Channel, req *Frame) *Frame {
 		return &Frame{Error: &FrameError{Code: 500, Message: "Random error"}}
 	})
 
-	// Create first server
-	mux := http.NewServeMux()
-	mux.Handle("/rpc", websocket.Handler(func(ws *websocket.Conn) {
-		log.Println("1st server")
-		dispatcher.AddChannel(ws)
-	}))
-	srv := httptest.NewServer(mux)
-	defer srv.Close()
-	rpcAddr := strings.Replace(srv.URL, "http://", "ws://", 1) + "/rpc"
-
-	// Create a second server with its own dispatcher
-	d2 := CreateDispatcher()
+	d2, rpc2Addr, done2 := mkdispatcher()
+	defer done2()
 	d2.AddHandler("Foo", func(d Dispatcher, c Channel, req *Frame) *Frame {
 		return &Frame{Result: json.RawMessage(`true`)}
 	})
-	mux2 := http.NewServeMux()
-	mux2.Handle("/rpc", websocket.Handler(func(ws *websocket.Conn) {
-		log.Println("2nd server")
-		d2.AddChannel(ws)
-	}))
-	srv2 := httptest.NewServer(mux2)
-	defer srv2.Close()
-	rpc2Addr := strings.Replace(srv2.URL, "http://", "ws://", 1) + "/rpc"
-
-	log.Printf("Servers: [%s] [%s]", rpcAddr, rpc2Addr)
 
 	// Connect to a junk address, expect error
 	if _, err := dispatcher.Connect("foo"); err == nil {
@@ -80,8 +141,6 @@ func TestRPC(t *testing.T) {
 	// Talk to the second server. Expect success.
 	req3 := &Frame{Tag: "xyz", Dst: rpc2Addr, Method: "Foo"}
 	res3, err3 := dispatcher.Call(context.Background(), req3)
-	s, _ := json.Marshal(res2)
-	log.Println(string(s))
 	if err3 != nil {
 		t.Error("call error:", err3)
 	} else if res3.ID == res2.ID {
@@ -93,5 +152,4 @@ func TestRPC(t *testing.T) {
 	} else if string(res3.Result) != `true` {
 		t.Error("wrong result")
 	}
-
 }
