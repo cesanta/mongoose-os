@@ -212,12 +212,12 @@ int mgos_get_mbuf_len(struct mbuf *m) {
 
 /* For FFI. */
 void *mgos_get_mgstr_ptr(struct mg_str *s) {
-  return (void *) s->p;
+  return (void *) (s == NULL ? NULL : s->p);
 }
 
 /* For FFI. */
 int mgos_get_mgstr_len(struct mg_str *s) {
-  return s->len;
+  return s == NULL ? 0 : s->len;
 }
 
 /* For FFI. */
