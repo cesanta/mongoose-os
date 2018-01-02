@@ -3,6 +3,10 @@ Mos tool changelog
 
 ## Latest (pending release)
 
+Nothing yet
+
+## 1.23
+
 Mos tool:
 
 - Fix brew build: mos shouldn't check for updates because when installed via
@@ -10,10 +14,13 @@ Mos tool:
 
 Firmware:
 
-- Implement `mgos_event_add_group_handler()` in C and `Event.addGroupHandler()`
-  in mJS
+- Implemented `mgos_event_add_group_handler()` in C and
+  `Event.addGroupHandler()` in mJS
 - `mgos_net_add_event_handler()` is deprecated in favor of `mgos_event`-based
   API. See comment for `MGOS_EVENT_GRP_NET` for the example.
+- Increased CC32xx UART buffer size
+- Many improvements in dashboard support (and in the dashboard itself)
+- Added DigiCert root
 
 ## 1.22.1
 
