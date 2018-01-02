@@ -104,7 +104,7 @@ func gcpIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 
 	reportf("(Re)creating the cloud device...")
 	out, err := exec.Command("gcloud", "beta", "iot", "devices", "delete", devId,
-		"--project", gcpProject, "--region", gcpRegion, "--registry", gcpRegistry).Output()
+		"--project", gcpProject, "--region", gcpRegion, "--registry", gcpRegistry, "--quiet").Output()
 	if err != nil {
 		reportf("gcloud device deletion: %s", string(out))
 	}
