@@ -125,13 +125,10 @@ func gcpIoTSetup(ctx context.Context, devConn *dev.DevConn) error {
 	// ca.pem has both roots in it, so, for platforms other than CC32XX, we can just use that.
 	// CC32XX do not support cert bundles and will always require specific CA cert.
 	// http://e2e.ti.com/support/wireless_connectivity/simplelink_wifi_cc31xx_cc32xx/f/968/t/634431
-	// CA certificate itself is a pretty ancient 1024-bit root, which is not good.
-	// Unfortunately, SimpleLink does not support vrifying intermediates, so we have to use it.
-	// http://e2e.ti.com/support/wireless_connectivity/simplelink_wifi_cc31xx_cc32xx/f/968/p/634427
 	caCertFile := "ca.pem"
 	uploadCACert := false
 	if strings.HasPrefix(strings.ToLower(*devInfo.Arch), "cc32") {
-		caCertFile = "data/ca-equifax.crt.pem"
+		caCertFile = "data/ca-globalsign.crt.pem"
 		uploadCACert = true
 	}
 
