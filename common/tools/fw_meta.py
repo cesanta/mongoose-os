@@ -32,9 +32,9 @@
 #    ZIP file will nclude the manifest and any files mentioned in "src"
 #    attributes of the parts.
 
+from __future__ import print_function
 import argparse
 import datetime
-import fnmatch
 import hashlib
 import json
 import os
@@ -43,18 +43,26 @@ import string
 import sys
 import zipfile
 
+# TODO(rojer): Remove when all the build images have python-six installed.
+try:
+    import six
+    string_types = six.string_types
+except:
+    string_types = basestring
+
 # Debian/Ubuntu: apt-get install python-git
 # PIP: pip install GitPython
 import git
 
 FW_MANIFEST_FILE_NAME = 'manifest.json'
 
+
 # From http://stackoverflow.com/questions/241327/python-snippet-to-remove-c-and-c-comments#241506
 def remove_comments(text):
     def replacer(match):
         s = match.group(0)
         if s.startswith('/'):
-            return " " # note: a space and not an empty string
+            return " "  # note: a space and not an empty string
         else:
             return s
     pattern = re.compile(
@@ -62,6 +70,7 @@ def remove_comments(text):
         re.DOTALL | re.MULTILINE
     )
     return re.sub(pattern, replacer, text)
+
 
 class FFISymbol:
     def __init__(self, name, return_type, args):
@@ -81,6 +90,7 @@ class FFISymbol:
 
     def signature(self):
         return self.return_type + " " + self.name + self.args
+
 
 def get_git_repo(path):
     # This is a temporary workaround until we get a version of python-git
@@ -110,7 +120,7 @@ def file_or_stdout(fname):
     dirname = os.path.dirname(fname)
     if dirname:
         try:
-            os.makedirs(dirname, mode=0755)
+            os.makedirs(dirname, mode=0o755)
         except Exception:
             pass
     return open(fname, 'w')
@@ -129,25 +139,25 @@ def _write_build_info(bi, args):
 
     if args.c_output:
         out = file_or_stdout(args.c_output)
-        print >>out, """\
+        print("""\
 /* Auto-generated, do not edit. */
 const char *%(var_prefix)sbuild_id = "%(build_id)s";
 const char *%(var_prefix)sbuild_timestamp = "%(build_timestamp)s";
 const char *%(var_prefix)sbuild_version = "%(build_version)s";\
-""" % bi
+""" % bi, file=out)
 
     if args.go_output:
         out = file_or_stdout(args.go_output)
-        print >>out, """\
+        print("""\
 /* Auto-generated, do not edit. */
 package version
 
 const (
-	%(var_prefix)sVersion = "%(build_version)s"
-	%(var_prefix)sBuildId = "%(build_id)s"
-	%(var_prefix)sBuildTimestamp = "%(build_timestamp)s"
+    %(var_prefix)sVersion = "%(build_version)s"
+    %(var_prefix)sBuildId = "%(build_id)s"
+    %(var_prefix)sBuildTimestamp = "%(build_timestamp)s"
 )\
-""" % bi
+""" % bi, file=out)
 
 
 def cmd_gen_build_info(args):
@@ -173,7 +183,7 @@ def cmd_gen_build_info(args):
             try:
                 repo = get_git_repo(repo_path)
                 version = get_tag_for_commit(repo, repo.head.commit)
-            except Exception, e:
+            except Exception as e:
                 pass
         if version is None:
             version = ts.strftime('%Y%m%d%H')
@@ -202,12 +212,13 @@ def cmd_gen_build_info(args):
                 branch_or_tag,
                 str(repo.head.commit)[:8],
                 '+' if dirty else '')
-        except Exception, e:
+        except Exception as e:
             id = '%s/???' % ts.strftime('%Y%m%d-%H%M%S')
     if id is not None:
         bi['build_id'] = id
 
     _write_build_info(bi, args)
+
 
 def cmd_gen_ffi_exports(args):
     patterns = args.patterns.split()
@@ -238,31 +249,31 @@ def cmd_gen_ffi_exports(args):
     symbols.sort()
 
     out = file_or_stdout(args.c_output)
-    print >>out, "/* Auto-generated, do not edit. */\n"
-    print >>out, "/*"
-    print >>out, " * Symbols filtered by the following globs:"
+    print("/* Auto-generated, do not edit. */\n", file=out)
+    print("/*", file=out)
+    print(" * Symbols filtered by the following globs:", file=out)
     for p in patterns:
-        print >>out, " *  ", p
-    print >>out, " */\n"
-    print >>out, "#include <stdbool.h>\n"
-    print >>out, "#include \"mgos_dlsym.h\"\n"
+        print(" *  %s" % p, file=out)
+    print(" */\n", file=out)
+    print("#include <stdbool.h>\n", file=out)
+    print("#include \"mgos_dlsym.h\"\n", file=out)
 
     # Emit forward declarations of all symbols to be exported
-    print >>out, "/* NOTE: signatures are fake */"
+    print("/* NOTE: signatures are fake */", file=out)
     for symbol in symbols:
-        print >>out, "%s;" % symbol.signature()
-        #print >>out, "extern const void * const %s;" % symbol
+        print("%s;" % symbol.signature(), file=out)
 
-    print >>out, """\
+    print("""\
 
-const struct mgos_ffi_export ffi_exports[] = {"""
+const struct mgos_ffi_export ffi_exports[] = {""", file=out)
 
     # Emit all symbols
     for symbol in symbols:
-        print >>out, "  {\"%s\", %s}," % (symbol.symbol_name(), symbol.symbol_name())
+        print("  {\"%s\", %s}," % (symbol.symbol_name(), symbol.symbol_name()), file=out)
 
-    print >>out, "};"
-    print >>out, "const int ffi_exports_cnt = %d;" % len(symbols)
+    print("};", file=out)
+    print("const int ffi_exports_cnt = %d;" % len(symbols), file=out)
+
 
 def cmd_get_build_info(args):
     manifest = json.load(open(args.manifest))
@@ -283,6 +294,7 @@ def unquote_string(qs):
     s = s.replace(r'\%s' % q, q)
     return s
 
+
 def stage_file_and_calc_digest(args, part, fname, staging_dir):
     with open(fname) as f:
         data = f.read()
@@ -296,6 +308,7 @@ def stage_file_and_calc_digest(args, part, fname, staging_dir):
             h = hashlib.new(algo)
             h.update(data)
             part['cs_%s' % algo] = h.hexdigest()
+
 
 def cmd_create_manifest(args):
     manifest = {
@@ -373,6 +386,7 @@ def add_file_to_arc(args, part, arc_dir, src_file, added):
     if arc_file not in added:
         added[arc_file] = src_file
 
+
 def cmd_create_fw(args):
     manifest = json.load(open(args.manifest))
     arc_dir = '%s-%s' % (manifest['name'], manifest['version'])
@@ -386,7 +400,7 @@ def cmd_create_fw(args):
                 continue
             # TODO(rojer): Support non-local sources.
             src = part['src']
-            if isinstance(src, basestring):
+            if isinstance(src, string_types):
                 add_file_to_arc(args, part, arc_dir, src, to_add)
             else:
                 # src is object with files as a keys
@@ -395,7 +409,7 @@ def cmd_create_fw(args):
                                     os.path.join(arc_dir, part_name),
                                     os.path.join(part_name, fname), to_add)
         for arc_file, src_file in sorted(to_add.items()):
-            print '     Adding %s' % src_file
+            print('     Adding %s' % src_file)
             zf.write(src_file, arc_file)
 
 
@@ -407,7 +421,7 @@ def cmd_get(args):
         for p in parts:
             v = d[p]
             d = v
-        print v
+        print(v)
 
 
 def cmd_set(args):
@@ -423,7 +437,8 @@ def cmd_set(args):
     if args.inplace:
         json.dump(o, open(args.json_file, "w"))
     else:
-        print json.dumps(o)
+        print(json.dumps(o))
+
 
 if __name__ == '__main__':
     handlers = {}
