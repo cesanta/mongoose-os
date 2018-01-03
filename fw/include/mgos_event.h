@@ -70,6 +70,14 @@ enum mgos_event_sys {
   MGOS_EVENT_OTA_STATUS,
 
   /*
+   * Triggered when OTA needs to start, and one of the implementations handles
+   * it and performs the OTA.
+   *
+   * ev_data: struct ota_request_param
+   */
+  MGOS_EVENT_OTA_REQUEST,
+
+  /*
    * Fired when time is changed with `mgos_settimeofday()`.
    *
    * ev_data: `struct mgos_time_changed_arg`.
@@ -91,6 +99,12 @@ enum mgos_event_sys {
    * ```
    */
   MGOS_EVENT_TIME_CHANGED,
+};
+
+/* Parameter for the MGOS_EVENT_OTA_REQUEST event */
+struct ota_request_param {
+  char *location;
+  void *updater_context;
 };
 
 /*

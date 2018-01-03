@@ -2,7 +2,6 @@
   ["device", "o", {title: "Device settings"}],
   ["device.id", "s", {title: "Device ID"}],  # Note: Each arch defines a default
   ["device.password", "s", {title: "Device password"}],
-  ["device.shadow_impl", "s", {title: "Shadow implementation, e.g. aws, dash, gcp"}],
 
   ["debug", "o", {title: "Debug Settings"}],
   ["debug.level", "i", 2, {
@@ -31,6 +30,7 @@
   ["sys.mount.fs_type", "s", "", {title: "Filesystem type"}],
   ["sys.mount.fs_opts", "s", "", {title: "Filesystem options"}],
   ["sys.wdt_timeout", "i", 30, {title: "Watchdog timeout (seconds)"}],
+  ["sys.pref_ota_lib", "s", {title: "Preferred ota lib, e.g. dash, ota-http-client"}],
 
   ["conf_acl", "s", "*", {title: "Conf ACL"}],
 ]
