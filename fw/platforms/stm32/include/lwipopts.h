@@ -60,6 +60,7 @@
 
 /* USER CODE END 0 */
 
+#include <machine/endian.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
