@@ -16,8 +16,8 @@ generate version/version.go version/version.json:
 	  head -n 1 ../debian/changelog | cut -d '(' -f 2 | cut -d '+' -f 1 > version/version; \
 	  head -n 1 ../debian/changelog | cut -d '(' -f 2 | cut -d ')' -f 1 > version/build_id; \
 	} || rm -f version/version version/build_id
-	@go install cesanta.com/vendor/github.com/jteeuwen/go-bindata/go-bindata
-	@go install cesanta.com/vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
+	@go install cesanta.com/mos/vendor/github.com/jteeuwen/go-bindata/go-bindata
+	@go install cesanta.com/mos/vendor/github.com/elazarl/go-bindata-assetfs/go-bindata-assetfs
 	@go generate . ./flash/cc3220 ./version
 	@gofmt -w bindata_assetfs.go flash/cc3220/bindata.go
 	@cat version/version.json
