@@ -117,7 +117,7 @@ func (d *dispImpl) AddChannel(channel Channel) {
 		frame := Frame{}
 		err := json.NewDecoder(channel).Decode(&frame)
 		if err != nil {
-			glog.V(2).Infof("Invalid frame from %p: [%s]", channel)
+			glog.V(2).Infof("Invalid frame from %p: [%v]", channel, err)
 			break
 		}
 		s, _ := json.Marshal(frame)
