@@ -12,14 +12,23 @@
 #include "common/cs_crc32.h"
 #include "common/str_util.h"
 
+#include "mgos_system.h"
+
 #ifndef NOINSTR
 #define NOINSTR
 #endif
 
 void mgos_cd_puts(const char *s) {
-  while (*s != '\0') {
-    mgos_cd_putc(*s++);
-  }
+  while (*s != '\0') mgos_cd_putc(*s++);
+}
+
+void mgos_cd_printf(const char *fmt, ...) {
+  va_list ap;
+  char buf[100];
+  va_start(ap, fmt);
+  vsnprintf(buf, sizeof(buf), fmt, ap);
+  va_end(ap);
+  mgos_cd_puts(buf);
 }
 
 struct section_ctx {
@@ -35,6 +44,7 @@ static NOINSTR void emit_char(char c, void *user_data) {
   if (ctx->col_counter >= 160) {
     mgos_cd_puts("\r\n");
     ctx->col_counter = 0;
+    mgos_wdt_feed();
   }
 }
 

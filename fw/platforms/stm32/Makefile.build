@@ -57,7 +57,7 @@ MGOS_PLATFORM_PATH ?= $(MGOS_PATH)/fw/platforms/stm32
 MGOS_FEATURES ?=
 
 PLATFORM_CFLAGS ?= -mthumb -march=armv7e-m -mfloat-abi=hard -mfpu=fpv4-sp-d16 \
-                   -DSTM32 -DSTM32F746xx -DHAVE_FPU=1 -D__WORDSIZE=32 -D_FILE_OFFSET_BITS=32 \
+                   -DSTM32 -DSTM32F746xx -DARM_HAVE_FPU=1 -D__WORDSIZE=32 -D_FILE_OFFSET_BITS=32 \
                    -DFW_ARCHITECTURE=$(APP_PLATFORM)
 STM32CUBE_PATH = $(STM32CUBE_F7_PATH)
 
@@ -88,7 +88,7 @@ override BUILD_DIR := $(abspath $(BUILD_DIR))
 include $(MGOS_PATH)/fw/common.mk
 
 # Platform support files
-ADD_SRCS = stm32_exc.c stm32_fs.c stm32_gpio.c stm32_gpio_defs.c \
+ADD_SRCS = arm_exc.c stm32_exc.c stm32_fs.c stm32_gpio.c stm32_gpio_defs.c \
            stm32_eth.c stm32_hal.c stm32_hw_timers.c \
            stm32_libc.c stm32_lwip.c \
            stm32_main.c stm32_uart.c \
@@ -141,7 +141,7 @@ SDK_SRCS = $(wildcard $(LWIP_PATH)/src/core/*.c) \
            $(wildcard $(LWIP_PATH)/src/netif/ethernet.c) \
            $(wildcard $(MBEDTLS_PATH)/library/*.c) \
            $(wildcard $(FREERTOS_PATH)/Source/*.c) port.c heap_3.c \
-startup_stm32f746xx.S \
+startup_stm32f746xx.S arm_exc_top.S \
 stm32f7xx_hal_adc.c stm32f7xx_hal_adc_ex.c stm32f7xx_hal.c \
 stm32f7xx_hal_can.c stm32f7xx_hal_cec.c stm32f7xx_hal_cortex.c \
 stm32f7xx_hal_crc.c stm32f7xx_hal_crc_ex.c stm32f7xx_hal_cryp.c \
@@ -195,8 +195,10 @@ MGOS_SRCS += $(notdir $(foreach m, $(SPIFFS_PATH),$(wildcard $(m)/*.c)))
 
 APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 
-VPATH += $(MGOS_PLATFORM_PATH) $(MGOS_PLATFORM_PATH)/$(TARGET) $(GEN_DIR) $(APP_SOURCE_DIRS) \
-         $(MGOS_SRC_PATH) $(MONGOOSE_PATH) $(COMMON_PATH) $(FROZEN_PATH) \
+VPATH += $(MGOS_PLATFORM_PATH) $(MGOS_PLATFORM_PATH)/$(TARGET) \
+         $(COMMON_PATH) $(COMMON_PATH)/platforms/arm \
+         $(GEN_DIR) $(APP_SOURCE_DIRS) \
+         $(MGOS_SRC_PATH) $(MONGOOSE_PATH) $(FROZEN_PATH) \
          $(SPIFFS_PATH) $(COMMON_PATH)/mg_rpc \
          $(STM32CUBE_PATH)/Middlewares/Third_Party/mbedTLS \
          $(STM32CUBE_PATH)/Drivers/STM32F7xx_HAL_Driver/Src \
@@ -268,7 +270,7 @@ $(BUILD_DIR)/%.c.o: %.c $(GENFILES_FLAG)
 	$(Q) $(CC) $(CFLAGS) $(addprefix -I, $(IPATH)) -c $< -o $@
 
 $(BUILD_DIR)/%.S.o: %.S $(GENFILES_FLAG)
-	$(vecho) CC $(notdir $<)
+	$(vecho) ASM $(notdir $<)
 	$(Q) $(CC) $(CFLAGS) $(addprefix -I, $(IPATH)) -c -x assembler-with-cpp $< -o $@
 
 $(GENFILES_FLAG): $(GENFILES_LIST)

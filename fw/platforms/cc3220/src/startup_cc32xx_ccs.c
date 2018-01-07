@@ -43,9 +43,8 @@
 #include <ti/devices/cc32xx/driverlib/rom_map.h>
 #include <ti/devices/cc32xx/driverlib/prcm.h>
 
-#include "cc32xx_exc.h"
-
 void resetISR(void);
+extern void arm_exc_handler_top(void);
 
 //*****************************************************************************
 //
@@ -76,21 +75,21 @@ extern unsigned long __STACK_END;
 void (*const resetVectors[16])(void) = {
     (void (*)(void))((unsigned long) &__STACK_END),
     // The initial stack pointer
-    resetISR,                       // The reset handler
-    cc32xx_nmi_handler,             /* The NMI handler */
-    cc32xx_hard_fault_handler_top,  /* The hard fault handler */
-    cc32xx_mem_fault_handler_top,   /* The MPU fault handler */
-    cc32xx_bus_fault_handler_top,   /* The hard fault handler */
-    cc32xx_usage_fault_handler_top, /* The usage fault handler */
-    0,                              // Reserved
-    0,                              // Reserved
-    0,                              // Reserved
-    0,                              // Reserved
-    vPortSVCHandler,                // SVCall handler
-    cc32xx_unhandled_int,           /* Debug monitor handler */
-    0,                              // Reserved
-    xPortPendSVHandler,             // The PendSV handler
-    xPortSysTickHandler             // The SysTick handler
+    resetISR,            // The reset handler
+    arm_exc_handler_top, /* The NMI handler */
+    arm_exc_handler_top, /* The hard fault handler */
+    arm_exc_handler_top, /* The MPU fault handler */
+    arm_exc_handler_top, /* The hard fault handler */
+    arm_exc_handler_top, /* The usage fault handler */
+    0,                   // Reserved
+    0,                   // Reserved
+    0,                   // Reserved
+    0,                   // Reserved
+    vPortSVCHandler,     // SVCall handler
+    arm_exc_handler_top, /* Debug monitor handler */
+    0,                   // Reserved
+    xPortPendSVHandler,  // The PendSV handler
+    xPortSysTickHandler  // The SysTick handler
 };
 
 #pragma DATA_SECTION(ramVectors, ".ramVecs")
@@ -111,7 +110,7 @@ void initVectors(void) {
 
   /* fill remaining vectors with default handler */
   for (i = 16; i < 256; i++) {
-    ramVectors[i] = (unsigned long) cc32xx_unhandled_int;
+    ramVectors[i] = (unsigned long) arm_exc_handler_top;
   }
 
   /* Set vector table base */

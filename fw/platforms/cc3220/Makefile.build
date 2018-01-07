@@ -102,7 +102,8 @@ MGOS_INCLUDE_PATH ?= $(MGOS_PATH)/fw/include
 include $(MGOS_PATH)/fw/common.mk
 
 VPATH = $(APP_SOURCE_DIRS) $(MGOS_SRC_PATH) $(MGOS_CC32XX_PATH)/src $(MGOS_CC3220_PATH)/src \
-        $(COMMON_PATH) $(GEN_DIR) \
+        $(COMMON_PATH) $(COMMON_PATH)/platforms/arm \
+        $(GEN_DIR) \
         $(MONGOOSE_PATH) $(FROZEN_PATH)
 IPATH = $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) $(MGOS_PATH) $(MGOS_SRC_PATH) $(MGOS_INCLUDE_PATH) \
         $(MGOS_CC32XX_PATH)/src $(MGOS_CC3220_PATH)/src $(GEN_DIR) \
@@ -209,11 +210,11 @@ SDK_CFLAGS = -DTARGET_IS_CC3220 -DUSE_CC3220_ROM_DRV_API -DUSE_FREERTOS
 MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3220_PATH)/src/*.c)) \
              cs_crc32.c cs_dbg.c cs_file.c cs_rbuf.c mbuf.c \
              frozen.c json_utils.c mongoose.c \
-             mgos_config_util.c mgos_debug.c mgos_dlsym.c mgos_event.c mgos_gpio.c mgos_init.c \
+             mgos_config_util.c mgos_core_dump.c mgos_debug.c mgos_dlsym.c mgos_event.c mgos_gpio.c mgos_init.c \
              mgos_mongoose.c mgos_sys_config.c \
              mgos_hw_timers.c mgos_system.c mgos_time.c mgos_timers.c mgos_uart.c mgos_utils.c \
              mgos_vfs.c mgos_vfs_dev.c mgos_vfs_fs_spiffs.c \
-             cc32xx_crypto.c cc32xx_exc.c cc32xx_exc_handler_top.asm cc32xx_fs.c cc32xx_gpio.c \
+             cc32xx_crypto.c cc32xx_exc.c arm_exc.c arm_exc_top.S cc32xx_fs.c cc32xx_gpio.c \
              cc32xx_hal.c cc32xx_hw_timers.c cc32xx_libc.c cc32xx_main.c cc32xx_sl_spawn.c cc32xx_uart.c \
              cc32xx_vfs.c cc32xx_vfs_fs_slfs.c \
              $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C))
@@ -291,7 +292,8 @@ APP_LD_SCRIPT ?= $(MGOS_CC3220_PATH)/ld/CC3220SF_LAUNCHXL_FREERTOS.cmd
 APP_LDFLAGS += --rom_model --heap_size=0 --stack_size=0x1000 \
                --disable_auto_rts -l rtsv7M4_T_le_eabi_cesanta.lib
 
-C_CXX_FLAGS += -DFW_ARCHITECTURE=$(APP_PLATFORM) \
+C_CXX_FLAGS += -DFW_ARCHITECTURE=$(APP_PLATFORM) -DARM_HAVE_FPU=0 \
+               -DSRAM_BASE_ADDR=0x20000000 -DSRAM_SIZE=0x40000 \
                $(patsubst %,-I%,$(subst :, ,$(IPATH))) \
                $(MG_FEATURES) $(MGOS_FEATURES) $(MGOS_CC3220_FEATURES) \
                $(MGOS_CFLAGS)
@@ -339,6 +341,10 @@ $(BUILD_DIR)/%.c.o: $(GEN_DIR)/%.c $(GENFILES_LIST)
 
 $(BUILD_DIR)/%.asm.o: %.asm $(GENFILES_LIST)
 	$(call asm,$(CFLAGS),$<)
+
+$(BUILD_DIR)/%.S.o: %.S $(GENFILES_LIST)
+	$(vecho) "GCCAS $@"
+	$(Q) arm-none-eabi-gcc -mthumb -mcpu=cortex-m4 $(C_CXX_FLAGS) -Wundef -c -x assembler-with-cpp $< -o $@
 
 $(FFI_EXPORTS_C): $(APP_FS_FILES)
 	$(call gen_ffi_exports,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))

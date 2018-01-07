@@ -14,16 +14,8 @@
 #include "driverlib/uart.h"
 
 #include "cc32xx_uart.h"
-#include "mgos_hal.h"
+#include "mgos_core_dump.h"
 #include "mgos_sys_config.h"
-
-#ifdef CC32XX_LOOP_ON_EXCEPTION
-#define EXC_ACTION \
-  while (1) {      \
-  }
-#else
-#define EXC_ACTION mgos_dev_system_restart();
-#endif
 
 #define ARM_PERIPH_BASE 0xE000E000
 
@@ -36,17 +28,19 @@
 #define SCB_HFAULTSTAT (ARM_PERIPH_BASE + 0xD2C)
 #define SCB_FAULTADDR (ARM_PERIPH_BASE + 0xD38)
 
-void cc32xx_exc_puts(const char *s) {
+void mgos_cd_putc(int c) {
   int uart_no = (mgos_sys_config_is_initialized()
                      ? mgos_sys_config_get_debug_stderr_uart()
                      : MGOS_DEBUG_UART);
   if (uart_no < 0) return;
   uint32_t base = cc32xx_uart_get_base(uart_no);
-  for (; *s != '\0'; s++) {
-    MAP_UARTCharPut(base, *s);
-  }
+  MAP_UARTCharPut(base, c);
   while (MAP_UARTBusy(base)) {
   }
+}
+
+void cc32xx_exc_puts(const char *s) {
+  for (; *s != '\0'; s++) mgos_cd_putc(*s);
 }
 
 void cc32xx_exc_printf(const char *fmt, ...) {
@@ -58,51 +52,18 @@ void cc32xx_exc_printf(const char *fmt, ...) {
   cc32xx_exc_puts(buf);
 }
 
-void handle_exception(struct cc32xx_exc_frame *f, const char *type) {
-  cc32xx_exc_printf(
-      "\n\n--- %s Fault ---\n"
-      "  SHCTL=0x%08x, FSTAT=0x%08x, HFSTAT=0x%08x, FADDR=%08x\n",
-      type, (unsigned int) HWREG(SCB_SYSHNDCTRL),
-      (unsigned int) HWREG(SCB_FAULTSTAT), (unsigned int) HWREG(SCB_HFAULTSTAT),
-      (unsigned int) HWREG(SCB_FAULTADDR));
-  cc32xx_exc_printf(
-      "  SF @ 0x%08x:\n    R0=0x%08x R1=0x%08x R2=0x%08x R3=0x%08x "
-      "R12=0x%08x\n",
-      (unsigned int) f, f->r0, f->r1, f->r2, f->r3, f->r12);
-  cc32xx_exc_printf("    LR=0x%08x PC=0x%08x xPSR=0x%08x\n---\n", f->lr, f->pc,
-                    f->xpsr);
-  EXC_ACTION
-}
-
-void cc32xx_nmi_handler(void) {
-  cc32xx_exc_puts("\n\n--- NMI ---\n");
-  EXC_ACTION
-}
-
-void cc32xx_hard_fault_handler_bottom(struct cc32xx_exc_frame *f) {
-  handle_exception(f, "Hard");
-}
-
-void cc32xx_mem_fault_handler_bottom(struct cc32xx_exc_frame *f) {
-  handle_exception(f, "Mem");
-}
-
-void cc32xx_bus_fault_handler_bottom(struct cc32xx_exc_frame *f) {
-  handle_exception(f, "Bus");
-}
-
-void cc32xx_usage_fault_handler_bottom(struct cc32xx_exc_frame *f) {
-  handle_exception(f, "Usage");
-}
-
-void cc32xx_unhandled_int(void) {
-  cc32xx_exc_puts("\n\n--- Unhandled int ---\n");
-  EXC_ACTION
+void abort(void) {
+  fflush(stdout);
+  fflush(stderr);
+  mgos_debug_flush();
+  cc32xx_exc_printf("\nabort() called\n");
+  // Executes an illegal instruction.
+  *((int *) 0xfafafafa) = 0x123;
 }
 
 void vMainAssertCalled(const char *file, uint32_t line) {
   cc32xx_exc_printf("Assert at %s:%u\r\n", file, line);
-  mgos_system_restart();
+  abort();
 }
 
 void vAssertCalled(const char *file, uint32_t line) {

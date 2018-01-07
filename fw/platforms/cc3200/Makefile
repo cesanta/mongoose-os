@@ -7,6 +7,5 @@ endif
 # This defines "all" and "clean" targets.
 include $(MGOS_PATH)/fw/docker_common.mk
 
-debug:
-	docker run --rm -it --privileged -v $(SRC_DIR):/src $(SDK) \
-		/bin/bash -c "cd /src/fw/platforms/cc3200 && tools/gdb.sh"
+GDB = arm-none-eabi-gdb
+include $(MGOS_PATH)/common/scripts/debug_coredump.mk

@@ -7,12 +7,13 @@ AR = $(TOOLCHAIN)/bin/armar
 NM = nm
 GENFILES_LIST ?=
 
-C_CXX_FLAGS = -mv7M4 --little_endian --code_state=16 --float_support=vfplib --abi=eabi \
-              -O4 --opt_for_speed=0 --unaligned_access=on --small_enum \
-              --gen_func_subsections=on --diag_wrap=off --display_error_number \
-              --emit_warnings_as_errors -Dccs -I$(TOOLCHAIN)/include
-CFLAGS += --c99 $(C_CXX_FLAGS)
-CXXFLAGS += $(C_CXX_FLAGS)
+C_CXX_FLAGS = -Dccs -I$(TOOLCHAIN)/include
+TI_C_CXX_FLAGS = -mv7M4 --little_endian --code_state=16 --float_support=vfplib --abi=eabi \
+                 -O4 --opt_for_speed=0 --unaligned_access=on --small_enum \
+                 --gen_func_subsections=on --diag_wrap=off --display_error_number \
+                 --emit_warnings_as_errors
+CFLAGS += --c99 $(TI_C_CXX_FLAGS) $(C_CXX_FLAGS)
+CXXFLAGS += $(TI_C_CXX_FLAGS) $(C_CXX_FLAGS)
 
 # cc flags,file
 define cc

@@ -106,7 +106,7 @@ FS_STAGING_DIR = $(BUILD_DIR)/fs
 include $(MGOS_PATH)/fw/common.mk
 
 VPATH = $(APP_SOURCE_DIRS) $(MGOS_SRC_PATH) $(MGOS_CC32XX_PATH)/src $(MGOS_CC3200_PATH)/src \
-        $(COMMON_PATH) \
+        $(COMMON_PATH) $(COMMON_PATH)/platforms/arm \
         $(BOOT_PATH)/lib \
         $(MONGOOSE_PATH) $(FROZEN_PATH)
 IPATH = $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) $(MGOS_PATH) $(MGOS_SRC_PATH) $(MGOS_INCLUDE_PATH) \
@@ -170,7 +170,7 @@ MGOS_SRCS = mgos_event.c \
             $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
             cs_crc32.c cs_file.c \
             cs_frbuf.c mgos_utils.c \
-            cs_rbuf.c mgos_uart.c \
+            cs_rbuf.c mgos_core_dump.c mgos_uart.c \
             boot.c mongoose.c frozen.c json_utils.c
 
 ifneq "$(TOOLCHAIN)" "gcc"
@@ -197,8 +197,8 @@ VPATH += $(SDK_PATH)/driverlib $(SDK_PATH)/oslib $(SDK_PATH)/simplelink \
 SDK_CFLAGS = -DTARGET_IS_CC3200 -DUSE_FREERTOS
 
 MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3200_PATH)/src/*.c)) \
-             cc32xx_crypto.c cc32xx_exc.c cc32xx_fs.c cc32xx_gpio.c cc32xx_hal.c \
-             cc32xx_hw_timers.c \
+             cc32xx_crypto.c cc32xx_exc.c arm_exc.c arm_exc_top.S \
+             cc32xx_fs.c cc32xx_gpio.c cc32xx_hal.c cc32xx_hw_timers.c \
              cc32xx_libc.c cc32xx_main.c cc32xx_sl_spawn.c cc32xx_uart.c \
              cc32xx_vfs.c cc32xx_vfs_dev_slfs_container.c cc32xx_vfs_fs_slfs.c
 APP_SRCS = $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
@@ -295,8 +295,7 @@ APP_LDFLAGS += --ram_model --cinit_compression=off --copy_compression=off \
                --disable_auto_rts -l rtsv7M4_T_le_eabi_cesanta.lib
 
 MGOS_CFLAGS += -DMG_TI_NO_HOST_INTERFACE=1
-MGOS_OBJS += $(BUILD_DIR)/cc32xx_exc_handler_top.asm.o \
-             $(BUILD_DIR)/portasm.asm.o \
+MGOS_OBJS += $(BUILD_DIR)/portasm.asm.o \
              $(BUILD_DIR)/startup_ccs.c.o
 VPATH += $(MGOS_CC3200_PATH)/src/ti
 
@@ -307,7 +306,8 @@ $(BUILD_DIR)/port.c.o: CFLAGS += --diag_suppress=193,225
 $(BUILD_DIR)/tasks.c.o: CFLAGS += --diag_suppress=225
 endif
 
-C_CXX_FLAGS += -DNDEBUG -DCS_NDEBUG \
+C_CXX_FLAGS += -DNDEBUG -DCS_NDEBUG -DARM_HAVE_FPU=0 \
+               -DSRAM_BASE_ADDR=0x20000000 -DSRAM_SIZE=0x40000 \
                -DFW_ARCHITECTURE=$(APP_PLATFORM) \
                $(patsubst %,-I%,$(subst :, ,$(IPATH))) \
                $(MG_FEATURES) $(MGOS_FEATURES) $(MGOS_CC3200_FEATURES) \
@@ -366,6 +366,10 @@ $(BUILD_DIR)/%.c.o: $(GEN_DIR)/%.c $(GENFILES_LIST)
 
 $(BUILD_DIR)/%.asm.o: %.asm $(GENFILES_LIST)
 	$(call asm,$(CFLAGS),$<)
+
+$(BUILD_DIR)/%.S.o: %.S $(GENFILES_LIST)
+	$(vecho) "GCCAS $@"
+	$(Q) arm-none-eabi-gcc -mthumb -mcpu=cortex-m4 $(C_CXX_FLAGS) -Wundef -c -x assembler-with-cpp $< -o $@
 
 $(FFI_EXPORTS_C): $(APP_FS_FILES)
 	$(call gen_ffi_exports,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))

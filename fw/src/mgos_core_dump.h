@@ -18,6 +18,13 @@ void mgos_cd_emit_header(void);
 void mgos_cd_emit_section(const char *name, const void *p, size_t len);
 void mgos_cd_emit_footer(void);
 
+void mgos_cd_puts(const char *s);
+void mgos_cd_printf(const char *fmt, ...)
+#ifdef __GNUC__
+    __attribute__((format(printf, 1, 2)))
+#endif
+    ;
+/* Platform must provide this. It must be safe to invoke from an ISR. */
 extern void mgos_cd_putc(int c);
 
 #ifdef __cplusplus

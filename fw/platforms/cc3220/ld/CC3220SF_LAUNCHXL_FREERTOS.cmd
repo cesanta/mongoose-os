@@ -58,6 +58,7 @@ SECTIONS
 {
     .dbghdr     : > FLASH_HDR
     .text       : > FLASH
+    .text.*     : > FLASH
     .TI.ramfunc : {} load=FLASH, run=SRAM, table(BINIT)
     .const      : > FLASH
     .cinit      : > FLASH

@@ -28,14 +28,6 @@ void cc32xx_exc_init(void);
 void cc32xx_exc_puts(const char *s);
 void cc32xx_exc_printf(const char *fmt, ...); /* Note: uses 100-byte buffer */
 
-void cc32xx_nmi_handler(void);
-void cc32xx_unhandled_int(void);
-/* From exc_handler_top.asm */
-void cc32xx_hard_fault_handler_top(void);
-void cc32xx_mem_fault_handler_top(void);
-void cc32xx_bus_fault_handler_top(void);
-void cc32xx_usage_fault_handler_top(void);
-
 #ifdef __cplusplus
 }
 #endif

@@ -8,6 +8,7 @@
 #include "cc32xx_exc.h"
 #include "mgos_hal.h"
 
+extern void arm_exc_handler_top(void);
 extern void vPortSVCHandler(void);
 extern void xPortPendSVHandler(void);
 extern void xPortSysTickHandler(void);
@@ -25,49 +26,49 @@ void ResetISR(void) {
 void (*const g_pfnVectors[256])(void) = {
     (void (*)(void))(&__STACK_END), /* The initial stack pointer */
     ResetISR,                       /* The reset handler */
-    cc32xx_nmi_handler,             /* The NMI handler */
-    cc32xx_hard_fault_handler_top,  /* The hard fault handler */
-    cc32xx_mem_fault_handler_top,   /* The MPU fault handler */
-    cc32xx_bus_fault_handler_top,   /* The hard fault handler */
-    cc32xx_usage_fault_handler_top, /* The usage fault handler */
+    arm_exc_handler_top,            /* The NMI handler */
+    arm_exc_handler_top,            /* The hard fault handler */
+    arm_exc_handler_top,            /* The MPU fault handler */
+    arm_exc_handler_top,            /* The hard fault handler */
+    arm_exc_handler_top,            /* The usage fault handler */
     0,                              /* Reserved */
     0,                              /* Reserved */
     0,                              /* Reserved */
     0,                              /* Reserved */
     vPortSVCHandler,                /* SVCall handler */
-    cc32xx_unhandled_int,           /* Debug monitor handler */
+    arm_exc_handler_top,            /* Debug monitor handler */
     0,                              /* Reserved */
     xPortPendSVHandler,             /* The PendSV handler */
     xPortSysTickHandler,            /* The SysTick handler */
-    cc32xx_unhandled_int,           /* GPIO Port A0 */
-    cc32xx_unhandled_int,           /* GPIO Port A1 */
-    cc32xx_unhandled_int,           /* GPIO Port A2 */
-    cc32xx_unhandled_int,           /* GPIO Port A3 */
+    arm_exc_handler_top,            /* GPIO Port A0 */
+    arm_exc_handler_top,            /* GPIO Port A1 */
+    arm_exc_handler_top,            /* GPIO Port A2 */
+    arm_exc_handler_top,            /* GPIO Port A3 */
     0,                              /* Reserved */
-    cc32xx_unhandled_int,           /* UART0 Rx and Tx */
-    cc32xx_unhandled_int,           /* UART1 Rx and Tx */
+    arm_exc_handler_top,            /* UART0 Rx and Tx */
+    arm_exc_handler_top,            /* UART1 Rx and Tx */
     0,                              /* Reserved */
-    cc32xx_unhandled_int,           /* I2C0 Master and Slave */
+    arm_exc_handler_top,            /* I2C0 Master and Slave */
     0, 0, 0, 0, 0,                  /* Reserved */
-    cc32xx_unhandled_int,           /* ADC Channel 0 */
-    cc32xx_unhandled_int,           /* ADC Channel 1 */
-    cc32xx_unhandled_int,           /* ADC Channel 2 */
-    cc32xx_unhandled_int,           /* ADC Channel 3 */
-    cc32xx_unhandled_int,           /* Watchdog Timer */
-    cc32xx_unhandled_int,           /* Timer 0 subtimer A */
-    cc32xx_unhandled_int,           /* Timer 0 subtimer B */
-    cc32xx_unhandled_int,           /* Timer 1 subtimer A */
-    cc32xx_unhandled_int,           /* Timer 1 subtimer B */
-    cc32xx_unhandled_int,           /* Timer 2 subtimer A */
-    cc32xx_unhandled_int,           /* Timer 2 subtimer B  */
+    arm_exc_handler_top,            /* ADC Channel 0 */
+    arm_exc_handler_top,            /* ADC Channel 1 */
+    arm_exc_handler_top,            /* ADC Channel 2 */
+    arm_exc_handler_top,            /* ADC Channel 3 */
+    arm_exc_handler_top,            /* Watchdog Timer */
+    arm_exc_handler_top,            /* Timer 0 subtimer A */
+    arm_exc_handler_top,            /* Timer 0 subtimer B */
+    arm_exc_handler_top,            /* Timer 1 subtimer A */
+    arm_exc_handler_top,            /* Timer 1 subtimer B */
+    arm_exc_handler_top,            /* Timer 2 subtimer A */
+    arm_exc_handler_top,            /* Timer 2 subtimer B  */
     0, 0, 0, 0,                     /* Reserved */
-    cc32xx_unhandled_int,           /* Flash */
+    arm_exc_handler_top,            /* Flash */
     0, 0, 0, 0, 0,                  /* Reserved */
-    cc32xx_unhandled_int,           /* Timer 3 subtimer A */
-    cc32xx_unhandled_int,           /* Timer 3 subtimer B */
+    arm_exc_handler_top,            /* Timer 3 subtimer A */
+    arm_exc_handler_top,            /* Timer 3 subtimer B */
     0, 0, 0, 0, 0, 0, 0, 0, 0,      /* Reserved */
-    cc32xx_unhandled_int,           /* uDMA Software Transfer */
-    cc32xx_unhandled_int,           /* uDMA Error */
+    arm_exc_handler_top,            /* uDMA Software Transfer */
+    arm_exc_handler_top,            /* uDMA Error */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   /* Reserved */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   /* Reserved */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   /* Reserved */
@@ -78,24 +79,24 @@ void (*const g_pfnVectors[256])(void) = {
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   /* Reserved */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   /* Reserved */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   /* Reserved */
-    cc32xx_unhandled_int,           /* SHA */
+    arm_exc_handler_top,            /* SHA */
     0, 0,                           /* Reserved */
-    cc32xx_unhandled_int,           /* AES */
+    arm_exc_handler_top,            /* AES */
     0,                              /* Reserved */
-    cc32xx_unhandled_int,           /* DES */
+    arm_exc_handler_top,            /* DES */
     0, 0, 0, 0, 0,                  /* Reserved */
-    cc32xx_unhandled_int,           /* SDHost */
+    arm_exc_handler_top,            /* SDHost */
     0,                              /* Reserved */
-    cc32xx_unhandled_int,           /* I2S */
+    arm_exc_handler_top,            /* I2S */
     0,                              /* Reserved */
-    cc32xx_unhandled_int,           /* Camera */
+    arm_exc_handler_top,            /* Camera */
     0, 0, 0, 0, 0, 0, 0,            /* Reserved */
-    cc32xx_unhandled_int,           /* NWP to APPS Interrupt */
-    cc32xx_unhandled_int,           /* Power, Reset and Clock module */
+    arm_exc_handler_top,            /* NWP to APPS Interrupt */
+    arm_exc_handler_top,            /* Power, Reset and Clock module */
     0, 0,                           /* Reserved */
-    cc32xx_unhandled_int,           /* Shared SPI */
-    cc32xx_unhandled_int,           /* Generic SPI */
-    cc32xx_unhandled_int,           /* Link SPI */
+    arm_exc_handler_top,            /* Shared SPI */
+    arm_exc_handler_top,            /* Generic SPI */
+    arm_exc_handler_top,            /* Link SPI */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   /* Reserved */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   /* Reserved */
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0,   /* Reserved */

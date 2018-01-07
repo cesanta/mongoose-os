@@ -25,6 +25,7 @@ SECTIONS
       .init_array
       .vtable
       .text
+      .text.*
       .const
       .data
       .bss
