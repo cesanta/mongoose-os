@@ -49,6 +49,10 @@ struct update_context {
   int update_state;
   const char *status_msg;
 
+  char *zip_file_url;
+  size_t total_zip_file_size;
+  size_t bytes_already_downloaded;
+
   const char *data;
   size_t data_len;
   struct mbuf unprocessed;

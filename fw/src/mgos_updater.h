@@ -52,6 +52,8 @@ enum mgos_upd_event {
   MGOS_UPD_EV_ROLLBACK = 5,
   /* ev_data = NULL, return: ignored */
   MGOS_UPD_EV_COMMIT = 6,
+  /* ev_data = NULL, return: ignored */
+  MGOS_UPD_EV_ERROR = 7,
 };
 
 /*
