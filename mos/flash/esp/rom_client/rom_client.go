@@ -274,7 +274,6 @@ func (rc *ROMClient) trySync() error {
 					continue
 				} else {
 					return errors.Annotatef(err, "error reading sync response #%d", i)
-					break
 				}
 			} else {
 				break

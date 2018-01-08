@@ -247,7 +247,6 @@ func buildXMLConfigFromFirmwareBundle(fw *common.FirmwareBundle, storageCapacity
 				},
 			})
 		case cc32xx.PartTypeSLConfig:
-			break
 			sfid, err := systemFileIdFromString(p.Name)
 			if err != nil {
 				return "", errors.Annotatef(err, "%s", p.Name)

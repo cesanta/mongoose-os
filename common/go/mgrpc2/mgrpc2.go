@@ -9,8 +9,6 @@ import (
 	"sync"
 	"time"
 
-	log "github.com/sirupsen/logrus"
-
 	"golang.org/x/net/context"
 	"golang.org/x/net/websocket"
 )
@@ -55,6 +53,10 @@ type Dispatcher interface {
 	AddChannel(channel Channel)
 }
 
+type LogFunc func(fmt string, args ...interface{})
+
+var defaultLogFunc = func(fmt string, args ...interface{}) {}
+
 type dispImpl struct {
 	lock     sync.Mutex
 	addrMap  map[string]Channel
@@ -62,13 +64,14 @@ type dispImpl struct {
 	calls    map[int64]chan *Frame
 	address  string
 	nextId   int64
+	logf     LogFunc
 }
 
 func (d *dispImpl) Connect(address string) (Channel, error) {
 	if strings.HasPrefix(address, "ws://") || strings.HasPrefix(address, "wss://") {
 		ws, err := websocket.Dial(address, "", "http://localhost")
 		if err != nil {
-			log.Warn("Error connecting: %v", err)
+			d.logf("Error connecting: %v", err)
 			return nil, err
 		} else {
 			d.addrMap[address] = ws
@@ -102,7 +105,7 @@ func (d *dispImpl) Dispatch(frame *Frame) bool {
 	ch, ok := d.calls[frame.ID]
 	if ok {
 		str, _ := json.Marshal(frame)
-		log.Infof("Response (ch): [%s]", string(str))
+		d.logf("Response (ch): [%s]", string(str))
 		ch <- frame
 	}
 	return ok
@@ -113,15 +116,15 @@ func (d *dispImpl) AddChannel(channel Channel) {
 
 	// TODO(lsm): refactor this blocking thing
 	for {
-		log.Infof("Reading request from channel [%p]...", channel)
+		d.logf("Reading request from channel [%p]...", channel)
 		frame := Frame{}
 		err := json.NewDecoder(channel).Decode(&frame)
 		if err != nil {
-			log.Warnf("Invalid frame from %p: [%v]", channel, err)
+			d.logf("Invalid frame from %p: [%v]", channel, err)
 			break
 		}
 		s, _ := json.Marshal(frame)
-		log.Infof("Got: [%s]", string(s))
+		d.logf("Got: [%s]", string(s))
 
 		if frame.Method == "" {
 			// Reply
@@ -134,7 +137,7 @@ func (d *dispImpl) AddChannel(channel Channel) {
 				d.lock.Lock()
 				d.addrMap[frame.Src] = channel
 				d.lock.Unlock()
-				log.Infof("Associating address [%s] with channel %p", frame.Src, channel)
+				d.logf("Associating address [%s] with channel %p", frame.Src, channel)
 			}
 
 			var response *Frame
@@ -159,9 +162,9 @@ func (d *dispImpl) AddChannel(channel Channel) {
 
 			if !d.Dispatch(response) {
 				str, _ := json.Marshal(response)
-				log.Infof("Response (io): [%s]", string(str))
+				d.logf("Response (io): [%s]", string(str))
 				if _, err := channel.Write(str); err != nil {
-					log.Infof("Write error: %v", err)
+					d.logf("Write error: %v", err)
 					break
 				}
 			}
@@ -189,7 +192,7 @@ func (d *dispImpl) Call(ctx context.Context, request *Frame) (*Frame, error) {
 		request.Src = d.address
 	}
 	s, _ := json.Marshal(request)
-	log.Infof("Sending: [%s]", string(s))
+	d.logf("Sending: [%s]", string(s))
 	n, err := c.Write(s)
 	if err != nil {
 		return nil, fmt.Errorf("Write error %p", err)
@@ -197,7 +200,7 @@ func (d *dispImpl) Call(ctx context.Context, request *Frame) (*Frame, error) {
 	if request.NoResponse {
 		return nil, nil
 	}
-	log.Infof("Sent %d out of %d bytes, ID %d, waiting for reply...", n, len(s), request.ID)
+	d.logf("Sent %d out of %d bytes, ID %d, waiting for reply...", n, len(s), request.ID)
 
 	ch := make(chan *Frame)
 	d.lock.Lock()
@@ -210,7 +213,7 @@ func (d *dispImpl) Call(ctx context.Context, request *Frame) (*Frame, error) {
 		d.lock.Unlock()
 	}()
 
-	log.Infof("Sent %d out of %d bytes, ID %d, waiting for reply...", n, len(s), request.ID)
+	d.logf("Sent %d out of %d bytes, ID %d, waiting for reply...", n, len(s), request.ID)
 	select {
 	case res := <-ch:
 		return res, nil
@@ -219,14 +222,18 @@ func (d *dispImpl) Call(ctx context.Context, request *Frame) (*Frame, error) {
 	}
 }
 
-func CreateDispatcher() Dispatcher {
+func CreateDispatcher(logf LogFunc) Dispatcher {
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	if logf == nil {
+		logf = defaultLogFunc
+	}
 	d := dispImpl{
 		addrMap:  make(map[string]Channel),
 		handlers: make(map[string]Handler),
 		address:  fmt.Sprintf("rpc_%.4d", r.Int31()),
 		nextId:   int64(r.Int31()),
 		calls:    make(map[int64]chan *Frame),
+		logf:     logf,
 	}
 	return &d
 }

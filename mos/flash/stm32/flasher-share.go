@@ -50,6 +50,4 @@ func Flash(fw *common.FirmwareBundle, opts *FlashOpts) error {
 
 		time.Sleep(1000 * time.Millisecond)
 	}
-
-	return nil
 }

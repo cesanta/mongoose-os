@@ -726,6 +726,6 @@ func (sid StorageID) String() string {
 	case StorageSFlash:
 		return "SFLASH"
 	default:
-		return fmt.Sprintf("?(0x%x)", sid)
+		return fmt.Sprintf("?(0x%x)", uint8(sid))
 	}
 }

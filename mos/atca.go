@@ -389,6 +389,7 @@ func genCSR(csrTemplateFile string, slot int, cl atcaService.Service, outputFile
 		csrTemplate.SignatureAlgorithm != x509.ECDSAWithSHA256 {
 		return errors.Errorf("%s: wrong public key and/or signature type; "+
 			"expected ECDSA(%d) and SHA256(%d), got %d %d",
+			csrTemplateFile,
 			x509.ECDSA, x509.ECDSAWithSHA256, csrTemplate.PublicKeyAlgorithm,
 			csrTemplate.SignatureAlgorithm)
 	}
@@ -471,8 +472,6 @@ func atcaGenKey(ctx context.Context, dc *dev.DevConn) error {
 	} else {
 		return writePubKey(keyData, outputFileName)
 	}
-
-	return nil
 }
 
 func atcaGetPubKey(ctx context.Context, dc *dev.DevConn) error {
@@ -519,6 +518,4 @@ func atcaGetPubKey(ctx context.Context, dc *dev.DevConn) error {
 	} else {
 		return writePubKey(keyData, outputFileName)
 	}
-
-	return nil
 }

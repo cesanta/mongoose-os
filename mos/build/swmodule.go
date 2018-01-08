@@ -237,8 +237,6 @@ func (m *SWModule) GetType() SWModuleType {
 	default:
 		return SWModuleTypeLocal
 	}
-
-	return SWModuleTypeLocal
 }
 
 func prepareLocalCopyGit(

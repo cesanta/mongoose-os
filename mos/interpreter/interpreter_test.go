@@ -85,7 +85,7 @@ func TestInterpreterBasic(t *testing.T) {
 		}
 
 		if res != v.result {
-			t.Fatalf("expr %q: want result %q, got %q", v.expr, v.result, res)
+			t.Fatalf("expr %q: want result %t, got %t", v.expr, v.result, res)
 		}
 	}
 

@@ -79,7 +79,7 @@ func main() {
 		log.Fatalf("Please specify --dst")
 	}
 
-	d := mgrpc2.CreateDispatcher()
+	d := mgrpc2.CreateDispatcher(log.Printf)
 	d.AddHandler("*", func(d mgrpc2.Dispatcher, c mgrpc2.Channel, f *mgrpc2.Frame) *mgrpc2.Frame {
 		switch f.Method {
 		case "RPC.List":

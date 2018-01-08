@@ -3,7 +3,6 @@ package mgrpc2
 import (
 	"context"
 	"encoding/json"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"reflect"
@@ -16,21 +15,21 @@ import (
 
 type serverCloser func()
 
-func mkdispatcher() (Dispatcher, string, serverCloser) {
-	d := CreateDispatcher()
+func mkdispatcher(t *testing.T) (Dispatcher, string, serverCloser) {
+	d := CreateDispatcher(nil)
 	mux := http.NewServeMux()
 	mux.Handle("/rpc", websocket.Handler(func(ws *websocket.Conn) {
 		d.AddChannel(ws)
 	}))
 	srv := httptest.NewServer(mux)
 	rpcAddr := strings.Replace(srv.URL, "http://", "ws://", 1) + "/rpc"
-	log.Println("Created server @ ", rpcAddr)
+	t.Log("Created server @ ", rpcAddr)
 	return d, rpcAddr, srv.Close
 }
 
 func TestUnorderedRPC(t *testing.T) {
 	actionsOrder := []int{}
-	d, rpcAddr, done := mkdispatcher()
+	d, rpcAddr, done := mkdispatcher(t)
 	defer done()
 
 	// Simulate two devices that make requests in one order, but receive replies
@@ -54,7 +53,7 @@ func TestUnorderedRPC(t *testing.T) {
 
 	go func() {
 		m2.Lock() // Wait until first device makes a call and triggers a handler
-		d2, _, done2 := mkdispatcher()
+		d2, _, done2 := mkdispatcher(t)
 		defer done2()
 		actionsOrder = append(actionsOrder, 2)
 		req := &Frame{Tag: "xyz", Dst: rpcAddr, Method: "Boo", ID: 888}
@@ -93,13 +92,13 @@ func TestUnorderedRPC(t *testing.T) {
 }
 
 func TestRPC(t *testing.T) {
-	dispatcher, rpcAddr, done := mkdispatcher()
+	dispatcher, rpcAddr, done := mkdispatcher(t)
 	defer done()
 	dispatcher.AddHandler("Boo", func(d Dispatcher, c Channel, req *Frame) *Frame {
 		return &Frame{Error: &FrameError{Code: 500, Message: "Random error"}}
 	})
 
-	d2, rpc2Addr, done2 := mkdispatcher()
+	d2, rpc2Addr, done2 := mkdispatcher(t)
 	defer done2()
 	d2.AddHandler("Foo", func(d Dispatcher, c Channel, req *Frame) *Frame {
 		return &Frame{Result: json.RawMessage(`true`)}

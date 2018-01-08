@@ -52,7 +52,7 @@ func TestDeps(t *testing.T) {
 		topo, cycle := deps.Topological(false)
 
 		if topo != nil {
-			t.Fatal("got: %v, want: %v", topo, nil)
+			t.Fatalf("got: %v, want: %v", topo, nil)
 		}
 
 		if err := checkCycle(cycle, []string{"foo", "subbar", "bar"}); err != nil {
