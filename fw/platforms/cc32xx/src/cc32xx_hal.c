@@ -66,21 +66,6 @@ void mgos_ints_enable(void) {
   portEXIT_CRITICAL();
 }
 
-void mongoose_poll_cb(void *arg);
-
-static bool s_mg_poll_scheduled;
-
-void mongoose_schedule_poll(bool from_isr) {
-  /* Prevent piling up of poll callbacks. */
-  if (s_mg_poll_scheduled) return;
-  s_mg_poll_scheduled = mgos_invoke_cb(mongoose_poll_cb, NULL, from_isr);
-}
-
-void mongoose_poll_cb(void *arg) {
-  s_mg_poll_scheduled = false;
-  (void) arg;
-}
-
 void mgos_wdt_feed(void) {
   MAP_WatchdogIntClear(WDT_BASE);
 }

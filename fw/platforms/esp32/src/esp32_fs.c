@@ -48,7 +48,7 @@ int esp32_get_boot_slot() {
   return SUBTYPE_TO_SLOT(p->subtype);
 }
 
-bool esp32_fs_init(void) {
+enum mgos_init_result mgos_fs_init(void) {
   esp_vfs_t esp_vfs = {
     .flags = ESP_VFS_FLAG_DEFAULT,
     /* ESP API uses void * as first argument, hence all the ugly casts. */
@@ -69,23 +69,26 @@ bool esp32_fs_init(void) {
   };
   if (esp_vfs_register("", &esp_vfs, NULL) != ESP_OK) {
     LOG(LL_ERROR, ("ESP VFS registration failed"));
-    return false;
+    return MGOS_INIT_FS_INIT_FAILED;
   }
 #if CS_SPIFFS_ENABLE_ENCRYPTION
   if (esp_flash_encryption_enabled() && !esp32_fs_crypt_init()) {
     LOG(LL_ERROR, ("Failed to initialize FS encryption key"));
-    return false;
+    return MGOS_INIT_FS_INIT_FAILED;
   }
 #endif
   const esp_partition_t *fs_part =
       esp32_find_fs_for_app_slot(esp32_get_boot_slot());
   if (fs_part == NULL) {
     LOG(LL_ERROR, ("No FS partition"));
-    return false;
+    return MGOS_INIT_FS_INIT_FAILED;
   }
-  return esp32_vfs_dev_partition_register_type() &&
-         mgos_vfs_fs_spiffs_register_type() &&
-         esp32_fs_mount_part(fs_part->label, "/");
+  if (!(esp32_vfs_dev_partition_register_type() &&
+        mgos_vfs_fs_spiffs_register_type() &&
+        esp32_fs_mount_part(fs_part->label, "/"))) {
+    return MGOS_INIT_FS_INIT_FAILED;
+  }
+  return MGOS_INIT_OK;
 }
 
 bool esp32_fs_mount_part(const char *label, const char *path) {

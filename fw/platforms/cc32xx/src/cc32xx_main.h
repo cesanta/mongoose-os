@@ -12,8 +12,9 @@
 extern "C" {
 #endif
 
-typedef int (*cc32xx_init_func_t)(bool pre);
-void cc32xx_main(cc32xx_init_func_t init_func);
+extern enum mgos_init_result cc32xx_pre_nwp_init(void);
+extern enum mgos_init_result cc32xx_init(void);
+void cc32xx_main(void);
 
 #ifdef __cplusplus
 }

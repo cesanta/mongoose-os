@@ -15,7 +15,6 @@ extern "C" {
 #endif
 
 void esp32_updater_early_init();
-bool esp32_is_first_boot();
 
 #ifdef __cplusplus
 }

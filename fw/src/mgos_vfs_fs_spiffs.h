@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_INCLUDE_MGOS_VFS_FS_SPIFFS_H_
-#define CS_FW_INCLUDE_MGOS_VFS_FS_SPIFFS_H_
+#ifndef CS_FW_SRC_MGOS_VFS_FS_SPIFFS_H_
+#define CS_FW_SRC_MGOS_VFS_FS_SPIFFS_H_
 
 #include <stdbool.h>
 
@@ -59,4 +59,4 @@ bool mgos_vfs_fs_spiffs_decrypt_block(spiffs_obj_id obj_id, uint32_t offset,
 }
 #endif
 
-#endif /* CS_FW_INCLUDE_MGOS_VFS_FS_SPIFFS_H_ */
+#endif /* CS_FW_SRC_MGOS_VFS_FS_SPIFFS_H_ */

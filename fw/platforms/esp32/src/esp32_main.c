@@ -7,14 +7,12 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "freertos/FreeRTOS.h"
-#include "freertos/timers.h"
-
 #include "esp_attr.h"
 #include "esp_event.h"
 #include "esp_event_loop.h"
 #include "esp_log.h"
 #include "esp_ota_ops.h"
+#include "esp_panic.h"
 #include "esp_spi_flash.h"
 #include "esp_system.h"
 #include "esp_task_wdt.h"
@@ -23,40 +21,20 @@
 #include "rom/spi_flash.h"
 
 #include "common/cs_dbg.h"
-#include "mgos_app.h"
+#include "mgos_core_dump.h"
 #include "mgos_debug_internal.h"
 #include "mgos_event.h"
-#include "mgos_hal.h"
-#include "mgos_init_internal.h"
-#include "mgos_mongoose_internal.h"
+#include "mgos_hal_freertos_internal.h"
 #include "mgos_net_hal.h"
-#include "mgos_sys_config.h"
-#include "mgos_uart_internal.h"
-#include "mgos_updater_common.h"
+#include "mgos_system.h"
 #include "mgos_vfs_internal.h"
 #ifdef MGOS_HAVE_WIFI
 #include "esp32_wifi.h"
 #endif
 
-#include "fw/platforms/esp32/src/esp32_debug.h"
-#include "fw/platforms/esp32/src/esp32_exc.h"
-#include "fw/platforms/esp32/src/esp32_fs.h"
-#include "fw/platforms/esp32/src/esp32_updater.h"
-
-#ifndef MGOS_TASK_STACK_SIZE
-#define MGOS_TASK_STACK_SIZE 8192 /* in bytes */
-#endif
-
-#ifndef MGOS_TASK_PRIORITY
-#define MGOS_TASK_PRIORITY 5
-#endif
-
-#ifndef MGOS_TASK_QUEUE_LENGTH
-#define MGOS_TASK_QUEUE_LENGTH 32
-#endif
-
-extern const char *build_version, *build_id;
-extern const char *mg_build_version, *mg_build_id;
+#include "esp32_debug.h"
+#include "esp32_exc.h"
+#include "esp32_updater.h"
 
 esp_err_t esp32_wifi_ev(system_event_t *event);
 
@@ -100,78 +78,27 @@ esp_err_t event_handler(void *ctx, system_event_t *event) {
   return ESP_OK;
 }
 
-struct mgos_event {
-  mgos_cb_t cb;
-  void *arg;
-};
-
-static void s_init_done_cb(int ev, void *ev_data, void *userdata) {
-  /* initialize TZ env variable with the sys.tz_spec config value */
-  const char *tz_spec = mgos_sys_config_get_sys_tz_spec();
-  if (tz_spec == NULL) {
-    tz_spec = "";
-  }
-
-  setenv("TZ", tz_spec, 1);
-  tzset();
-
-  (void) ev;
-  (void) ev_data;
-  (void) userdata;
-}
-
-static enum mgos_init_result esp32_mgos_init() {
+enum mgos_init_result mgos_hal_freertos_pre_init(void) {
   enum mgos_init_result r;
 
-  /* Enable WDT for this task. It will be fed by Mongoose polling loop. */
-  mgos_wdt_enable();
+  srand(esp_random()); /* esp_random() uses HW RNG */
 
 #if MGOS_ENABLE_UPDATER
   esp32_updater_early_init();
 #endif
 
-  cs_log_set_level(MGOS_EARLY_DEBUG_LEVEL);
-  r = mongoose_init();
-  if (r != MGOS_INIT_OK) return r;
-
   r = esp32_debug_init();
   if (r != MGOS_INIT_OK) return r;
-  r = mgos_debug_uart_init();
-  if (r != MGOS_INIT_OK) return r;
 
-  if (strcmp(MGOS_APP, "mongoose-os") != 0) {
-    LOG(LL_INFO, ("%s %s (%s)", MGOS_APP, build_version, build_id));
-  }
-  LOG(LL_INFO, ("Mongoose OS %s (%s)%s", mg_build_version, mg_build_id,
-#if MGOS_ENABLE_UPDATER
-                (esp32_is_first_boot() ? ", first boot" : "")
-#else
-                ""
-#endif
-                    ));
   LOG(LL_INFO, ("ESP-IDF %s", esp_get_idf_version()));
   LOG(LL_INFO,
-      ("Boot partition: %s; flash: %uM; RAM: %u total, %u free",
-       esp_ota_get_boot_partition()->label, g_rom_flashchip.chip_size / 1048576,
-       mgos_get_heap_size(), mgos_get_free_heap_size()));
+      ("Boot partition: %s; flash: %uM", esp_ota_get_boot_partition()->label,
+       g_rom_flashchip.chip_size / 1048576));
 
   /* Disable WDT on idle task(s), mgos task WDT should do fine. */
   TaskHandle_t h;
   if ((h = xTaskGetIdleTaskHandleForCPU(0)) != NULL) esp_task_wdt_delete(h);
   if ((h = xTaskGetIdleTaskHandleForCPU(1)) != NULL) esp_task_wdt_delete(h);
-
-  if (!esp32_fs_init()) {
-    LOG(LL_ERROR, ("Failed to mount FS"));
-    return MGOS_INIT_FS_INIT_FAILED;
-  }
-
-  mgos_wdt_feed();
-
-#if MGOS_ENABLE_UPDATER
-  if (esp32_is_first_boot() && mgos_upd_apply_update() < 0) {
-    return MGOS_INIT_APPLY_UPDATE_FAILED;
-  }
-#endif
 
 #ifdef CS_MMAP
   mgos_vfs_mmap_init();
@@ -179,128 +106,7 @@ static enum mgos_init_result esp32_mgos_init() {
 
   esp32_exception_handler_init();
 
-  /*
-   * We also need to initialize TZ env variable with the sys.tz_spec config
-   * value, but we can't do that here because sys_config is not yet
-   * initialized, so we register the INIT_DONE event handler.
-   */
-  mgos_event_add_handler(MGOS_EVENT_INIT_DONE, s_init_done_cb, NULL);
-
-  if ((r = mgos_init()) != MGOS_INIT_OK) return r;
-
   return MGOS_INIT_OK;
-}
-
-extern SemaphoreHandle_t s_mgos_mux;
-static QueueHandle_t s_main_queue;
-/* Note: we cannot use mutex here because there is no recursive mutex
- * that can be used from ISR as well as from task. mgos_invoke_cb pust an item
- * on the queue and may cause a context switch and re-enter schedule_poll.
- * Hence this elaborate dance we perform with poll counter. */
-static volatile uint32_t s_mg_last_poll = 0;
-static volatile bool s_mg_poll_scheduled = false;
-static volatile bool s_mg_want_poll = false;
-static portMUX_TYPE s_poll_spinlock = portMUX_INITIALIZER_UNLOCKED;
-static TimerHandle_t s_mg_poll_timer;
-
-static void IRAM_ATTR mgos_mg_poll_cb(void *arg) {
-  uint32_t timeout_ms, timeout_ticks, n = 0;
-  portENTER_CRITICAL(&s_poll_spinlock);
-  do {
-    portEXIT_CRITICAL(&s_poll_spinlock);
-    s_mg_want_poll = false;
-    mongoose_poll(0);
-    timeout_ms = mg_lwip_get_poll_delay_ms(mgos_get_mgr());
-    portENTER_CRITICAL(&s_poll_spinlock);
-    if (timeout_ms > 100) timeout_ms = 100;
-    timeout_ticks = timeout_ms / portTICK_PERIOD_MS;
-    n++;
-  } while (n < 10 && (s_mg_want_poll || timeout_ticks == 0));
-  s_mg_poll_scheduled = false;
-  s_mg_last_poll++;
-  portEXIT_CRITICAL(&s_poll_spinlock);
-  if (!s_mg_want_poll && timeout_ticks > 0) {
-    xTimerChangePeriod(s_mg_poll_timer, timeout_ticks, 10);
-    xTimerReset(s_mg_poll_timer, 10);
-  } else {
-    mongoose_schedule_poll(false /* from_isr */);
-  }
-  (void) arg;
-}
-
-void IRAM_ATTR mongoose_schedule_poll(bool from_isr) {
-  /* Prevent piling up of poll callbacks. */
-  portENTER_CRITICAL(&s_poll_spinlock);
-  s_mg_want_poll = true;
-  if (!s_mg_poll_scheduled) {
-    uint32_t last_poll = s_mg_last_poll;
-    portEXIT_CRITICAL(&s_poll_spinlock);
-    if (mgos_invoke_cb(mgos_mg_poll_cb, NULL, from_isr)) {
-      portENTER_CRITICAL(&s_poll_spinlock);
-      if (s_mg_last_poll == last_poll) {
-        s_mg_poll_scheduled = true;
-      }
-      portEXIT_CRITICAL(&s_poll_spinlock);
-    }
-  } else {
-    portEXIT_CRITICAL(&s_poll_spinlock);
-  }
-}
-
-void mgos_mg_poll_timer_cb(TimerHandle_t t) {
-  mongoose_schedule_poll(false /* from_isr */);
-  (void) t;
-}
-
-void mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr) {
-  (void) mgr;
-  mongoose_schedule_poll(false /* from_isr */);
-}
-
-void mgos_task(void *arg) {
-  struct mgos_event e;
-  s_main_queue = xQueueCreate(MGOS_TASK_QUEUE_LENGTH, sizeof(e));
-  srand(esp_random()); /* esp_random() uses HW RNG */
-
-  mgos_app_preinit();
-
-  enum mgos_init_result r = esp32_mgos_init();
-  bool success = (r == MGOS_INIT_OK);
-  if (!success) LOG(LL_ERROR, ("MGOS init failed: %d", r));
-
-#if MGOS_ENABLE_UPDATER
-  mgos_upd_boot_finish(success, esp32_is_first_boot());
-#endif
-
-  if (!success) {
-    /* Arbitrary delay to make potential reboot loop less tight. */
-    mgos_usleep(500000);
-    mgos_system_restart();
-  }
-
-  while (true) {
-    while (xQueueReceive(s_main_queue, &e, 10 /* tick */)) {
-      e.cb(e.arg);
-    }
-  }
-
-  (void) arg;
-}
-
-bool IRAM_ATTR mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
-  struct mgos_event e = {.cb = cb, .arg = arg};
-  if (from_isr) {
-    int should_yield = false;
-    if (!xQueueSendToBackFromISR(s_main_queue, &e, &should_yield)) {
-      return false;
-    }
-    if (should_yield) {
-      portYIELD_FROM_ISR();
-    }
-    return true;
-  } else {
-    return xQueueSendToBack(s_main_queue, &e, 10);
-  }
 }
 
 /*
@@ -310,6 +116,10 @@ bool IRAM_ATTR mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
 static IRAM void sdk_putc(char c) {
   if (mgos_debug_uart_is_suspended()) return;
   ets_write_char_uart(c);
+}
+
+void mgos_cd_putc(int c) {
+  panicPutChar(c);
 }
 
 extern enum cs_log_level cs_log_cur_msg_level;
@@ -324,17 +134,11 @@ static int sdk_debug_vprintf(const char *fmt, va_list ap) {
 void app_main(void) {
   nvs_flash_init();
   tcpip_adapter_init();
-  mgos_uart_init();
-  mgos_debug_init();
   ets_install_putc1(sdk_putc);
   ets_install_putc2(NULL);
   esp_log_set_vprintf(sdk_debug_vprintf);
-  s_mg_poll_timer = xTimerCreate("mg_poll", 10, pdFALSE /* reload */, 0,
-                                 mgos_mg_poll_timer_cb);
   ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
-  s_mgos_mux = xSemaphoreCreateRecursiveMutex();
-  setvbuf(stdout, NULL, _IOLBF, 256);
-  setvbuf(stderr, NULL, _IOLBF, 256);
-  xTaskCreate(mgos_task, "mgos", MGOS_TASK_STACK_SIZE, NULL, MGOS_TASK_PRIORITY,
-              NULL);
+  /* Scheduler is already running at this point */
+  mgos_hal_freertos_run_mgos_task(false /* start_scheduler */);
+  /* Unlike other platforms, we return and abandon this task. */
 }

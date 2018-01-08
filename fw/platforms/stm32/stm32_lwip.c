@@ -18,6 +18,8 @@
 #include <lwip/timeouts.h>
 #include <netif/etharp.h>
 
+#include "mgos_mongoose_internal.h"
+
 extern struct netif gnetif;
 
 int stm32_have_ip_address() {

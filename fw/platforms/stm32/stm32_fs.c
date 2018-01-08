@@ -10,6 +10,7 @@
 #include "common/cs_dbg.h"
 #include "frozen/frozen.h"
 
+#include "mgos_hal.h"
 #include "mgos_vfs.h"
 #include "mgos_vfs_fs_spiffs.h"
 
@@ -26,8 +27,11 @@ bool stm32_fs_mount(const char *path, uint32_t addr, uint32_t size) {
   return true;
 }
 
-bool stm32_fs_init(void) {
-  return stm32_vfs_dev_flash_register_type() &&
-         mgos_vfs_fs_spiffs_register_type() &&
-         stm32_fs_mount("/", FS_BASE_ADDR, FS_SIZE);
+enum mgos_init_result mgos_fs_init(void) {
+  if (!(stm32_vfs_dev_flash_register_type() &&
+        mgos_vfs_fs_spiffs_register_type() &&
+        stm32_fs_mount("/", FS_BASE_ADDR, FS_SIZE))) {
+    return MGOS_INIT_FS_INIT_FAILED;
+  }
+  return MGOS_INIT_OK;
 }

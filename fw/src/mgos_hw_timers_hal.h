@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_INCLUDE_MGOS_HW_TIMERS_HAL_H_
-#define CS_FW_INCLUDE_MGOS_HW_TIMERS_HAL_H_
+#ifndef CS_FW_SRC_MGOS_HW_TIMERS_HAL_H_
+#define CS_FW_SRC_MGOS_HW_TIMERS_HAL_H_
 
 #include <stdbool.h>
 
@@ -58,4 +58,4 @@ void mgos_hw_timers_deinit(void);
 }
 #endif
 
-#endif /* CS_FW_INCLUDE_MGOS_HW_TIMERS_HAL_H_ */
+#endif /* CS_FW_SRC_MGOS_HW_TIMERS_HAL_H_ */

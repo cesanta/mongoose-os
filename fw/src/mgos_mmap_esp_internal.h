@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_INCLUDE_MGOS_MMAP_ESP_H_
-#define CS_FW_INCLUDE_MGOS_MMAP_ESP_H_
+#ifndef CS_FW_SRC_MGOS_MMAP_ESP_INTERNAL_H_
+#define CS_FW_SRC_MGOS_MMAP_ESP_INTERNAL_H_
 
 #include <stdint.h>
 
@@ -45,4 +45,4 @@ IRAM NOINSTR int esp_mmap_exception_handler(uint32_t vaddr, uint8_t *pc,
 /* no_extern_c_check */
 #endif /* CS_PLATFORM == CS_P_ESP32 || CS_PLATFORM == CS_P_ESP8266 */
 #endif /* CS_MMAP */
-#endif /* CS_FW_INCLUDE_MGOS_MMAP_ESP_H_ */
+#endif /* CS_FW_SRC_MGOS_MMAP_ESP_INTERNAL_H_ */

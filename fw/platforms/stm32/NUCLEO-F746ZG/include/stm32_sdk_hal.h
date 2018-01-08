@@ -17,6 +17,7 @@ extern "C" {
 
 typedef UART_HandleTypeDef UART_Handle;
 
+extern UART_Handle huart1;
 extern UART_Handle huart2;
 extern UART_Handle huart3;
 

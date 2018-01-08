@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_INCLUDE_MGOS_VFS_DEV_H_
-#define CS_FW_INCLUDE_MGOS_VFS_DEV_H_
+#ifndef CS_FW_SRC_MGOS_VFS_DEV_H_
+#define CS_FW_SRC_MGOS_VFS_DEV_H_
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -41,4 +41,4 @@ bool mgos_vfs_dev_close(struct mgos_vfs_dev *dev);
 }
 #endif
 
-#endif /* CS_FW_INCLUDE_MGOS_VFS_DEV_H_ */
+#endif /* CS_FW_SRC_MGOS_VFS_DEV_H_ */

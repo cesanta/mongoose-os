@@ -65,10 +65,12 @@ int mgos_upd_file_end(struct mgos_upd_hal_ctx *ctx,
  */
 int mgos_upd_finalize(struct mgos_upd_hal_ctx *ctx);
 
+bool mgos_upd_is_first_boot(void);
+
 void mgos_upd_hal_ctx_free(struct mgos_upd_hal_ctx *ctx);
 
 /* Apply update on first boot, usually involves merging filesystem. */
-int mgos_upd_apply_update();
+int mgos_upd_apply_update(void);
 
 /*
  * Create a snapshot of currently running firmware (including FS) in
@@ -76,7 +78,7 @@ int mgos_upd_apply_update();
  * in progress.
  * Returns slot id used for snapshot or < 0 in case of error.
  */
-int mgos_upd_create_snapshot();
+int mgos_upd_create_snapshot(void);
 
 struct mgos_upd_boot_state {
   /* Slot that will be used to load firmware during next boot. */
@@ -90,8 +92,8 @@ struct mgos_upd_boot_state {
 bool mgos_upd_boot_get_state(struct mgos_upd_boot_state *bs);
 bool mgos_upd_boot_set_state(const struct mgos_upd_boot_state *bs);
 /* Shortcuts for get and set */
-void mgos_upd_boot_commit();
-void mgos_upd_boot_revert();
+void mgos_upd_boot_commit(void);
+void mgos_upd_boot_revert(void);
 
 #ifdef __cplusplus
 }

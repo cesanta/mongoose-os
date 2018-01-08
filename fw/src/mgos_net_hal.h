@@ -3,8 +3,8 @@
  * All rights reserved
  */
 
-#ifndef CS_FW_INCLUDE_MGOS_NET_HAL_H_
-#define CS_FW_INCLUDE_MGOS_NET_HAL_H_
+#ifndef CS_FW_SRC_MGOS_NET_HAL_H_
+#define CS_FW_SRC_MGOS_NET_HAL_H_
 
 #include "mgos_net.h"
 
@@ -25,4 +25,4 @@ bool mgos_eth_dev_get_ip_info(int if_instance,
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_INCLUDE_MGOS_NET_HAL_H_ */
+#endif /* CS_FW_SRC_MGOS_NET_HAL_H_ */

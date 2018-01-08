@@ -22,6 +22,7 @@
 #include "mgos_debug_internal.h"
 #include "mgos_features.h"
 #include "mgos_hal.h"
+#include "mgos_hal_freertos_internal.h"
 #include "mgos_init_internal.h"
 #include "mgos_mongoose_internal.h"
 #include "mgos_uart_internal.h"
@@ -32,27 +33,33 @@
 #include "cc32xx_task_config.h"
 #include "umm_malloc_cfg.h"
 
-/* TODO(rojer): Refactor */
-#if CS_PLATFORM == CS_P_CC3200
-#include "fw/platforms/cc3200/boot/lib/boot.h"
-extern struct boot_cfg g_boot_cfg;
-#endif
-
 #if SL_MAJOR_VERSION_NUM < 2
 #define SL_NETAPP_HTTP_SERVER_ID SL_NET_APP_HTTP_SERVER_ID
 #endif
 
-struct mgos_event {
-  mgos_cb_t cb;
-  void *arg;
-};
-
-static QueueHandle_t s_main_queue = NULL;
-
-extern const char *build_version, *build_id;
-extern const char *mg_build_version, *mg_build_id;
-
-void mgos_lock_init(void);
+uint32_t mg_lwip_get_poll_delay_ms(struct mg_mgr *mgr) {
+  uint32_t timeout_ms = ~0;
+  struct mg_connection *nc;
+  double min_timer = 0;
+  int num_timers = 0;
+  for (nc = mg_next(mgr, NULL); nc != NULL; nc = mg_next(mgr, nc)) {
+    if (nc->ev_timer_time == 0) continue;
+    if (num_timers == 0 || nc->ev_timer_time < min_timer) {
+      min_timer = nc->ev_timer_time;
+    }
+    num_timers++;
+  }
+  double now = mg_time();
+  if (num_timers > 0) {
+    /* If we have a timer that is past due, do a poll ASAP. */
+    if (min_timer < now) return 0;
+    double timer_timeout_ms = (min_timer - now) * 1000 + 1 /* rounding */;
+    if (timer_timeout_ms < timeout_ms) {
+      timeout_ms = timer_timeout_ms;
+    }
+  }
+  return timeout_ms;
+}
 
 static int cc32xx_start_nwp(void) {
   int r = sl_Start(NULL, NULL, NULL);
@@ -76,83 +83,16 @@ __attribute__((section(".heap_start"))) uint32_t _heap_start;
 __attribute__((section(".heap_end"))) uint32_t _heap_end;
 #endif
 
-int cc32xx_init(void) {
-  mgos_lock_init();
-  mgos_uart_init();
-  mgos_debug_init();
-  mgos_debug_uart_init();
+enum mgos_init_result mgos_hal_freertos_pre_init(void) {
+  enum mgos_init_result r = cc32xx_pre_nwp_init();
+  if (r != MGOS_INIT_OK) return r;
 
-  setvbuf(stdout, NULL, _IOLBF, 256);
-  setvbuf(stderr, NULL, _IOLBF, 256);
-  cs_log_set_level(MGOS_EARLY_DEBUG_LEVEL);
-
-  if (strcmp(MGOS_APP, "mongoose-os") != 0) {
-    LOG(LL_INFO, ("%s %s (%s)", MGOS_APP, build_version, build_id));
-  }
-  LOG(LL_INFO, ("Mongoose OS %s (%s)", mg_build_version, mg_build_id));
-  LOG(LL_INFO, ("RAM: %d total, %d free", mgos_get_heap_size(),
-                mgos_get_free_heap_size()));
-
-  int r = cc32xx_start_nwp();
-  if (r < 0) {
-    LOG(LL_ERROR, ("Failed to start NWP: %d", r));
-    return -2;
+  if (cc32xx_start_nwp() != 0) {
+    LOG(LL_ERROR, ("Failed to start NWP"));
+    return MGOS_INIT_FS_INIT_FAILED;
   }
 
-  mongoose_init();
-
-  return 0;
-}
-
-extern int dump;
-
-static void cc32xx_main_task(void *arg) {
-  struct mgos_event e;
-  cc32xx_init_func_t init_func = (cc32xx_init_func_t) arg;
-
-  int r = init_func(true /* pre */);
-  r = (r == 0 ? cc32xx_init() : r);
-  mgos_wdt_feed();
-  r = (r == 0 ? init_func(false /* pre */) : r);
-  mgos_wdt_feed();
-  r = (r == 0 ? mgos_init() : r);
-  mgos_wdt_feed();
-
-  bool init_success = (r == 0);
-  if (!init_success) LOG(LL_ERROR, ("Init failed: %d", r));
-
-#if MGOS_ENABLE_UPDATER && CS_PLATFORM != CS_P_CC3220
-  mgos_upd_boot_finish(init_success, (g_boot_cfg.flags & BOOT_F_FIRST_BOOT));
-#endif
-
-  if (!init_success) {
-    /* Arbitrary delay to make potential reboot loop less tight. */
-    mgos_usleep(500000);
-    mgos_system_restart();
-  }
-
-  mgos_wdt_set_feed_on_poll(true);
-  // dump = 1;
-  while (1) {
-    mongoose_poll(0);
-    while (xQueueReceive(s_main_queue, &e, 10 /* tick */)) {
-      e.cb(e.arg);
-    }
-  }
-}
-
-bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
-  struct mgos_event e = {.cb = cb, .arg = arg};
-  if (from_isr) {
-    BaseType_t should_yield = false;
-    if (!xQueueSendToBackFromISR(s_main_queue, &e, &should_yield)) {
-      return false;
-    }
-    portYIELD_FROM_ISR(should_yield);
-    return true;
-  } else {
-    return xQueueSendToBack(s_main_queue, &e, 10);
-  }
+  return cc32xx_init();
 }
 
 void umm_oom_cb(size_t size, unsigned short int blocks_cnt) {
@@ -166,7 +106,7 @@ void cc32xx_nsleep100(uint32_t n) {
 }
 uint32_t mgos_bitbang_n100_cal = 0;
 
-void cc32xx_main(cc32xx_init_func_t init_func) {
+void cc32xx_main(void) {
   mgos_nsleep100 = cc32xx_nsleep100;
   PRCMCC3200MCUInit();
   cc32xx_exc_init();
@@ -177,27 +117,14 @@ void cc32xx_main(cc32xx_init_func_t init_func) {
   cc32xx_exc_puts("\r\n");
 
   MAP_PRCMPeripheralClkEnable(PRCM_WDT, PRCM_RUN_MODE_CLK);
-  mgos_wdt_set_timeout(10 /* seconds */);
-  mgos_wdt_enable();
 
   if (!MAP_PRCMRTCInUseGet()) {
     MAP_PRCMRTCInUseSet();
     MAP_PRCMRTCSet(0, 0);
   }
 
-  /* Early init app hook. */
-  mgos_app_preinit();
-
   cc32xx_sl_spawn_init();
 
-  s_main_queue =
-      xQueueCreate(MGOS_TASK_QUEUE_LENGTH, sizeof(struct mgos_event));
-  xTaskCreate(cc32xx_main_task, "main",
-              MGOS_TASK_STACK_SIZE / sizeof(portSTACK_TYPE), init_func,
-              MGOS_TASK_PRIORITY, NULL);
-
-  vTaskStartScheduler();
-  /* Not reached, but just in case... */
-  cc32xx_exc_puts("Scheduler failed to start!\r\n");
-  mgos_system_restart();
+  mgos_hal_freertos_run_mgos_task(true /* start_scheduler */);
+  /* Not reached */
 }

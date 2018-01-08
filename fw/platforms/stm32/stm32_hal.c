@@ -6,6 +6,7 @@
 #include <sys/time.h>
 
 #include <stm32_sdk_hal.h>
+#include "stm32f7xx_hal_iwdg.h"
 
 #include "FreeRTOS.h"
 #include "semphr.h"
@@ -15,34 +16,7 @@
 #include "mgos_mongoose.h"
 #include "mgos_timers.h"
 
-static int s_mongoose_poll_scheduled;
-
-struct cb_invoke_params {
-  mgos_cb_t cb;
-  void *arg;
-};
-
-int mongoose_poll_scheduled() {
-  int ret = s_mongoose_poll_scheduled;
-  s_mongoose_poll_scheduled = 0;
-  return ret;
-}
-
-static void stm32_invoke_cb(void *param) {
-  struct cb_invoke_params *params = (struct cb_invoke_params *) param;
-  params->cb(params->arg);
-  free(params);
-}
-
-bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
-  /* Going to call cb from Mongoose context */
-  struct cb_invoke_params *params = malloc(sizeof(*params));
-  params->cb = cb;
-  params->arg = arg;
-  mgos_set_timer(0, 0, stm32_invoke_cb, params);
-  (void) from_isr;
-  return true;
-}
+#include "stm32_uart.h"
 
 void mgos_dev_system_restart(void) {
   HAL_NVIC_SystemReset();
@@ -51,26 +25,6 @@ void mgos_dev_system_restart(void) {
 void device_get_mac_address(uint8_t mac[6]) {
   /* TODO(alashkin): implement */
   memset(mac, 0, 6);
-}
-
-void mongoose_schedule_poll(bool from_isr) {
-  (void) from_isr;
-  s_mongoose_poll_scheduled = 0;
-}
-
-size_t mgos_get_min_free_heap_size(void) {
-  /* TODO(alashkin): implement */
-  return 0;
-}
-
-size_t mgos_get_free_heap_size(void) {
-  /* TODO(alashkin): implement */
-  return 0;
-}
-
-size_t mgos_get_heap_size(void) {
-  /* TODO(alashkin): implement */
-  return 0;
 }
 
 void mgos_msleep(uint32_t msecs) {
@@ -85,9 +39,6 @@ void mgos_usleep(uint32_t usecs) {
     msecs = 1;
   }
   mgos_msleep(msecs);
-}
-
-void mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr) {
 }
 
 int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {
@@ -110,22 +61,41 @@ int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {
   return 0;
 }
 
-/*
- * STM32 WDT is too hard to use in mOS;
- * 1. Once enabled it cannot be disabled
- * 2. Its max timeout is 22ms, too small
- * 3. WDT_Refresh() cannot be called at any time,
- *    (if program calls refresh() too often it leads
- *    to exception and reboot)
- * Resume: this WDT is good only for real time programs
- * not for FW with (possibly) arbitrary user code and JS
- * thus, keep it disabled
- */
+#define IWDG_1_SECOND 128
+IWDG_HandleTypeDef hiwdg = {
+    .Instance = IWDG,
+    .Init =
+        {
+         .Prescaler = IWDG_PRESCALER_256,
+         .Reload = 5 * IWDG_1_SECOND,
+         .Window = IWDG_WINDOW_DISABLE,
+        },
+};
+
+void mgos_wdt_enable(void) {
+  HAL_IWDG_Init(&hiwdg);
+}
+
 void mgos_wdt_feed(void) {
+  HAL_IWDG_Refresh(&hiwdg);
 }
 
 void mgos_wdt_set_timeout(int secs) {
-  (void) secs;
+  uint32_t new_reload = (secs * IWDG_1_SECOND);
+  if (!IS_IWDG_RELOAD(new_reload)) {
+    LOG(LL_ERROR, ("Invalid WDT reload value %lu", new_reload));
+    return;
+  }
+  hiwdg.Init.Reload = new_reload;
+  HAL_IWDG_Init(&hiwdg);
+}
+
+void mgos_wdt_disable(void) {
+  static bool printed = false;
+  if (!printed) {
+    printed = true;
+    LOG(LL_ERROR, ("Once enabled, WDT cannot be disabled!"));
+  }
 }
 
 void mgos_bitbang_write_bits_js(void) {

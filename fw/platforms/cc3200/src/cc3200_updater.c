@@ -23,10 +23,13 @@
 #include "cc32xx_vfs_dev_slfs_container.h"
 #include "cc32xx_vfs_dev_slfs_container_meta.h"
 
-#include "cc3200_main_task.h"
+#include "cc3200_updater.h"
 #include "fw/platforms/cc3200/boot/lib/boot.h"
 
 #if MGOS_ENABLE_UPDATER
+
+static int s_boot_cfg_idx;
+static struct boot_cfg s_boot_cfg;
 
 struct mgos_upd_hal_ctx {
   struct json_token *parts;
@@ -389,8 +392,36 @@ int mgos_upd_create_snapshot() {
   return -1;
 }
 
+bool cc3200_upd_init(void) {
+  s_boot_cfg_idx = get_active_boot_cfg_idx();
+  if (s_boot_cfg_idx < 0 || read_boot_cfg(s_boot_cfg_idx, &s_boot_cfg) < 0) {
+    return false;
+  }
+
+  LOG(LL_INFO,
+      ("Boot cfg %d: 0x%llx, 0x%u, %s @ 0x%08x, %s", s_boot_cfg_idx,
+       s_boot_cfg.seq, (unsigned int) s_boot_cfg.flags,
+       s_boot_cfg.app_image_file, (unsigned int) s_boot_cfg.app_load_addr,
+       s_boot_cfg.fs_container_prefix));
+
+  if (mgos_upd_is_first_boot()) {
+    /* Tombstone the current config. If anything goes wrong between now and
+     * commit, next boot will use the old one. */
+    uint64_t saved_seq = s_boot_cfg.seq;
+    s_boot_cfg.seq = BOOT_CFG_TOMBSTONE_SEQ;
+    write_boot_cfg(&s_boot_cfg, s_boot_cfg_idx);
+    s_boot_cfg.seq = saved_seq;
+  }
+
+  return true;
+}
+
+const char *cc3200_upd_get_fs_container_prefix(void) {
+  return s_boot_cfg.fs_container_prefix;
+}
+
 bool mgos_upd_boot_get_state(struct mgos_upd_boot_state *bs) {
-  struct boot_cfg *cfg = &g_boot_cfg;
+  struct boot_cfg *cfg = &s_boot_cfg;
   memset(bs, 0, sizeof(*bs));
   const char *p = strrchr(cfg->app_image_file, '.');
   bs->active_slot = (*(p + 1) == '0' ? 0 : 1);
@@ -405,20 +436,23 @@ bool mgos_upd_boot_set_state(const struct mgos_upd_boot_state *bs) {
   return false;
 }
 
-void mgos_upd_boot_revert() {
-  int boot_cfg_idx = g_boot_cfg_idx;
-  struct boot_cfg *cfg = &g_boot_cfg;
+void mgos_upd_boot_revert(void) {
+  int boot_cfg_idx = s_boot_cfg_idx;
+  struct boot_cfg *cfg = &s_boot_cfg;
   if (!cfg->flags & BOOT_F_FIRST_BOOT) return;
   LOG(LL_ERROR, ("Config %d is bad, reverting", boot_cfg_idx));
   /* Tombstone the current config. */
   cfg->seq = BOOT_CFG_TOMBSTONE_SEQ;
   write_boot_cfg(cfg, boot_cfg_idx);
-  mgos_system_restart();
 }
 
-void mgos_upd_boot_commit() {
-  int boot_cfg_idx = g_boot_cfg_idx;
-  struct boot_cfg *cfg = &g_boot_cfg;
+bool mgos_upd_is_first_boot(void) {
+  return (s_boot_cfg.flags & BOOT_F_FIRST_BOOT) != 0;
+}
+
+void mgos_upd_boot_commit(void) {
+  int boot_cfg_idx = s_boot_cfg_idx;
+  struct boot_cfg *cfg = &s_boot_cfg;
   if (!cfg->flags & BOOT_F_FIRST_BOOT) return;
   cfg->flags &= ~(BOOT_F_FIRST_BOOT);
   int r = write_boot_cfg(cfg, boot_cfg_idx);
@@ -426,9 +460,9 @@ void mgos_upd_boot_commit() {
   LOG(LL_INFO, ("Committed cfg %d, seq 0x%llx", boot_cfg_idx, cfg->seq));
 }
 
-int mgos_upd_apply_update() {
-  int boot_cfg_idx = g_boot_cfg_idx;
-  struct boot_cfg *cfg = &g_boot_cfg;
+int mgos_upd_apply_update(void) {
+  int boot_cfg_idx = s_boot_cfg_idx;
+  struct boot_cfg *cfg = &s_boot_cfg;
   if (cfg->flags & BOOT_F_MERGE_SPIFFS) {
     int old_boot_cfg_idx = (boot_cfg_idx == 0 ? 1 : 0);
     struct boot_cfg old_boot_cfg;

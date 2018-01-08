@@ -29,6 +29,7 @@
   ["sys.mount.dev_opts", "s", "", {title: "Storage device options"}],
   ["sys.mount.fs_type", "s", "", {title: "Filesystem type"}],
   ["sys.mount.fs_opts", "s", "", {title: "Filesystem options"}],
+  ["sys.tz_spec", "s", "", {title: "See formats for the TZ env var: \"man tzset\". Formats like \":/path/to/file\" are not supported"}],
   ["sys.wdt_timeout", "i", 30, {title: "Watchdog timeout (seconds)"}],
   ["sys.pref_ota_lib", "s", {title: "Preferred ota lib, e.g. dash, ota-http-client"}],
 

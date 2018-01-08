@@ -32,8 +32,8 @@ FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.o
 
 NM = xtensa-esp32-elf-nm
 
-MGOS_SRCS += mgos_config_util.c mgos_dlsym.c mgos_event.c mgos_gpio.c mgos_init.c \
-             mgos_mmap_esp.c mgos_mongoose.c \
+MGOS_SRCS += mgos_config_util.c mgos_core_dump.c mgos_dlsym.c mgos_event.c mgos_hal_freertos.c \
+             mgos_gpio.c mgos_init.c mgos_mmap_esp.c mgos_mongoose.c \
              mgos_sys_config.c $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
              mgos_hw_timers.c mgos_system.c mgos_time.c mgos_timers.c mgos_uart.c mgos_utils.c \
              mgos_vfs.c mgos_vfs_dev.c mgos_vfs_fs_spiffs.c \
@@ -137,4 +137,5 @@ $(FFI_EXPORTS_C): $(APP_FS_FILES)
 	  -c $< -o $@
 
 COMPONENT_EXTRA_INCLUDES = $(MGOS_ESP_SRC_PATH) $(MGOS_PATH) $(MGOS_SRC_PATH) $(MGOS_INCLUDE_PATH) $(MGOS_ESP_PATH)/include \
-                           $(SPIFFS_PATH) $(GEN_DIR) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) $(IPATH)
+                           $(SPIFFS_PATH) $(GEN_DIR) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) $(IPATH) \
+                           $(IDF_PATH)/components/freertos/include/freertos

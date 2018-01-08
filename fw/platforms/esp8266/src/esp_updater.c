@@ -467,7 +467,7 @@ void mgos_upd_boot_commit() {
   mgos_upd_boot_set_state(&s);
 }
 
-void mgos_upd_boot_revert() {
+void mgos_upd_boot_revert(void) {
   struct mgos_upd_boot_state s;
   if (!mgos_upd_boot_get_state(&s)) return;
   if (s.is_committed) return;

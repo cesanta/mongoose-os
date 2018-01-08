@@ -19,8 +19,6 @@ const esp_partition_t *esp32_find_fs_for_app_slot(int app_slot);
 
 bool esp32_fs_crypt_init(void);
 
-bool esp32_fs_init(void);
-
 bool esp32_fs_mount_part(const char *label, const char *path);
 
 #define SUBTYPE_TO_SLOT(st) ((st) -ESP_PARTITION_SUBTYPE_OTA(0))

@@ -3,6 +3,8 @@
  * All rights reserved
  */
 
+#include <time.h>
+
 #include "mgos.h"
 #include "mgos_deps_internal.h"
 #include "mgos_gpio_internal.h"
@@ -25,6 +27,18 @@ enum mgos_init_result mgos_init(void) {
 
   r = mgos_sys_config_init();
   if (r != MGOS_INIT_OK) return r;
+
+#ifdef __NEWLIB__
+  {
+    /* initialize TZ env variable with the sys.tz_spec config value */
+    const char *tz_spec = mgos_sys_config_get_sys_tz_spec();
+    if (tz_spec == NULL) tz_spec = "";
+    setenv("TZ", tz_spec, 1);
+    tzset();
+  }
+#else
+/* TODO(rojer): TZ support for TI libc */
+#endif
 
 #if MGOS_ENABLE_MDNS
   r = mgos_mdns_init(); /* Before dns_sd init, after

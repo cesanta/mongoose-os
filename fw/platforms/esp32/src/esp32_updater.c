@@ -537,15 +537,15 @@ bool mgos_upd_boot_set_state(const struct mgos_upd_boot_state *bs) {
           esp32_set_boot_slot(bs->active_slot));
 }
 
-void mgos_upd_boot_revert() {
+void mgos_upd_boot_revert(void) {
   int slot = MGOS_UPDATE_OLD_SLOT(g_boot_status);
   if (slot == MGOS_UPDATE_NEW_SLOT(g_boot_status)) return;
   LOG(LL_ERROR, ("Reverting to slot %d", slot));
-  set_update_status(slot, slot, false /* first_boot */, false /* merger_fs */);
+  set_update_status(slot, slot, false /* first_boot */, false /* merge_fs */);
   esp32_set_boot_slot(slot);
 }
 
-void mgos_upd_boot_commit() {
+void mgos_upd_boot_commit(void) {
   int slot = MGOS_UPDATE_NEW_SLOT(g_boot_status);
   if (set_update_status(MGOS_UPDATE_OLD_SLOT(g_boot_status), slot,
                         false /* first_boot */, false /* merger_fs */) &&
@@ -556,7 +556,7 @@ void mgos_upd_boot_commit() {
   }
 }
 
-int mgos_upd_apply_update() {
+int mgos_upd_apply_update(void) {
   int ret = -1;
   int old_slot = MGOS_UPDATE_OLD_SLOT(g_boot_status);
   if (MGOS_UPDATE_NEW_SLOT(g_boot_status) == old_slot ||
@@ -581,9 +581,9 @@ int mgos_upd_apply_update() {
   return ret;
 }
 
-void esp32_updater_early_init() {
+void esp32_updater_early_init(void) {
   g_boot_status = get_update_status();
-  if (!esp32_is_first_boot()) return;
+  if (!mgos_upd_is_first_boot()) return;
   /*
    * Tombstone the current config. If anything goes wrong between now and
    * commit, next boot will use the old slot.
@@ -596,6 +596,6 @@ void esp32_updater_early_init() {
   esp32_set_boot_slot(MGOS_UPDATE_OLD_SLOT(g_boot_status));
 }
 
-bool esp32_is_first_boot() {
+bool mgos_upd_is_first_boot(void) {
   return (g_boot_status & MGOS_UPDATE_FIRST_BOOT) != 0;
 }

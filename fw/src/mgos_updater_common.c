@@ -799,7 +799,7 @@ void mgos_upd_boot_finish(bool is_successful, bool is_first) {
   if (!is_successful) {
     CALL_HOOK(LL_INFO, MGOS_UPD_EV_ROLLBACK, NULL, MGOS_OTA_STATE_ROLLBACK,
               "%s", "Reverting OTA");
-    mgos_upd_boot_revert(true /* reboot */);
+    mgos_upd_revert(true /* reboot */);
     /* Not reached */
     return;
   }

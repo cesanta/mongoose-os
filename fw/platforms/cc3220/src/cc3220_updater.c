@@ -66,8 +66,12 @@ void mgos_upd_hal_ctx_free(struct mgos_upd_hal_ctx *ctx) {
   free(ctx);
 }
 
-int mgos_upd_create_snapshot() {
+int mgos_upd_create_snapshot(void) {
   return -1;
+}
+
+bool mgos_upd_is_first_boot(void) {
+  return false;
 }
 
 bool mgos_upd_boot_get_state(struct mgos_upd_boot_state *bs) {
