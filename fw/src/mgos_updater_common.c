@@ -117,6 +117,7 @@ static void updater_abort(void *arg) {
    * is stuck may still be referring to it. We close the network connection,
    * if there is one, to hopefully get things to wind down cleanly. */
   if (ctx->nc) ctx->nc->flags |= MG_F_CLOSE_IMMEDIATELY;
+  ctx->wdt = MGOS_INVALID_TIMER_ID;
   s_ctx = NULL;
 }
 
@@ -141,10 +142,10 @@ struct update_context *updater_context_create() {
 
   s_ctx->dev_ctx = mgos_upd_hal_ctx_create();
 
+  int timeout = mgos_sys_config_get_update_timeout();
+  s_ctx->wdt = mgos_set_timer(timeout * 1000, 0, updater_abort, s_ctx);
   CALL_HOOK(LL_INFO, MGOS_UPD_EV_INIT, NULL, MGOS_OTA_STATE_INIT,
-            "starting, timeout %d", mgos_sys_config_get_update_timeout());
-  s_ctx->wdt = mgos_set_timer(mgos_sys_config_get_update_timeout() * 1000,
-                              false /* repeat */, updater_abort, s_ctx);
+            "starting, timeout %d hf %u", timeout, mgos_get_free_heap_size());
   return s_ctx;
 }
 
@@ -650,12 +651,12 @@ void updater_context_free(struct update_context *ctx) {
   if (!is_update_finished(ctx)) {
     LOG(LL_ERROR, ("Update terminated unexpectedly"));
   }
+  if (ctx == s_ctx) s_ctx = NULL;
   mgos_clear_timer(ctx->wdt);
   mgos_upd_hal_ctx_free(ctx->dev_ctx);
   mbuf_free(&ctx->unprocessed);
   free(ctx->manifest_data);
   free(ctx);
-  if (ctx == s_ctx) s_ctx = NULL;
 }
 
 void bin2hex(const uint8_t *src, int src_len, char *dst) {
