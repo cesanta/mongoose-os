@@ -37,6 +37,7 @@ var (
 )
 
 func main() {
+	glog.Init()
 	flag.Parse()
 	http.HandleFunc("/update", updateRedirector)
 	glog.Infof("Listening on %s", *addr)

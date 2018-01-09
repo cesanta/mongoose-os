@@ -34,6 +34,7 @@ var (
 )
 
 func main() {
+	glog.Init()
 	flag.Parse()
 	if *consoleLog == "" {
 		glog.Exitf("--console_log is required")

@@ -9,7 +9,12 @@ import (
 	"time"
 
 	"github.com/cesanta/errors"
+	"github.com/golang/glog"
 )
+
+func init() {
+	glog.Init()
+}
 
 func TestDeps(t *testing.T) {
 	deps := NewDeps()

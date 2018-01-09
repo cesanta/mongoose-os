@@ -165,6 +165,7 @@ func consoleJunkHandler(data []byte) {
 }
 
 func main() {
+	glog.Init()
 	seed1 := time.Now().UnixNano()
 	seed2, _ := cRand.Int(cRand.Reader, big.NewInt(4000000000))
 	mRand.Seed(seed1 ^ seed2.Int64())

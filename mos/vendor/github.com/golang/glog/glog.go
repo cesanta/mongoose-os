@@ -114,6 +114,8 @@ var severityName = []string{
 	fatalLog:   "FATAL",
 }
 
+var logDir *string
+
 // get returns the value of the severity.
 func (s *severity) get() severity {
 	return severity(atomic.LoadInt32((*int32)(s)))
@@ -395,13 +397,17 @@ type flushSyncWriter interface {
 	io.Writer
 }
 
-func init() {
+func Init() {
 	flag.BoolVar(&logging.toStderr, "logtostderr", false, "log to standard error instead of files")
 	flag.BoolVar(&logging.alsoToStderr, "alsologtostderr", false, "log to standard error as well as files")
 	flag.Var(&logging.verbosity, "v", "log level for V logs")
 	flag.Var(&logging.stderrThreshold, "stderrthreshold", "logs at or above this threshold go to stderr")
 	flag.Var(&logging.vmodule, "vmodule", "comma-separated list of pattern=N settings for file-filtered logging")
 	flag.Var(&logging.traceLocation, "log_backtrace_at", "when logging hits line file:N, emit a stack trace")
+
+	// If non-empty, overrides the choice of directory in which to write logs.
+	// See createLogDirs for the full list of possible destinations.
+	logDir = flag.String("log_dir", "", "If non-empty, write log files in this directory")
 
 	// Default stderrThreshold is ERROR.
 	logging.stderrThreshold = errorLog
