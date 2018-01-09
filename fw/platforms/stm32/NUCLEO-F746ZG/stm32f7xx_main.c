@@ -84,21 +84,12 @@ extern void mgos_loop();
 /* USER CODE END 0 */
 
 int main(void) {
-  /* USER CODE BEGIN 1 */
+  __HAL_FLASH_ART_ENABLE();
+  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
+  HAL_MspInit();
 
-  /* USER CODE END 1 */
-
-  /* MCU
-   * Configuration----------------------------------------------------------*/
-
-  /* Reset of all peripherals, Initializes the Flash interface and the Systick.
-   */
-  HAL_Init();
-
-  /* Configure the system clock */
   SystemClock_Config();
 
-  /* Initialize all configured peripherals */
   MX_GPIO_Init();
 
   MX_USART1_UART_Init();
@@ -107,9 +98,7 @@ int main(void) {
   MX_RNG_Init();
   MX_I2C1_Init();
 
-  /* USER CODE BEGIN 2 */
   mgos_main();
-  /* USER CODE END 2 */
 }
 
 /** System Clock Configuration

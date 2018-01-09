@@ -80,38 +80,6 @@ void mgos_wdt_set_timeout(int secs) {
   TIMERG0.wdt_wprotect = 0;
 }
 
-SemaphoreHandle_t s_mgos_mux = NULL;
-
-IRAM void mgos_lock() {
-  xSemaphoreTakeRecursive(s_mgos_mux, portMAX_DELAY);
-}
-
-IRAM void mgos_unlock() {
-  xSemaphoreGiveRecursive(s_mgos_mux);
-}
-
-struct mgos_rlock_type *mgos_new_rlock(void) {
-  return (struct mgos_rlock_type *) xSemaphoreCreateRecursiveMutex();
-}
-
-IRAM void mgos_rlock(struct mgos_rlock_type *l) {
-  xSemaphoreTakeRecursive((SemaphoreHandle_t) l, portMAX_DELAY);
-}
-
-IRAM void mgos_runlock(struct mgos_rlock_type *l) {
-  xSemaphoreGiveRecursive((SemaphoreHandle_t) l);
-}
-
-static portMUX_TYPE s_int_spinlock = portMUX_INITIALIZER_UNLOCKED;
-
-IRAM void mgos_ints_disable(void) {
-  portENTER_CRITICAL(&s_int_spinlock);
-}
-
-IRAM void mgos_ints_enable(void) {
-  portEXIT_CRITICAL(&s_int_spinlock);
-}
-
 int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {
   while (len > 0) {
     uint32_t r = esp_random(); /* Uses hardware RNG. */

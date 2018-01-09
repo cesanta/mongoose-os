@@ -43,8 +43,8 @@
 extern const char *build_version, *build_id;
 extern const char *mg_build_version, *mg_build_id;
 
-extern SemaphoreHandle_t s_mgos_mux;
 static QueueHandle_t s_main_queue;
+static SemaphoreHandle_t s_mgos_mux;
 
 /* Note: we cannot use mutex here because there is no recursive mutex
  * that can be used from ISR as well as from task. mgos_invoke_cb puts an item
@@ -155,7 +155,8 @@ enum mgos_init_result mgos_init2(void) {
     LOG(LL_INFO, ("%s %s (%s)", MGOS_APP, build_version, build_id));
   }
   LOG(LL_INFO, ("Mongoose OS %s (%s)", mg_build_version, mg_build_id));
-  LOG(LL_INFO, ("RAM: %u total, %u free", mgos_get_heap_size(),
+  LOG(LL_INFO, ("CPU: %d MHz, RAM: %u total, %u free",
+                (int) (mgos_get_cpu_freq() / 1000000), mgos_get_heap_size(),
                 mgos_get_free_heap_size()));
 
   r = mgos_hal_freertos_pre_init();
@@ -235,4 +236,32 @@ void mgos_hal_freertos_run_mgos_task(bool start_scheduler) {
     mgos_cd_puts("Scheduler failed to start!\n");
     mgos_dev_system_restart();
   }
+}
+
+IRAM void mgos_ints_disable(void) {
+  ENTER_CRITICAL();
+}
+
+IRAM void mgos_ints_enable(void) {
+  EXIT_CRITICAL();
+}
+
+void mgos_lock(void) {
+  xSemaphoreTakeRecursive(s_mgos_mux, portMAX_DELAY);
+}
+
+void mgos_unlock(void) {
+  xSemaphoreGiveRecursive(s_mgos_mux);
+}
+
+struct mgos_rlock_type *mgos_new_rlock(void) {
+  return (struct mgos_rlock_type *) xSemaphoreCreateRecursiveMutex();
+}
+
+void mgos_rlock(struct mgos_rlock_type *l) {
+  xSemaphoreTakeRecursive((SemaphoreHandle_t) l, portMAX_DELAY);
+}
+
+void mgos_runlock(struct mgos_rlock_type *l) {
+  xSemaphoreGiveRecursive((SemaphoreHandle_t) l);
 }

@@ -129,10 +129,11 @@ enum mgos_init_result esp_mgos_init2(rboot_config *bcfg) {
     LOG(LL_INFO, ("%s %s (%s)", MGOS_APP, build_version, build_id));
   }
   LOG(LL_INFO, ("Mongoose OS %s (%s)", mg_build_version, mg_build_id));
-  LOG(LL_INFO,
-      ("SDK %s; flash: %uM; RAM: %d total, %d free", system_get_sdk_version(),
-       esp_vfs_dev_sysflash_get_size(NULL) / 1048576, mgos_get_heap_size(),
-       mgos_get_free_heap_size()));
+  LOG(LL_INFO, ("CPU: %d MHz, RAM: %u total, %u free",
+                (int) (mgos_get_cpu_freq() / 1000000), mgos_get_heap_size(),
+                mgos_get_free_heap_size()));
+  LOG(LL_INFO, ("SDK %s; flash: %uM", system_get_sdk_version(),
+                esp_vfs_dev_sysflash_get_size(NULL) / 1048576));
   esp_print_reset_info();
 
   if (!esp_fs_init(bcfg->fs_addresses[bcfg->current_rom],

@@ -11,7 +11,6 @@
 #include <driverlib/wdt.h>
 
 #include "FreeRTOS.h"
-#include "semphr.h"
 #include "task.h"
 
 #include "common/cs_dbg.h"
@@ -19,32 +18,6 @@
 
 #include "mgos_hal.h"
 #include "mgos_mongoose.h"
-
-SemaphoreHandle_t s_mgos_mux = NULL;
-
-void mgos_lock_init(void) {
-  s_mgos_mux = xSemaphoreCreateRecursiveMutex();
-}
-
-void mgos_lock(void) {
-  xSemaphoreTakeRecursive(s_mgos_mux, portMAX_DELAY);
-}
-
-void mgos_unlock(void) {
-  xSemaphoreGiveRecursive(s_mgos_mux);
-}
-
-struct mgos_rlock_type *mgos_new_rlock(void) {
-  return (struct mgos_rlock_type *) xSemaphoreCreateRecursiveMutex();
-}
-
-void mgos_rlock(struct mgos_rlock_type *l) {
-  xSemaphoreTakeRecursive((SemaphoreHandle_t) l, portMAX_DELAY);
-}
-
-void mgos_runlock(struct mgos_rlock_type *l) {
-  xSemaphoreGiveRecursive((SemaphoreHandle_t) l);
-}
 
 /* TODO(rojer): make accurate to account for vTaskDelay inaccuracy */
 void mgos_usleep(uint32_t usecs) {
@@ -56,14 +29,6 @@ void mgos_usleep(uint32_t usecs) {
 
 void mgos_msleep(uint32_t msecs) {
   mgos_usleep(msecs * 1000);
-}
-
-void mgos_ints_disable(void) {
-  portENTER_CRITICAL();
-}
-
-void mgos_ints_enable(void) {
-  portEXIT_CRITICAL();
 }
 
 void mgos_wdt_feed(void) {

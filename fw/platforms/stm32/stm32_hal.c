@@ -10,6 +10,7 @@
 
 #include "FreeRTOS.h"
 #include "semphr.h"
+#include "task.h"
 
 #include "mgos_hal.h"
 #include "mgos_sys_config.h"
@@ -28,17 +29,21 @@ void device_get_mac_address(uint8_t mac[6]) {
 }
 
 void mgos_msleep(uint32_t msecs) {
-  HAL_Delay(msecs);
+  mgos_usleep(msecs * 1000);
+}
+
+static void __attribute__((naked)) delay_cycles(unsigned long ulCount) {
+  __asm(
+      "    subs    r0, #1\n"
+      "    bne     delay_cycles\n"
+      "    bx      lr");
 }
 
 void mgos_usleep(uint32_t usecs) {
-  /* STM HAL_Tick has a milliseconds resolution */
-  /* TODO(alashkin): try to use RTC timer to get usecs resolution */
-  uint32_t msecs = usecs / 1000;
-  if (msecs == 0) {
-    msecs = 1;
-  }
-  mgos_msleep(msecs);
+  int ticks = usecs / (1000000 / configTICK_RATE_HZ);
+  int remainder = usecs % (1000000 / configTICK_RATE_HZ);
+  if (ticks > 0) vTaskDelay(ticks);
+  if (remainder > 0) delay_cycles(remainder * (SystemCoreClock / 1000000));
 }
 
 int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {
@@ -59,6 +64,11 @@ int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {
   } while (i < len);
 
   return 0;
+}
+
+uint32_t HAL_GetTick(void) {
+  /* Overflow? Meh. HAL doesn't seem to care. */
+  return xTaskGetTickCount() * 1000;
 }
 
 #define IWDG_1_SECOND 128
@@ -103,40 +113,5 @@ void mgos_bitbang_write_bits_js(void) {
 }
 
 uint32_t mgos_get_cpu_freq(void) {
-  /* TODO */
-  return 0;
-}
-
-void mgos_ints_disable(void) {
-  portENTER_CRITICAL();
-}
-
-void mgos_ints_enable(void) {
-  portEXIT_CRITICAL();
-}
-
-SemaphoreHandle_t s_mgos_mux = NULL;
-
-void mgos_lock_init(void) {
-  s_mgos_mux = xSemaphoreCreateRecursiveMutex();
-}
-
-void mgos_lock(void) {
-  xSemaphoreTakeRecursive(s_mgos_mux, portMAX_DELAY);
-}
-
-void mgos_unlock(void) {
-  xSemaphoreGiveRecursive(s_mgos_mux);
-}
-
-struct mgos_rlock_type *mgos_new_rlock(void) {
-  return (struct mgos_rlock_type *) xSemaphoreCreateRecursiveMutex();
-}
-
-void mgos_rlock(struct mgos_rlock_type *l) {
-  xSemaphoreTakeRecursive((SemaphoreHandle_t) l, portMAX_DELAY);
-}
-
-void mgos_runlock(struct mgos_rlock_type *l) {
-  xSemaphoreGiveRecursive((SemaphoreHandle_t) l);
+  return SystemCoreClock;
 }

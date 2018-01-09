@@ -142,7 +142,7 @@ SDK_SRCS = $(wildcard $(LWIP_PATH)/src/core/*.c) \
            $(wildcard $(MBEDTLS_PATH)/library/*.c) \
            $(wildcard $(FREERTOS_PATH)/Source/*.c) port.c heap_3.c \
 startup_stm32f746xx.S arm_exc_top.S \
-stm32f7xx_hal_adc.c stm32f7xx_hal_adc_ex.c stm32f7xx_hal.c \
+stm32f7xx_hal_adc.c stm32f7xx_hal_adc_ex.c \
 stm32f7xx_hal_can.c stm32f7xx_hal_cec.c stm32f7xx_hal_cortex.c \
 stm32f7xx_hal_crc.c stm32f7xx_hal_crc_ex.c stm32f7xx_hal_cryp.c \
 stm32f7xx_hal_cryp_ex.c stm32f7xx_hal_dac.c stm32f7xx_hal_dac_ex.c \
