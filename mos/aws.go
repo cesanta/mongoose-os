@@ -71,7 +71,7 @@ func init() {
 	flag.IntVar(&atcaSlot, "atca-slot", 0, "When using ATCA, use this slot for key storage.")
 	flag.StringVar(&certType, "cert-type", "", "Type of the key for new cert, RSA or ECDSA. Default is "+defaultCertType+".")
 	flag.StringVar(&certCN, "cert-cn", "", "Common name for the certificate. By default uses device ID.")
-	flag.StringVar(&awsIoTPolicy, "aws-iot-policy", "", "Attach this policy to the generated certificate")
+	flag.StringVar(&awsIoTPolicy, "aws-iot-policy", awsIoTPolicyMOS, "Attach this policy to the generated certificate")
 	flag.StringVar(&awsIoTThing, "aws-iot-thing", "",
 		"Attach the generated certificate to this thing. "+
 			"By default uses device ID. Set to '-' to not attach certificate to any thing.")
