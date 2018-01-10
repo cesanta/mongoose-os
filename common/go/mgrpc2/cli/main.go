@@ -10,8 +10,6 @@ import (
 	"os"
 	"strings"
 
-	"github.com/golang/glog"
-
 	"golang.org/x/net/context"
 
 	"cesanta.com/common/go/mgrpc2"
@@ -70,7 +68,6 @@ func handleShadow(name string, d mgrpc2.Dispatcher, framec chan mgrpc2.Frame) {
 }
 
 func main() {
-	glog.Init()
 	dst := flag.String("dst", "", "RPC destination")
 	key := flag.String("key", "", "RPC frame key (password)")
 	config := flag.String("config", "", "Device config JSON")
