@@ -83,6 +83,8 @@
 #include <assert.h>
 #include <stdint.h>
 extern uint32_t SystemCoreClock;
+#include "stm32_sdk_hal.h"
+#include <core_cm7.h>
 #endif
 
 #define configUSE_PREEMPTION 1

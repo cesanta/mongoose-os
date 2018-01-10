@@ -95,6 +95,11 @@ enum mgos_init_result mgos_hal_freertos_pre_init(void) {
       ("Boot partition: %s; flash: %uM", esp_ota_get_boot_partition()->label,
        g_rom_flashchip.chip_size / 1048576));
 
+  /* Use default mac as base. Makes no difference but silences warnings. */
+  uint8_t mac[6];
+  esp_efuse_mac_get_default(mac);
+  esp_base_mac_addr_set(mac);
+
   /* Disable WDT on idle task(s), mgos task WDT should do fine. */
   TaskHandle_t h;
   if ((h = xTaskGetIdleTaskHandleForCPU(0)) != NULL) esp_task_wdt_delete(h);

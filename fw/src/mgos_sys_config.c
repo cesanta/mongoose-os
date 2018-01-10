@@ -50,18 +50,23 @@ static int load_config_file(const char *filename, const char *acl,
                             struct mgos_config *cfg);
 
 void mgos_expand_mac_address_placeholders(char *str) {
-  const char *mac = mgos_sys_ro_vars_get_mac_address();
+  struct mg_str s = mg_mk_str(str);
+  struct mg_str mac = mg_mk_str(mgos_sys_ro_vars_get_mac_address());
+  mgos_expand_placeholders(mac, &s);
+}
+
+void mgos_expand_placeholders(const struct mg_str src, struct mg_str *str) {
   int num_placeholders = 0;
-  char *sp;
-  if (mac == NULL) return;
-  for (sp = str; sp != NULL && *sp != '\0'; sp++) {
-    if (*sp == PLACEHOLDER_CHAR) num_placeholders++;
+  if (src.len == 0 || str->len == 0) return;
+  for (size_t i = 0; i < str->len; i++) {
+    if (str->p[i] == PLACEHOLDER_CHAR) num_placeholders++;
   }
-  if (num_placeholders > 0 && num_placeholders <= 12 &&
+  if (num_placeholders > 0 &&
       num_placeholders % 2 == 0 /* Allows use of single '?' w/o subst. */) {
-    const char *msp = mac + 11; /* Start from the end */
-    for (; sp >= str; sp--) {
-      if (*sp == PLACEHOLDER_CHAR) *sp = *msp--;
+    char *sp = ((char *) str->p) + str->len - 1;
+    const char *ssp = src.p + src.len - 1;
+    for (; sp >= str->p && ssp >= src.p; sp--) {
+      if (*sp == PLACEHOLDER_CHAR) *sp = *ssp--;
     }
   }
 }

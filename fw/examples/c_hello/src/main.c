@@ -16,7 +16,7 @@
 #elif CS_PLATFORM == CS_P_ESP32
 /* Unfortunately, there is no LED on DevKitC, so this is random GPIO. */
 #define LED_GPIO 17
-#define BUTTON_GPIO 0 /* Usually a "Flash" button. */
+#define BUTTON_GPIO 18 /* Usually a "Flash" button. */
 #define BUTTON_PULL MGOS_GPIO_PULL_UP
 #define BUTTON_EDGE MGOS_GPIO_INT_EDGE_POS
 #elif CS_PLATFORM == CS_P_CC3200 || CS_PLATFORM == CS_P_CC3220

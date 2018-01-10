@@ -12,6 +12,8 @@
 #include "semphr.h"
 #include "task.h"
 
+#include "mongoose/mongoose.h"
+
 #include "mgos_hal.h"
 #include "mgos_sys_config.h"
 #include "mgos_mongoose.h"
@@ -24,13 +26,35 @@ void mgos_dev_system_restart(void) {
 }
 
 void device_get_mac_address(uint8_t mac[6]) {
-  /* TODO(alashkin): implement */
-  memset(mac, 0, 6);
+  static uint8_t s_dev_mac[6] = {0};
+  if (s_dev_mac[0] != 0) {
+    memcpy(mac, s_dev_mac, 6);
+    return;
+  }
+  /*
+   * Construct MAC address by using a Locally Administered Address OUI 12:34:...
+   * and a unique suffix obtained from hashing the device's UID.
+   */
+  uint32_t uid[3] = {
+      READ_REG(*((uint32_t *) UID_BASE)),
+      READ_REG(*((uint32_t *) UID_BASE + 4)),
+      READ_REG(*((uint32_t *) UID_BASE + 8)),
+  };
+  uint8_t digest[20];
+  const uint8_t *msgs[1] = {(const uint8_t *) &uid[0]};
+  size_t lens[1] = {sizeof(uid)};
+  mg_hash_sha1_v(1, msgs, lens, digest);
+  memcpy(&s_dev_mac[2], digest, 4);
+  s_dev_mac[1] = 0x34;
+  s_dev_mac[0] = 0x12;
+  memcpy(mac, s_dev_mac, 6);
 }
 
 void mgos_msleep(uint32_t msecs) {
   mgos_usleep(msecs * 1000);
 }
+
+void HAL_Delay(__IO uint32_t ms) __attribute__((alias("mgos_msleep")));
 
 static void __attribute__((naked)) delay_cycles(unsigned long ulCount) {
   __asm(
@@ -68,7 +92,12 @@ int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {
 
 uint32_t HAL_GetTick(void) {
   /* Overflow? Meh. HAL doesn't seem to care. */
-  return xTaskGetTickCount() * 1000;
+  return xTaskGetTickCount() * portTICK_PERIOD_MS;
+}
+
+/* LwIP time function, returns timestamp in milliseconds. */
+u32_t sys_now(void) {
+  return HAL_GetTick();
 }
 
 #define IWDG_1_SECOND 128

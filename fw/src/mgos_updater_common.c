@@ -17,6 +17,7 @@
 #include "mgos_sys_config.h"
 #include "mgos_timers.h"
 #include "mgos_updater_hal.h"
+#include "mgos_vfs.h"
 
 /*
  * Using static variable (not only c->user_data), it allows to check if update
@@ -500,17 +501,18 @@ static int updater_process_int(struct update_context *ctx, const char *data,
         if (ctx->total_zip_file_size > 0) {
           double ratio = (double) ctx->bytes_already_downloaded * 100.0 /
                          ctx->total_zip_file_size;
-          CALL_HOOK(
-              LL_DEBUG, MGOS_UPD_EV_PROGRESS, &ctx->info,
-              MGOS_OTA_STATE_PROGRESS, "%.2f%% total, current: %s %d of %d",
-              ratio, ctx->info.current_file.name,
-              ctx->info.current_file.processed, ctx->info.current_file.size);
+          CALL_HOOK(LL_DEBUG, MGOS_UPD_EV_PROGRESS, &ctx->info,
+                    MGOS_OTA_STATE_PROGRESS,
+                    "%.2f%% total, current: %s %d of %d", ratio,
+                    ctx->info.current_file.name,
+                    (int) ctx->info.current_file.processed,
+                    (int) ctx->info.current_file.size);
         } else {
           CALL_HOOK(LL_DEBUG, MGOS_UPD_EV_PROGRESS, &ctx->info,
                     MGOS_OTA_STATE_PROGRESS, "%s %d of %d",
                     ctx->info.current_file.name,
-                    ctx->info.current_file.processed,
-                    ctx->info.current_file.size);
+                    (int) ctx->info.current_file.processed,
+                    (int) ctx->info.current_file.size);
         }
 
         uint32_t bytes_left =

@@ -66,3 +66,4 @@ arm_exc_handler_top:
 
   mrs r0, ipsr
   b arm_exc_handler_bottom
+.size arm_exc_handler_top, . - arm_exc_handler_top

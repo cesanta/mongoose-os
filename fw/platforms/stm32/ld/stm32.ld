@@ -110,13 +110,23 @@ SECTIONS
     __bss_end__ = _ebss;
   } >SRAM
 
+  /* For now, max size of no-cache region is 1K */
+  .nocache :
+  {
+    . = ALIGN(NOCACHE_SIZE);
+    __nocache_start__ = .;
+    *(.nocache)
+    . = ALIGN(NOCACHE_SIZE);
+    __nocache_end__ = .;
+  } >SRAM
+
   .heap :
   {
     . = ALIGN(8);
-        _heap_start = .;
-        . = . + (LENGTH(SRAM) - SIZEOF(.data) - SIZEOF(.bss) - _init_stack_size);
-        . = ALIGN(8);
-        _heap_end = .;
+    _heap_start = .;
+    . = . + (LENGTH(SRAM) - SIZEOF(.data) - SIZEOF(.bss) - SIZEOF(.nocache) - _init_stack_size);
+    . = ALIGN(8);
+    _heap_end = .;
   } >SRAM
 
   /* Filesystem image */

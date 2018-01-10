@@ -159,6 +159,11 @@ int mgos_conf_value_int(const void *cfg, const struct mgos_conf_entry *e);
  */
 double mgos_conf_value_double(const void *cfg, const struct mgos_conf_entry *e);
 
+/*
+ * Expands ? placeholders in str with characters from src, right to left.
+ */
+void mgos_expand_placeholders(const struct mg_str src, struct mg_str *str);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

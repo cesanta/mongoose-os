@@ -187,32 +187,12 @@ extern "C" {
 
 /* ################## Ethernet peripheral configuration ##################### */
 
-/* Section 1 : Ethernet peripheral configuration */
-
-/* MAC ADDRESS: MAC_ADDR0:MAC_ADDR1:MAC_ADDR2:MAC_ADDR3:MAC_ADDR4:MAC_ADDR5 */
-#define MAC_ADDR0 2U
-#define MAC_ADDR1 0U
-#define MAC_ADDR2 0U
-#define MAC_ADDR3 0U
-#define MAC_ADDR4 0U
-#define MAC_ADDR5 0U
-
-/* Definition of the Ethernet driver buffers size and count */
-#define ETH_RX_BUF_SIZE \
-  ETH_MAX_PACKET_SIZE /* buffer size for receive               */
-#define ETH_TX_BUF_SIZE \
-  ETH_MAX_PACKET_SIZE               /* buffer size for transmit              */
-#define ETH_RXBUFNB ((uint32_t) 4U) /* 4 Rx buffers of size ETH_RX_BUF_SIZE */
-#define ETH_TXBUFNB ((uint32_t) 4U) /* 4 Tx buffers of size ETH_TX_BUF_SIZE */
-
-/* Section 2: PHY configuration section */
-
 /* LAN8742A_PHY_ADDRESS Address*/
 #define LAN8742A_PHY_ADDRESS 0
 /* PHY Reset delay these values are based on a 1 ms Systick interrupt*/
 #define PHY_RESET_DELAY ((uint32_t) 0x000000FFU)
 /* PHY Configuration delay */
-#define PHY_CONFIG_DELAY ((uint32_t) 0x00000FFFU)
+#define PHY_CONFIG_DELAY 500
 
 #define PHY_READ_TO ((uint32_t) 0x0000FFFFU)
 #define PHY_WRITE_TO ((uint32_t) 0x0000FFFFU)
@@ -250,7 +230,7 @@ extern "C" {
 
 /* Section 4: Extended PHY Registers */
 #define PHY_SR \
-  ((uint16_t) 0x10U) /*!< PHY status register Offset                      */
+  ((uint16_t) 0x1FU) /*!< PHY status register Offset                      */
 
 #define PHY_SPEED_STATUS \
   ((uint16_t) 0x0002U) /*!< PHY Speed mask                                  */
