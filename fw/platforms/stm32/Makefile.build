@@ -5,8 +5,6 @@ MGOS_ENABLE_BITBANG = 0
 MGOS_ENABLE_DEBUG_UDP = 0
 MGOS_ENABLE_UPDATER = 0
 
-USE_LWIP ?= 1
-
 include $(MGOS_PATH)/fw/src/mgos_features.mk
 
 TARGET ?=
@@ -55,7 +53,7 @@ FROZEN_PATH ?= $(MGOS_PATH)/frozen
 MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
 MGOS_INCLUDE_PATH ?= $(MGOS_PATH)/fw/include
 LWIP_PATH ?= $(STM32CUBE_PATH)/Middlewares/Third_Party/LwIP
-MBEDTLS_PATH ?= $(STM32CUBE_PATH)/Middlewares/Third_Party/mbedTLS
+MBEDTLS_PATH ?= /opt/cs_mbedtls
 FREERTOS_PATH ?= $(STM32CUBE_PATH)/Middlewares/Third_Party/FreeRTOS
 MGOS_PLATFORM_PATH ?= $(MGOS_PATH)/fw/platforms/stm32
 MGOS_FEATURES ?=
@@ -207,7 +205,6 @@ VPATH += $(MGOS_PLATFORM_PATH) $(MGOS_PLATFORM_PATH)/$(TARGET) \
          $(GEN_DIR) $(APP_SOURCE_DIRS) \
          $(MGOS_SRC_PATH) $(MONGOOSE_PATH) $(FROZEN_PATH) \
          $(SPIFFS_PATH) $(COMMON_PATH)/mg_rpc \
-         $(STM32CUBE_PATH)/Middlewares/Third_Party/mbedTLS \
          $(STM32CUBE_PATH)/Drivers/STM32F7xx_HAL_Driver/Src \
          $(LWIP_PATH)/src/api \
          $(LWIP_PATH)/src/core \
@@ -228,6 +225,7 @@ IPATH = $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) $(MGOS_PATH) \
         $(COMMON_PATH)/mg_rpc \
         $(SDK_INCLUDES)
 
+SSL_LIBS = $(addprefix $(MBEDTLS_PATH)/library/,libmbedcrypto.a libmbedtls.a libmbedx509.a)
 
 SRCS = $(notdir $(SDK_SRCS) $(ADD_SRCS) $(APP_SRCS) $(MGOS_SRCS))
 
@@ -264,15 +262,11 @@ LDFLAGS += -Wl,--defsym=SRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -Wl,--defsym=SRAM_SIZE=
 
 LDFLAGS += -Wl,--gc-sections -Wl,--undefined=fs_bin -Wl,-Map=$(MAP_FILE)
 
-LDLIBS = -Wl,--start-group
+LDLIBS = -Wl,--start-group $(SSL_LIBS) -lc -lgcc -lnosys -Wl,--end-group
 
-ifeq "${USE_LWIP}" "1"
 CFLAGS += -DMG_NET_IF=3 -D__CPU_H__ -DMG_LWIP=1 -DLWIP_TIMEVAL_PRIVATE=0 \
           -DLWIP_TCP_KEEPALIVE=1 -DMG_SSL_IF=MG_SSL_IF_MBEDTLS \
           -DMGOS_APP=\"$(APP)\" -DMG_ENABLE_SSL
-endif
-
-LDLIBS += -lc -lgcc -lnosys -Wl,--end-group
 
 all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(APP_BIN) $(FW_ZIP)
 
@@ -293,7 +287,7 @@ $(BUILD_DIR)/%.S.o: %.S $(GENFILES_FLAG)
 $(GENFILES_FLAG): $(GENFILES_LIST)
 	$(Q) touch $@
 
-$(APP_ELF): $(OBJECTS) $(FFI_EXPORTS_O) $(LDSCRIPT)
+$(APP_ELF): $(OBJECTS) $(FFI_EXPORTS_O) $(LDSCRIPT) $(SSL_LIBS)
 	$(vecho) LD $(notdir $@)
 	$(Q) $(CC) $(CFLAGS) $(LDFLAGS) $(OBJECTS) $(FFI_EXPORTS_O) $(APP_BIN_LIB_FILES) $(LDLIBS) -T$(LDSCRIPT) -o $@
 
