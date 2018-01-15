@@ -922,6 +922,7 @@ bool mgos_vfs_umount(const char *path) {
   }
   mgos_vfs_unlock();
   LOG(LL_INFO, ("%s %p %d", path, fs, ret));
+  (void) fs;
   return ret;
 }
 

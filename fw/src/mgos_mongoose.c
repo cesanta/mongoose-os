@@ -160,6 +160,7 @@ static void def_http_handler(struct mg_connection *c, int ev, void *p,
                     (int) hm->uri.len, hm->uri.p));
       memset(&opts, 0, sizeof(opts));
       mg_serve_http(c, p, opts);
+      (void) hm;
 #else
       mg_http_send_error(c, 404, NULL);
 #endif

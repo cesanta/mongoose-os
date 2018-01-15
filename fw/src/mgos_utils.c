@@ -10,7 +10,9 @@
 #include "mgos_timers.h"
 
 extern enum cs_log_level cs_log_threshold;
+#if CS_ENABLE_STDIO
 extern FILE *cs_log_file;
+#endif
 
 static void reboot_timer_cb(void *param) {
   mgos_system_restart();
@@ -26,6 +28,7 @@ float mgos_rand_range(float from, float to) {
   return from + (((float) (to - from)) / RAND_MAX * rand());
 }
 
+#if CS_ENABLE_STDIO
 /*
  * Intended for ffi
  */
@@ -36,3 +39,4 @@ void mgos_log(const char *filename, int line_no, int level, const char *msg) {
   }
   // LOG(level, ("%s", msg));
 };
+#endif

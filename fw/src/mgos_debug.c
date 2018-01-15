@@ -38,7 +38,9 @@ static inline void debug_unlock(void) {
 }
 
 /* From cs_dbg.c */
+#if CS_ENABLE_STDIO
 extern enum cs_log_level cs_log_cur_msg_level;
+#endif
 
 void mgos_debug_write(int fd, const void *data, size_t len) {
   char buf[MGOS_DEBUG_TMP_BUF_SIZE];
@@ -60,12 +62,14 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
     len = mgos_uart_write(uart_no, data, len);
     mgos_uart_flush(uart_no);
   }
+#if CS_ENABLE_STDIO
   /* Only send LL_INFO messages and below, to avoid loops. */
   if (!mgos_sys_config_is_initialized() || cs_log_cur_msg_level > LL_INFO) {
     s_in_debug = false;
     debug_unlock();
     return;
   }
+#endif /* CS_ENABLE_STDIO */
 #if MGOS_ENABLE_DEBUG_UDP
   /* Only send STDERR to UDP. */
   if (fd == 2) {

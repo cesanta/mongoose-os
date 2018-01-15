@@ -261,8 +261,10 @@ enum mgos_init_result mgos_sys_config_init(void) {
   mgos_wdt_set_timeout(mgos_sys_config_get_sys_wdt_timeout());
   mgos_wdt_set_feed_on_poll(true);
 
+#if MG_ENABLE_HEXDUMP
   mgos_get_mgr()->hexdump_file =
       mgos_sys_config_get_debug_mg_mgr_hexdump_file();
+#endif
 
   if (mgos_sys_config_get_sys_mount_path() != NULL) {
     if (!mgos_vfs_mount(mgos_sys_config_get_sys_mount_path(),
