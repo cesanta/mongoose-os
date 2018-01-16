@@ -93,17 +93,20 @@ IRAM bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
       GPIO_REG_WRITE(GPIO_ENABLE_W1TC_ADDRESS, BIT(pin));
       break;
     case MGOS_GPIO_MODE_OUTPUT:
+    case MGOS_GPIO_MODE_OUTPUT_OD:
       PIN_FUNC_SELECT(gi->periph, gi->func);
       GPIO_REG_WRITE(GPIO_ENABLE_W1TS_ADDRESS, BIT(pin));
       gpio_pin_intr_state_set(GPIO_ID_PIN(pin), GPIO_PIN_INTR_DISABLE);
       GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, BIT(pin));
       /* Pin driver -> direct drive, pad driver -> open drain. */
-      GPIO_REG_WRITE(GPIO_PIN_ADDR(GPIO_ID_PIN(pin)),
-                     GPIO_REG_READ(GPIO_PIN_ADDR(GPIO_ID_PIN(pin))) &
-                         (~GPIO_PIN_PAD_DRIVER_SET(GPIO_PAD_DRIVER_DISABLE)));
+      uint32_t pin_addr = GPIO_REG_READ(GPIO_PIN_ADDR(GPIO_ID_PIN(pin)));
+      if (mode == MGOS_GPIO_MODE_OUTPUT) {
+        pin_addr &= ~GPIO_PIN_PAD_DRIVER_MASK;
+      } else {
+        pin_addr |= GPIO_PIN_PAD_DRIVER_MASK;
+      }
+      GPIO_REG_WRITE(GPIO_PIN_ADDR(GPIO_ID_PIN(pin)), pin_addr);
       break;
-    default:
-      return false;
   }
 
   return true;

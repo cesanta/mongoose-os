@@ -68,6 +68,9 @@ IRAM bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
     case MGOS_GPIO_MODE_OUTPUT:
       m = GPIO_MODE_OUTPUT;
       break;
+    case MGOS_GPIO_MODE_OUTPUT_OD:
+      m = GPIO_MODE_OUTPUT_OD;
+      break;
     default:
       return false;
   }

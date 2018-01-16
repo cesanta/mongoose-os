@@ -81,13 +81,13 @@ bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
     case MGOS_GPIO_MODE_INPUT:
       HWREG(port_base + GPIO_O_GPIO_DIR) &= ~port_bit_mask;
       break;
-    case MGOS_GPIO_MODE_OUTPUT: {
+    case MGOS_GPIO_MODE_OUTPUT:
+    case MGOS_GPIO_MODE_OUTPUT_OD: {
       HWREG(port_base + GPIO_O_GPIO_DIR) |= port_bit_mask;
+      if (mode == MGOS_GPIO_MODE_OUTPUT_OD) pad_config |= PIN_TYPE_OD;
       pad_config |= 0xA0; /* drive strength 10mA. */
       break;
     }
-    default:
-      return false;
   }
   uint32_t pad_reg =
       (OCP_SHARED_BASE + OCP_SHARED_O_GPIO_PAD_CONFIG_0 + (gpio_no * 4));

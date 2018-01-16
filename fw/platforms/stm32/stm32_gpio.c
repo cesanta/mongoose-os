@@ -69,7 +69,18 @@ bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
   if (def == NULL) {
     return false;
   }
-  def->init_info.Mode = mode;
+  switch (mode) {
+    case MGOS_GPIO_MODE_INPUT:
+      def->init_info.Mode = GPIO_MODE_INPUT;
+      break;
+    case MGOS_GPIO_MODE_OUTPUT:
+      def->init_info.Mode = GPIO_MODE_OUTPUT_PP;
+      break;
+    case MGOS_GPIO_MODE_OUTPUT_OD: {
+      def->init_info.Mode = GPIO_MODE_OUTPUT_OD;
+      break;
+    }
+  }
   HAL_GPIO_Init(def->port, &def->init_info);
   return true;
 }

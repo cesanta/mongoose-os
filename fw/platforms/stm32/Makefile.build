@@ -234,7 +234,7 @@ FW_PARTS = boot:src=$(APP_BIN),addr=0
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
 
 OBJECTS := $(addprefix $(BUILD_DIR)/,$(SRCS:=.o))
-CFLAGS ?= -std=gnu99 -Os -ggdb -MD -Wall -Werror -Wundef \
+CFLAGS ?= -std=gnu99 -Os -ggdb -MD -Wall -Werror \
           -fno-common -fno-inline \
           -ffunction-sections -fdata-sections \
           -D_GNU_SOURCE \

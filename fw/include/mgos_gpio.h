@@ -19,14 +19,15 @@ extern "C" {
 #endif /* __cplusplus */
 
 enum mgos_gpio_mode {
-  MGOS_GPIO_MODE_INPUT = 0, /* input mode */
-  MGOS_GPIO_MODE_OUTPUT = 1 /* output mode */
+  MGOS_GPIO_MODE_INPUT = 0,
+  MGOS_GPIO_MODE_OUTPUT = 1,
+  MGOS_GPIO_MODE_OUTPUT_OD = 2, /* open-drain output */
 };
 
 enum mgos_gpio_pull_type {
-  MGOS_GPIO_PULL_NONE = 0,
-  MGOS_GPIO_PULL_UP = 1,  /* pin is pilled to the high voltage */
-  MGOS_GPIO_PULL_DOWN = 2 /* pin is pulled to the low voltage */
+  MGOS_GPIO_PULL_NONE = 0, /* floating */
+  MGOS_GPIO_PULL_UP = 1,
+  MGOS_GPIO_PULL_DOWN = 2,
 };
 
 enum mgos_gpio_int_mode {
