@@ -78,7 +78,7 @@ enum mgos_init_result cc32xx_pre_nwp_init(void) {
 enum mgos_init_result cc32xx_init(void) {
   cc3200_srand();
 #if MGOS_ENABLE_UPDATER
-  cc3200_upd_init();
+  if (!cc3200_upd_init()) return MGOS_INIT_UPD_INIT_FAILED;
 #endif
   return MGOS_INIT_OK;
 }

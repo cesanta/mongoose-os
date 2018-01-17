@@ -413,6 +413,17 @@ bool cc3200_upd_init(void) {
     s_boot_cfg.seq = saved_seq;
   }
 
+  /*
+   * We aim to maintain at most 3 FS containers at all times.
+   * Delete inactive FS container in the inactive boot configuration.
+   */
+  struct boot_cfg cfg;
+  int inactive_idx = (s_boot_cfg_idx == 0 ? 1 : 0);
+  if (read_boot_cfg(inactive_idx, &cfg) >= 0) {
+    cc32xx_vfs_dev_slfs_container_delete_inactive_container(
+        cfg.fs_container_prefix);
+  }
+
   return true;
 }
 

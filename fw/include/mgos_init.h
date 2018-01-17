@@ -42,6 +42,7 @@ enum mgos_init_result {
   MGOS_INIT_DEPS_FAILED = -32,
   MGOS_INIT_MOUNT_FAILED = -33,
   MGOS_INIT_NET_INIT_FAILED = -34,
+  MGOS_INIT_UPD_INIT_FAILED = -35,
 };
 
 #ifdef __cplusplus
