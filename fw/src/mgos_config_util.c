@@ -279,10 +279,7 @@ static void mgos_conf_emit_obj(struct emit_ctx *ctx,
   for (i = 0; i < num_entries;) {
     const struct mgos_conf_entry *e = schema + i;
     if (mgos_conf_value_eq(ctx->cfg, ctx->base, e)) {
-      i++;
-      if (e->type == CONF_TYPE_OBJECT) {
-        i += e->num_desc;
-      }
+      i += (e->type == CONF_TYPE_OBJECT ? e->num_desc : 1);
       continue;
     }
     if (!first) {
