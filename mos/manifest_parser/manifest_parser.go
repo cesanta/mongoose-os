@@ -717,7 +717,6 @@ func ReadManifestFile(
 
 	for i, _ := range manifest.Modules {
 		manifest.Modules[i].Normalize()
-		manifest.Modules[i].SuffixTpl = SwmodSuffixTpl
 	}
 
 	if manifest.BuildVars == nil {

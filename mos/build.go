@@ -1573,8 +1573,12 @@ func (lpr *compProviderReal) GetModuleLocalPath(
 		// use the module name and will clone/pull it if necessary
 		freportf(logWriter, "The flag --module is not given for the module %q, going to use the repository", name)
 
-		var err error
-		targetDir, err = m.PrepareLocalDir(paths.ModulesDir, logWriter, true, modulesDefVersion, *libsUpdateInterval)
+		appDir, err := getCodeDirAbs()
+		if err != nil {
+			return "", errors.Trace(err)
+		}
+
+		targetDir, err = m.PrepareLocalDir(getModulesDir(appDir), logWriter, true, modulesDefVersion, *libsUpdateInterval)
 		if err != nil {
 			return "", errors.Annotatef(err, "preparing local copy of the module %q", name)
 		}
@@ -1604,6 +1608,14 @@ func getDepsDir(projectDir string) string {
 	}
 }
 
+func getModulesDir(projectDir string) string {
+	if paths.ModulesDir != "" {
+		return paths.ModulesDir
+	} else {
+		return moscommon.GetDepsDir(projectDir)
+	}
+}
+
 func getMosDirEffective(mongooseOsVersion string, updateInterval time.Duration) (string, error) {
 	var mosDirEffective string
 	if *mosRepo != "" {
@@ -1612,17 +1624,20 @@ func getMosDirEffective(mongooseOsVersion string, updateInterval time.Duration) 
 	} else {
 		freportf(logWriter, "The flag --repo is not given, going to use mongoose-os repository")
 
+		appDir, err := getCodeDirAbs()
+		if err != nil {
+			return "", errors.Trace(err)
+		}
+
 		m := build.SWModule{
 			// TODO(dfrank) get upstream repo URL from a flag
 			// (and this flag needs to be forwarded to fwbuild as well, which should
 			// forward it to the mos invocation)
-			Location:  "https://github.com/cesanta/mongoose-os",
-			Version:   mongooseOsVersion,
-			SuffixTpl: manifest_parser.SwmodSuffixTpl,
+			Location: "https://github.com/cesanta/mongoose-os",
+			Version:  mongooseOsVersion,
 		}
 
-		var err error
-		mosDirEffective, err = m.PrepareLocalDir(paths.ModulesDir, logWriter, true, "", updateInterval)
+		mosDirEffective, err = m.PrepareLocalDir(getModulesDir(appDir), logWriter, true, "", updateInterval)
 		if err != nil {
 			return "", errors.Annotatef(err, "preparing local copy of the mongoose-os repo")
 		}
