@@ -198,9 +198,7 @@ include $(MGOS_PATH)/fw/src/spiffs.mk
 
 all: $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(FW_ZIP) $(BREAKDOWN_FILE)
 
-FS_FILES += $(GEN_DIR)/conf0.json \
-            $(GEN_DIR)/mgos_config_schema.json \
-            $(GEN_DIR)/mgos_ro_vars_schema.json
+FS_FILES += $(GEN_DIR)/conf0.json
 
 $(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
 	$(vecho) "MKDIR $@"
