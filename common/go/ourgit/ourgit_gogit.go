@@ -12,10 +12,10 @@ import (
 
 	moscommon "cesanta.com/mos/common"
 	"github.com/cesanta/errors"
-	git "github.com/cesanta/go-git"
-	"github.com/cesanta/go-git/plumbing"
-	"github.com/cesanta/go-git/plumbing/storer"
 	"github.com/golang/glog"
+	git "gopkg.in/src-d/go-git.v4"
+	"gopkg.in/src-d/go-git.v4/plumbing"
+	"gopkg.in/src-d/go-git.v4/plumbing/storer"
 )
 
 type ourGitGoGit struct{}
