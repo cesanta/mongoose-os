@@ -1,8 +1,8 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"golang.org/x/net/context"
 	"os"
 
 	"cesanta.com/mos/dev"

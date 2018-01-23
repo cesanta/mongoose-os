@@ -10,8 +10,8 @@ import (
 	"sync"
 	"time"
 
+	"context"
 	"github.com/cesanta/errors"
-	"golang.org/x/net/context"
 
 	"cesanta.com/common/go/ourio"
 	"cesanta.com/mos/build"

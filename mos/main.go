@@ -13,7 +13,7 @@ import (
 	"os"
 	"time"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"cesanta.com/common/go/pflagenv"
 	moscommon "cesanta.com/mos/common"

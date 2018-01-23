@@ -3,7 +3,7 @@
 package main
 
 import (
-	"golang.org/x/net/context"
+	"context"
 
 	"cesanta.com/mos/dev"
 	"github.com/cesanta/errors"

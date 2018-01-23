@@ -1,8 +1,8 @@
 package main
 
 import (
+	"context"
 	"fmt"
-	"golang.org/x/net/context"
 	"strings"
 	"time"
 
@@ -113,7 +113,8 @@ func configSetAndSave(ctx context.Context, devConn *dev.DevConn, devConf *dev.De
 		} else {
 			reportf("Saving and rebooting...")
 		}
-		ctx2, _ := context.WithTimeout(ctx, saveTimeout)
+		ctx2, cancel := context.WithTimeout(ctx, saveTimeout)
+		defer cancel()
 		err = devConn.CConf.Save(ctx2, &fwconfig.SaveArgs{
 			Reboot: lptr.Bool(!noReboot),
 		})

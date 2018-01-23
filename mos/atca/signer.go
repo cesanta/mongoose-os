@@ -1,13 +1,13 @@
 package atca
 
 import (
+	"context"
 	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"encoding/asn1"
 	"encoding/base64"
 	"fmt"
-	"golang.org/x/net/context"
 	"io"
 	"math/big"
 	"os"

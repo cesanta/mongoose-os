@@ -3,7 +3,7 @@
 package main
 
 import (
-	"golang.org/x/net/context"
+	"context"
 	"io/ioutil"
 	"math/big"
 	"strings"

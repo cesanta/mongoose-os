@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"cesanta.com/common/go/mgrpc/frame"
 	"cesanta.com/common/go/ourjson"
@@ -69,7 +69,9 @@ func call(ctx context.Context, devConn *dev.DevConn) error {
 	}
 
 	if *timeout > 0 {
-		ctx, _ = context.WithTimeout(ctx, *timeout)
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, *timeout)
+		defer cancel()
 	}
 
 	result, err := callDeviceService(ctx, devConn, args[0], params)

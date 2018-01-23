@@ -17,7 +17,7 @@ import (
 
 	"github.com/cesanta/errors"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"cesanta.com/mos/dev"
 )

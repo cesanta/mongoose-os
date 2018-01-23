@@ -1,9 +1,9 @@
 package main
 
 import (
+	"context"
 	"encoding/base64"
 	"fmt"
-	"golang.org/x/net/context"
 	"io"
 	"os"
 	"path"
@@ -80,7 +80,8 @@ func getFile(ctx context.Context, devConn *dev.DevConn, name string) (string, er
 	attempts := fsOpAttempts
 	for {
 		// Get the next chunk of data
-		ctx2, _ := context.WithTimeout(ctx, fsOpTimeout)
+		ctx2, cancel := context.WithTimeout(ctx, fsOpTimeout)
+		defer cancel()
 		glog.V(1).Infof("Getting %s %d @ %d (attempts %d)", name, chunkSize, offset, attempts)
 		chunk, err := devConn.CFilesystem.Get(ctx2, &fwfs.GetArgs{
 			Filename: &name,
@@ -171,7 +172,8 @@ func fsPutData(ctx context.Context, devConn *dev.DevConn, r io.Reader, devFilena
 		n, readErr := r.Read(data)
 		if n > 0 {
 			for attempts > 0 {
-				ctx2, _ := context.WithTimeout(ctx, fsOpTimeout)
+				ctx2, cancel := context.WithTimeout(ctx, fsOpTimeout)
+				defer cancel()
 				glog.V(1).Infof("Sending %s %d (attempts %d)", devFilename, n, attempts)
 				err := devConn.CFilesystem.Put(ctx2, &fwfs.PutArgs{
 					Filename: &devFilename,

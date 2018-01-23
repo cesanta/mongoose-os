@@ -4,7 +4,7 @@ import (
 	"crypto/tls"
 	"time"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"cesanta.com/common/go/mgrpc"
 	"cesanta.com/common/go/mgrpc/codec"
@@ -73,7 +73,8 @@ func (dc *DevConn) GetConfig(ctx context.Context) (*DevConf, error) {
 	var err error
 	attempts := confOpAttempts
 	for {
-		ctx2, _ := context.WithTimeout(ctx, confOpTimeout)
+		ctx2, cancel := context.WithTimeout(ctx, confOpTimeout)
+		defer cancel()
 		devConfRaw, err = dc.CConf.Get(ctx2, &fwconfig.GetArgs{})
 		if err != nil {
 			attempts -= 1
@@ -99,7 +100,8 @@ func (dc *DevConn) GetConfig(ctx context.Context) (*DevConf, error) {
 func (dc *DevConn) SetConfig(ctx context.Context, devConf *DevConf) error {
 	attempts := confOpAttempts
 	for {
-		ctx2, _ := context.WithTimeout(ctx, confOpTimeout)
+		ctx2, cancel := context.WithTimeout(ctx, confOpTimeout)
+		defer cancel()
 		err := dc.CConf.Set(ctx2, &fwconfig.SetArgs{
 			Config: ourjson.DelayMarshaling(devConf.data),
 		})

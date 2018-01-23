@@ -1,8 +1,8 @@
 package dev
 
 import (
+	"context"
 	"flag"
-	"golang.org/x/net/context"
 	"time"
 
 	"github.com/cesanta/errors"
@@ -36,6 +36,7 @@ func UsageSummary() string {
 // RunWithTimeout takes a parent context and a function, and calls the function
 // with the newly created context with timeout (see the "timeout" flag)
 func (c *Client) RunWithTimeout(ctx context.Context, f func(context.Context) error) error {
-	cctx, _ := context.WithTimeout(ctx, c.Timeout)
+	cctx, cancel := context.WithTimeout(ctx, c.Timeout)
+	defer cancel()
 	return errors.Trace(f(cctx))
 }

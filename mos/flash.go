@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"cesanta.com/common/go/ourutil"
 	"cesanta.com/mos/dev"

@@ -24,7 +24,7 @@ import (
 	"time"
 	"unicode"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"cesanta.com/common/go/multierror"
 	"cesanta.com/common/go/ourfilepath"

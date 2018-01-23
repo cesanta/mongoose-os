@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"cesanta.com/common/go/ourutil"
 	atcaService "cesanta.com/fw/defs/atca"

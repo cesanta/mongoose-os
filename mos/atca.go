@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"strings"
 
-	"golang.org/x/net/context"
+	"context"
 
 	atcaService "cesanta.com/fw/defs/atca"
 	"cesanta.com/mos/atca"

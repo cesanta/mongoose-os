@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"cesanta.com/mos/dev"
 	"cesanta.com/mos/interpreter"

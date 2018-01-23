@@ -3,8 +3,8 @@
 package main
 
 import (
+	"context"
 	"crypto/rand"
-	"golang.org/x/net/context"
 	"io/ioutil"
 	"math/big"
 	"os"

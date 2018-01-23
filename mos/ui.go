@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"golang.org/x/net/context"
+	"context"
 
 	"cesanta.com/common/go/ourutil"
 	"cesanta.com/mos/build"
