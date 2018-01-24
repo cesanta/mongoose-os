@@ -5,6 +5,7 @@ package ourgit
 
 import (
 	"bytes"
+	"fmt"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -65,8 +66,14 @@ func (m *ourGitShell) Pull(localDir string) error {
 	return nil
 }
 
-func (m *ourGitShell) Fetch(localDir string) error {
-	_, err := shellGit(localDir, "fetch", "--tags")
+func (m *ourGitShell) Fetch(localDir string, opts FetchOptions) error {
+	args := []string{"--tags"}
+
+	if opts.Depth > 0 {
+		args = append(args, "--depth", fmt.Sprintf("%d", opts.Depth))
+	}
+
+	_, err := shellGit(localDir, "fetch", args...)
 	if err != nil {
 		return errors.Annotatef(err, "failed to git fetch")
 	}
@@ -132,10 +139,6 @@ func (m *ourGitShell) IsClean(localDir, version string) (bool, error) {
 	return true, nil
 }
 
-func (m *ourGitShell) Clone(srcURL, targetDir string) error {
-	return m.CloneReferenced(srcURL, targetDir, "")
-}
-
 func (m *ourGitShell) ResetHard(localDir string) error {
 	_, err := shellGit(localDir, "checkout", ".")
 	if err != nil {
@@ -144,11 +147,21 @@ func (m *ourGitShell) ResetHard(localDir string) error {
 	return nil
 }
 
-func (m *ourGitShell) CloneReferenced(srcURL, targetDir, referenceDir string) error {
+func (m *ourGitShell) Clone(srcURL, targetDir string, opts CloneOptions) error {
 	args := []string{"clone"}
-	if referenceDir != "" {
-		args = append(args, "--reference", referenceDir)
+
+	if opts.ReferenceDir != "" {
+		args = append(args, "--reference", opts.ReferenceDir)
 	}
+
+	if opts.Depth > 0 {
+		args = append(args, "--depth", fmt.Sprintf("%d", opts.Depth))
+	}
+
+	if opts.Ref != "" {
+		args = append(args, "-b", opts.Ref)
+	}
+
 	var berr bytes.Buffer
 	args = append(args, srcURL, targetDir)
 	cmd := exec.Command("git", args...)

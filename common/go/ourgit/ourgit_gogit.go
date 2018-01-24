@@ -6,6 +6,7 @@ package ourgit
 import (
 	"encoding/hex"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -194,14 +195,15 @@ func (m *ourGitGoGit) Pull(localDir string) error {
 	return nil
 }
 
-func (m *ourGitGoGit) Fetch(localDir string) error {
+func (m *ourGitGoGit) Fetch(localDir string, opts FetchOptions) error {
 	repo, err := git.PlainOpen(localDir)
 	if err != nil {
 		return errors.Annotatef(err, "failed to open repo %s", localDir)
 	}
 
 	err = repo.Fetch(&git.FetchOptions{
-		Tags: git.AllTags,
+		Tags:  git.AllTags,
+		Depth: opts.Depth,
 	})
 	if err != nil && errors.Cause(err) != git.NoErrAlreadyUpToDate {
 		return errors.Annotatef(err, "failed to git fetch %s", localDir)
@@ -231,19 +233,67 @@ func (m *ourGitGoGit) IsClean(localDir, version string) (bool, error) {
 	return isCleanWithLib(status), nil
 }
 
-func (m *ourGitGoGit) Clone(srcURL, localDir string) error {
-	_, err := git.PlainClone(localDir, false, &git.CloneOptions{
-		URL: srcURL,
-	})
+func (m *ourGitGoGit) Clone(srcURL, localDir string, opts CloneOptions) error {
+	// Check if the dir existed before we try to do the clone
+	existed := false
+	if _, err := os.Stat(localDir); !os.IsNotExist(err) {
+		files, err := ioutil.ReadDir(localDir)
+		if err != nil {
+			return errors.Trace(err)
+		}
+
+		existed = len(files) > 0
+	}
+
+	if opts.ReferenceDir != "" {
+		return errors.Errorf("ReferenceDir is not implemented for go-git impl")
+	}
+
+	goGitOpts := []git.CloneOptions{
+		git.CloneOptions{
+			URL:   srcURL,
+			Depth: opts.Depth,
+			Tags:  git.TagFollowing,
+		},
+	}
+
+	// If depth is non-zero, also assume we should only clone a single branch
+	if opts.Depth != 0 {
+		goGitOpts[0].Depth = opts.Depth
+		goGitOpts[0].SingleBranch = true
+	}
+
+	if opts.Ref != "" {
+		// We asked to clone at the certain ref instead of master. Unfortunately
+		// there's no way (that I know of) in go-git to specify a name of a branch
+		// OR a name of tag OR a hash, so we have to try all of the three
+		// separately.
+		goGitOpts = append(goGitOpts, goGitOpts[0], goGitOpts[0])
+		goGitOpts[0].ReferenceName = plumbing.ReferenceName("refs/heads/" + opts.Ref)
+		goGitOpts[1].ReferenceName = plumbing.ReferenceName("refs/tags/" + opts.Ref)
+		goGitOpts[2].ReferenceName = "" // TODO(dfrank): use hash
+	}
+
+	// Do the clone. If opts.Ref was empty, goGitOpts contains just a single
+	// element, so there will be just one iteration of the loop. If opts.Ref was
+	// non-empty, there will be up to 3 iterations (try branch, try tag, try
+	// hash)
+	var err error
+	for _, o := range goGitOpts {
+		if !existed {
+			os.RemoveAll(localDir)
+		}
+		_, err = git.PlainClone(localDir, false, &o)
+		if err == nil {
+			break
+		}
+	}
+
 	if err != nil {
 		return errors.Annotatef(err, "cloning %q to %q", srcURL, localDir)
 	}
 
 	return nil
-}
-
-func (m *ourGitGoGit) CloneReferenced(srcURL, targetDir, referenceDir string) error {
-	return errors.Errorf("not implemented")
 }
 
 func (m *ourGitGoGit) GetOriginUrl(localDir string) (string, error) {
@@ -268,18 +318,18 @@ func (m *ourGitGoGit) GetOriginUrl(localDir string) (string, error) {
 
 // NewHash return a new Hash from a hexadecimal hash representation
 func newHashSafe(s string) (plumbing.Hash, error) {
+	b, err := hex.DecodeString(s)
+	if err != nil {
+		return plumbing.Hash{}, errors.Annotatef(err, "trying to interpret %q as a git hash", s)
+	}
+
 	// TODO(dfrank): at the moment (10/11/2017) git-go doesn't support partial
 	// hashes; hopefully it will be fixed in the future.
 	if len(s) != fullHashLen {
 		return plumbing.Hash{}, errors.Errorf(
-			"partial git hashes are not supported, hash should have exactly %d characters",
-			fullHashLen,
+			"partial git hashes are not supported (given: %s), hash should have exactly %d characters",
+			s, fullHashLen,
 		)
-	}
-
-	b, err := hex.DecodeString(s)
-	if err != nil {
-		return plumbing.Hash{}, errors.Trace(err)
 	}
 
 	var h plumbing.Hash

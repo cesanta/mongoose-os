@@ -11,14 +11,28 @@ type OurGit interface {
 	Checkout(localDir string, id string, refType RefType) error
 	ResetHard(localDir string) error
 	Pull(localDir string) error
-	Fetch(localDir string) error
+	Fetch(localDir string, opts FetchOptions) error
 	IsClean(localDir, version string) (bool, error)
-	Clone(srcURL, localDir string) error
-	CloneReferenced(srcURL, localDir, referenceLocalDir string) error
+	Clone(srcURL, localDir string, opts CloneOptions) error
 	GetOriginUrl(localDir string) (string, error)
 }
 
 type RefType string
+
+type CloneOptions struct {
+	// Path to a local repo which should be used as a reference for a new clone.
+	// Equivalent of the --reference CLI flag.
+	ReferenceDir string
+	// How many commits to fetch. Equivalent of the --depth CLI flag.
+	Depth int
+	// Head to fetch: it can be a branch name, a tag name, or a hash.
+	Ref string
+}
+
+type FetchOptions struct {
+	// How many commits to fetch. Equivalent of the --depth CLI flag.
+	Depth int
+}
 
 const (
 	RefTypeBranch RefType = "branch"

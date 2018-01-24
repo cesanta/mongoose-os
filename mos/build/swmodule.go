@@ -1,6 +1,7 @@
 package build
 
 import (
+	"encoding/hex"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -102,7 +103,7 @@ func (m *SWModule) IsClean(libsDir, defaultVersion string) (bool, error) {
 // (e.g. for git it's "master")
 func (m *SWModule) PrepareLocalDir(
 	libsDir string, logWriter io.Writer, deleteIfFailed bool, defaultVersion string,
-	pullInterval time.Duration,
+	pullInterval time.Duration, cloneDepth int,
 ) (string, error) {
 	if m.localPath == "" {
 
@@ -114,7 +115,7 @@ func (m *SWModule) PrepareLocalDir(
 		switch m.GetType() {
 		case SWModuleTypeGithub:
 			version := m.getVersionGit(defaultVersion)
-			if err := prepareLocalCopyGit(m.Location, version, lp, logWriter, deleteIfFailed, pullInterval); err != nil {
+			if err := prepareLocalCopyGit(m.Location, version, lp, logWriter, deleteIfFailed, pullInterval, cloneDepth); err != nil {
 				return "", errors.Trace(err)
 			}
 
@@ -242,8 +243,9 @@ func (m *SWModule) GetType() SWModuleType {
 func prepareLocalCopyGit(
 	origin, version, targetDir string,
 	logWriter io.Writer, deleteIfFailed bool,
-	pullInterval time.Duration,
-) error {
+	pullInterval time.Duration, cloneDepth int,
+) (retErr error) {
+
 	gitinst := mosgit.NewOurGit()
 
 	// version is already converted from "" or "latest" to "master" here.
@@ -280,7 +282,16 @@ func prepareLocalCopyGit(
 
 	if !repoExists {
 		freportf(logWriter, "Repository %q does not exist, cloning...\n", targetDir)
-		err := gitinst.Clone(origin, targetDir)
+		cloneOpts := ourgit.CloneOptions{
+			Depth: cloneDepth,
+		}
+		// We specify the revision to clone if only depth is limited; otherwise,
+		// we'll clone at master and checkout the needed revision afterwards,
+		// because this use case is faster for go-git.
+		if cloneDepth > 0 {
+			cloneOpts.Ref = version
+		}
+		err := gitinst.Clone(origin, targetDir, cloneOpts)
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -298,6 +309,36 @@ func prepareLocalCopyGit(
 		}
 	}
 
+	// Now we know that the repo is either clean or non-existing, so, if asked to
+	// delete in case of a failure, defer a fallback function.
+	if deleteIfFailed {
+		defer func() {
+			if retErr != nil {
+				// Instead of returning an error, try to delete the directory and
+				// clone the fresh copy
+				glog.Warningf("%s", retErr)
+				glog.V(2).Infof("removing everything under %q", targetDir)
+
+				files, err := ioutil.ReadDir(targetDir)
+				if err != nil {
+					glog.Errorf("failed to ReadDir(%q): %s", targetDir, err)
+					return
+				}
+				for _, f := range files {
+					glog.V(2).Infof("removing %q", f.Name())
+					p := path.Join(targetDir, f.Name())
+					if err := os.RemoveAll(p); err != nil {
+						glog.Errorf("failed to remove %q: %s", p, err)
+						return
+					}
+				}
+
+				glog.V(2).Infof("calling prepareLocalCopyGit() again")
+				retErr = prepareLocalCopyGit(origin, version, targetDir, logWriter, false, pullInterval, cloneDepth)
+			}
+		}()
+	}
+
 	// Now, we'll try to checkout the desired mongoose-os version.
 	//
 	// It's optimized for two common cases:
@@ -312,28 +353,7 @@ func prepareLocalCopyGit(
 	// First of all, get current SHA
 	curHash, err := gitinst.GetCurrentHash(targetDir)
 	if err != nil {
-		if deleteIfFailed {
-			// Instead of returning an error, try to delete the directory and
-			// clone the fresh copy
-			glog.Warningf("%s", err)
-			glog.V(2).Infof("removing everything under %q", targetDir)
-
-			files, err := ioutil.ReadDir(targetDir)
-			if err != nil {
-				return errors.Trace(err)
-			}
-			for _, f := range files {
-				glog.V(2).Infof("removing %q", f.Name())
-				if err := os.RemoveAll(path.Join(targetDir, f.Name())); err != nil {
-					return errors.Trace(err)
-				}
-			}
-
-			glog.V(2).Infof("calling prepareLocalCopyGit() again")
-			return prepareLocalCopyGit(origin, version, targetDir, logWriter, false, pullInterval)
-		} else {
-			return errors.Trace(err)
-		}
+		return errors.Trace(err)
 	}
 
 	glog.V(2).Infof("hash: %q", curHash)
@@ -367,7 +387,7 @@ func prepareLocalCopyGit(
 	// If the desired mongoose-os version isn't a known branch, do git fetch
 	if !branchExists && !tagExists {
 		glog.V(2).Infof("neither branch nor tag exists, fetching..")
-		err = gitinst.Fetch(targetDir)
+		err = gitinst.Fetch(targetDir, ourgit.FetchOptions{})
 		if err != nil {
 			return errors.Trace(err)
 		}
@@ -395,7 +415,13 @@ func prepareLocalCopyGit(
 		glog.V(2).Infof("%q is a tag", version)
 		refType = ourgit.RefTypeTag
 	} else {
-		glog.V(2).Infof("%q is neither a branch nor a tag, assume it's a hash", version)
+		// Given version is neither a branch nor a tag, let's see if it looks like
+		// a hash
+		if _, err := hex.DecodeString(version); err == nil {
+			glog.V(2).Infof("%q is neither a branch nor a tag, assume it's a hash", version)
+		} else {
+			return errors.Errorf("given version %q is neither a branch nor a tag", version)
+		}
 	}
 
 	// Try to checkout to the requested version

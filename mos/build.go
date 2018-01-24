@@ -1473,7 +1473,7 @@ func (lpr *compProviderReal) GetLibLocalPath(
 					curHash, _ = gitinst.GetCurrentHash(localDir)
 				}
 
-				libDirAbs, err = m.PrepareLocalDir(libsDir, lpr.logWriter, true, libsDefVersion, *libsUpdateInterval)
+				libDirAbs, err = m.PrepareLocalDir(libsDir, lpr.logWriter, true, libsDefVersion, *libsUpdateInterval, 0)
 				if err != nil {
 					if m.Version == "" && libsDefVersion != "latest" {
 						// We failed to fetch lib at the default version (mos.version),
@@ -1578,7 +1578,7 @@ func (lpr *compProviderReal) GetModuleLocalPath(
 			return "", errors.Trace(err)
 		}
 
-		targetDir, err = m.PrepareLocalDir(getModulesDir(appDir), logWriter, true, modulesDefVersion, *libsUpdateInterval)
+		targetDir, err = m.PrepareLocalDir(getModulesDir(appDir), logWriter, true, modulesDefVersion, *libsUpdateInterval, 0)
 		if err != nil {
 			return "", errors.Annotatef(err, "preparing local copy of the module %q", name)
 		}
@@ -1637,7 +1637,9 @@ func getMosDirEffective(mongooseOsVersion string, updateInterval time.Duration) 
 			Version:  mongooseOsVersion,
 		}
 
-		mosDirEffective, err = m.PrepareLocalDir(getModulesDir(appDir), logWriter, true, "", updateInterval)
+		// NOTE: mongoose-os repo is huge, so in order to save space and time, we
+		// do a shallow clone (--depth 1).
+		mosDirEffective, err = m.PrepareLocalDir(getModulesDir(appDir), logWriter, true, "", updateInterval, 1)
 		if err != nil {
 			return "", errors.Annotatef(err, "preparing local copy of the mongoose-os repo")
 		}

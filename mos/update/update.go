@@ -468,7 +468,7 @@ func migrateProj(oldDir, newDir, oldVer string, wg *sync.WaitGroup) {
 		}
 
 		glog.Infof("Checking out %s at the version %s...", basename, version.GetMosVersion())
-		_, err = swmod.PrepareLocalDir(filepath.Dir(newDir), &logWriter, true, "", time.Duration(0))
+		_, err = swmod.PrepareLocalDir(filepath.Dir(newDir), &logWriter, true, "", time.Duration(0), 0)
 		if err != nil {
 			ourutil.Reportf("Error preparing local dir for %s: %s", newDir, err)
 		}
