@@ -19,45 +19,56 @@ int remove_f(const char *fname) {
 }
 
 int main(int argc, char **argv) {
-  const char *image_file = argv[1];
   uint32_t expected_crc = 0;
+  int opt, bs = FS_BLOCK_SIZE, ps = FS_PAGE_SIZE, es = FS_ERASE_SIZE;
 
-  struct stat st;
-  if (stat(image_file, &st) != 0) {
-    fprintf(stderr, "failed to stat %s: %d\n", image_file, errno);
+  while ((opt = getopt(argc, argv, "b:e:p:c:")) != -1) {
+    switch (opt) {
+      case 'b': {
+        bs = (size_t) strtol(optarg, NULL, 0);
+        if (bs == 0) {
+          fprintf(stderr, "invalid fs block size '%s'\n", optarg);
+          return 1;
+        }
+        break;
+      }
+      case 'e': {
+        es = (size_t) strtol(optarg, NULL, 0);
+        if (es == 0) {
+          fprintf(stderr, "invalid fs erase size '%s'\n", optarg);
+          return 1;
+        }
+        break;
+      }
+      case 'p': {
+        ps = (size_t) strtol(optarg, NULL, 0);
+        if (ps == 0) {
+          fprintf(stderr, "invalid fs page size '%s'\n", optarg);
+          return 1;
+        }
+        break;
+      }
+      case 'c': {
+        expected_crc = (uint32_t) strtoul(optarg, NULL, 0);
+        if (ps == 0) {
+          fprintf(stderr, "invalid crc value '%s'\n", optarg);
+          return 1;
+        }
+        break;
+      }
+    }
+  }
+
+  if (optind >= argc) {
+    fprintf(stderr, "Image file name required\n");
     return 1;
   }
 
-  if (argc > 2) {
-    expected_crc = strtoul(argv[2], NULL, 0);
-    fprintf(stderr, "expected CRC: 0x%08x\n", expected_crc);
-  }
+  const char *image_file = argv[optind];
 
-  image_size = st.st_size;
-  fprintf(stderr, "image size: %d\n", (int) image_size);
-
-  image = malloc(image_size);
-  if (image == NULL) {
-    fprintf(stderr, "cannot allocate %lu bytes\n", image_size);
+  if (mem_spiffs_mount_file(image_file, bs, ps, es) != SPIFFS_OK) {
+    fprintf(stderr, "Failed to mount FS image file\n");
     return 1;
-  }
-
-  FILE *in = fopen(image_file, "r");
-  if (in == NULL) {
-    fprintf(stderr, "cannot open %s: %d\n", image_file, errno);
-    return 1;
-  }
-
-  if (fread(image, 1, image_size, in) != image_size) {
-    fprintf(stderr, "failed to read image data\n");
-    return 1;
-  }
-
-  fclose(in);
-
-  if (mem_spiffs_mount() != SPIFFS_OK) {
-    fprintf(stderr, "SPIFFS_mount failed: %d\n", SPIFFS_errno(&fs));
-    return 2;
   }
 
   SPIFFS_vis(&fs);
