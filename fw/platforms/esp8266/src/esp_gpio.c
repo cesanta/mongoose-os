@@ -57,6 +57,15 @@ void gpio16_input_conf(void) {
                  READ_PERI_REG(RTC_GPIO_ENABLE) & (uint32_t) 0xfffffffe);
 }
 
+// Returns true if the chip we're running on is ESP8285, false otherwise
+IRAM bool is_esp8285() {
+  uint32_t efuse0 = ntohl(READ_PERI_REG(0x3ff00050));
+  uint32_t efuse2 = ntohl(READ_PERI_REG(0x3ff00058));
+  if (efuse0&(1<<4) != 0 || efuse2&(1<<16) != 0)
+    return true;
+  return false;
+}
+
 IRAM bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
   if (pin == 16) {
     if (mode == MGOS_GPIO_MODE_INPUT) {
@@ -68,7 +77,15 @@ IRAM bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
   }
 
   if (pin >= 6 && pin <= 11) {
-    LOG(LL_ERROR, ("GPIO%d is used by SPI flash, don't use it", pin));
+    if (is_esp8285()) {
+      if (pin!=9 && pin!=10) {
+        LOG(LL_ERROR, ("ESP8285 GPIO%d is used by SPI flash, don't use it", pin));
+        return false;
+      }
+    } else {
+      LOG(LL_ERROR, ("ESP8266 GPIO%d is used by SPI flash, don't use it", pin));
+      return false;
+    }
     /*
      * Alright, so you're here to investigate what's up with this error. So,
      * GPIO6-11 are used for SPI flash and messing with them causes crashes.
@@ -81,7 +98,6 @@ IRAM bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
      * So really, just stay away from GPIO6-11 if you can help it.
      * If you are sure you know what you're doing, copy the code below.
      */
-    return false;
   }
 
   const struct gpio_info *gi = get_gpio_info(pin);
