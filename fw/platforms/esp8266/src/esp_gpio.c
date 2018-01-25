@@ -67,6 +67,12 @@ IRAM bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
     return true;
   }
 
+#ifdef ESP8285
+  if ((pin >= 6 && pin <= 8) || (pin == 11)) {
+    LOG(LL_ERROR, ("GPIO%d is used by SPI flash, don't use it", pin));
+    return false;
+  }
+#else
   if (pin >= 6 && pin <= 11) {
     LOG(LL_ERROR, ("GPIO%d is used by SPI flash, don't use it", pin));
     /*
@@ -80,9 +86,13 @@ IRAM bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
      * crash most ESP8266 modules, but in a different way.
      * So really, just stay away from GPIO6-11 if you can help it.
      * If you are sure you know what you're doing, copy the code below.
+     *
+     * NOTE(pimvanpelt) - ESP8285 has SPI flash memory internally connected in
+     * DOUT mode, pins 9 and 10 may be used as GPIO / I2C / PWM pins
      */
     return false;
   }
+#endif
 
   const struct gpio_info *gi = get_gpio_info(pin);
   if (gi == NULL) return false;
