@@ -253,7 +253,7 @@ else
   MGOS_CFLAGS += -DLWIP_OPEN_SRC \
                  -DCS_MMAP -DSPIFFS_ON_PAGE_MOVE_HOOK=mgos_vfs_mmap_spiffs_on_page_move_hook
   LWIP_LIB = $(LWIP_BUILD_DIR)/liblwip_cs.a
-  LWIP_PATH = $(COMMON_ESP8266_PATH)/lwip
+  LWIP_PATH = /opt/Espressif/cs_lwip
   SDK_LIBS += m
   IPATH += $(LWIP_PATH)/src/include \
            $(LWIP_PATH)/src/include/ipv4 \
@@ -264,6 +264,7 @@ $(LWIP_LIB): $(LWIP_PATH)
 	$(Q) mkdir -p $(abspath $(LWIP_BUILD_DIR))
 	$(Q) $(MAKE) -C $(LWIP_PATH) -j3 all \
 		APP=liblwip_cs BUILD_DIR=$(abspath $(LWIP_BUILD_DIR)) \
+		COMMON_ESP8266_PATH=$(COMMON_ESP8266_PATH) \
 		CFLAGS_EXTRA="$(HEAP_LOG_FLAGS)"
 endif
 
