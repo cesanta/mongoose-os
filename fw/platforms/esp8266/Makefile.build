@@ -127,6 +127,7 @@ MGOS_SRCS = cs_file.c cs_rbuf.c \
             mgos_utils.c \
             mgos_vfs.c \
             mgos_vfs_dev.c \
+            mgos_vfs_dev_ram.c \
             mgos_vfs_fs_spiffs.c \
             cs_crc32.c \
             rboot-bigflash.c rboot-api.c \
