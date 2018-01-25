@@ -32,13 +32,14 @@
 #ifdef MGOS_HAVE_ADC
 #include "esp_adc.h"
 #endif
-#include "fw/platforms/esp8266/src/esp_exc.h"
-#include "fw/platforms/esp8266/src/esp_fs.h"
-#include "fw/platforms/esp8266/src/esp_hw.h"
-#include "fw/platforms/esp8266/src/esp_hw_wdt.h"
-#include "fw/platforms/esp8266/src/esp_features.h"
-#include "fw/platforms/esp8266/src/esp_updater.h"
-#include "fw/platforms/esp8266/src/esp_vfs_dev_sysflash.h"
+#include "esp_exc.h"
+#include "esp_fs.h"
+#include "esp_hw.h"
+#include "esp_hw_wdt.h"
+#include "esp_features.h"
+#include "esp_periph.h"
+#include "esp_updater.h"
+#include "esp_vfs_dev_sysflash.h"
 
 #ifdef RTOS_SDK
 
@@ -129,7 +130,8 @@ enum mgos_init_result esp_mgos_init2(rboot_config *bcfg) {
     LOG(LL_INFO, ("%s %s (%s)", MGOS_APP, build_version, build_id));
   }
   LOG(LL_INFO, ("Mongoose OS %s (%s)", mg_build_version, mg_build_id));
-  LOG(LL_INFO, ("CPU: %d MHz, RAM: %u total, %u free",
+  LOG(LL_INFO, ("CPU: %s, %d MHz, RAM: %u total, %u free",
+                esp_chip_type_str(esp_get_chip_type()),
                 (int) (mgos_get_cpu_freq() / 1000000), mgos_get_heap_size(),
                 mgos_get_free_heap_size()));
   LOG(LL_INFO, ("SDK %s; flash: %uM", system_get_sdk_version(),

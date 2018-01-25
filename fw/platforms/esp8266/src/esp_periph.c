@@ -56,3 +56,23 @@ IRAM const struct gpio_info *get_gpio_info(uint8_t gpio_no) {
 
   return ret_val;
 }
+
+enum esp_chip_type esp_get_chip_type(void) {
+  uint32_t efuse0 = READ_PERI_REG(0x3ff00050);
+  uint32_t efuse2 = READ_PERI_REG(0x3ff00058);
+  // https://github.com/espressif/esptool/blob/200ab6e39487bef1df9db12a5be5b0682d80d3c1/esptool.py#L885
+  if ((efuse0 & (1 << 4)) != 0 || (efuse2 & (1 << 16)) != 0) {
+    return ESP_CHIP_TYPE_ESP8285;
+  }
+  return ESP_CHIP_TYPE_ESP8266EX;
+}
+
+const char *esp_chip_type_str(enum esp_chip_type dev_type) {
+  switch (dev_type) {
+    case ESP_CHIP_TYPE_ESP8266EX:
+      return "ESP8266EX";
+    case ESP_CHIP_TYPE_ESP8285:
+      return "ESP8285";
+  }
+  return "";
+}

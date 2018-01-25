@@ -67,7 +67,10 @@ IRAM bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
     return true;
   }
 
-  if (pin >= 6 && pin <= 11) {
+  if (pin >= 6 && pin <= 11 &&
+      /* ESP8285's on-chip flash is in DOUT mode, so 9 and 10 can be used. */
+      !(esp_get_chip_type() == ESP_CHIP_TYPE_ESP8285 &&
+        (pin == 9 || pin == 10))) {
     LOG(LL_ERROR, ("GPIO%d is used by SPI flash, don't use it", pin));
     /*
      * Alright, so you're here to investigate what's up with this error. So,
