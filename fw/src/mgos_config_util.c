@@ -3,12 +3,12 @@
  * All rights reserved
  */
 
+#include "mgos_config_util.h"
 #include <stdio.h>
 #include <string.h>
+#include "common/cs_dbg.h"
 #include "common/json_utils.h"
 #include "common/mbuf.h"
-#include "common/cs_dbg.h"
-#include "mgos_config_util.h"
 
 bool mgos_conf_check_access(const struct mg_str key, const char *acl) {
   return mgos_conf_check_access_n(key, mg_mk_str(acl));
@@ -28,7 +28,7 @@ bool mgos_conf_check_access_n(const struct mg_str key, struct mg_str acl) {
       entry.p++;
       entry.len--;
     }
-    if (mg_match_prefix_n(entry, key) == (int) key.len) {
+    if (mg_match_prefix_n(entry, key) == key.len) {
       return result;
     }
   }

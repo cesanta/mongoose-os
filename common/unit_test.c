@@ -93,19 +93,23 @@ static const char *test_cs_timegm(void) {
 }
 
 static const char *test_mg_match_prefix(void) {
+  const struct mg_str null = MG_NULL_STR;
+  ASSERT_EQ(mg_match_prefix_n(null, mg_mk_str("")), 0);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str(""), null), 0);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("x"), null), 0);
   ASSERT_EQ(mg_match_prefix_n(mg_mk_str(""), mg_mk_str("")), 0);
   ASSERT_EQ(mg_match_prefix_n(mg_mk_str("|"), mg_mk_str("")), 0);
   ASSERT_EQ(mg_match_prefix_n(mg_mk_str("xy|"), mg_mk_str("")), 0);
   ASSERT_EQ(mg_match_prefix_n(mg_mk_str("xy|"), mg_mk_str("xy")), 2);
   ASSERT_EQ(mg_match_prefix_n(mg_mk_str("*"), mg_mk_str("")), 0);
   ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a"), mg_mk_str("a")), 1);
-  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a"), mg_mk_str("xyz")), -1);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a"), mg_mk_str("xyz")), 0);
   ASSERT_EQ(mg_match_prefix_n(mg_mk_str("abc"), mg_mk_str("abc")), 3);
   ASSERT_EQ(mg_match_prefix_n(mg_mk_str("abc"), mg_mk_str("abcdef")), 3);
   ASSERT_EQ(mg_match_prefix_n(mg_mk_str("abc*"), mg_mk_str("abcdef")), 6);
   ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a*f"), mg_mk_str("abcdef")), 6);
   ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a*f"), mg_mk_str("abcdefZZ")), 6);
-  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a*f"), mg_mk_str("abcdeZZ")), -1);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a*f"), mg_mk_str("abcdeZZ")), 0);
   ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a*f|de*"), mg_mk_str("abcdef")), 6);
   ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a*f|de*|xy"), mg_mk_str("defgh")), 5);
   ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a*f,de*"), mg_mk_str("abcdef")), 6);
@@ -116,11 +120,16 @@ static const char *test_mg_match_prefix(void) {
   ASSERT_EQ(mg_match_prefix_n(mg_mk_str("?"), mg_mk_str("abc")), 1);
   ASSERT_EQ(mg_match_prefix_n(mg_mk_str("?*"), mg_mk_str("abc")), 3);
   ASSERT_EQ(mg_match_prefix_n(mg_mk_str("?*"), mg_mk_str("abcdef")), 6);
-  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("?*"), mg_mk_str("")), -1);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("?*"), mg_mk_str("")), 0);
   ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a?c"), mg_mk_str("abc")), 3);
   ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a?c"), mg_mk_str("adc")), 3);
-  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a?c"), mg_mk_str("ab")), -1);
-  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a?c"), mg_mk_str("a")), -1);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a?c"), mg_mk_str("ab")), 0);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a?c"), mg_mk_str("a")), 0);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a$"), mg_mk_str("a")), 1);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("*a$"), mg_mk_str("a")), 1);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("*b$"), mg_mk_str("ab")), 2);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("**a$|**b$"), mg_mk_str("xa")), 2);
+  ASSERT_EQ(mg_match_prefix_n(mg_mk_str("a.*$"), mg_mk_str("a.txt")), 5);
   return NULL;
 }
 

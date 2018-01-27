@@ -52,8 +52,8 @@ int cs_log_print_prefix(enum cs_log_level level, const char *func,
 
   if (level > cs_log_threshold) return 0;
   if (s_filter_pattern != NULL &&
-      mg_match_prefix(s_filter_pattern, s_filter_pattern_len, func) < 0 &&
-      mg_match_prefix(s_filter_pattern, s_filter_pattern_len, filename) < 0) {
+      mg_match_prefix(s_filter_pattern, s_filter_pattern_len, func) == 0 &&
+      mg_match_prefix(s_filter_pattern, s_filter_pattern_len, filename) == 0) {
     return 0;
   }
 
