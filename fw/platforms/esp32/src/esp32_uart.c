@@ -213,7 +213,7 @@ void mgos_uart_hal_flush_fifo(struct mgos_uart_state *us) {
 }
 
 bool esp32_uart_validate_config(const struct mgos_uart_config *c) {
-  if (c->baud_rate < 0 || c->baud_rate > 4000000 || c->rx_buf_size < 0 ||
+  if (c->baud_rate < 0 || c->baud_rate > 10000000 || c->rx_buf_size < 0 ||
       c->dev.rx_fifo_full_thresh < 1 ||
       (c->rx_fc_type != MGOS_UART_FC_NONE &&
        (c->dev.rx_fifo_fc_thresh < c->dev.rx_fifo_full_thresh)) ||
