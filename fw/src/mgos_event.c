@@ -88,7 +88,9 @@ int mgos_event_trigger(int ev, void *ev_data) {
     }
   }
   if (ev != MGOS_EVENT_LOG) {
-    LOG(LL_DEBUG, ("ev %x triggered %d handlers", ev, count));
+    const uint8_t *u = (uint8_t *) &ev;
+    LOG(LL_DEBUG,
+        ("ev %c%c%c%hhu triggered %d handlers", u[3], u[2], u[1], u[0], count));
   }
   return count;
 }
