@@ -5,8 +5,12 @@
 
 #include "cs_dbg.h"
 #include "cs_file.h"
+
+#include "frozen/frozen.h"
+
 #include "mgos_config_util.h"
 #include "mgos_event.h"
+
 #include "sys_conf.h"
 #include "test_util.h"
 

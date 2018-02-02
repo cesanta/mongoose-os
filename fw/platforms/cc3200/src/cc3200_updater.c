@@ -8,7 +8,9 @@
 #include <inttypes.h>
 #include <strings.h>
 
+#include "common/cs_dbg.h"
 #include "common/platform.h"
+
 #include "frozen/frozen.h"
 #include "mongoose/mongoose.h"
 

@@ -1,6 +1,8 @@
 #include <stdio.h>
 
+#include "common/cs_dbg.h"
 #include "common/platform.h"
+
 #include "mgos_app.h"
 #include "mgos_gpio.h"
 #include "mgos_sys_config.h"

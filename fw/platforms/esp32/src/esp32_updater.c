@@ -17,6 +17,7 @@
 
 #include "mbedtls/sha1.h"
 
+#include "common/cs_dbg.h"
 #include "common/mg_str.h"
 #include "common/platform.h"
 

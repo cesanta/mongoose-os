@@ -13,9 +13,11 @@
 #include "driverlib/rom_map.h"
 #include "driverlib/uart.h"
 
-#include "cc32xx_uart.h"
 #include "mgos_core_dump.h"
+#include "mgos_debug.h"
 #include "mgos_sys_config.h"
+
+#include "cc32xx_uart.h"
 
 #define ARM_PERIPH_BASE 0xE000E000
 

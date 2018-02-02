@@ -14,8 +14,6 @@
 
 #include "common/mbuf.h"
 #include "common/mg_str.h"
-#include "frozen/frozen.h"
-#include "mongoose/mongoose.h"
 
 #ifdef __cplusplus
 extern "C" {

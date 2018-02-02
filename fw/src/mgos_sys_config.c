@@ -9,9 +9,11 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include "common/cs_dbg.h"
 #include "common/cs_file.h"
 #include "common/json_utils.h"
 #include "common/str_util.h"
+
 #include "mgos_config_util.h"
 #include "mgos_debug.h"
 #include "mgos_debug_hal.h"
@@ -19,6 +21,7 @@
 #include "mgos_hal.h"
 #include "mgos_init.h"
 #include "mgos_mongoose.h"
+#include "mgos_ro_vars.h"
 #include "mgos_updater_common.h"
 #include "mgos_utils.h"
 #include "mgos_vfs.h"

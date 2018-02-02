@@ -9,6 +9,7 @@
 #include <strings.h>
 
 #include "common/cs_crc32.h"
+#include "common/cs_dbg.h"
 #include "common/cs_file.h"
 #include "common/str_util.h"
 

@@ -8,11 +8,9 @@
 
 #include <stdbool.h>
 
-#include "mgos_config.h"
-#include "mgos_ro_vars.h"
-#include "common/cs_dbg.h"
+#include "common/mg_str.h"
 
-#include "mongoose/mongoose.h"
+#include "mgos_config.h"
 
 #ifdef __cplusplus
 extern "C" {

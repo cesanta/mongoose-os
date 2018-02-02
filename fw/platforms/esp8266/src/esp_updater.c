@@ -11,11 +11,13 @@
 #include <c_types.h>
 #include <spi_flash.h>
 
+#include "common/cs_dbg.h"
 #include "common/cs_sha1.h"
 #include "common/platforms/esp8266/esp_missing_includes.h"
 #include "common/platforms/esp8266/rboot/rboot/appcode/rboot-api.h"
 #include "common/queue.h"
 #include "common/spiffs/spiffs.h"
+
 #include "mgos_hal.h"
 #include "mgos_sys_config.h"
 #include "mgos_updater_hal.h"
