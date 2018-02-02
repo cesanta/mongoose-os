@@ -168,7 +168,7 @@ void _strfail(const char *a, const char *e, int len);
 #endif
 
 #if MG_ENABLE_POLL_UNTIL
-#include "mongoose/mongoose.h"
+#include "mongoose.h"
 int c_str_ne(void *a, void *b);
 int c_int_ne(void *a, void *b);
 int c_int_eq(void *a, void *b);
