@@ -254,7 +254,7 @@ void mgos_unlock(void) {
   xSemaphoreGiveRecursive(s_mgos_mux);
 }
 
-struct mgos_rlock_type *mgos_new_rlock(void) {
+struct mgos_rlock_type *mgos_rlock_create(void) {
   return (struct mgos_rlock_type *) xSemaphoreCreateRecursiveMutex();
 }
 

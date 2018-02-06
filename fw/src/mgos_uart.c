@@ -9,9 +9,9 @@
 
 #include "common/cs_dbg.h"
 
-#include "mgos_hal.h"
 #include "mgos_mongoose.h"
 #include "mgos_mongoose_internal.h"
+#include "mgos_system.h"
 #include "mgos_uart_hal.h"
 #include "mgos_utils.h"
 
@@ -292,6 +292,6 @@ IRAM NOINSTR struct mgos_uart_state *mgos_uart_hal_get_state(int uart_no) {
 }
 
 enum mgos_init_result mgos_uart_init(void) {
-  s_uart_lock = mgos_new_rlock();
+  s_uart_lock = mgos_rlock_create();
   return MGOS_INIT_OK;
 }

@@ -14,9 +14,9 @@
 #include "mongoose/mongoose.h"
 
 #include "mgos_features.h"
-#include "mgos_hal.h"
 #include "mgos_event.h"
 #include "mgos_sys_config.h"
+#include "mgos_system.h"
 #include "mgos_uart.h"
 
 #ifndef IRAM
@@ -153,7 +153,7 @@ IRAM bool mgos_debug_uart_is_suspended(void) {
 }
 
 enum mgos_init_result mgos_debug_init(void) {
-  s_debug_lock = mgos_new_rlock();
+  s_debug_lock = mgos_rlock_create();
   return MGOS_INIT_OK;
 }
 

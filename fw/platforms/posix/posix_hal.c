@@ -130,7 +130,7 @@ void mgos_lock(void) {
 void mgos_unlock(void) {
 }
 
-struct mgos_rlock_type *mgos_new_rlock(void) {
+struct mgos_rlock_type *mgos_rlock_create(void) {
   return NULL;
 }
 

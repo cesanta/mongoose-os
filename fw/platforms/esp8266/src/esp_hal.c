@@ -96,7 +96,7 @@ IRAM void mgos_unlock(void) {
   xSemaphoreGiveRecursive(s_mtx);
 }
 
-struct mgos_rlock_type *mgos_new_rlock(void) {
+struct mgos_rlock_type *mgos_rlock_create(void) {
   return (struct mgos_rlock_type *) xSemaphoreCreateRecursiveMutex();
 }
 
@@ -115,7 +115,7 @@ IRAM void mgos_lock(void) {
 IRAM void mgos_unlock(void) {
 }
 
-struct mgos_rlock_type *mgos_new_rlock(void) {
+struct mgos_rlock_type *mgos_rlock_create(void) {
   return NULL;
 }
 

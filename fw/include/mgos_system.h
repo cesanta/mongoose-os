@@ -83,6 +83,21 @@ bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr);
 /* Get the CPU frequency in Hz */
 uint32_t mgos_get_cpu_freq(void);
 
+/* Opaque recursive lock type. */
+struct mgos_rlock_type;
+
+/* Create a recursive lock. */
+struct mgos_rlock_type *mgos_rlock_create(void);
+
+/* Acquire a recursive lock. */
+void mgos_rlock(struct mgos_rlock_type *l);
+
+/* Release a recursive lock. */
+void mgos_runlock(struct mgos_rlock_type *l);
+
+/* Destroy a recursive lock. */
+void mgos_rlock_destroy(struct mgos_rlock_type *l);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

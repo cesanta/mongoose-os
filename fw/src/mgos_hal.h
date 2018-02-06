@@ -30,11 +30,6 @@ void mgos_dev_system_restart(void);
 void mgos_lock(void);
 void mgos_unlock(void);
 
-struct mgos_rlock_type;
-struct mgos_rlock_type *mgos_new_rlock(void);
-void mgos_rlock(struct mgos_rlock_type *l);
-void mgos_runlock(struct mgos_rlock_type *l);
-
 extern enum mgos_init_result mgos_fs_init(void);
 
 #ifdef __cplusplus
