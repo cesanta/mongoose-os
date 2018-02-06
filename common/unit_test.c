@@ -44,41 +44,67 @@ static const char *test_c_snprintf(void) {
 }
 
 static const char *test_cs_varint(void) {
-  uint8_t buf[100];
+  uint8_t buf[100] = {0};
+  size_t llen_enc, llen_dec;
+  uint64_t num;
 
-  int llen_enc;
-  int llen_dec;
-  ASSERT_EQ((llen_enc = cs_varint_encode(127, buf)), 1);
-  ASSERT_EQ(cs_varint_decode(buf, &llen_dec), 127);
+  memset(buf, 'X', sizeof(buf));
+  ASSERT_EQ((llen_enc = cs_varint_encode(127, buf, 0)), 1);
+  ASSERT_EQ(buf[0], 'X');
+  ASSERT_EQ((llen_enc = cs_varint_encode(127, buf, sizeof(buf))), 1);
+  ASSERT_EQ(llen_enc, 1);
+  ASSERT_EQ(buf[1], 'X');
+  ASSERT(!cs_varint_decode(buf, 0, &num, &llen_dec));
+  ASSERT(cs_varint_decode(buf, 1, &num, &llen_dec));
+  ASSERT_EQ(num, 127);
   ASSERT_EQ(llen_dec, llen_enc);
 
-  ASSERT_EQ((llen_enc = cs_varint_encode(128, buf)), 2);
-  ASSERT_EQ(cs_varint_decode(buf, &llen_dec), 128);
+  memset(buf, 'X', sizeof(buf));
+  ASSERT_EQ((llen_enc = cs_varint_encode(128, buf, 1)), 2);
+  ASSERT_EQ(buf[1], 'X');
+  ASSERT_EQ((llen_enc = cs_varint_encode(128, buf, sizeof(buf))), 2);
+  ASSERT(cs_varint_decode(buf, sizeof(buf), &num, &llen_dec));
+  ASSERT_EQ(num, 128);
   ASSERT_EQ(llen_dec, llen_enc);
 
-  ASSERT_EQ((llen_enc = cs_varint_encode(0xfffffff, buf)), 4);
-  ASSERT_EQ(cs_varint_decode(buf, &llen_dec), 0xfffffff);
+  ASSERT_EQ((llen_enc = cs_varint_encode(0xfffffff, buf, sizeof(buf))), 4);
+  ASSERT(cs_varint_decode(buf, sizeof(buf), &num, &llen_dec));
+  ASSERT_EQ(num, 0xfffffff);
   ASSERT_EQ(llen_dec, llen_enc);
 
-  ASSERT_EQ((llen_enc = cs_varint_encode(0x7fffffff, buf)), 5);
-  ASSERT_EQ(cs_varint_decode(buf, &llen_dec), 0x7fffffff);
+  ASSERT_EQ((llen_enc = cs_varint_encode(0x7fffffff, buf, sizeof(buf))), 5);
+  ASSERT(cs_varint_decode(buf, sizeof(buf), &num, &llen_dec));
+  ASSERT_EQ(num, 0x7fffffff);
   ASSERT_EQ(llen_dec, llen_enc);
 
-  ASSERT_EQ((llen_enc = cs_varint_encode(0xffffffff, buf)), 5);
-  ASSERT_EQ(cs_varint_decode(buf, &llen_dec), 0xffffffff);
+  ASSERT_EQ((llen_enc = cs_varint_encode(0xffffffff, buf, sizeof(buf))), 5);
+  ASSERT(cs_varint_decode(buf, sizeof(buf), &num, &llen_dec));
+  ASSERT_EQ(num, 0xffffffff);
   ASSERT_EQ(llen_dec, llen_enc);
 
-  ASSERT_EQ((llen_enc = cs_varint_encode(0xfffffffff, buf)), 6);
-  ASSERT_EQ(cs_varint_decode(buf, &llen_dec), 0xfffffffff);
+  ASSERT_EQ((llen_enc = cs_varint_encode(0xfffffffff, buf, sizeof(buf))), 6);
+  ASSERT(cs_varint_decode(buf, sizeof(buf), &num, &llen_dec));
+  ASSERT_EQ(num, 0xfffffffff);
   ASSERT_EQ(llen_dec, llen_enc);
 
-  ASSERT_EQ((llen_enc = cs_varint_encode(0xfffffffffffffff, buf)), 9);
-  ASSERT_EQ(cs_varint_decode(buf, &llen_dec), 0xfffffffffffffff);
+  ASSERT_EQ((llen_enc = cs_varint_encode(0xfffffffffffffff, buf, sizeof(buf))),
+            9);
+  ASSERT(cs_varint_decode(buf, sizeof(buf), &num, &llen_dec));
+  ASSERT_EQ(num, 0xfffffffffffffff);
   ASSERT_EQ(llen_dec, llen_enc);
 
-  ASSERT_EQ((llen_enc = cs_varint_encode(0xffffffffffffffff, buf)), 10);
-  ASSERT_EQ(cs_varint_decode(buf, &llen_dec), 0xffffffffffffffff);
+  ASSERT_EQ((llen_enc = cs_varint_encode(0xffffffffffffffff, buf, sizeof(buf))),
+            10);
+  ASSERT(cs_varint_decode(buf, sizeof(buf), &num, &llen_dec));
+  ASSERT_EQ(num, 0xffffffffffffffff);
   ASSERT_EQ(llen_dec, llen_enc);
+
+  /* Overflow */
+  memset(buf, 0xff, sizeof(buf));
+  num = 0;
+  ASSERT(cs_varint_decode(buf, sizeof(buf), &num, &llen_dec));
+  ASSERT_EQ(num, 0xffffffffffffffff);
+  ASSERT_EQ(llen_dec, 10);
 
   return NULL;
 }
