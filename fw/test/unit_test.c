@@ -12,6 +12,7 @@
 #include "mgos_event.h"
 
 #include "sys_conf.h"
+#include "test_main.h"
 #include "test_util.h"
 
 static const char *test_config(void) {
@@ -200,23 +201,15 @@ static const char *test_events(void) {
   return NULL;
 }
 
-static const char *run_tests(const char *filter, double *total_elapsed) {
+void tests_setup(void) {
+}
+
+const char *tests_run(const char *filter) {
   RUN_TEST(test_config);
   RUN_TEST(test_json_scanf);
   RUN_TEST(test_events);
   return NULL;
 }
 
-int __cdecl main(int argc, char *argv[]) {
-  const char *fail_msg;
-  const char *filter = argc > 1 ? argv[1] : "";
-  double total_elapsed = 0.0;
-
-  setvbuf(stdout, NULL, _IONBF, 0);
-  setvbuf(stderr, NULL, _IONBF, 0);
-
-  fail_msg = run_tests(filter, &total_elapsed);
-  printf("%s, run %d in %.3lfs\n", fail_msg ? "FAIL" : "PASS", num_tests,
-         total_elapsed);
-  return fail_msg == NULL ? EXIT_SUCCESS : EXIT_FAILURE;
+void tests_teardown(void) {
 }

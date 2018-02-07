@@ -4,6 +4,7 @@
 #include <stdlib.h>
 
 #include "cs_dbg.h"
+#include "test_main.h"
 #include "test_util.h"
 
 #define TEST_FILE "cs_frbuf_test.dat"
@@ -149,7 +150,10 @@ static const char *test_frbuf_wrap(void) {
   return NULL;
 }
 
-static const char *run_tests(const char *filter, double *total_elapsed) {
+void tests_setup(void) {
+}
+
+const char *tests_run(const char *filter, double *total_elapsed) {
   remove(TEST_FILE);
   RUN_TEST(test_frbuf_init_clean);
   remove(TEST_FILE);
@@ -159,15 +163,5 @@ static const char *run_tests(const char *filter, double *total_elapsed) {
   return NULL;
 }
 
-int main(int argc, char *argv[]) {
-  const char *fail_msg;
-  const char *filter = argc > 1 ? argv[1] : "";
-  double total_elapsed = 0.0;
-
-  cs_log_set_level(LL_DEBUG);
-
-  fail_msg = run_tests(filter, &total_elapsed);
-  printf("%s, run %d in %.3lfs\n", fail_msg ? "FAIL" : "PASS", num_tests,
-         total_elapsed);
-  return fail_msg == NULL ? 0 : 1;
+void tests_teardown(void) {
 }

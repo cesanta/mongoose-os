@@ -1,4 +1,4 @@
-SOURCES = str_util.c cs_time.c unit_test.c test_util.c cs_varint.c mg_str.c
+SOURCES = str_util.c cs_dbg.c cs_time.c unit_test.c test_main.c test_util.c cs_varint.c mg_str.c
 CFLAGS = -I.. -g $(CFLAGS_EXTRA)
 UMM_MALLOC_TEST_PATH = umm_malloc/test
 

@@ -12,6 +12,7 @@ SOURCES = unit_test.c \
           $(REPO_ROOT)/mongoose/mongoose.c \
           $(REPO_ROOT)/common/json_utils.c \
           $(REPO_ROOT)/common/cs_file.c \
+          $(REPO_ROOT)/common/test_main.c \
           $(REPO_ROOT)/common/test_util.c
 
 INCS = -I$(REPO_ROOT)/fw/src \

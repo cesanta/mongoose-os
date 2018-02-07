@@ -9,9 +9,8 @@
 #include "common/cs_varint.h"
 #include "common/mg_str.h"
 #include "common/str_util.h"
+#include "common/test_main.h"
 #include "common/test_util.h"
-
-int num_tests;
 
 static const char *test_c_snprintf(void) {
   char buf[100];
@@ -241,7 +240,10 @@ static const char *test_mg_strstr(void) {
   return NULL;
 }
 
-static const char *run_tests(const char *filter, double *total_elapsed) {
+void tests_setup(void) {
+}
+
+const char *tests_run(const char *filter) {
   RUN_TEST(test_c_snprintf);
   RUN_TEST(test_cs_varint);
   RUN_TEST(test_cs_timegm);
@@ -253,18 +255,5 @@ static const char *run_tests(const char *filter, double *total_elapsed) {
   return NULL;
 }
 
-int main(int argc, char *argv[]) {
-  const char *fail_msg;
-  const char *filter = argc > 1 ? argv[1] : "";
-  double total_elapsed = 0.0;
-
-  fail_msg = run_tests(filter, &total_elapsed);
-  printf("%s, tests run: %d\n", fail_msg ? "FAIL" : "PASS", num_tests);
-
-  if (fail_msg != NULL) {
-    /* Prevent leak analyzer from running: there will be "leaks" because of
-     * premature return from the test, and in this case we don't care. */
-    _exit(EXIT_FAILURE);
-  }
-  return EXIT_SUCCESS;
+void tests_teardown(void) {
 }
