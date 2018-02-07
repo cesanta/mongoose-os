@@ -53,7 +53,7 @@ out:
     free(dd->data);
     free(dd);
   } else {
-    LOG(LL_INFO, ("%u bytes, eb 0x%02x, fb 0x%02x, fc %s", dd->size,
+    LOG(LL_INFO, ("%u bytes, eb 0x%02x, fb 0x%02x, fc %s", (unsigned) dd->size,
                   dd->erase_byte, fb, (dd->flash_check ? "yes" : "no")));
   }
   return res;
@@ -72,7 +72,7 @@ static bool mgos_vfs_dev_ram_read(struct mgos_vfs_dev *dev, size_t offset,
 
 out:
   LOG((res ? LL_DEBUG : LL_ERROR),
-      ("%s %u @ 0x%x = %d", "read", len, offset, res));
+      ("%s %u @ 0x%x = %d", "read", (unsigned) len, (unsigned) offset, res));
   return res;
 }
 
@@ -91,7 +91,7 @@ static bool mgos_vfs_dev_ram_write(struct mgos_vfs_dev *dev, size_t offset,
     if (dd->flash_check) {
       if ((src_byte & dst_byte) != src_byte) {
         LOG(LL_ERROR, ("NOR flash check violation @ %u: 0x%02x -> 0x%02x",
-                       offset + i, dst_byte, src_byte));
+                       (unsigned) (offset + i), dst_byte, src_byte));
         goto out;
       }
     }
@@ -102,7 +102,7 @@ static bool mgos_vfs_dev_ram_write(struct mgos_vfs_dev *dev, size_t offset,
 
 out:
   LOG((res ? LL_DEBUG : LL_ERROR),
-      ("%s %u @ 0x%x = %d", "write", len, offset, res));
+      ("%s %u @ 0x%x = %d", "write", (unsigned) len, (unsigned) offset, res));
   return res;
 }
 
@@ -119,7 +119,7 @@ static bool mgos_vfs_dev_ram_erase(struct mgos_vfs_dev *dev, size_t offset,
 
 out:
   LOG((res ? LL_DEBUG : LL_ERROR),
-      ("%s %u @ 0x%x = %d", "erase", len, offset, res));
+      ("%s %u @ 0x%x = %d", "erase", (unsigned) len, (unsigned) offset, res));
   return res;
 }
 

@@ -40,7 +40,6 @@ int __cdecl main(int argc, char *argv[]) {
   } else {
     seed = (int) time(NULL);
   }
-  cs_log_set_level(LL_INFO);
   printf("seed: %d\n", seed);
   srand(seed);
 
