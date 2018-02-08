@@ -62,6 +62,12 @@ static const char *test_cs_varint(void) {
   ASSERT_EQ((llen_enc = cs_varint_encode(128, buf, 1)), 2);
   ASSERT_EQ(buf[1], 'X');
   ASSERT_EQ((llen_enc = cs_varint_encode(128, buf, sizeof(buf))), 2);
+  ASSERT(!cs_varint_decode(buf, 0, &num, &llen_dec));
+  num = 123;
+  llen_dec = 456;
+  ASSERT(!cs_varint_decode(buf, 1, &num, &llen_dec));
+  ASSERT_EQ(num, 123);
+  ASSERT_EQ(llen_dec, 456);
   ASSERT(cs_varint_decode(buf, sizeof(buf), &num, &llen_dec));
   ASSERT_EQ(num, 128);
   ASSERT_EQ(llen_dec, llen_enc);

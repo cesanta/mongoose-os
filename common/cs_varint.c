@@ -32,7 +32,7 @@ size_t cs_varint_encode(uint64_t num, uint8_t *buf, size_t buf_size) {
 bool cs_varint_decode(const uint8_t *buf, size_t buf_size, uint64_t *num,
                       size_t *llen) {
   size_t i = 0, shift = 0;
-  *num = 0;
+  uint64_t n = 0;
 
   do {
     if (i == buf_size || i == (8 * sizeof(*num) / 7 + 1)) return false;
@@ -40,14 +40,17 @@ bool cs_varint_decode(const uint8_t *buf, size_t buf_size, uint64_t *num,
      * Each byte of varint contains 7 bits, in little endian order.
      * MSB is a continuation bit: it tells whether next byte is used.
      */
-    *num |= ((uint64_t)(buf[i] & 0x7f)) << shift;
+    n |= ((uint64_t)(buf[i] & 0x7f)) << shift;
     /*
      * First we increment i, then check whether it is within boundary and
      * whether decoded byte had continuation bit set.
      */
-    *llen = ++i;
+    i++;
     shift += 7;
   } while (shift < sizeof(uint64_t) * 8 && (buf[i - 1] & 0x80));
+
+  *num = n;
+  *llen = i;
 
   return true;
 }
