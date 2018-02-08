@@ -59,8 +59,7 @@ struct mgos_vfs_dev *mgos_vfs_dev_open(const char *type, const char *opts) {
 
 bool mgos_vfs_dev_close(struct mgos_vfs_dev *dev) {
   bool ret = false;
-  dev->refs--;
-  LOG(LL_INFO, ("%p refs %d", dev, dev->refs));
+  LOG(LL_DEBUG, ("%p refs %d", dev, dev->refs));
   if (dev->refs <= 0) {
     ret = dev->ops->close(dev);
     if (ret) free(dev);
