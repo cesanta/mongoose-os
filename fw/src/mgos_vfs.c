@@ -82,7 +82,6 @@ bool mgos_vfs_mkfs(const char *dev_type, const char *dev_opts,
       if (dev_type != NULL) {
         dev = mgos_vfs_dev_open(dev_type, dev_opts);
         if (dev == NULL) return false;
-        dev->refs++;
       }
       struct mgos_vfs_fs fs = {.type = fe->type, .ops = fe->ops, .dev = dev};
       LOG(LL_INFO, ("Create %s (dev %p, opts %s)", fs_type, dev, fs_opts));
@@ -902,7 +901,10 @@ static bool mgos_vfs_umount_entry(struct mgos_vfs_mount_entry *me, bool force) {
   SLIST_REMOVE(&s_mounts, me, mgos_vfs_mount_entry, next);
   ret = me->fs->ops->umount(me->fs);
   if (ret) {
-    if (me->fs->dev) mgos_vfs_dev_close(me->fs->dev);
+    if (me->fs->dev) {
+      me->fs->dev->refs--;
+      mgos_vfs_dev_close(me->fs->dev);
+    }
     free(me->fs);
     free(me);
   }
