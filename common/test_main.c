@@ -26,6 +26,7 @@ int __cdecl CrtDbgHook(int nReportType, char *szMsg, int *pnRet) {
 #endif
 
 int g_num_tests = 0;
+int g_num_checks = 0;
 const char *g_argv_0 = NULL;
 
 int __cdecl main(int argc, char *argv[]) {
@@ -56,8 +57,8 @@ int __cdecl main(int argc, char *argv[]) {
 
   started = cs_time();
   fail_msg = tests_run(filter);
-  printf("%s, ran %d tests in %.3lfs\n", fail_msg ? "FAIL" : "PASS",
-         g_num_tests, cs_time() - started);
+  printf("%s, ran %d tests (%d checks) in %.3lfs\n", fail_msg ? "FAIL" : "PASS",
+         g_num_tests, g_num_checks, cs_time() - started);
 
   tests_teardown();
 
