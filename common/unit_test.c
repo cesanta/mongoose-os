@@ -12,6 +12,71 @@
 #include "common/test_main.h"
 #include "common/test_util.h"
 
+static const char *check_assert_ptrne(void) {
+  int a = 0;
+  ASSERT_PTRNE(&a, &a);
+  return NULL;
+}
+
+static const char *check_assert_streq(void) {
+  ASSERT_STREQ("foo", "bar");
+  return NULL;
+}
+
+static const char *check_assert_eq(void) {
+  ASSERT_EQ(1, 2);
+  return NULL;
+}
+static const char *check_assert_eq_precision(void) {
+  ASSERT_EQ((2ULL << 51) + 1, (2ULL << 51) + 1);
+  return NULL;
+}
+static const char *check_assert_eq64(void) {
+  ASSERT_EQ64(0xffffffffffffffff, 0xfffffffffffffffe);
+  return NULL;
+}
+
+static const char *check_assert_ne(void) {
+  ASSERT_NE(1, 1);
+  return NULL;
+}
+static const char *check_assert_ne_precision(void) {
+  ASSERT_NE((2ULL << 51) + 1, (2ULL << 51) + 2);
+  return NULL;
+}
+static const char *check_assert_ne64(void) {
+  ASSERT_NE64(0xffffffffffffffff, 0xffffffffffffffff);
+  return NULL;
+}
+
+static const char *test_testutil(void) {
+  if (check_assert_ptrne() == NULL) return "ASSERT_PTRNE does not work";
+
+  ASSERT_STREQ("foo", "foo");
+  ASSERT_PTRNE(check_assert_streq(), NULL);
+
+  ASSERT_EQ(0, 0);
+  ASSERT_EQ(-1, -1);
+  ASSERT_EQ((long) -1, (long) -1);
+
+  ASSERT_EQ(1, 1);
+  ASSERT_EQ((2ULL << 51), (2ULL << 51));
+  ASSERT_PTRNE(check_assert_eq(), NULL);
+  ASSERT_STREQ(check_assert_eq_precision(),
+               "loss of precision, use ASSERT_EQ64");
+  ASSERT_EQ64(0xffffffffffffffff, 0xffffffffffffffff);
+  ASSERT_PTRNE(check_assert_eq64(), NULL);
+
+  ASSERT_NE((2ULL << 51) - 1, (2ULL << 51) - 2);
+  ASSERT_PTRNE(check_assert_ne(), NULL);
+  ASSERT_STREQ(check_assert_ne_precision(),
+               "loss of precision, use ASSERT_NE64");
+  ASSERT_NE64(0xffffffffffffffff, 0xfffffffffffffffe);
+  ASSERT_PTRNE(check_assert_ne64(), NULL);
+  printf("^^^ failure messages above are normal, ignore ^^^\n");
+  return NULL;
+}
+
 static const char *test_c_snprintf(void) {
   char buf[100];
 
@@ -95,20 +160,20 @@ static const char *test_cs_varint(void) {
   ASSERT_EQ((llen_enc = cs_varint_encode(0xfffffffffffffff, buf, sizeof(buf))),
             9);
   ASSERT(cs_varint_decode(buf, sizeof(buf), &num, &llen_dec));
-  ASSERT_EQ(num, 0xfffffffffffffff);
+  ASSERT_EQ64(num, 0xfffffffffffffff);
   ASSERT_EQ(llen_dec, llen_enc);
 
   ASSERT_EQ((llen_enc = cs_varint_encode(0xffffffffffffffff, buf, sizeof(buf))),
             10);
   ASSERT(cs_varint_decode(buf, sizeof(buf), &num, &llen_dec));
-  ASSERT_EQ(num, 0xffffffffffffffff);
+  ASSERT_EQ64(num, 0xffffffffffffffff);
   ASSERT_EQ(llen_dec, llen_enc);
 
   /* Overflow */
   memset(buf, 0xff, sizeof(buf));
   num = 0;
   ASSERT(cs_varint_decode(buf, sizeof(buf), &num, &llen_dec));
-  ASSERT_EQ(num, 0xffffffffffffffff);
+  ASSERT_EQ64(num, 0xffffffffffffffff);
   ASSERT_EQ(llen_dec, 10);
 
   return NULL;
@@ -250,6 +315,7 @@ void tests_setup(void) {
 }
 
 const char *tests_run(const char *filter) {
+  RUN_TEST(test_testutil);
   RUN_TEST(test_c_snprintf);
   RUN_TEST(test_cs_varint);
   RUN_TEST(test_cs_timegm);
