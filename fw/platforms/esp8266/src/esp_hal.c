@@ -107,6 +107,10 @@ IRAM void mgos_rlock(struct mgos_rlock_type *l) {
 IRAM void mgos_runlock(struct mgos_rlock_type *l) {
   xSemaphoreGiveRecursive((xSemaphoreHandle) l);
 }
+
+IRAM void mgos_rlock_destroy(struct mgos_rlock_type *l) {
+  vSemaphoreDelete((xSemaphoreHandle) l);
+}
 #else /* !RTOS_SDK */
 
 IRAM void mgos_lock(void) {
@@ -124,6 +128,10 @@ IRAM void mgos_rlock(struct mgos_rlock_type *l) {
 }
 
 IRAM void mgos_runlock(struct mgos_rlock_type *l) {
+  (void) l;
+}
+
+IRAM void mgos_rlock_destroy(struct mgos_rlock_type *l) {
   (void) l;
 }
 

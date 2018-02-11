@@ -254,14 +254,18 @@ void mgos_unlock(void) {
   xSemaphoreGiveRecursive(s_mgos_mux);
 }
 
-struct mgos_rlock_type *mgos_rlock_create(void) {
+IRAM struct mgos_rlock_type *mgos_rlock_create(void) {
   return (struct mgos_rlock_type *) xSemaphoreCreateRecursiveMutex();
 }
 
-void mgos_rlock(struct mgos_rlock_type *l) {
+IRAM void mgos_rlock(struct mgos_rlock_type *l) {
   xSemaphoreTakeRecursive((SemaphoreHandle_t) l, portMAX_DELAY);
 }
 
-void mgos_runlock(struct mgos_rlock_type *l) {
+IRAM void mgos_runlock(struct mgos_rlock_type *l) {
   xSemaphoreGiveRecursive((SemaphoreHandle_t) l);
+}
+
+IRAM void mgos_rlock_destroy(struct mgos_rlock_type *l) {
+  vSemaphoreDelete((SemaphoreHandle_t) l);
 }
