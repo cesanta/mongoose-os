@@ -10,8 +10,6 @@
 #ifndef CS_FW_INCLUDE_MGOS_UTILS_H_
 #define CS_FW_INCLUDE_MGOS_UTILS_H_
 
-#include "mgos_features.h"
-
 #ifndef MIN
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
