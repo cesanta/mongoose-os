@@ -1,13 +1,7 @@
-#include <stdio.h>
+
+#include "mgos.h"
 
 #include "mgos_i2c.h"
-
-#include "common/platform.h"
-#include "mgos_app.h"
-#include "mgos_gpio.h"
-#include "mgos_sys_config.h"
-#include "mgos_wifi.h"
-
 #include "mgos_mqtt.h"
 
 enum {
