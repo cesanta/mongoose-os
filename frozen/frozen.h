@@ -209,7 +209,7 @@ typedef void (*json_scanner_t)(const char *str, int len, void *user_data);
 /*
  * Helper function to scan array item with given path and index.
  * Fills `token` with the matched JSON token.
- * Return 0 if no array element found, otherwise non-0.
+ * Return -1 if no array element found, otherwise non-negative token length.
  */
 int json_scanf_array_elem(const char *s, int len, const char *path, int index,
                           struct json_token *token);
