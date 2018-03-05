@@ -124,7 +124,8 @@ bool mgos_gpio_set_button_handler(int pin, enum mgos_gpio_pull_type pull_type,
                                   enum mgos_gpio_int_mode int_mode,
                                   int debounce_ms, mgos_gpio_int_handler_f cb,
                                   void *arg) {
-  if (!(int_mode == MGOS_GPIO_INT_EDGE_POS || MGOS_GPIO_INT_EDGE_NEG) ||
+  if (!(int_mode == MGOS_GPIO_INT_EDGE_POS ||
+        int_mode == MGOS_GPIO_INT_EDGE_NEG) ||
       !mgos_gpio_set_mode(pin, MGOS_GPIO_MODE_INPUT) ||
       !mgos_gpio_set_pull(pin, pull_type) ||
       !mgos_gpio_set_int_handler(pin, int_mode, cb, arg)) {
