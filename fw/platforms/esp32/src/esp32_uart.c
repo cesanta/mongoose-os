@@ -208,7 +208,10 @@ IRAM void mgos_uart_hal_dispatch_bottom(struct mgos_uart_state *us) {
 }
 
 void mgos_uart_hal_flush_fifo(struct mgos_uart_state *us) {
-  while (esp32_uart_tx_fifo_len(us->uart_no) > 0) {
+  int uart_no = us->uart_no;
+  /* Wait for FIFO to drain and transmission of the last character to finish. */
+  WRITE_PERI_REG(UART_INT_CLR_REG(uart_no), UART_TX_DONE_INT_CLR);
+  while (!(READ_PERI_REG(UART_INT_RAW_REG(uart_no)) & UART_TX_DONE_INT_RAW)) {
   }
 }
 
