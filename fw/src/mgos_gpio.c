@@ -24,6 +24,7 @@ struct mgos_gpio_state {
   void *cb_arg;
   unsigned int isr : 1;
   unsigned int cb_pending : 1;
+  unsigned int btn_active_state : 1;
   unsigned int debounce_ms : 16;
 };
 static struct mgos_gpio_state s_state[MGOS_NUM_GPIO];
@@ -58,8 +59,8 @@ static void mgos_gpio_int_cb(void *arg) {
   int pin = (intptr_t) arg;
   struct mgos_gpio_state *s = (struct mgos_gpio_state *) &s_state[pin];
   if (!s->cb_pending || s->cb == NULL) return;
-  s->cb(pin, s->cb_arg);
   if (s->debounce_ms == 0) {
+    s->cb(pin, s->cb_arg);
     s->cb_pending = false;
     mgos_gpio_hal_int_done(pin);
   } else {
@@ -71,8 +72,9 @@ static void mgos_gpio_int_cb(void *arg) {
 static void mgos_gpio_dbnc_done_cb(void *arg) {
   int pin = (intptr_t) arg;
   struct mgos_gpio_state *s = (struct mgos_gpio_state *) &s_state[pin];
+  if (mgos_gpio_read(pin) == s->btn_active_state) s->cb(pin, s->cb_arg);
   s->cb_pending = false;
-  /* Clear any noise taht happened during debounce timer. */
+  /* Clear any noise that happened during debounce timer. */
   mgos_gpio_hal_int_clr(pin);
   mgos_gpio_hal_int_done(pin);
 }
@@ -122,11 +124,13 @@ bool mgos_gpio_set_button_handler(int pin, enum mgos_gpio_pull_type pull_type,
                                   enum mgos_gpio_int_mode int_mode,
                                   int debounce_ms, mgos_gpio_int_handler_f cb,
                                   void *arg) {
-  if (!mgos_gpio_set_mode(pin, MGOS_GPIO_MODE_INPUT) ||
+  if (!(int_mode == MGOS_GPIO_INT_EDGE_POS || MGOS_GPIO_INT_EDGE_NEG) ||
+      !mgos_gpio_set_mode(pin, MGOS_GPIO_MODE_INPUT) ||
       !mgos_gpio_set_pull(pin, pull_type) ||
       !mgos_gpio_set_int_handler(pin, int_mode, cb, arg)) {
     return false;
   }
+  s_state[pin].btn_active_state = (int_mode == MGOS_GPIO_INT_EDGE_POS);
   s_state[pin].debounce_ms = debounce_ms;
   return mgos_gpio_enable_int(pin);
 }
