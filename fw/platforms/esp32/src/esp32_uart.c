@@ -39,8 +39,7 @@ IRAM bool esp32_uart_cts(int uart_no) {
 
 /* Note: ESP32 supports FIFO lengths > 128. For now, we ignore that. */
 IRAM int esp32_uart_rx_fifo_len(int uart_no) {
-  return (READ_PERI_REG(UART_STATUS_REG(uart_no)) >> UART_RXFIFO_CNT_S) &
-         UART_RXFIFO_CNT_V;
+  return REG_GET_FIELD(UART_STATUS_REG(uart_no), UART_RXFIFO_CNT);
 }
 
 IRAM static int rx_byte(int uart_no) {
@@ -54,13 +53,11 @@ IRAM static int rx_byte(int uart_no) {
    * Also, errata says to use AHB addresses:
    *https://espressif.com/sites/default/files/documentation/eco_and_workarounds_for_bugs_in_esp32_en.pdf
    */
-  return (READ_PERI_REG(UART_FIFO_AHB_REG(uart_no)) >> UART_RXFIFO_RD_BYTE_S) &
-         UART_RXFIFO_RD_BYTE_V;
+  return REG_GET_FIELD(UART_FIFO_AHB_REG(uart_no), UART_RXFIFO_RD_BYTE);
 }
 
 IRAM int esp32_uart_tx_fifo_len(int uart_no) {
-  return (READ_PERI_REG(UART_STATUS_REG(uart_no)) >> UART_TXFIFO_CNT_S) &
-         UART_TXFIFO_CNT_V;
+  return REG_GET_FIELD(UART_STATUS_REG(uart_no), UART_TXFIFO_CNT);
 }
 
 IRAM static void tx_byte(int uart_no, uint8_t byte) {
@@ -70,8 +67,7 @@ IRAM static void tx_byte(int uart_no, uint8_t byte) {
 }
 
 IRAM uint8_t get_rx_fifo_full_thresh(int uart_no) {
-  return (READ_PERI_REG(UART_CONF1_REG(uart_no)) >> UART_RXFIFO_FULL_THRHD_S) &
-         UART_RXFIFO_FULL_THRHD_V;
+  return REG_GET_FIELD(UART_CONF1_REG(uart_no), UART_RXFIFO_FULL_THRHD);
 }
 
 IRAM bool adj_rx_fifo_full_thresh(struct mgos_uart_state *us) {
@@ -237,6 +233,8 @@ IRAM void mgos_uart_hal_dispatch_bottom(struct mgos_uart_state *us) {
 }
 
 void mgos_uart_hal_flush_fifo(struct mgos_uart_state *us) {
+  while (esp32_uart_tx_fifo_len(us->uart_no) > 0) {
+  }
   uart_tx_wait_idle(us->uart_no);
 }
 
