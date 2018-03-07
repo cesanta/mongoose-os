@@ -13,6 +13,7 @@
 #include "esp_intr_alloc.h"
 #include "driver/periph_ctrl.h"
 #include "driver/uart.h"
+#include "rom/uart.h"
 #include "soc/uart_reg.h"
 
 #include "common/cs_dbg.h"
@@ -236,8 +237,7 @@ IRAM void mgos_uart_hal_dispatch_bottom(struct mgos_uart_state *us) {
 }
 
 void mgos_uart_hal_flush_fifo(struct mgos_uart_state *us) {
-  while (esp32_uart_tx_fifo_len(us->uart_no) > 0) {
-  }
+  uart_tx_wait_idle(us->uart_no);
 }
 
 bool esp32_uart_validate_config(const struct mgos_uart_config *c) {
