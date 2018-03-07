@@ -54,6 +54,13 @@ struct mgos_uart_dev_config {
   int8_t tx_gpio;
   int8_t cts_gpio;
   int8_t rts_gpio;
+
+  /* Half-duplex mode: if enabled, tx_en_gpio will be configured as an output
+   * and will be set to tx_en_gpio_val when data is being transmitted.
+   * When transmission is done, it will be returned to !tx_en_gpio_val. */
+  bool hd;
+  int tx_en_gpio;
+  int tx_en_gpio_val;
 };
 
 int esp32_uart_rx_fifo_len(int uart_no);

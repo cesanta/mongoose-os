@@ -17,11 +17,19 @@
 
 #include "common/cs_dbg.h"
 #include "common/cs_rbuf.h"
+#include "mgos_gpio.h"
 #include "mgos_uart_hal.h"
 
 #define UART_RX_INTS (UART_RXFIFO_FULL_INT_ENA | UART_RXFIFO_TOUT_INT_ENA)
 #define UART_TX_INTS (UART_TXFIFO_EMPTY_INT_ENA)
 #define UART_INFO_INTS (UART_RXFIFO_OVF_INT_ENA | UART_CTS_CHG_INT_ENA)
+
+struct esp32_uart_state {
+  bool hd;
+  int tx_en_gpio;
+  int tx_en_gpio_val;
+  intr_handle_t ih;
+};
 
 /* Active for CTS is 0, i.e. 0 = ok to send. */
 IRAM bool esp32_uart_cts(int uart_no) {
@@ -90,6 +98,7 @@ IRAM NOINSTR static void esp_handle_uart_int(struct mgos_uart_state *us) {
   const unsigned int int_st = READ_PERI_REG(UART_INT_ST_REG(uart_no)) &
                               READ_PERI_REG(UART_INT_ENA_REG(uart_no));
   const struct mgos_uart_config *cfg = &us->cfg;
+  struct esp32_uart_state *uds = (struct esp32_uart_state *) us->dev_data;
   if (int_st == 0) return;
   us->stats.ints++;
   if (int_st & UART_RXFIFO_OVF_INT_ST) {
@@ -109,6 +118,13 @@ IRAM NOINSTR static void esp_handle_uart_int(struct mgos_uart_state *us) {
     if (esp32_uart_cts(uart_no) != 0 && esp32_uart_tx_fifo_len(uart_no) > 0) {
       us->stats.tx_throttles++;
     }
+  }
+  if (uds->hd && (int_st & UART_TX_DONE_INT_ST)) {
+    /* Switch to RX mode and flush the FIFO (depending on the wiring,
+     * it may contain transmitted data or garbage received during TX). */
+    mgos_gpio_write(uds->tx_en_gpio, !uds->tx_en_gpio_val);
+    SET_PERI_REG_MASK(UART_CONF0_REG(uart_no), UART_RXFIFO_RST);
+    CLEAR_PERI_REG_MASK(UART_CONF0_REG(uart_no), UART_RXFIFO_RST);
   }
   if (int_st & (UART_RX_INTS | UART_TX_INTS)) {
     int int_ena = UART_INFO_INTS;
@@ -174,15 +190,20 @@ IRAM void mgos_uart_hal_dispatch_rx_top(struct mgos_uart_state *us) {
     fprintf(stderr, "Time spent reading: %u us\n", system_get_time() - st);
 #endif
   }
-  CLEAR_PERI_REG_MASK(UART_INT_CLR_REG(uart_no), UART_RX_INTS);
+  WRITE_PERI_REG(UART_INT_CLR_REG(uart_no), UART_RX_INTS);
 }
 
 IRAM void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us) {
+  struct esp32_uart_state *uds = (struct esp32_uart_state *) us->dev_data;
   int uart_no = us->uart_no;
   struct mbuf *txb = &us->tx_buf;
   uint32_t txn = 0;
   /* TX */
   if (txb->len > 0) {
+    if (uds->hd) {
+      mgos_gpio_write(uds->tx_en_gpio, uds->tx_en_gpio_val);
+      WRITE_PERI_REG(UART_INT_CLR_REG(uart_no), UART_TX_DONE_INT_CLR);
+    }
     while (txb->len > 0) {
       size_t tx_av = 128 - esp32_uart_tx_fifo_len(uart_no);
       size_t len = MIN(txb->len, tx_av);
@@ -199,11 +220,18 @@ IRAM void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us) {
 
 IRAM void mgos_uart_hal_dispatch_bottom(struct mgos_uart_state *us) {
   uint32_t int_ena = UART_INFO_INTS;
+  struct esp32_uart_state *uds = (struct esp32_uart_state *) us->dev_data;
   /* Determine which interrupts we want. */
   if (us->rx_enabled && mgos_uart_rxb_free(us) > 0) {
     int_ena |= UART_RX_INTS;
   }
-  if (us->tx_buf.len > 0) int_ena |= UART_TX_INTS;
+  if (us->tx_buf.len > 0) {
+    int_ena |= UART_TX_INTS;
+  } else if (uds->hd) {
+    if (mgos_gpio_read_out(uds->tx_en_gpio) == uds->tx_en_gpio_val) {
+      int_ena |= UART_TX_DONE_INT_ENA;
+    }
+  }
   WRITE_PERI_REG(UART_INT_ENA_REG(us->uart_no), int_ena);
 }
 
@@ -273,6 +301,9 @@ void mgos_uart_hal_config_set_defaults(int uart_no,
 bool mgos_uart_hal_init(struct mgos_uart_state *us) {
   int uart_no = us->uart_no;
   if (uart_no < 0 || uart_no > 2) return false;
+  struct esp32_uart_state *uds =
+      (struct esp32_uart_state *) calloc(1, sizeof(*uds));
+  us->dev_data = uds;
   int int_src;
   if (uart_no == 0) {
     int_src = ETS_UART0_INTR_SOURCE;
@@ -284,14 +315,15 @@ bool mgos_uart_hal_init(struct mgos_uart_state *us) {
     int_src = ETS_UART2_INTR_SOURCE;
     periph_module_enable(PERIPH_UART2_MODULE);
   }
-  esp_err_t r = esp_intr_alloc(int_src, 0, esp32_handle_uart_int, us,
-                               (intr_handle_t *) &(us->dev_data));
+  /* Start with ints disabled. */
+  WRITE_PERI_REG(UART_INT_ENA_REG(us->uart_no), 0);
+  esp_err_t r =
+      esp_intr_alloc(int_src, ESP_INTR_FLAG_SHARED | ESP_INTR_FLAG_IRAM,
+                     esp32_handle_uart_int, us, &uds->ih);
   if (r != ESP_OK) {
     LOG(LL_ERROR, ("Error allocating int for UART%d: %d", us->uart_no, r));
     return false;
   }
-  /* Start with ints disabled. */
-  WRITE_PERI_REG(UART_INT_ENA_REG(us->uart_no), 0);
   return true;
 }
 
@@ -302,6 +334,8 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
   if (!esp32_uart_validate_config(cfg)) {
     return false;
   }
+
+  struct esp32_uart_state *uds = (struct esp32_uart_state *) us->dev_data;
 
   WRITE_PERI_REG(UART_INT_ENA_REG(uart_no), 0);
 
@@ -391,6 +425,15 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
   WRITE_PERI_REG(UART_CONF1_REG(uart_no), conf1);
   /* Configure FIFOs for 128 bytes. */
   WRITE_PERI_REG(UART_MEM_CONF_REG(uart_no), 0x88);
+
+  uds->hd = cfg->dev.hd;
+  uds->tx_en_gpio = cfg->dev.tx_en_gpio;
+  uds->tx_en_gpio_val = cfg->dev.tx_en_gpio_val;
+  if (uds->hd) {
+    mgos_gpio_write(uds->tx_en_gpio, !uds->tx_en_gpio_val);  // RX
+    mgos_gpio_set_mode(uds->tx_en_gpio, MGOS_GPIO_MODE_OUTPUT);
+  }
+
   return true;
 }
 
