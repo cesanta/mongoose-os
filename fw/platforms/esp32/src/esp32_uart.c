@@ -423,6 +423,8 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
   WRITE_PERI_REG(UART_CONF1_REG(uart_no), conf1);
   /* Configure FIFOs for 128 bytes. */
   WRITE_PERI_REG(UART_MEM_CONF_REG(uart_no), 0x88);
+  /* Disable idle after transmission, reset defaults are non-zero. */
+  WRITE_PERI_REG(UART_IDLE_CONF_REG(uart_no), 0);
 
   uds->hd = cfg->dev.hd;
   uds->tx_en_gpio = cfg->dev.tx_en_gpio;
