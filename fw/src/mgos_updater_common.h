@@ -30,6 +30,7 @@ struct mgos_upd_hal_ctx; /* This struct is defined by HAL and is opaque to us */
 enum mgos_ota_state {
   MGOS_OTA_STATE_NONE = 0,
   MGOS_OTA_STATE_INIT,       /* "init" */
+  MGOS_OTA_STATE_BEGIN,      /* "begin" */
   MGOS_OTA_STATE_PROGRESS,   /* "progress" */
   MGOS_OTA_STATE_FINALIZING, /* "finalizing" */
   MGOS_OTA_STATE_DONE,       /* "done" */

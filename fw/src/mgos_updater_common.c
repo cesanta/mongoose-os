@@ -446,6 +446,15 @@ static int updater_process_int(struct update_context *ctx, const char *data,
           return ret;
         }
 
+        CALL_HOOK(LL_INFO, MGOS_UPD_EV_BEGIN, &ctx->info,
+                  MGOS_OTA_STATE_BEGIN,
+                  "App: %.*s FW: %.*s Build ID: %.*s",
+                  ctx->info.name.len, ctx->info.name.ptr,
+                  ctx->info.version.len, ctx->info.version.ptr, 
+                  ctx->info.build_id.len, ctx->info.build_id.ptr);
+        
+        if (ctx->result) return ctx->result;
+
         context_clear_current_file(ctx);
         updater_set_status(ctx, US_WAITING_FILE_HEADER);
       } /* fall through */
@@ -828,6 +837,8 @@ const char *mgos_ota_state_str(enum mgos_ota_state state) {
       return "";
     case MGOS_OTA_STATE_INIT:
       return "init";
+    case MGOS_OTA_STATE_BEGIN:
+      return "begin";
     case MGOS_OTA_STATE_PROGRESS:
       return "progress";
     case MGOS_OTA_STATE_FINALIZING:

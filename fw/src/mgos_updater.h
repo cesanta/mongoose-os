@@ -40,19 +40,19 @@ struct mgos_upd_info {
 };
 
 enum mgos_upd_event {
-  /* ev_data = NULL; return: true = ok to proceed. */
+  /* ev_data = NULL */
   MGOS_UPD_EV_INIT = 1,
-  /* ev_data = const struct mgos_upd_info *; return: true = ok to proceed. */
+  /* ev_data = const struct mgos_upd_info * */
   MGOS_UPD_EV_BEGIN = 2,
-  /* ev_data = const struct mgos_upd_info *; return: ignored. */
+  /* ev_data = const struct mgos_upd_info * */
   MGOS_UPD_EV_PROGRESS = 3,
-  /* ev_data = struct update_context *; return: ignored */
+  /* ev_data = struct update_context * */
   MGOS_UPD_EV_END = 4,
-  /* ev_data = NULL, return: ignored */
+  /* ev_data = NULL */
   MGOS_UPD_EV_ROLLBACK = 5,
-  /* ev_data = NULL, return: ignored */
+  /* ev_data = NULL */
   MGOS_UPD_EV_COMMIT = 6,
-  /* ev_data = NULL, return: ignored */
+  /* ev_data = NULL */
   MGOS_UPD_EV_ERROR = 7,
 };
 
