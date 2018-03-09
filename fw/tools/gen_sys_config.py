@@ -343,6 +343,9 @@ class AccessorsGen(object):
         if self._c_global_name != None:
             lines.append("extern struct %s %s;" % (self._struct_name, self._c_global_name))
             lines.append("")
+            lines.append("static inline bool %s_get(const struct mg_str key, struct mg_str *value) { return mgos_config_get(key, value, &%s, %s_schema()); }" % (self._c_global_name, self._c_global_name, self._struct_name))
+            lines.append("static inline bool %s_set(const struct mg_str key, const struct mg_str value, bool free_strings) { return mgos_config_set(key, value, &%s, %s_schema(), free_strings); }" % (self._c_global_name, self._c_global_name, self._struct_name))
+            lines.append("")
             for ctype_api, ctype_field, path in self._getters:
                 name = path.replace(".", "_")
                 lines.append("static inline %s%s_get%s(void) { return %s_get%s(&%s); }" % (ctype_api, self._c_global_name, name, self._struct_name, name, self._c_global_name))
@@ -427,9 +430,10 @@ extern "C" {{
 #endif /* __cplusplus */
 
 {struct_def_lines}
-{lines}
 
 const struct mgos_conf_entry *{name}_schema();
+
+{lines}
 
 #ifdef __cplusplus
 }}

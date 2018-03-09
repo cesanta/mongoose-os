@@ -45,6 +45,8 @@ struct sys_conf {
   struct sys_conf_debug debug;
 };
 
+const struct mgos_conf_entry *sys_conf_schema();
+
 /* Parametrized accessor prototypes {{{ */
 const struct sys_conf_wifi *sys_conf_get_wifi(struct sys_conf *cfg);
 const struct sys_conf_wifi_sta *sys_conf_get_wifi_sta(struct sys_conf *cfg);
@@ -53,29 +55,26 @@ const char *sys_conf_get_wifi_sta_pass(struct sys_conf *cfg);
 const struct sys_conf_wifi_ap *sys_conf_get_wifi_ap(struct sys_conf *cfg);
 const char *sys_conf_get_wifi_ap_ssid(struct sys_conf *cfg);
 const char *sys_conf_get_wifi_ap_pass(struct sys_conf *cfg);
-int         sys_conf_get_wifi_ap_channel(struct sys_conf *cfg);
+int sys_conf_get_wifi_ap_channel(struct sys_conf *cfg);
 const char *sys_conf_get_wifi_ap_dhcp_end(struct sys_conf *cfg);
 const struct sys_conf_http *sys_conf_get_http(struct sys_conf *cfg);
-int         sys_conf_get_http_enable(struct sys_conf *cfg);
-int         sys_conf_get_http_port(struct sys_conf *cfg);
+int sys_conf_get_http_enable(struct sys_conf *cfg);
+int sys_conf_get_http_port(struct sys_conf *cfg);
 const struct sys_conf_debug *sys_conf_get_debug(struct sys_conf *cfg);
-int         sys_conf_get_debug_level(struct sys_conf *cfg);
+int sys_conf_get_debug_level(struct sys_conf *cfg);
 const char *sys_conf_get_debug_dest(struct sys_conf *cfg);
 
 void sys_conf_set_wifi_sta_ssid(struct sys_conf *cfg, const char *val);
 void sys_conf_set_wifi_sta_pass(struct sys_conf *cfg, const char *val);
 void sys_conf_set_wifi_ap_ssid(struct sys_conf *cfg, const char *val);
 void sys_conf_set_wifi_ap_pass(struct sys_conf *cfg, const char *val);
-void sys_conf_set_wifi_ap_channel(struct sys_conf *cfg, int         val);
+void sys_conf_set_wifi_ap_channel(struct sys_conf *cfg, int val);
 void sys_conf_set_wifi_ap_dhcp_end(struct sys_conf *cfg, const char *val);
-void sys_conf_set_http_enable(struct sys_conf *cfg, int         val);
-void sys_conf_set_http_port(struct sys_conf *cfg, int         val);
-void sys_conf_set_debug_level(struct sys_conf *cfg, int         val);
+void sys_conf_set_http_enable(struct sys_conf *cfg, int val);
+void sys_conf_set_http_port(struct sys_conf *cfg, int val);
+void sys_conf_set_debug_level(struct sys_conf *cfg, int val);
 void sys_conf_set_debug_dest(struct sys_conf *cfg, const char *val);
 /* }}} */
-
-
-const struct mgos_conf_entry *sys_conf_schema();
 
 #ifdef __cplusplus
 }

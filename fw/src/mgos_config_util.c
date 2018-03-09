@@ -416,3 +416,104 @@ double mgos_conf_value_double(const void *cfg,
   }
   return 0;
 }
+
+bool mgos_config_get(const struct mg_str key, struct mg_str *value,
+                     const void *cfg, const struct mgos_conf_entry *schema) {
+  char **cp;
+  bool ret = false;
+  memset(value, 0, sizeof(*value));
+  const struct mgos_conf_entry *e = mgos_conf_find_schema_entry_s(key, schema);
+  if (e == NULL) goto out;
+  cp = (char **) &value->p;
+  switch (e->type) {
+    case CONF_TYPE_INT:
+      value->len = mg_asprintf(cp, 0, "%d", mgos_conf_value_int(cfg, e));
+      break;
+    case CONF_TYPE_BOOL:
+      value->len = mg_asprintf(
+          cp, 0, "%s", (mgos_conf_value_int(cfg, e) ? "true" : "false"));
+      break;
+    case CONF_TYPE_DOUBLE:
+      value->len = mg_asprintf(cp, 0, "%lf", mgos_conf_value_double(cfg, e));
+      break;
+    case CONF_TYPE_STRING:
+      value->len =
+          mg_asprintf(cp, 0, "%s", mgos_conf_value_string_nonnull(cfg, e));
+      break;
+    case CONF_TYPE_OBJECT: {
+      struct mbuf mb;
+      mbuf_init(&mb, 0);
+      mgos_conf_emit_cb(cfg, NULL /* base */, e, false /* pretty */, &mb,
+                        NULL /* cb */, NULL /* cb_param */);
+      value->p = mb.buf;
+      value->len = mb.len;
+      break;
+    }
+  }
+  ret = true;
+
+out:
+  if (!ret) free((void *) value->p);
+  return ret;
+}
+
+bool mgos_config_set(const struct mg_str key, const struct mg_str value,
+                     void *cfg, const struct mgos_conf_entry *schema,
+                     bool free_strings) {
+  bool ret = false;
+  struct mg_str value_nul = MG_NULL_STR;
+  const struct mgos_conf_entry *e = mgos_conf_find_schema_entry_s(key, schema);
+  if (e == NULL) goto out;
+
+  switch (e->type) {
+    case CONF_TYPE_INT: {
+      int *vp = (int *) (((char *) cfg) + e->offset);
+      char *endptr;
+      value_nul = mg_strdup_nul(value);
+      *vp = strtol(value_nul.p, &endptr, 10);
+      if (endptr != value_nul.p + value_nul.len) goto out;
+      ret = true;
+      break;
+    }
+    case CONF_TYPE_BOOL: {
+      int *vp = (int *) (((char *) cfg) + e->offset);
+      if (mg_vcmp(&value, "true") == 0) {
+        *vp = 1;
+      } else if (mg_vcmp(&value, "false") == 0) {
+        *vp = 0;
+      } else {
+        goto out;
+      }
+      ret = true;
+      break;
+    }
+    case CONF_TYPE_DOUBLE: {
+      double *vp = (double *) (((char *) cfg) + e->offset);
+      char *endptr;
+      value_nul = mg_strdup_nul(value);
+      *vp = strtod(value_nul.p, &endptr);
+      if (endptr != value_nul.p + value_nul.len) goto out;
+      ret = true;
+      break;
+    }
+    case CONF_TYPE_STRING: {
+      char **vp = (char **) (((char *) cfg) + e->offset);
+      if (free_strings) free(*vp);
+      if (value.len > 0) {
+        *vp = (char *) mg_strdup_nul(value).p;
+      } else {
+        *vp = NULL;
+      }
+      ret = true;
+      break;
+    }
+    case CONF_TYPE_OBJECT: {
+      ret = mgos_conf_parse(value, "*", e, cfg);
+      break;
+    }
+  }
+
+out:
+  free((void *) value_nul.p);
+  return ret;
+}

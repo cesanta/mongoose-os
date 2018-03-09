@@ -117,11 +117,28 @@ const struct mgos_conf_entry *mgos_conf_find_schema_entry(
     const char *path, const struct mgos_conf_entry *obj);
 
 /*
- * Like `mgos_conf_find_schema_entry()`, but takes the path as a `strct
- * mg_str`.
+ * Like `mgos_conf_find_schema_entry()`, but takes the path as a
+ * `struct mg_str`.
  */
 const struct mgos_conf_entry *mgos_conf_find_schema_entry_s(
     const struct mg_str path, const struct mgos_conf_entry *obj);
+
+/*
+ * Get config value |key| in |cfg| according to |schema|.
+ * Boolean and numeric values are stringified, objects are serialized as JSON.
+ * Note: Returned value is heap-allocated and must be freed.
+ */
+bool mgos_config_get(const struct mg_str key, struct mg_str *value,
+                     const void *cfg, const struct mgos_conf_entry *schema);
+
+/*
+ * Set config value |key| in |cfg| according to |schema|.
+ * Boolean and numeric values are converted from string, objects are parsed as
+ * JSON.
+ */
+bool mgos_config_set(const struct mg_str key, const struct mg_str value,
+                     void *cfg, const struct mgos_conf_entry *schema,
+                     bool free_strings);
 
 /* Set string configuration entry. Frees current entry. */
 void mgos_conf_set_str(char **vp, const char *v);
