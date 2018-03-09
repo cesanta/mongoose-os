@@ -108,7 +108,11 @@ static void mgos_clear_sw_timer(mgos_timer_id id) {
   LIST_FOREACH(ti2, &s_timer_data->timers, entries) {
     if (ti2 == ti) break;
   }
-  if (ti2 == NULL) return; /* Not a valid timer */
+  if (ti2 == NULL) {
+    /* Not a valid timer */
+    mgos_unlock();
+    return;
+  }
   LIST_REMOVE(ti, entries);
   if (s_timer_data->current == ti) {
     schedule_next_timer(s_timer_data);
