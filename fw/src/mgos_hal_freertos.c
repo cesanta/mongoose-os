@@ -60,14 +60,22 @@ static TimerHandle_t s_mg_poll_timer;
 static portMUX_TYPE s_poll_spinlock = portMUX_INITIALIZER_UNLOCKED;
 #define ENTER_CRITICAL() portENTER_CRITICAL(&s_poll_spinlock)
 #define EXIT_CRITICAL() portEXIT_CRITICAL(&s_poll_spinlock)
+/* On ESP32 critical s-s are implemented using a spinlock, so it's the same. */
+#define ENTER_CRITICAL_NO_ISR(from_isr) portENTER_CRITICAL(&s_poll_spinlock)
+#define EXIT_CRITICAL_NO_ISR(from_isr) portEXIT_CRITICAL(&s_poll_spinlock)
 #define YIELD_FROM_ISR(should_yield)        \
   {                                         \
     if (should_yield) portYIELD_FROM_ISR(); \
   }
 #define STACK_SIZE_UNIT 1
 #else
-#define ENTER_CRITICAL(mux) portENTER_CRITICAL()
-#define EXIT_CRITICAL(mux) portEXIT_CRITICAL()
+#define ENTER_CRITICAL() portENTER_CRITICAL()
+#define EXIT_CRITICAL() portEXIT_CRITICAL()
+/* Elsewhere critical sections = disable ints, must not be done from ISR */
+#define ENTER_CRITICAL_NO_ISR(from_isr) \
+  if (!from_isr) portENTER_CRITICAL()
+#define EXIT_CRITICAL_NO_ISR(from_isr) \
+  if (!from_isr) portEXIT_CRITICAL()
 #define YIELD_FROM_ISR(should_yield) portYIELD_FROM_ISR(should_yield)
 #define STACK_SIZE_UNIT sizeof(portSTACK_TYPE)
 #endif
@@ -101,21 +109,22 @@ static IRAM void mgos_mg_poll_cb(void *arg) {
 
 IRAM void mongoose_schedule_poll(bool from_isr) {
   /* Prevent piling up of poll callbacks. */
-  ENTER_CRITICAL();
+  ENTER_CRITICAL_NO_ISR(from_isr);
   s_mg_want_poll = true;
   if (!s_mg_poll_scheduled) {
     uint32_t last_poll = s_mg_last_poll;
-    EXIT_CRITICAL();
+    EXIT_CRITICAL_NO_ISR(from_isr);
     if (mgos_invoke_cb(mgos_mg_poll_cb, NULL, from_isr)) {
-      ENTER_CRITICAL();
+      ENTER_CRITICAL_NO_ISR(from_isr);
       if (s_mg_last_poll == last_poll) {
         s_mg_poll_scheduled = true;
       }
-      EXIT_CRITICAL();
+    } else {
+      /* Not in a critical section, just return. */
+      return;
     }
-  } else {
-    EXIT_CRITICAL();
   }
+  EXIT_CRITICAL_NO_ISR(from_isr);
 }
 
 void mgos_mg_poll_timer_cb(TimerHandle_t t) {
