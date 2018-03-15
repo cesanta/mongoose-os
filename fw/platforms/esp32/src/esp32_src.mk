@@ -40,7 +40,7 @@ MGOS_SRCS += mgos_config_util.c mgos_core_dump.c mgos_dlsym.c mgos_event.c mgos_
              esp32_crypto.c esp32_debug.c esp32_exc.c esp32_fs.c esp32_fs_crypt.c \
              esp32_vfs_dev_partition.c \
              esp32_gpio.c esp32_hal.c esp32_hw_timers.c \
-             esp32_main.c esp32_mdns.c esp32_uart.c
+             esp32_main.c esp32_uart.c
 
 include $(MGOS_PATH)/fw/common.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk

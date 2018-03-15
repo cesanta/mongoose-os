@@ -148,7 +148,6 @@ MGOS_SRCS += esp_config.c \
              esp_hw_wdt.c \
              esp_libc.c \
              esp_main.c \
-             esp_mdns.c \
              esp_periph.c \
              esp_uart.c \
              esp_updater.c \

@@ -23,7 +23,6 @@
 #include "mgos_features.h"
 #include "mgos_gpio.h"
 #include "mgos_init.h"
-#include "mgos_mdns.h"
 #include "mgos_mongoose.h"
 #include "mgos_net.h"
 #include "mgos_sys_config.h"
