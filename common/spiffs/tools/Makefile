@@ -11,7 +11,7 @@ ifeq "$(SPIFFS_CONFIG_PATH)" ""
 $(error Please set SPIFFS_CONFIG_PATH to where spiffs_config.h for the platform you are building for is located)
 endif
 
-SPIFFS_TOOLS_CFLAGS = -Wall -Werror -DNO_ESP -DSPIFFS_TEST_VISUALISATION -g
+SPIFFS_TOOLS_CFLAGS = -Wall -Werror -DNO_ESP -DSPIFFS_TEST_VISUALISATION -DSPIFFS_TOOLS_BUILD -g
 
 all: $(BUILD_DIR)/mkspiffs $(BUILD_DIR)/mkspiffs8 $(BUILD_DIR)/unspiffs $(BUILD_DIR)/unspiffs8
 
