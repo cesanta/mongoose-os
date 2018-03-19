@@ -50,6 +50,9 @@ struct mgos_uart_dev_config {
    * UART 2: Rx: 16, Tx: 17, CTS: 14, RTS: 15
    */
 
+  bool tx_inverted;
+  bool rx_inverted;
+
   int8_t rx_gpio;
   int8_t tx_gpio;
   int8_t cts_gpio;

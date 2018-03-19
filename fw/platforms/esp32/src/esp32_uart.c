@@ -356,6 +356,14 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
 
   uint32_t conf0 = UART_TICK_REF_ALWAYS_ON;
 
+  if (cfg->dev->tx_inverted) {
+    conf0 |= UART_TXD_INV;
+  }
+
+  if (cfg->dev->rx_inverted) {
+    conf0 |= UART_RXD_INV;
+  }
+
   switch (cfg->num_data_bits) {
     case 5:
       break;
