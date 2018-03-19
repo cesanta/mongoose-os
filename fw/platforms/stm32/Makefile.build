@@ -116,7 +116,7 @@ FS_BASE_ADDR = $(shell echo $$(($(FLASH_SIZE) - $(FS_SIZE))))
 FS_BLOCK_SIZE = 4096
 FS_PAGE_SIZE = 256
 FS_ERASE_SIZE = 4096
-MKSPIFFS = /usr/local/bin/mkspiffs8
+MKSPIFFS ?= /usr/local/bin/mkspiffs8
 FS_BIN_C = $(GEN_DIR)/fs_bin.c
 FS_STAGING_DIR = $(BUILD_DIR)/fs
 

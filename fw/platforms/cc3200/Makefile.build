@@ -93,6 +93,7 @@ FS_PAGE_SIZE ?= 256
 FS_ERASE_SIZE ?= 4096
 FS_META_SIZE = 64
 FS_IMAGE_SIZE = $(shell echo $$(($(FS_SIZE) + $(FS_META_SIZE))))
+MKSPIFFS ?= /usr/local/bin/mkspiffs
 
 # With safe code update, new code image is written to a different file on update
 # making it possible to safely revert the update.

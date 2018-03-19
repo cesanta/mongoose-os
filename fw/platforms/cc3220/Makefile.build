@@ -64,7 +64,7 @@ MBEDTLS_PATH ?= /opt/cs_mbedtls
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 MONGOOSE_PATH ?= $(MGOS_PATH)/mongoose
 FROZEN_PATH ?= $(MGOS_PATH)/frozen
-MKSPIFFS = /usr/local/bin/mkspiffs8
+MKSPIFFS ?= /usr/local/bin/mkspiffs8
 
 # Binary images must be signed. By default, we sign with dummy "playground" keys from the SDK.
 SIG_CERT ?= $(SDK_PATH)/tools/cc32xx_tools/certificate-playground/dummy-root-ca-cert

@@ -167,7 +167,7 @@ SDKCONFIG = $(GEN_DIR)/sdkconfig
 BATCH_BUILD = 1
 
 PARTITION_TABLE_CSV_PATH = $(MGOS_ESP_PATH)/src/partitions_mgos.csv
-MKSPIFFS = /usr/local/bin/mkspiffs8
+MKSPIFFS ?= /usr/local/bin/mkspiffs8
 
 include $(IDF_PATH)/make/project.mk
 

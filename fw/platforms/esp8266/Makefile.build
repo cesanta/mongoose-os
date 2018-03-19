@@ -327,7 +327,7 @@ BOOT_CONFIG_WRITE_ADDR ?= $(BOOT_CONFIG_ADDR)
 SYS_PARAMS_ADDR = $(shell printf "0x%05x" "$$(($(FLASH_SIZE) - $(SYS_PARAMS_SIZE)))")
 # RF calibration data sector location is configurable, but we also keep it at the end, just above sys params.
 FW_RF_CAL_DATA_ADDR = $(shell printf "0x%05x" "$$(($(FLASH_SIZE) - $(SYS_PARAMS_SIZE) - $(RF_CAL_DATA_SIZE)))")
-MKSPIFFS = /usr/local/bin/mkspiffs8
+MKSPIFFS ?= /usr/local/bin/mkspiffs8
 
 ifeq ("$(FLASH_SIZE)", "1048576")
 #
