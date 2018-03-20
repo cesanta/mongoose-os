@@ -291,8 +291,6 @@ else
   SSL_LIBS =
 endif
 
-include $(MGOS_PATH)/fw/src/spiffs.mk
-
 MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o)) \
             $(BUILD_DIR)/esp_exc_vectors.S.o \
             $(BUILD_DIR)/esp_nsleep100.S.o
@@ -499,6 +497,7 @@ $(LD_SCRIPT): $(LD_SCRIPT_TEMPL)
 include $(MGOS_PATH)/common/scripts/build_info.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
 include $(MGOS_PATH)/fw/src/mgos_config.mk
+include $(MGOS_PATH)/fw/src/spiffs.mk
 
 MGOS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp_sys_config.yaml
 
