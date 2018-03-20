@@ -23,16 +23,16 @@
 #error Please define MGOS_MAX_NUM_UARTS
 #endif
 
-static struct mgos_rlock_type *s_uart_lock = NULL;
-
 static struct mgos_uart_state *s_uart_state[MGOS_MAX_NUM_UARTS];
 
-static inline void uart_lock(void) {
-  mgos_rlock(s_uart_lock);
+static inline void uart_lock(struct mgos_uart_state *us) {
+  mgos_rlock(us->lock);
+  us->locked++;
 }
 
-static inline void uart_unlock(void) {
-  mgos_runlock(s_uart_lock);
+static inline void uart_unlock(struct mgos_uart_state *us) {
+  mgos_runlock(us->lock);
+  us->locked--;
 }
 
 IRAM void mgos_uart_schedule_dispatcher(int uart_no, bool from_isr) {
@@ -45,13 +45,13 @@ void mgos_uart_dispatcher(void *arg) {
   int uart_no = (intptr_t) arg;
   struct mgos_uart_state *us = s_uart_state[uart_no];
   if (us == NULL) return;
-  uart_lock();
+  uart_lock(us);
   if (us->rx_enabled) mgos_uart_hal_dispatch_rx_top(us);
   if (!us->xoff_recd) mgos_uart_hal_dispatch_tx_top(us);
   if (us->dispatcher_cb != NULL) {
-    uart_unlock();
+    uart_unlock(us);
     us->dispatcher_cb(uart_no, us->dispatcher_data);
-    uart_lock();
+    uart_lock(us);
   }
   mgos_uart_hal_dispatch_bottom(us);
   if (us->xoff_sent && us->rx_enabled && mgos_uart_rxb_free(us) > 0) {
@@ -63,21 +63,21 @@ void mgos_uart_dispatcher(void *arg) {
   }
   if (us->rx_buf.len == 0) mbuf_trim(&us->rx_buf);
   if (us->tx_buf.len == 0) mbuf_trim(&us->tx_buf);
-  uart_unlock();
+  uart_unlock(us);
 }
 
 size_t mgos_uart_write(int uart_no, const void *buf, size_t len) {
   size_t written = 0;
   struct mgos_uart_state *us = s_uart_state[uart_no];
   if (us == NULL) return 0;
-  uart_lock();
+  uart_lock(us);
   while (written < len) {
     size_t nw = MIN(len - written, mgos_uart_write_avail(uart_no));
     mbuf_append(&us->tx_buf, ((const char *) buf) + written, nw);
     written += nw;
     if (written < len) mgos_uart_flush(uart_no);
   }
-  uart_unlock();
+  uart_unlock(us);
   mgos_uart_schedule_dispatcher(uart_no, false /* from_isr */);
   return written;
 }
@@ -101,7 +101,7 @@ int mgos_uart_printf(int uart_no, const char *fmt, ...) {
 size_t mgos_uart_read(int uart_no, void *buf, size_t len) {
   struct mgos_uart_state *us = s_uart_state[uart_no];
   if (us == NULL || !us->rx_enabled) return 0;
-  uart_lock();
+  uart_lock(us);
   mgos_uart_hal_dispatch_rx_top(us);
   size_t tr = MIN(len, us->rx_buf.len);
   if (us->cfg.tx_fc_type == MGOS_UART_FC_SW) {
@@ -124,14 +124,14 @@ size_t mgos_uart_read(int uart_no, void *buf, size_t len) {
     memcpy(buf, us->rx_buf.buf, tr);
   }
   mbuf_remove(&us->rx_buf, tr);
-  uart_unlock();
+  uart_unlock(us);
   return tr;
 }
 
 size_t mgos_uart_read_mbuf(int uart_no, struct mbuf *mb, size_t len) {
   struct mgos_uart_state *us = s_uart_state[uart_no];
   if (us == NULL || !us->rx_enabled) return 0;
-  uart_lock();
+  uart_lock(us);
   size_t nr = MIN(len, mgos_uart_read_avail(uart_no));
   if (nr > 0) {
     size_t free_bytes = mb->size - mb->len;
@@ -141,7 +141,7 @@ size_t mgos_uart_read_mbuf(int uart_no, struct mbuf *mb, size_t len) {
     nr = mgos_uart_read(uart_no, mb->buf + mb->len, nr);
     mb->len += nr;
   }
-  uart_unlock();
+  uart_unlock(us);
   return nr;
 }
 
@@ -149,16 +149,15 @@ void mgos_uart_flush(int uart_no) {
   struct mgos_uart_state *us = s_uart_state[uart_no];
   if (us == NULL || us->xoff_recd) return;
   while (us->tx_buf.len > 0) {
-    uart_lock();
+    uart_lock(us);
     mgos_uart_hal_dispatch_tx_top(us);
-    uart_unlock();
+    uart_unlock(us);
   }
   mgos_uart_hal_flush_fifo(us);
 }
 
 bool mgos_uart_configure(int uart_no, const struct mgos_uart_config *cfg) {
   if (uart_no < 0 || uart_no >= MGOS_MAX_NUM_UARTS) return false;
-  uart_lock();
   bool res = false;
   struct mgos_uart_state *us = s_uart_state[uart_no];
   if (us == NULL) {
@@ -167,6 +166,7 @@ bool mgos_uart_configure(int uart_no, const struct mgos_uart_config *cfg) {
     mbuf_init(&us->rx_buf, 0);
     mbuf_init(&us->tx_buf, 0);
     if (mgos_uart_hal_init(us)) {
+      us->lock = mgos_rlock_create();
       mgos_add_poll_cb(mgos_uart_dispatcher, (void *) (intptr_t) uart_no);
       s_uart_state[uart_no] = us;
       res = true;
@@ -186,7 +186,6 @@ bool mgos_uart_configure(int uart_no, const struct mgos_uart_config *cfg) {
       }
     }
   }
-  uart_unlock();
   if (res) {
     mgos_uart_schedule_dispatcher(uart_no, false /* from_isr */);
   }
@@ -292,6 +291,5 @@ IRAM NOINSTR struct mgos_uart_state *mgos_uart_hal_get_state(int uart_no) {
 }
 
 enum mgos_init_result mgos_uart_init(void) {
-  s_uart_lock = mgos_rlock_create();
   return MGOS_INIT_OK;
 }

@@ -21,6 +21,10 @@
 #include "common/platforms/esp8266/uart_register.h"
 #include "mgos_utils.h"
 
+struct esp8266_uart_state {
+  size_t isr_tx_bytes;
+};
+
 #ifndef HOST_INF_SEL
 #define HOST_INF_SEL (0x28)
 #endif
@@ -36,6 +40,8 @@
 #define UART_RX_INTS (UART_RXFIFO_FULL_INT_ENA | UART_RXFIFO_TOUT_INT_ENA)
 #define UART_TX_INTS (UART_TXFIFO_EMPTY_INT_ENA)
 #define UART_INFO_INTS (UART_RXFIFO_OVF_INT_ENA | UART_CTS_CHG_INT_ENA)
+
+#define UART_FIFO_MAX_LEN 127
 
 /* Active for CTS is 0, i.e. 0 = ok to send. */
 IRAM bool esp_uart_cts(int uart_no) {
@@ -77,6 +83,21 @@ IRAM bool adj_rx_fifo_full_thresh(struct mgos_uart_state *us) {
   return (rx_fifo_len < thresh);
 }
 
+static IRAM size_t fill_tx_fifo(struct mgos_uart_state *us) {
+  struct esp8266_uart_state *uds = (struct esp8266_uart_state *) us->dev_data;
+  int uart_no = us->uart_no;
+  size_t tx_av = us->tx_buf.len - uds->isr_tx_bytes;
+  if (tx_av == 0) return 0;
+  size_t fifo_av = UART_FIFO_MAX_LEN - esp_uart_tx_fifo_len(uart_no);
+  if (fifo_av == 0) return 0;
+  size_t len = MIN(tx_av, fifo_av);
+  const char *src = us->tx_buf.buf + uds->isr_tx_bytes;
+  for (size_t i = 0; i < len; i++) {
+    esp_uart_tx_byte(uart_no, src[i]);
+  }
+  return len;
+}
+
 IRAM NOINSTR static void esp_handle_uart_int(struct mgos_uart_state *us) {
   if (us == NULL) return;
   const int uart_no = us->uart_no;
@@ -92,21 +113,39 @@ IRAM NOINSTR static void esp_handle_uart_int(struct mgos_uart_state *us) {
       us->stats.tx_throttles++;
     }
   }
-  if (int_st & (UART_RX_INTS | UART_TX_INTS)) {
-    int int_ena = UART_INFO_INTS;
-    if (int_st & UART_RX_INTS) us->stats.rx_ints++;
-    if (int_st & UART_TX_INTS) us->stats.tx_ints++;
+  if (int_st & UART_RX_INTS) {
+    us->stats.rx_ints++;
+    CLEAR_PERI_REG_MASK(UART_INT_ENA(uart_no), UART_RX_INTS);
     if (adj_rx_fifo_full_thresh(us)) {
-      int_ena |= UART_RXFIFO_FULL_INT_ENA;
+      SET_PERI_REG_MASK(UART_INT_ENA(uart_no), UART_RXFIFO_FULL_INT_ENA);
     } else if (cfg->rx_fc_type == MGOS_UART_FC_SW) {
       /* Send XOFF and keep RX ints disabled */
-      while (esp_uart_tx_fifo_len(uart_no) >= 127) {
+      while (esp_uart_tx_fifo_len(uart_no) >= UART_FIFO_MAX_LEN) {
       }
       esp_uart_tx_byte(uart_no, MGOS_UART_XOFF_CHAR);
       us->xoff_sent = true;
     }
-    WRITE_PERI_REG(UART_INT_ENA(uart_no), int_ena);
     mgos_uart_schedule_dispatcher(uart_no, true /* from_isr */);
+  }
+  if (int_st & UART_TX_INTS) {
+    size_t tx_av = 0;
+    us->stats.tx_ints++;
+    if (!us->locked) {
+      struct esp8266_uart_state *uds =
+          (struct esp8266_uart_state *) us->dev_data;
+      uds->isr_tx_bytes += fill_tx_fifo(us);
+      tx_av = us->tx_buf.len - uds->isr_tx_bytes;
+    }
+    if (tx_av > 0) {
+      SET_PERI_REG_MASK(UART_INT_ENA(uart_no), UART_TX_INTS);
+    } else {
+      CLEAR_PERI_REG_MASK(UART_INT_ENA(uart_no), UART_TX_INTS);
+    }
+    if (tx_av < UART_FIFO_MAX_LEN) {
+      mgos_uart_schedule_dispatcher(uart_no, true /* from_isr */);
+    } else {
+      /* No need to bother dispatcher, we have plenty of data */
+    }
   }
   WRITE_PERI_REG(UART_INT_CLR(uart_no), int_st);
 }
@@ -159,27 +198,19 @@ void mgos_uart_hal_dispatch_rx_top(struct mgos_uart_state *us) {
 #endif
     us->stats.rx_bytes += rxn;
   }
-  CLEAR_PERI_REG_MASK(UART_INT_CLR(uart_no), UART_RX_INTS);
+  WRITE_PERI_REG(UART_INT_CLR(uart_no), UART_RX_INTS);
 }
 
 void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us) {
   int uart_no = us->uart_no;
-  struct mbuf *txb = &us->tx_buf;
-  uint32_t txn = 0;
-  /* TX */
-  if (txb->len > 0) {
-    while (txb->len > 0) {
-      size_t tx_av = 128 - esp_uart_tx_fifo_len(uart_no);
-      size_t len = MIN(txb->len, tx_av);
-      if (len == 0) break;
-      for (size_t i = 0; i < len; i++) {
-        esp_uart_tx_byte(uart_no, *(txb->buf + i));
-      }
-      txn += len;
-      mbuf_remove(txb, len);
-    }
-    us->stats.tx_bytes += txn;
-  }
+  struct esp8266_uart_state *uds = (struct esp8266_uart_state *) us->dev_data;
+  CLEAR_PERI_REG_MASK(UART_INT_ENA(uart_no), UART_TX_INTS);
+  uint32_t txn = uds->isr_tx_bytes;
+  txn += fill_tx_fifo(us);
+  mbuf_remove(&us->tx_buf, txn);
+  uds->isr_tx_bytes = 0;
+  us->stats.tx_bytes += txn;
+  WRITE_PERI_REG(UART_INT_CLR(uart_no), UART_TX_INTS);
 }
 
 void mgos_uart_hal_dispatch_bottom(struct mgos_uart_state *us) {
@@ -224,6 +255,9 @@ void mgos_uart_hal_config_set_defaults(int uart_no,
 }
 
 bool mgos_uart_hal_init(struct mgos_uart_state *us) {
+  struct esp8266_uart_state *uds =
+      (struct esp8266_uart_state *) calloc(1, sizeof(*uds));
+  us->dev_data = uds;
   /* Start with ints disabled. */
   WRITE_PERI_REG(UART_INT_ENA(us->uart_no), 0);
 #ifdef RTOS_SDK

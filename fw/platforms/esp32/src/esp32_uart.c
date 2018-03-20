@@ -25,11 +25,15 @@
 #define UART_TX_INTS (UART_TXFIFO_EMPTY_INT_ENA)
 #define UART_INFO_INTS (UART_RXFIFO_OVF_INT_ENA | UART_CTS_CHG_INT_ENA)
 
+/* Note: ESP32 supports FIFO lengths > 128. For now, we ignore that. */
+#define UART_FIFO_MAX_LEN 127
+
 struct esp32_uart_state {
   bool hd;
   int tx_en_gpio;
   int tx_en_gpio_val;
   intr_handle_t ih;
+  size_t isr_tx_bytes;
 };
 
 /* Active for CTS is 0, i.e. 0 = ok to send. */
@@ -37,7 +41,6 @@ IRAM bool esp32_uart_cts(int uart_no) {
   return (READ_PERI_REG(UART_STATUS_REG(uart_no)) & UART_CTSN) ? 1 : 0;
 }
 
-/* Note: ESP32 supports FIFO lengths > 128. For now, we ignore that. */
 IRAM int esp32_uart_rx_fifo_len(int uart_no) {
   return REG_GET_FIELD(UART_STATUS_REG(uart_no), UART_RXFIFO_CNT);
 }
@@ -60,7 +63,7 @@ IRAM int esp32_uart_tx_fifo_len(int uart_no) {
   return REG_GET_FIELD(UART_STATUS_REG(uart_no), UART_TXFIFO_CNT);
 }
 
-IRAM static void tx_byte(int uart_no, uint8_t byte) {
+IRAM static void esp32_uart_tx_byte(int uart_no, uint8_t byte) {
   /* Use AHB FIFO register because writing to the data bus register
    * can overwhelm UART and cause bytes to be lost. */
   WRITE_PERI_REG(UART_FIFO_AHB_REG(uart_no), byte);
@@ -78,15 +81,27 @@ IRAM bool adj_rx_fifo_full_thresh(struct mgos_uart_state *us) {
     thresh = us->cfg.dev.rx_fifo_fc_thresh;
   }
   if (get_rx_fifo_full_thresh(uart_no) != thresh) {
-    uint32_t conf1 = READ_PERI_REG(UART_CONF1_REG(uart_no));
-    conf1 = (conf1 & ~(UART_RXFIFO_FULL_THRHD_V << UART_RXFIFO_FULL_THRHD_S)) |
-            ((thresh & UART_RXFIFO_FULL_THRHD_V) << UART_RXFIFO_FULL_THRHD_S);
-    WRITE_PERI_REG(UART_CONF1_REG(uart_no), conf1);
+    REG_SET_FIELD(UART_CONF1_REG(uart_no), UART_RXFIFO_FULL_THRHD, thresh);
   }
   return (rx_fifo_len < thresh);
 }
 
-IRAM NOINSTR static void esp_handle_uart_int(struct mgos_uart_state *us) {
+static IRAM size_t fill_tx_fifo(struct mgos_uart_state *us) {
+  struct esp32_uart_state *uds = (struct esp32_uart_state *) us->dev_data;
+  int uart_no = us->uart_no;
+  size_t tx_av = us->tx_buf.len - uds->isr_tx_bytes;
+  if (tx_av == 0) return 0;
+  size_t fifo_av = UART_FIFO_MAX_LEN - esp32_uart_tx_fifo_len(uart_no);
+  if (fifo_av == 0) return 0;
+  size_t len = MIN(tx_av, fifo_av);
+  const char *src = us->tx_buf.buf + uds->isr_tx_bytes;
+  for (size_t i = 0; i < len; i++) {
+    esp32_uart_tx_byte(uart_no, src[i]);
+  }
+  return len;
+}
+
+IRAM NOINSTR static void esp32_handle_uart_int(struct mgos_uart_state *us) {
   const int uart_no = us->uart_no;
   /*
    * Since both UARTs use the same int, we need to apply the mask manually.
@@ -122,31 +137,45 @@ IRAM NOINSTR static void esp_handle_uart_int(struct mgos_uart_state *us) {
     mgos_gpio_write(uds->tx_en_gpio, !uds->tx_en_gpio_val);
     SET_PERI_REG_MASK(UART_CONF0_REG(uart_no), UART_RXFIFO_RST);
     CLEAR_PERI_REG_MASK(UART_CONF0_REG(uart_no), UART_RXFIFO_RST);
+    CLEAR_PERI_REG_MASK(UART_INT_ENA_REG(uart_no), UART_TX_DONE_INT_ENA);
   }
-  if (int_st & (UART_RX_INTS | UART_TX_INTS)) {
-    int int_ena = UART_INFO_INTS;
-    if (int_st & UART_RX_INTS) us->stats.rx_ints++;
-    if (int_st & UART_TX_INTS) us->stats.tx_ints++;
+  if (int_st & UART_RX_INTS) {
+    us->stats.rx_ints++;
+    CLEAR_PERI_REG_MASK(UART_INT_ENA_REG(uart_no), UART_RX_INTS);
     if (adj_rx_fifo_full_thresh(us)) {
-      int_ena |= UART_RXFIFO_FULL_INT_ENA;
+      SET_PERI_REG_MASK(UART_INT_ENA_REG(uart_no), UART_RXFIFO_FULL_INT_ENA);
     } else if (cfg->rx_fc_type == MGOS_UART_FC_SW) {
       /* Send XOFF and keep RX ints disabled */
-      while (esp32_uart_tx_fifo_len(uart_no) >= 127) {
+      while (esp32_uart_tx_fifo_len(uart_no) >= UART_FIFO_MAX_LEN) {
       }
-      tx_byte(uart_no, MGOS_UART_XOFF_CHAR);
+      esp32_uart_tx_byte(uart_no, MGOS_UART_XOFF_CHAR);
       us->xoff_sent = true;
     }
-    WRITE_PERI_REG(UART_INT_ENA_REG(uart_no), int_ena);
     mgos_uart_schedule_dispatcher(uart_no, true /* from_isr */);
+  }
+  if (int_st & UART_TX_INTS) {
+    size_t tx_av = 0;
+    us->stats.tx_ints++;
+    if (!us->locked) {
+      struct esp32_uart_state *uds = (struct esp32_uart_state *) us->dev_data;
+      uds->isr_tx_bytes += fill_tx_fifo(us);
+      tx_av = us->tx_buf.len - uds->isr_tx_bytes;
+    }
+    if (tx_av > 0) {
+      SET_PERI_REG_MASK(UART_INT_ENA_REG(uart_no), UART_TX_INTS);
+    } else {
+      CLEAR_PERI_REG_MASK(UART_INT_ENA_REG(uart_no), UART_TX_INTS);
+    }
+    if (tx_av < UART_FIFO_MAX_LEN) {
+      mgos_uart_schedule_dispatcher(uart_no, true /* from_isr */);
+    } else {
+      /* No need to bother dispatcher, we have plenty of data */
+    }
   }
   WRITE_PERI_REG(UART_INT_CLR_REG(uart_no), int_st);
 }
 
-IRAM NOINSTR static void esp32_handle_uart_int(void *arg) {
-  esp_handle_uart_int((struct mgos_uart_state *) arg);
-}
-
-IRAM void mgos_uart_hal_dispatch_rx_top(struct mgos_uart_state *us) {
+void mgos_uart_hal_dispatch_rx_top(struct mgos_uart_state *us) {
   int uart_no = us->uart_no;
   struct mbuf *rxb = &us->rx_buf;
   uint32_t rxn = 0;
@@ -186,36 +215,28 @@ IRAM void mgos_uart_hal_dispatch_rx_top(struct mgos_uart_state *us) {
 #ifdef MEASURE_LINGER_TIME
     fprintf(stderr, "Time spent reading: %u us\n", system_get_time() - st);
 #endif
+    us->stats.rx_bytes += rxn;
   }
   WRITE_PERI_REG(UART_INT_CLR_REG(uart_no), UART_RX_INTS);
 }
 
-IRAM void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us) {
-  struct esp32_uart_state *uds = (struct esp32_uart_state *) us->dev_data;
+void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us) {
   int uart_no = us->uart_no;
-  struct mbuf *txb = &us->tx_buf;
-  uint32_t txn = 0;
-  /* TX */
-  if (txb->len > 0) {
-    if (uds->hd) {
-      mgos_gpio_write(uds->tx_en_gpio, uds->tx_en_gpio_val);
-      WRITE_PERI_REG(UART_INT_CLR_REG(uart_no), UART_TX_DONE_INT_CLR);
-    }
-    while (txb->len > 0) {
-      size_t tx_av = 128 - esp32_uart_tx_fifo_len(uart_no);
-      size_t len = MIN(txb->len, tx_av);
-      if (len == 0) break;
-      for (size_t i = 0; i < len; i++) {
-        tx_byte(uart_no, *(txb->buf + i));
-      }
-      txn += len;
-      mbuf_remove(txb, len);
-    }
-    us->stats.tx_bytes += txn;
+  struct esp32_uart_state *uds = (struct esp32_uart_state *) us->dev_data;
+  CLEAR_PERI_REG_MASK(UART_INT_ENA_REG(uart_no), UART_TX_INTS);
+  uint32_t txn = uds->isr_tx_bytes;
+  if (uds->hd && us->tx_buf.len - uds->isr_tx_bytes > 0) {
+    mgos_gpio_write(uds->tx_en_gpio, uds->tx_en_gpio_val);
   }
+  txn += fill_tx_fifo(us);
+  mbuf_remove(&us->tx_buf, txn);
+  uds->isr_tx_bytes = 0;
+  us->stats.tx_bytes += txn;
+
+  WRITE_PERI_REG(UART_INT_CLR_REG(uart_no), UART_TX_INTS);
 }
 
-IRAM void mgos_uart_hal_dispatch_bottom(struct mgos_uart_state *us) {
+void mgos_uart_hal_dispatch_bottom(struct mgos_uart_state *us) {
   uint32_t int_ena = UART_INFO_INTS;
   struct esp32_uart_state *uds = (struct esp32_uart_state *) us->dev_data;
   /* Determine which interrupts we want. */
@@ -317,7 +338,7 @@ bool mgos_uart_hal_init(struct mgos_uart_state *us) {
   WRITE_PERI_REG(UART_INT_ENA_REG(us->uart_no), 0);
   esp_err_t r =
       esp_intr_alloc(int_src, ESP_INTR_FLAG_SHARED | ESP_INTR_FLAG_IRAM,
-                     esp32_handle_uart_int, us, &uds->ih);
+                     (void (*) (void *)) esp32_handle_uart_int, us, &uds->ih);
   if (r != ESP_OK) {
     LOG(LL_ERROR, ("Error allocating int for UART%d: %d", us->uart_no, r));
     return false;

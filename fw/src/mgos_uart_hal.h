@@ -7,6 +7,7 @@
 #define CS_FW_SRC_MGOS_UART_HAL_H_
 
 #include "mgos_uart.h"
+#include "mgos_system.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -24,6 +25,8 @@ struct mgos_uart_state {
   mgos_uart_dispatcher_t dispatcher_cb;
   void *dispatcher_data;
   void *dev_data;
+  struct mgos_rlock_type *lock;
+  int locked;
 };
 
 struct mgos_uart_state *mgos_uart_hal_get_state(int uart_no);
