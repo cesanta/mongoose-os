@@ -10,6 +10,7 @@ MG_FEATURES_TINY = -DMG_MODULE_LINES \
                    -DMG_MAX_HTTP_REQUEST_SIZE=3072 \
                    -DMG_LOG_DNS_FAILURES \
                    -DMG_MAX_PATH=256 \
+                   -DMBUF_SIZE_MULTIPLIER=2 -DMBUF_SIZE_MAX_HEADROOM=128
 
 V ?=
 ifeq ("$(V)","1")

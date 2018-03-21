@@ -78,7 +78,7 @@ MGOS_PIC32_FEATURES ?= -DMGOS_NUM_GPIO=16
 MG_FEATURES ?= $(MG_FEATURES_TINY) \
                -DMG_LOCALS \
                -DMG_DISABLE_MQTT \
-               -DMBUF_SIZE_MULTIPLIER=1 -DFS_MAX_OPEN_FILES=5
+               -DFS_MAX_OPEN_FILES=5
 
 # TODO(dfrank): add these macros
 # -DMG_ENABLE_SSL
