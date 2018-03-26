@@ -15,7 +15,6 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
-#include "common/cs_dbg.h"
 #include "common/str_util.h"
 
 #include "mgos_core_dump.h"
@@ -60,7 +59,6 @@ enum mgos_init_result cc32xx_init(void) {
   _u16 len16 = 4;
   uint32_t seed = 0;
   sl_NetUtilGet(SL_NETUTIL_TRUE_RANDOM, 0, (uint8_t *) &seed, &len16);
-  LOG(LL_INFO, ("seed: %lu", seed));
   return MGOS_INIT_OK;
 }
 
