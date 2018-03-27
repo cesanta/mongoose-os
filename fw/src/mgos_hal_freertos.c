@@ -149,13 +149,10 @@ enum mgos_init_result mgos_init2(void) {
   r = mgos_debug_init();
   if (r != MGOS_INIT_OK) return r;
 
-  r = mongoose_init();
+  r = mgos_debug_uart_init();
   if (r != MGOS_INIT_OK) return r;
 
   cs_log_set_level(MGOS_EARLY_DEBUG_LEVEL);
-
-  r = mgos_debug_uart_init();
-  if (r != MGOS_INIT_OK) return r;
 
   setvbuf(stdout, NULL, _IOLBF, 256);
   setvbuf(stderr, NULL, _IOLBF, 256);
@@ -167,6 +164,9 @@ enum mgos_init_result mgos_init2(void) {
   LOG(LL_INFO, ("CPU: %d MHz, RAM: %u total, %u free",
                 (int) (mgos_get_cpu_freq() / 1000000), mgos_get_heap_size(),
                 mgos_get_free_heap_size()));
+
+  r = mongoose_init();
+  if (r != MGOS_INIT_OK) return r;
 
   r = mgos_hal_freertos_pre_init();
   if (r != MGOS_INIT_OK) return r;

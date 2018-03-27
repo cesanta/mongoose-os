@@ -115,13 +115,12 @@ enum mgos_init_result esp_mgos_init2(rboot_config *bcfg) {
 #ifdef CS_MMAP
   mgos_vfs_mmap_init();
 #endif
-  mongoose_init();
   enum mgos_init_result ir = mgos_debug_uart_init();
   if (ir != MGOS_INIT_OK) return ir;
   uart_initialized = true;
+  cs_log_set_level(MGOS_EARLY_DEBUG_LEVEL);
   setvbuf(stdout, NULL, _IOLBF, 256);
   setvbuf(stderr, NULL, _IOLBF, 256);
-  cs_log_set_level(MGOS_EARLY_DEBUG_LEVEL);
   /* Note: putc can be invoked from int handlers. */
   os_install_putc1(sdk_putc);
   fputc('\n', stderr);
@@ -137,6 +136,7 @@ enum mgos_init_result esp_mgos_init2(rboot_config *bcfg) {
   LOG(LL_INFO, ("SDK %s; flash: %uM", system_get_sdk_version(),
                 esp_vfs_dev_sysflash_get_size(NULL) / 1048576));
   esp_print_reset_info();
+  mongoose_init();
 
   if (!esp_fs_init(bcfg->fs_addresses[bcfg->current_rom],
                    bcfg->fs_sizes[bcfg->current_rom])) {
