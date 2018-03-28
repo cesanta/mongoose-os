@@ -9,8 +9,8 @@
 #include "common/platform.h"
 #include "common/queue.h"
 
-#include "frozen/frozen.h"
-#include "mongoose/mongoose.h"
+#include "frozen.h"
+#include "mongoose.h"
 
 #include "mgos_hal.h"
 #include "mgos_timers.h"

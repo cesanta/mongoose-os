@@ -6,7 +6,7 @@
 #include "cs_dbg.h"
 #include "cs_file.h"
 
-#include "frozen/frozen.h"
+#include "frozen.h"
 
 #include "mgos_config_util.h"
 #include "mgos_event.h"

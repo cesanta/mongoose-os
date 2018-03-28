@@ -45,12 +45,10 @@ endif
 
 APP_FS_DIRS = $(sort $(dir $(APP_FS_FILES)))
 
+include $(MGOS_PATH)/fw/common.mk
+
 APP_PATH := $(CURDIR)
-MGOS_PATH ?= ../../..
-COMMON_PATH ?= $(MGOS_PATH)/common
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
-MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
-MGOS_INCLUDE_PATH ?= $(MGOS_PATH)/fw/include
 MGOS_ESP_PATH ?= $(MGOS_PATH)/fw/platforms/esp32
 MGOS_ESP_SRC_PATH ?= $(MGOS_PATH)/fw/platforms/esp32/src
 
@@ -122,13 +120,13 @@ MGOS_FEATURES =
 MGOS_CONF_SCHEMA =
 FS_FILES =
 
+MGOS_PATH ?= ../../..
 include $(MGOS_PATH)/fw/src/mgos_features.mk
 
 export MGOS_SRCS
 export MGOS_FEATURES
 export MGOS_CONF_SCHEMA
-export IPATH
-export VPATH
+export MGOS_IPATH
 
 # Flags for other component builds, including SPIFFS, go here.
 CFLAGS += -Wall -Werror -mtext-section-literals \
@@ -181,8 +179,6 @@ defconfig menuconfig:
 	true
 
 LDFLAGS += -L$(BUILD_DIR)/src
-
-include $(MGOS_PATH)/fw/common.mk
 
 FW_PARTS = boot:type=boot,addr=0x1000,src=$(BOOTLOADER_BIN),encrypt=true,update=$(MGOS_UPDATE_BOOT_LOADER) \
            pt:type=pt,addr=$(PARTITION_TABLE_OFFSET),src=$(PARTITION_TABLE_BIN),encrypt=true \

@@ -12,7 +12,7 @@
 
 #include "common/mbuf.h"
 #include "common/mg_str.h"
-#include "frozen/frozen.h"
+#include "frozen.h"
 
 #include "mgos_updater.h"
 

@@ -15,7 +15,7 @@
 #include "common/cs_dbg.h"
 #include "common/mbuf.h"
 
-#include "frozen/frozen.h"
+#include "frozen.h"
 
 #include "mgos_hal.h"
 #include "mgos_vfs.h"

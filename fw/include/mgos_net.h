@@ -16,7 +16,7 @@
 
 #include <stdbool.h>
 
-#include "mongoose/mongoose.h"
+#include "mongoose.h"
 
 #include "mgos_config.h"
 #include "mgos_event.h"

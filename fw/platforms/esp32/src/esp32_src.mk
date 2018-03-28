@@ -136,6 +136,6 @@ $(FFI_EXPORTS_C): $(APP_FS_FILES)
 	  $(addprefix -I ,$(COMPONENT_EXTRA_INCLUDES)) \
 	  -c $< -o $@
 
-COMPONENT_EXTRA_INCLUDES = $(MGOS_ESP_SRC_PATH) $(MGOS_PATH) $(MGOS_SRC_PATH) $(MGOS_INCLUDE_PATH) $(MGOS_ESP_PATH)/include \
-                           $(SPIFFS_PATH) $(GEN_DIR) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) $(IPATH) \
+COMPONENT_EXTRA_INCLUDES = $(MGOS_ESP_SRC_PATH) $(MGOS_ESP_PATH)/include \
+                           $(SPIFFS_PATH) $(GEN_DIR) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) $(MGOS_IPATH) \
                            $(IDF_PATH)/components/freertos/include/freertos

@@ -30,6 +30,9 @@ APP_FS_PATH ?=
 
 BUILD_LIB_NAME ?= lib.a
 
+MGOS_PATH ?= ../../..
+include $(MGOS_PATH)/fw/common.mk
+
 # For backward compatibility, convert old APP_MODULES and APP_FS_PATH into
 # new APP_SOURCES and APP_FS_FILES
 ifneq "$(APP_MODULES)" ""
@@ -55,15 +58,11 @@ APP_IMAGE_MAX_SIZE ?= 262144
 APP_PATH := $(CURDIR)
 SDK_PATH ?=
 FREERTOS_PATH ?=
-MGOS_PATH ?= ../../..
-COMMON_PATH ?= $(MGOS_PATH)/common
 COMMON_CC3200_PATH ?= $(MGOS_PATH)/common/platforms/cc3200
 MGOS_CC3220_PATH ?= $(MGOS_PATH)/fw/platforms/cc3220
 MGOS_CC32XX_PATH ?= $(MGOS_PATH)/fw/platforms/cc32xx
 MBEDTLS_PATH ?= /opt/cs_mbedtls
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
-MONGOOSE_PATH ?= $(MGOS_PATH)/mongoose
-FROZEN_PATH ?= $(MGOS_PATH)/frozen
 MKSPIFFS ?= /usr/local/bin/mkspiffs8
 
 # Binary images must be signed. By default, we sign with dummy "playground" keys from the SDK.
@@ -98,14 +97,10 @@ FS_ERASE_SIZE ?= 2048
 MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
 MGOS_INCLUDE_PATH ?= $(MGOS_PATH)/fw/include
 
-# For FW_VERSION, MG_FEATURES_TINY
-include $(MGOS_PATH)/fw/common.mk
-
-VPATH = $(APP_SOURCE_DIRS) $(MGOS_SRC_PATH) $(MGOS_CC32XX_PATH)/src $(MGOS_CC3220_PATH)/src \
+VPATH = $(MGOS_VPATH) $(APP_SOURCE_DIRS) $(MGOS_CC32XX_PATH)/src $(MGOS_CC3220_PATH)/src \
         $(COMMON_PATH) $(COMMON_PATH)/platforms/arm \
-        $(GEN_DIR) \
-        $(MONGOOSE_PATH) $(FROZEN_PATH)
-IPATH = $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) $(MGOS_PATH) $(MGOS_SRC_PATH) $(MGOS_INCLUDE_PATH) \
+        $(GEN_DIR)
+IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
         $(MGOS_CC32XX_PATH)/src $(MGOS_CC3220_PATH)/src $(GEN_DIR) \
         $(MBEDTLS_PATH)/include
 

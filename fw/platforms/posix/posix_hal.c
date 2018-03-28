@@ -28,7 +28,7 @@ typedef unsigned short u_short;
 #include <unistd.h>
 #endif
 
-#include "mongoose/mongoose.h"
+#include "mongoose.h"
 #include "mgos_hal.h"
 #include "mgos_mongoose.h"
 #include "mgos_net_hal.h"

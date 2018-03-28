@@ -12,11 +12,11 @@
 #include <stdbool.h>
 #include <stdint.h>
 
-#include "frozen/frozen.h"
+#include "frozen.h"
 #include "mgos_timers.h"
 #include "mgos_updater.h"
 #include "mgos_updater_hal.h"
-#include "mongoose/mongoose.h"
+#include "mongoose.h"
 
 #ifdef __cplusplus
 extern "C" {

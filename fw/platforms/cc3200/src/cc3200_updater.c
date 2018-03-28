@@ -11,8 +11,8 @@
 #include "common/cs_dbg.h"
 #include "common/platform.h"
 
-#include "frozen/frozen.h"
-#include "mongoose/mongoose.h"
+#include "frozen.h"
+#include "mongoose.h"
 
 #include "mgos_hal.h"
 #include "mgos_sys_config.h"

@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-#include "mongoose/mongoose.h"
+#include "mongoose.h"
 
 #include "common/platforms/esp8266/esp_missing_includes.h"
 

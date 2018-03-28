@@ -10,7 +10,7 @@
 #include "mbedtls/sha1.h"
 #include "mbedtls/sha256.h"
 
-#include "mongoose/mongoose.h"
+#include "mongoose.h"
 
 void mg_hash_md5_v(size_t num_msgs, const uint8_t *msgs[],
                    const size_t *msg_lens, uint8_t *digest) {

@@ -15,7 +15,7 @@
 
 #include <stdbool.h>
 
-#include "frozen/frozen.h"
+#include "frozen.h"
 
 #ifdef __cplusplus
 extern "C" {

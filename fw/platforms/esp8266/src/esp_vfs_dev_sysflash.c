@@ -9,7 +9,7 @@
 #include "spi_flash.h"
 
 #include "common/cs_dbg.h"
-#include "mongoose/mongoose.h"
+#include "mongoose.h"
 
 #include "mgos_vfs_dev.h"
 #include "mgos_vfs_fs_spiffs.h"

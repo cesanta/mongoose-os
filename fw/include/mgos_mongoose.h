@@ -15,7 +15,7 @@
 
 #include <stdbool.h>
 
-#include "mongoose/mongoose.h"
+#include "mongoose.h"
 
 #ifndef MGOS_RECV_MBUF_LIMIT
 #define MGOS_RECV_MBUF_LIMIT 3072

@@ -6,18 +6,14 @@ MAKEFLAGS += --warn-undefined-variables
 .DEFAULT_GOAL := all
 
 MGOS_PATH ?= ../../..
-COMMON_PATH ?= $(MGOS_PATH)/common
-MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
-MGOS_INCLUDE_PATH ?= $(MGOS_PATH)/fw/include
+include $(MGOS_PATH)/fw/common.mk
+
 SRC_PATH ?= ../../src
-MONGOOSE_PATH ?= ../../../mongoose
 BIN_DIR ?= ./bin
 BUILD_DIR ?= ./.build
 GEN_DIR ?= ./.build/gen
-FROZEN_PATH ?= $(MGOS_PATH)/frozen
 APP ?= mongoose-os
 VERBOSE ?= 0
-VPATH = $(SRC_PATH) $(MONGOOSE_PATH) $(FROZEN_PATH) $(COMMON_PATH) $(COMMON_PATH)/mg_rpc
 SSL ?= None
 DEBUG ?= 0
 CC_WRAPPER ?=
@@ -28,9 +24,6 @@ MGOS_ENABLE_DEBUG_UDP = 0
 MGOS_ENABLE_BITBANG = 0
 MGOS_ENABLE_SYS_SERVICE = 0
 MGOS_ENABLE_WIFI = 0
-
-# For FW_VERSION, MG_FEATURES_TINY
-include $(MGOS_PATH)/fw/common.mk
 
 LDFLAGS ?=
 
@@ -43,7 +36,8 @@ MONGOOSE_FEATURES = \
   -DMG_MODULE_LINES
 
 
-INCLUDES = $(MGOS_PATH) $(SRC_PATH) $(MGOS_INCLUDE_PATH) $(BUILD_DIR)
+INCLUDES = $(MGOS_IPATH) $(SRC_PATH) $(BUILD_DIR)
+VPATH = $(MGOS_VPATH) $(SRC_PATH)
 MGOS_SRCS = $(notdir $(wildcard *.c)) mgos_init.c  \
             mongoose.c frozen.c mgos_mongoose.c mgos_event.c mgos_gpio.c \
             mgos_system.c mgos_time.c mgos_timers.c \

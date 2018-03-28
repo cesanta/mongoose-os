@@ -11,7 +11,7 @@
 
 #include "common/cs_dbg.h"
 
-#include "mongoose/mongoose.h"
+#include "mongoose.h"
 
 #include "mgos_features.h"
 #include "mgos_event.h"

@@ -17,6 +17,8 @@ SOURCES = unit_test.c \
 
 INCS = -I$(REPO_ROOT)/fw/src \
        -I$(REPO_ROOT)/fw/include \
+       -I$(REPO_ROOT)/frozen \
+       -I$(REPO_ROOT)/mongoose \
        -I$(REPO_ROOT) \
        -I$(REPO_ROOT)/common \
        -I. \

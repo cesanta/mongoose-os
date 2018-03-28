@@ -9,7 +9,7 @@
 #include "common/mbuf.h"
 #include "common/mg_str.h"
 #include "common/platform.h"
-#include "frozen/frozen.h"
+#include "frozen.h"
 
 #ifdef __cplusplus
 extern "C" {

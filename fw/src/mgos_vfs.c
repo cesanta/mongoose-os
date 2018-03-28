@@ -10,7 +10,7 @@
 #include <sys/reent.h>
 #endif
 
-#include "mongoose/mongoose.h" /* For MG_MAX_PATH */
+#include "mongoose.h" /* For MG_MAX_PATH */
 
 #include "common/cs_dbg.h"
 #include "common/queue.h"
