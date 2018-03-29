@@ -5,6 +5,7 @@ MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
 MGOS_INCLUDE_PATH ?= $(MGOS_PATH)/fw/include
 COMMON_PATH ?= $(MGOS_PATH)/common
 FROZEN_PATH ?= $(MGOS_PATH)/frozen
+# Note: Mongoose is added as a library, this is left for backward compatibility.
 MONGOOSE_PATH ?= $(MGOS_PATH)/mongoose
 
 MGOS_IPATH ?= $(MGOS_PATH) $(MGOS_INCLUDE_PATH) $(MGOS_SRC_PATH) $(MONGOOSE_PATH) $(FROZEN_PATH)
