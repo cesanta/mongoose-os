@@ -1,7 +1,5 @@
 .DEFAULT_GOAL = all
 
-include ../../../fw/common.mk
-
 BUILD_DIR ?= .
 SPIFFS_PATH ?= $(CURDIR)/..
 SPIFFS_CONFIG_PATH ?=
@@ -28,21 +26,21 @@ $(BUILD_DIR)/spls8: spls.c $(COMMON_FILES)
 	$(call compile,-DCS_SPIFFS_ENABLE_METADATA)
 
 $(BUILD_DIR)/mkspiffs: mkspiffs.c $(COMMON_FILES)
-	$(vecho) "GCC mkspiffs"
+	@echo GCC mkspiffs
 	$(call compile,)
 
 $(BUILD_DIR)/mkspiffs8: mkspiffs.c $(COMMON_FILES)
-	$(vecho) "GCC mkspiffs8"
+	@echo GCC mkspiffs8
 	$(call compile,-DCS_SPIFFS_ENABLE_METADATA)
 
 $(BUILD_DIR)/unspiffs: unspiffs.c $(COMMON_FILES)
-	$(vecho) "GCC unspiffs"
+	@echo GCC unspiffs
 	$(call compile,)
 
 $(BUILD_DIR)/unspiffs8: unspiffs.c $(COMMON_FILES)
-	$(vecho) "GCC unspiffs8"
+	@echo GCC unspiffs8
 	$(call compile,-DCS_SPIFFS_ENABLE_METADATA)
 
 clean:
-	$(vecho) "CLEAN"
+	@echo CLEAN
 	$(Q) rm -f $(BUILD_DIR)/mkspiffs $(BUILD_DIR)/unspiffs $(BUILD_DIR)/sptest $(BUILD_DIR)/spls
