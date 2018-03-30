@@ -95,9 +95,11 @@ static IRAM size_t fill_tx_fifo(struct mgos_uart_state *us) {
   if (fifo_av == 0) return 0;
   size_t len = MIN(tx_av, fifo_av);
   const char *src = us->tx_buf.buf + uds->isr_tx_bytes;
+  if (uds->hd) mgos_gpio_write(uds->tx_en_gpio, uds->tx_en_gpio_val);
   for (size_t i = 0; i < len; i++) {
     esp32_uart_tx_byte(uart_no, src[i]);
   }
+  WRITE_PERI_REG(UART_INT_CLR_REG(uart_no), UART_TX_DONE_INT_CLR);
   return len;
 }
 
@@ -225,9 +227,6 @@ void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us) {
   struct esp32_uart_state *uds = (struct esp32_uart_state *) us->dev_data;
   CLEAR_PERI_REG_MASK(UART_INT_ENA_REG(uart_no), UART_TX_INTS);
   uint32_t txn = uds->isr_tx_bytes;
-  if (uds->hd && us->tx_buf.len - uds->isr_tx_bytes > 0) {
-    mgos_gpio_write(uds->tx_en_gpio, uds->tx_en_gpio_val);
-  }
   txn += fill_tx_fifo(us);
   mbuf_remove(&us->tx_buf, txn);
   uds->isr_tx_bytes = 0;
