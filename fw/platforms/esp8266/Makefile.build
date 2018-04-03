@@ -102,31 +102,31 @@ include $(COMMON_ESP8266_PATH)/common.mk
 
 MGOS_ESP_SRC_PATH = $(MGOS_ESP8266_PATH)/src
 
-MGOS_SRCS = cs_file.c cs_rbuf.c \
-            mgos_config_util.c \
-            mgos_core_dump.c \
-            mgos_dlsym.c \
-            mgos_event.c \
-            mgos_gpio.c \
-            mgos_hw_timers.c \
-            mgos_init.c \
-            mgos_time.c \
-            mgos_timers.c \
-            mgos_mmap_esp.c \
-            mgos_mongoose.c \
-            mgos_sys_config.c $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
-            mgos_system.c \
-            mgos_uart.c \
-            mgos_utils.c \
-            mgos_vfs.c \
-            mgos_vfs_dev.c \
-            mgos_vfs_dev_ram.c \
-            mgos_vfs_fs_spiffs.c \
-            cs_crc32.c \
-            rboot-bigflash.c rboot-api.c \
-            json_utils.c \
-            umm_malloc.c \
-            mongoose.c frozen.c
+MGOS_SRCS += cs_file.c cs_rbuf.c \
+             mgos_config_util.c \
+             mgos_core_dump.c \
+             mgos_dlsym.c \
+             mgos_event.c \
+             mgos_gpio.c \
+             mgos_hw_timers.c \
+             mgos_init.c \
+             mgos_time.c \
+             mgos_timers.c \
+             mgos_mmap_esp.c \
+             mgos_mongoose.c \
+             mgos_sys_config.c $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
+             mgos_system.c \
+             mgos_uart.c \
+             mgos_utils.c \
+             mgos_vfs.c \
+             mgos_vfs_dev.c \
+             mgos_vfs_dev_ram.c \
+             mgos_vfs_fs_spiffs.c \
+             cs_crc32.c \
+             rboot-bigflash.c rboot-api.c \
+             json_utils.c \
+             umm_malloc.c \
+             frozen.c
 
 MGOS_SRCS += esp_config.c \
              esp_coredump.c \

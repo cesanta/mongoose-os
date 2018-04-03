@@ -152,8 +152,6 @@ GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
 
 .PHONY: all clean
 
-MGOS_SRCS =
-
 MGOS_SRCS += umm_malloc.c
 VPATH += $(COMMON_PATH)/umm_malloc
 
@@ -204,7 +202,7 @@ SDK_CFLAGS = -DTARGET_IS_CC3220 -DUSE_CC3220_ROM_DRV_API -DUSE_FREERTOS
 
 MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3220_PATH)/src/*.c)) \
              cs_crc32.c cs_dbg.c cs_file.c cs_rbuf.c mbuf.c \
-             frozen.c json_utils.c mongoose.c \
+             frozen.c json_utils.c \
              mgos_config_util.c mgos_core_dump.c mgos_debug.c mgos_dlsym.c mgos_event.c mgos_gpio.c \
              mgos_hal_freertos.c mgos_init.c \
              mgos_mongoose.c mgos_sys_config.c \

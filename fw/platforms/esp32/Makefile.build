@@ -45,6 +45,7 @@ endif
 
 APP_FS_DIRS = $(sort $(dir $(APP_FS_FILES)))
 
+MGOS_PATH ?= ../../..
 include $(MGOS_PATH)/fw/common.mk
 
 APP_PATH := $(CURDIR)
@@ -115,12 +116,10 @@ export SPIFFS_PATH
 
 export BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
 
-MGOS_SRCS =
 MGOS_FEATURES =
 MGOS_CONF_SCHEMA =
 FS_FILES =
 
-MGOS_PATH ?= ../../..
 include $(MGOS_PATH)/fw/src/mgos_features.mk
 
 export MGOS_SRCS

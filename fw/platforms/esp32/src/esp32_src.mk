@@ -14,6 +14,8 @@ override FW_DIR := $(_FW_DIR)
 override GEN_DIR := $(_GEN_DIR)
 override MGOS_PATH = $(_MGOS_PATH)
 
+include $(MGOS_PATH)/fw/common.mk
+
 # Get list of dirs which contain sources (used for IPATH and VPATH)
 APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
 
@@ -42,7 +44,6 @@ MGOS_SRCS += mgos_config_util.c mgos_core_dump.c mgos_dlsym.c mgos_event.c mgos_
              esp32_gpio.c esp32_hal.c esp32_hw_timers.c \
              esp32_main.c esp32_uart.c
 
-include $(MGOS_PATH)/fw/common.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
 
 ifeq "$(MGOS_ENABLE_UPDATER)" "1"
@@ -60,13 +61,9 @@ VPATH += $(MGOS_ESP_SRC_PATH) $(MGOS_PATH)/common \
 
 MGOS_SRCS += cs_crc32.c cs_dbg.c cs_file.c cs_rbuf.c json_utils.c
 
-VPATH += $(MGOS_PATH)/fw/src
+VPATH += $(MGOS_VPATH)
 
-VPATH += $(MGOS_PATH)/frozen
 MGOS_SRCS += frozen.c
-
-VPATH += $(MGOS_PATH)/mongoose
-MGOS_SRCS += mongoose.c
 
 VPATH += $(GEN_DIR)
 
