@@ -37,11 +37,11 @@ Mongoose OS is Open Source and dual-licensed:
 
 |              |  Community Edition |  Enterprise Edition  |
 | -------------| ------------------ | -------------------- |
-| License | [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) | Commercial - [contact us](/contact.html) |
+| License | [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) | Commercial - [contact us](https://mongoose-os.com//contact.html) |
 | Allows to close end-product's source code  | Yes | Yes  |
-| Price  | Free | Paid, see [details](/licensing.html) |
+| Price  | Free | Paid, see [details](https://mongoose-os.com//licensing.html) |
 | Source code & functionality  | Limited (see below) | Full |
-| Technical support  | Community support via [Forum](https://forum.mongoose-os.com) and [Chat](https://gitter.im/cesanta/mongoose-os) | Commercial support by Mongoose OS development team, see [details](/support.html) |
+| Technical support  | Community support via [Forum](https://forum.mongoose-os.com) and [Chat](https://gitter.im/cesanta/mongoose-os) | Commercial support by Mongoose OS development team, see [details](https://mongoose-os.com/support.html) |
 
 
 # How to contribute
@@ -57,7 +57,7 @@ and send GitHub pull request. You retain the copyright on your contributions.
    * [rojer](https://github.com/rojer)
    * [cpq](https://github.com/cpq)
 - Responsibilities of the core team members:
-   * Review and merge PR submissions - make sure that the [Cesanta CLA](https://cesanta.com/cla.html) is signed by the PR author
+   * Review and merge PR submissions
    * Create new repos in the https://github.com/mongoose-os-apps and
    https://github.com/mongoose-os-libs organisations for new app/library
    contributions
