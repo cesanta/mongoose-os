@@ -5,16 +5,17 @@ MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
 MGOS_INCLUDE_PATH ?= $(MGOS_PATH)/fw/include
 COMMON_PATH ?= $(MGOS_PATH)/common
 FROZEN_PATH ?= $(MGOS_PATH)/frozen
-# Note: Mongoose is added as a library, this is left for backward compatibility.
-MONGOOSE_PATH ?= $(MGOS_PATH)/mongoose
 
 MGOS_IPATH ?= $(MGOS_PATH) $(MGOS_INCLUDE_PATH) $(MGOS_SRC_PATH) $(MONGOOSE_PATH) $(FROZEN_PATH)
-MGOS_VPATH ?= $(COMMON_PATH) $(MGOS_SRC_PATH) $(MONGOOSE_PATH) $(FROZEN_PATH)
+MGOS_VPATH ?= $(COMMON_PATH) $(MGOS_SRC_PATH) $(FROZEN_PATH)
 MGOS_IFLAGS = $(addprefix -I,$(MGOS_IPATH))
 MGOS_SRCS ?=
 
-ifneq ($(wildcard "$(MONGOOSE_PATH)/mongoose.c"), "")
+# Note: Mongoose is added as a library, this is left for backward compatibility.
+MONGOOSE_PATH ?= $(MGOS_PATH)/mongoose
+ifneq ("$(wildcard $(MONGOOSE_PATH)/mongoose.c)", "")
 MGOS_SRCS += mongoose.c
+MGOS_VPATH += $(MONGOOSE_PATH)
 endif
 
 MG_FEATURES_TINY = -DMG_MODULE_LINES \
