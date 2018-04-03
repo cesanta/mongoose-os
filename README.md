@@ -1,23 +1,17 @@
-# Mongoose OS [![Gitter](https://badges.gitter.im/cesanta/mongoose-os.svg)](https://gitter.im/cesanta/mongoose-os?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)  [![Gitter](https://badges.gitter.im/cesanta/mongoose-os.svg)](https://gitter.im/cesanta/mongoose-os?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge)
 
-- [Mongoose OS](https://mongoose-os.com) - open source embedded Operating System for commercial connected products.
+# Mongoose OS - an IoT Firmware Development Framework
 
-Targeting commercial connected products:
-- Over-The-Air updates and remote management - OTA firmware updates with rollback on failures; RPC infrastructure for the full remote control;
-- Security - 	built in flash encryption, crypto chip support ARM mbedTLS optimized for small memory footprint;
-- [Device management dashboard service](https://mongoose-os.com/docs/overview/dashboard.html)	- for tracking your fleet. On-prem option is available;
-- Supported microcontrollers: CC3220, CC3200, ESP32, ESP8266, STM32F4; 
-- Recommended dev kits: [ESP32-DevKitC for AWS IoT](https://mongoose-os.com/aws-iot-starter-kit/), [ESP32 Kit for Google IoT Core](https://mongoose-os.com/gcp/);
-- IoT cloud integration	Built in support for: AWS IoT, Google IoT Core, Microsoft Azure, Samsung Artik, Adafruit IO, Generic MQTT/Restful;
-- Code in C or JavaScript;
-- Ready to go [Apps](https://mongoose-os.com/apps.html) and [Libraries](https://mongoose-os.com/libs.html);
-- [Embedded JavaScript engine - mJS](https://github.com/cesanta/mjs);
+- Over-The-Air firmware updates and remote management - reliable updates with rollback on failures, remote device access infrastructure
+- Security - 	built in flash encryption, crypto chip support, ARM mbedTLS optimized for small memory footprint
+- [Device management dashboard service](https://mongoose-os.com/docs/overview/dashboard.html) - with on-prem private installation option
+- Supported microcontrollers: CC3220, CC3200, ESP32, ESP8266, STM32F4
+- Recommended dev kits: [ESP32-DevKitC for AWS IoT](https://mongoose-os.com/aws-iot-starter-kit/), [ESP32 Kit for Google IoT Core](https://mongoose-os.com/gcp/)
+- Built-in integration for AWS IoT, Google IoT Core, Microsoft Azure, Samsung Artik, Adafruit IO, generic MQTT servers
+- Code in C or JavaScript
+- Ready to go [Apps](https://mongoose-os.com/docs/reference/apps.html) and [Libraries](https://mongoose-os.com/docs/reference/api.html)
+- [Embedded JavaScript engine - mJS](https://github.com/cesanta/mjs)
 
-Mongoose OS benefits:
-- Reliable and scallable infrastructure for commercial products;
-- Secure, trusted and verified by leading companies;
-- Shorter time to market at optimal cost;
-- Quick proof of concepts / prototypes.
 
 Trusted and Recommended By:
 - Amazon AWS - [Amazon AWS Technology Partner](https://aws.amazon.com/partners/find/partnerdetails/?id=0010L00001jQCb5QAG)
@@ -33,15 +27,38 @@ Trusted and Recommended By:
 
 # Licensing
 
-Mongoose OS is released under [Commercial](https://mongoose-os.com/licensing.html) and [GNU GPL v.2](http://www.gnu.org/licenses/old-licenses/gpl-2.0.html) open source licenses.
+Mongoose OS is Open Source and dual-licensed:
 
-Commercial Projects: [Contact us for the commercial license.](https://mongoose-os.com/contact.html)
+- **Mongoose OS Community Edition** - Apache License Version 2.0
+- **Mongoose OS Enterprise Edition** - Commercial License
 
-# Contributions
 
-To submit contributions, sign
-[Cesanta CLA](https://docs.cesanta.com/contributors_la.shtml)
+## Community vs Enterprise Edition
+
+|              |  Community Edition |  Enterprise Edition  |
+| -------------| ------------------ | -------------------- |
+| License | [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) | Commercial - [contact us](/contact.html) |
+| Allows to close end-product's source code  | Yes | Yes  |
+| Price  | Free | Paid, see [details](/licensing.html) |
+| Source code & functionality  | Limited (see below) | Full |
+| Technical support  | Community support via [Forum](https://forum.mongoose-os.com) and [Chat](https://gitter.im/cesanta/mongoose-os) | Commercial support by Mongoose OS development team, see [details](/support.html) |
+
+
+# How to contribute
+
+- If you have not done it already, sign [Cesanta CLA](https://cesanta.com/cla.html)
 and send GitHub pull request. You retain the copyright on your contributions.
-
-
-[![Analytics](https://ga-beacon.appspot.com/UA-42732794-6/project-page)](https://github.com/cesanta/mongoose-os)
+- Make a Pull Request (PR) against this repo. Please follow
+  [Google Coding Style](https://google.github.io/styleguide/cppguide.html).
+  Send PR to one of the core team member:
+   * [pimvanpelt](https://github.com/pimvanpelt)
+   * [nliviu](https://github.com/nliviu)
+   * [DrBomb](https://github.com/DrBomb)
+   * [rojer](https://github.com/rojer)
+   * [cpq](https://github.com/cpq)
+- Responsibilities of the core team members:
+   * Review and merge PR submissions - make sure that the [Cesanta CLA](https://cesanta.com/cla.html) is signed by the PR author
+   * Create new repos in the https://github.com/mongoose-os-apps and
+   https://github.com/mongoose-os-libs organisations for new app/library
+   contributions
+   * Create Mongoose OS releases
