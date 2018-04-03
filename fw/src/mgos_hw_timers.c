@@ -1,6 +1,18 @@
 /*
- * Copyright (c) 2014-2017 Cesanta Software Limited
+ * Copyright (c) 2014-2018 Cesanta Software Limited
  * All rights reserved
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 #include "mgos_hw_timers_hal.h"
@@ -29,8 +41,8 @@ IRAM void mgos_hw_timers_isr(struct mgos_hw_timer_info *ti) {
   mgos_hw_timers_dev_isr_bottom(ti);
 }
 
-IRAM mgos_timer_id
-mgos_set_hw_timer(int usecs, int flags, timer_callback cb, void *cb_arg) {
+IRAM mgos_timer_id mgos_set_hw_timer(int usecs, int flags, timer_callback cb,
+                                     void *cb_arg) {
   mgos_timer_id id;
   struct mgos_hw_timer_info *ti = NULL;
   mgos_ints_disable();
