@@ -102,7 +102,7 @@ VPATH = $(MGOS_VPATH) $(APP_SOURCE_DIRS) $(MGOS_CC32XX_PATH)/src $(MGOS_CC3220_P
         $(GEN_DIR)
 IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
         $(MGOS_CC32XX_PATH)/src $(MGOS_CC3220_PATH)/src $(GEN_DIR) \
-        $(MBEDTLS_PATH)/include
+        $(MBEDTLS_PATH)/include $(MBEDTLS_PATH)/cc32xx
 
 # Note: CC3220 has only 32 GPIO but our port uses pin-based numbering
 # and those go from 1 to 64.
@@ -116,14 +116,18 @@ MGOS_CC3220_FEATURES ?= -DMGOS_NUM_GPIO=65 '-DUMM_ONFREE(ptr, size)=memset(ptr, 
                         -DCS_SPIFFS_ENABLE_METADATA=1
 
 MG_FEATURES ?= $(MG_FEATURES_TINY) \
-               -DMG_LOCALS -DMG_ENABLE_SSL \
+               -DMG_LOCALS \
                -DMG_FS_SLFS -DMG_FS_NO_VFS \
                -DMG_ENABLE_FILESYSTEM \
                -DMG_ENABLE_DIRECTORY_LISTING \
                -DMG_SIMPLELINK_NO_OSI \
                -DCS_DISABLE_MD5 -DMG_EXT_MD5 \
                -DCS_DISABLE_SHA1 -DMG_EXT_SHA1 \
-               -DFS_MAX_OPEN_FILES=5
+               -DFS_MAX_OPEN_FILES=5 \
+               -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS \
+               -DMG_SSL_IF_MBEDTLS_FREE_CERTS \
+               -DMG_SSL_IF_MBEDTLS_MAX_FRAG_LEN=1024 \
+               -DMBEDTLS_X509_CA_CHAIN_ON_DISK
 
 MGOS_FEATURES ?= -DMGOS_VFS_DECLARE_LIBC_DIR_API \
                  -DMGOS_VFS_DEFINE_LIBC_DIR_API \
@@ -208,8 +212,8 @@ MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3220_PATH)/src/*.c)) \
              mgos_mongoose.c mgos_sys_config.c \
              mgos_hw_timers.c mgos_system.c mgos_time.c mgos_timers.c mgos_uart.c mgos_utils.c \
              mgos_vfs.c mgos_vfs_dev.c mgos_vfs_dev_ram.c mgos_vfs_fs_spiffs.c \
-             cc32xx_crypto.c cc32xx_exc.c arm_exc.c arm_exc_top.S cc32xx_fs.c cc32xx_gpio.c \
-             cc32xx_hal.c cc32xx_hw_timers.c cc32xx_libc.c cc32xx_main.c cc32xx_sl_spawn.c cc32xx_uart.c \
+             cc32xx_exc.c arm_exc.c arm_exc_top.S cc32xx_fs.c cc32xx_gpio.c \
+             cc32xx_hal.c cc32xx_hash.c cc32xx_hw_timers.c cc32xx_libc.c cc32xx_main.c cc32xx_sl_spawn.c cc32xx_uart.c \
              cc32xx_vfs.c cc32xx_vfs_fs_slfs.c \
              $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C))
 

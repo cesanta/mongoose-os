@@ -30,7 +30,7 @@
 #include "mgos_updater_util.h"
 #include "mgos_utils.h"
 
-#include "cc32xx_crypto.h"
+#include "cc32xx_hash.h"
 #include "cc32xx_fs.h"
 #include "cc32xx_vfs_dev_slfs_container.h"
 #include "cc32xx_vfs_dev_slfs_container_meta.h"
@@ -116,11 +116,12 @@ static bool verify_checksum(const char *fn, int fs,
   }
 
   struct cc32xx_hash_ctx ctx;
-  cc32xx_hash_init(&ctx, CC32XX_HASH_ALGO_SHA1);
+  cc32xx_hash_init(&ctx);
+  cc32xx_hash_start(&ctx, CC32XX_HASH_ALGO_SHA1);
   if (read_file(fn, 0, fs, sha1_update_cb, &ctx) < 0) {
     return false;
   }
-  cc32xx_hash_final(&ctx, digest);
+  cc32xx_hash_finish(&ctx, digest);
   bin2hex(digest, 20, digest_str);
 
   LOG(LL_INFO,

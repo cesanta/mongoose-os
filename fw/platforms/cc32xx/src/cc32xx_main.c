@@ -41,6 +41,7 @@
 #include "mgos_updater_common.h"
 
 #include "cc32xx_exc.h"
+#include "cc32xx_hash.h"
 #include "cc32xx_sl_spawn.h"
 #include "cc32xx_task_config.h"
 #include "umm_malloc_cfg.h"
@@ -135,6 +136,7 @@ void cc32xx_main(void) {
     MAP_PRCMRTCSet(0, 0);
   }
 
+  cc32xx_hash_module_init();
   cc32xx_sl_spawn_init();
 
   mgos_hal_freertos_run_mgos_task(true /* start_scheduler */);
