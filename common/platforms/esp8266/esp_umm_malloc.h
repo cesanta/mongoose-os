@@ -32,4 +32,8 @@ void esp_umm_init(void);
  */
 void esp_umm_oom_cb(size_t size, size_t blocks_cnt);
 
+typedef void (*esp_umm_malloc_OutOfMemoryCallback_t) (size_t size, size_t blocks_cnt);
+
+void esp_umm_oom_register_OutOfMemoryCallback(esp_umm_malloc_OutOfMemoryCallback_t callback);
+
 #endif /* CS_COMMON_PLATFORMS_ESP8266_ESP_UMM_MALLOC_H_ */
