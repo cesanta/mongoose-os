@@ -47,6 +47,14 @@ void cs_base64_finish(struct cs_base64_ctx *ctx);
 
 void cs_base64_encode(const unsigned char *src, int src_len, char *dst);
 void cs_fprint_base64(FILE *f, const unsigned char *src, int src_len);
+
+/*
+ * Decodes a base64 string `s` length `len` into `dst`.
+ * `dst` must have enough space to hold the result.
+ * `*dec_len` will contain the resulting length of the string in `dst`
+ * while return value will return number of processed bytes in `src`.
+ * Return value == len indicates successful processing of all the data.
+ */
 int cs_base64_decode(const unsigned char *s, int len, char *dst, int *dec_len);
 
 #ifdef __cplusplus
