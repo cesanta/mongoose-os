@@ -1373,3 +1373,34 @@ void *json_next_elem(const char *s, int len, void *handle, const char *path,
                      int *idx, struct json_token *val) {
   return json_next(s, len, handle, path, NULL, val, idx);
 }
+
+static int json_sprinter(struct json_out *out, const char *str, size_t len) {
+  size_t old_len = out->u.buf.buf == NULL ? 0 : strlen(out->u.buf.buf);
+  size_t new_len = len + old_len;
+  char *p = (char *) realloc(out->u.buf.buf, new_len + 1);
+  if (p != NULL) {
+    memcpy(p + old_len, str, len);
+    p[new_len] = '\0';
+    out->u.buf.buf = p;
+  }
+  return len;
+}
+
+char *json_vasprintf(const char *fmt, va_list ap) WEAK;
+char *json_vasprintf(const char *fmt, va_list ap) {
+  struct json_out out;
+  memset(&out, 0, sizeof(out));
+  out.printer = json_sprinter;
+  json_vprintf(&out, fmt, ap);
+  return out.u.buf.buf;
+}
+
+char *json_asprintf(const char *fmt, ...) WEAK;
+char *json_asprintf(const char *fmt, ...) {
+  char *result = NULL;
+  va_list ap;
+  va_start(ap, fmt);
+  result = json_vasprintf(fmt, ap);
+  va_end(ap);
+  return result;
+}

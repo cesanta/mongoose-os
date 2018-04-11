@@ -166,6 +166,20 @@ int json_fprintf(const char *file_name, const char *fmt, ...);
 int json_vfprintf(const char *file_name, const char *fmt, va_list ap);
 
 /*
+ * Print JSON into an allocated 0-terminated string.
+ * Return allocated string, or NULL on error.
+ * Example:
+ *
+ * ```c
+ *   char *str = json_sprintf("{a:%H}", 3, "abc");
+ *   printf("%s\n", str);  // Prints "616263"
+ *   free(str);
+ * ```
+ */
+char *json_asprintf(const char *fmt, ...);
+char *json_vasprintf(const char *fmt, va_list ap);
+
+/*
  * Helper %M callback that prints contiguous C arrays.
  * Consumes void *array_ptr, size_t array_size, size_t elem_size, char *fmt
  * Return number of bytes printed.
