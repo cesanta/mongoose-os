@@ -673,7 +673,6 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
         if ((n + 1 == strlen("%" PRId64) && strcmp(fmt2, "%" PRId64) == 0) ||
             (n + 1 == strlen("%" PRIu64) && strcmp(fmt2, "%" PRIu64) == 0)) {
           (void) va_arg(ap, int64_t);
-          skip += strlen(PRIu64) - 1;
         } else if (strcmp(fmt2, "%.*s") == 0) {
           (void) va_arg(ap, int);
           (void) va_arg(ap, char *);
@@ -922,8 +921,13 @@ static void json_scanf_cb(void *callback_data, const char *name,
         if (unescaped_len >= 0 &&
             (*dst = (char *) malloc(unescaped_len + 1)) != NULL) {
           info->num_conversions++;
-          json_unescape(token->ptr, token->len, *dst, unescaped_len);
-          (*dst)[unescaped_len] = '\0';
+          if (json_unescape(token->ptr, token->len, *dst, unescaped_len) ==
+              unescaped_len) {
+            (*dst)[unescaped_len] = '\0';
+          } else {
+            free(*dst);
+            *dst = NULL;
+          }
         }
       }
       break;
@@ -1059,15 +1063,16 @@ char *json_fread(const char *path) {
   } else if (fseek(fp, 0, SEEK_END) != 0) {
     fclose(fp);
   } else {
-    size_t size = ftell(fp);
+    long size = ftell(fp);
     data = (char *) malloc(size + 1);
-    if (data != NULL) {
+    if (size > 0 && (data = (char *) malloc(size + 1)) != NULL) {
       fseek(fp, 0, SEEK_SET); /* Some platforms might not have rewind(), Oo */
-      if (fread(data, 1, size, fp) != size) {
+      if (fread(data, 1, size, fp) != (size_t) size) {
         free(data);
-        return NULL;
+        data = NULL;
+      } else {
+        data[size] = '\0';
       }
-      data[size] = '\0';
     }
     fclose(fp);
   }
