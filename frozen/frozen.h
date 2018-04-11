@@ -171,7 +171,7 @@ int json_vfprintf(const char *file_name, const char *fmt, va_list ap);
  * Example:
  *
  * ```c
- *   char *str = json_sprintf("{a:%H}", 3, "abc");
+ *   char *str = json_asprintf("{a:%H}", 3, "abc");
  *   printf("%s\n", str);  // Prints "616263"
  *   free(str);
  * ```
