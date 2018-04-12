@@ -90,6 +90,36 @@ bool mgos_event_add_group_handler(int evgrp, mgos_event_handler_t cb,
   return add_handler(evgrp, cb, userdata, true);
 }
 
+static bool remove_handler(int ev, mgos_event_handler_t cb, void *userdata,
+                           bool group) {
+  struct handler *ph = NULL, *h = NULL, *th;
+  SLIST_FOREACH_SAFE(h, &s_handlers, next, th) {
+    if (h->ev == ev && h->group == group && h->cb == cb &&
+        h->userdata == userdata) {
+      break;
+    }
+    ph = h;
+  }
+  if (h == NULL) return false;
+  if (ph == NULL) {
+    SLIST_REMOVE_HEAD(&s_handlers, next);
+  } else {
+    SLIST_REMOVE_AFTER(ph, next);
+  }
+  free(h);
+  return true;
+}
+
+bool mgos_event_remove_handler(int ev, mgos_event_handler_t cb,
+                               void *userdata) {
+  return remove_handler(ev, cb, userdata, false);
+}
+
+bool mgos_event_remove_group_handler(int evgrp, mgos_event_handler_t cb,
+                                     void *userdata) {
+  return remove_handler(evgrp, cb, userdata, true);
+}
+
 int mgos_event_trigger(int ev, void *ev_data) {
   struct handler *h, *te;
   int count = 0;

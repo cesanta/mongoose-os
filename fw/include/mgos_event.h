@@ -186,6 +186,16 @@ bool mgos_event_add_handler(int ev, mgos_event_handler_t cb, void *userdata);
 bool mgos_event_add_group_handler(int evgrp, mgos_event_handler_t cb,
                                   void *userdata);
 
+/*
+ * Remove an event handler.
+ * Both cb and userdata must match the initial add invocation.
+ * Returns true if a handler was found and removed, false if there was no
+ * such handler in the first place.
+ */
+bool mgos_event_remove_handler(int ev, mgos_event_handler_t cb, void *userdata);
+bool mgos_event_remove_group_handler(int evgrp, mgos_event_handler_t cb,
+                                     void *userdata);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
