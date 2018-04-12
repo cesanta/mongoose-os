@@ -1064,7 +1064,6 @@ char *json_fread(const char *path) {
     fclose(fp);
   } else {
     long size = ftell(fp);
-    data = (char *) malloc(size + 1);
     if (size > 0 && (data = (char *) malloc(size + 1)) != NULL) {
       fseek(fp, 0, SEEK_SET); /* Some platforms might not have rewind(), Oo */
       if (fread(data, 1, size, fp) != (size_t) size) {
