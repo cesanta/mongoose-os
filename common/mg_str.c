@@ -17,6 +17,7 @@
 
 #include "common/mg_mem.h"
 #include "common/mg_str.h"
+#include "common/platform.h"
 
 #include <stdlib.h>
 #include <string.h>

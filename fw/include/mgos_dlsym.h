@@ -18,6 +18,8 @@
 #ifndef CS_FW_INCLUDE_MGOS_DLSYM_H_
 #define CS_FW_INCLUDE_MGOS_DLSYM_H_
 
+#include "common/mg_str.h"
+
 #include "mgos_features.h"
 
 struct mgos_ffi_export {
