@@ -151,7 +151,7 @@ typedef int (*json_printf_callback_t)(struct json_out *, va_list *ap);
  *  - `%M` invokes a json_printf_callback_t function. That callback function
  *  can consume more parameters.
  *
- * Return number of bytes printed. If the return value is bigger then the
+ * Return number of bytes printed. If the return value is bigger than the
  * supplied buffer, that is an indicator of overflow. In the overflow case,
  * overflown bytes are not printed.
  */
