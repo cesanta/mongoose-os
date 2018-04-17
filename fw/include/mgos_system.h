@@ -72,7 +72,7 @@ void mgos_system_restart(void);
 /* Delay given number of milliseconds */
 void mgos_msleep(uint32_t msecs);
 
-/* Delay given number of nanoseconds */
+/* Delay given number of microseconds */
 void mgos_usleep(uint32_t usecs);
 
 extern void (*mgos_nsleep100)(uint32_t n);
