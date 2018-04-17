@@ -54,6 +54,7 @@ and send GitHub pull request. You retain the copyright on your contributions.
    * [pimvanpelt](https://github.com/pimvanpelt)
    * [nliviu](https://github.com/nliviu)
    * [DrBomb](https://github.com/DrBomb)
+   * [kzyapkov](https://github.com/kzyapkov)
    * [rojer](https://github.com/rojer)
    * [cpq](https://github.com/cpq)
 - Responsibilities of the core team members:
