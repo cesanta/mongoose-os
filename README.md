@@ -47,7 +47,7 @@ Mongoose OS is Open Source and dual-licensed:
 # How to contribute
 
 - If you have not done it already, sign [Cesanta CLA](https://cesanta.com/cla.html)
-and send GitHub pull request. You retain the copyright on your contributions.
+and send GitHub pull request.
 - Make a Pull Request (PR) against this repo. Please follow
   [Google Coding Style](https://google.github.io/styleguide/cppguide.html).
   Send PR to one of the core team member:
