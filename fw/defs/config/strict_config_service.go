@@ -6,6 +6,7 @@ package config
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"sync"
@@ -15,7 +16,6 @@ import (
 	"cesanta.com/common/go/ourjson"
 	"cesanta.com/common/go/ourtrace"
 	"github.com/cesanta/errors"
-	"golang.org/x/net/context"
 	"golang.org/x/net/trace"
 
 	"github.com/cesanta/ucl"
