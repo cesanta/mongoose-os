@@ -129,16 +129,6 @@ static bool cc3220_vfs_dev_flash_open(struct mgos_vfs_dev *dev,
     /* Wipe the source image: overwrite with zeroes. */
     fh = slfs_open(image, SL_FS_WRITE);
     if (fh >= 0) {
-      memset(buf, 0, CC3220_FLASH_SECTOR_SIZE);
-      for (int offset = 0; offset < dd->size;
-           offset += CC3220_FLASH_SECTOR_SIZE) {
-        int nw = sl_FsWrite(fh, offset, buf, CC3220_FLASH_SECTOR_SIZE);
-        if (nw != CC3220_FLASH_SECTOR_SIZE) {
-          LOG(LL_INFO, ("Failed to zero source image @ %d: %d", offset, nw));
-          break;
-        }
-        mgos_wdt_feed();
-      }
       sl_FsClose(fh, NULL, NULL, 0);
     }
     fh = -1;
