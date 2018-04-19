@@ -30,6 +30,11 @@
 #define NOINSTR
 #endif
 
+#define MGOS_CORE_DUMP_START "\r\n--- BEGIN CORE DUMP ---\r\n"
+#define MGOS_CORE_DUMP_END "\r\n---- END CORE DUMP ----\r\n"
+
+extern const char *build_version, *build_id;
+
 void mgos_cd_puts(const char *s) {
   while (*s != '\0') mgos_cd_putc(*s++);
 }
@@ -81,11 +86,16 @@ NOINSTR void mgos_cd_emit_section(const char *name, const void *p, size_t len) {
 }
 
 void mgos_cd_emit_header(void) {
-  mgos_cd_puts(
-      "\r\n--- BEGIN CORE DUMP ---\r\n{\"arch\": \"" CS_STRINGIFY_MACRO(
-          FW_ARCHITECTURE) "\"");
+  mgos_cd_puts(MGOS_CORE_DUMP_START "{");
+  mgos_cd_puts("\"app\": \"" MGOS_APP "\", ");
+  mgos_cd_puts("\"arch\": \"" CS_STRINGIFY_MACRO(FW_ARCHITECTURE) "\", ");
+  mgos_cd_printf("\"version\": \"%s\", ", build_version);
+  mgos_cd_printf("\"build_id\": \"%s\"", build_id);
+#ifdef MGOS_SDK_BUILD_IMAGE
+  mgos_cd_printf(", \"build_image\": \"" MGOS_SDK_BUILD_IMAGE "\"");
+#endif
 }
 
 NOINSTR void mgos_cd_emit_footer(void) {
-  mgos_cd_puts("}\r\n---- END CORE DUMP ----\r\n");
+  mgos_cd_puts("}" MGOS_CORE_DUMP_END);
 }
