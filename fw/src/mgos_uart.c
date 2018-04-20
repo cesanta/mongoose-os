@@ -251,7 +251,7 @@ void mgos_uart_config_set_rx_params(struct mgos_uart_config *cfg,
 void mgos_uart_config_set_tx_params(struct mgos_uart_config *cfg,
                                     int tx_buf_size, bool tx_fc_ena) {
   cfg->tx_buf_size = tx_buf_size;
-  cfg->rx_fc_type = (tx_fc_ena ? MGOS_UART_FC_HW : MGOS_UART_FC_NONE);
+  cfg->tx_fc_type = (tx_fc_ena ? MGOS_UART_FC_HW : MGOS_UART_FC_NONE);
 }
 
 void mgos_uart_set_dispatcher(int uart_no, mgos_uart_dispatcher_t cb,
