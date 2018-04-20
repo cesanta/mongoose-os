@@ -182,7 +182,7 @@ LDFLAGS += -L$(BUILD_DIR)/src
 FW_PARTS = boot:type=boot,addr=0x1000,src=$(BOOTLOADER_BIN),encrypt=true,update=$(MGOS_UPDATE_BOOT_LOADER) \
            pt:type=pt,addr=$(PARTITION_TABLE_OFFSET),src=$(PARTITION_TABLE_BIN),encrypt=true \
            nvs:type=nvs,addr=$(NVS_ADDR),size=$(NVS_SIZE),fill=0xff,encrypt=false \
-           otadata:type=otadata,addr=$(OTA_DATA_ADDR),size=$(OTA_DATA_SIZE),fill=0xff,encrypt=true \
+           otadata:type=otadata,addr=$(OTA_DATA_ADDR),size=$(OTA_DATA_SIZE),src=$(MGOS_ESP_PATH)/otadata.bin,encrypt=true \
            app:type=app,addr=$(CONFIG_APP_OFFSET),ptn=app_0,src=$(APP_BIN),encrypt=true \
            fs:src=$(FS_IMG),type=fs,addr=$(FS_ADDR),ptn=fs_0,fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
 
