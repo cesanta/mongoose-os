@@ -1,0 +1,26 @@
+# This image adds package building tools to Ubuntu images and installs Go 1.8
+# Intended to be used to package mos utility for Ubuntu.
+
+ARG base
+FROM $base
+
+SHELL ["/bin/bash", "-c"]
+RUN eval $(cat /etc/lsb-release) && \
+    ([ "$DISTRIB_CODENAME" != "xenial" ] || \
+     ( apt-get update && \
+       apt-get install -y --no-install-recommends software-properties-common && \
+       add-apt-repository ppa:longsleep/golang-backports ) ) && \
+    apt-get update && apt-get install -y --no-install-recommends \
+      build-essential dh-golang fakeroot git git-build-recipe gnupg golang \
+      libftdi-dev libusb-1.0-0-dev \
+      packaging-dev pkg-config pbuilder pristine-tar \
+      python python-git rsync ubuntu-dev-tools wget && \
+    apt-get clean
+
+ENV GOPATH=/go
+ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/go/bin
+ENV DEBFULLNAME="Cesanta Bot"
+ENV DEBEMAIL="cesantabot@cesanta.com"
+RUN git config --global user.name "Cesanta Bot" && git config --global user.email "cesantabot@cesanta.com"
+
+RUN go get github.com/kardianos/govendor && go install github.com/kardianos/govendor

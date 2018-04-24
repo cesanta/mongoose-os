@@ -1,0 +1,8 @@
+ARG DOCKER_TAG
+FROM docker.cesanta.com/esp32-toolchain:$DOCKER_TAG
+
+ADD cs_mbedtls /opt/cs_mbedtls
+
+ARG DOCKER_TAG
+ENV MGOS_SDK_REVISION $DOCKER_TAG
+ENV MGOS_SDK_BUILD_IMAGE docker.cesanta.com/esp32-build:$DOCKER_TAG

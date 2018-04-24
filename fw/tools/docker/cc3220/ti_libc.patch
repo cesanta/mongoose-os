@@ -1,0 +1,94 @@
+--- src/Makefile.orig	2017-10-24 01:44:01.000000000 +0100
++++ src/Makefile	2018-01-16 19:50:54.061511820 +0000
+@@ -1165,7 +1165,6 @@
+ 	ecvt.c \
+ 	exit.c \
+ 	fcvt.c \
+-	memory.c \
+ 	_bufread.c \
+ 	_data_synch.c \
+ 	_io_perm.c \
+@@ -1179,7 +1178,6 @@
+ 	_scanfi_min.c \
+ 	_scanfi_nf.c \
+ 	_tvaltostr.c \
+-	add_device.c \
+ 	args_main.c \
+ 	asctime.c \
+ 	assert.c \
+@@ -1194,7 +1192,6 @@
+ 	bzero.c \
+ 	clearerr.c \
+ 	clock.c \
+-	close.c \
+ 	ctime_.c \
+ 	ctime64.c \
+ 	ctype.c \
+@@ -1220,7 +1217,6 @@
+ 	ftell.c \
+ 	fwrite.c \
+ 	getenv.c \
+-	getdevice.c \
+ 	gmtime.c \
+ 	gmtime64.c \
+ 	index.c \
+@@ -1238,7 +1234,6 @@
+ 	isxdigit.c \
+ 	localtim.c \
+ 	localtim64.c \
+-	lseek.c \
+ 	ltoa.c \
+ 	memccpy.c \
+ 	memchr.c \
+@@ -1247,15 +1242,11 @@
+ 	mktime.c \
+ 	mktime64.c \
+ 	multibyte.c \
+-	open.c \
+ 	perror.c \
+ 	printf.c \
+ 	qsort.c \
+ 	rand.c \
+-	read.c \
+ 	remove.c \
+-	remove_device.c \
+-	rename.c \
+ 	rewind.c \
+ 	rindex.c \
+ 	setbuf.c \
+@@ -1303,25 +1294,12 @@
+ 	toascii.c \
+ 	tolower.c \
+ 	toupper.c \
+-	hostclock.c \
+-	hostclose.c \
+-	hostgetenv.c \
+-	hostlseek.c \
+-	hostopen.c \
+-	hostread.c \
+-	hostrename.c \
+-	hosttime.c \
+-	hostunlink.c \
+-	hostwrite.c \
+-	trgmsg.c \
+ 	ungetc.c \
+-	unlink.c \
+ 	vfprintf.c \
+ 	vprintf.c \
+ 	vsnprintf.c \
+ 	vsprintf.c \
+ 	wctype.c \
+-	write.c
+ 
+ C_SOURCE += $(GENERIC_TI_C_SOURCE)
+ 
+--- src/exit.c.orig	2017-10-24 01:44:01.000000000 +0100
++++ src/exit.c	2018-01-16 19:51:52.236361593 +0000
+@@ -124,6 +124,7 @@
+ /****************************************************************************/
+ /* ABORT - ABNORMAL PROGRAM TERMINATION.  CURRENTLY JUST HALTS EXECUTION.   */
+ /****************************************************************************/
++void abort(void) __attribute__((weak));
+ void abort(void)
+ {
+     loader_exit();
