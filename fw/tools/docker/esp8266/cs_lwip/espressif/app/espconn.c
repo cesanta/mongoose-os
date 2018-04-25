@@ -416,10 +416,11 @@ espconn_sent(struct espconn *espconn, uint8 *psent, uint16 length) {
           error = espconn_tcp_write(pnode);
           //					if (error != ESPCONN_OK){
           //						/*send the application
-          //packet
+          // packet
           // fail,
-          //						 * ensure that each allocated
-          //is
+          //						 * ensure that each
+          //allocated
+          // is
           // deleted*/
           //						espconn_pbuf_delete(&pnode->pcommon.pbuf,
           // pbuf);

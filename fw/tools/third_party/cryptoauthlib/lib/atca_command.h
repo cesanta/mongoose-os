@@ -272,7 +272,7 @@ uint8_t atCheckCrc(const uint8_t *response);
   ((uint8_t) 35)  //!< size of response packet containing 32 bytes data
 #define ATCA_RSP_SIZE_MAX \
   ((uint8_t) 75)  //!< maximum size of response packet (GenKey and Verify
-// command)
+                  // command)
 
 /** \name Definitions for Command Parameter Ranges
    @{ */
@@ -441,9 +441,9 @@ typedef enum {
 // counter ID to be included in the message generation.
 #define GENDIG_ZONE_KEY_CONFIG \
   ((uint8_t) 5)  //!< GenDig zone id key config. KeyID specifies the slot for
-// which the configuration information is to be included in the
-// message generation.
-/** @} */
+                 // which the configuration information is to be included in the
+                 // message generation.
+                 /** @} */
 
 /** \name Definitions for the GenKey Command
    @{ */
@@ -466,10 +466,10 @@ typedef enum {
 // public key is calculated
 #define GENKEY_MODE_PUBKEY_DIGEST \
   ((uint8_t) 0x10)  //!< GenKey mode: Calculate PubKey digest on the public key
-// in KeyId
-/** @} */
-/** \name Definitions for the GENKEY Command
-   @{ */
+                    // in KeyId
+                    /** @} */
+                    /** \name Definitions for the GENKEY Command
+                       @{ */
 /** @} */
 
 /** \name Definitions for the HMAC Command
