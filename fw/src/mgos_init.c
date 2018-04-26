@@ -39,13 +39,15 @@ enum mgos_init_result mgos_init(void) {
   r = mgos_sys_config_init();
   if (r != MGOS_INIT_OK) return r;
 
-#ifdef __NEWLIB__
+#ifdef _NEWLIB_VERSION
   {
     /* initialize TZ env variable with the sys.tz_spec config value */
     const char *tz_spec = mgos_sys_config_get_sys_tz_spec();
-    if (tz_spec == NULL) tz_spec = "";
-    setenv("TZ", tz_spec, 1);
-    tzset();
+    if (tz_spec != NULL) {
+      LOG(LL_INFO, ("Setting TZ to '%s'", tz_spec));
+      setenv("TZ", tz_spec, 1);
+      tzset();
+    }
   }
 #else
 /* TODO(rojer): TZ support for TI libc */
