@@ -128,11 +128,11 @@ export MGOS_CONF_SCHEMA
 export MGOS_IPATH
 
 # Flags for other component builds, including SPIFFS, go here.
-CFLAGS += -Wall -Werror -mtext-section-literals \
+CFLAGS += -Wall -Werror -pipe -mtext-section-literals \
           -I$(MGOS_PATH) -I$(MGOS_SRC_PATH) -I$(MGOS_INCLUDE_PATH) \
           -DMBEDTLS_X509_CA_CHAIN_ON_DISK \
           $(APP_CFLAGS)
-CXXFLAGS += $(APP_CXXFLAGS)
+CXXFLAGS += -pipe $(APP_CXXFLAGS)
 
 # Settings for the ESP-IDF build system
 # See docs here:
