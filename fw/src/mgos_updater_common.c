@@ -45,6 +45,8 @@ extern const char *build_version;
 #define UPDATER_CTX_FILE_NAME "updater.dat"
 #define MANIFEST_FILENAME "manifest.json"
 #define SHA1SUM_LEN 40
+#define PROGRESS_REPORT_BYTES 50000
+#define PROGRESS_REPORT_SECONDS 5
 
 static mgos_upd_event_cb s_event_cb = NULL;
 static void *s_event_cb_arg = NULL;
@@ -178,8 +180,6 @@ static void context_update(struct update_context *ctx, const char *data,
     ctx->data = data;
     ctx->data_len = len;
   }
-
-  LOG(LL_DEBUG, ("Added %u, size: %u", len, ctx->data_len));
 }
 
 static void context_save_unprocessed(struct update_context *ctx) {
@@ -187,9 +187,6 @@ static void context_save_unprocessed(struct update_context *ctx) {
     mbuf_append(&ctx->unprocessed, ctx->data, ctx->data_len);
     ctx->data = ctx->unprocessed.buf;
     ctx->data_len = ctx->unprocessed.len;
-    if (ctx->data_len > 0) {
-      LOG(LL_DEBUG, ("Added %d bytes to cached data", ctx->data_len));
-    }
   }
 }
 
@@ -204,8 +201,6 @@ void context_remove_data(struct update_context *ctx, size_t len) {
     ctx->data = ctx->data + len;
     ctx->data_len -= len;
   }
-
-  LOG(LL_DEBUG, ("Consumed %u, %u left", len, ctx->data_len));
 }
 
 static void context_clear_current_file(struct update_context *ctx) {
@@ -387,6 +382,31 @@ static int finalize_write(struct update_context *ctx, struct mg_str tail) {
   return 1;
 }
 
+static void mgos_updater_progress(struct update_context *ctx) {
+  if (ctx->last_reported_bytes == 0 ||
+      ctx->bytes_already_downloaded - ctx->last_reported_bytes >=
+          PROGRESS_REPORT_BYTES ||
+      mg_time() - ctx->last_reported_time > PROGRESS_REPORT_SECONDS) {
+    if (ctx->zip_file_size > 0) {
+      float ratio =
+          (float) ctx->bytes_already_downloaded * 100.0f / ctx->zip_file_size;
+      CALL_HOOK(LL_INFO, MGOS_UPD_EV_PROGRESS, &ctx->info,
+                MGOS_OTA_STATE_PROGRESS, "%.2f%% total, %s %d of %d", ratio,
+                ctx->info.current_file.name,
+                (int) ctx->info.current_file.processed,
+                (int) ctx->info.current_file.size);
+    } else {
+      CALL_HOOK(LL_INFO, MGOS_UPD_EV_PROGRESS, &ctx->info,
+                MGOS_OTA_STATE_PROGRESS, "%s %d of %d",
+                ctx->info.current_file.name,
+                (int) ctx->info.current_file.processed,
+                (int) ctx->info.current_file.size);
+    }
+    ctx->last_reported_bytes = ctx->bytes_already_downloaded;
+    ctx->last_reported_time = mg_time();
+  }
+}
+
 static int updater_process_int(struct update_context *ctx, const char *data,
                                size_t len) {
   int ret;
@@ -497,6 +517,7 @@ static int updater_process_int(struct update_context *ctx, const char *data,
         }
         updater_set_status(ctx, US_WAITING_FILE);
         ctx->current_file_crc_calc = 0;
+        ctx->last_reported_bytes = 0;
       } /* fall through */
       case US_WAITING_FILE: {
         struct mg_str to_process;
@@ -517,25 +538,7 @@ static int updater_process_int(struct update_context *ctx, const char *data,
           context_remove_data(ctx, num_processed);
           ctx->info.current_file.processed += num_processed;
         }
-        LOG(LL_DEBUG,
-            ("Processed %d, up to %u, %u left in the buffer", num_processed,
-             (unsigned int) ctx->info.current_file.processed, ctx->data_len));
-        if (ctx->total_zip_file_size > 0) {
-          double ratio = (double) ctx->bytes_already_downloaded * 100.0 /
-                         ctx->total_zip_file_size;
-          CALL_HOOK(LL_DEBUG, MGOS_UPD_EV_PROGRESS, &ctx->info,
-                    MGOS_OTA_STATE_PROGRESS,
-                    "%.2f%% total, current: %s %d of %d", ratio,
-                    ctx->info.current_file.name,
-                    (int) ctx->info.current_file.processed,
-                    (int) ctx->info.current_file.size);
-        } else {
-          CALL_HOOK(LL_DEBUG, MGOS_UPD_EV_PROGRESS, &ctx->info,
-                    MGOS_OTA_STATE_PROGRESS, "%s %d of %d",
-                    ctx->info.current_file.name,
-                    (int) ctx->info.current_file.processed,
-                    (int) ctx->info.current_file.size);
-        }
+        mgos_updater_progress(ctx);
 
         uint32_t bytes_left =
             ctx->info.current_file.size - ctx->info.current_file.processed;
@@ -559,9 +562,8 @@ static int updater_process_int(struct update_context *ctx, const char *data,
             MIN(ctx->data_len,
                 ctx->info.current_file.size - ctx->info.current_file.processed);
         ctx->info.current_file.processed += to_skip;
-        LOG(LL_DEBUG, ("Skipping %u bytes, %u total", (unsigned int) to_skip,
-                       (unsigned int) ctx->info.current_file.processed));
         context_remove_data(ctx, to_skip);
+        mgos_updater_progress(ctx);
 
         if (ctx->info.current_file.processed < ctx->info.current_file.size) {
           context_save_unprocessed(ctx);

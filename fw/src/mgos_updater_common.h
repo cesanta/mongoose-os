@@ -51,8 +51,10 @@ struct update_context {
   const char *status_msg;
 
   char *zip_file_url;
-  size_t total_zip_file_size;
+  size_t zip_file_size;
   size_t bytes_already_downloaded;
+  size_t last_reported_bytes;
+  double last_reported_time;
 
   const char *data;
   size_t data_len;
@@ -70,7 +72,6 @@ struct update_context {
   mgos_updater_result_cb result_cb;
 
   char *manifest_data;
-  int file_size;
   char file_name[50];
 
   struct mgos_upd_hal_ctx *dev_ctx;
