@@ -58,6 +58,8 @@ esp_err_t event_handler(void *ctx, system_event_t *event) {
     case SYSTEM_EVENT_STA_GOT_IP:
     case SYSTEM_EVENT_STA_CONNECTED:
     case SYSTEM_EVENT_STA_DISCONNECTED:
+    case SYSTEM_EVENT_AP_START:
+    case SYSTEM_EVENT_AP_STOP:
     case SYSTEM_EVENT_AP_STACONNECTED:
     case SYSTEM_EVENT_AP_STADISCONNECTED:
     case SYSTEM_EVENT_SCAN_DONE:

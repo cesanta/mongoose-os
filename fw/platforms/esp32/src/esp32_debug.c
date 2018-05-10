@@ -40,10 +40,16 @@
 #include "mgos_init.h"
 
 static int debug_open(const char *path, int flags, int mode) {
-  (void) path;
+  if (strcmp(path, "/in") == 0) {
+    return 0;
+  } else if (strcmp(path, "/out") == 0) {
+    return 1;
+  } else if (strcmp(path, "/err") == 0) {
+    return 2;
+  }
   (void) flags;
   (void) mode;
-  return 0;
+  return -1;
 }
 
 static ssize_t debug_read(int fd, void *dst, size_t size) {
@@ -68,17 +74,14 @@ enum mgos_init_result esp32_debug_init() {
   if (esp_vfs_register("/__mgos_debug", &vfs, NULL) != ESP_OK) {
     return MGOS_INIT_CONSOLE_INIT_FAILED;
   }
-  int fd = open("/__mgos_debug/test", O_RDONLY);
-  /* Open cannot fail if VFS was installed. */
-  assert(fd >= 0);
   /*
    * Now the tricky part: poke our own FDs inside existing std{in,out,err} FILE
    * structs. We do not reallocate them because pointers have now been copied to
    * all the existing RTOS tasks.
    */
-  _GLOBAL_REENT->_stdin->_file = fd;
-  _GLOBAL_REENT->_stdout->_file = fd + 1;
-  _GLOBAL_REENT->_stderr->_file = fd + 2;
+  _GLOBAL_REENT->_stdin->_file = open("/__mgos_debug/in", O_RDONLY);
+  _GLOBAL_REENT->_stdout->_file = open("/__mgos_debug/out", O_WRONLY);
+  _GLOBAL_REENT->_stderr->_file = open("/__mgos_debug/err", O_WRONLY);
   return MGOS_INIT_OK;
 }
 
