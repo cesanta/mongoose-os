@@ -123,7 +123,7 @@ static void updater_abort(void *arg) {
   s_ctx = NULL;
 }
 
-struct update_context *updater_context_create() {
+struct update_context *updater_context_create(int timeout) {
   if (s_ctx != NULL) {
     CALL_HOOK(LL_ERROR, MGOS_UPD_EV_ERROR, NULL, MGOS_OTA_STATE_ERROR, "%s",
               "Update already in progress");
@@ -144,7 +144,7 @@ struct update_context *updater_context_create() {
 
   s_ctx->dev_ctx = mgos_upd_hal_ctx_create();
 
-  int timeout = mgos_sys_config_get_update_timeout();
+  if (timeout <= 0) timeout = mgos_sys_config_get_update_timeout();
   s_ctx->wdt = mgos_set_timer(timeout * 1000, 0, updater_abort, s_ctx);
   CALL_HOOK(LL_INFO, MGOS_UPD_EV_INIT, NULL, MGOS_OTA_STATE_INIT,
             "starting, timeout %d hf %u", timeout, mgos_get_free_heap_size());

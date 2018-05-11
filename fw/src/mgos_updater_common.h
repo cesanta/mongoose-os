@@ -89,7 +89,7 @@ struct update_context {
   } fctx __attribute__((packed));
 };
 
-struct update_context *updater_context_create(void);
+struct update_context *updater_context_create(int timeout);
 
 /*
  * Returns updater context of the update in progress. If no update is in
