@@ -90,6 +90,18 @@ parser.add_argument("--dest_dir", default=".", help="base path of generated file
 parser.add_argument("schema_files", nargs="+", help="YAML schema files")
 
 
+RESERVED_WORDS = set(
+    ("alignas alignof and and_eq asm auto bitand bitor bool break case catch char "
+     "char16_t char32_t class compl const constexpr const_cast continue decltype "
+     "default delete do double dynamic_cast else enum explicit export extern false "
+     "float for friend goto if inline int long mutable namespace new noexcept not "
+     "not_eq nullptr operator or or_eq private protected public register "
+     "reinterpret_cast restrict return short signed sizeof static static_assert "
+     "static_cast struct switch template this thread_local throw true try typedef "
+     "typeid typename union unsigned using virtual void volatile wchar_t while "
+     "xor xor_eq").split())
+
+
 class SchemaEntry(object):
     V_INT = "i"
     V_BOOL = "b"
@@ -120,6 +132,9 @@ class SchemaEntry(object):
 
         if not isinstance(self.path, basestring):
             raise TypeError("Path is not a string (%s)" % e)
+
+        if self.path in RESERVED_WORDS:
+            raise NameError("Cannot use '%s' as a config key, it's a C/C++ reserved keyword" % self.path)
 
         if self.vtype is not None:
             if self.vtype not in (self.V_OBJECT, self.V_BOOL, self.V_INT, self.V_DOUBLE, self.V_STRING):
