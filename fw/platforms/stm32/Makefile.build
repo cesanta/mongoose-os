@@ -83,8 +83,6 @@ override FW_DIR := $(abspath $(FW_DIR))
 override GEN_DIR := $(abspath $(GEN_DIR))
 override BUILD_DIR := $(abspath $(BUILD_DIR))
 
-include $(MGOS_PATH)/fw/common.mk
-
 # Platform support files
 ADD_SRCS = arm_exc.c stm32_exc.c stm32_fs.c stm32_gpio.c stm32_gpio_defs.c \
            stm32_hal.c stm32_hw_timers.c \
@@ -129,7 +127,7 @@ MGOS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/mgos_config_schema.json
 MGOS_RO_VARS_C = $(GEN_DIR)/mgos_ro_vars.c
 MGOS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/mgos_ro_vars_schema.json
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
-GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C) $(FS_BIN_C) $(FFI_EXPORTS_C)
+GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(FS_BIN_C) $(FFI_EXPORTS_C)
 SYMBOLS_DUMP = $(GEN_DIR)/symbols_dump.txt
 FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
 FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.c.o
@@ -190,7 +188,7 @@ MGOS_SRCS += $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
              cs_dbg.c mgos_dlsym.c mgos_system.c mgos_utils.c \
              mgos_vfs.c mgos_vfs_dev.c mgos_vfs_fs_spiffs.c
 
-MGOS_SRCS += $(notdir $(foreach m, $(SPIFFS_PATH),$(wildcard $(m)/*.c)))
+MGOS_SRCS += spiffs_cache.c spiffs_gc.c spiffs_nucleus.c spiffs_check.c spiffs_hydrogen.c
 
 APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
@@ -225,7 +223,7 @@ FW_PARTS = boot:src=$(APP_BIN),addr=0
 
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
 
-OBJECTS := $(addprefix $(BUILD_DIR)/,$(SRCS:=.o))
+OBJECTS = $(addprefix $(BUILD_DIR)/,$(SRCS:=.o))
 CFLAGS ?= -std=gnu99 -Os -ggdb -MD -Wall -Werror -pipe \
           -fno-common -fno-inline \
           -ffunction-sections -fdata-sections \
@@ -262,7 +260,7 @@ CFLAGS += -DMG_NET_IF=3 -D__CPU_H__ -DMG_LWIP=1 -DLWIP_TIMEVAL_PRIVATE=0 \
 
 all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(APP_BIN) $(FW_ZIP)
 
-$(FW_MANIFEST): $(APP_BIN) $(MGOS_CONFIG_C) $(BUILD_INFO_C) $(BUILD_INFO_JSON) $(MG_BUILD_INFO_C) $(FW_DIR)
+$(FW_MANIFEST): $(APP_BIN) $(MGOS_CONFIG_C) $(BUILD_INFO_C) $(BUILD_INFO_JSON) $(MG_BUILD_INFO_C)
 
 $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR):
 	$(vecho) MKDIR $@
