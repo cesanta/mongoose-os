@@ -197,7 +197,7 @@ FEATURES = $(MG_FEATURES) $(MGOS_FEATURES) $(MGOS_ESP_FEATURES) \
 
 MEMORY_FLAGS = -DFS_MAX_OPEN_FILES=5
 
-.PHONY: all clean build-lib
+.PHONY: all clean
 
 MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" \
               -DMGOS_MAX_NUM_UARTS=2 \
@@ -451,10 +451,14 @@ $(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(MGOS_ESP8266_PATH)/Makefile.build
             "void __cyg_profile_func_enter(void *this_fn, void *call_site){(void) this_fn; (void) call_site;}" \
             "void __cyg_profile_func_exit(void *this_fn, void *call_site){(void) this_fn; (void) call_site;}" > $@
 
-# Main app lib.
 $(MGOS_LIB): $(MGOS_OBJS)
 	$(vecho) "AR    $@"
 	$(Q) $(AR) cru $@ $^
+
+# lib.a, used during lib release build.
+$(BUILD_DIR)/$(BUILD_LIB_NAME): $(BUILD_DIR) $(APP_OBJS)
+	$(vecho) "AR    $@"
+	$(AR) cru $@ $(APP_OBJS)
 
 # This rule is for normal (pre-existing) C sources from VPATH.
 $(BUILD_DIR)/%.c.o: %.c $(GENFILES_FLAG)
@@ -511,12 +515,6 @@ $(MG_BUILD_INFO_C): $(MGOS_OBJS)
 
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)
-
-# Build lib.a
-
-$(BUILD_DIR)/$(BUILD_LIB_NAME): $(BUILD_DIR) $(APP_OBJS)
-	$(vecho) "AR    $@"
-	$(AR) cru $@ $(APP_OBJS)
 
 # -- Filesystem.
 

@@ -1,5 +1,7 @@
-.PHONY: all clean
+MAKEFLAGS += --warn-undefined-variables
 .DEFAULT_GOAL := all
+
+.PHONY: all clean
 
 MGOS_ENABLE_BITBANG = 0
 MGOS_ENABLE_DEBUG_UDP = 0
@@ -34,6 +36,8 @@ APP_BIN_LIBS ?=
 APP_MODULES ?=
 APP_FS_PATH ?=
 
+BUILD_LIB_NAME ?= lib.a
+
 # For backward compatibility, convert old APP_MODULES and APP_FS_PATH into
 # new APP_SOURCES and APP_FS_FILES
 ifneq "$(APP_MODULES)" ""
@@ -67,9 +71,10 @@ PLATFORM_CFLAGS += -DMGOS_NUM_GPIO=176 -DHSE_VALUE=25000000
 endif
 endif
 
+AR = arm-none-eabi-ar
 CC = arm-none-eabi-gcc
-OBJCOPY = arm-none-eabi-objcopy
 NM = arm-none-eabi-nm
+OC = arm-none-eabi-objcopy
 
 BUILD_DIR ?= $(CURDIR)/.build
 FW_STAGING_DIR ?= $(BUILD_DIR)/fw_temp
@@ -84,17 +89,17 @@ override GEN_DIR := $(abspath $(GEN_DIR))
 override BUILD_DIR := $(abspath $(BUILD_DIR))
 
 # Platform support files
-ADD_SRCS = arm_exc.c stm32_exc.c stm32_fs.c stm32_gpio.c stm32_gpio_defs.c \
-           stm32_hal.c stm32_hw_timers.c \
-           stm32_libc.c \
-           stm32_main.c stm32_uart.c \
-           stm32_updater.c \
-           stm32_vfs_dev_flash.c \
-           stm32f7xx_hal_msp.c \
-           stm32f7xx_it.c \
-           stm32f7xx_main.c \
-           stm32f7xx_system.c \
-           $(notdir $(FS_BIN_C))
+MGOS_SRCS += arm_exc.c stm32_exc.c stm32_fs.c stm32_gpio.c stm32_gpio_defs.c \
+             stm32_hal.c stm32_hw_timers.c \
+             stm32_libc.c \
+             stm32_main.c stm32_uart.c \
+             stm32_updater.c \
+             stm32_vfs_dev_flash.c \
+             stm32f7xx_hal_msp.c \
+             stm32f7xx_it.c \
+             stm32f7xx_main.c \
+             stm32f7xx_system.c \
+             $(notdir $(FS_BIN_C))
 # stm32_i2c.c
 
 APP_ELF = $(BUILD_DIR)/$(APP).elf
@@ -118,9 +123,12 @@ FS_IMG = $(FW_STAGING_DIR)/fs.bin
 
 include $(MGOS_PATH)/fw/src/spiffs.mk
 
+MGOS_LIB = $(BUILD_DIR)/mongoose-os.a
 BUILD_INFO_C = $(GEN_DIR)/build_info.c
+BUILD_INFO_O = $(BUILD_DIR)/build_info.c.o
 BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
 MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
+MG_BUILD_INFO_O = $(BUILD_DIR)/mg_build_info.c.o
 MGOS_CONFIG_C = $(GEN_DIR)/mgos_config.c
 MGOS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/conf0.json
 MGOS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/mgos_config_schema.json
@@ -132,7 +140,8 @@ SYMBOLS_DUMP = $(GEN_DIR)/symbols_dump.txt
 FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
 FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.c.o
 
-SDK_SRCS = $(wildcard $(LWIP_PATH)/src/core/*.c) tcpip.c sys_arch.c \
+SDK_SRCS = $(notdir \
+           $(wildcard $(LWIP_PATH)/src/core/*.c) tcpip.c sys_arch.c \
            $(wildcard $(LWIP_PATH)/src/core/ipv4/*.c) \
            $(wildcard $(LWIP_PATH)/src/core/ipv6/*.c) \
            $(wildcard $(LWIP_PATH)/src/netif/ethernet.c) \
@@ -165,7 +174,8 @@ stm32f7xx_ll_adc.c stm32f7xx_ll_crc.c stm32f7xx_ll_dac.c stm32f7xx_ll_dma2d.c \
 stm32f7xx_ll_dma.c stm32f7xx_ll_exti.c stm32f7xx_ll_fmc.c stm32f7xx_ll_gpio.c \
 stm32f7xx_ll_i2c.c stm32f7xx_ll_lptim.c stm32f7xx_ll_pwr.c stm32f7xx_ll_rcc.c \
 stm32f7xx_ll_rng.c stm32f7xx_ll_rtc.c stm32f7xx_ll_sdmmc.c stm32f7xx_ll_spi.c \
-stm32f7xx_ll_tim.c stm32f7xx_ll_usart.c stm32f7xx_ll_usb.c stm32f7xx_ll_utils.c
+stm32f7xx_ll_tim.c stm32f7xx_ll_usart.c stm32f7xx_ll_usb.c stm32f7xx_ll_utils.c \
+)
 
 SDK_INCLUDES = $(STM32CUBE_PATH) \
                $(STM32CUBE_PATH)/Drivers/CMSIS/Include \
@@ -177,10 +187,9 @@ SDK_INCLUDES = $(STM32CUBE_PATH) \
                $(FREERTOS_PATH)/Source/include \
                $(FREERTOS_PATH)/Source/CMSIS_RTOS \
                $(FREERTOS_PATH)/Source/portable/GCC/ARM_CM7/r0p1
-LDSCRIPT = $(MGOS_PLATFORM_PATH)/ld/stm32.ld
+LD_SCRIPT = $(MGOS_PLATFORM_PATH)/ld/stm32.ld
 
 MGOS_SRCS += $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
-             $(notdir $(MG_BUILD_INFO_C)) $(notdir $(BUILD_INFO_C)) \
              mgos_config_util.c mgos_core_dump.c mgos_event.c mgos_gpio.c \
              mgos_hal_freertos.c mgos_hw_timers.c mgos_sys_config.c \
              mgos_time.c mgos_timers.c cs_crc32.c cs_file.c mgos_mongoose.c \
@@ -217,13 +226,14 @@ IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
 
 SSL_LIBS = $(addprefix $(MBEDTLS_PATH)/library/,libmbedcrypto.a libmbedtls.a libmbedx509.a)
 
-SRCS = $(notdir $(SDK_SRCS) $(ADD_SRCS) $(APP_SRCS) $(MGOS_SRCS))
+MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o))
+SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(SDK_SRCS:=.o))
+APP_OBJS = $(addprefix $(BUILD_DIR)/,$(APP_SRCS:=.o))
 
 FW_PARTS = boot:src=$(APP_BIN),addr=0
 
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
 
-OBJECTS = $(addprefix $(BUILD_DIR)/,$(SRCS:=.o))
 CFLAGS ?= -std=gnu99 -Os -ggdb -MD -Wall -Werror -pipe \
           -fno-common -fno-inline \
           -ffunction-sections -fdata-sections \
@@ -250,9 +260,7 @@ LDFLAGS += -Wl,--defsym=SRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -Wl,--defsym=SRAM_SIZE=
            -Wl,--defsym=FS_BASE_ADDR=$(FS_BASE_ADDR) -Wl,--defsym=FS_SIZE=$(FS_SIZE) \
            -Wl,--defsym=NOCACHE_SIZE=0x400
 
-LDFLAGS += -Wl,--gc-sections -Wl,--undefined=fs_bin -Wl,-Map=$(MAP_FILE)
-
-LDLIBS = -Wl,--start-group $(SSL_LIBS) -lc -lgcc -lnosys -Wl,--end-group
+LDFLAGS += -Wl,--gc-sections -Wl,--undefined=fs_bin
 
 CFLAGS += -DMG_NET_IF=3 -D__CPU_H__ -DMG_LWIP=1 -DLWIP_TIMEVAL_PRIVATE=0 \
           -DLWIP_TCP_KEEPALIVE=1 -DMG_SSL_IF=MG_SSL_IF_MBEDTLS \
@@ -260,30 +268,42 @@ CFLAGS += -DMG_NET_IF=3 -D__CPU_H__ -DMG_LWIP=1 -DLWIP_TIMEVAL_PRIVATE=0 \
 
 all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(APP_BIN) $(FW_ZIP)
 
-$(FW_MANIFEST): $(APP_BIN) $(MGOS_CONFIG_C) $(BUILD_INFO_C) $(BUILD_INFO_JSON) $(MG_BUILD_INFO_C)
+$(FW_MANIFEST): $(APP_BIN) $(MGOS_CONFIG_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C)
 
 $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR):
-	$(vecho) MKDIR $@
+	$(vecho) "MKDIR $@"
 	$(Q) mkdir -p $@
 
+$(MGOS_LIB): $(MGOS_OBJS)
+	$(vecho) "AR    $@"
+	$(Q) $(AR) cru $@ $^
+
+# lib.a, used during lib release build.
+$(BUILD_DIR)/$(BUILD_LIB_NAME): $(BUILD_DIR) $(APP_OBJS)
+	$(vecho) "AR    $@"
+	$(AR) cru $@ $(APP_OBJS)
+
 $(BUILD_DIR)/%.c.o: %.c $(GENFILES_FLAG)
-	$(vecho) CC $<
+	$(vecho) "CC    $<"
 	$(Q) $(CC) $(CFLAGS) $(addprefix -I, $(IPATH)) -c $< -o $@
 
 $(BUILD_DIR)/%.S.o: %.S $(GENFILES_FLAG)
-	$(vecho) ASM $(notdir $<)
+	$(vecho) "ASM   $<"
 	$(Q) $(CC) $(CFLAGS) $(addprefix -I, $(IPATH)) -c -x assembler-with-cpp $< -o $@
 
 $(GENFILES_FLAG): $(GENFILES_LIST)
 	$(Q) touch $@
 
-$(APP_ELF): $(OBJECTS) $(FFI_EXPORTS_O) $(LDSCRIPT) $(SSL_LIBS)
-	$(vecho) LD $(notdir $@)
-	$(Q) $(CC) $(CFLAGS) $(LDFLAGS) $(OBJECTS) $(FFI_EXPORTS_O) $(APP_BIN_LIB_FILES) $(LDLIBS) -T$(LDSCRIPT) -o $@
+BIN_PARTS = $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(SDK_OBJS) $(SSL_LIBS) $(APP_BIN_LIB_FILES)
+$(APP_ELF): $(BIN_PARTS) $(LD_SCRIPT)
+	$(vecho) "LD    $@"
+	$(Q) $(CC) $(CFLAGS) $(LDFLAGS) \
+	  -Wl,-Map=$(MAP_FILE) -Wl,--start-group $(BIN_PARTS) -lc -lgcc -lnosys -Wl,--end-group \
+	  -T$(LD_SCRIPT) -o $@
 
 $(APP_BIN): $(APP_ELF)
-	$(vecho) OBJCOPY $(notdir $@)
-	$(Q) $(OBJCOPY) -Obinary $^ $@
+	$(vecho) "BIN   $@"
+	$(Q) $(OC) -Obinary $^ $@
 
 include $(MGOS_PATH)/common/scripts/build_info.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
@@ -291,10 +311,10 @@ include $(MGOS_PATH)/fw/src/mgos_config.mk
 
 MGOS_CONF_SCHEMA += $(MGOS_PLATFORM_PATH)/stm32_sys_config.yaml
 
-$(BUILD_INFO_C) $(BUILD_INFO_JSON):
+$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MGOS_OBJS)
 	$(call gen_build_info,$@,$(APP_PATH),$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
 
-$(MG_BUILD_INFO_C):
+$(MG_BUILD_INFO_C): $(MGOS_OBJS)
 	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
 
 $(MGOS_CONFIG_C): $(MANIFEST_FINAL)
