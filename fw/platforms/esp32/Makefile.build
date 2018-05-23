@@ -199,7 +199,7 @@ $(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
 	$(vecho) "MKDIR $@"
 	$(Q) mkdir -p $@
 
-$(FW_MANIFEST): $(APP_BIN) $(BOOTLOADER_BIN) $(PARTITION_TABLE_BIN) $(FS_IMG)
+$(FW_MANIFEST): $(APP_BIN) $(BOOTLOADER_BIN) $(PARTITION_TABLE_BIN) $(FS_IMG) $(MKSPIFFS)
 
 # mgos_config is generated during binary build
 $(GEN_DIR)/mgos_config_schema.json $(GEN_DIR)/mgos_ro_vars_schema.json: all_binaries

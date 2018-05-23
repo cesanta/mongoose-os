@@ -322,7 +322,7 @@ $(MGOS_CONFIG_C): $(MANIFEST_FINAL)
 # Pull in auto-generated .c dependencies (if any).
 -include $(wildcard $(BUILD_DIR)/*.d)
 
-$(FS_IMG): $(APP_FS_DIRS) $(FS_FILES) $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
+$(FS_IMG): $(APP_FS_DIRS) $(FS_FILES) $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(MKSPIFFS)
 	$(call mkspiffs,$(FS_SIZE),$(FS_BLOCK_SIZE),$(FS_PAGE_SIZE),$(FS_ERASE_SIZE))
 
 $(FS_BIN_C): $(FS_IMG)
