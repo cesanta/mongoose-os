@@ -67,7 +67,6 @@ static void stm32_uart_isr(struct mgos_uart_state *us) {
   struct stm32_uart_state *uds = (struct stm32_uart_state *) us->dev_data;
   const uint32_t ints = uds->regs->ISR;
   const uint32_t cr1 = uds->regs->CR1;
-  HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, 1);
   us->stats.ints++;
   if (ints & USART_ISR_ORE) {
     us->stats.rx_overflows++;
@@ -100,7 +99,6 @@ static void stm32_uart_isr(struct mgos_uart_state *us) {
     } else {
       if (cfg->rx_fc_type == MGOS_UART_FC_SW &&
           irxb->avail < UART_ISR_BUF_XOFF_THRESH && !us->xoff_sent) {
-        HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 1);
         stm32_uart_tx_byte(uds, MGOS_UART_XOFF_CHAR);
         us->xoff_sent = true;
       }
@@ -115,7 +113,6 @@ static void stm32_uart_isr(struct mgos_uart_state *us) {
   if (dispatch) {
     mgos_uart_schedule_dispatcher(us->uart_no, true /* from_isr */);
   }
-  HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, 0);
 }
 
 void USART1_IRQHandler(void) {
