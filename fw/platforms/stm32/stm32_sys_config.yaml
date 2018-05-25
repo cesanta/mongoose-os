@@ -1,4 +1,7 @@
 [
   ["device.id", "stm32_??????"],
   ["debug.mbedtls_level", "i", 0, {title: "mbedTLS debug level"}],
+  # UART3 is for NUCLEO only, must be changed for other boards.
+  ["debug.stdout_uart", 3],
+  ["debug.stderr_uart", 3],
 ]

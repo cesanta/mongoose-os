@@ -67,9 +67,6 @@ UART_HandleTypeDef huart3;
 void SystemClock_Config(void);
 void Error_Handler(void);
 static void MX_GPIO_Init(void);
-static void MX_USART1_UART_Init(void);
-static void MX_USART2_UART_Init(void);
-static void MX_USART3_UART_Init(void);
 static void MX_RNG_Init(void);
 static void MX_I2C1_Init(void);
 
@@ -85,16 +82,12 @@ extern void mgos_loop();
 
 int main(void) {
   __HAL_FLASH_ART_ENABLE();
-  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
   HAL_MspInit();
 
   SystemClock_Config();
 
   MX_GPIO_Init();
 
-  MX_USART1_UART_Init();
-  MX_USART2_UART_Init();
-  MX_USART3_UART_Init();
   MX_RNG_Init();
   MX_I2C1_Init();
 
@@ -181,59 +174,6 @@ static void MX_I2C1_Init(void) {
 static void MX_RNG_Init(void) {
   hrng.Instance = RNG;
   if (HAL_RNG_Init(&hrng) != HAL_OK) {
-    Error_Handler();
-  }
-}
-
-/* USART1 init function */
-static void MX_USART1_UART_Init(void) {
-  __HAL_RCC_USART1_CLK_ENABLE();
-  huart1.Instance = USART1;
-  huart1.Init.BaudRate = 115200;
-  huart1.Init.WordLength = UART_WORDLENGTH_8B;
-  huart1.Init.StopBits = UART_STOPBITS_1;
-  huart1.Init.Parity = UART_PARITY_NONE;
-  huart1.Init.Mode = UART_MODE_TX_RX;
-  huart1.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart1.Init.OverSampling = UART_OVERSAMPLING_16;
-  huart1.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-  huart1.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-  if (HAL_UART_Init(&huart1) != HAL_OK) {
-    Error_Handler();
-  }
-}
-
-/* USART2 init function */
-static void MX_USART2_UART_Init(void) {
-  __HAL_RCC_USART2_CLK_ENABLE();
-  huart2.Instance = USART2;
-  huart2.Init.BaudRate = 115200;
-  huart2.Init.WordLength = UART_WORDLENGTH_8B;
-  huart2.Init.StopBits = UART_STOPBITS_1;
-  huart2.Init.Parity = UART_PARITY_NONE;
-  huart2.Init.Mode = UART_MODE_TX_RX;
-  huart2.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart2.Init.OverSampling = UART_OVERSAMPLING_16;
-  huart2.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-  huart2.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-  if (HAL_UART_Init(&huart2) != HAL_OK) {
-    Error_Handler();
-  }
-}
-
-/* USART3 init function */
-static void MX_USART3_UART_Init(void) {
-  huart3.Instance = USART3;
-  huart3.Init.BaudRate = 115200;
-  huart3.Init.WordLength = UART_WORDLENGTH_8B;
-  huart3.Init.StopBits = UART_STOPBITS_1;
-  huart3.Init.Parity = UART_PARITY_NONE;
-  huart3.Init.Mode = UART_MODE_TX_RX;
-  huart3.Init.HwFlowCtl = UART_HWCONTROL_NONE;
-  huart3.Init.OverSampling = UART_OVERSAMPLING_16;
-  huart3.Init.OneBitSampling = UART_ONE_BIT_SAMPLE_DISABLE;
-  huart3.AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-  if (HAL_UART_Init(&huart3) != HAL_OK) {
     Error_Handler();
   }
 }

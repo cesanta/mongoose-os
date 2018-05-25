@@ -27,15 +27,6 @@
 extern "C" {
 #endif
 
-typedef UART_HandleTypeDef UART_Handle;
-
-extern UART_Handle huart1;
-extern UART_Handle huart2;
-extern UART_Handle huart3;
-
-#define UART_USB huart3
-#define UART_2 huart2
-
 extern RNG_HandleTypeDef hrng;
 #define RNG_1 hrng
 

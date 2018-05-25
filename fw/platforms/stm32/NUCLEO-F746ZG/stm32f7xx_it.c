@@ -47,9 +47,6 @@ void mgos_gpio_irq_handler(IRQn_Type irq);
 
 /* External variables --------------------------------------------------------*/
 extern I2C_HandleTypeDef hi2c1;
-extern UART_HandleTypeDef huart1;
-extern UART_HandleTypeDef huart2;
-extern UART_HandleTypeDef huart3;
 
 /******************************************************************************/
 /*            Cortex-M7 Processor Interruption and Exception Handlers         */
@@ -86,18 +83,6 @@ void I2C1_ER_IRQHandler(void) {
   /* USER CODE BEGIN I2C1_ER_IRQn 1 */
 
   /* USER CODE END I2C1_ER_IRQn 1 */
-}
-
-void USART1_IRQHandler(void) {
-  HAL_UART_IRQHandler(&huart1);
-}
-
-void USART2_IRQHandler(void) {
-  HAL_UART_IRQHandler(&huart2);
-}
-
-void USART3_IRQHandler(void) {
-  HAL_UART_IRQHandler(&huart3);
 }
 
 /* USER CODE BEGIN 1 */

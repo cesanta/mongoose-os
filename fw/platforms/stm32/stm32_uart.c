@@ -18,40 +18,129 @@
 #include <stm32_sdk_hal.h>
 #include <stdio.h>
 #include <stdarg.h>
-#include "mgos_uart_hal.h"
-#include "mgos_utils.h"
+
 #include "common/cs_dbg.h"
 #include "common/cs_rbuf.h"
 
-#define UART_TRANSMIT_TIMEOUT 100
-#define UART_BUF_SIZE 1024
+#include "mgos_debug.h"
+#include "mgos_uart_hal.h"
+#include "mgos_utils.h"
 
-static UART_Handle *s_huarts[2] = {&UART_USB, &UART_2};
+#define UART_ISR_BUF_SIZE 128
+#define UART_ISR_BUF_DISP_THRESH 16
+#define UART_ISR_BUF_XOFF_THRESH 8
+#define USART_ERROR_INTS (USART_ICR_ORECF | USART_ICR_FECF | USART_ICR_PECF);
 
-struct UART_State {
-  uint8_t received_byte;
-  cs_rbuf_t rx_buf;
-  cs_rbuf_t tx_buf;
-  int tx_in_progress;
-  int rx_in_progress;
-  int rx_enabled;
+static USART_TypeDef *const s_uart_regs[MGOS_MAX_NUM_UARTS + 1] = {
+    NULL, USART1, USART2, USART3,
+    /* UART4, UART5, USART6, UART7, UART8, */
 };
 
-static struct UART_State s_uarts_state[2];
+struct stm32_uart_state {
+  volatile USART_TypeDef *regs;
+  cs_rbuf_t irx_buf;
+  cs_rbuf_t itx_buf;
+};
 
-static struct UART_State *get_state_by_huart(UART_Handle *huart) {
-  return huart == s_huarts[0] ? &s_uarts_state[0] : &s_uarts_state[1];
+static struct mgos_uart_state *s_us[MGOS_MAX_NUM_UARTS + 1];
+
+static inline void stm32_uart_tx_byte(struct stm32_uart_state *uds,
+                                      uint8_t byte) {
+  while (!(uds->regs->ISR & USART_ISR_TXE)) {
+  }
+  uds->regs->TDR = byte;
 }
 
-/*
- * Debug helper, prints to UART_USB even if mgos_uart_write is disabled
- * Ex: RPC-UART activated
- */
-void stm32_uart_dputc(int c) {
-  UART_HandleTypeDef *huart = &UART_USB;
-  while (!__HAL_UART_GET_FLAG(huart, UART_FLAG_TXE)) {
+static inline void stm32_uart_tx_byte_from_buf(struct stm32_uart_state *uds) {
+  struct cs_rbuf *itxb = &uds->itx_buf;
+  uint8_t *data = NULL;
+  if (cs_rbuf_get(itxb, 1, &data) == 1) {
+    stm32_uart_tx_byte(uds, *data);
+    cs_rbuf_consume(itxb, 1);
   }
-  huart->Instance->TDR = (uint8_t) c;
+}
+
+static void stm32_uart_isr(struct mgos_uart_state *us) {
+  if (us == NULL) return;
+  bool dispatch = false;
+  const struct mgos_uart_config *cfg = &us->cfg;
+  struct stm32_uart_state *uds = (struct stm32_uart_state *) us->dev_data;
+  const uint32_t ints = uds->regs->ISR;
+  const uint32_t cr1 = uds->regs->CR1;
+  HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, 1);
+  us->stats.ints++;
+  if (ints & USART_ISR_ORE) {
+    us->stats.rx_overflows++;
+    CLEAR_BIT(uds->regs->ICR, USART_ICR_ORECF);
+  }
+  if (ints & USART_ISR_CTSIF) {
+    if ((ints & USART_ISR_CTS) == 0 && uds->itx_buf.used > 0) {
+      us->stats.tx_throttles++;
+    }
+    CLEAR_BIT(uds->regs->ICR, USART_ICR_CTSCF);
+  }
+  if ((ints & USART_ISR_TXE) && (cr1 & USART_CR1_TXEIE)) {
+    struct cs_rbuf *itxb = &uds->itx_buf;
+    us->stats.tx_ints++;
+    stm32_uart_tx_byte_from_buf(uds);
+    if (itxb->used < UART_ISR_BUF_DISP_THRESH) {
+      dispatch = true;
+    }
+    if (itxb->used == 0) CLEAR_BIT(uds->regs->CR1, USART_CR1_TXEIE);
+  }
+  if ((ints & USART_ISR_RXNE) && (cr1 & USART_CR1_RXNEIE)) {
+    struct cs_rbuf *irxb = &uds->irx_buf;
+    us->stats.rx_ints++;
+    if (irxb->avail > 0) {
+      uint8_t data = uds->regs->RDR;
+      cs_rbuf_append_one(irxb, data);
+    }
+    if (irxb->avail > UART_ISR_BUF_DISP_THRESH) {
+      SET_BIT(uds->regs->CR1, USART_CR1_RTOIE);
+    } else {
+      if (cfg->rx_fc_type == MGOS_UART_FC_SW &&
+          irxb->avail < UART_ISR_BUF_XOFF_THRESH && !us->xoff_sent) {
+        HAL_GPIO_WritePin(LD2_GPIO_Port, LD2_Pin, 1);
+        stm32_uart_tx_byte(uds, MGOS_UART_XOFF_CHAR);
+        us->xoff_sent = true;
+      }
+      if (irxb->avail == 0) CLEAR_BIT(uds->regs->CR1, USART_CR1_RXNEIE);
+      dispatch = true;
+    }
+  }
+  if ((ints & USART_ISR_RTOF) && (cr1 & USART_CR1_RTOIE)) {
+    if (uds->irx_buf.used > 0) dispatch = true;
+    CLEAR_BIT(uds->regs->CR1, USART_CR1_RTOIE);
+  }
+  if (dispatch) {
+    mgos_uart_schedule_dispatcher(us->uart_no, true /* from_isr */);
+  }
+  HAL_GPIO_WritePin(LD3_GPIO_Port, LD3_Pin, 0);
+}
+
+void USART1_IRQHandler(void) {
+  stm32_uart_isr(s_us[1]);
+}
+void USART2_IRQHandler(void) {
+  stm32_uart_isr(s_us[2]);
+}
+void USART3_IRQHandler(void) {
+  stm32_uart_isr(s_us[3]);
+}
+void UART4_IRQHandler(void) {
+  stm32_uart_isr(s_us[4]);
+}
+#if 0
+void UART5_IRQHandler(void) { stm32_uart_isr(s_us[5]); }
+void USART6_IRQHandler(void) { stm32_uart_isr(s_us[6]); }
+void UART7_IRQHandler(void) { stm32_uart_isr(s_us[7]); }
+void UART8_IRQHandler(void) { stm32_uart_isr(s_us[8]); }
+#endif
+
+void stm32_uart_dputc(int c) {
+  int uart_no = mgos_get_stderr_uart();
+  if (uart_no < 0 || s_us[uart_no] == NULL) return;
+  stm32_uart_tx_byte((struct stm32_uart_state *) s_us[uart_no]->dev_data, c);
 }
 
 void stm32_uart_dprintf(const char *fmt, ...) {
@@ -63,132 +152,60 @@ void stm32_uart_dprintf(const char *fmt, ...) {
   for (int i = 0; i < result; i++) stm32_uart_dputc(buf[i]);
 }
 
-static void move_rbuf_data(cs_rbuf_t *dst, struct mbuf *src) {
-  if (dst->avail == 0 || src->len == 0) {
-    return;
-  }
-  size_t len = MIN(dst->avail, src->len);
-  cs_rbuf_append(dst, src->buf, len);
-  mbuf_remove(src, len);
-}
-
 void mgos_uart_hal_dispatch_rx_top(struct mgos_uart_state *us) {
-  UART_Handle *huart = (UART_Handle *) us->dev_data;
-  struct UART_State *state = get_state_by_huart(huart);
-  cs_rbuf_t *rxb = &state->rx_buf;
-  while (rxb->used > 0 && mgos_uart_rxb_free(us) > 0) {
-    uint8_t *data;
-    int len = cs_rbuf_get(rxb, mgos_uart_rxb_free(us), &data);
-    mbuf_append(&us->rx_buf, data, len);
-    cs_rbuf_consume(rxb, len);
+  struct stm32_uart_state *uds = (struct stm32_uart_state *) us->dev_data;
+  size_t rxb_free;
+  struct cs_rbuf *irxb = &uds->irx_buf;
+  while (irxb->used > 0 && (rxb_free = mgos_uart_rxb_free(us)) > 0) {
+    uint8_t *data = NULL;
+    CLEAR_BIT(uds->regs->CR1, USART_CR1_RXNEIE);
+    uint16_t n = cs_rbuf_get(irxb, rxb_free, &data);
+    mbuf_append(&us->rx_buf, data, n);
+    cs_rbuf_consume(irxb, n);
   }
-}
-
-void mgos_uart_hal_dispatch_bottom(struct mgos_uart_state *us) {
-  UART_Handle *huart = (UART_Handle *) us->dev_data;
-  struct UART_State *state = get_state_by_huart(huart);
-  if (us->rx_enabled && !state->rx_in_progress) {
-    HAL_StatusTypeDef status =
-        HAL_UART_Receive_IT(huart, &state->received_byte, 1);
-    if (status != HAL_OK) {
-      LOG(LL_ERROR, ("Failed to start receive from UART"));
-    } else {
-      state->rx_in_progress = 1;
-    }
-  }
+  if (irxb->avail > 0) SET_BIT(uds->regs->CR1, USART_CR1_RXNEIE);
 }
 
 void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us) {
-  UART_Handle *huart = (UART_Handle *) us->dev_data;
-  struct UART_State *state = get_state_by_huart(huart);
-  if (state->tx_in_progress || us->tx_buf.len == 0) {
-    return;
+  struct stm32_uart_state *uds = (struct stm32_uart_state *) us->dev_data;
+  struct mbuf *txb = &us->tx_buf;
+  struct cs_rbuf *itxb = &uds->itx_buf;
+  uint16_t n = MIN(txb->len, itxb->avail);
+  if (n > 0) {
+    CLEAR_BIT(uds->regs->CR1, USART_CR1_TXEIE);
+    cs_rbuf_append(itxb, txb->buf, n);
   }
+  if (itxb->used > 0) SET_BIT(uds->regs->CR1, USART_CR1_TXEIE);
+  mbuf_remove(txb, n);
+}
 
-  if (state->tx_buf.used == 0) {
-    move_rbuf_data(&state->tx_buf, &us->tx_buf);
+void mgos_uart_hal_dispatch_bottom(struct mgos_uart_state *us) {
+  struct stm32_uart_state *uds = (struct stm32_uart_state *) us->dev_data;
+  if (us->rx_enabled && uds->irx_buf.avail > 0) {
+    SET_BIT(uds->regs->CR1, USART_CR1_RXNEIE);
   }
-
-  state->tx_in_progress = 1;
-  uint8_t *cp;
-  cs_rbuf_get(&state->tx_buf, state->tx_buf.used, &cp);
-  HAL_StatusTypeDef status =
-      HAL_UART_Transmit_IT(huart, cp, state->tx_buf.used);
-  if (status != HAL_OK) {
-    state->tx_in_progress = 0;
-    LOG(LL_ERROR, ("Failed to start transmission to UART"));
+  if (uds->itx_buf.used > 0) {
+    SET_BIT(uds->regs->CR1, USART_CR1_TXEIE);
   }
 }
 
 void mgos_uart_hal_flush_fifo(struct mgos_uart_state *us) {
-  UART_Handle *huart = (UART_Handle *) us->dev_data;
-  struct UART_State *state = get_state_by_huart(huart);
-  while (state->tx_buf.used > 0) {
-    mgos_uart_hal_dispatch_tx_top(us);
+  struct stm32_uart_state *uds = (struct stm32_uart_state *) us->dev_data;
+  struct cs_rbuf *itxb = &uds->itx_buf;
+  CLEAR_BIT(uds->regs->CR1, USART_CR1_TXEIE);
+  while (itxb->used > 0) {
+    stm32_uart_tx_byte_from_buf(uds);
   }
-  while (!__HAL_UART_GET_FLAG(huart, UART_FLAG_TXE)) {
+  while (!(uds->regs->ISR & USART_ISR_TC)) {
   }
 }
 
 void mgos_uart_hal_set_rx_enabled(struct mgos_uart_state *us, bool enabled) {
-  UART_Handle *huart = (UART_Handle *) us->dev_data;
-  struct UART_State *state = get_state_by_huart(huart);
-  if (enabled && !state->rx_in_progress) {
-    HAL_StatusTypeDef status =
-        HAL_UART_Receive_IT(huart, &state->received_byte, 1);
-    if (status != HAL_OK) {
-      LOG(LL_ERROR, ("Failed to start receive from UART"));
-    } else {
-      state->rx_in_progress = 1;
-    }
-  }
-  state->rx_enabled = enabled;
-  /*
-   * We do not need to handle enabled = false here, it is
-   * handled in HAL_UART_RxCpltCallback
-   */
-}
-
-void HAL_UART_RxCpltCallback(UART_Handle *huart) {
-  struct UART_State *state = get_state_by_huart(huart);
-  if (!state->rx_in_progress) {
-    return;
-  }
-
-  state->rx_in_progress = 0;
-
-  if (state->rx_buf.avail > 0 && state->rx_enabled) {
-    cs_rbuf_append_one(&state->rx_buf, state->received_byte);
+  struct stm32_uart_state *uds = (struct stm32_uart_state *) us->dev_data;
+  if (enabled) {
+    SET_BIT(uds->regs->CR1, (USART_CR1_RE | USART_CR1_RXNEIE));
   } else {
-    LOG(LL_ERROR, ("UART RX buf overflow"));
-    /* Will be enabled back in mgos_uart_hal_dispatch_bottom */
-    return;
-  }
-
-  if (state->rx_enabled) {
-    HAL_StatusTypeDef status = HAL_OK;
-    status = HAL_UART_Receive_IT(huart, &state->received_byte, 1);
-    if (status != HAL_OK) {
-      LOG(LL_ERROR, ("Failed to restart receive from UART"));
-    } else {
-      state->rx_in_progress = 1;
-    }
-  }
-}
-
-void HAL_UART_TxCpltCallback(UART_Handle *huart) {
-  struct UART_State *state = get_state_by_huart(huart);
-  if (!state->tx_in_progress) {
-    return;
-  }
-  cs_rbuf_clear(&state->tx_buf);
-  state->tx_in_progress = 0;
-}
-
-void HAL_UART_ErrorCallback(UART_Handle *huart) {
-  if (huart->ErrorCode != 0) {
-    LOG(LL_ERROR, ("UART error: %d\n", (int) huart->ErrorCode));
-    /* TODO(alashkin): do something here */
+    CLEAR_BIT(uds->regs->CR1, (USART_CR1_RE | USART_CR1_RXNEIE));
   }
 }
 
@@ -200,60 +217,114 @@ void mgos_uart_hal_config_set_defaults(int uart_no,
 
 bool mgos_uart_hal_configure(struct mgos_uart_state *us,
                              const struct mgos_uart_config *cfg) {
-  UART_Handle *huart = (UART_Handle *) us->dev_data;
-  huart->Init.Mode = UART_MODE_TX; /* Start with RX disabled */
-  huart->Init.BaudRate = cfg->baud_rate;
+  struct stm32_uart_state *uds = (struct stm32_uart_state *) us->dev_data;
+  /* Init HW - pins, clk */
+  UART_HandleTypeDef huart = {.Instance = s_uart_regs[us->uart_no]};
+  HAL_UART_MspInit(&huart);
+  /* Disable for reconfig */
+  CLEAR_BIT(uds->regs->CR1, USART_CR1_UE);
+
+  uint32_t cr1 = USART_CR1_TE; /* Start with TX enabled */
+  uint32_t cr2 = 0;
+  uint32_t cr3 = USART_CR3_EIE;
+  uint32_t brr = 0;
   switch (cfg->num_data_bits) {
     case 7:
-      huart->Init.WordLength = UART_WORDLENGTH_7B;
+      cr1 |= USART_CR1_M_1;
       break;
     case 8:
-      huart->Init.WordLength = UART_WORDLENGTH_8B;
       break;
     case 9:
-      huart->Init.WordLength = UART_WORDLENGTH_9B;
+      cr1 |= USART_CR1_M_0;
       break;
     default:
       return false;
   }
   switch (cfg->parity) {
     case MGOS_UART_PARITY_NONE:
-      huart->Init.Parity = UART_PARITY_NONE;
       break;
     case MGOS_UART_PARITY_EVEN:
-      huart->Init.Parity = UART_PARITY_EVEN;
+      cr1 |= USART_CR1_PCE;
       break;
     case MGOS_UART_PARITY_ODD:
-      huart->Init.Parity = UART_PARITY_ODD;
+      cr1 |= (USART_CR1_PCE | USART_CR1_PS);
       break;
     default:
       return false;
   }
   switch (cfg->stop_bits) {
     case 1:
-      huart->Init.StopBits = UART_STOPBITS_1;
       break;
     case 2:
-      huart->Init.StopBits = UART_STOPBITS_2;
+      cr2 |= USART_CR2_STOP_1;
       break;
     default:
       return false;
   }
-  uint32_t hwfc = UART_HWCONTROL_NONE;
-  if (cfg->rx_fc_type == MGOS_UART_FC_HW) hwfc |= UART_HWCONTROL_CTS;
-  if (cfg->tx_fc_type == MGOS_UART_FC_HW) hwfc |= UART_HWCONTROL_RTS;
-  huart->AdvancedInit.AdvFeatureInit = UART_ADVFEATURE_NO_INIT;
-  return HAL_UART_Init(huart) == HAL_OK;
+  if (cfg->rx_fc_type == MGOS_UART_FC_HW) {
+    cr3 |= USART_CR3_RTSE;
+  }
+  if (cfg->tx_fc_type == MGOS_UART_FC_HW) {
+    cr3 |= (USART_CR3_CTSE | USART_CR3_CTSIE);
+  }
+  {
+    uint32_t div = 0;
+    UART_ClockSourceTypeDef cs = UART_CLOCKSOURCE_UNDEFINED;
+    UART_GETCLOCKSOURCE(&huart, cs);
+    switch (cs) {
+      case UART_CLOCKSOURCE_PCLK1:
+        div = UART_DIV_SAMPLING16(HAL_RCC_GetPCLK1Freq(), cfg->baud_rate);
+        break;
+      case UART_CLOCKSOURCE_PCLK2:
+        div = UART_DIV_SAMPLING16(HAL_RCC_GetPCLK2Freq(), cfg->baud_rate);
+        break;
+      case UART_CLOCKSOURCE_HSI:
+        div = UART_DIV_SAMPLING16(HSI_VALUE, cfg->baud_rate);
+        break;
+      case UART_CLOCKSOURCE_SYSCLK:
+        div = UART_DIV_SAMPLING16(HAL_RCC_GetSysClockFreq(), cfg->baud_rate);
+        break;
+      case UART_CLOCKSOURCE_LSE:
+        div = UART_DIV_SAMPLING16(LSE_VALUE, cfg->baud_rate);
+        break;
+      default:
+        return false;
+    }
+    if ((div & 0xffff0000) != 0) return false;
+    /* Note: When 8x oversampling is used there's some bit shifting to do.
+     * But we don't use that, so BRR = divider. */
+    brr = div;
+  }
+  uds->regs->CR1 = cr1;
+  uds->regs->CR2 = cr2;
+  uds->regs->CR3 = cr3;
+  uds->regs->BRR = brr;
+  uds->regs->RTOR = 8; /* 8 idle bit intervals before RX timeout. */
+  uds->regs->ICR = USART_ERROR_INTS;
+  s_us[us->uart_no] = us;
+  SET_BIT(uds->regs->CR1, USART_CR1_UE);
+  return true;
 }
 
 bool mgos_uart_hal_init(struct mgos_uart_state *us) {
-  if (us->uart_no != 0 && us->uart_no != 1) return false;
-  us->dev_data = (void *) s_huarts[us->uart_no];
-  cs_rbuf_init(&s_uarts_state[us->uart_no].rx_buf, UART_BUF_SIZE);
-  cs_rbuf_init(&s_uarts_state[us->uart_no].tx_buf, UART_BUF_SIZE);
+  if (us->uart_no <= 0 || us->uart_no >= MGOS_MAX_NUM_UARTS) return false;
+  struct stm32_uart_state *uds =
+      (struct stm32_uart_state *) calloc(1, sizeof(*uds));
+  uds->regs = s_uart_regs[us->uart_no];
+  cs_rbuf_init(&uds->irx_buf, UART_ISR_BUF_SIZE);
+  cs_rbuf_init(&uds->itx_buf, UART_ISR_BUF_SIZE);
+  us->dev_data = uds;
   return true;
 }
 
 void mgos_uart_hal_deinit(struct mgos_uart_state *us) {
+  struct stm32_uart_state *uds = (struct stm32_uart_state *) us->dev_data;
+  CLEAR_BIT(uds->regs->CR1, USART_CR1_UE);
+  s_us[us->uart_no] = NULL;
+  UART_HandleTypeDef huart = {.Instance = s_uart_regs[us->uart_no]};
+  HAL_UART_MspDeInit(&huart);
   us->dev_data = NULL;
+  cs_rbuf_deinit(&uds->irx_buf);
+  cs_rbuf_deinit(&uds->itx_buf);
+  free(uds);
 }

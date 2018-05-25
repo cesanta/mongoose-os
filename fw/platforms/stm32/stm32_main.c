@@ -124,8 +124,6 @@ void mgos_main() {
 
   SystemCoreClockUpdate();
 
-  mgos_app_preinit();
-
   mgos_hal_freertos_run_mgos_task(true /* start_scheduler */);
   /* not reached */
   abort();

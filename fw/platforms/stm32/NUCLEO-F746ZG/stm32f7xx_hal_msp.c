@@ -63,10 +63,6 @@ void HAL_MspInit(void) {
   HAL_NVIC_SetPriority(SVCall_IRQn, 0, 0);
   /* DebugMonitor_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DebugMonitor_IRQn, 0, 0);
-  /* PendSV_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(PendSV_IRQn, 0, 0);
-  /* SysTick_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(SysTick_IRQn, 0, 0);
 }
 
 void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c) {
@@ -86,9 +82,9 @@ void HAL_I2C_MspInit(I2C_HandleTypeDef *hi2c) {
     /* Peripheral clock enable */
     __HAL_RCC_I2C1_CLK_ENABLE();
     /* Peripheral interrupt init */
-    HAL_NVIC_SetPriority(I2C1_EV_IRQn, 0, 0);
+    HAL_NVIC_SetPriority(I2C1_EV_IRQn, 10, 0);
     HAL_NVIC_EnableIRQ(I2C1_EV_IRQn);
-    HAL_NVIC_SetPriority(I2C1_ER_IRQn, 0, 0);
+    HAL_NVIC_SetPriority(I2C1_ER_IRQn, 10, 0);
     HAL_NVIC_EnableIRQ(I2C1_ER_IRQn);
   }
 }
@@ -164,7 +160,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef *huart) {
     HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
     /* Peripheral interrupt init */
-    HAL_NVIC_SetPriority(USART2_IRQn, 0, 0);
+    HAL_NVIC_SetPriority(USART2_IRQn, 10, 0);
     HAL_NVIC_EnableIRQ(USART2_IRQn);
   } else if (huart->Instance == USART3) {
     /* Peripheral clock enable */
@@ -182,7 +178,7 @@ void HAL_UART_MspInit(UART_HandleTypeDef *huart) {
     HAL_GPIO_Init(GPIOD, &GPIO_InitStruct);
 
     /* Peripheral interrupt init */
-    HAL_NVIC_SetPriority(USART3_IRQn, 0, 0);
+    HAL_NVIC_SetPriority(USART3_IRQn, 10, 0);
     HAL_NVIC_EnableIRQ(USART3_IRQn);
   }
 }
