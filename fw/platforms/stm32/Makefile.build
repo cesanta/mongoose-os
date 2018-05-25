@@ -204,7 +204,7 @@ MGOS_SRCS += spiffs_cache.c spiffs_gc.c spiffs_nucleus.c spiffs_check.c spiffs_h
 APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
 
-VPATH = $(MGOS_VPATH) $(MGOS_PLATFORM_PATH) $(MGOS_PLATFORM_PATH)/$(TARGET) \
+VPATH = $(MGOS_VPATH) $(MGOS_PLATFORM_PATH)/src $(MGOS_PLATFORM_PATH)/src/$(TARGET) \
         $(COMMON_PATH)/platforms/arm \
         $(GEN_DIR) $(APP_SOURCE_DIRS) \
         $(SPIFFS_PATH) \
@@ -221,8 +221,8 @@ VPATH = $(MGOS_VPATH) $(MGOS_PLATFORM_PATH) $(MGOS_PLATFORM_PATH)/$(TARGET) \
         $(FREERTOS_PATH)/Source/portable/MemMang \
         $(FREERTOS_PATH)/Source/portable/GCC/ARM_CM7/r0p1
 IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
-        $(MGOS_PLATFORM_PATH) $(MGOS_PLATFORM_PATH)/include \
-        $(MGOS_PLATFORM_PATH)/$(TARGET)/include \
+        $(MGOS_PLATFORM_PATH)/include \
+        $(MGOS_PLATFORM_PATH)/src/$(TARGET)/include \
         $(SPIFFS_PATH) $(GEN_DIR) \
         $(SDK_INCLUDES)
 
