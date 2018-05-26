@@ -1,5 +1,5 @@
 DOCKERFILES = esp8266-build esp8266-toolchain
-SPIFFS_CONFIG_PATH = /cesanta/fw/platforms/esp8266/include
+SPIFFS_CONFIG_PATH = /cesanta/fw/platforms/esp8266/include/spiffs
 MBEDTLS_BRANCH ?= esp8266_$(DOCKER_TAG)
 
 include ../docker.mk

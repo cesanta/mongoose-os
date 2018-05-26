@@ -158,7 +158,7 @@ VPATH = $(MGOS_VPATH) $(APP_SOURCE_DIRS) $(MGOS_SRC_PATH) $(MONGOOSE_PATH) \
         $(MGOS_ESP_SRC_PATH) $(SPIFFS_PATH) $(COMMON_ESP8266_PATH) \
         $(COMMON_ESP_PATH)
 IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
-        $(SPIFFS_PATH) $(MGOS_ESP8266_PATH)/include \
+        $(SPIFFS_PATH) $(MGOS_ESP8266_PATH)/include $(MGOS_ESP8266_PATH)/include/spiffs \
         $(BOOTLOADER_PATH)/rboot $(SDK_PATH)/include/lwip \
         $(SDK_PATH) $(SDK_PATH)/include \
         $(COMMON_ESP8266_PATH) $(COMMON_ESP_PATH) \

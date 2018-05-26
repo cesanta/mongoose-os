@@ -105,6 +105,7 @@ VPATH = $(MGOS_VPATH) $(APP_SOURCE_DIRS) $(MGOS_SRC_PATH) $(MGOS_CC32XX_PATH)/sr
         $(BOOT_PATH)/lib \
         $(MONGOOSE_PATH) $(FROZEN_PATH)
 IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
+        $(MGOS_CC32XX_PATH)/include $(MGOS_CC32XX_PATH)/include/spiffs \
         $(MGOS_CC32XX_PATH)/src $(MGOS_CC3200_PATH)/src \
         $(BOOT_PATH)/lib $(GEN_DIR) \
         $(MBEDTLS_PATH)/include $(MBEDTLS_PATH)/cc32xx

@@ -1,5 +1,5 @@
 DOCKERFILES = cc3200-build
-SPIFFS_CONFIG_PATH = /cesanta/fw/platforms/cc32xx/src
+SPIFFS_CONFIG_PATH = /cesanta/fw/platforms/cc32xx/include/spiffs
 
 # SDK cannot be downloaded directly (requires registering on the TI site).
 # Furthermore, it is distributed as a Windows binary only (boo). So:

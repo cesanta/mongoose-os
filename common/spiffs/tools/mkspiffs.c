@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-#include "/usr/include/dirent.h"
+#include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
 #include <stdbool.h>

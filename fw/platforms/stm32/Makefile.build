@@ -221,7 +221,7 @@ VPATH = $(MGOS_VPATH) $(MGOS_PLATFORM_PATH)/src $(MGOS_PLATFORM_PATH)/src/$(TARG
         $(FREERTOS_PATH)/Source/portable/MemMang \
         $(FREERTOS_PATH)/Source/portable/GCC/ARM_CM7/r0p1
 IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
-        $(MGOS_PLATFORM_PATH)/include \
+        $(MGOS_PLATFORM_PATH)/include $(MGOS_PLATFORM_PATH)/include/spiffs \
         $(MGOS_PLATFORM_PATH)/src/$(TARGET)/include \
         $(SPIFFS_PATH) $(GEN_DIR) \
         $(SDK_INCLUDES)

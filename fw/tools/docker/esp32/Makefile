@@ -1,5 +1,5 @@
 DOCKERFILES = esp32-build esp32-toolchain
-SPIFFS_CONFIG_PATH = /cesanta/fw/platforms/esp32/include
+SPIFFS_CONFIG_PATH = /cesanta/fw/platforms/esp32/include/spiffs
 TOOLCHAIN_VERSION = 1.22.0-80-g6c4433a-5.2.0
 MBEDTLS_BRANCH ?= esp32_$(DOCKER_TAG)
 

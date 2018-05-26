@@ -101,6 +101,7 @@ VPATH = $(MGOS_VPATH) $(APP_SOURCE_DIRS) $(MGOS_CC32XX_PATH)/src $(MGOS_CC3220_P
         $(COMMON_PATH) $(COMMON_PATH)/platforms/arm \
         $(GEN_DIR)
 IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
+        $(MGOS_CC32XX_PATH)/include $(MGOS_CC32XX_PATH)/include/spiffs \
         $(MGOS_CC32XX_PATH)/src $(MGOS_CC3220_PATH)/src $(GEN_DIR) \
         $(MBEDTLS_PATH)/include $(MBEDTLS_PATH)/cc32xx
 
