@@ -17,14 +17,13 @@
 
 #include "mem_spiffs.h"
 
+#include <dirent.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/stat.h>
 #include <unistd.h>
-
-#include "/usr/include/dirent.h"
 
 #include "common/cs_crc32.h"
 
