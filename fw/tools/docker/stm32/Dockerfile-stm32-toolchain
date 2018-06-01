@@ -17,14 +17,14 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y -q \
       gcc-arm-none-eabi gdb-arm-none-eabi libnewlib-arm-none-eabi libnewlib-dev && \
     apt-get clean
 
-# STM32Cube can be found at http://www.st.com/en/development-tools/stm32cubemx.html#getsoftware-scroll
-# and pruned a bit by removing some heavy, but non-essential stuff:
-# rm -rf Middlewares/ST Middlewares/Third_Party/mbedTLS Projects Utilities
-ADD STM32Cube_FW_F7_V1.8.0.tar.xz /opt
-ADD lwipopts.patch /opt
-RUN cd /opt/STM32Cube_FW_F7_V1.8.0 && patch -p 0 < ../lwipopts.patch
+ARG STM32CUBE_F4_DIR
+ADD tmp/$STM32CUBE_F4_DIR /opt/$STM32CUBE_F4_DIR
+ENV STM32CUBE_F4_PATH /opt/$STM32CUBE_F4_DIR
+
+ARG STM32CUBE_F7_DIR
+ADD tmp/$STM32CUBE_F7_DIR /opt/$STM32CUBE_F7_DIR
+ENV STM32CUBE_F7_PATH /opt/$STM32CUBE_F7_DIR
 
 ADD fw_meta.py serve_core.py mkspiffs mkspiffs8 /usr/local/bin/
 
-ENV STM32CUBE_F7_PATH /opt/STM32Cube_FW_F7_V1.8.0
 ENV MGOS_TARGET_GDB /usr/bin/arm-none-eabi-gdb

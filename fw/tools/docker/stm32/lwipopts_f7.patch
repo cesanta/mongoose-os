@@ -1,0 +1,11 @@
+--- Middlewares/Third_Party/LwIP/system/arch/cc.h.orig	2018-02-23 12:16:19.000000000 +0000
++++ Middlewares/Third_Party/LwIP/system/arch/cc.h	2018-05-23 23:33:06.255209521 +0100
+@@ -38,7 +38,7 @@
+ 
+ typedef int sys_prot_t;
+ 
+-#define LWIP_PROVIDE_ERRNO
++// #define LWIP_PROVIDE_ERRNO
+ 
+ #if defined (__GNUC__) & !defined (__CC_ARM)
+ 
