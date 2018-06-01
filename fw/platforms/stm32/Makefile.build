@@ -53,9 +53,9 @@ MGOS_FEATURES ?=
 
 # Value of the external crystal in Hz, if present.
 # If set to 0, internal RC oscillator is used.
-HSE_VALUE = 0
+HSE_VALUE ?= 0
 # Internal oscillator frequency. Set for each device.
-HSE_VALUE = 0
+HSI_VALUE ?= 0
 
 STM32_CFLAGS ?=
 STM32_CFLAGS += -DSTM32 -D__WORDSIZE=32 -D_FILE_OFFSET_BITS=32
