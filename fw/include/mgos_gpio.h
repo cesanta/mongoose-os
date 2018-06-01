@@ -26,6 +26,12 @@
 
 #include <stdbool.h>
 
+#include "common/platform.h"
+
+#if CS_PLATFORM == CS_P_STM32
+#include "stm32_gpio.h"
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */

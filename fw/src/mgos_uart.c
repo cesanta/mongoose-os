@@ -207,6 +207,7 @@ bool mgos_uart_configure(int uart_no, const struct mgos_uart_config *cfg) {
 bool mgos_uart_config_get(int uart_no, struct mgos_uart_config *cfg) {
   if (uart_no < 0 || uart_no >= MGOS_MAX_NUM_UARTS) return false;
   struct mgos_uart_state *us = s_uart_state[uart_no];
+  if (us == NULL) return false;
   /* A way of telling if the UART has been configured. */
   if (us->cfg.rx_buf_size == 0 && us->cfg.tx_buf_size == 0) return false;
   memcpy(cfg, &us->cfg, sizeof(*cfg));

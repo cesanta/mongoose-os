@@ -40,8 +40,8 @@
   */
 
 /* Define to prevent recursive inclusion -------------------------------------*/
-#ifndef CS_FW_PLATFORMS_STM32_STM32F7XX_HAL_CONF_H_
-#define CS_FW_PLATFORMS_STM32_STM32F7XX_HAL_CONF_H_
+#ifndef CS_FW_PLATFORMS_STM32_INCLUDE_STM32F7XX_HAL_CONF_H_
+#define CS_FW_PLATFORMS_STM32_INCLUDE_STM32F7XX_HAL_CONF_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -113,9 +113,8 @@ extern "C" {
  * PLL).
   */
 #if !defined(HSE_VALUE)
-#define HSE_VALUE \
-  ((uint32_t) 25000000U) /*!< Value of the External oscillator in Hz */
-#endif                   /* HSE_VALUE */
+#define HSE_VALUE 0
+#endif /* HSE_VALUE */
 
 #if !defined(HSE_STARTUP_TIMEOUT)
 #define HSE_STARTUP_TIMEOUT \
@@ -437,6 +436,6 @@ extern "C" {
 }
 #endif
 
-#endif /* CS_FW_PLATFORMS_STM32_STM32F7XX_HAL_CONF_H_ */
+#endif /* CS_FW_PLATFORMS_STM32_INCLUDE_STM32F7XX_HAL_CONF_H_ */
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

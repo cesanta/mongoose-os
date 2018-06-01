@@ -17,7 +17,7 @@
 
 #include "mgos_core_dump.h"
 
-#include "stm32_uart.h"
+#include "stm32_uart_internal.h"
 
 /*
  * There isn't much here, and here's why.

@@ -15,34 +15,28 @@
  * limitations under the License.
  */
 
-#ifndef CS_FW_PLATFORMS_STM32_DISCO_F746G_INCLUDE_STM32_SDK_HAL_H_
-#define CS_FW_PLATFORMS_STM32_DISCO_F746G_INCLUDE_STM32_SDK_HAL_H_
+#ifndef CS_FW_PLATFORMS_STM32_INCLUDE_STM32_UART_INTERNAL_H_
+#define CS_FW_PLATFORMS_STM32_INCLUDE_STM32_UART_INTERNAL_H_
 
-#include "stm32f7xx_hal.h"
-#include "stm32_gpio_defs.h"
+#include "stm32_uart.h"
 
-#include "main.h"
+#include "stm32_sdk_hal.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-typedef UART_HandleTypeDef UART_Handle;
+struct stm32_uart_def {
+  USART_TypeDef *regs;
+  struct stm32_uart_pins default_pins;
+};
 
-extern UART_Handle huart1;
-extern UART_Handle huart6;
-
-#define UART_USB huart1
-#define UART_2 huart6
-
-extern RNG_HandleTypeDef hrng;
-#define RNG_1 hrng
-
-extern I2C_HandleTypeDef hi2c1;
-#define I2C_DEFAULT hi2c1
+void stm32_uart_dputc(int c);
+void stm32_uart_dprintf(const char *fmt, ...)
+    __attribute__((format(printf, 1, 2)));
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* CS_FW_PLATFORMS_STM32_DISCO_F746G_INCLUDE_STM32_SDK_HAL_H_ */
+#endif /* CS_FW_PLATFORMS_STM32_INCLUDE_STM32_UART_INTERNAL_H_ */

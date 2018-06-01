@@ -29,6 +29,7 @@
 #include "mgos_app.h"
 #include "mgos_core_dump.h"
 #include "mgos_debug_internal.h"
+#include "mgos_gpio.h"
 #include "mgos_hal.h"
 #include "mgos_init_internal.h"
 #include "mgos_mongoose_internal.h"
@@ -176,7 +177,6 @@ enum mgos_init_result mgos_init2(void) {
   LOG(LL_INFO, ("CPU: %d MHz, RAM: %u total, %u free",
                 (int) (mgos_get_cpu_freq() / 1000000), mgos_get_heap_size(),
                 mgos_get_free_heap_size()));
-
   r = mongoose_init();
   if (r != MGOS_INIT_OK) return r;
 

@@ -35,9 +35,11 @@
 #if CS_PLATFORM == CS_P_CC3200 || CS_PLATFORM == CS_P_CC3220
 #include "cc32xx_uart.h"
 #elif CS_PLATFORM == CS_P_ESP32
-#include "fw/platforms/esp32/src/esp32_uart.h"
+#include "esp32_uart.h"
 #elif CS_PLATFORM == CS_P_ESP8266
-#include "fw/platforms/esp8266/src/esp_uart.h"
+#include "esp_uart.h"
+#elif CS_PLATFORM == CS_P_STM32
+#include "stm32_uart.h"
 #else
 struct mgos_uart_dev_config {};
 #endif

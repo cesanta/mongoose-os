@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-#ifndef CS_FW_PLATFORMS_STM32_STM32_HW_TIMERS_H_
-#define CS_FW_PLATFORMS_STM32_STM32_HW_TIMERS_H_
+#ifndef CS_FW_PLATFORMS_STM32_INCLUDE_STM32_HW_TIMERS_H_
+#define CS_FW_PLATFORMS_STM32_INCLUDE_STM32_HW_TIMERS_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -30,4 +30,4 @@ struct mgos_hw_timer_dev_data {};
 }
 #endif /* __cplusplus */
 
-#endif /* CS_FW_PLATFORMS_STM32_STM32_HW_TIMERS_H_ */
+#endif /* CS_FW_PLATFORMS_STM32_INCLUDE_STM32_HW_TIMERS_H_ */

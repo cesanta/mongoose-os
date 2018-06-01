@@ -32,6 +32,7 @@
 #include "mgos_init_internal.h"
 #include "mgos_debug.h"
 #include "mgos_debug_internal.h"
+#include "mgos_gpio.h"
 #include "mgos_mongoose_internal.h"
 #include "mgos_sys_config.h"
 #include "mgos_system.h"
@@ -107,24 +108,24 @@ enum mgos_init_result mgos_hal_freertos_pre_init() {
   return MGOS_INIT_OK;
 }
 
-void mgos_main() {
-  GPIO_InitTypeDef info;
-  info.Pin = LD1_Pin;
-  info.Mode = GPIO_MODE_OUTPUT_PP;
-  info.Pull = GPIO_NOPULL;
-  info.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(LD1_GPIO_Port, &info);
-  info.Pin = LD2_Pin;
-  HAL_GPIO_Init(LD2_GPIO_Port, &info);
-  info.Pin = LD3_Pin;
-  HAL_GPIO_Init(LD3_GPIO_Port, &info);
+void SystemCoreClockUpdate(void) {
+  uint32_t presc = AHBPrescTable[((RCC->CFGR & RCC_CFGR_HPRE) >> 4)];
+  SystemCoreClock = HAL_RCC_GetSysClockFreq() >> presc;
+}
 
-  SCB_EnableICache();
-  SCB_EnableDCache();
+extern void stm32_clock_config(void);
+
+int main() {
+  stm32_clock_config();
 
   SystemCoreClockUpdate();
 
   mgos_hal_freertos_run_mgos_task(true /* start_scheduler */);
   /* not reached */
+  abort();
+}
+
+void assert_failed(uint8_t *file, uint32_t line) {
+  fprintf(stderr, "assert_failed @ %s:%d\r\n", file, (int) line);
   abort();
 }

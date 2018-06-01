@@ -18,7 +18,7 @@
 #ifndef CS_FW_PLATFORMS_STM32_INCLUDE_LWIPOPTS_H_
 #define CS_FW_PLATFORMS_STM32_INCLUDE_LWIPOPTS_H_
 
-#include "stm32f7xx_hal.h"
+#include "stm32_sdk_hal.h"
 
 #include <machine/endian.h>
 #include <stdint.h>

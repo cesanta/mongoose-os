@@ -86,6 +86,13 @@ void mgos_debug_resume_uart(void);
  */
 bool mgos_debug_uart_is_suspended(void);
 
+/*
+ * User can implement this to apply custom config during debug uart init
+ * (e.g. remap pins).
+ */
+struct mgos_uart_config;
+bool mgos_debug_uart_custom_cfg(int uart_no, struct mgos_uart_config *cfg);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

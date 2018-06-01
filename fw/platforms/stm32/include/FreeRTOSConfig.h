@@ -63,8 +63,8 @@
     1 tab == 4 spaces!
 */
 
-#ifndef FREERTOS_CONFIG_H
-#define FREERTOS_CONFIG_H
+#ifndef CS_FW_PLATFORMS_STM32_INCLUDE_FREERTOSCONFIG_H_
+#define CS_FW_PLATFORMS_STM32_INCLUDE_FREERTOSCONFIG_H_
 
 /*-----------------------------------------------------------
  * Application specific definitions.
@@ -84,7 +84,11 @@
 #include <stdint.h>
 extern uint32_t SystemCoreClock;
 #include "stm32_sdk_hal.h"
+#if defined(STM32F4)
+#include <core_cm4.h>
+#elif defined(STM32F7)
 #include <core_cm7.h>
+#endif
 #endif
 
 #define configUSE_PREEMPTION 1
@@ -166,4 +170,4 @@ standard names. */
 #define xPortPendSVHandler PendSV_Handler
 #define xPortSysTickHandler SysTick_Handler
 
-#endif /* FREERTOS_CONFIG_H */
+#endif /* CS_FW_PLATFORMS_STM32_INCLUDE_FREERTOSCONFIG_H_ */

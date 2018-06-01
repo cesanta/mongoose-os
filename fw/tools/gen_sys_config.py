@@ -181,10 +181,9 @@ class Schema(object):
             else:
                 oe = None
             if e.vtype is None:
-                if oe is None:
-                    raise KeyError("%s: Cannot override, no such entry" % e.path)
-                oe.default = e.default
-                oe.ValidateDefault()
+                if oe is not None:
+                    oe.default = e.default
+                    oe.ValidateDefault()
             else:
                 if oe is None:
                     self._schema.append(e)

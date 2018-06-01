@@ -15,19 +15,23 @@
  * limitations under the License.
  */
 
-#ifndef CS_FW_PLATFORMS_STM32_STM32_UART_H_
-#define CS_FW_PLATFORMS_STM32_STM32_UART_H_
+#ifndef CS_FW_PLATFORMS_STM32_INCLUDE_STM32_UART_H_
+#define CS_FW_PLATFORMS_STM32_INCLUDE_STM32_UART_H_
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void stm32_uart_dputc(int c);
-void stm32_uart_dprintf(const char *fmt, ...)
-    __attribute__((format(printf, 1, 2)));
+struct stm32_uart_pins {
+  int tx, rx, ck, cts, rts;
+};
+
+struct mgos_uart_dev_config {
+  struct stm32_uart_pins pins;
+};
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* CS_FW_PLATFORMS_STM32_STM32_UART_H_ */
+#endif /* CS_FW_PLATFORMS_STM32_INCLUDE_STM32_UART_H_ */

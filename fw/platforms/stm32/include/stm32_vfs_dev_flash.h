@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-#ifndef CS_FW_PLATFORMS_STM32_STM32_VFS_DEV_FLASH_H_
-#define CS_FW_PLATFORMS_STM32_STM32_VFS_DEV_FLASH_H_
+#ifndef CS_FW_PLATFORMS_STM32_INCLUDE_STM32_VFS_DEV_FLASH_H_
+#define CS_FW_PLATFORMS_STM32_INCLUDE_STM32_VFS_DEV_FLASH_H_
 
 #include <stdbool.h>
 
@@ -32,4 +32,4 @@ bool stm32_vfs_dev_flash_register_type(void);
 }
 #endif
 
-#endif /* CS_FW_PLATFORMS_STM32_STM32_VFS_DEV_FLASH_H_ */
+#endif /* CS_FW_PLATFORMS_STM32_INCLUDE_STM32_VFS_DEV_FLASH_H_ */

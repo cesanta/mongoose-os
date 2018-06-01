@@ -24,8 +24,14 @@
 #include "mgos_sys_config_internal.h"
 #include "mgos_timers_internal.h"
 
+extern int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len);
+
 enum mgos_init_result mgos_init(void) {
   enum mgos_init_result r;
+
+  unsigned int seed;
+  mg_ssl_if_mbed_random(NULL, (uint8_t *) &seed, sizeof(seed));
+  srand(seed);
 
   mgos_event_register_base(MGOS_EVENT_SYS, "mos");
   mgos_uptime_init();

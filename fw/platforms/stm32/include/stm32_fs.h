@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-#ifndef CS_FW_PLATFORMS_STM32_STM32_FS_H_
-#define CS_FW_PLATFORMS_STM32_STM32_FS_H_
+#ifndef CS_FW_PLATFORMS_STM32_INCLUDE_STM32_FS_H_
+#define CS_FW_PLATFORMS_STM32_INCLUDE_STM32_FS_H_
 
 #include <stdbool.h>
 
@@ -30,4 +30,4 @@ bool stm32_fs_init(void);
 }
 #endif
 
-#endif /* CS_FW_PLATFORMS_STM32_STM32_FS_H_ */
+#endif /* CS_FW_PLATFORMS_STM32_INCLUDE_STM32_FS_H_ */

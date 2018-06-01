@@ -172,3 +172,11 @@ bool mgos_hw_timers_init(void *ti) {
 
 void mgos_hw_timers_deinit(void) {
 }
+
+int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {
+  while (len-- > 0) {
+    *buf++ = (unsigned char) rand();
+  }
+  (void) ctx;
+  return 0;
+}

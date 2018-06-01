@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-#ifndef CS_FW_PLATFORMS_STM32_STM32_HAL_H_
-#define CS_FW_PLATFORMS_STM32_STM32_HAL_H_
+#ifndef CS_FW_PLATFORMS_STM32_INCLUDE_STM32_HAL_H_
+#define CS_FW_PLATFORMS_STM32_INCLUDE_STM32_HAL_H_
 
 #ifdef __cplusplus
 extern "C" {
@@ -28,4 +28,4 @@ int mongoose_poll_scheduled();
 }
 #endif
 
-#endif /* CS_FW_PLATFORMS_STM32_STM32_HAL_H_ */
+#endif /* CS_FW_PLATFORMS_STM32_INCLUDE_STM32_HAL_H_ */

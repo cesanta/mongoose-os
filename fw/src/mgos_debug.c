@@ -115,6 +115,13 @@ void mgos_debug_flush(void) {
   if (s_stderr_uart >= 0) mgos_uart_flush(s_stderr_uart);
 }
 
+bool mgos_debug_uart_custom_cfg(int uart_no, struct mgos_uart_config *cfg) WEAK;
+bool mgos_debug_uart_custom_cfg(int uart_no, struct mgos_uart_config *cfg) {
+  (void) uart_no;
+  (void) cfg;
+  return true;
+}
+
 static enum mgos_init_result mgos_init_debug_uart(int uart_no) {
   if (uart_no < 0) return MGOS_INIT_OK;
   /* If already initialized, don't touch. */
@@ -122,6 +129,9 @@ static enum mgos_init_result mgos_init_debug_uart(int uart_no) {
   struct mgos_uart_config ucfg;
   mgos_uart_config_set_defaults(uart_no, &ucfg);
   ucfg.baud_rate = MGOS_DEBUG_UART_BAUD_RATE;
+  if (!mgos_debug_uart_custom_cfg(uart_no, &ucfg)) {
+    return MGOS_INIT_UART_FAILED;
+  }
   if (!mgos_uart_configure(uart_no, &ucfg)) {
     return MGOS_INIT_UART_FAILED;
   }

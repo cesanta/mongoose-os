@@ -27,7 +27,7 @@
 #include "mgos_debug.h"
 #include "mgos_system.h"
 
-#include "stm32_uart.h"
+#include "stm32_uart_internal.h"
 
 #include <stm32_sdk_hal.h>
 

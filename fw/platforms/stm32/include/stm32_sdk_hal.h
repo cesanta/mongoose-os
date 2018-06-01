@@ -15,26 +15,23 @@
  * limitations under the License.
  */
 
-#ifndef CS_FW_PLATFORMS_STM32_NUCLEO_F746ZG_INCLUDE_STM32_SDK_HAL_H_
-#define CS_FW_PLATFORMS_STM32_NUCLEO_F746ZG_INCLUDE_STM32_SDK_HAL_H_
+#ifndef CS_FW_PLATFORMS_STM32_INCLUDE_STM32_SDK_HAL_H_
+#define CS_FW_PLATFORMS_STM32_INCLUDE_STM32_SDK_HAL_H_
 
+#if defined(STM32F4)
+#include "stm32f4xx_hal.h"
+#elif defined(STM32F7)
 #include "stm32f7xx_hal.h"
-#include "stm32_gpio_defs.h"
-
-#include "main.h"
+#else
+#error Device family not defined
+#endif
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-extern RNG_HandleTypeDef hrng;
-#define RNG_1 hrng
-
-extern I2C_HandleTypeDef hi2c1;
-#define I2C_DEFAULT hi2c1
-
 #ifdef __cplusplus
 }
 #endif
 
-#endif /* CS_FW_PLATFORMS_STM32_NUCLEO_F746ZG_INCLUDE_STM32_SDK_HAL_H_ */
+#endif /* CS_FW_PLATFORMS_STM32_INCLUDE_STM32_SDK_HAL_H_ */

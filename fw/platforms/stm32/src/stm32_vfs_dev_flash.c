@@ -22,8 +22,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#include "stm32f7xx_hal_conf.h"
-#include "stm32f7xx_hal_flash.h"
+#include "stm32_sdk_hal.h"
 
 #include "common/cs_dbg.h"
 

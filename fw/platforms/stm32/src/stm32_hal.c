@@ -18,7 +18,7 @@
 #include <sys/time.h>
 
 #include <stm32_sdk_hal.h>
-#include "stm32f7xx_hal_iwdg.h"
+//#include "stm32f7xx_hal_iwdg.h"
 
 #include "FreeRTOS.h"
 #include "semphr.h"
@@ -32,6 +32,7 @@
 #include "mgos_sys_config.h"
 #include "mgos_mongoose.h"
 #include "mgos_timers.h"
+#include "mgos_utils.h"
 
 #include "stm32_uart.h"
 
@@ -84,23 +85,20 @@ void mgos_usleep(uint32_t usecs) {
   if (remainder > 0) delay_cycles(remainder * (SystemCoreClock / 1000000));
 }
 
+/* Note: PLL must be enabled for RNG to work */
 int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {
+  RCC->AHB2ENR |= RCC_AHB2ENR_RNGEN;
+  RNG->CR = RNG_CR_RNGEN;
   int i = 0;
-  (void) ctx;
   do {
-    uint32_t rnd;
-    if (HAL_RNG_GenerateRandomNumber(&RNG_1, &rnd) != HAL_OK) {
-      /* Possible if HAL is locked, fallback to timer */
-      rnd = HAL_GetTick();
+    if (RNG->SR & RNG_SR_DRDY) {
+      uint32_t rnd = RNG->DR;
+      size_t l = MIN(len - i, sizeof(rnd));
+      memcpy(buf + i, &rnd, l);
+      i += l;
     }
-    int copy_len = len - i;
-    if (copy_len > 4) {
-      copy_len = 4;
-    }
-    memcpy(buf + i, &rnd, copy_len);
-    i += 4;
   } while (i < len);
-
+  (void) ctx;
   return 0;
 }
 
@@ -121,7 +119,9 @@ IWDG_HandleTypeDef hiwdg = {
         {
          .Prescaler = IWDG_PRESCALER_256,
          .Reload = 5 * IWDG_1_SECOND,
+#ifdef STM32F7
          .Window = IWDG_WINDOW_DISABLE,
+#endif
         },
 };
 
