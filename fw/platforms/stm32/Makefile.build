@@ -219,7 +219,7 @@ CFLAGS ?= -std=gnu99 -Os -ggdb -MD -Wall -Werror -pipe \
           ${MG_FEATURES_TINY} -DMG_ENABLE_DIRECTORY_LISTING
 
 SSL_LIBS =
-ifneq "$(MBEDTLS_PATH)" ""
+ifeq ("$(SSL)", "mbedTLS")
   SSL_LIBS += $(addprefix $(MBEDTLS_PATH)/library/,libmbedcrypto.a libmbedtls.a libmbedx509.a)
   CFLAGS += -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS
 endif
