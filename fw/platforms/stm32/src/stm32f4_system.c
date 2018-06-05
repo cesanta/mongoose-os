@@ -87,21 +87,17 @@ void stm32_clock_config(void) {
   RCC_ClkInitTypeDef cc;
   RCC_OscInitTypeDef oc;
 
-  /* Enable Power Control clock */
   __HAL_RCC_PWR_CLK_ENABLE();
-
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
-  oc.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+/* Configure the clock source and PLL. */
 #if HSE_VALUE == 0
-  oc.OscillatorType = RCC_OSCILLATORTYPE_HSI | RCC_OSCILLATORTYPE_HSE;
+  oc.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   oc.HSIState = RCC_HSI_ON;
-  oc.HSEState = RCC_HSE_OFF;
   oc.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   oc.PLL.PLLM = HSI_VALUE / 1000000;  // VCO input = 1 MHz
 #else
-  oc.OscillatorType = RCC_OSCILLATORTYPE_HSI | RCC_OSCILLATORTYPE_HSE;
-  oc.HSIState = RCC_HSI_OFF;
+  oc.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   oc.HSEState = RCC_HSE_ON;
   oc.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   oc.PLL.PLLM = HSE_VALUE / 1000000;  // VCO input = 1 MHz
@@ -113,8 +109,6 @@ void stm32_clock_config(void) {
   oc.PLL.PLLR = 7;
   HAL_RCC_OscConfig(&oc);
 
-  /* Select PLL as system clock source and configure the HCLK, PCLK1 and PCLK2
-     clocks dividers */
   cc.ClockType = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK |
                   RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2);
   cc.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
@@ -125,4 +119,15 @@ void stm32_clock_config(void) {
 
   /* Use system PLL for USB and RNG. */
   LL_RCC_SetCK48MClockSource(LL_RCC_CK48M_CLKSOURCE_PLL);
+
+/* Turn off the unused oscilaltor. */
+#if HSE_VALUE == 0
+  oc.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  oc.HSEState = RCC_HSE_OFF;
+#else
+  oc.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  oc.HSIState = RCC_HSI_OFF;
+#endif
+  oc.PLL.PLLState = RCC_PLL_NONE; /* Don't touch the PLL config */
+  HAL_RCC_OscConfig(&oc);
 }
