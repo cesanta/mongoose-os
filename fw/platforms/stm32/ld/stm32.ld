@@ -91,6 +91,7 @@ SECTIONS
     *(.data*)          /* .data* sections */
 
     . = ALIGN(4);
+    *(.iram .iram.*)   /* code placed in RAM */
     _edata = .;        /* define a global symbol at data end */
   } >SRAM AT> FLASH
 

@@ -24,8 +24,8 @@ SECTIONS
     GROUP {
       .init_array
       .vtable
-      .text
-      .text.*
+      .iram .iram.*
+      .text .text.*
       .const
       .data
       .bss

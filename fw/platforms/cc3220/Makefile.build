@@ -213,7 +213,8 @@ MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3220_PATH)/src/*.c)) \
              mgos_mongoose.c mgos_sys_config.c \
              mgos_hw_timers.c mgos_system.c mgos_time.c mgos_timers.c mgos_uart.c mgos_utils.c \
              mgos_vfs.c mgos_vfs_dev.c mgos_vfs_dev_ram.c mgos_vfs_fs_spiffs.c \
-             cc32xx_exc.c arm_exc.c arm_exc_top.S cc32xx_fs.c cc32xx_gpio.c \
+             cc32xx_exc.c arm_exc.c arm_exc_top.S arm_nsleep100.c arm_nsleep100_m4.S \
+             cc32xx_fs.c cc32xx_gpio.c \
              cc32xx_hal.c cc32xx_hash.c cc32xx_hw_timers.c cc32xx_libc.c cc32xx_main.c cc32xx_sl_spawn.c cc32xx_uart.c \
              cc32xx_vfs.c cc32xx_vfs_fs_slfs.c \
              $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C))
@@ -292,6 +293,7 @@ APP_LDFLAGS += --rom_model --heap_size=0 --stack_size=0x1000 \
                --disable_auto_rts -l rtsv7M4_T_le_eabi_cesanta.lib
 
 C_CXX_FLAGS += -DFW_ARCHITECTURE=$(APP_PLATFORM) -DARM_HAVE_FPU=0 \
+               -DIRAM='__attribute__((section(".iram")))' \
                -DSRAM_BASE_ADDR=0x20000000 -DSRAM_SIZE=0x40000 \
                $(patsubst %,-I%,$(subst :, ,$(IPATH))) \
                $(MG_FEATURES) $(MGOS_FEATURES) $(MGOS_CC3220_FEATURES) \
@@ -343,7 +345,7 @@ $(BUILD_DIR)/%.asm.o: %.asm $(GENFILES_LIST)
 
 $(BUILD_DIR)/%.S.o: %.S $(GENFILES_LIST)
 	$(vecho) "GCCAS $@"
-	$(Q) arm-none-eabi-gcc -mthumb -mcpu=cortex-m4 $(C_CXX_FLAGS) -Wundef -c -x assembler-with-cpp $< -o $@
+	$(Q) arm-none-eabi-gcc -mthumb -mcpu=cortex-m4 $(C_CXX_FLAGS) -Wundef -c -ggdb -x assembler-with-cpp $< -o $@
 
 $(FFI_EXPORTS_C): $(APP_FS_FILES)
 	$(call gen_ffi_exports,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))

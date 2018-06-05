@@ -113,14 +113,10 @@ void umm_oom_cb(size_t size, unsigned short int blocks_cnt) {
   cc32xx_exc_printf("E:M %u\r\n", size, blocks_cnt);
 }
 
-void (*mgos_nsleep100)(uint32_t n);
-void cc32xx_nsleep100(uint32_t n) {
-  /* TODO(rojer) */
-}
 uint32_t mgos_bitbang_n100_cal = 0;
+extern void mgos_nsleep100_cal(void);
 
 void cc32xx_main(void) {
-  mgos_nsleep100 = cc32xx_nsleep100;
   PRCMCC3200MCUInit();
   cc32xx_exc_init();
 #ifdef __TI_COMPILER_VERSION__
@@ -128,6 +124,8 @@ void cc32xx_main(void) {
   memset(UMM_MALLOC_CFG__HEAP_ADDR, 0, UMM_MALLOC_CFG__HEAP_SIZE);
 #endif
   cc32xx_exc_puts("\r\n");
+
+  mgos_nsleep100_cal();
 
   MAP_PRCMPeripheralClkEnable(PRCM_WDT, PRCM_RUN_MODE_CLK);
 

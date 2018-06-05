@@ -108,9 +108,12 @@ enum mgos_init_result mgos_hal_freertos_pre_init() {
   return MGOS_INIT_OK;
 }
 
+extern void mgos_nsleep100_cal();
+
 void SystemCoreClockUpdate(void) {
   uint32_t presc = AHBPrescTable[((RCC->CFGR & RCC_CFGR_HPRE) >> 4)];
   SystemCoreClock = HAL_RCC_GetSysClockFreq() >> presc;
+  mgos_nsleep100_cal();
 }
 
 extern void stm32_clock_config(void);

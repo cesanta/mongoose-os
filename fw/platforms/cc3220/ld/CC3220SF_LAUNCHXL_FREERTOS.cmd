@@ -35,7 +35,7 @@
 
 --stack_size=1024
 --heap_size=0      /* minimize heap since we are using heap_4.c */
---entry_point=resetISR
+--entry_point=_c_int00
 
 /*
  * The starting address of the application.  Normally the interrupt vectors
@@ -57,25 +57,25 @@ MEMORY
 SECTIONS
 {
     .dbghdr     : > FLASH_HDR
+    .binit      : > FLASH
     .text       : > FLASH
     .text.*     : > FLASH
-    .TI.ramfunc : {} load=FLASH, run=SRAM, table(BINIT)
     .const      : > FLASH
     .cinit      : > FLASH
     .pinit      : > FLASH
     .init_array : > FLASH
 
     GROUP {
-      .data
+      .int_vecs
+      .TI.ramfunc .iram .iram.*
+    } load=FLASH, run=SRAM_BASE, table(BINIT)
+    GROUP {
       .bss
+      .data
       .heap_start
     } > SRAM
     GROUP {
       .heap_end
       .stack
     } > SRAM(HIGH)
-
-    /* these sections are used by FreeRTOS */
-    .resetVecs  : > FLASH_BASE
-    .ramVecs    : > SRAM_BASE, type=NOLOAD
 }
