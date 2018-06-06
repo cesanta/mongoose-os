@@ -44,6 +44,8 @@ extern "C" {
 #define STM32_PIN_AF(pin_def) ((((int) (pin_def)) >> 16) & 0xf)
 GPIO_TypeDef *stm32_gpio_port_base(int pin_def);
 #define STM32_PIN_MASK(pin_def) (1 << STM32_PIN_NUM((pin_def)))
+/* TODO(rojer): Move up to core, implement for other platforms. */
+const char *mgos_gpio_str(int pin_def, char buf[8]);
 
 #ifdef __cplusplus
 }

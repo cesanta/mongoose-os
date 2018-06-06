@@ -28,7 +28,9 @@
 
 #include "stm32_vfs_dev_flash.h"
 
-bool stm32_fs_mount(const char *path, uint32_t addr, uint32_t size) {
+extern const unsigned char fs_bin[];
+
+bool stm32_fs_mount(const char *path, uintptr_t addr, uint32_t size) {
   char fs_opts[100];
   struct json_out out = JSON_OUT_BUF(fs_opts, sizeof(fs_opts));
   json_printf(&out, "{addr: %u, size: %u}", addr, size);
@@ -42,7 +44,8 @@ bool stm32_fs_mount(const char *path, uint32_t addr, uint32_t size) {
 enum mgos_init_result mgos_fs_init(void) {
   if (!(stm32_vfs_dev_flash_register_type() &&
         mgos_vfs_fs_spiffs_register_type() &&
-        stm32_fs_mount("/", FS_BASE_ADDR, FS_SIZE))) {
+        stm32_fs_mount("/", ((uintptr_t) &fs_bin[0]) - FLASH_BASE_ADDR,
+                       FS_SIZE))) {
     return MGOS_INIT_FS_INIT_FAILED;
   }
   return MGOS_INIT_OK;

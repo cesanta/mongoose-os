@@ -230,11 +230,10 @@ CXXFLAGS += $(APP_CXXFLAGS)
 
 CFLAGS  += -DSRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -DSRAM_SIZE=$(SRAM_SIZE) \
            -DFLASH_BASE_ADDR=$(FLASH_BASE_ADDR) -DFLASH_SIZE=$(FLASH_SIZE) \
-           -DFS_BASE_ADDR=$(FS_BASE_ADDR) -DFS_SIZE=$(FS_SIZE) \
+           -DFS_SIZE=$(FS_SIZE) \
            -DNOCACHE_SIZE=0x400
 LDFLAGS += -Wl,--defsym=SRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -Wl,--defsym=SRAM_SIZE=$(SRAM_SIZE) \
            -Wl,--defsym=FLASH_BASE_ADDR=$(FLASH_BASE_ADDR) -Wl,--defsym=FLASH_SIZE=$(FLASH_SIZE) \
-           -Wl,--defsym=FS_BASE_ADDR=$(FS_BASE_ADDR) -Wl,--defsym=FS_SIZE=$(FS_SIZE) \
            -Wl,--defsym=NOCACHE_SIZE=0x400
 
 LDFLAGS += -Wl,--gc-sections -Wl,--undefined=fs_bin

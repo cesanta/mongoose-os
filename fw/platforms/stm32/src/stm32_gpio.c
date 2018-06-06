@@ -53,6 +53,34 @@ GPIO_TypeDef *stm32_gpio_port_base(int pin_def) {
   return NULL;
 }
 
+const char *mgos_gpio_str(int pin_def, char buf[8]) {
+  int i = 0;
+  if (pin_def >= 0) {
+    buf[i++] = STM32_PIN_PORT(pin_def);
+    int pin_no = STM32_PIN_NUM(pin_def);
+    if (pin_no < 10) {
+      buf[i++] = '0' + pin_no;
+    } else {
+      buf[i++] = '1';
+      buf[i++] = '0' + (pin_no - 10);
+    }
+    int pin_af = STM32_PIN_AF(pin_def);
+    if (pin_af > 0) {
+      buf[i++] = ':';
+      if (pin_af < 10) {
+        buf[i++] = '0' + pin_af;
+      } else {
+        buf[i++] = '1';
+        buf[i++] = '0' + (pin_af - 10);
+      }
+    }
+  } else {
+    buf[i++] = '-';
+  }
+  buf[i++] = '\0';
+  return buf;
+}
+
 bool mgos_gpio_read(int pin) {
   GPIO_TypeDef *regs = stm32_gpio_port_base(pin);
   if (regs == NULL) return false;
