@@ -1,1 +1,1 @@
-docker.cesanta.com/stm32-build:r6
+docker.io/mgos/stm32-build:r6

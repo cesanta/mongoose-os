@@ -47,7 +47,7 @@ docker-pre-build-cc3200-build: mbedtls docker-build-cc3200-toolchain
 	docker run --rm -it \
 	  -v $(realpath mbedtls):/opt/cs_mbedtls \
 	  --user $(shell id -u):$(shell id -u) \
-	  docker.cesanta.com/cc3200-toolchain:$(DOCKER_TAG) /bin/bash -c "\
+	  docker.io/mgos/cc3200-toolchain:$(DOCKER_TAG) /bin/bash -c "\
 	    cd /opt/cs_mbedtls/library && make clean && make -j4 \
 	  " && \
 	  cp -v mbedtls/library/*.a cs_mbedtls/library

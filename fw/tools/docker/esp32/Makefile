@@ -24,7 +24,7 @@ docker-pre-build-esp32-build: mbedtls cryptoauthlib docker-build-esp32-toolchain
 	  -v $(REPO_PATH):/opt/src \
 	  -v $(realpath mbedtls):/opt/cs_mbedtls \
 	  --user $(shell id -u):$(shell id -u) \
-	  docker.cesanta.com/esp32-toolchain:$(DOCKER_TAG) /bin/bash -c "\
+	  docker.io/mgos/esp32-toolchain:$(DOCKER_TAG) /bin/bash -c "\
 	    nice make -j 4 -C /opt/src/fw/platforms/esp32 -f Makefile.build \
 	      /opt/src/fw/platforms/esp32/.build/cs_mbedtls/libcs_mbedtls.a \
 	      APP=test APP_VERSION=1.0 APP_BUILD_ID=dummy MGOS_PATH=/opt/src \
@@ -36,7 +36,7 @@ docker-pre-build-esp32-build: mbedtls cryptoauthlib docker-build-esp32-toolchain
 	  -v $(REPO_PATH):/opt/src \
 	  -v $(realpath mbedtls):/opt/cs_mbedtls \
 	  --user $(shell id -u):$(shell id -u) \
-	  docker.cesanta.com/esp32-toolchain:$(DOCKER_TAG) /bin/bash -c "\
+	  docker.io/mgos/esp32-toolchain:$(DOCKER_TAG) /bin/bash -c "\
 	    nice make -j 4 -C /opt/src/fw/platforms/esp32 -f Makefile.build \
 	      /opt/src/fw/platforms/esp32/.build/cs_mbedtls/libcs_mbedtls.a \
 	      APP=test APP_VERSION=1.0 APP_BUILD_ID=dummy MGOS_PATH=/opt/src \

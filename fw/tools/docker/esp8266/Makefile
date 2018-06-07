@@ -20,7 +20,7 @@ docker-pre-build-esp8266-build: mbedtls cryptoauthlib docker-build-esp8266-toolc
 	  -v $(realpath $(REPO_PATH)):/opt/src \
 	  -v $(realpath mbedtls):/opt/cs_mbedtls \
 	  --user $(shell id -u):$(shell id -u) \
-	  docker.cesanta.com/esp8266-toolchain:$(DOCKER_TAG) /bin/bash -c "\
+	  docker.io/mgos/esp8266-toolchain:$(DOCKER_TAG) /bin/bash -c "\
 	    make -C /opt/cs_mbedtls/library clean && \
 	    nice make -j 4 -C /opt/src/fw/platforms/esp8266 -f Makefile.build \
 	      /opt/cs_mbedtls/library/libmbedcrypto_atca.a \
@@ -34,7 +34,7 @@ docker-pre-build-esp8266-build: mbedtls cryptoauthlib docker-build-esp8266-toolc
 	  -v $(realpath $(REPO_PATH)):/opt/src \
 	  -v $(realpath mbedtls):/opt/cs_mbedtls \
 	  --user $(shell id -u):$(shell id -u) \
-	  docker.cesanta.com/esp8266-toolchain:$(DOCKER_TAG) /bin/bash -c "\
+	  docker.io/mgos/esp8266-toolchain:$(DOCKER_TAG) /bin/bash -c "\
 	    make -C /opt/cs_mbedtls/library clean && \
 	    nice make -j 4 -C /opt/src/fw/platforms/esp8266 -f Makefile.build \
 	      /opt/cs_mbedtls/library/libmbedcrypto.a \

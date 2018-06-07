@@ -7,7 +7,7 @@
 # docker-push-$(i): pushes the image as $(REGISTRY)/$(i)
 
 REPO_PATH ?= $(realpath ../../../..)
-REGISTRY ?= docker.cesanta.com
+REGISTRY ?= docker.io/mgos
 DOCKER_TAG ?= latest
 DOCKER_FLAGS ?=
 
@@ -35,7 +35,7 @@ serve_core.py: $(REPO_PATH)/common/tools/serve_core.py
 
 mkspiffs mkspiffs8: $(wildcard $(REPO_PATH)/common/spiffs/*)
 	docker run --rm -it -v $(REPO_PATH):/cesanta \
-	  docker.cesanta.com/gcc \
+	  docker.io/mgos/gcc \
 	  bash -c 'make -C /cesanta/common/spiffs/tools mkspiffs mkspiffs8 \
 	    SPIFFS_CONFIG_PATH=$(SPIFFS_CONFIG_PATH)'
 	cp -v $(REPO_PATH)/common/spiffs/tools/$@ $@

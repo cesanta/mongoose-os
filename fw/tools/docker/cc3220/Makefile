@@ -32,7 +32,7 @@ docker-pre-build-cc3220-build: mbedtls docker-build-cc3220-toolchain
 	docker run --rm -it \
 	  -v $(realpath mbedtls):/opt/cs_mbedtls \
 	  --user $(shell id -u):$(shell id -u) \
-	  docker.cesanta.com/cc3220-toolchain:$(DOCKER_TAG) /bin/bash -c "\
+	  docker.io/mgos/cc3220-toolchain:$(DOCKER_TAG) /bin/bash -c "\
 	    cd /opt/cs_mbedtls/library && make clean && make -j4 \
 	    EXTRA_CFLAGS=-DMBEDTLS_X509_CA_CHAIN_ON_DISK \
 	  " && \

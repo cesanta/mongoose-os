@@ -31,7 +31,7 @@ docker-pre-build-stm32-build: mbedtls docker-build-stm32-toolchain
 	docker run --rm -it \
 	  -v $(realpath mbedtls):/opt/cs_mbedtls \
 	  --user $(shell id -u):$(shell id -u) \
-	  docker.cesanta.com/stm32-toolchain:$(DOCKER_TAG) /bin/bash -c '\
+	  docker.io/mgos/stm32-toolchain:$(DOCKER_TAG) /bin/bash -c '\
 	    cd /opt/cs_mbedtls/library && make clean && \
 	    make -j4 CC=arm-none-eabi-gcc CFLAGS="-mthumb -march=armv7e-m -mfloat-abi=hard -mfpu=fpv4-sp-d16 -std=gnu99 -Os -ggdb -MD -Wall -Werror -Wundef -fno-common -fno-inline -ffunction-sections -fdata-sections"' && \
 	  cp -v mbedtls/library/*.a cs_mbedtls/library \
