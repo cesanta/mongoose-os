@@ -29,7 +29,16 @@
   ["sys.mount.dev_opts", "s", "", {title: "Storage device options"}],
   ["sys.mount.fs_type", "s", "", {title: "Filesystem type"}],
   ["sys.mount.fs_opts", "s", "", {title: "Filesystem options"}],
+
+  # https://users.pja.edu.pl/~jms/qnx/help/watcom/clibref/global_data.html
+  # https://github.com/G6EJD/ESP32-Time-Services-and-SETENV-variable/blob/master/ESP32_Time_and_SETENV.ino
+  # Example: EST5EDT4,M4.1.0/02:00:00,M10.5.0/02:00:00
+  # Eastern Standard Time is 5 hours earlier than Coordinated Universal Time (UTC).
+  # Standard time and daylight savings time both apply to this locale.
+  # Eastern Daylight Time (EDT) is one hour ahead of standard time.
+  # Daylight saving time starts on the first (1) Sunday (0) of April (4) at 2:00 A.M., and ends on the last (5) Sunday (0) of October (10) at 2:00 A.M.
   ["sys.tz_spec", "s", "", {title: "See formats for the TZ env var: \"man tzset\". Formats like \":/path/to/file\" are not supported"}],
+
   ["sys.wdt_timeout", "i", 30, {title: "Watchdog timeout (seconds)"}],
   ["sys.pref_ota_lib", "s", {title: "Preferred ota lib, e.g. dash, ota-http-client"}],
 
