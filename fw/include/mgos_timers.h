@@ -54,13 +54,19 @@ typedef void (*timer_callback)(void *param);
 /* Timer ID type */
 typedef uintptr_t mgos_timer_id;
 
+/* Flags for mgos_set*_timer() */
+
 /*
- * Flag for mgos_set*_timer().
- *
- * When it's set, the call is repeated indefinitely; otherwise the call is a
- * one-off.
+ * When set, the callback is invoked at the specified interval.
+ * Otherwise the call is a one-off.
  */
 #define MGOS_TIMER_REPEAT (1 << 0)
+
+/*
+ * Flag that makes callback execute immediately.
+ * Only makes sense for repeating timers.
+ */
+#define MGOS_TIMER_RUN_NOW (1 << 1)
 
 /*
  * Setup a timer with `msecs` timeout and `cb` as a callback.

@@ -92,15 +92,19 @@ static void mgos_timer_ev(struct mg_connection *nc, int ev, void *ev_data,
   (void) nc;
 }
 
-mgos_timer_id mgos_set_timer(int msecs, int repeat, timer_callback cb,
+mgos_timer_id mgos_set_timer(int msecs, int flags, timer_callback cb,
                              void *arg) {
   struct timer_info *ti = (struct timer_info *) calloc(1, sizeof(*ti));
   if (ti == NULL) return MGOS_INVALID_TIMER_ID;
-  ti->next_invocation = mg_time() + msecs / 1000.0;
-  if (repeat) {
+  if (flags & MGOS_TIMER_REPEAT) {
     ti->interval_ms = msecs;
   } else {
     ti->interval_ms = -1;
+  }
+  if (flags & MGOS_TIMER_RUN_NOW) {
+    ti->next_invocation = 1;
+  } else {
+    ti->next_invocation = mg_time() + msecs / 1000.0;
   }
   ti->cb = cb;
   ti->cb_arg = arg;
