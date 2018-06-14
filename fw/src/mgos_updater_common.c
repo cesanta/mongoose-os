@@ -848,7 +848,7 @@ void mgos_upd_set_event_cb(mgos_upd_event_cb cb, void *cb_arg) {
 const char *mgos_ota_state_str(enum mgos_ota_state state) {
   switch (state) {
     case MGOS_OTA_STATE_NONE:
-      return "";
+      return "not initialised";
     case MGOS_OTA_STATE_INIT:
       return "init";
     case MGOS_OTA_STATE_BEGIN:
