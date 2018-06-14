@@ -1,7 +1,6 @@
 MGOS_ENABLE_BITBANG ?= 1
 MGOS_ENABLE_DEBUG_UDP ?= 1
 MGOS_ENABLE_SYS_SERVICE ?= 1
-MGOS_ENABLE_UPDATER ?= 0
 
 MGOS_DEBUG_UART ?= 0
 MGOS_EARLY_DEBUG_LEVEL ?= LL_INFO
@@ -43,15 +42,8 @@ ifeq "$(MGOS_ENABLE_BITBANG)" "1"
   MGOS_FEATURES += -DMGOS_ENABLE_BITBANG
 endif
 
-ifeq "$(MGOS_ENABLE_UPDATER)" "1"
-  MGOS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_updater_config.yaml
-  MGOS_SRCS += mgos_updater_common.c
-  MGOS_FEATURES += -DMGOS_ENABLE_UPDATER
-endif
-
 # Export all the feature switches.
 # This is required for needed make invocations (i.e. ESP32 IDF)
 export MGOS_ENABLE_BITBANG
 export MGOS_ENABLE_DEBUG_UDP
 export MGOS_ENABLE_SYS_SERVICE
-export MGOS_ENABLE_UPDATER

@@ -19,11 +19,9 @@ DEBUG ?= 0
 CC_WRAPPER ?=
 
 # Explicitly disable updater, it's not supported on POSIX build yet.
-MGOS_ENABLE_UPDATER = 0
 MGOS_ENABLE_DEBUG_UDP = 0
 MGOS_ENABLE_BITBANG = 0
 MGOS_ENABLE_SYS_SERVICE = 0
-MGOS_ENABLE_WIFI = 0
 
 LDFLAGS ?=
 

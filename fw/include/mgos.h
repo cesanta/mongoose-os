@@ -42,9 +42,6 @@
 #include "mgos_time.h"
 #include "mgos_timers.h"
 #include "mgos_uart.h"
-#include "mgos_updater.h"
-#include "mgos_updater_common.h"
-#include "mgos_updater_util.h"
 #include "mgos_utils.h"
 #ifdef MGOS_HAVE_WIFI
 #include "mgos_wifi.h"

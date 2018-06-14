@@ -31,7 +31,6 @@
 #include "mgos_hal.h"
 #include "mgos_sys_config.h"
 #include "mgos_vfs.h"
-#include "fw/platforms/esp32/src/esp32_fs.h"
 
 size_t mgos_get_heap_size(void) {
   multi_heap_info_t info;

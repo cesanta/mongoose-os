@@ -1,5 +1,0 @@
-[
-  ["update", "o", {title: "Firmware updater"}],
-  ["update.timeout", "i", 300, {title : "Update will be aborted if it does not finish within this time"}],
-  ["update.commit_timeout", "i", {title : "After applying update, wait for commit up to this long"}],
-]

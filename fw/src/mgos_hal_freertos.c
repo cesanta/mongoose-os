@@ -34,8 +34,10 @@
 #include "mgos_init_internal.h"
 #include "mgos_mongoose_internal.h"
 #include "mgos_uart_internal.h"
+#ifdef MGOS_HAVE_OTA_COMMON
 #include "mgos_updater_common.h"
 #include "mgos_updater_hal.h"
+#endif
 
 #ifndef MGOS_TASK_STACK_SIZE_BYTES
 #define MGOS_TASK_STACK_SIZE_BYTES 8192
@@ -177,20 +179,9 @@ enum mgos_init_result mgos_init2(void) {
   LOG(LL_INFO, ("CPU: %d MHz, RAM: %u total, %u free",
                 (int) (mgos_get_cpu_freq() / 1000000), mgos_get_heap_size(),
                 mgos_get_free_heap_size()));
-  r = mongoose_init();
-  if (r != MGOS_INIT_OK) return r;
 
   r = mgos_hal_freertos_pre_init();
   if (r != MGOS_INIT_OK) return r;
-
-  r = mgos_fs_init();
-  if (r != MGOS_INIT_OK) return r;
-
-#if MGOS_ENABLE_UPDATER
-  if (mgos_upd_is_first_boot() && mgos_upd_apply_update() < 0) {
-    return MGOS_INIT_APPLY_UPDATE_FAILED;
-  }
-#endif
 
   r = mgos_init();
 
@@ -210,7 +201,7 @@ IRAM void mgos_task(void *arg) {
     LOG(LL_ERROR, ("MGOS init failed: %d", r));
   }
 
-#if MGOS_ENABLE_UPDATER
+#if MGOS_HAVE_OTA_COMMON
   mgos_upd_boot_finish(success, mgos_upd_is_first_boot());
 #endif
 

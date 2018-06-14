@@ -27,17 +27,20 @@ extern void xPortSysTickHandler(void);
 
 /* Linker variable that marks the top of the stack. */
 extern unsigned long __STACK_END;
-
+/*
 void ResetISR(void) {
   __asm(
       "  .global _c_int00\n"
       "  b.w     _c_int00");
 }
+*/
+
+extern void _c_int00(void);
 
 #pragma DATA_SECTION(g_pfnVectors, ".intvecs")
 void (*const g_pfnVectors[256])(void) = {
     (void (*)(void))(&__STACK_END), /* The initial stack pointer */
-    ResetISR,                       /* The reset handler */
+    _c_int00,                       /* The reset handler */
     arm_exc_handler_top,            /* The NMI handler */
     arm_exc_handler_top,            /* The hard fault handler */
     arm_exc_handler_top,            /* The MPU fault handler */

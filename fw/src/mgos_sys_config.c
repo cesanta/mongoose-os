@@ -36,7 +36,6 @@
 #include "mgos_init.h"
 #include "mgos_mongoose.h"
 #include "mgos_ro_vars.h"
-#include "mgos_updater_common.h"
 #include "mgos_utils.h"
 #include "mgos_vfs.h"
 

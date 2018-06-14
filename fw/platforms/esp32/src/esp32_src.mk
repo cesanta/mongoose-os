@@ -38,17 +38,11 @@ MGOS_SRCS += mgos_config_util.c mgos_core_dump.c mgos_dlsym.c mgos_event.c mgos_
              mgos_gpio.c mgos_init.c mgos_mmap_esp.c mgos_mongoose.c \
              mgos_sys_config.c $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
              mgos_hw_timers.c mgos_system.c mgos_time.c mgos_timers.c mgos_uart.c mgos_utils.c \
-             mgos_vfs.c mgos_vfs_dev.c mgos_vfs_dev_ram.c mgos_vfs_fs_spiffs.c \
-             esp32_crypto.c esp32_debug.c esp32_exc.c esp32_fs.c esp32_fs_crypt.c \
-             esp32_vfs_dev_partition.c \
+             esp32_crypto.c esp32_debug.c esp32_exc.c esp32_fs_crypt.c \
              esp32_gpio.c esp32_hal.c esp32_hw_timers.c \
              esp32_main.c esp32_uart.c
 
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
-
-ifeq "$(MGOS_ENABLE_UPDATER)" "1"
-  MGOS_SRCS += esp32_updater.c
-endif
 
 include $(MGOS_PATH)/common/scripts/build_info.mk
 

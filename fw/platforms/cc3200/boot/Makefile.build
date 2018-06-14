@@ -18,7 +18,7 @@ COMMON_CC3200_PATH ?= $(MGOS_PATH)/common/platforms/cc3200
 include $(MGOS_PATH)/fw/common.mk
 
 VPATH = $(APP_MODULES) $(BUILD_DIR)
-IPATH = $(APP_MODULES) $(BUILD_DIR) $(MGOS_PATH) $(MGOS_PATH)/fw/platforms/cc32xx/src
+IPATH = $(APP_MODULES) $(BUILD_DIR) $(MGOS_PATH) $(MGOS_PATH)/fw/platforms/cc3200/src
 
 SDK_FLAGS = -DTARGET_IS_CC3200
 
@@ -111,4 +111,4 @@ $(BUILD_INFO_O): $(BUILD_INFO_C)
 
 $(MKCFG_BIN): tools/mkcfg.c lib/boot_meta.h
 	$(vecho) "GCC   $< -> $@"
-	$(Q) gcc -Wall -I$(MGOS_PATH)/fw/platforms/cc32xx/src -Werror -o $@ $^
+	$(Q) gcc -Wall -I$(MGOS_PATH)/fw/platforms/cc3200/src -Werror -o $@ $^

@@ -15,11 +15,10 @@
  * limitations under the License.
  */
 
-#ifndef CS_FW_PLATFORMS_CC32XX_SRC_DIRENT_H_
-#define CS_FW_PLATFORMS_CC32XX_SRC_DIRENT_H_
+#pragma once
 
+#ifdef MGOS_HAVE_VFS_COMMON
 #include "mgos_vfs.h"
+#endif
 
 /* no_extern_c_check */
-
-#endif /* CS_FW_PLATFORMS_CC32XX_SRC_DIRENT_H_ */

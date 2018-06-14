@@ -25,8 +25,8 @@
 #include "common/cs_dbg.h"
 #include "common/mbuf.h"
 #include "common/platform.h"
-#include "common/spiffs/spiffs.h"
-#include "common/spiffs/spiffs_nucleus.h"
+#include "spiffs.h"
+#include "spiffs_nucleus.h"
 
 #if CS_PLATFORM != CS_P_ESP32 && CS_PLATFORM != CS_P_ESP8266
 #error only esp32 and esp8266 are supported

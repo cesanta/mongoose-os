@@ -8,8 +8,9 @@
 
 #include <stdint.h>
 
-#include "common/spiffs/spiffs.h"
 #include "common/platform.h"
+
+#include "spiffs.h"
 
 #ifdef CS_MMAP
 #if CS_PLATFORM == CS_P_ESP32 || CS_PLATFORM == CS_P_ESP8266
@@ -35,8 +36,7 @@
 #include "fw/platforms/esp32/src/esp32_fs.h"
 #include "fw/platforms/esp32/src/esp32_mmap.h"
 #elif CS_PLATFORM == CS_P_ESP8266
-#include "fw/platforms/esp8266/src/esp_fs.h"
-#include "fw/platforms/esp8266/src/esp8266_mmap.h"
+#include "esp_mmap.h"
 #endif
 
 IRAM NOINSTR int esp_mmap_exception_handler(uint32_t vaddr, uint8_t *pc,

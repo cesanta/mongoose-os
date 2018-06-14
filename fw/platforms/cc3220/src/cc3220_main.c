@@ -32,33 +32,9 @@
 
 #include "mgos_core_dump.h"
 #include "mgos_hal.h"
-#include "mgos_vfs.h"
-#include "mgos_vfs_fs_spiffs.h"
 
 #include "cc32xx_fs.h"
 #include "cc32xx_main.h"
-#include "cc32xx_vfs_fs_slfs.h"
-
-#include "cc3220_vfs_dev_flash.h"
-
-enum mgos_init_result mgos_fs_init(void) {
-  if (!(cc3220_vfs_dev_flash_register_type() &&
-         cc32xx_vfs_fs_slfs_register_type() &&
-         mgos_vfs_fs_spiffs_register_type() &&
-         mgos_vfs_mount(
-             "/", MGOS_DEV_TYPE_FLASH,
-             "{offset: " CS_STRINGIFY_MACRO(MGOS_FS_OFFSET) ", "
-             "size: " CS_STRINGIFY_MACRO(MGOS_FS_SIZE) ", "
-             "image: \"" MGOS_FS_IMG "\"}",
-             MGOS_VFS_FS_TYPE_SPIFFS,
-             "{bs: " CS_STRINGIFY_MACRO(MGOS_FS_BLOCK_SIZE) ", "
-             "ps: " CS_STRINGIFY_MACRO(MGOS_FS_PAGE_SIZE) ", "
-             "es: " CS_STRINGIFY_MACRO(MGOS_FS_ERASE_SIZE) "}") &&
-         cc32xx_fs_slfs_mount("/slfs"))) {
-    return MGOS_INIT_FS_INIT_FAILED;
-  }
-  return MGOS_INIT_OK;
-}
 
 enum mgos_init_result cc32xx_pre_nwp_init(void) {
   Power_init();

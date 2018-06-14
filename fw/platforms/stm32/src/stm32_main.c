@@ -38,7 +38,6 @@
 #include "mgos_system.h"
 #include "mgos_uart_internal.h"
 
-#include "stm32_fs.h"
 #include "stm32_hal.h"
 #include "stm32_uart.h"
 

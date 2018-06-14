@@ -37,7 +37,6 @@
 #include "mgos_mongoose.h"
 #include "mgos_timers.h"
 
-#include "fw/platforms/esp8266/src/esp_fs.h"
 #include "fw/platforms/esp8266/src/esp_hw_wdt.h"
 
 size_t mgos_get_heap_size(void) {

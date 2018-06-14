@@ -19,46 +19,9 @@
 
 #include "mgos.h"
 #include "mgos_deps_internal.h"
-#include "mgos_gpio_internal.h"
-#include "mgos_net_internal.h"
-#include "mgos_sys_config_internal.h"
-#include "mgos_timers_internal.h"
-
-extern int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len);
+#include "mgos_init.h"
 
 enum mgos_init_result mgos_init(void) {
-  enum mgos_init_result r;
-
-  unsigned int seed;
-  mg_ssl_if_mbed_random(NULL, (uint8_t *) &seed, sizeof(seed));
-  srand(seed);
-
-  mgos_event_register_base(MGOS_EVENT_SYS, "mos");
-  mgos_uptime_init();
-
-  r = mgos_net_init();
-  if (r != MGOS_INIT_OK) return r;
-
-  r = mgos_gpio_init();
-  if (r != MGOS_INIT_OK) return r;
-
-  r = mgos_sys_config_init();
-  if (r != MGOS_INIT_OK) return r;
-
-#ifdef _NEWLIB_VERSION
-  {
-    /* initialize TZ env variable with the sys.tz_spec config value */
-    const char *tz_spec = mgos_sys_config_get_sys_tz_spec();
-    if (tz_spec != NULL) {
-      LOG(LL_INFO, ("Setting TZ to '%s'", tz_spec));
-      setenv("TZ", tz_spec, 1);
-      tzset();
-    }
-  }
-#else
-/* TODO(rojer): TZ support for TI libc */
-#endif
-
   if (!mgos_deps_init()) {
     return MGOS_INIT_DEPS_FAILED;
   }

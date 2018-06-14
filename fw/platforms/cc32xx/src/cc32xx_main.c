@@ -38,7 +38,6 @@
 #include "mgos_init_internal.h"
 #include "mgos_mongoose_internal.h"
 #include "mgos_uart_internal.h"
-#include "mgos_updater_common.h"
 
 #include "cc32xx_exc.h"
 #include "cc32xx_hash.h"

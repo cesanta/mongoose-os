@@ -20,7 +20,7 @@
 
 #include <stdint.h>
 
-#include "cc32xx_vfs_dev_slfs_container_meta.h"
+#include "cc3200_vfs_dev_slfs_container_meta.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -5,7 +5,6 @@ MAKEFLAGS += --warn-undefined-variables
 
 MGOS_ENABLE_BITBANG = 0
 MGOS_ENABLE_DEBUG_UDP = 0
-MGOS_ENABLE_UPDATER = 0
 SSL ?= mbedTLS
 
 MGOS_PATH ?= ../../..
@@ -100,18 +99,15 @@ override BUILD_DIR := $(abspath $(BUILD_DIR))
 
 # Platform support files
 MGOS_SRCS += arm_exc.c arm_nsleep100.c \
-             stm32_exc.c stm32_fs.c stm32_gpio.c \
+             stm32_exc.c stm32_gpio.c \
              stm32_hal.c stm32_hw_timers.c \
              stm32_libc.c \
              stm32_main.c stm32_uart.c \
-             stm32_updater.c \
-             stm32_vfs_dev_flash.c \
              $(notdir $(FS_BIN_C))
 # stm32_i2c.c
 
 APP_ELF = $(BUILD_DIR)/$(APP).elf
 APP_BIN = $(BUILD_DIR)/$(APP).bin
-SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 FLASH_SIZE ?= 0
 SRAM_BASE_ADDR ?= 0x20000000
 FLASH_BASE_ADDR ?= 0x8000000
@@ -169,10 +165,7 @@ MGOS_SRCS += $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
              mgos_time.c mgos_timers.c cs_crc32.c cs_file.c mgos_mongoose.c \
              json_utils.c frozen.c mgos_uart.c cs_rbuf.c mgos_init.c \
              cs_dbg.c mgos_dlsym.c mgos_system.c mgos_utils.c \
-             mgos_vfs.c mgos_vfs_dev.c mgos_vfs_fs_spiffs.c \
              arm_exc_top.S
-
-MGOS_SRCS += spiffs_cache.c spiffs_gc.c spiffs_nucleus.c spiffs_check.c spiffs_hydrogen.c
 
 APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
@@ -181,7 +174,6 @@ VPATH = $(MGOS_VPATH) $(MGOS_PLATFORM_PATH)/src \
         $(SDK_VPATH) \
         $(COMMON_PATH)/platforms/arm \
         $(GEN_DIR) $(APP_SOURCE_DIRS) \
-        $(SPIFFS_PATH) \
         $(LWIP_PATH)/src/api \
         $(LWIP_PATH)/src/core \
         $(LWIP_PATH)/src/core/ipv4 \
@@ -195,7 +187,7 @@ VPATH = $(MGOS_VPATH) $(MGOS_PLATFORM_PATH)/src \
         $(FREERTOS_PATH)/Source/portable/GCC/ARM_CM7/r0p1
 IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
         $(MGOS_PLATFORM_PATH)/include $(MGOS_PLATFORM_PATH)/include/spiffs \
-        $(SPIFFS_PATH) $(GEN_DIR) \
+        $(GEN_DIR) \
         $(SDK_IPATH)
 
 MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o))

@@ -37,9 +37,9 @@
 #include "mgos_init_internal.h"
 #include "mgos_mongoose_internal.h"
 #include "mgos_uart_internal.h"
+#ifdef MGOS_HAVE_OTA_COMMON
 #include "mgos_updater_common.h"
-#include "mgos_updater_hal.h"
-#include "mgos_vfs_internal.h"
+#endif
 
 #ifdef MGOS_HAVE_ADC
 #include "esp_adc.h"
@@ -50,7 +50,7 @@
 #include "esp_hw_wdt.h"
 #include "esp_features.h"
 #include "esp_periph.h"
-#include "esp_updater.h"
+#include "esp_rboot.h"
 #include "esp_vfs_dev_sysflash.h"
 
 #ifdef RTOS_SDK
@@ -123,7 +123,7 @@ IRAM void sdk_putc(char c) {
   esp_exc_putc(c);
 }
 
-enum mgos_init_result esp_mgos_init2(rboot_config *bcfg) {
+enum mgos_init_result esp_mgos_init2(void) {
 #ifdef CS_MMAP
   mgos_vfs_mmap_init();
 #endif
@@ -148,19 +148,6 @@ enum mgos_init_result esp_mgos_init2(rboot_config *bcfg) {
   LOG(LL_INFO, ("SDK %s; flash: %uM", system_get_sdk_version(),
                 esp_vfs_dev_sysflash_get_size(NULL) / 1048576));
   esp_print_reset_info();
-  mongoose_init();
-
-  if (!esp_fs_init(bcfg->fs_addresses[bcfg->current_rom],
-                   bcfg->fs_sizes[bcfg->current_rom])) {
-    LOG(LL_ERROR, ("FS init error"));
-    return MGOS_INIT_FS_INIT_FAILED;
-  }
-
-#if MGOS_ENABLE_UPDATER
-  if (bcfg->fw_updated && mgos_upd_apply_update() < 0) {
-    return MGOS_INIT_APPLY_UPDATE_FAILED;
-  }
-#endif
 
   system_soft_wdt_stop();
   ir = mgos_init();
@@ -173,11 +160,10 @@ enum mgos_init_result esp_mgos_init2(rboot_config *bcfg) {
 }
 
 static void esp_mgos_init(void) {
-  rboot_config *bcfg = get_rboot_config();
-  enum mgos_init_result result = esp_mgos_init2(bcfg);
+  enum mgos_init_result result = esp_mgos_init2();
   bool success = (result == MGOS_INIT_OK);
-#if MGOS_ENABLE_UPDATER
-  mgos_upd_boot_finish(success, bcfg->is_first_boot);
+#ifdef MGOS_HAVE_OTA_COMMON
+  mgos_upd_boot_finish(success, mgos_upd_is_first_boot());
 #endif
   if (!success) {
     LOG(LL_ERROR, ("Init failed: %d", result));

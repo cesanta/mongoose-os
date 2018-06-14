@@ -15,21 +15,25 @@
  * limitations under the License.
  */
 
-#ifndef CS_FW_PLATFORMS_ESP32_SRC_ESP32_VFS_DEV_PARTITION_H_
-#define CS_FW_PLATFORMS_ESP32_SRC_ESP32_VFS_DEV_PARTITION_H_
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-#include <stdbool.h>
+#include "cc3200_vfs_dev_slfs_container_meta.h"
 
-#ifdef __cplusplus
-extern "C" {
-#endif
-
-#define MGOS_VFS_DEV_TYPE_ESP32_PARTITION "esp32part"
-
-bool esp32_vfs_dev_partition_register_type(void);
-
-#ifdef __cplusplus
+int main(int argc, char **argv) {
+  if (argc < 5) return 1;
+  union fs_container_meta meta;
+  memset(&meta, 0, sizeof(meta));
+  meta.info.fs_size = strtol(argv[1], NULL, 0);
+  meta.info.fs_block_size = strtol(argv[2], NULL, 0);
+  meta.info.fs_page_size = strtol(argv[3], NULL, 0);
+  meta.info.fs_erase_size = strtol(argv[4], NULL, 0);
+  if (argc == 6) {
+    meta.info.seq = strtoull(argv[5], NULL, 0);
+  } else {
+    meta.info.seq = FS_INITIAL_SEQ;
+  }
+  fwrite(&meta, sizeof(meta), 1, stdout);
+  return 0;
 }
-#endif
-
-#endif /* CS_FW_PLATFORMS_ESP32_SRC_ESP32_VFS_DEV_PARTITION_H_ */

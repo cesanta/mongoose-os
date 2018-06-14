@@ -46,7 +46,9 @@
 
 #include "esp32_debug.h"
 #include "esp32_exc.h"
+#ifdef MGOS_HAVE_OTA_COMMON
 #include "esp32_updater.h"
+#endif
 
 esp_err_t esp32_wifi_ev(system_event_t *event);
 
@@ -97,7 +99,7 @@ enum mgos_init_result mgos_hal_freertos_pre_init(void) {
 
   srand(esp_random()); /* esp_random() uses HW RNG */
 
-#if MGOS_ENABLE_UPDATER
+#ifdef MGOS_HAVE_OTA_COMMON
   esp32_updater_early_init();
 #endif
 

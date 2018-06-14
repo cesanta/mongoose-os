@@ -46,16 +46,15 @@
 
 #include "mgos_hal.h"
 #include "mgos_mongoose.h"
-#include "mgos_updater_common.h"
-#include "mgos_vfs_fs_spiffs.h"
 
 #include "cc32xx_fs.h"
 #include "cc32xx_main.h"
-#include "cc32xx_vfs_dev_slfs_container.h"
-#include "cc32xx_vfs_fs_slfs.h"
 
-#include "cc3200_updater.h"
 #include "fw/platforms/cc3200/boot/lib/boot.h"
+
+#ifdef MGOS_HAVE_OTA_COMMON
+#include "cc3200_updater.h"
+#endif
 
 /* These are FreeRTOS hooks for various life situations. */
 void vApplicationMallocFailedHook(void) {
@@ -89,25 +88,9 @@ enum mgos_init_result cc32xx_pre_nwp_init(void) {
 
 enum mgos_init_result cc32xx_init(void) {
   cc3200_srand();
-#if MGOS_ENABLE_UPDATER
+#ifdef MGOS_HAVE_OTA_COMMON
   if (!cc3200_upd_init()) return MGOS_INIT_UPD_INIT_FAILED;
 #endif
-  return MGOS_INIT_OK;
-}
-
-enum mgos_init_result mgos_fs_init(void) {
-  if (!(cc32xx_vfs_dev_slfs_container_register_type() &&
-        cc32xx_vfs_fs_slfs_register_type() &&
-        mgos_vfs_fs_spiffs_register_type() &&
-#if MGOS_ENABLE_UPDATER
-        cc32xx_fs_spiffs_container_mount(
-            "/", cc3200_upd_get_fs_container_prefix()) &&
-#else
-        cc32xx_fs_spiffs_container_mount("/", "spiffs.img.0") &&
-#endif
-        cc32xx_fs_slfs_mount("/slfs"))) {
-    return MGOS_INIT_FS_INIT_FAILED;
-  }
   return MGOS_INIT_OK;
 }
 
@@ -131,8 +114,12 @@ enum mgos_init_result mgos_fs_init(void) {
  */
 void *cc3200_tmp_gettimeofday_workaround = settimeofday;
 
+__attribute__((section(".bss_start"))) uint32_t _bss_start;
+__attribute__((section(".bss_end"))) uint32_t _bss_end;
+
 int main(void) {
   MAP_IntVTableBaseSet((unsigned long) &g_pfnVectors[0]);
+  memset(&_bss_start, 0, ((char *) &_bss_end - (char *) &_bss_start));
 
   MAP_IntEnable(FAULT_SYSTICK);
   MAP_IntMasterEnable();

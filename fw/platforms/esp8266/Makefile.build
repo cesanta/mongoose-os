@@ -118,10 +118,6 @@ MGOS_SRCS += cs_file.c cs_rbuf.c \
              mgos_system.c \
              mgos_uart.c \
              mgos_utils.c \
-             mgos_vfs.c \
-             mgos_vfs_dev.c \
-             mgos_vfs_dev_ram.c \
-             mgos_vfs_fs_spiffs.c \
              cs_crc32.c \
              rboot-bigflash.c rboot-api.c \
              json_utils.c \
@@ -132,8 +128,6 @@ MGOS_SRCS += esp_config.c \
              esp_coredump.c \
              esp_debug.c \
              esp_exc.c \
-             esp_flash_writer.c \
-             esp_fs.c \
              esp_gpio.c \
              esp_hal.c \
              esp_heap_trace.c \
@@ -142,9 +136,7 @@ MGOS_SRCS += esp_config.c \
              esp_libc.c \
              esp_main.c \
              esp_periph.c \
-             esp_uart.c \
-             esp_updater.c \
-             esp_vfs_dev_sysflash.c
+             esp_uart.c
 
 MGOS_SRCS += $(notdir $(foreach m,$(SPIFFS_PATH) $(COMMON_ESP8266_PATH),$(wildcard $(m)/*.c)))
 APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)

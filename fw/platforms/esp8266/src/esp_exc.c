@@ -38,7 +38,6 @@
 #include "mgos_vfs.h"
 
 #include "fw/platforms/esp8266/src/esp_coredump.h"
-#include "fw/platforms/esp8266/src/esp_fs.h"
 #include "fw/platforms/esp8266/src/esp_hw.h"
 #include "fw/platforms/esp8266/src/esp_hw_wdt.h"
 #include "fw/platforms/esp8266/src/esp_uart.h"

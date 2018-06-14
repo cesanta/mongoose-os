@@ -15,11 +15,8 @@
  * limitations under the License.
  */
 
-#ifndef CS_FW_PLATFORMS_STM32_INCLUDE_DIRENT_H_
-#define CS_FW_PLATFORMS_STM32_INCLUDE_DIRENT_H_
-
+#ifdef MGOS_HAVE_VFS_COMMON
 #include "mgos_vfs.h"
+#endif
 
 /* no_extern_c_check */
-
-#endif /* CS_FW_PLATFORMS_STM32_INCLUDE_DIRENT_H_ */
