@@ -33,9 +33,12 @@ fw_meta.py: $(REPO_PATH)/common/tools/fw_meta.py
 serve_core.py: $(REPO_PATH)/common/tools/serve_core.py
 	cp -v $< .
 
-mkspiffs mkspiffs8: $(wildcard $(REPO_PATH)/common/spiffs/*)
-	docker run --rm -it -v $(REPO_PATH):/cesanta \
+mkspiffs mkspiffs8:
+	rm -rf vfs-fs-spiffs
+	git clone --depth=1 https://github.com/mongoose-os-libs/vfs-fs-spiffs
+	docker run --rm -it \
+	  -v $(CURDIR)/vfs-fs-spiffs:/vfs-fs-spiffs \
 	  docker.io/mgos/gcc \
-	  bash -c 'make -C /cesanta/common/spiffs/tools mkspiffs mkspiffs8 \
+	  bash -c 'make -C /vfs-fs-spiffs/tools mkspiffs mkspiffs8 \
 	    SPIFFS_CONFIG_PATH=$(SPIFFS_CONFIG_PATH)'
-	cp -v $(REPO_PATH)/common/spiffs/tools/$@ $@
+	cp -v vfs-fs-spiffs/tools/$@ $@

@@ -1,5 +1,5 @@
 DOCKERFILES = cc3220-build
-SPIFFS_CONFIG_PATH = /cesanta/fw/platforms/cc32xx/include/spiffs
+SPIFFS_CONFIG_PATH = /vfs-fs-spiffs/include/cc3220
 
 TI_COMPILER_DIR = ti-cgt-arm_16.9.6.LTS
 SDK_DIR = simplelink_cc32xx_sdk_$(subst .,_,$(firstword $(subst -, ,$(DOCKER_TAG))))

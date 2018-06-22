@@ -1,5 +1,5 @@
 DOCKERFILES = stm32-build
-SPIFFS_CONFIG_PATH = /cesanta/fw/platforms/stm32/include/spiffs
+SPIFFS_CONFIG_PATH = /vfs-fs-spiffs/include/stm32
 MBEDTLS_BRANCH ?= stm32_$(DOCKER_TAG)
 
 include ../docker.mk

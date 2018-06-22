@@ -1,0 +1,3 @@
+*.service
+*.service.*
+!*.service.yaml
