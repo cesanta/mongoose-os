@@ -107,7 +107,6 @@ GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
 .PHONY: all clean flash
 
 MGOS_SRCS = mgos_gpio.c mgos_init.c \
-            mgos_mongoose.c \
             mgos_timers_mongoose.c \
             mgos_config.c mgos_sys_config.c \
             $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \

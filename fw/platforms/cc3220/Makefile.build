@@ -210,7 +210,7 @@ MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3220_PATH)/src/*.c)) \
              frozen.c json_utils.c \
              mgos_config_util.c mgos_core_dump.c mgos_debug.c mgos_dlsym.c mgos_event.c mgos_gpio.c \
              mgos_hal_freertos.c mgos_init.c \
-             mgos_mongoose.c mgos_sys_config.c \
+             mgos_sys_config.c \
              mgos_hw_timers.c mgos_system.c mgos_time.c mgos_timers.c mgos_uart.c mgos_utils.c \
              cc32xx_exc.c arm_exc.c arm_exc_top.S arm_nsleep100.c arm_nsleep100_m4.S \
              cc32xx_gpio.c \

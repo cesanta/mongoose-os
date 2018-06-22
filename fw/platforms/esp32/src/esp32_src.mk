@@ -35,7 +35,7 @@ FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.o
 NM = xtensa-esp32-elf-nm
 
 MGOS_SRCS += mgos_config_util.c mgos_core_dump.c mgos_dlsym.c mgos_event.c mgos_hal_freertos.c \
-             mgos_gpio.c mgos_init.c mgos_mmap_esp.c mgos_mongoose.c \
+             mgos_gpio.c mgos_init.c mgos_mmap_esp.c \
              mgos_sys_config.c $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
              mgos_hw_timers.c mgos_system.c mgos_time.c mgos_timers.c mgos_uart.c mgos_utils.c \
              esp32_crypto.c esp32_debug.c esp32_exc.c esp32_fs_crypt.c \
