@@ -162,7 +162,7 @@ See http://www.FreeRTOS.org/RTOS-Cortex-M3-M4.html. */
 #define configMAX_SYSCALL_INTERRUPT_PRIORITY \
   (configLIBRARY_MAX_SYSCALL_INTERRUPT_PRIORITY << (8 - configPRIO_BITS))
 
-#define configASSERT(x) assert(x)
+// #define configASSERT(x) assert(x)
 
 /* Definitions that map the FreeRTOS port interrupt handlers to their CMSIS
 standard names. */

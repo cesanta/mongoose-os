@@ -271,6 +271,8 @@ $(APP_ELF): $(BIN_PARTS) $(LD_SCRIPT)
 $(APP_BIN): $(APP_ELF)
 	$(vecho) "BIN   $@"
 	$(Q) $(OC) -Obinary $^ $@
+	$(vecho) "  Code: $$($(OC) -Obinary -j .text $^ /dev/fd/1 | wc -c)"
+	$(vecho) "  Data: $$($(OC) -Obinary -j .rodata $^ /dev/fd/1 | wc -c) + $$($(OC) -Obinary -j .data $^ /dev/fd/1 | wc -c)"
 
 include $(MGOS_PATH)/common/scripts/build_info.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk

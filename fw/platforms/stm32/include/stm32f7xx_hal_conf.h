@@ -43,58 +43,59 @@
 #ifndef CS_FW_PLATFORMS_STM32_INCLUDE_STM32F7XX_HAL_CONF_H_
 #define CS_FW_PLATFORMS_STM32_INCLUDE_STM32F7XX_HAL_CONF_H_
 
+#include <assert.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-#include <assert.h>
+/* Asserts are disabled by default, they use too much flash space. */
+// #define USE_FULL_ASSERT 1
+#ifdef USE_FULL_ASSERT
+#define assert_param(x) assert(x)
+#else
+#define assert_param(x)
+#endif
 
-/* Exported types ------------------------------------------------------------*/
-/* Exported constants --------------------------------------------------------*/
-
-/* ########################## Module Selection ############################## */
-/**
-  * @brief This is the list of modules to be used in the HAL driver
-  */
+/* We enable all the modules, unused code is dropped when linking. */
 #define HAL_MODULE_ENABLED
-
-/* #define HAL_ADC_MODULE_ENABLED   */
-/* #define HAL_CAN_MODULE_ENABLED   */
-/* #define HAL_CEC_MODULE_ENABLED   */
-/* #define HAL_CRC_MODULE_ENABLED   */
-/* #define HAL_CRYP_MODULE_ENABLED   */
-/* #define HAL_DAC_MODULE_ENABLED   */
-/* #define HAL_DCMI_MODULE_ENABLED   */
-/* #define HAL_DMA2D_MODULE_ENABLED   */
+#define HAL_ADC_MODULE_ENABLED
+#define HAL_CAN_MODULE_ENABLED
+#define HAL_CEC_MODULE_ENABLED
+/* #define HAL_CRC_MODULE_ENABLED - build fails */
+#define HAL_CRYP_MODULE_ENABLED
+#define HAL_DAC_MODULE_ENABLED
+#define HAL_DCMI_MODULE_ENABLED
+#define HAL_DMA2D_MODULE_ENABLED
 #define HAL_ETH_MODULE_ENABLED
-/* #define HAL_NAND_MODULE_ENABLED   */
-/* #define HAL_NOR_MODULE_ENABLED   */
-/* #define HAL_SRAM_MODULE_ENABLED   */
-/* #define HAL_SDRAM_MODULE_ENABLED   */
-/* #define HAL_HASH_MODULE_ENABLED   */
-/* #define HAL_I2S_MODULE_ENABLED   */
+#define HAL_NAND_MODULE_ENABLED
+#define HAL_NOR_MODULE_ENABLED
+#define HAL_SRAM_MODULE_ENABLED
+#define HAL_SDRAM_MODULE_ENABLED
+#define HAL_HASH_MODULE_ENABLED
+#define HAL_I2S_MODULE_ENABLED
 #define HAL_IWDG_MODULE_ENABLED
-/* #define HAL_LPTIM_MODULE_ENABLED   */
-/* #define HAL_LTDC_MODULE_ENABLED   */
-/* #define HAL_QSPI_MODULE_ENABLED   */
+#define HAL_LPTIM_MODULE_ENABLED
+#define HAL_LTDC_MODULE_ENABLED
+#define HAL_QSPI_MODULE_ENABLED
 #define HAL_RNG_MODULE_ENABLED
 #define HAL_RTC_MODULE_ENABLED
-/* #define HAL_SAI_MODULE_ENABLED   */
-/* #define HAL_SD_MODULE_ENABLED   */
-/* #define HAL_SPDIFRX_MODULE_ENABLED   */
-/* #define HAL_SPI_MODULE_ENABLED   */
+#define HAL_SAI_MODULE_ENABLED
+#define HAL_SD_MODULE_ENABLED
+#define HAL_SPDIFRX_MODULE_ENABLED
+#define HAL_SPI_MODULE_ENABLED
 #define HAL_TIM_MODULE_ENABLED
 #define HAL_UART_MODULE_ENABLED
-/* #define HAL_USART_MODULE_ENABLED   */
-/* #define HAL_IRDA_MODULE_ENABLED   */
-/* #define HAL_SMARTCARD_MODULE_ENABLED   */
-/* #define HAL_WWDG_MODULE_ENABLED   */
-/* #define HAL_PCD_MODULE_ENABLED   */
-/* #define HAL_HCD_MODULE_ENABLED   */
-/* #define HAL_DFSDM_MODULE_ENABLED   */
-/* #define HAL_DSI_MODULE_ENABLED   */
-/* #define HAL_JPEG_MODULE_ENABLED   */
-/* #define HAL_MDIOS_MODULE_ENABLED   */
+#define HAL_USART_MODULE_ENABLED
+#define HAL_IRDA_MODULE_ENABLED
+#define HAL_SMARTCARD_MODULE_ENABLED
+#define HAL_WWDG_MODULE_ENABLED
+#define HAL_PCD_MODULE_ENABLED
+#define HAL_HCD_MODULE_ENABLED
+#define HAL_DFSDM_MODULE_ENABLED
+#define HAL_DSI_MODULE_ENABLED
+#define HAL_JPEG_MODULE_ENABLED
+#define HAL_MDIOS_MODULE_ENABLED
 #define HAL_GPIO_MODULE_ENABLED
 #define HAL_DMA_MODULE_ENABLED
 #define HAL_RCC_MODULE_ENABLED
@@ -177,13 +178,6 @@ extern "C" {
 #define PREFETCH_ENABLE 0U
 #define ART_ACCLERATOR_ENABLE 1U /* To enable instr cache and prefetch */
 
-/* ########################## Assert Selection ############################## */
-/**
-  * @brief Uncomment the line below to expanse the "assert_param" macro in the
-  *        HAL drivers code
-  */
-/* #define USE_FULL_ASSERT    1 */
-
 /* ################## Ethernet peripheral configuration ##################### */
 
 /* LAN8742A_PHY_ADDRESS Address*/
@@ -240,14 +234,7 @@ extern "C" {
   ((uint16_t) 0x000BU) /*!< PHY Interrupt Source Flag register Offset   */
 #define PHY_ISFR_INT4 ((uint16_t) 0x000BU) /*!< PHY Link down inturrupt */
 
-/* ################## SPI peripheral configuration ########################## */
-
-/* CRC FEATURE: Use to activate CRC feature inside HAL SPI Driver
-* Activated: CRC code is present inside driver
-* Deactivated: CRC code cleaned from driver
-*/
-
-#define USE_SPI_CRC 0U
+#define USE_SPI_CRC 0
 
 /* Includes ------------------------------------------------------------------*/
 /**
@@ -429,8 +416,6 @@ extern "C" {
 #ifdef HAL_MDIOS_MODULE_ENABLED
 #include "stm32f7xx_hal_mdios.h"
 #endif /* HAL_MDIOS_MODULE_ENABLED */
-
-#define assert_param(expr) assert(expr)
 
 #ifdef __cplusplus
 }

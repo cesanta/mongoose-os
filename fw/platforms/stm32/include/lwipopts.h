@@ -53,6 +53,8 @@ typedef uint32_t u32_t;
 
 #define SYS_LIGHTWEIGHT_PROT 0
 
+#define LWIP_NOASSERT
+
 #ifdef __cplusplus
 }
 #endif
