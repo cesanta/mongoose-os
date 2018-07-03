@@ -131,3 +131,12 @@ void stm32_clock_config(void) {
   oc.PLL.PLLState = RCC_PLL_NONE; /* Don't touch the PLL config */
   HAL_RCC_OscConfig(&oc);
 }
+
+IRAM void stm32_flush_caches(void) {
+  __HAL_FLASH_DATA_CACHE_DISABLE();
+  __HAL_FLASH_DATA_CACHE_RESET();
+  __HAL_FLASH_DATA_CACHE_ENABLE();
+  __HAL_FLASH_INSTRUCTION_CACHE_DISABLE();
+  __HAL_FLASH_INSTRUCTION_CACHE_RESET();
+  __HAL_FLASH_INSTRUCTION_CACHE_ENABLE();
+}

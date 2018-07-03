@@ -14,3 +14,13 @@ define mkspiffs
 	$(vecho) "MKFS  $(MKSPIFFS) $1 $2 $3 $4 $(FS_STAGING_DIR) -> $@"
 	$(Q) $(MKSPIFFS) -s $1 -b $2 -p $3 -e $4 -f $@ $(FS_STAGING_DIR)
 endef
+
+# Args: fs_size, json_opts
+define mkspiffs2
+	$(Q) rm -rf $(FS_STAGING_DIR) && mkdir -p $(FS_STAGING_DIR) $(dir $@)
+	$(Q) $(foreach f,$(FS_FILES), \
+	  echo "  CP    $(f) -> $(FS_STAGING_DIR)"; \
+	  cp $(f) $(FS_STAGING_DIR);)
+	$(vecho) "MKFS  $(MKSPIFFS) $1 $2 $(FS_STAGING_DIR) -> $@"
+	$(Q) $(MKSPIFFS) -s $1 -o '$2' -f $@ $(FS_STAGING_DIR)
+endef

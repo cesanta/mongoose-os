@@ -137,3 +137,12 @@ void stm32_clock_config(void) {
   oc.PLL.PLLState = RCC_PLL_NONE; /* Don't touch the PLL config */
   HAL_RCC_OscConfig(&oc);
 }
+
+IRAM void stm32_flush_caches(void) {
+  SCB_DisableICache();
+  SCB_InvalidateICache();
+  SCB_EnableICache();
+  SCB_DisableDCache();
+  SCB_CleanInvalidateDCache();
+  SCB_EnableDCache();
+}

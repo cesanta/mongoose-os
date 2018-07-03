@@ -1,4 +1,5 @@
 HSI_VALUE = 16000000
+FLASH_S0_SIZE = 16384
 STM32_CFLAGS += -mthumb -march=armv7e-m -mfloat-abi=hard -mfpu=fpv4-sp-d16 \
                 -DSTM32F4 -DARM_HAVE_FPU=1 -DMGOS_MAX_NUM_UARTS=7
 STM32CUBE_PATH = $(STM32CUBE_F4_PATH)
