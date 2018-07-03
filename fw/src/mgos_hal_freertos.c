@@ -192,7 +192,7 @@ IRAM void mgos_task(void *arg) {
   struct mgos_event e;
 
   mgos_wdt_enable();
-  mgos_wdt_set_timeout(5 /* seconds */);
+  mgos_wdt_set_timeout(30 /* seconds */);
 
   enum mgos_init_result r = mgos_init2();
   bool success = (r == MGOS_INIT_OK);
