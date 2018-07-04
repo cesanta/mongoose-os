@@ -159,6 +159,20 @@ void mgos_net_ip_to_str(const struct sockaddr_in *sin, char *out) {
   mg_sock_addr_to_str(&sa, out, 16, MG_SOCK_STRINGIFY_IP);
 }
 
+char *mgos_get_nameserver() {
+#ifdef MGOS_HAVE_WIFI
+  char *dns = NULL;
+  if (mgos_sys_config_get_wifi_sta_nameserver() != NULL) {
+    dns = strdup(mgos_sys_config_get_wifi_sta_nameserver());
+  } else {
+    dns = mgos_wifi_get_sta_default_dns();
+  }
+  return dns;
+#else
+  return NULL;
+#endif
+}
+
 enum mgos_init_result mgos_net_init(void) {
   if (!mgos_event_register_base(MGOS_EVENT_GRP_NET, "net")) {
     return MGOS_INIT_NET_INIT_FAILED;
