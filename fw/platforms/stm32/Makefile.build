@@ -101,9 +101,7 @@ MGOS_SRCS += arm_exc.c arm_nsleep100.c \
              stm32_exc.c stm32_gpio.c \
              stm32_hal.c stm32_hw_timers.c \
              stm32_libc.c \
-             stm32_main.c stm32_uart.c \
-             $(notdir $(FS_BIN_C))
-# stm32_i2c.c
+             stm32_main.c stm32_uart.c
 
 APP_ELF = $(BUILD_DIR)/$(APP).elf
 APP_BIN = $(BUILD_DIR)/$(APP).bin
@@ -139,10 +137,9 @@ MGOS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/mgos_config_schema.json
 MGOS_RO_VARS_C = $(GEN_DIR)/mgos_ro_vars.c
 MGOS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/mgos_ro_vars_schema.json
 GENFILES_FLAG = $(BUILD_DIR)/genfiles.done
-GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(FS_BIN_C) $(FFI_EXPORTS_C)
+GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
 SYMBOLS_DUMP = $(GEN_DIR)/symbols_dump.txt
 FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
-FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.c.o
 
 SDK_SRCS += $(notdir \
             $(wildcard $(LWIP_PATH)/src/core/*.c) tcpip.c sys_arch.c \
@@ -196,6 +193,8 @@ IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
 MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o))
 SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(SDK_SRCS:=.o))
 APP_OBJS = $(addprefix $(BUILD_DIR)/,$(APP_SRCS:=.o))
+FS_BIN_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FS_BIN_C:=.o)))
+FFI_EXPORTS_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FFI_EXPORTS_C:=.o)))
 
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
 
@@ -267,7 +266,7 @@ $(BUILD_DIR)/%.S.o: %.S $(GENFILES_FLAG)
 $(GENFILES_FLAG): $(GENFILES_LIST)
 	$(Q) touch $@
 
-BIN_PARTS = $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(SDK_OBJS) $(SSL_LIBS) $(APP_BIN_LIB_FILES)
+BIN_PARTS = $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(SDK_OBJS) $(SSL_LIBS) $(APP_BIN_LIB_FILES) $(FS_BIN_O)
 $(APP_ELF): $(BIN_PARTS) $(LD_SCRIPT_NO_OTA)
 	$(vecho) "LD    $@"
 	$(Q) $(CC) $(CFLAGS) $(LDFLAGS) \
@@ -287,7 +286,7 @@ include $(MGOS_PATH)/fw/src/mgos_config.mk
 
 MGOS_CONF_SCHEMA += $(MGOS_PLATFORM_PATH)/stm32_sys_config.yaml $(STM32_CONF_SCHEMA)
 
-$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MGOS_OBJS)
+$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MGOS_OBJS) $(FFI_EXPORTS_O) $(FS_BIN_O)
 	$(call gen_build_info,$@,$(APP_PATH),$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
 
 $(MG_BUILD_INFO_C): $(MGOS_OBJS)
@@ -300,7 +299,17 @@ $(MGOS_CONFIG_C): $(MGOS_CONF_SCHEMA) $(MANIFEST_FINAL)
 
 # Note: SPIFFS image is created only to make sure we have enough space, it is otherwise unused.
 $(FS_IMG): $(APP_FS_DIRS) $(FS_FILES) $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(MKSPIFFS)
+ifeq "$(MGOS_FS_TYPE)" "SPIFFS"
 	$(call mkspiffs2,$(FS_SIZE),$(MGOS_FS_OPTS))
+else
+ifeq "$(MGOS_FS_TYPE)" "LFS"
+	$(Q) rm -rf $(FS_STAGING_DIR) && mkdir -p $(FS_STAGING_DIR) $(dir $@)
+	$(Q) $(foreach f,$(FS_FILES), \
+	  echo "  CP    $(f) -> $(FS_STAGING_DIR)"; \
+	  cp $(f) $(FS_STAGING_DIR);)
+	$(Q) touch $@
+endif
+endif
 
 $(FS_ZIP): $(FS_IMG)
 	$(Q) rm -f $@
