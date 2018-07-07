@@ -131,3 +131,15 @@ const char *mg_strstr(const struct mg_str haystack,
   }
   return NULL;
 }
+
+struct mg_str mg_strstrip(struct mg_str s) WEAK;
+struct mg_str mg_strstrip(struct mg_str s) {
+  while (s.len > 0 && isspace((int) *s.p)) {
+    s.p++;
+    s.len--;
+  }
+  while (s.len > 0 && isspace((int) *(s.p + s.len - 1))) {
+    s.len--;
+  }
+  return s;
+}

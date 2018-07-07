@@ -323,6 +323,21 @@ static const char *test_mg_strstr(void) {
   return NULL;
 }
 
+static const char *test_mg_strstrip(void) {
+  struct mg_str s0 = MG_NULL_STR;
+
+  ASSERT_EQ(mg_strstrip(s0).len, 0);
+  ASSERT_MG_STREQ(mg_strstrip(mg_mk_str("foo")), "foo");
+  ASSERT_MG_STREQ(mg_strstrip(mg_mk_str(" foo")), "foo");
+  ASSERT_MG_STREQ(mg_strstrip(mg_mk_str("foo ")), "foo");
+  ASSERT_MG_STREQ(mg_strstrip(mg_mk_str(" foo ")), "foo");
+  ASSERT_MG_STREQ(mg_strstrip(mg_mk_str(" \t\r\n foo \r\n\t ")), "foo");
+  ASSERT_MG_STREQ(mg_strstrip(mg_mk_str(" \t\r\n foo \r\n\t bar")),
+                  "foo \r\n\t bar");
+
+  return NULL;
+}
+
 void tests_setup(void) {
 }
 
@@ -336,6 +351,7 @@ const char *tests_run(const char *filter) {
   RUN_TEST(test_mg_strdup);
   RUN_TEST(test_mg_strchr);
   RUN_TEST(test_mg_strstr);
+  RUN_TEST(test_mg_strstrip);
   return NULL;
 }
 
