@@ -492,8 +492,8 @@ class CWriter(object):
         si = self._start_indices.pop()
         num_desc = len(self._schema_lines) - si - 1
         self._schema_lines[si] = (
-            '  {.type = CONF_TYPE_OBJECT, .key = "%s", .num_desc = %d},'
-            % (e.key, num_desc))
+            '  {.type = CONF_TYPE_OBJECT, .key = "%s", .offset = offsetof(struct %s, %s), .num_desc = %d},'
+            % (e.key, self._struct_name, e.path, num_desc))
 
     def __str__(self):
         return """\
@@ -503,7 +503,7 @@ class CWriter(object):
 #include "{name}.h"
 
 const struct mgos_conf_entry {name}_schema_[{num_entries}] = {{
-  {{.type = CONF_TYPE_OBJECT, .key = "", .num_desc = {num_desc}}},
+  {{.type = CONF_TYPE_OBJECT, .key = "", .offset = 0, .num_desc = {num_desc}}},
 {schema_lines}
 }};
 

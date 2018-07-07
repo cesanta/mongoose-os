@@ -88,6 +88,20 @@ bool mgos_config_apply(const char *sys_config_subset_json, bool save);
 /* Same as mgos_config_apply but uses mg_str */
 bool mgos_config_apply_s(const struct mg_str, bool save);
 
+/*
+ * Parse a subsection of sys config, e.g. just "spi".
+ * cfg must point to the subsection's struct.
+ * Example:
+ * ```
+ *   struct mgos_config_spi cfg;
+ *   const struct mg_str json_cfg = MG_MK_STR("{\"unit_no\": 1}");
+ *   memset(&cfg, 0, sizeof(cfg));
+ *   mgos_sys_config_parse_sub(json_cfg, "spi", cfg);
+ * ```
+ */
+bool mgos_sys_config_parse_sub(const struct mg_str json, const char *section,
+                               void *cfg);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

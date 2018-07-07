@@ -23,6 +23,7 @@
 #define CS_FW_INCLUDE_MGOS_CONFIG_UTIL_H_
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "common/mbuf.h"
 #include "common/mg_str.h"
@@ -69,10 +70,8 @@ enum mgos_conf_type {
 struct mgos_conf_entry {
   enum mgos_conf_type type;
   const char *key;
-  union {
-    int offset;
-    int num_desc;
-  };
+  uint16_t offset;
+  uint16_t num_desc;
 };
 
 /*
@@ -81,6 +80,9 @@ struct mgos_conf_entry {
  */
 bool mgos_conf_parse(const struct mg_str json, const char *acl,
                      const struct mgos_conf_entry *schema, void *cfg);
+
+bool mgos_conf_parse_sub(const struct mg_str json,
+                         const struct mgos_conf_entry *sub_schema, void *cfg);
 
 /*
  * Callback for `mgos_conf_emit_cb` (see below); `data` is the emitted data and

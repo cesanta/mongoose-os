@@ -317,3 +317,15 @@ bool mgos_config_apply_s(const struct mg_str json, bool save) {
 bool mgos_config_apply(const char *json, bool save) {
   return mgos_config_apply_s(mg_mk_str(json), save);
 }
+
+bool mgos_sys_config_parse_sub(const struct mg_str json, const char *section,
+                               void *cfg) {
+  const struct mgos_conf_entry *schema = mgos_config_schema();
+  const struct mgos_conf_entry *sub_schema =
+      mgos_conf_find_schema_entry(section, schema);
+  if (sub_schema == NULL || sub_schema->type != CONF_TYPE_OBJECT ||
+      sub_schema->num_desc == 0) {
+    return false;
+  }
+  return mgos_conf_parse_sub(json, sub_schema, cfg);
+}
