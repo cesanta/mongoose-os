@@ -42,7 +42,7 @@ ADD user.h /opt/$SDK_DIR/cc3200-sdk/simplelink/user.h
 ARG NWP_SP_FILE
 ADD $NWP_SP_FILE $NWP_SP_FILE.sign /opt/
 
-ADD fw_meta.py serve_core.py mkspiffs mkspiffs8 /usr/local/bin/
+ADD fw_meta.py serve_core.py mklfs mkspiffs mkspiffs8 /usr/local/bin/
 
 ENV SDK_PATH=/opt/$SDK_DIR/cc3200-sdk
 ENV TI_COMPILER_PATH=/opt/$TI_COMPILER_DIR

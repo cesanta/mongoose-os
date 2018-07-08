@@ -5,7 +5,7 @@ MBEDTLS_BRANCH ?= esp32_$(DOCKER_TAG)
 
 include ../docker.mk
 
-docker-pre-build-esp32-toolchain: fw_meta.py serve_core.py mkspiffs mkspiffs8
+docker-pre-build-esp32-toolchain: fw_meta.py serve_core.py mklfs mkspiffs mkspiffs8
 docker-build-esp32-toolchain: DOCKER_FLAGS = --build-arg=TOOLCHAIN_VERSION=$(TOOLCHAIN_VERSION) \
                                              --build-arg=DOCKER_TAG=$(DOCKER_TAG)
 
@@ -54,4 +54,4 @@ cryptoauthlib:
 	rsync -a ../../third_party/cryptoauthlib .
 
 clean:
-	rm -rf cryptoauthlib mbedtls cs_mbedtls fw_meta.py serve_core.py mkspiffs mkspiffs8
+	rm -rf cryptoauthlib mbedtls cs_mbedtls fw_meta.py serve_core.py mklfs mkspiffs mkspiffs8

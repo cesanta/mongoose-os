@@ -13,7 +13,7 @@ $(TI_COMPILER_DIR) $(SDK_DIR):
 	@exit 1
 
 docker-pre-build-cc3220-toolchain: $(TI_COMPILER_DIR) $(SDK_DIR) \
-                                   fw_meta.py serve_core.py mkspiffs mkspiffs8
+                                   fw_meta.py serve_core.py mklfs mkspiffs mkspiffs8
 
 docker-build-cc3220-toolchain: DOCKER_FLAGS = --build-arg=TI_COMPILER_DIR=$(TI_COMPILER_DIR) \
                                               --build-arg=SDK_DIR=$(SDK_DIR)
@@ -41,4 +41,4 @@ docker-pre-build-cc3220-build: mbedtls docker-build-cc3220-toolchain
 docker-build-cc3220-build: DOCKER_FLAGS = --build-arg=DOCKER_TAG=$(DOCKER_TAG)
 
 clean:
-	rm -rf mbedtls fw_meta.py serve_core.py mkspiffs mkspiffs8
+	rm -rf mbedtls fw_meta.py serve_core.py mklfs mkspiffs mkspiffs8

@@ -65,5 +65,5 @@ RUN mv /opt/Espressif/ESP8266_RTOS_SDK/lib/libmbedtls.a /opt/Espressif/ESP8266_R
 ADD cs_lwip /opt/Espressif/cs_lwip
 ADD cryptoauthlib /opt/cryptoauthlib
 ADD rom.bin rom.elf /opt/Espressif/rom/
-ADD fw_meta.py serve_core.py mkspiffs mkspiffs8 /usr/local/bin/
+ADD fw_meta.py serve_core.py mklfs mkspiffs mkspiffs8 /usr/local/bin/
 ENV MGOS_TARGET_GDB=/opt/Espressif/esp-open-sdk/xtensa-lx106-elf/bin/xtensa-lx106-elf-gdb

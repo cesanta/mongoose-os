@@ -8,7 +8,8 @@ STM32CUBE_F4_PATH = STM32Cube_FW_F4_$(STM32CUBE_F4_VERSION)
 STM32CUBE_F7_PATH = STM32Cube_FW_F7_$(STM32CUBE_F4_VERSION)
 
 docker-pre-build-stm32-toolchain: en.stm32cubef4.zip en.stm32cubef7.zip \
-                                  fw_meta.py serve_core.py mkspiffs mkspiffs8
+                                  fw_meta.py serve_core.py \
+                                  mklfs mkspiffs mkspiffs8
 	rm -rf tmp && mkdir tmp
 	unzip -q en.stm32cubef4.zip -x '*/Documentation/*' '*/Examples/*' '*/Middlewares/ST/*' '*/Projects/*' '*/Utilities/*' -d tmp
 	cd tmp/STM32Cube_FW_F4_* && patch -p 0 -b < ../../lwipopts_f4.patch
@@ -50,4 +51,4 @@ mbedtls:
 	git clone git@github.com:cesanta/mbedtls
 
 clean:
-	rm -rf mbedtls cs_mbedtls fw_meta.py mkspiffs mkspiffs8
+	rm -rf mbedtls cs_mbedtls fw_meta.py mklfs mkspiffs mkspiffs8

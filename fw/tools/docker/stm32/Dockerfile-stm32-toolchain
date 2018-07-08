@@ -25,6 +25,6 @@ ARG STM32CUBE_F7_DIR
 ADD tmp/$STM32CUBE_F7_DIR /opt/$STM32CUBE_F7_DIR
 ENV STM32CUBE_F7_PATH /opt/$STM32CUBE_F7_DIR
 
-ADD fw_meta.py serve_core.py mkspiffs mkspiffs8 /usr/local/bin/
+ADD fw_meta.py serve_core.py mklfs mkspiffs mkspiffs8 /usr/local/bin/
 
 ENV MGOS_TARGET_GDB /usr/bin/arm-none-eabi-gdb

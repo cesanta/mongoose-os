@@ -48,7 +48,7 @@ RUN cd /opt && \
     unzip -q 170425_FreeRTOS_SimpleLink_CC3220SF_CCS.zip && \
     rm 170425_FreeRTOS_SimpleLink_CC3220SF_CCS.zip
 
-ADD fw_meta.py serve_core.py mkspiffs mkspiffs8 /usr/local/bin/
+ADD fw_meta.py serve_core.py mklfs mkspiffs mkspiffs8 /usr/local/bin/
 
 ENV SDK_PATH=/opt/$SDK_DIR
 ENV TI_COMPILER_PATH=/opt/$TI_COMPILER_DIR

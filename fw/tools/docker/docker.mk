@@ -33,6 +33,18 @@ fw_meta.py: $(REPO_PATH)/common/tools/fw_meta.py
 serve_core.py: $(REPO_PATH)/common/tools/serve_core.py
 	cp -v $< .
 
+mklfs:
+	rm -rf vfs-fs-lfs
+	git clone --depth=1 https://github.com/mongoose-os-libs/vfs-fs-lfs
+	docker run --rm -it \
+	  -v $(REPO_PATH):/mongoose-os \
+	  -v $(CURDIR)/vfs-fs-lfs:/vfs-fs-lfs \
+	  docker.io/mgos/gcc \
+	  bash -c 'make -C /vfs-fs-lfs/tools mklfs \
+	    FROZEN_PATH=/mongoose-os/frozen \
+	    SPIFFS_CONFIG_PATH=$(SPIFFS_CONFIG_PATH)'
+	cp -v vfs-fs-lfs/tools/$@ $@
+
 mkspiffs mkspiffs8:
 	rm -rf vfs-fs-spiffs
 	git clone --depth=1 https://github.com/mongoose-os-libs/vfs-fs-spiffs
