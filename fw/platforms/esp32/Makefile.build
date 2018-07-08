@@ -190,7 +190,7 @@ FW_PARTS = boot:type=boot,addr=0x1000,src=$(BOOTLOADER_BIN),encrypt=true,update=
 export CONFIG_APP_OFFSET
 
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
-include $(MGOS_PATH)/fw/src/spiffs.mk
+include $(MGOS_PATH)/fw/src/mkfs.mk
 
 all: $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(FW_ZIP) $(BREAKDOWN_FILE)
 

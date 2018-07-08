@@ -108,22 +108,37 @@ APP_BIN = $(BUILD_DIR)/$(APP).bin
 FLASH_SIZE ?= 0
 SRAM_BASE_ADDR ?= 0x20000000
 FLASH_BASE_ADDR ?= 0x8000000
-FS_ADDR = $(FLASH_S0_SIZE)
-FS_SIZE ?= $(shell echo $$(($(FLASH_S0_SIZE) * 3)))
-MGOS_FS_DEV_TYPE ?= stm32flash
-MGOS_FS_DEV_OPTS ?= {"addr": $(FS_ADDR), "size": $(FS_SIZE)}
-MGOS_FS_TYPE ?= SPIFFS
-# Note: These do not correspond to physical characteristics of flash,
-# we fake small erases by performing an RMW.
-MGOS_FS_OPTS ?= {"bs": 4096, "ps": 128, "es": 4096}
-MKSPIFFS ?= /usr/local/bin/mkspiffs8
-FS_BIN_C = $(GEN_DIR)/fs_bin.c
+FLASH_FS_OFFSET = $(FLASH_S0_SIZE)
+MGOS_ROOT_DEVTAB ?= fs0 stm32flash {"offset": $(FLASH_FS_OFFSET), "size": $(MGOS_ROOT_FS_SIZE)}
+MGOS_ROOT_FS_TYPE ?= SPIFFS
+MGOS_ROOT_FS_SIZE ?= $(shell echo $$(($(FLASH_S0_SIZE) * 3)))
+MGOS_ROOT_FS_ON_SYS_FLASH ?= 1
+# When FS is not on sys flash, we definitely need to extract.
+MGOS_ROOT_FS_EXTRACT ?= 1-$(MGOS_ROOT_FS_ON_SYS_FLASH)
+# Note: FS options do not correspond to the characteristics of on-board flash,
+# we fake small erases by performing an RMW which is unsafe but works.
+ifeq "$(MGOS_ROOT_FS_TYPE)" "SPIFFS"
+  MKFS ?= /usr/local/bin/mkspiffs8
+  MGOS_ROOT_FS_OPTS ?= {"bs": 4096, "ps": 128, "es": 4096}
+else
+ifeq "$(MGOS_ROOT_FS_TYPE)" "LFS"
+  MKFS ?= /usr/local/bin/mklfs
+  MGOS_ROOT_FS_OPTS ?= {"bs": 1024, "is": 128}
+endif
+endif
 FS_STAGING_DIR = $(BUILD_DIR)/fs
 
 FS_IMG = $(FW_STAGING_DIR)/fs.bin
 FS_ZIP = $(FW_STAGING_DIR)/fs.zip
+FS_IMG_C = $(GEN_DIR)/fs_img.c
+FS_ZIP_C = $(GEN_DIR)/fs_zip.c
+ifeq "$(MGOS_ROOT_FS_ON_SYS_FLASH)" "1"
+  FLASH_FS_SIZE = $(MGOS_ROOT_FS_SIZE)
+else
+  FLASH_FS_SIZE = 0
+endif
 
-include $(MGOS_PATH)/fw/src/spiffs.mk
+include $(MGOS_PATH)/fw/src/mkfs.mk
 
 MGOS_LIB = $(BUILD_DIR)/mongoose-os.a
 BUILD_INFO_C = $(GEN_DIR)/build_info.c
@@ -193,7 +208,8 @@ IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
 MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o))
 SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(SDK_SRCS:=.o))
 APP_OBJS = $(addprefix $(BUILD_DIR)/,$(APP_SRCS:=.o))
-FS_BIN_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FS_BIN_C:=.o)))
+FS_IMG_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FS_IMG_C:=.o)))
+FS_ZIP_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FS_ZIP_C:=.o)))
 FFI_EXPORTS_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FFI_EXPORTS_C:=.o)))
 
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
@@ -222,13 +238,15 @@ CXXFLAGS += $(APP_CXXFLAGS)
 
 CFLAGS  += -DSRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -DSRAM_SIZE=$(SRAM_SIZE) \
            -DFLASH_BASE_ADDR=$(FLASH_BASE_ADDR) -DFLASH_SIZE=$(FLASH_SIZE) \
-           -DMGOS_FS_DEV_TYPE='$(MGOS_FS_DEV_TYPE)' -DMGOS_FS_DEV_OPTS='$(MGOS_FS_DEV_OPTS)' \
-           -DMGOS_FS_TYPE='$(MGOS_FS_TYPE)' -DMGOS_FS_OPTS='$(MGOS_FS_OPTS)' \
+           -DMGOS_ROOT_DEVTAB='$(MGOS_ROOT_DEVTAB)' \
+           -DMGOS_ROOT_FS_TYPE='$(MGOS_ROOT_FS_TYPE)' \
+           -DMGOS_ROOT_FS_OPTS='$(MGOS_ROOT_FS_OPTS)' \
+           -DMGOS_ROOT_FS_EXTRACT='$(MGOS_ROOT_FS_EXTRACT)' \
            -DNOCACHE_SIZE=0x400
 LDFLAGS += -Wl,--defsym=SRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -Wl,--defsym=SRAM_SIZE=$(SRAM_SIZE) \
            -Wl,--defsym=FLASH_BASE_ADDR=$(FLASH_BASE_ADDR) -Wl,--defsym=FLASH_SIZE=$(FLASH_SIZE) \
            -Wl,--defsym=FLASH_S0_SIZE=$(FLASH_S0_SIZE) \
-           -Wl,--defsym=FS_SIZE=$(FS_SIZE) \
+           -Wl,--defsym=FLASH_FS_SIZE=$(FLASH_FS_SIZE) \
            -Wl,--defsym=NOCACHE_SIZE=0x400
 
 LDFLAGS += -Wl,--gc-sections
@@ -266,7 +284,13 @@ $(BUILD_DIR)/%.S.o: %.S $(GENFILES_FLAG)
 $(GENFILES_FLAG): $(GENFILES_LIST)
 	$(Q) touch $@
 
-BIN_PARTS = $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(SDK_OBJS) $(SSL_LIBS) $(APP_BIN_LIB_FILES) $(FS_BIN_O)
+BIN_PARTS = $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(SDK_OBJS) $(SSL_LIBS) $(APP_BIN_LIB_FILES)
+ifeq "$(MGOS_ROOT_FS_ON_SYS_FLASH)" "1"
+  BIN_PARTS += $(FS_IMG_O)
+else
+  BIN_PARTS += $(FS_ZIP_O)
+endif
+
 $(APP_ELF): $(BIN_PARTS) $(LD_SCRIPT_NO_OTA)
 	$(vecho) "LD    $@"
 	$(Q) $(CC) $(CFLAGS) $(LDFLAGS) \
@@ -278,7 +302,6 @@ $(APP_BIN): $(APP_ELF)
 	$(Q) $(OC) -Obinary $^ $@
 	$(vecho) "  Code: $$($(OC) -Obinary -j .text $^ /dev/fd/1 | wc -c)"
 	$(vecho) "  Data: $$($(OC) -Obinary -j .rodata $^ /dev/fd/1 | wc -c) + $$($(OC) -Obinary -j .data $^ /dev/fd/1 | wc -c)"
-	$(vecho) "  FS data: $$($(OC) -Obinary -j .fs_bin $^ /dev/fd/1 | wc -c)"
 
 include $(MGOS_PATH)/common/scripts/build_info.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
@@ -286,7 +309,7 @@ include $(MGOS_PATH)/fw/src/mgos_config.mk
 
 MGOS_CONF_SCHEMA += $(MGOS_PLATFORM_PATH)/stm32_sys_config.yaml $(STM32_CONF_SCHEMA)
 
-$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MGOS_OBJS) $(FFI_EXPORTS_O) $(FS_BIN_O)
+$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MGOS_OBJS) $(FFI_EXPORTS_O)
 	$(call gen_build_info,$@,$(APP_PATH),$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
 
 $(MG_BUILD_INFO_C): $(MGOS_OBJS)
@@ -298,28 +321,24 @@ $(MGOS_CONFIG_C): $(MGOS_CONF_SCHEMA) $(MANIFEST_FINAL)
 -include $(wildcard $(BUILD_DIR)/*.d)
 
 # Note: SPIFFS image is created only to make sure we have enough space, it is otherwise unused.
-$(FS_IMG): $(APP_FS_DIRS) $(FS_FILES) $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(MKSPIFFS)
-ifeq "$(MGOS_FS_TYPE)" "SPIFFS"
-	$(call mkspiffs2,$(FS_SIZE),$(MGOS_FS_OPTS))
-else
-ifeq "$(MGOS_FS_TYPE)" "LFS"
-	$(Q) rm -rf $(FS_STAGING_DIR) && mkdir -p $(FS_STAGING_DIR) $(dir $@)
-	$(Q) $(foreach f,$(FS_FILES), \
-	  echo "  CP    $(f) -> $(FS_STAGING_DIR)"; \
-	  cp $(f) $(FS_STAGING_DIR);)
-	$(Q) touch $@
-endif
-endif
+$(FS_IMG): $(APP_FS_DIRS) $(FS_FILES) $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(MKFS)
+	$(call mkfs,$(MGOS_ROOT_FS_SIZE),$(MGOS_ROOT_FS_OPTS))
 
 $(FS_ZIP): $(FS_IMG)
 	$(Q) rm -f $@
 	$(Q) cd $(FS_STAGING_DIR) && zip -9 -r $@ .
 
-$(FS_BIN_C): $(FS_ZIP)
+$(FS_ZIP_C): $(FS_ZIP)
 	$(vecho) "GEN   $@"
-	$(Q) (cd $(dir $(FS_IMG)) && xxd -i $(notdir $(FS_ZIP)) $(FS_BIN_C).tmp && \
-	      echo 'const __attribute((section(".fs_bin")))' > $(FS_BIN_C) && \
-	      cat $(FS_BIN_C).tmp >> $(FS_BIN_C))
+	$(Q) (cd $(dir $(FS_IMG)) && xxd -i $(notdir $(FS_ZIP)) $(FS_ZIP_C).tmp && \
+	      echo -n 'const ' > $(FS_ZIP_C) && \
+	      cat $(FS_ZIP_C).tmp >> $(FS_ZIP_C))
+
+$(FS_IMG_C): $(FS_IMG)
+	$(vecho) "GEN   $@"
+	$(Q) (cd $(dir $(FS_IMG)) && xxd -i $(notdir $(FS_IMG)) $(FS_IMG_C).tmp && \
+	      echo 'const __attribute((section(".fs_img")))' > $(FS_IMG_C) && \
+	      cat $(FS_IMG_C).tmp >> $(FS_IMG_C))
 
 $(FFI_EXPORTS_C): $(FS_FILES)
 	$(call gen_ffi_exports,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))

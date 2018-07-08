@@ -16,11 +16,11 @@ define mkspiffs
 endef
 
 # Args: fs_size, json_opts
-define mkspiffs2
+define mkfs
 	$(Q) rm -rf $(FS_STAGING_DIR) && mkdir -p $(FS_STAGING_DIR) $(dir $@)
 	$(Q) $(foreach f,$(FS_FILES), \
 	  echo "  CP    $(f) -> $(FS_STAGING_DIR)"; \
 	  cp $(f) $(FS_STAGING_DIR);)
-	$(vecho) "MKFS  $(MKSPIFFS) $1 $2 $(FS_STAGING_DIR) -> $@"
-	$(Q) $(MKSPIFFS) -s $1 -o '$2' -f $@ $(FS_STAGING_DIR)
+	$(vecho) "MKFS  $(MKFS) $1 $2 $(FS_STAGING_DIR) -> $@"
+	$(Q) $(MKFS) -s $1 -o '$2' -f $@ $(FS_STAGING_DIR)
 endef

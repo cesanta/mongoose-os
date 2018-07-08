@@ -11,9 +11,9 @@ _init_stack_size = 0x400; /* stack size before FreeRTOS is running */
 MEMORY {
   SRAM     (rwx) : ORIGIN = SRAM_BASE_ADDR,  LENGTH = SRAM_SIZE
   FLASH_S0 (rx)  : ORIGIN = FLASH_BASE_ADDR, LENGTH = FLASH_S0_SIZE
-  FLASH_FS (r)   : ORIGIN = FLASH_BASE_ADDR + FLASH_S0_SIZE, LENGTH = FS_SIZE
-  FLASH_CS (rx)  : ORIGIN = FLASH_BASE_ADDR + FLASH_S0_SIZE + FS_SIZE,
-                   LENGTH = FLASH_SIZE - FS_SIZE - FLASH_S0_SIZE
+  FLASH_FS (r)   : ORIGIN = FLASH_BASE_ADDR + FLASH_S0_SIZE, LENGTH = FLASH_FS_SIZE
+  FLASH_CS (rx)  : ORIGIN = FLASH_BASE_ADDR + FLASH_S0_SIZE + FLASH_FS_SIZE,
+                   LENGTH = FLASH_SIZE - FLASH_FS_SIZE - FLASH_S0_SIZE
 }
 
 /* Define output sections */
@@ -25,10 +25,8 @@ SECTIONS {
   } > FLASH_S0
 
   /* Fill FS0 with 0xff to make initial mkfs faster (no erase). */
-  .fs0 : {
-    FILL(0xff)
-    . = ORIGIN(FLASH_FS) + LENGTH(FLASH_FS) - 1;
-    BYTE(0xff)
+  .fs_img : {
+    KEEP(*(.fs_img))
   } > FLASH_FS
 
   .text :
@@ -76,13 +74,6 @@ SECTIONS {
 
   .rodata : {
     *(.rodata .rodata.*)
-  } > FLASH_CS
-  /* fs_bin_size = SIZEOF(.fs_bin); */
-
-  .fs_bin : {
-    _fs_bin_start = .;
-    KEEP (*(.fs_bin))
-    _fs_bin_end = .;
   } > FLASH_CS
 
   /* used by the startup to initialize data */

@@ -205,7 +205,7 @@ MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" -DCS_PLATFORM=CS_P_CC3200 \
               -DC_DISABLE_BUILTIN_SNPRINTF
 
 include $(MGOS_PATH)/fw/src/mgos_features.mk
-include $(MGOS_PATH)/fw/src/spiffs.mk
+include $(MGOS_PATH)/fw/src/mkfs.mk
 
 clean:
 	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)

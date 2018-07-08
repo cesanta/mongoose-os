@@ -484,7 +484,7 @@ $(LD_SCRIPT): $(LD_SCRIPT_TEMPL)
 include $(MGOS_PATH)/common/scripts/build_info.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
 include $(MGOS_PATH)/fw/src/mgos_config.mk
-include $(MGOS_PATH)/fw/src/spiffs.mk
+include $(MGOS_PATH)/fw/src/mkfs.mk
 
 MGOS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp_sys_config.yaml
 
