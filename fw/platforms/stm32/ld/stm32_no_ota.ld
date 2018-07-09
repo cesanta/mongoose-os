@@ -32,7 +32,7 @@ SECTIONS {
   .text :
   {
     . = ALIGN(4);
-    *(.text .text.*)
+    *(.text SORT(.text.*))
     *(.glue_7)         /* glue arm to thumb code */
     *(.glue_7t)        /* glue thumb to arm code */
     *(.eh_frame)
@@ -73,7 +73,7 @@ SECTIONS {
   } > FLASH_CS
 
   .rodata : {
-    *(.rodata .rodata.*)
+    *(.rodata SORT(.rodata.*))
   } > FLASH_CS
 
   /* used by the startup to initialize data */
@@ -83,9 +83,8 @@ SECTIONS {
   .data : {
     . = ALIGN(4);
     _sdata = .;        /* create a global symbol at data start */
-    *(.data)           /* .data sections */
-    *(.data*)          /* .data* sections */
-    *(.RamFunc .RamFunc.*)   /* code placed in RAM */
+    *(.data SORT(.data.*))
+    *(.RamFunc SORT(.RamFunc.*))
     _edata = .;        /* define a global symbol at data end */
   } > SRAM AT > FLASH_CS
 
@@ -94,8 +93,7 @@ SECTIONS {
     /* This is used by the startup in order to initialize the .bss secion */
     _sbss = .;         /* define a global symbol at bss start */
     __bss_start__ = _sbss;
-    *(.bss)
-    *(.bss*)
+    *(.bss SORT(.bss.*))
     *(COMMON)
 
     . = ALIGN(4);
