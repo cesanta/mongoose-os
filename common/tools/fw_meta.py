@@ -443,7 +443,7 @@ def cmd_set(args):
 def cmd_xxd(args):
     total_len = 0
     const = "const " if args.const else ""
-    sect = '__attribute((section("%s")))' % args.section if args.section else ""
+    sect = ' __attribute((section("%s")))' % args.section if args.section else ""
     with open(args.input_file, "rb") as f:
         print("""\
 /* Generated file, do not edit! */
