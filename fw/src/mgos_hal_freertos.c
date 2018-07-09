@@ -94,30 +94,32 @@ static portMUX_TYPE s_poll_spinlock = portMUX_INITIALIZER_UNLOCKED;
 #define STACK_SIZE_UNIT sizeof(portSTACK_TYPE)
 #endif
 
-uint32_t mg_lwip_get_poll_delay_ms(struct mg_mgr *mgr);
-
 static IRAM void mgos_mg_poll_cb(void *arg) {
-  uint32_t timeout_ms, timeout_ticks, n = 0;
+  int timeout_ms;
   ENTER_CRITICAL();
   do {
-    EXIT_CRITICAL();
     s_mg_want_poll = false;
-    mongoose_poll(0);
-    timeout_ms = mg_lwip_get_poll_delay_ms(mgos_get_mgr());
+    EXIT_CRITICAL();
+    /* While things are happening, keep polling. */
+    while (mongoose_poll(0) != 0)
+      ;
+    /* Things are not happening now, see when they are due to happen. */
+    double min_timer = mg_mgr_min_timer(mgos_get_mgr());
+    if (min_timer > 0) {
+      /* Note: timeout_ms can get negative if a timer is past due. That's ok. */
+      timeout_ms = (int) ((min_timer - mg_time()) * 1000.0);
+      if (timeout_ms < 0) timeout_ms = 0;
+    } else {
+      timeout_ms = 1000;
+    }
     ENTER_CRITICAL();
-    if (timeout_ms > 100) timeout_ms = 100;
-    timeout_ticks = timeout_ms / portTICK_PERIOD_MS;
-    n++;
-  } while (n < 10 && (s_mg_want_poll || timeout_ticks == 0));
+  } while (s_mg_want_poll || timeout_ms < portTICK_PERIOD_MS);
   s_mg_poll_scheduled = false;
   s_mg_last_poll++;
   EXIT_CRITICAL();
-  if (!s_mg_want_poll && timeout_ticks > 0) {
-    xTimerChangePeriod(s_mg_poll_timer, timeout_ticks, 10);
-    xTimerReset(s_mg_poll_timer, 10);
-  } else {
-    mongoose_schedule_poll(false /* from_isr */);
-  }
+  int timeout_ticks = (timeout_ms / portTICK_PERIOD_MS);
+  xTimerChangePeriod(s_mg_poll_timer, timeout_ticks, 10);
+  xTimerReset(s_mg_poll_timer, 10);
   (void) arg;
 }
 

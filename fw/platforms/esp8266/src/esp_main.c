@@ -92,10 +92,20 @@ static volatile bool s_mg_poll_scheduled = false;
 static void mongoose_poll_cb(void *arg) {
   s_mg_poll_scheduled = false;
   s_mg_last_poll++;
-  mongoose_poll(0);
+  /* While things are happening, keep polling. */
+  while (mongoose_poll(0) != 0)
+    ;
   if (!s_mg_poll_scheduled) {
-    uint32_t timeout_ms = mg_lwip_get_poll_delay_ms(mgos_get_mgr());
-    if (timeout_ms > 100) timeout_ms = 100;
+    /* Things are not happening now, see when they are due to happen. */
+    int timeout_ms;
+    double min_timer = mg_mgr_min_timer(mgos_get_mgr());
+    if (min_timer > 0) {
+      /* Note: timeout_ms can get negative if a timer is past due. That's ok. */
+      timeout_ms = (int) ((min_timer - mg_time()) * 1000.0);
+      if (timeout_ms < 0) timeout_ms = 0;
+    } else {
+      timeout_ms = 1000;
+    }
     os_timer_disarm(&s_mg_poll_tmr);
     /* We set repeat = true in case things get stuck for any reason. */
     os_timer_arm(&s_mg_poll_tmr, timeout_ms, 1 /* repeat */);
