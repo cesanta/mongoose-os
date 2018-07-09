@@ -176,9 +176,12 @@ enum mgos_init_result mgos_init2(void) {
     LOG(LL_INFO, ("%s %s (%s)", MGOS_APP, build_version, build_id));
   }
   LOG(LL_INFO, ("Mongoose OS %s (%s)", mg_build_version, mg_build_id));
-  LOG(LL_INFO, ("CPU: %d MHz, RAM: %u total, %u free",
+  LOG(LL_INFO, ("CPU: %d MHz, heap: %u total, %u free",
                 (int) (mgos_get_cpu_freq() / 1000000), mgos_get_heap_size(),
                 mgos_get_free_heap_size()));
+#ifdef _NEWLIB_VERSION
+  LOG(LL_INFO, ("Newlib %s", _NEWLIB_VERSION));
+#endif
 
   r = mgos_hal_freertos_pre_init();
   if (r != MGOS_INIT_OK) return r;

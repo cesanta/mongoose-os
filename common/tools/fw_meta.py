@@ -440,6 +440,28 @@ def cmd_set(args):
         print(json.dumps(o))
 
 
+def cmd_xxd(args):
+    total_len = 0
+    const = "const " if args.const else ""
+    sect = '__attribute((section("%s")))' % args.section if args.section else ""
+    with open(args.input_file, "rb") as f:
+        print("""\
+/* Generated file, do not edit! */
+/* Source: %s */
+%sunsigned char %s[]%s = {\
+""" % (args.input_file, const, args.var_name, sect))
+        while True:
+            bb = f.read(16)
+            if len(bb) == 0: break
+            print("  ", end="")
+            print(*["0x%02x" % ord(b) for b in bb], sep=", ", end=",\n")
+            total_len += len(bb)
+    print("""\
+};
+const unsigned int %s_len = %u;\
+""" % (args.var_name, total_len))
+
+
 if __name__ == '__main__':
     handlers = {}
     parser = argparse.ArgumentParser(description='FW metadata tool', prog='fw_meta')
@@ -506,6 +528,14 @@ if __name__ == '__main__':
     set_cmd.add_argument('json_file')
     set_cmd.add_argument('key_values', nargs='+')
     handlers['set'] = cmd_set
+
+    xxd_desc = "Convert a binary file into C source"
+    xxd_cmd = cmd.add_parser('xxd', help=xxd_desc, description=xxd_desc)
+    xxd_cmd.add_argument('--var_name', help="C variable name", required=True)
+    xxd_cmd.add_argument('--section', help="Add section attribute")
+    xxd_cmd.add_argument('--const', help="Make the variable const", action='store_true')
+    xxd_cmd.add_argument('input_file')
+    handlers['xxd'] = cmd_xxd
 
     args = parser.parse_args()
     handlers[args.cmd](args)

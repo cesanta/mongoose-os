@@ -78,6 +78,17 @@ void abort(void) {
   __builtin_trap();  // Executes an illegal instruction.
 }
 
+#if __NEWLIB__ >= 3
+void __malloc_lock(struct _reent *r) {
+  portENTER_CRITICAL();
+  (void) r;
+}
+
+void __malloc_unlock(struct _reent *r) {
+  portEXIT_CRITICAL();
+  (void) r;
+}
+#else
 void __malloc_lock(void) {
   portENTER_CRITICAL();
 }
@@ -85,6 +96,7 @@ void __malloc_lock(void) {
 void __malloc_unlock(void) {
   portEXIT_CRITICAL();
 }
+#endif
 
 extern uint8_t _heap_start, _heap_end; /* Provided by linker */
 void *_sbrk(intptr_t incr) {

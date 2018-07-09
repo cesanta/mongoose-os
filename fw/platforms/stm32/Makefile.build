@@ -161,7 +161,6 @@ SDK_SRCS += $(notdir \
             $(wildcard $(LWIP_PATH)/src/core/ipv4/*.c) \
             $(wildcard $(LWIP_PATH)/src/core/ipv6/*.c) \
             $(wildcard $(LWIP_PATH)/src/netif/ethernet.c) \
-            $(wildcard $(MBEDTLS_PATH)/library/*.c) \
             $(wildcard $(FREERTOS_PATH)/Source/*.c) port.c heap_3.c cmsis_os.c) \
 
 SDK_IPATH += $(STM32CUBE_PATH) \
@@ -205,15 +204,6 @@ IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
         $(GEN_DIR) \
         $(SDK_IPATH)
 
-MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o))
-SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(SDK_SRCS:=.o))
-APP_OBJS = $(addprefix $(BUILD_DIR)/,$(APP_SRCS:=.o))
-FS_IMG_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FS_IMG_C:=.o)))
-FS_ZIP_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FS_ZIP_C:=.o)))
-FFI_EXPORTS_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FFI_EXPORTS_C:=.o)))
-
-include $(MGOS_PATH)/common/scripts/fw_meta.mk
-
 CFLAGS ?= -std=gnu99 -Os -ggdb -MD -Wall -Werror -pipe \
           -fno-common -fno-inline \
           -ffunction-sections -fdata-sections \
@@ -227,9 +217,16 @@ CFLAGS ?= -std=gnu99 -Os -ggdb -MD -Wall -Werror -pipe \
           -DMBEDTLS_CONFIG_FILE=\"mbedtls/config.h\" \
           ${MG_FEATURES_TINY} -DMG_ENABLE_DIRECTORY_LISTING
 
+SSL_SRCS =
 SSL_LIBS =
 ifeq ("$(SSL)", "mbedTLS")
-  SSL_LIBS += $(addprefix $(MBEDTLS_PATH)/library/,libmbedcrypto.a libmbedtls.a libmbedx509.a)
+  SSL_SRCS = $(wildcard $(MBEDTLS_PATH)/library/*.c)
+  # If we have no sources, this must be a binary-only distr.
+  ifneq "$(SSL_SRCS)" ""
+    SDK_SRCS += $(notdir $(SSL_SRCS))
+  else
+    SSL_LIBS += $(addprefix $(MBEDTLS_PATH)/library/,libmbedcrypto.a libmbedtls.a libmbedx509.a)
+  endif
   CFLAGS += -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS
 endif
 
@@ -255,6 +252,15 @@ CFLAGS += -DMG_NET_IF=3 -D__CPU_H__ -DMG_LWIP=1 -DLWIP_TIMEVAL_PRIVATE=0 \
           -DLWIP_TCP_KEEPALIVE=1 -DMGOS_APP=\"$(APP)\"
 
 FW_PARTS = app:type=app,src=$(APP_BIN),addr=$(FLASH_BASE_ADDR)
+
+MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o))
+SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(SDK_SRCS:=.o))
+APP_OBJS = $(addprefix $(BUILD_DIR)/,$(APP_SRCS:=.o))
+FS_IMG_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FS_IMG_C:=.o)))
+FS_ZIP_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FS_ZIP_C:=.o)))
+FFI_EXPORTS_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FFI_EXPORTS_C:=.o)))
+
+include $(MGOS_PATH)/common/scripts/fw_meta.mk
 
 all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(APP_BIN) $(FW_ZIP)
 
@@ -330,15 +336,11 @@ $(FS_ZIP): $(FS_IMG)
 
 $(FS_ZIP_C): $(FS_ZIP)
 	$(vecho) "GEN   $@"
-	$(Q) (cd $(dir $(FS_IMG)) && xxd -i $(notdir $(FS_ZIP)) $(FS_ZIP_C).tmp && \
-	      echo -n 'const ' > $(FS_ZIP_C) && \
-	      cat $(FS_ZIP_C).tmp >> $(FS_ZIP_C))
+	$(Q) $(FW_META_CMD) xxd --var_name fs_zip --const $(FS_ZIP) > $@
 
 $(FS_IMG_C): $(FS_IMG)
 	$(vecho) "GEN   $@"
-	$(Q) (cd $(dir $(FS_IMG)) && xxd -i $(notdir $(FS_IMG)) $(FS_IMG_C).tmp && \
-	      echo 'const __attribute((section(".fs_img")))' > $(FS_IMG_C) && \
-	      cat $(FS_IMG_C).tmp >> $(FS_IMG_C))
+	$(Q) $(FW_META_CMD) xxd --var_name fs_img --const --section .fs_img $(FS_IMG) > $@
 
 $(FFI_EXPORTS_C): $(FS_FILES)
 	$(call gen_ffi_exports,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))
