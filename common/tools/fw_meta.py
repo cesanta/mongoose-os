@@ -503,7 +503,7 @@ if __name__ == '__main__':
     cm_cmd.add_argument('--build_info', '-i', required=True)
     cm_cmd.add_argument('--description', '-d')
     cm_cmd.add_argument('--checksums', default='sha1')
-    cm_cmd.add_argument('--src_dir')
+    cm_cmd.add_argument('--src_dir', default='.')
     cm_cmd.add_argument('--staging_dir')
     cm_cmd.add_argument('--output', '-o')
     cm_cmd.add_argument('parts', nargs='+')

@@ -23,24 +23,13 @@ APP_INCLUDES ?=
 APP_FS_FILES ?=
 # List of static libs (.a) which are parts of the app
 APP_BIN_LIBS ?=
-
-# NOTE: those two are deprecated. Use APP_SOURCES and APP_FS_FILES instead.
-APP_MODULES ?=
-APP_FS_PATH ?=
+# Extra parts to include in firmware
+APP_EXTRA_FW_PARTS ?=
 
 BUILD_LIB_NAME ?= lib.a
 
 MGOS_PATH ?= ../../..
 include $(MGOS_PATH)/fw/common.mk
-
-# For backward compatibility, convert old APP_MODULES and APP_FS_PATH into
-# new APP_SOURCES and APP_FS_FILES
-ifneq "$(APP_MODULES)" ""
-APP_SOURCES += $(foreach m,$(APP_MODULES),$(m)/*.c $(m)/*.cpp)
-endif
-ifneq "$(APP_FS_PATH)" ""
-APP_FS_FILES += $(foreach m,$(APP_FS_PATH),$(m)/*)
-endif
 
 # Get list of dirs which contain sources and filesystem files
 APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
@@ -247,6 +236,7 @@ else
               spiffs.img.0.1:type=slfile,falloc=$(FS_IMAGE_SIZE)
 endif
 FW_PARTS += $(foreach f,$(SLFS_FILES), $(notdir $(f)):type=slfile,src=$(f))
+FW_PARTS += $(APP_EXTRA_FW_PARTS)
 
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
 

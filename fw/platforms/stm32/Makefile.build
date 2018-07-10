@@ -22,21 +22,10 @@ APP_INCLUDES ?=
 APP_FS_FILES ?=
 # List of static libs (.a) which are parts of the app
 APP_BIN_LIBS ?=
-
-# NOTE: those two are deprecated. Use APP_SOURCES and APP_FS_FILES instead.
-APP_MODULES ?=
-APP_FS_PATH ?=
+# Extra parts to include in firmware
+APP_EXTRA_FW_PARTS ?=
 
 BUILD_LIB_NAME ?= lib.a
-
-# For backward compatibility, convert old APP_MODULES and APP_FS_PATH into
-# new APP_SOURCES and APP_FS_FILES
-ifneq "$(APP_MODULES)" ""
-APP_SOURCES += $(foreach m,$(APP_MODULES),$(m)/*.c $(m)/*.cpp)
-endif
-ifneq "$(APP_FS_PATH)" ""
-APP_FS_FILES += $(foreach m,$(APP_FS_PATH),$(m)/*)
-endif
 
 # Get list of dirs which contain sources and filesystem files
 APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
@@ -251,7 +240,8 @@ LDFLAGS += -Wl,--gc-sections
 CFLAGS += -DMG_NET_IF=3 -D__CPU_H__ -DMG_LWIP=1 -DLWIP_TIMEVAL_PRIVATE=0 \
           -DLWIP_TCP_KEEPALIVE=1 -DMGOS_APP=\"$(APP)\"
 
-FW_PARTS = app:type=app,src=$(APP_BIN),addr=$(FLASH_BASE_ADDR)
+FW_PARTS = app:type=app,src=$(APP_BIN),addr=$(FLASH_BASE_ADDR) \
+           $(APP_EXTRA_FW_PARTS)
 
 MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o))
 SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(SDK_SRCS:=.o))

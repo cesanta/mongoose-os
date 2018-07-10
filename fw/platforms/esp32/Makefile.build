@@ -18,6 +18,8 @@ APP_INCLUDES ?=
 APP_FS_FILES ?=
 # List of static libs (.a) which are parts of the app
 APP_BIN_LIBS ?=
+# Extra parts to include in firmware
+APP_EXTRA_FW_PARTS ?=
 # Override some settings in SDKCONFIG, e.g. to disable FOO and enable BAR:
 # ESP_IDF_SDKCONFIG_OPTS = "CONFIG_FOO= CONFIG_BAR=y"
 ESP_IDF_SDKCONFIG_OPTS ?=
@@ -29,19 +31,6 @@ ESP_IDF_EXTRA_COMPONENTS ?=
 ESP_IDF_EXTRA_PARTITION ?=
 
 MGOS_UPDATE_BOOT_LOADER ?= false
-
-# NOTE: those two are deprecated. Use APP_SOURCES and APP_FS_FILES instead.
-APP_MODULES ?=
-APP_FS_PATH ?=
-
-# For backward compatibility, convert old APP_MODULES and APP_FS_PATH into
-# new APP_SOURCES and APP_FS_FILES
-ifneq "$(APP_MODULES)" ""
-APP_SOURCES += $(foreach m,$(APP_MODULES),$(m)/*.c $(m)/*.cpp)
-endif
-ifneq "$(APP_FS_PATH)" ""
-APP_FS_FILES += $(foreach m,$(APP_FS_PATH),$(m)/*)
-endif
 
 APP_FS_DIRS = $(sort $(dir $(APP_FS_FILES)))
 
@@ -185,7 +174,8 @@ FW_PARTS = boot:type=boot,addr=0x1000,src=$(BOOTLOADER_BIN),encrypt=true,update=
            nvs:type=nvs,addr=$(NVS_ADDR),size=$(NVS_SIZE),fill=0xff,encrypt=false \
            otadata:type=otadata,addr=$(OTA_DATA_ADDR),size=$(OTA_DATA_SIZE),src=$(MGOS_ESP_PATH)/otadata.bin,encrypt=true \
            app:type=app,addr=$(CONFIG_APP_OFFSET),ptn=app_0,src=$(APP_BIN),encrypt=true \
-           fs:src=$(FS_IMG),type=fs,addr=$(FS_ADDR),ptn=fs_0,fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE)
+           fs:src=$(FS_IMG),type=fs,addr=$(FS_ADDR),ptn=fs_0,fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE) \
+           $(APP_EXTRA_FW_PARTS)
 
 export CONFIG_APP_OFFSET
 

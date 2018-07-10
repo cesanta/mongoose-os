@@ -23,24 +23,13 @@ APP_INCLUDES ?=
 APP_FS_FILES ?=
 # List of static libs (.a) which are parts of the app
 APP_BIN_LIBS ?=
-
-# NOTE: those two are deprecated. Use APP_SOURCES and APP_FS_FILES instead.
-APP_MODULES ?=
-APP_FS_PATH ?=
+# Extra parts to include in firmware
+APP_EXTRA_FW_PARTS ?=
 
 BUILD_LIB_NAME ?= lib.a
 
 MGOS_PATH ?= ../../..
 include $(MGOS_PATH)/fw/common.mk
-
-# For backward compatibility, convert old APP_MODULES and APP_FS_PATH into
-# new APP_SOURCES and APP_FS_FILES
-ifneq "$(APP_MODULES)" ""
-APP_SOURCES += $(foreach m,$(APP_MODULES),$(m)/*.c $(m)/*.cpp)
-endif
-ifneq "$(APP_FS_PATH)" ""
-APP_FS_FILES += $(foreach m,$(APP_FS_PATH),$(m)/*)
-endif
 
 # Get list of dirs which contain sources and filesystem files
 APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
@@ -255,7 +244,8 @@ FW_PARTS = $(notdir $(CA_BUNDLE)):type=cabundle,src=$(CA_BUNDLE),sig=$(notdir $(
            $(notdir $(SIG_CERT)):type=cert,src=$(SIG_CERT) \
            $(notdir $(APP_BIN_SHA_SIG)):type=sig,src=$(APP_BIN_SHA_SIG) \
            $(notdir $(FS_IMG)):type=fs,src=$(FS_IMG),fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE) \
-           $(foreach f,$(SLFS_FILES), $(notdir $(f)):type=slfile,src=$(f))
+           $(foreach f,$(SLFS_FILES), $(notdir $(f)):type=slfile,src=$(f)) \
+           $(APP_EXTRA_FW_PARTS)
 
 CC3220_SP_FILE ?= $(wildcard $(SDK_PATH)/tools/cc32xx_tools/servicepack-cc3x20/sp_*.?.bin)
 ifneq "$(CC3220_SP_FILE)" ""

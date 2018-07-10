@@ -26,21 +26,10 @@ APP_INCLUDES ?=
 APP_FS_FILES ?=
 # List of static libs (.a) which are parts of the app
 APP_BIN_LIBS ?=
-
-# NOTE: those two are deprecated. Use APP_SOURCES and APP_FS_FILES instead.
-APP_MODULES ?=
-APP_FS_PATH ?=
+# Extra parts to include in firmware
+APP_EXTRA_FW_PARTS ?=
 
 BUILD_LIB_NAME ?= lib.a
-
-# For backward compatibility, convert old APP_MODULES and APP_FS_PATH into
-# new APP_SOURCES and APP_FS_FILES
-ifneq "$(APP_MODULES)" ""
-APP_SOURCES += $(foreach m,$(APP_MODULES),$(m)/*.c $(m)/*.cpp)
-endif
-ifneq "$(APP_FS_PATH)" ""
-APP_FS_FILES += $(foreach m,$(APP_FS_PATH),$(m)/*)
-endif
 
 # Get list of dirs which contain sources and filesystem files
 APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
@@ -408,7 +397,8 @@ FW_PARTS = boot:addr=$(BOOT_LOADER_ADDR),src=$(BOOT_LOADER_BIN),update=$(MGOS_UP
            fw:addr=$(APP0_ADDR),src=$(APP_BIN) \
            fs:src=$(FS_IMG),type=fs,addr=$(FS0_ADDR),fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE) \
            rf_cal_data:addr=$(FW_RF_CAL_DATA_ADDR),size=$(RF_CAL_DATA_SIZE),fill=0xff \
-           sys_params:type=sys_params,src=$(SDK_INIT_DATA_PATH)/bin/esp_init_data_default_v08.bin,addr=$(SYS_PARAMS_ADDR)
+           sys_params:type=sys_params,src=$(SDK_INIT_DATA_PATH)/bin/esp_init_data_default_v08.bin,addr=$(SYS_PARAMS_ADDR) \
+           $(APP_EXTRA_FW_PARTS)
 
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
 
