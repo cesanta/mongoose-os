@@ -259,21 +259,28 @@ static int parse_number(struct frozen *f) {
   SET_STATE(f, f->cur, "", 0);
   if (ch == '-') f->cur++;
   EXPECT(f->cur < f->end, JSON_STRING_INCOMPLETE);
-  EXPECT(is_digit(f->cur[0]), JSON_STRING_INVALID);
-  while (f->cur < f->end && is_digit(f->cur[0])) f->cur++;
-  if (f->cur < f->end && f->cur[0] == '.') {
-    f->cur++;
+  if (f->cur + 1 < f->end && f->cur[0] == '0' && f->cur[1] == 'x') {
+    f->cur += 2;
     EXPECT(f->cur < f->end, JSON_STRING_INCOMPLETE);
+    EXPECT(is_hex_digit(f->cur[0]), JSON_STRING_INVALID);
+    while (f->cur < f->end && is_hex_digit(f->cur[0])) f->cur++;
+  } else {
     EXPECT(is_digit(f->cur[0]), JSON_STRING_INVALID);
     while (f->cur < f->end && is_digit(f->cur[0])) f->cur++;
-  }
-  if (f->cur < f->end && (f->cur[0] == 'e' || f->cur[0] == 'E')) {
-    f->cur++;
-    EXPECT(f->cur < f->end, JSON_STRING_INCOMPLETE);
-    if ((f->cur[0] == '+' || f->cur[0] == '-')) f->cur++;
-    EXPECT(f->cur < f->end, JSON_STRING_INCOMPLETE);
-    EXPECT(is_digit(f->cur[0]), JSON_STRING_INVALID);
-    while (f->cur < f->end && is_digit(f->cur[0])) f->cur++;
+    if (f->cur < f->end && f->cur[0] == '.') {
+      f->cur++;
+      EXPECT(f->cur < f->end, JSON_STRING_INCOMPLETE);
+      EXPECT(is_digit(f->cur[0]), JSON_STRING_INVALID);
+      while (f->cur < f->end && is_digit(f->cur[0])) f->cur++;
+    }
+    if (f->cur < f->end && (f->cur[0] == 'e' || f->cur[0] == 'E')) {
+      f->cur++;
+      EXPECT(f->cur < f->end, JSON_STRING_INCOMPLETE);
+      if ((f->cur[0] == '+' || f->cur[0] == '-')) f->cur++;
+      EXPECT(f->cur < f->end, JSON_STRING_INCOMPLETE);
+      EXPECT(is_digit(f->cur[0]), JSON_STRING_INVALID);
+      while (f->cur < f->end && is_digit(f->cur[0])) f->cur++;
+    }
   }
   truncate_path(f, fstate.path_len);
   CALL_BACK(f, JSON_TYPE_NUMBER, fstate.ptr, f->cur - fstate.ptr);
