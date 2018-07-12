@@ -109,6 +109,7 @@ static void mgos_net_on_change_cb(void *arg) {
   mgos_event_trigger(ei->ev, &evd);
 
   free(ei);
+  (void) if_name;
 }
 
 void mgos_net_dev_event_cb(enum mgos_net_if_type if_type, int if_instance,

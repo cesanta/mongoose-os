@@ -16,6 +16,7 @@
  */
 
 #include "stm32_sdk_hal.h"
+#include "stm32_system.h"
 
 uint32_t SystemCoreClock = HSI_VALUE;
 const uint8_t AHBPrescTable[16] = {0, 0, 0, 0, 0, 0, 0, 0,
@@ -23,13 +24,13 @@ const uint8_t AHBPrescTable[16] = {0, 0, 0, 0, 0, 0, 0, 0,
 const uint8_t APBPrescTable[8] = {0, 0, 0, 0, 1, 2, 3, 4};
 #define VECT_TAB_OFFSET 0x0
 
-void SystemInit(void) {
-/* FPU settings ------------------------------------------------------------*/
+#include "mgos_gpio.h"
+
+void stm32_system_init(void) {
 #if (__FPU_PRESENT == 1) && (__FPU_USED == 1)
   SCB->CPACR |=
       ((3UL << 10 * 2) | (3UL << 11 * 2)); /* set CP10 and CP11 Full Access */
 #endif
-  /* Reset the RCC clock configuration to the default reset state ------------*/
   /* Set HSION bit */
   RCC->CR |= (uint32_t) 0x00000001;
 
@@ -48,32 +49,9 @@ void SystemInit(void) {
   /* Disable all interrupts */
   RCC->CIR = 0x00000000;
 
-/* Configure the Vector Table location add offset address ------------------*/
-#ifdef VECT_TAB_SRAM
-  SCB->VTOR = RAMDTCM_BASE |
-              VECT_TAB_OFFSET; /* Vector Table Relocation in Internal SRAM */
-#else
-  SCB->VTOR = FLASH_BASE |
-              VECT_TAB_OFFSET; /* Vector Table Relocation in Internal FLASH */
-#endif
-
   __HAL_FLASH_PREFETCH_BUFFER_ENABLE();
   SCB_EnableICache();
   SCB_EnableDCache();
-
-  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
-  HAL_NVIC_SetPriority(MemoryManagement_IRQn, 0, 0);
-  HAL_NVIC_SetPriority(BusFault_IRQn, 0, 0);
-  HAL_NVIC_SetPriority(UsageFault_IRQn, 0, 0);
-  HAL_NVIC_SetPriority(DebugMonitor_IRQn, 0, 0);
-
-  __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
-  __HAL_RCC_GPIOC_CLK_ENABLE();
-  __HAL_RCC_GPIOD_CLK_ENABLE();
-  __HAL_RCC_GPIOE_CLK_ENABLE();
-  __HAL_RCC_GPIOH_CLK_ENABLE();
-  __HAL_RCC_GPIOG_CLK_ENABLE();
 }
 
 void stm32_clock_config(void) {

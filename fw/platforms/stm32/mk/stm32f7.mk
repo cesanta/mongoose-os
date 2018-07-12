@@ -35,4 +35,4 @@ stm32f7xx_ll_i2c.c stm32f7xx_ll_lptim.c stm32f7xx_ll_pwr.c stm32f7xx_ll_rcc.c \
 stm32f7xx_ll_rng.c stm32f7xx_ll_rtc.c stm32f7xx_ll_sdmmc.c stm32f7xx_ll_spi.c \
 stm32f7xx_ll_tim.c stm32f7xx_ll_usart.c stm32f7xx_ll_usb.c stm32f7xx_ll_utils.c
 
-MGOS_SRCS += stm32f7_startup.S stm32f7_system.c arm_nsleep100_m7.S
+MGOS_SRCS += stm32f7_system.c arm_nsleep100_m7.S

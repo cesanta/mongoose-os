@@ -25,11 +25,13 @@
 #include "common/cs_rbuf.h"
 
 #include "mgos_debug.h"
+#include "mgos_gpio.h"
 #include "mgos_uart_hal.h"
 #include "mgos_utils.h"
 
-#include <stm32_sdk_hal.h>
+#include "stm32_sdk_hal.h"
 #include "stm32_gpio.h"
+#include "stm32_system.h"
 
 struct stm32_uart_state {
   volatile USART_TypeDef *regs;
@@ -42,6 +44,10 @@ static struct mgos_uart_state *s_us[MGOS_MAX_NUM_UARTS];
 extern struct stm32_uart_def const s_uart_defs[MGOS_MAX_NUM_UARTS];
 
 static inline uint8_t stm32_uart_rx_byte(struct stm32_uart_state *uds);
+
+#ifdef MGOS_NO_MAIN
+#define stm32_set_int_handler(irqn, handler)
+#endif
 
 #if defined(STM32F4)
 #define ISR SR
@@ -72,6 +78,13 @@ static inline void stm32_uart_clear_ovf_int(struct stm32_uart_state *uds) {
 #define UART_ISR_BUF_DISP_THRESH 16
 #define UART_ISR_BUF_XOFF_THRESH 8
 #define USART_ERROR_INTS (USART_ICR_ORECF | USART_ICR_FECF | USART_ICR_PECF);
+
+void stm32_uart_putc(int uart_no, char c) {
+  volatile USART_TypeDef *regs = s_uart_defs[uart_no].regs;
+  while (!(regs->ISR & USART_ISR_TXE)) {
+  }
+  regs->TDR = c;
+}
 
 static inline uint8_t stm32_uart_rx_byte(struct stm32_uart_state *uds) {
   return uds->regs->RDR;
@@ -158,29 +171,29 @@ static void stm32_uart_isr(struct mgos_uart_state *us) {
   }
 }
 
-void USART1_IRQHandler(void) {
+void stm32_uart1_int_handler(void) {
   stm32_uart_isr(s_us[1]);
 }
-void USART2_IRQHandler(void) {
+void stm32_uart2_int_handler(void) {
   stm32_uart_isr(s_us[2]);
 }
-void USART3_IRQHandler(void) {
+void stm32_uart3_int_handler(void) {
   stm32_uart_isr(s_us[3]);
 }
-void UART4_IRQHandler(void) {
+void stm32_uart4_int_handler(void) {
   stm32_uart_isr(s_us[4]);
 }
-void UART5_IRQHandler(void) {
+void stm32_uart5_int_handler(void) {
   stm32_uart_isr(s_us[5]);
 }
-void USART6_IRQHandler(void) {
+void stm32_uart6_int_handler(void) {
   stm32_uart_isr(s_us[6]);
 }
 #if defined(STM32F7)
-void UART7_IRQHandler(void) {
+void stm32_uart7_int_handler(void) {
   stm32_uart_isr(s_us[7]);
 }
-void UART8_IRQHandler(void) {
+void stm32_uart8_int_handler(void) {
   stm32_uart_isr(s_us[8]);
 }
 #endif
@@ -264,65 +277,63 @@ void mgos_uart_hal_config_set_defaults(int uart_no,
 }
 
 bool stm32_uart_setup_pins(int uart_no, const struct mgos_uart_config *cfg) {
-  GPIO_InitTypeDef gs = {.Mode = GPIO_MODE_AF_PP,
-                         .Pull = GPIO_PULLUP,
-                         .Speed = GPIO_SPEED_FREQ_VERY_HIGH};
+  mgos_gpio_set_mode(cfg->dev.pins.tx, MGOS_GPIO_MODE_OUTPUT);
 
-  gs.Pin = STM32_PIN_MASK(cfg->dev.pins.tx);
-  gs.Alternate = STM32_PIN_AF(cfg->dev.pins.tx);
-  HAL_GPIO_Init(stm32_gpio_port_base(cfg->dev.pins.tx), &gs);
-
-  gs.Pin = STM32_PIN_MASK(cfg->dev.pins.rx);
-  gs.Alternate = STM32_PIN_AF(cfg->dev.pins.rx);
-  HAL_GPIO_Init(stm32_gpio_port_base(cfg->dev.pins.rx), &gs);
+  mgos_gpio_set_mode(cfg->dev.pins.rx, MGOS_GPIO_MODE_INPUT);
+  mgos_gpio_set_pull(cfg->dev.pins.rx, MGOS_GPIO_PULL_UP);
 
   if (cfg->tx_fc_type == MGOS_UART_FC_HW) {
-    gs.Pin = STM32_PIN_MASK(cfg->dev.pins.cts);
-    gs.Alternate = STM32_PIN_AF(cfg->dev.pins.cts);
-    HAL_GPIO_Init(stm32_gpio_port_base(cfg->dev.pins.cts), &gs);
+    mgos_gpio_set_mode(cfg->dev.pins.cts, MGOS_GPIO_MODE_INPUT);
+    mgos_gpio_set_pull(cfg->dev.pins.cts, MGOS_GPIO_PULL_UP);
   }
 
   if (cfg->rx_fc_type == MGOS_UART_FC_HW) {
-    gs.Pin = STM32_PIN_MASK(cfg->dev.pins.rts);
-    gs.Alternate = STM32_PIN_AF(cfg->dev.pins.rts);
-    HAL_GPIO_Init(stm32_gpio_port_base(cfg->dev.pins.rts), &gs);
+    mgos_gpio_set_mode(cfg->dev.pins.rts, MGOS_GPIO_MODE_OUTPUT);
   }
 
   int irqn = 0;
   switch (uart_no) {
     case 1:
       __HAL_RCC_USART1_CLK_ENABLE();
+      stm32_set_int_handler(USART1_IRQn, stm32_uart1_int_handler);
       irqn = USART1_IRQn;
       break;
     case 2:
       __HAL_RCC_USART2_CLK_ENABLE();
+      stm32_set_int_handler(USART2_IRQn, stm32_uart2_int_handler);
       irqn = USART2_IRQn;
       break;
     case 3:
       __HAL_RCC_USART3_CLK_ENABLE();
+      stm32_set_int_handler(USART3_IRQn, stm32_uart3_int_handler);
       irqn = USART3_IRQn;
       break;
 #if defined(STM32F7)
     case 4:
       __HAL_RCC_UART4_CLK_ENABLE();
+      stm32_set_int_handler(UART4_IRQn, stm32_uart4_int_handler);
       irqn = UART4_IRQn;
       break;
     case 5:
       __HAL_RCC_UART5_CLK_ENABLE();
+      stm32_set_int_handler(UART5_IRQn, stm32_uart5_int_handler);
       irqn = UART5_IRQn;
       break;
 #endif
     case 6:
       __HAL_RCC_USART6_CLK_ENABLE();
+      stm32_set_int_handler(USART6_IRQn, stm32_uart6_int_handler);
       irqn = USART6_IRQn;
       break;
 #if defined(STM32F7)
     case 7:
       __HAL_RCC_UART7_CLK_ENABLE();
+      stm32_set_int_handler(UART7_IRQn, stm32_uart7_int_handler);
       irqn = UART7_IRQn;
       break;
     case 8:
       __HAL_RCC_UART8_CLK_ENABLE();
+      stm32_set_int_handler(UART8_IRQn, stm32_uart8_int_handler);
       irqn = UART8_IRQn;
       break;
 #endif
@@ -334,14 +345,13 @@ bool stm32_uart_setup_pins(int uart_no, const struct mgos_uart_config *cfg) {
   return true;
 }
 
-bool mgos_uart_hal_configure(struct mgos_uart_state *us,
-                             const struct mgos_uart_config *cfg) {
-  struct stm32_uart_state *uds = (struct stm32_uart_state *) us->dev_data;
+bool stm32_uart_configure(int uart_no, const struct mgos_uart_config *cfg) {
+  volatile USART_TypeDef *regs = s_uart_defs[uart_no].regs;
 
-  if (!stm32_uart_setup_pins(us->uart_no, cfg)) return false;
+  if (!stm32_uart_setup_pins(uart_no, cfg)) return false;
 
   /* Disable for reconfig */
-  CLEAR_BIT(uds->regs->CR1, USART_CR1_UE);
+  CLEAR_BIT(regs->CR1, USART_CR1_UE);
 
   uint32_t cr1 = USART_CR1_TE; /* Start with TX enabled */
   uint32_t cr2 = 0;
@@ -398,14 +408,14 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
     uint32_t div = 0;
 #if defined(STM32F4)
     uint32_t f_uart;
-    if (us->uart_no == 1 || us->uart_no == 6) {
+    if (uart_no == 1 || uart_no == 6) {
       f_uart = HAL_RCC_GetPCLK2Freq();
     } else {
       f_uart = HAL_RCC_GetPCLK1Freq();
     }
     div = (uint32_t) roundf((float) f_uart / cfg->baud_rate);
 #elif defined(STM32F7)
-    UART_HandleTypeDef huart = {.Instance = (USART_TypeDef *) uds->regs};
+    UART_HandleTypeDef huart = {.Instance = (USART_TypeDef *) regs};
     UART_ClockSourceTypeDef cs = UART_CLOCKSOURCE_UNDEFINED;
     UART_GETCLOCKSOURCE(&huart, cs);
     switch (cs) {
@@ -431,17 +441,26 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
     if ((div & 0xffff0000) != 0) return false;
     brr = div;
   }
-  uds->regs->CR1 = cr1;
-  uds->regs->CR2 = cr2;
-  uds->regs->CR3 = cr3;
-  uds->regs->BRR = brr;
+  regs->CR1 = cr1;
+  regs->CR2 = cr2;
+  regs->CR3 = cr3;
+  regs->BRR = brr;
 #if defined(STM32F7)
-  uds->regs->RTOR = 8; /* 8 idle bit intervals before RX timeout. */
-  uds->regs->ICR = USART_ERROR_INTS;
+  regs->RTOR = 8; /* 8 idle bit intervals before RX timeout. */
+  regs->ICR = USART_ERROR_INTS;
 #endif
-  s_us[us->uart_no] = us;
-  SET_BIT(uds->regs->CR1, USART_CR1_UE);
+  SET_BIT(regs->CR1, USART_CR1_UE);
   return true;
+}
+
+bool mgos_uart_hal_configure(struct mgos_uart_state *us,
+                             const struct mgos_uart_config *cfg) {
+  s_us[us->uart_no] = us;
+  bool res = stm32_uart_configure(us->uart_no, cfg);
+  if (!res) {
+    s_us[us->uart_no] = NULL;
+  }
+  return res;
 }
 
 bool mgos_uart_hal_init(struct mgos_uart_state *us) {

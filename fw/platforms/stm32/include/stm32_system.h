@@ -21,7 +21,9 @@
 extern "C" {
 #endif
 
+void stm32_system_init(void);
 void stm32_flush_caches(void);
+void stm32_set_int_handler(int irqn, void (*handler)(void));
 
 #ifdef __cplusplus
 }

@@ -15,31 +15,19 @@
  * limitations under the License.
  */
 
-#include <stdio.h>
-
-#include <stm32_sdk_hal.h>
-
 #include "FreeRTOS.h"
 #include "queue.h"
 #include "task.h"
 
-#include "lwip/tcpip.h"
-
 #include "common/cs_dbg.h"
 
-#include "mgos_app.h"
-#include "mgos_hal_freertos_internal.h"
-#include "mgos_init_internal.h"
-#include "mgos_debug.h"
-#include "mgos_debug_internal.h"
-#include "mgos_gpio.h"
-#include "mgos_mongoose_internal.h"
-#include "mgos_sys_config.h"
-#include "mgos_system.h"
-#include "mgos_uart_internal.h"
+#include "lwip/tcpip.h"
 
-#include "stm32_hal.h"
-#include "stm32_uart.h"
+#include "mgos_hal_freertos_internal.h"
+#include "mgos_system.h"
+
+#include "stm32_sdk_hal.h"
+#include "stm32_system.h"
 
 HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority) {
   /* Override the HAL function but do nothing, FreeRTOS will take care of it. */
@@ -117,17 +105,51 @@ void SystemCoreClockUpdate(void) {
   mgos_nsleep100_cal();
 }
 
+#ifndef MGOS_NO_MAIN
+void (*stm32_int_vectors[256])(void)
+    __attribute__((section(".ram_int_vectors")));
+extern const void *stm32_flash_int_vectors[2];
+
+extern void arm_exc_handler_top(void);
+extern void stm32_system_init(void);
 extern void stm32_clock_config(void);
+extern void __libc_init_array(void);
+extern void SVC_Handler(void);
+extern void PendSV_Handler(void);
+extern void SysTick_Handler(void);
 
-int main() {
+void stm32_set_int_handler(int irqn, void (*handler)(void)) {
+  stm32_int_vectors[irqn + 16] = handler;
+}
+
+int main(void) {
+  /* Move int vectors to RAM. */
+  for (int i = 0; i < ARRAY_SIZE(stm32_int_vectors); i++) {
+    stm32_int_vectors[i] = arm_exc_handler_top;
+  }
+  memcpy(stm32_int_vectors, stm32_flash_int_vectors,
+         sizeof(stm32_flash_int_vectors));
+  stm32_set_int_handler(SVCall_IRQn, SVC_Handler);
+  stm32_set_int_handler(PendSV_IRQn, PendSV_Handler);
+  stm32_set_int_handler(SysTick_IRQn, SysTick_Handler);
+  SCB->VTOR = (uint32_t) &stm32_int_vectors[0];
+
+  stm32_system_init();
+  __libc_init_array();
   stm32_clock_config();
-
   SystemCoreClockUpdate();
+
+  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
+  HAL_NVIC_SetPriority(MemoryManagement_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(BusFault_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(UsageFault_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(DebugMonitor_IRQn, 0, 0);
 
   mgos_hal_freertos_run_mgos_task(true /* start_scheduler */);
   /* not reached */
   abort();
 }
+#endif
 
 void assert_failed(uint8_t *file, uint32_t line) {
   fprintf(stderr, "assert_failed @ %s:%d\r\n", file, (int) line);

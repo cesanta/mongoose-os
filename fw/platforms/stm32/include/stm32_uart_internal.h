@@ -18,7 +18,7 @@
 #ifndef CS_FW_PLATFORMS_STM32_INCLUDE_STM32_UART_INTERNAL_H_
 #define CS_FW_PLATFORMS_STM32_INCLUDE_STM32_UART_INTERNAL_H_
 
-#include "stm32_uart.h"
+#include "mgos_uart.h"
 
 #include "stm32_sdk_hal.h"
 
@@ -30,6 +30,9 @@ struct stm32_uart_def {
   USART_TypeDef *regs;
   struct stm32_uart_pins default_pins;
 };
+
+bool stm32_uart_configure(int uart_no, const struct mgos_uart_config *cfg);
+void stm32_uart_putc(int uart_no, char c);
 
 void stm32_uart_dputc(int c);
 void stm32_uart_dprintf(const char *fmt, ...)

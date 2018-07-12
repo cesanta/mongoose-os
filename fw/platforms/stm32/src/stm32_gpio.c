@@ -23,7 +23,7 @@
 
 #include <stm32_sdk_hal.h>
 
-GPIO_TypeDef *stm32_gpio_port_base(int pin_def) {
+IRAM GPIO_TypeDef *stm32_gpio_port_base(int pin_def) {
   switch (STM32_PIN_PORT(pin_def)) {
     case 'A':
       return GPIOA;
@@ -51,6 +51,48 @@ GPIO_TypeDef *stm32_gpio_port_base(int pin_def) {
 #endif
   }
   return NULL;
+}
+
+static void stm32_gpio_port_en(int pin_def) {
+  uint32_t bit = 0;
+  switch (STM32_PIN_PORT(pin_def)) {
+    case 'A':
+      bit = RCC_AHB1ENR_GPIOAEN;
+      break;
+    case 'B':
+      bit = RCC_AHB1ENR_GPIOBEN;
+      break;
+    case 'C':
+      bit = RCC_AHB1ENR_GPIOCEN;
+      break;
+    case 'D':
+      bit = RCC_AHB1ENR_GPIODEN;
+      break;
+    case 'E':
+      bit = RCC_AHB1ENR_GPIOEEN;
+      break;
+    case 'F':
+      bit = RCC_AHB1ENR_GPIOFEN;
+      break;
+    case 'G':
+      bit = RCC_AHB1ENR_GPIOGEN;
+      break;
+    case 'H':
+      bit = RCC_AHB1ENR_GPIOHEN;
+      break;
+#ifdef STM32F7
+    case 'I':
+      bit = RCC_AHB1ENR_GPIOIEN;
+      break;
+    case 'J':
+      bit = RCC_AHB1ENR_GPIOJEN;
+      break;
+    case 'K':
+      bit = RCC_AHB1ENR_GPIOKEN;
+      break;
+#endif
+  }
+  SET_BIT(RCC->AHB1ENR, bit);
 }
 
 const char *mgos_gpio_str(int pin_def, char buf[8]) {
@@ -81,19 +123,19 @@ const char *mgos_gpio_str(int pin_def, char buf[8]) {
   return buf;
 }
 
-bool mgos_gpio_read(int pin) {
+IRAM bool mgos_gpio_read(int pin) {
   GPIO_TypeDef *regs = stm32_gpio_port_base(pin);
   if (regs == NULL) return false;
   return (regs->IDR & STM32_PIN_MASK(pin)) != 0;
 }
 
-bool mgos_gpio_read_out(int pin) {
+IRAM bool mgos_gpio_read_out(int pin) {
   GPIO_TypeDef *regs = stm32_gpio_port_base(pin);
   if (regs == NULL) return false;
   return (regs->ODR & STM32_PIN_MASK(pin)) != 0;
 }
 
-void mgos_gpio_write(int pin, bool level) {
+IRAM void mgos_gpio_write(int pin, bool level) {
   GPIO_TypeDef *regs = stm32_gpio_port_base(pin);
   if (regs == NULL) return;
   uint32_t val = STM32_PIN_MASK(pin);
@@ -104,23 +146,25 @@ void mgos_gpio_write(int pin, bool level) {
 bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
   GPIO_TypeDef *regs = stm32_gpio_port_base(pin);
   if (regs == NULL) return false;
+  int af = STM32_PIN_AF(pin);
   GPIO_InitTypeDef gs = {
       .Pin = STM32_PIN_MASK(pin),
       .Speed = GPIO_SPEED_FREQ_VERY_HIGH,
-      .Alternate = 0,
+      .Alternate = af,
   };
   switch (mode) {
     case MGOS_GPIO_MODE_INPUT:
-      gs.Mode = GPIO_MODE_INPUT;
+      gs.Mode = (af > 0 ? GPIO_MODE_AF_PP : GPIO_MODE_INPUT);
       break;
     case MGOS_GPIO_MODE_OUTPUT:
-      gs.Mode = GPIO_MODE_OUTPUT_PP;
+      gs.Mode = (af > 0 ? GPIO_MODE_AF_PP : GPIO_MODE_OUTPUT_PP);
       break;
     case MGOS_GPIO_MODE_OUTPUT_OD: {
-      gs.Mode = GPIO_MODE_OUTPUT_OD;
+      gs.Mode = (af > 0 ? GPIO_MODE_AF_OD : GPIO_MODE_OUTPUT_OD);
       break;
     }
   }
+  stm32_gpio_port_en(pin);
   HAL_GPIO_Init(regs, &gs);
   return true;
 }

@@ -16,6 +16,7 @@
  */
 
 #include "stm32_sdk_hal.h"
+#include "stm32_system.h"
 
 #include <stm32f4xx_ll_rcc.h>
 
@@ -25,8 +26,7 @@ const uint8_t AHBPrescTable[16] = {0, 0, 0, 0, 0, 0, 0, 0,
 const uint8_t APBPrescTable[8] = {0, 0, 0, 0, 1, 2, 3, 4};
 #define VECT_TAB_OFFSET 0x0
 
-void SystemInit(void) {
-/* FPU settings ------------------------------------------------------------*/
+void stm32_system_init(void) {
 #if (__FPU_PRESENT == 1) && (__FPU_USED == 1)
   SCB->CPACR |=
       ((3UL << 10 * 2) | (3UL << 11 * 2)); /* set CP10 and CP11 Full Access */
@@ -50,37 +50,9 @@ void SystemInit(void) {
   /* Disable all interrupts */
   RCC->CIR = 0x00000000;
 
-#if defined(DATA_IN_ExtSDRAM)
-  SystemInit_ExtMemCtl();
-#endif /* DATA_IN_ExtSDRAM */
-
-/* Configure the Vector Table location add offset address ------------------*/
-#ifdef VECT_TAB_SRAM
-  SCB->VTOR = SRAM_BASE |
-              VECT_TAB_OFFSET; /* Vector Table Relocation in Internal SRAM */
-#else
-  SCB->VTOR = FLASH_BASE |
-              VECT_TAB_OFFSET; /* Vector Table Relocation in Internal FLASH */
-#endif
-
   __HAL_FLASH_INSTRUCTION_CACHE_ENABLE();
   __HAL_FLASH_DATA_CACHE_ENABLE();
   __HAL_FLASH_PREFETCH_BUFFER_ENABLE();
-
-  HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
-  HAL_NVIC_SetPriority(MemoryManagement_IRQn, 0, 0);
-  HAL_NVIC_SetPriority(BusFault_IRQn, 0, 0);
-  HAL_NVIC_SetPriority(UsageFault_IRQn, 0, 0);
-  HAL_NVIC_SetPriority(DebugMonitor_IRQn, 0, 0);
-
-  __HAL_RCC_GPIOA_CLK_ENABLE();
-  __HAL_RCC_GPIOB_CLK_ENABLE();
-  __HAL_RCC_GPIOC_CLK_ENABLE();
-  __HAL_RCC_GPIOD_CLK_ENABLE();
-  __HAL_RCC_GPIOE_CLK_ENABLE();
-  __HAL_RCC_GPIOF_CLK_ENABLE();
-  __HAL_RCC_GPIOG_CLK_ENABLE();
-  __HAL_RCC_GPIOH_CLK_ENABLE();
 }
 
 void stm32_clock_config(void) {

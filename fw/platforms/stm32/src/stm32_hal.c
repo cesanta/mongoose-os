@@ -79,9 +79,13 @@ static void __attribute__((naked)) delay_cycles(unsigned long ulCount) {
 }
 
 void mgos_usleep(uint32_t usecs) {
+#ifndef MGOS_NO_MAIN
   int ticks = usecs / (1000000 / configTICK_RATE_HZ);
   int remainder = usecs % (1000000 / configTICK_RATE_HZ);
   if (ticks > 0) vTaskDelay(ticks);
+#else
+  uint32_t remainder = usecs;
+#endif
   if (remainder > 0) delay_cycles(remainder * (SystemCoreClock / 1000000));
 }
 

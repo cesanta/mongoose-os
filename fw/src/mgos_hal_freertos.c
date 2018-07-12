@@ -253,6 +253,7 @@ void mgos_hal_freertos_run_mgos_task(bool start_scheduler) {
   }
 }
 
+#ifndef MGOS_NO_MAIN
 IRAM void mgos_ints_disable(void) {
   ENTER_CRITICAL();
 }
@@ -284,3 +285,4 @@ IRAM void mgos_runlock(struct mgos_rlock_type *l) {
 IRAM void mgos_rlock_destroy(struct mgos_rlock_type *l) {
   vSemaphoreDelete((SemaphoreHandle_t) l);
 }
+#endif /* MGOS_NO_MAIN */

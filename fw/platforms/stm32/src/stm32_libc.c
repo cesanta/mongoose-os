@@ -69,14 +69,23 @@ int settimeofday(const struct timeval *tv, const struct timezone *tz) {
 }
 
 void abort(void) {
+#if CS_ENABLE_STDIO
   fflush(stdout);
   fflush(stderr);
   mgos_debug_flush();
   void *sp;
   __asm volatile("mov %0, sp" : "=r"(sp) : :);
   stm32_uart_dprintf("\nabort() called, sp = %p\n", sp);
+#endif
   __builtin_trap();  // Executes an illegal instruction.
 }
+
+#ifdef MGOS_NO_MAIN
+#undef portENTER_CRITICAL
+#define portENTER_CRITICAL()
+#undef portEXIT_CRITICAL
+#define portEXIT_CRITICAL()
+#endif
 
 #if __NEWLIB__ >= 3
 void __malloc_lock(struct _reent *r) {

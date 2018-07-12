@@ -10,26 +10,27 @@ _stack = SRAM_BASE_ADDR + SRAM_SIZE;
 _stack_size = 0x400;
 
 MEMORY {
-  FLASH_S0 (rx)  : ORIGIN = FLASH_BASE_ADDR, LENGTH = FLASH_S0_SIZE
-  FLASH_FS (r)   : ORIGIN = FLASH_BASE_ADDR + FLASH_S0_SIZE, LENGTH = FLASH_FS_SIZE
-  FLASH_CS (rx)  : ORIGIN = FLASH_BASE_ADDR + FLASH_S0_SIZE + FLASH_FS_SIZE,
-                   LENGTH = FLASH_SIZE - (FLASH_FS_SIZE + FLASH_S0_SIZE)
+  FLASH_BL  (rx)  : ORIGIN = FLASH_BASE_ADDR, LENGTH = FLASH_BL_SIZE
+  FLASH_BLC (rx)  : ORIGIN = FLASH_BASE_ADDR + FLASH_BL_SIZE, LENGTH = FLASH_S0_SIZE
+  FLASH_FS (r)   : ORIGIN = FLASH_BASE_ADDR + FLASH_BL_SIZE + FLASH_BLC_SIZE, LENGTH = FLASH_FS_SIZE
+  FLASH_CS (rx)  : ORIGIN = FLASH_BASE_ADDR + FLASH_BL_SIZE + FLASH_BLC_SIZE + FLASH_FS_SIZE,
+                   LENGTH = FLASH_SIZE - (FLASH_BL_SIZE + FLASH_BLC_SIZE + FLASH_FS_SIZE)
   SRAM     (rwx) : ORIGIN = SRAM_BASE_ADDR,  LENGTH = SRAM_SIZE
 }
 
 /* Define output sections */
 SECTIONS {
-  .flash_int_vectors : {
-    . = ALIGN(256);  /* Vectors must be aligned to 0x100 */
-    KEEP(*(.flash_int_vectors))
-  } > FLASH_S0
+  .bool_loader : {
+    KEEP(*(.bl_bin))
+  } > FLASH_BL
 
   .fs_img : {
     KEEP(*(.fs_img))
   } > FLASH_FS
 
   .text : {
-    . = ALIGN(4);
+    . = ALIGN(256);  /* Vectors must be aligned to 0x100 */
+    KEEP(*(.flash_int_vectors))
     *(.text SORT(.text.*))
     *(.eh_frame)
     KEEP (*(.init))

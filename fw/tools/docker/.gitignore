@@ -7,6 +7,7 @@ ti-cgt-arm_*/
 
 en.stm32cubef*.zip
 fw_meta.py
+mklfs
 mkspiffs
 mkspiffs8
 ota_*.ucf*

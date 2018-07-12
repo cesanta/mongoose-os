@@ -24,6 +24,8 @@ APP_FS_FILES ?=
 APP_BIN_LIBS ?=
 # Extra parts to include in firmware
 APP_EXTRA_FW_PARTS ?=
+# Bootloader path
+BL_BIN ?=
 
 BUILD_LIB_NAME ?= lib.a
 
@@ -84,10 +86,11 @@ override FW_STAGING_DIR := $(abspath $(FW_STAGING_DIR))
 override FW_DIR := $(abspath $(FW_DIR))
 override GEN_DIR := $(abspath $(GEN_DIR))
 override BUILD_DIR := $(abspath $(BUILD_DIR))
+override BL_BIN := $(abspath $(BL_BIN))
 
 # Platform support files
 MGOS_SRCS += arm_exc.c arm_nsleep100.c \
-             stm32_exc.c stm32_gpio.c \
+             stm32_entry.c stm32_exc.c stm32_gpio.c \
              stm32_hal.c stm32_hw_timers.c \
              stm32_libc.c \
              stm32_main.c stm32_uart.c
@@ -97,10 +100,19 @@ APP_BIN = $(BUILD_DIR)/$(APP).bin
 FLASH_SIZE ?= 0
 SRAM_BASE_ADDR ?= 0x20000000
 FLASH_BASE_ADDR ?= 0x8000000
+
+ifneq "$(BL_BIN)" ""
+FLASH_FS_OFFSET = $(shell echo $$(($(FLASH_BL_SIZE) + $(FLASH_BLC_SIZE))))
+LD_SCRIPT ?= $(MGOS_PLATFORM_PATH)/ld/stm32_ota_0.ld
+else
 FLASH_FS_OFFSET = $(FLASH_S0_SIZE)
+LD_SCRIPT ?= $(MGOS_PLATFORM_PATH)/ld/stm32_no_ota.ld
+endif
+FLASH_BL_SIZE ?= $(FLASH_S0_SIZE)
+FLASH_BLC_SIZE ?= $(FLASH_S0_SIZE)
 MGOS_ROOT_DEVTAB ?= fs0 stm32flash {"offset": $(FLASH_FS_OFFSET), "size": $(MGOS_ROOT_FS_SIZE)}
 MGOS_ROOT_FS_TYPE ?= SPIFFS
-MGOS_ROOT_FS_SIZE ?= $(shell echo $$(($(FLASH_S0_SIZE) * 3)))
+MGOS_ROOT_FS_SIZE ?= $(shell echo $$(($(FLASH_S0_SIZE) * 4 - $(FLASH_FS_OFFSET))))
 MGOS_ROOT_FS_ON_SYS_FLASH ?= 1
 # When FS is not on sys flash, we definitely need to extract.
 MGOS_ROOT_FS_EXTRACT ?= 1-$(MGOS_ROOT_FS_ON_SYS_FLASH)
@@ -119,6 +131,8 @@ FS_STAGING_DIR = $(BUILD_DIR)/fs
 
 FS_IMG = $(FW_STAGING_DIR)/fs.bin
 FS_ZIP = $(FW_STAGING_DIR)/fs.zip
+
+BL_BIN_C = $(GEN_DIR)/bl_bin.c
 FS_IMG_C = $(GEN_DIR)/fs_img.c
 FS_ZIP_C = $(GEN_DIR)/fs_zip.c
 ifeq "$(MGOS_ROOT_FS_ON_SYS_FLASH)" "1"
@@ -160,7 +174,6 @@ SDK_IPATH += $(STM32CUBE_PATH) \
              $(FREERTOS_PATH)/Source/include \
              $(FREERTOS_PATH)/Source/CMSIS_RTOS \
              $(FREERTOS_PATH)/Source/portable/GCC/ARM_CM7/r0p1
-LD_SCRIPT_NO_OTA = $(MGOS_PLATFORM_PATH)/ld/stm32_no_ota.ld
 
 MGOS_SRCS += $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
              mgos_config_util.c mgos_core_dump.c mgos_event.c mgos_gpio.c \
@@ -202,7 +215,6 @@ CFLAGS ?= -std=gnu99 -Os -ggdb -MD -Wall -Werror -pipe \
           -DMGOS_VFS_DEFINE_LIBC_REENT_API \
           -DMGOS_VFS_DEFINE_LIBC_DIR_API \
           -DMGOS_VFS_DEFINE_DIRENT \
-          -DCS_ENABLE_STDIO \
           -DMBEDTLS_CONFIG_FILE=\"mbedtls/config.h\" \
           ${MG_FEATURES_TINY} -DMG_ENABLE_DIRECTORY_LISTING
 
@@ -232,6 +244,8 @@ CFLAGS  += -DSRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -DSRAM_SIZE=$(SRAM_SIZE) \
 LDFLAGS += -Wl,--defsym=SRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -Wl,--defsym=SRAM_SIZE=$(SRAM_SIZE) \
            -Wl,--defsym=FLASH_BASE_ADDR=$(FLASH_BASE_ADDR) -Wl,--defsym=FLASH_SIZE=$(FLASH_SIZE) \
            -Wl,--defsym=FLASH_S0_SIZE=$(FLASH_S0_SIZE) \
+           -Wl,--defsym=FLASH_BL_SIZE=$(FLASH_BL_SIZE) \
+           -Wl,--defsym=FLASH_BLC_SIZE=$(FLASH_BLC_SIZE) \
            -Wl,--defsym=FLASH_FS_SIZE=$(FLASH_FS_SIZE) \
            -Wl,--defsym=NOCACHE_SIZE=0x400
 
@@ -246,6 +260,7 @@ FW_PARTS = app:type=app,src=$(APP_BIN),addr=$(FLASH_BASE_ADDR) \
 MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o))
 SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(SDK_SRCS:=.o))
 APP_OBJS = $(addprefix $(BUILD_DIR)/,$(APP_SRCS:=.o))
+BL_BIN_O = $(addprefix $(BUILD_DIR)/,$(notdir $(BL_BIN_C:=.o)))
 FS_IMG_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FS_IMG_C:=.o)))
 FS_ZIP_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FS_ZIP_C:=.o)))
 FFI_EXPORTS_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FFI_EXPORTS_C:=.o)))
@@ -286,12 +301,15 @@ ifeq "$(MGOS_ROOT_FS_ON_SYS_FLASH)" "1"
 else
   BIN_PARTS += $(FS_ZIP_O)
 endif
+ifneq "$(BL_BIN)" ""
+  BIN_PARTS += $(BL_BIN_O)
+endif
 
-$(APP_ELF): $(BIN_PARTS) $(LD_SCRIPT_NO_OTA)
-	$(vecho) "LD    $@"
+$(APP_ELF): $(BIN_PARTS) $(LD_SCRIPT)
+	$(vecho) "LD    $@ (BL=$(notdir $(BL_BIN)) LDS=$(notdir $(LD_SCRIPT)))"
 	$(Q) $(CC) $(CFLAGS) $(LDFLAGS) \
 	  -Wl,-Map=$@.map -Wl,--start-group $(BIN_PARTS) -lc -lgcc -lnosys -Wl,--end-group \
-	  -T$(LD_SCRIPT_NO_OTA) -o $@
+	  -T$(LD_SCRIPT) -o $@
 
 $(APP_BIN): $(APP_ELF)
 	$(vecho) "BIN   $@"
@@ -331,6 +349,10 @@ $(FS_ZIP_C): $(FS_ZIP)
 $(FS_IMG_C): $(FS_IMG)
 	$(vecho) "GEN   $@"
 	$(Q) $(FW_META_CMD) xxd --var_name fs_img --const --section .fs_img $(FS_IMG) > $@
+
+$(BL_BIN_C): $(BL_BIN)
+	$(vecho) "GEN   $@"
+	$(Q) $(FW_META_CMD) xxd --var_name bl_bin --const --section .bl_bin $(BL_BIN) > $@
 
 $(FFI_EXPORTS_C): $(FS_FILES)
 	$(call gen_ffi_exports,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))
