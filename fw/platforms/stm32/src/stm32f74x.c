@@ -28,7 +28,11 @@ struct stm32_uart_def const
           .default_pins =
               {
                .tx = STM32_PIN_DEF('A', 9, 7),
+#ifdef BSP_DISCO_F746NG
+               .rx = STM32_PIN_DEF('B', 7, 7),
+#else
                .rx = STM32_PIN_DEF('A', 10, 7),
+#endif
                .ck = STM32_PIN_DEF('A', 8, 7),
                .cts = STM32_PIN_DEF('A', 11, 7),
                .rts = STM32_PIN_DEF('A', 12, 7),

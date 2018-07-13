@@ -1,5 +1,0 @@
-[
-  ["rpc.uart.uart_no", 3],
-  ["debug.stdout_uart", 3],
-  ["debug.stderr_uart", 3],
-]

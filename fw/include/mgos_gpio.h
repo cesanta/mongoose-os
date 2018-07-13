@@ -137,6 +137,10 @@ bool mgos_gpio_set_button_handler(int pin, enum mgos_gpio_pull_type pull_type,
                                   int debounce_ms, mgos_gpio_int_handler_f cb,
                                   void *arg);
 
+/* String representation of pin number.
+ * Will return "PA5" or "PK3" for platforms that have port banks. */
+const char *mgos_gpio_str(int pin_def, char buf[8]);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

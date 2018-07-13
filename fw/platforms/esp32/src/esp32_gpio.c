@@ -196,6 +196,20 @@ IRAM bool mgos_gpio_disable_int(int pin) {
   return true;
 }
 
+const char *mgos_gpio_str(int pin_def, char buf[8]) {
+  int i = 0;
+  if (pin_def >= 0) {
+    if (pin_def < 10) {
+      buf[i++] = '0' + pin_def;
+    } else {
+      buf[i++] = '0' + (pin_def / 10);
+      buf[i++] = '0' + (pin_def % 10);
+    }
+  }
+  buf[i++] = '\0';
+  return buf;
+}
+
 void esp32_nsleep100_80(uint32_t n);
 void esp32_nsleep100_160(uint32_t n);
 void esp32_nsleep100_240(uint32_t n);

@@ -270,6 +270,20 @@ IRAM bool mgos_gpio_disable_int(int pin) {
   return true;
 }
 
+const char *mgos_gpio_str(int pin_def, char buf[8]) {
+  int i = 0;
+  if (pin_def >= 0) {
+    if (pin_def < 10) {
+      buf[i++] = '0' + pin_def;
+    } else {
+      buf[i++] = '1';
+      buf[i++] = '0' + (pin_def - 10);
+    }
+  }
+  buf[i++] = '\0';
+  return buf;
+}
+
 /* From gpio_register.h */
 #define PERIPHS_GPIO_BASEADDR 0x60000300
 #define GPIO_IN_ADDRESS 0x18

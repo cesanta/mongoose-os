@@ -1,0 +1,7 @@
+DEVICE = stm32f746ng
+# No XTAL on this board
+HSE_VALUE = 0
+STM32_CFLAGS += -DBSP_DISCO_F746NG
+#                          I1
+STM32_CFLAGS += -DLED1_PIN=129
+MGOS_DEBUG_UART ?= 1

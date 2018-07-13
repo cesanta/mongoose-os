@@ -274,6 +274,20 @@ bool mgos_gpio_disable_int(int pin) {
   return true;
 }
 
+const char *mgos_gpio_str(int pin_def, char buf[8]) {
+  int i = 0;
+  if (pin_def >= 0) {
+    if (pin_def < 10) {
+      buf[i++] = '0' + pin_def;
+    } else {
+      buf[i++] = '0' + (pin_def / 10);
+      buf[i++] = '0' + (pin_def % 10);
+    }
+  }
+  buf[i++] = '\0';
+  return buf;
+}
+
 enum mgos_init_result mgos_gpio_hal_init(void) {
   return MGOS_INIT_OK;
 }

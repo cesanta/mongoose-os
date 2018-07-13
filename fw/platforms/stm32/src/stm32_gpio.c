@@ -98,6 +98,7 @@ static void stm32_gpio_port_en(int pin_def) {
 const char *mgos_gpio_str(int pin_def, char buf[8]) {
   int i = 0;
   if (pin_def >= 0) {
+    buf[i++] = 'P';
     buf[i++] = STM32_PIN_PORT(pin_def);
     int pin_no = STM32_PIN_NUM(pin_def);
     if (pin_no < 10) {
