@@ -28,12 +28,14 @@ extern uint32_t _data_start, _data_end, _data_flash_start;
 /* The main entry point of the program */
 void stm32_entry(void) {
   memset(&_bss_start, 0, ((char *) &_bss_end - (char *) &_bss_start));
-  memcpy(&_data_start, &_data_flash_start, ((char *) &_data_end - (char *) &_data_start));
+  memcpy(&_data_start, &_data_flash_start,
+         ((char *) &_data_end - (char *) &_data_start));
   main();
-  while (1) {}
+  while (1) {
+  }
 }
 
 /* Initial int vectors, in flash */
-const __attribute__((section(".flash_int_vectors"))) void *stm32_flash_int_vectors[2] = {
-  &_stack, stm32_entry
-};
+const __attribute__((
+    section(".flash_int_vectors"))) void *stm32_flash_int_vectors[2] = {
+    &_stack, stm32_entry};
