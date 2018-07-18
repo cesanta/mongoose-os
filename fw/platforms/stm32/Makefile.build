@@ -46,6 +46,7 @@ HSE_VALUE ?= 0
 # Internal oscillator frequency. Set for each device.
 HSI_VALUE ?= 0
 
+STM32_LIBC ?= -lc
 STM32_CFLAGS ?=
 STM32_CFLAGS += -DSTM32 -D__WORDSIZE=32 -D_FILE_OFFSET_BITS=32
 STM32_CONF_SCHEMA =
@@ -110,7 +111,7 @@ LD_SCRIPT ?= $(MGOS_PLATFORM_PATH)/ld/stm32_no_ota.ld
 endif
 FLASH_BL_SIZE ?= $(FLASH_S0_SIZE)
 FLASH_BLC_SIZE ?= $(FLASH_S0_SIZE)
-MGOS_ROOT_DEVTAB ?= fs0 stm32flash {"offset": $(FLASH_FS_OFFSET), "size": $(MGOS_ROOT_FS_SIZE)}
+MGOS_ROOT_DEVTAB ?= fs0 stm32flash {"offset": $(FLASH_FS_OFFSET), "size": $(MGOS_ROOT_FS_SIZE), "ese": true}
 MGOS_ROOT_FS_TYPE ?= SPIFFS
 MGOS_ROOT_FS_SIZE ?= $(shell echo $$(($(FLASH_S0_SIZE) * 4 - $(FLASH_FS_OFFSET))))
 MGOS_ROOT_FS_ON_SYS_FLASH ?= 1
@@ -308,7 +309,7 @@ endif
 $(APP_ELF): $(BIN_PARTS) $(LD_SCRIPT)
 	$(vecho) "LD    $@ (BL=$(notdir $(BL_BIN)) LDS=$(notdir $(LD_SCRIPT)))"
 	$(Q) $(CC) $(CFLAGS) $(LDFLAGS) \
-	  -Wl,-Map=$@.map -Wl,--start-group $(BIN_PARTS) -lc -lgcc -lnosys -Wl,--end-group \
+	  -Wl,-Map=$@.map -Wl,--start-group $(BIN_PARTS) $(STM32_LIBC) -lgcc -lnosys -Wl,--end-group \
 	  -T$(LD_SCRIPT) -o $@
 
 $(APP_BIN): $(APP_ELF)
