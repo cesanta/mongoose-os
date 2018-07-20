@@ -52,6 +52,11 @@
 
 esp_err_t esp32_wifi_ev(system_event_t *event);
 
+void esp32_system_event_handler_default(system_event_t *event) WEAK;
+void esp32_system_event_handler_default(system_event_t *event) {
+  (void) event;
+}
+
 esp_err_t event_handler(void *ctx, system_event_t *event) {
   switch (event->event_id) {
 #ifdef MGOS_HAVE_WIFI
@@ -90,6 +95,7 @@ esp_err_t event_handler(void *ctx, system_event_t *event) {
 #endif
     default:
       LOG(LL_INFO, ("event: %d", event->event_id));
+      esp32_system_event_handler_default(event);
   }
   return ESP_OK;
 }
