@@ -29,6 +29,10 @@
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 #endif
 
+#define CS_CTASSERT_JOIN(a, b) a##b
+#define CS_CTASSERT(pred, msg) \
+  extern char CS_CTASSERT_JOIN(ASSERTION_FAILED_, msg)[!!(pred) ? 1 : -1]
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
