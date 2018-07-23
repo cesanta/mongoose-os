@@ -49,11 +49,19 @@ struct stm32_uart_def const
           .regs = USART3,
           .default_pins =
               {
+#ifndef STM32F4_USART3_ALT_PINS
                .tx = STM32_PIN_DEF('D', 8, 7),
                .rx = STM32_PIN_DEF('D', 9, 7),
                .ck = STM32_PIN_DEF('D', 10, 7),
                .cts = STM32_PIN_DEF('D', 11, 7),
                .rts = STM32_PIN_DEF('D', 12, 7),
+#else
+               .tx = STM32_PIN_DEF('C', 10, 7),
+               .rx = STM32_PIN_DEF('C', 11, 7),
+               .ck = STM32_PIN_DEF('B', 12, 8),
+               .cts = STM32_PIN_DEF('B', 13, 8),
+               .rts = STM32_PIN_DEF('B', 14, 7),
+#endif
               },
          },
          {.regs = NULL},

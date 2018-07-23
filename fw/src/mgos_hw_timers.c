@@ -46,7 +46,7 @@ mgos_set_hw_timer(int usecs, int flags, timer_callback cb, void *cb_arg) {
   mgos_timer_id id;
   struct mgos_hw_timer_info *ti = NULL;
   mgos_ints_disable();
-  for (id = 0; id < MGOS_NUM_HW_TIMERS; id++) {
+  for (id = 0; (int) id < MGOS_NUM_HW_TIMERS; id++) {
     if (s_timers[id].cb == NULL) {
       ti = &s_timers[id];
       break;

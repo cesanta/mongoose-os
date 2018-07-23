@@ -57,6 +57,9 @@ MGOS_ENABLE_HEAP_LOG ?= 0
 MGOS_ENABLE_CALL_TRACE ?= 0
 MGOS_ESP8266_RTOS ?= 0
 
+# Normally boot loader is not updated during OTA update.
+# The firmware built with this flag set to true will, when used for OTA,
+# will reflash the boot loader as well.
 MGOS_UPDATE_BOOT_LOADER ?= false
 
 FLASH_SIZE ?= 4194304

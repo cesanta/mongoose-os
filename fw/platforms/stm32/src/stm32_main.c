@@ -105,7 +105,7 @@ void SystemCoreClockUpdate(void) {
   mgos_nsleep100_cal();
 }
 
-#ifndef MGOS_NO_MAIN
+#ifndef MGOS_BOOT_BUILD
 void (*stm32_int_vectors[256])(void)
     __attribute__((section(".ram_int_vectors")));
 extern const void *stm32_flash_int_vectors[2];
@@ -124,7 +124,7 @@ void stm32_set_int_handler(int irqn, void (*handler)(void)) {
 
 int main(void) {
   /* Move int vectors to RAM. */
-  for (int i = 0; i < ARRAY_SIZE(stm32_int_vectors); i++) {
+  for (int i = 0; i < (int) ARRAY_SIZE(stm32_int_vectors); i++) {
     stm32_int_vectors[i] = arm_exc_handler_top;
   }
   memcpy(stm32_int_vectors, stm32_flash_int_vectors,

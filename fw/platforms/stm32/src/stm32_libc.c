@@ -80,7 +80,7 @@ void abort(void) {
   __builtin_trap();  // Executes an illegal instruction.
 }
 
-#ifdef MGOS_NO_MAIN
+#ifdef MGOS_BOOT_BUILD
 #undef portENTER_CRITICAL
 #define portENTER_CRITICAL()
 #undef portEXIT_CRITICAL

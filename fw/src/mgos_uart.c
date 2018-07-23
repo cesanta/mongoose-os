@@ -50,7 +50,7 @@ static inline void uart_unlock(struct mgos_uart_state *us) {
 IRAM void mgos_uart_schedule_dispatcher(int uart_no, bool from_isr) {
   struct mgos_uart_state *us = s_uart_state[uart_no];
   if (us == NULL) return;
-#ifndef MGOS_NO_MAIN
+#ifndef MGOS_BOOT_BUILD
   mongoose_schedule_poll(from_isr);
 #endif
 }
@@ -181,7 +181,7 @@ bool mgos_uart_configure(int uart_no, const struct mgos_uart_config *cfg) {
     mbuf_init(&us->tx_buf, 0);
     if (mgos_uart_hal_init(us)) {
       us->lock = mgos_rlock_create();
-#ifndef MGOS_NO_MAIN
+#ifndef MGOS_BOOT_BUILD
       mgos_add_poll_cb(mgos_uart_dispatcher, (void *) (intptr_t) uart_no);
 #endif
       s_uart_state[uart_no] = us;

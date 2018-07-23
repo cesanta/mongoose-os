@@ -71,15 +71,17 @@ void mgos_msleep(uint32_t msecs) {
 
 void HAL_Delay(__IO uint32_t ms) __attribute__((alias("mgos_msleep")));
 
-static void __attribute__((naked)) delay_cycles(unsigned long ulCount) {
+static void delay_cycles(unsigned long n) {
   __asm(
-      "    subs    r0, #1\n"
+      "    subs    %0, #1\n"
       "    bne     delay_cycles\n"
-      "    bx      lr");
+      : /* output */
+      : /* input */ "r"(n)
+      : /* scratch */);
 }
 
 void mgos_usleep(uint32_t usecs) {
-#ifndef MGOS_NO_MAIN
+#ifndef MGOS_BOOT_BUILD
   int ticks = usecs / (1000000 / configTICK_RATE_HZ);
   int remainder = usecs % (1000000 / configTICK_RATE_HZ);
   if (ticks > 0) vTaskDelay(ticks);
@@ -93,7 +95,7 @@ void mgos_usleep(uint32_t usecs) {
 int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {
   RCC->AHB2ENR |= RCC_AHB2ENR_RNGEN;
   RNG->CR = RNG_CR_RNGEN;
-  int i = 0;
+  size_t i = 0;
   do {
     if (RNG->SR & RNG_SR_DRDY) {
       uint32_t rnd = RNG->DR;

@@ -25,7 +25,11 @@ APP_BIN_LIBS ?=
 # Extra parts to include in firmware
 APP_EXTRA_FW_PARTS ?=
 # Bootloader path
-BL_BIN ?=
+MGOS_BL_BIN ?=
+# Normally boot loader is not updated during OTA update.
+# The firmware built with this flag set to true will, when used for OTA,
+# will reflash the boot loader as well.
+MGOS_UPDATE_BOOT_LOADER ?= false
 
 BUILD_LIB_NAME ?= lib.a
 
@@ -87,7 +91,7 @@ override FW_STAGING_DIR := $(abspath $(FW_STAGING_DIR))
 override FW_DIR := $(abspath $(FW_DIR))
 override GEN_DIR := $(abspath $(GEN_DIR))
 override BUILD_DIR := $(abspath $(BUILD_DIR))
-override BL_BIN := $(abspath $(BL_BIN))
+override MGOS_BL_BIN := $(abspath $(MGOS_BL_BIN))
 
 # Platform support files
 MGOS_SRCS += arm_exc.c arm_nsleep100.c \
@@ -96,21 +100,21 @@ MGOS_SRCS += arm_exc.c arm_nsleep100.c \
              stm32_libc.c \
              stm32_main.c stm32_uart.c
 
-APP_ELF = $(BUILD_DIR)/$(APP).elf
-APP_BIN = $(BUILD_DIR)/$(APP).bin
+APP0_ELF = $(BUILD_DIR)/$(APP).elf
+APP0_BIN = $(BUILD_DIR)/$(APP).bin
 FLASH_SIZE ?= 0
 SRAM_BASE_ADDR ?= 0x20000000
 FLASH_BASE_ADDR ?= 0x8000000
 
-ifneq "$(BL_BIN)" ""
-FLASH_FS_OFFSET = $(shell echo $$(($(FLASH_BL_SIZE) + $(FLASH_BLC_SIZE))))
+ifneq "$(MGOS_BL_BIN)" ""
+FLASH_FS_OFFSET = $(shell echo $$(($(FLASH_BL_SIZE) + $(FLASH_BL_CFG_SIZE))))
 LD_SCRIPT ?= $(MGOS_PLATFORM_PATH)/ld/stm32_ota_0.ld
 else
 FLASH_FS_OFFSET = $(FLASH_S0_SIZE)
 LD_SCRIPT ?= $(MGOS_PLATFORM_PATH)/ld/stm32_no_ota.ld
 endif
-FLASH_BL_SIZE ?= $(FLASH_S0_SIZE)
-FLASH_BLC_SIZE ?= $(FLASH_S0_SIZE)
+FLASH_BL_SIZE ?= 32768
+FLASH_BL_CFG_SIZE ?= $(FLASH_S0_SIZE)
 MGOS_ROOT_DEVTAB ?= fs0 stm32flash {"offset": $(FLASH_FS_OFFSET), "size": $(MGOS_ROOT_FS_SIZE), "ese": true}
 MGOS_ROOT_FS_TYPE ?= SPIFFS
 MGOS_ROOT_FS_SIZE ?= $(shell echo $$(($(FLASH_S0_SIZE) * 4 - $(FLASH_FS_OFFSET))))
@@ -246,7 +250,7 @@ LDFLAGS += -Wl,--defsym=SRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -Wl,--defsym=SRAM_SIZE=
            -Wl,--defsym=FLASH_BASE_ADDR=$(FLASH_BASE_ADDR) -Wl,--defsym=FLASH_SIZE=$(FLASH_SIZE) \
            -Wl,--defsym=FLASH_S0_SIZE=$(FLASH_S0_SIZE) \
            -Wl,--defsym=FLASH_BL_SIZE=$(FLASH_BL_SIZE) \
-           -Wl,--defsym=FLASH_BLC_SIZE=$(FLASH_BLC_SIZE) \
+           -Wl,--defsym=FLASH_BL_CFG_SIZE=$(FLASH_BL_CFG_SIZE) \
            -Wl,--defsym=FLASH_FS_SIZE=$(FLASH_FS_SIZE) \
            -Wl,--defsym=NOCACHE_SIZE=0x400
 
@@ -255,8 +259,11 @@ LDFLAGS += -Wl,--gc-sections
 CFLAGS += -DMG_NET_IF=3 -D__CPU_H__ -DMG_LWIP=1 -DLWIP_TIMEVAL_PRIVATE=0 \
           -DLWIP_TCP_KEEPALIVE=1 -DMGOS_APP=\"$(APP)\"
 
-FW_PARTS = app:type=app,src=$(APP_BIN),addr=$(FLASH_BASE_ADDR) \
-           $(APP_EXTRA_FW_PARTS)
+FW_PARTS = app:type=app0,src=$(APP0_BIN),bl_size=$(FLASH_BL_SIZE),bl_cfg_size=$(FLASH_BL_CFG_SIZE),fs_size=$(FLASH_FS_SIZE),update_bl=$(MGOS_UPDATE_BOOT_LOADER)
+ifeq "$(FLASH_FS_SIZE)$(MGOS_ROOT_FS_EXTRACT)" "01-1"
+FW_PARTS += fs:type=fs,src=$(FS_IMG)
+endif
+FW_PARTS += $(APP_EXTRA_FW_PARTS)
 
 MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o))
 SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(SDK_SRCS:=.o))
@@ -268,9 +275,9 @@ FFI_EXPORTS_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FFI_EXPORTS_C:=.o)))
 
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
 
-all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(APP_BIN) $(FW_ZIP)
+all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(APP0_BIN) $(FW_ZIP)
 
-$(FW_MANIFEST): $(APP_BIN) $(MGOS_CONFIG_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C)
+$(FW_MANIFEST): $(APP0_BIN) $(MGOS_CONFIG_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C)
 
 $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR):
 	$(vecho) "MKDIR $@"
@@ -302,17 +309,17 @@ ifeq "$(MGOS_ROOT_FS_ON_SYS_FLASH)" "1"
 else
   BIN_PARTS += $(FS_ZIP_O)
 endif
-ifneq "$(BL_BIN)" ""
+ifneq "$(MGOS_BL_BIN)" ""
   BIN_PARTS += $(BL_BIN_O)
 endif
 
-$(APP_ELF): $(BIN_PARTS) $(LD_SCRIPT)
-	$(vecho) "LD    $@ (BL=$(notdir $(BL_BIN)) LDS=$(notdir $(LD_SCRIPT)))"
+$(APP0_ELF): $(BIN_PARTS) $(LD_SCRIPT)
+	$(vecho) "LD    $@ (BL=$(notdir $(MGOS_BL_BIN)) LDS=$(notdir $(LD_SCRIPT)))"
 	$(Q) $(CC) $(CFLAGS) $(LDFLAGS) \
 	  -Wl,-Map=$@.map -Wl,--start-group $(BIN_PARTS) $(STM32_LIBC) -lgcc -lnosys -Wl,--end-group \
 	  -T$(LD_SCRIPT) -o $@
 
-$(APP_BIN): $(APP_ELF)
+$(APP0_BIN): $(APP0_ELF)
 	$(vecho) "BIN   $@"
 	$(Q) $(OC) -Obinary $^ $@
 	$(vecho) "  Code: $$($(OC) -Obinary -j .text $^ /dev/fd/1 | wc -c)"
@@ -351,9 +358,9 @@ $(FS_IMG_C): $(FS_IMG)
 	$(vecho) "GEN   $@"
 	$(Q) $(FW_META_CMD) xxd --var_name fs_img --const --section .fs_img $(FS_IMG) > $@
 
-$(BL_BIN_C): $(BL_BIN)
+$(BL_BIN_C): $(MGOS_BL_BIN)
 	$(vecho) "GEN   $@"
-	$(Q) $(FW_META_CMD) xxd --var_name bl_bin --const --section .bl_bin $(BL_BIN) > $@
+	$(Q) $(FW_META_CMD) xxd --var_name bl_bin --const --section .bl_bin $(MGOS_BL_BIN) > $@
 
 $(FFI_EXPORTS_C): $(FS_FILES)
 	$(call gen_ffi_exports,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))

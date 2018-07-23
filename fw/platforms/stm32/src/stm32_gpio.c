@@ -194,24 +194,30 @@ bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
 
 void mgos_gpio_hal_int_clr(int pin) {
   /* TODO(rojer) */
+  (void) pin;
 }
 
 void mgos_gpio_hal_int_done(int pin) {
   /* TODO(rojer) */
+  (void) pin;
 }
 
 bool mgos_gpio_hal_set_int_mode(int pin, enum mgos_gpio_int_mode mode) {
   /* TODO(rojer) */
+  (void) pin;
+  (void) mode;
   return false;
 }
 
 bool mgos_gpio_enable_int(int pin) {
   /* TODO(rojer) */
+  (void) pin;
   return false;
 }
 
 bool mgos_gpio_disable_int(int pin) {
   /* TODO(rojer) */
+  (void) pin;
   return false;
 }
 

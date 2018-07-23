@@ -45,7 +45,7 @@ extern struct stm32_uart_def const s_uart_defs[MGOS_MAX_NUM_UARTS];
 
 static inline uint8_t stm32_uart_rx_byte(struct stm32_uart_state *uds);
 
-#ifdef MGOS_NO_MAIN
+#ifdef MGOS_BOOT_BUILD
 #define stm32_set_int_handler(irqn, handler)
 #endif
 
