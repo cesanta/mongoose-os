@@ -227,13 +227,27 @@ class DefaultsJSONWriter(object):
         self._path.append(d)
 
     def Value(self, e):
+        # Avoid emitting zero value defaults to reduce the size of the file.
+        if (e.vtype == SchemaEntry.V_INT and e.default == 0 or
+            e.vtype == SchemaEntry.V_BOOL and e.default == False or
+            e.vtype == SchemaEntry.V_DOUBLE and e.default == 0.0 or
+            e.vtype == SchemaEntry.V_STRING and e.default == ""):
+            return
+        #if self._path[-1]
+        #print self._path, e.key, e.vtype, e.default
         self._path[-1][e.key] = e.default
 
-    def ObjectEnd(self, _e):
-        self._path.pop()
+    def ObjectEnd(self, e):
+        d = self._path.pop()
+        if len(d) == 0:
+            print e.path
+            del self._path[-1][e.key]
 
     def __str__(self):
-        return json.dumps(self._defaults, indent=2)
+        s = json.dumps(self._defaults, indent=1)
+        # Python adds trailing spaces to object keys, strip them.
+        s = s.replace(" \n", "\n")
+        return s
 
 
 # Writes a JSON version of the schema.
