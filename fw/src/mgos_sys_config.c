@@ -111,20 +111,20 @@ bool load_config_defaults(struct mgos_config *cfg) {
 
 bool save_cfg(const struct mgos_config *cfg, char **msg) {
   bool result = false;
-  struct mgos_config defaults;
+  struct mgos_config *defaults = calloc(1, sizeof(*defaults));
   char *ptr = NULL;
+  if (defaults == NULL) goto clean;
   if (msg == NULL) msg = &ptr;
-  memset(&defaults, 0, sizeof(defaults));
   *msg = NULL;
   int i;
   for (i = 0; i < s_num_validators; i++) {
     if (!s_validators[i](cfg, msg)) goto clean;
   }
-  if (!load_config_defaults(&defaults)) {
+  if (!load_config_defaults(defaults)) {
     *msg = strdup("failed to load defaults");
     goto clean;
   }
-  if (mgos_conf_emit_f(cfg, &defaults, mgos_config_schema(), true /* pretty */,
+  if (mgos_conf_emit_f(cfg, defaults, mgos_config_schema(), true /* pretty */,
                        CONF_USER_FILE)) {
     LOG(LL_INFO, ("Saved to %s", CONF_USER_FILE));
     result = true;
@@ -133,7 +133,10 @@ bool save_cfg(const struct mgos_config *cfg, char **msg) {
   }
 clean:
   free(ptr);
-  mgos_conf_free(mgos_config_schema(), &defaults);
+  if (defaults != NULL) {
+    mgos_conf_free(mgos_config_schema(), defaults);
+    free(defaults);
+  }
   return result;
 }
 
