@@ -233,14 +233,11 @@ class DefaultsJSONWriter(object):
             e.vtype == SchemaEntry.V_DOUBLE and e.default == 0.0 or
             e.vtype == SchemaEntry.V_STRING and e.default == ""):
             return
-        #if self._path[-1]
-        #print self._path, e.key, e.vtype, e.default
         self._path[-1][e.key] = e.default
 
     def ObjectEnd(self, e):
         d = self._path.pop()
         if len(d) == 0:
-            print e.path
             del self._path[-1][e.key]
 
     def __str__(self):
