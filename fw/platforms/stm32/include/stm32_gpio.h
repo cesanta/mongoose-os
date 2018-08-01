@@ -15,9 +15,9 @@
  * limitations under the License.
  */
 
-#ifndef CS_FW_PLATFORMS_STM32_INCLUDE_STM32_GPIO_H_
-#define CS_FW_PLATFORMS_STM32_INCLUDE_STM32_GPIO_H_
+#pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "stm32_sdk_hal.h"
@@ -39,14 +39,25 @@ extern "C" {
  */
 #define STM32_GPIO(port, pin_num) STM32_PIN_DEF((port), (pin_num), 0)
 
-#define STM32_PIN_PORT(pin_def) (((((int) (pin_def)) >> 4) & 0xff) + 'A')
+#define STM32_PIN_PORT_NUM(pin_def) (((((int) (pin_def)) >> 4) & 0xff))
+#define STM32_PIN_PORT(pin_def) (STM32_PIN_PORT_NUM(pin_def) + 'A')
 #define STM32_PIN_NUM(pin_def) (((int) (pin_def)) & 0xf)
 #define STM32_PIN_AF(pin_def) ((((int) (pin_def)) >> 16) & 0xf)
 GPIO_TypeDef *stm32_gpio_port_base(int pin_def);
 #define STM32_PIN_MASK(pin_def) (1 << STM32_PIN_NUM((pin_def)))
 
+/*
+ * Controls output driver characteristics of the output.
+ * Refer to the datasheet for details.
+ */
+enum stm32_gpio_ospeed {
+  STM32_GPIO_OSPEED_LOW = 0,
+  STM32_GPIO_OSPEED_MEDIUM = 1,
+  STM32_GPIO_OSPEED_HIGH = 2,
+  STM32_GPIO_OSPEED_VERY_HIGH = 2,
+};
+bool stm32_gpio_set_ospeed(int pin, enum stm32_gpio_ospeed ospeed);
+
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* CS_FW_PLATFORMS_STM32_INCLUDE_STM32_GPIO_H_ */

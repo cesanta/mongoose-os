@@ -15,13 +15,16 @@
  * limitations under the License.
  */
 
+#include "stm32_gpio.h"
+
 #include <stdlib.h>
 
-#include "common/queue.h"
+#include "common/cs_dbg.h"
 
 #include "mgos_gpio_hal.h"
 
-#include <stm32_sdk_hal.h>
+#include "stm32_sdk_hal.h"
+#include "stm32_system.h"
 
 IRAM GPIO_TypeDef *stm32_gpio_port_base(int pin_def) {
   switch (STM32_PIN_PORT(pin_def)) {
@@ -147,81 +150,230 @@ IRAM void mgos_gpio_write(int pin, bool level) {
 bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
   GPIO_TypeDef *regs = stm32_gpio_port_base(pin);
   if (regs == NULL) return false;
-  int af = STM32_PIN_AF(pin);
-  GPIO_InitTypeDef gs = {
-      .Pin = STM32_PIN_MASK(pin),
-      .Speed = GPIO_SPEED_FREQ_VERY_HIGH,
-      .Alternate = af,
-  };
+  const uint32_t af = STM32_PIN_AF(pin);
+  const uint32_t pin_num = STM32_PIN_NUM(pin);
+  uint32_t afr_msk = (0xf << ((pin_num & 7) * 4));
+  uint32_t afr_val = (af << ((pin_num & 7) * 4));
+  volatile uint32_t *afrp = &regs->AFR[pin_num < 8 ? 0 : 1];
+  uint32_t moder_msk = (3 << (pin_num * 2)), moder_val = 0;
+  uint32_t otyper_msk = (1 << pin_num), otyper_val = 0;
   switch (mode) {
     case MGOS_GPIO_MODE_INPUT:
-      gs.Mode = (af > 0 ? GPIO_MODE_AF_PP : GPIO_MODE_INPUT);
       break;
     case MGOS_GPIO_MODE_OUTPUT:
-      gs.Mode = (af > 0 ? GPIO_MODE_AF_PP : GPIO_MODE_OUTPUT_PP);
+      moder_val = 1;
       break;
-    case MGOS_GPIO_MODE_OUTPUT_OD: {
-      gs.Mode = (af > 0 ? GPIO_MODE_AF_OD : GPIO_MODE_OUTPUT_OD);
+    case MGOS_GPIO_MODE_OUTPUT_OD:
+      moder_val = 1;
+      otyper_val = 1;
       break;
-    }
   }
   stm32_gpio_port_en(pin);
-  HAL_GPIO_Init(regs, &gs);
+  MODIFY_REG(*afrp, afr_msk, afr_val);
+  if (afr_val != 0) moder_val = 2;
+  MODIFY_REG(regs->MODER, moder_msk, (moder_val << (pin_num * 2)));
+  if (moder_val == 1 || moder_val == 2) {
+    MODIFY_REG(regs->OTYPER, otyper_msk, (otyper_val << pin_num));
+    stm32_gpio_set_ospeed(pin, STM32_GPIO_OSPEED_VERY_HIGH);
+  }
   return true;
 }
 
 bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
   GPIO_TypeDef *regs = stm32_gpio_port_base(pin);
   if (regs == NULL) return false;
-  uint32_t m = 3, v = 0;
+  const uint32_t pin_num = STM32_PIN_NUM(pin);
+  uint32_t pupdr_msk = (3 << pin_num), pupdr_val = 0;
   switch (pull) {
     case MGOS_GPIO_PULL_NONE:
       break;
     case MGOS_GPIO_PULL_UP:
-      v = 1;
+      pupdr_val = 1;
       break;
     case MGOS_GPIO_PULL_DOWN:
-      v = 2;
+      pupdr_val = 2;
       break;
     default:
       return false;
   }
-  m <<= STM32_PIN_NUM(pin);
-  v <<= STM32_PIN_NUM(pin);
-  MODIFY_REG(regs->PUPDR, m, v);
+  MODIFY_REG(regs->PUPDR, pupdr_msk, (pupdr_val << pin_num));
   return true;
 }
 
+bool stm32_gpio_set_ospeed(int pin, enum stm32_gpio_ospeed ospeed) {
+  GPIO_TypeDef *regs = stm32_gpio_port_base(pin);
+  if (regs == NULL) return false;
+  const uint32_t pin_num = STM32_PIN_NUM(pin);
+  uint32_t ospeedr_msk = (3 << (pin_num * 2));
+  uint32_t ospeedr = ((((uint32_t) ospeed) & 3) << (pin_num * 2));
+  MODIFY_REG(regs->OSPEEDR, ospeedr_msk, ospeedr);
+  return true;
+}
+
+/*
+ * STM32 supports up to 16 GPIO int sources simultaneously (EXTIn),
+ * mapped to 7 IRQ lines in the NVIC>
+ * Pxy ports are mapped to EXTIn such that y always maps to n
+ * but which Px is used is selected by SYSCFG_EXTICR.
+ *
+ * I.e. Px0 will trigger EXTI0, Px1 -> EXTI1, ..., Px15 -> EXTI15.
+ * Selection of x is performed via EXTICR.
+ *
+ * This means that it is not possible to have interrupts on both PA0 and PB0.
+ */
+
+/* Find out which port this EXTI line is assigned to. */
+static int exti_selected_port_num(int exti_num) {
+  uint32_t exticr_num = (exti_num / 4);
+  uint32_t exticr_shl = (exti_num % 4) * 4;
+  uint32_t port_num = ((SYSCFG->EXTICR[exticr_num] >> exticr_shl) & 0xf);
+  return port_num;
+}
+
+static void stm32_gpio_ext_int_handler(uint32_t exti_min, uint32_t exti_max) {
+  uint32_t exti_msk = (1 << exti_min);
+  for (uint32_t i = exti_min; i <= exti_max; i++, exti_msk <<= 1) {
+    if (!(EXTI->PR & exti_msk)) continue;
+    /* Disable int now, it will be re-enabled when handled. */
+    CLEAR_BIT(EXTI->IMR, exti_msk);
+    EXTI->PR = exti_msk;
+    mgos_gpio_hal_int_cb(STM32_GPIO(exti_selected_port_num(i) + 'A', i));
+  }
+}
+
+static void stm32_gpio_exti0_int_handler(void) {
+  stm32_gpio_ext_int_handler(0, 0);
+}
+static void stm32_gpio_exti1_int_handler(void) {
+  stm32_gpio_ext_int_handler(1, 1);
+}
+static void stm32_gpio_exti2_int_handler(void) {
+  stm32_gpio_ext_int_handler(2, 2);
+}
+static void stm32_gpio_exti3_int_handler(void) {
+  stm32_gpio_ext_int_handler(4, 4);
+}
+static void stm32_gpio_exti4_int_handler(void) {
+  stm32_gpio_ext_int_handler(4, 4);
+}
+static void stm32_gpio_exti_5_9_int_handler(void) {
+  stm32_gpio_ext_int_handler(5, 9);
+}
+static void stm32_gpio_exti_10_15_int_handler(void) {
+  stm32_gpio_ext_int_handler(10, 15);
+}
+
+static uint32_t s_exti_ena = 0;
+
 void mgos_gpio_hal_int_clr(int pin) {
-  /* TODO(rojer) */
-  (void) pin;
+  uint32_t exti_num = STM32_PIN_NUM(pin);
+  uint32_t exti_msk = (1 << exti_num);
+  EXTI->PR = exti_msk;
 }
 
 void mgos_gpio_hal_int_done(int pin) {
-  /* TODO(rojer) */
-  (void) pin;
+  uint32_t exti_num = STM32_PIN_NUM(pin);
+  uint32_t exti_msk = (1 << exti_num);
+  if (s_exti_ena & exti_msk) {
+    SET_BIT(EXTI->IMR, exti_msk);
+  }
 }
 
 bool mgos_gpio_hal_set_int_mode(int pin, enum mgos_gpio_int_mode mode) {
-  /* TODO(rojer) */
-  (void) pin;
-  (void) mode;
-  return false;
+  uint32_t port_num = STM32_PIN_PORT_NUM(pin);
+  uint32_t exti_num = STM32_PIN_NUM(pin);
+  uint32_t exti_msk = (1 << exti_num);
+  uint32_t rtr_val = 0, ftr_val = 0;
+  switch (mode) {
+    case MGOS_GPIO_INT_NONE:
+      break;
+    case MGOS_GPIO_INT_EDGE_POS:
+      rtr_val = exti_msk;
+      break;
+    case MGOS_GPIO_INT_EDGE_NEG:
+      ftr_val = exti_msk;
+      break;
+    case MGOS_GPIO_INT_EDGE_ANY:
+      rtr_val = ftr_val = exti_msk;
+      break;
+    case MGOS_GPIO_INT_LEVEL_HI:
+    case MGOS_GPIO_INT_LEVEL_LO:
+    default:
+      return false;
+  }
+  if ((EXTI->RTSR & exti_msk) || (EXTI->FTSR & exti_msk)) {
+    uint32_t cur_port_num = exti_selected_port_num(exti_num);
+    if (cur_port_num != port_num) {
+      char buf1[8], buf2[8];
+      LOG(LL_ERROR,
+          ("EXTI%d is already assigned to %s (want: %s)", (int) exti_num,
+           mgos_gpio_str(STM32_GPIO(cur_port_num + 'A', exti_num), buf1),
+           mgos_gpio_str(pin, buf2)));
+      (void) buf1;
+      (void) buf2;
+      return false;
+    }
+  }
+  CLEAR_BIT(s_exti_ena, exti_msk);
+  CLEAR_BIT(EXTI->IMR, exti_msk);
+  MODIFY_REG(EXTI->RTSR, exti_msk, rtr_val);
+  MODIFY_REG(EXTI->FTSR, exti_msk, ftr_val);
+  EXTI->PR = exti_msk;
+  uint32_t exticr_num = (exti_num / 4);
+  uint32_t exticr_shl = (exti_num % 4) * 4;
+  uint32_t exticr_msk = (0xf << exticr_shl);
+  uint32_t exticr_val = (port_num << exticr_shl);
+  MODIFY_REG(SYSCFG->EXTICR[exticr_num], exticr_msk, exticr_val);
+  return true;
 }
 
 bool mgos_gpio_enable_int(int pin) {
-  /* TODO(rojer) */
-  (void) pin;
-  return false;
+  uint32_t exti_num = STM32_PIN_NUM(pin);
+  uint32_t exti_msk = (1 << exti_num);
+  if (exti_selected_port_num(exti_num) != STM32_PIN_PORT_NUM(pin)) {
+    return false;
+  }
+  SET_BIT(s_exti_ena, exti_msk);
+  SET_BIT(EXTI->IMR, exti_msk);
+  return true;
 }
 
 bool mgos_gpio_disable_int(int pin) {
-  /* TODO(rojer) */
-  (void) pin;
-  return false;
+  uint32_t exti_num = STM32_PIN_NUM(pin);
+  uint32_t exti_msk = (1 << exti_num);
+  if (exti_selected_port_num(exti_num) != STM32_PIN_PORT_NUM(pin)) {
+    return false;
+  }
+  CLEAR_BIT(s_exti_ena, exti_msk);
+  CLEAR_BIT(EXTI->IMR, exti_msk);
+  return true;
 }
 
 enum mgos_init_result mgos_gpio_hal_init(void) {
-  /* Do nothing here */
+  const struct {
+    int irqn;
+    void (*handler)(void);
+  } ext_irqs[7] = {
+      {EXTI0_IRQn, stm32_gpio_exti0_int_handler},
+      {EXTI1_IRQn, stm32_gpio_exti1_int_handler},
+      {EXTI2_IRQn, stm32_gpio_exti2_int_handler},
+      {EXTI3_IRQn, stm32_gpio_exti3_int_handler},
+      {EXTI4_IRQn, stm32_gpio_exti4_int_handler},
+      {EXTI9_5_IRQn, stm32_gpio_exti_5_9_int_handler},
+      {EXTI15_10_IRQn, stm32_gpio_exti_10_15_int_handler},
+  };
+  EXTI->PR = 0xffff;
+  MODIFY_REG(EXTI->IMR, 0xffff, 0);
+  for (int i = 0; i < ARRAY_SIZE(ext_irqs); i++) {
+    int irqn = ext_irqs[i].irqn;
+    stm32_set_int_handler(irqn, ext_irqs[i].handler);
+    HAL_NVIC_SetPriority(irqn, 9, 0);
+    HAL_NVIC_EnableIRQ(irqn);
+  }
+  __HAL_RCC_SYSCFG_CLK_ENABLE();
+  SYSCFG->EXTICR[0] = 0;
+  SYSCFG->EXTICR[1] = 0;
+  SYSCFG->EXTICR[2] = 0;
+  SYSCFG->EXTICR[3] = 0;
   return MGOS_INIT_OK;
 }

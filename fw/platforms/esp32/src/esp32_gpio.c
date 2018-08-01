@@ -37,7 +37,7 @@
 #endif
 
 gpio_isr_handle_t s_int_handle;
-uint8_t s_int_ena[MGOS_NUM_GPIO];
+static uint8_t s_int_ena[MGOS_NUM_GPIO];
 
 /* Invoked by SDK, runs in ISR context. */
 IRAM static void esp32_gpio_isr(void *arg) {
