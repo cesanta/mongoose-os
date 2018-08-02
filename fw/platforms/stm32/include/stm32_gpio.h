@@ -29,7 +29,7 @@ extern "C" {
 /*
  * Pin definition, including function.
  */
-#define STM32_PIN_DEF(port, pin_num, af)                                   \
+#define STM32_PIN(port, pin_num, af)                                       \
   (((((int) (af)) & 0xf) << 16) | (((((int) (port)) & 0xff) - 'A') << 4) | \
    (((int) (pin_num)) & 0xf))
 
@@ -37,7 +37,19 @@ extern "C" {
  * GPIO number, for mgos_gpio functions (function is always 0)
  * E.g.: mgos_gpio_write(STM32_GPIO('A', 0), 1)
  */
-#define STM32_GPIO(port, pin_num) STM32_PIN_DEF((port), (pin_num), 0)
+#define STM32_GPIO(port, pin_num) STM32_PIN((port), (pin_num), 0)
+
+#define STM32_GPIO_PORT_A 'A'
+#define STM32_GPIO_PORT_B 'B'
+#define STM32_GPIO_PORT_C 'C'
+#define STM32_GPIO_PORT_D 'D'
+#define STM32_GPIO_PORT_E 'E'
+#define STM32_GPIO_PORT_F 'F'
+#define STM32_GPIO_PORT_G 'G'
+#define STM32_GPIO_PORT_H 'H'
+#define STM32_GPIO_PORT_I 'I'
+#define STM32_GPIO_PORT_J 'J'
+#define STM32_GPIO_PORT_K 'K'
 
 #define STM32_PIN_PORT_NUM(pin_def) (((((int) (pin_def)) >> 4) & 0xff))
 #define STM32_PIN_PORT(pin_def) (STM32_PIN_PORT_NUM(pin_def) + 'A')
