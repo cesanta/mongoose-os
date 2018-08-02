@@ -38,7 +38,8 @@ APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
 APP_FS_DIRS = $(sort $(dir $(APP_FS_FILES)))
 
 APP_PATH := $(CURDIR)
-LWIP_PATH ?= $(STM32CUBE_PATH)/Middlewares/Third_Party/LwIP
+# We always use LwIP from F4, it's the same everywhere anyway.
+LWIP_PATH ?= $(STM32CUBE_F4_PATH)/Middlewares/Third_Party/LwIP
 MBEDTLS_PATH ?= /opt/cs_mbedtls
 FREERTOS_PATH ?= $(STM32CUBE_PATH)/Middlewares/Third_Party/FreeRTOS
 MGOS_PLATFORM_PATH ?= $(MGOS_PATH)/fw/platforms/stm32

@@ -5,20 +5,27 @@ MBEDTLS_BRANCH ?= stm32_$(DOCKER_TAG)
 include ../docker.mk
 
 STM32CUBE_F4_PATH = STM32Cube_FW_F4_$(STM32CUBE_F4_VERSION)
+STM32CUBE_L4_PATH = STM32Cube_FW_L4_$(STM32CUBE_L4_VERSION)
 STM32CUBE_F7_PATH = STM32Cube_FW_F7_$(STM32CUBE_F4_VERSION)
 
-docker-pre-build-stm32-toolchain: en.stm32cubef4.zip en.stm32cubef7.zip \
+EXCL_COMMON = '*/Documentation/*' '*/Examples/*' '*/Middlewares/ST/*' '*/Projects/*' '*/Utilities/*' '*/Drivers/STM32*_HAL_Driver/*.chm'
+EXCL_MBEDTLS = '*/Middlewares/Third_Party/mbedTLS/*'
+EXCL_LWIP = '*/Middlewares/Third_Party/LwIP/*'
+
+docker-pre-build-stm32-toolchain: en.stm32cubef4.zip en.stm32cubel4.zip en.stm32cubef7.zip \
                                   fw_meta.py serve_core.py \
                                   mklfs mkspiffs mkspiffs8
 	rm -rf tmp && mkdir tmp
-	unzip -q en.stm32cubef4.zip -x '*/Documentation/*' '*/Examples/*' '*/Middlewares/ST/*' '*/Projects/*' '*/Utilities/*' -d tmp
-	cd tmp/STM32Cube_FW_F4_* && patch -p 0 -b < ../../lwipopts_f4.patch
+	unzip -q en.stm32cubef4.zip -d tmp -x $(EXCL_COMMON) $(EXCL_MBEDTLS)
+	cd tmp/STM32Cube_FW_F4_* && patch -p 0 -b < ../../lwipopts.patch
 	$(eval STM32CUBE_F4_DIR = $$(shell cd tmp && ls -1 -d STM32Cube_FW_F4_*))
-	unzip -q en.stm32cubef7.zip -x '*/Documentation/*' '*/Examples/*' '*/Middlewares/ST/*' '*/Projects/*' '*/Utilities/*' -d tmp
-	cd tmp/STM32Cube_FW_F7_* && patch -p 0 -b < ../../lwipopts_f7.patch
+	unzip -q en.stm32cubel4.zip -d tmp -x $(EXCL_COMMON)
+	$(eval STM32CUBE_L4_DIR = $$(shell cd tmp && ls -1 -d STM32Cube_FW_L4_*))
+	unzip -q en.stm32cubef7.zip -d tmp -x $(EXCL_COMMON) $(EXCL_MBEDTLS) $(EXCL_LWIP)
 	$(eval STM32CUBE_F7_DIR = $$(shell cd tmp && ls -1 -d STM32Cube_FW_F7_*))
 
 docker-build-stm32-toolchain: DOCKER_FLAGS = --build-arg=STM32CUBE_F4_DIR=$(STM32CUBE_F4_DIR) \
+                                             --build-arg=STM32CUBE_L4_DIR=$(STM32CUBE_L4_DIR) \
                                              --build-arg=STM32CUBE_F7_DIR=$(STM32CUBE_F7_DIR)
 
 # Build our mbedTLS with the new toolchain, with and without ATCA support.
@@ -39,6 +46,10 @@ docker-pre-build-stm32-build: mbedtls docker-build-stm32-toolchain
 
 en.stm32cubef4.zip:
 	@echo "Please obtain $@ from http://www.st.com/content/st_com/en/products/embedded-software/mcus-embedded-software/stm32-embedded-software/stm32cube-mcu-packages/stm32cubef4.html"
+	@exit 1
+
+en.stm32cubel4.zip:
+	@echo "Please obtain $@ from http://www.st.com/content/st_com/en/products/embedded-software/mcus-embedded-software/stm32-embedded-software/stm32cube-mcu-packages/stm32cubel4.html"
 	@exit 1
 
 en.stm32cubef7.zip:

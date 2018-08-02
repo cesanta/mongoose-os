@@ -5,7 +5,7 @@ mbedtls/
 simplelink_cc32xx_sdk_*/
 ti-cgt-arm_*/
 
-en.stm32cubef*.zip
+en.stm32cube*.zip
 fw_meta.py
 mklfs
 mkspiffs
