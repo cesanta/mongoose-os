@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+#include <string.h>
+
 #include "stm32_sdk_hal.h"
 #include "stm32_system.h"
 
@@ -58,19 +60,22 @@ void stm32_clock_config(void) {
   RCC_OscInitTypeDef oc;
   RCC_ClkInitTypeDef cc;
   RCC_PeriphCLKInitTypeDef pcc;
+  memset(&cc, 0, sizeof(cc));
+  memset(&oc, 0, sizeof(oc));
+  memset(&pcc, 0, sizeof(pcc));
 
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE3);
 
-/* Configure the clock source and PLL. */
+  oc.OscillatorType = RCC_OSCILLATORTYPE_LSE;
+  oc.LSEState = (LSE_VALUE == 0 ? RCC_LSE_OFF : RCC_LSE_ON);
 #if HSE_VALUE == 0
-  oc.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  oc.OscillatorType |= RCC_OSCILLATORTYPE_HSI;
   oc.HSIState = RCC_HSI_ON;
-  oc.HSICalibrationValue = 16;
   oc.PLL.PLLSource = RCC_PLLSOURCE_HSI;
   oc.PLL.PLLM = HSI_VALUE / 1000000;  // VCO input = 1 MHz
 #else
-  oc.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  oc.OscillatorType |= RCC_OSCILLATORTYPE_HSE;
   oc.HSEState = RCC_HSE_ON;
   oc.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   oc.PLL.PLLM = HSE_VALUE / 1000000;  // VCO input = 1 MHz
@@ -104,13 +109,18 @@ void stm32_clock_config(void) {
   pcc.Clk48ClockSelection = RCC_CLK48SOURCE_PLL;
   HAL_RCCEx_PeriphCLKConfig(&pcc);
 
-/* Turn off the unused oscilaltor. */
+  /* Turn off unused oscillators. */
+  oc.OscillatorType = 0;
 #if HSE_VALUE == 0
-  oc.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  oc.OscillatorType |= RCC_OSCILLATORTYPE_HSE;
   oc.HSEState = RCC_HSE_OFF;
 #else
-  oc.OscillatorType = RCC_OSCILLATORTYPE_HSI;
+  oc.OscillatorType |= RCC_OSCILLATORTYPE_HSI;
   oc.HSIState = RCC_HSI_OFF;
+#endif
+#if LSE_VALUE == 0
+  oc.OscillatorType |= RCC_OSCILLATORTYPE_LSE;
+  oc.LSEState = RCC_LSE_OFF;
 #endif
   oc.PLL.PLLState = RCC_PLL_NONE; /* Don't touch the PLL config */
   HAL_RCC_OscConfig(&oc);

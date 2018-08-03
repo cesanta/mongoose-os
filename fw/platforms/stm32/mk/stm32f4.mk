@@ -1,7 +1,11 @@
 HSI_VALUE = 16000000
 FLASH_S0_SIZE = 16384
+MGOS_ROOT_FS_SIZE ?= 98304
 STM32_CFLAGS += -mthumb -march=armv7e-m -mfloat-abi=hard -mfpu=fpv4-sp-d16 \
-                -DSTM32F4 -DARM_HAVE_FPU=1 -DMGOS_MAX_NUM_UARTS=7
+                -DSTM32F4 -DARM_HAVE_FPU=1 -DMGOS_MAX_NUM_UARTS=7 \
+                -DIRAM=__RAM_FUNC
+LD_SCRIPT_NO_OTA = $(MGOS_PLATFORM_PATH)/ld/stm32f_no_ota.ld
+LD_SCRIPT_OTA_0 = $(MGOS_PLATFORM_PATH)/ld/stm32f_ota_0.ld
 STM32CUBE_PATH = $(STM32CUBE_F4_PATH)
 SDK_IPATH = $(STM32CUBE_PATH)/Drivers/CMSIS/Device/ST/STM32F4xx/Include \
             $(STM32CUBE_PATH)/Drivers/STM32F4xx_HAL_Driver/Inc

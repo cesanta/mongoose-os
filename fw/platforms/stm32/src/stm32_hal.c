@@ -95,13 +95,20 @@ void mgos_usleep(uint32_t usecs) {
 int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {
   RCC->AHB2ENR |= RCC_AHB2ENR_RNGEN;
   RNG->CR = RNG_CR_RNGEN;
-  size_t i = 0;
+  size_t i = 0, j = 0;
   do {
     if (RNG->SR & RNG_SR_DRDY) {
       uint32_t rnd = RNG->DR;
       size_t l = MIN(len - i, sizeof(rnd));
       memcpy(buf + i, &rnd, l);
       i += l;
+    } else {
+      j++;
+      if (j > 1000) {
+        LOG(LL_ERROR,
+            ("RNG is not working! ST 0x%lx CR 0x%lx", RNG->SR, RNG->CR));
+        return -1;
+      }
     }
   } while (i < len);
   (void) ctx;
@@ -125,7 +132,7 @@ IWDG_HandleTypeDef hiwdg = {
         {
          .Prescaler = IWDG_PRESCALER_256,
          .Reload = 5 * IWDG_1_SECOND,
-#ifdef STM32F7
+#ifdef IWDG_WINDOW_DISABLE
          .Window = IWDG_WINDOW_DISABLE,
 #endif
         },

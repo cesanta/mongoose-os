@@ -84,7 +84,7 @@
 #include <stdint.h>
 extern uint32_t SystemCoreClock;
 #include "stm32_sdk_hal.h"
-#if defined(STM32F4)
+#if defined(STM32F4) || defined(STM32L4)
 #include <core_cm4.h>
 #elif defined(STM32F7)
 #include <core_cm7.h>

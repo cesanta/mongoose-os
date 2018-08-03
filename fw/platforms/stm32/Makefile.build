@@ -45,9 +45,11 @@ FREERTOS_PATH ?= $(STM32CUBE_PATH)/Middlewares/Third_Party/FreeRTOS
 MGOS_PLATFORM_PATH ?= $(MGOS_PATH)/fw/platforms/stm32
 MGOS_FEATURES ?=
 
-# Value of the external crystal in Hz, if present.
+# Value of the external high-speed crystal in Hz, if present.
 # If set to 0, internal RC oscillator is used.
 HSE_VALUE ?= 0
+# Value of the 32 KHz crystal. If present, set to 32768.
+LSE_VALUE ?= 0
 # Internal oscillator frequency. Set for each device.
 HSI_VALUE ?= 0
 
@@ -69,8 +71,7 @@ else
 $(error Please, specify FAMILY. Possible values are stm32f4 and stm32f7)
 endif
 
-STM32_CFLAGS += -DHSE_VALUE=$(HSE_VALUE) -DHSI_VALUE=$(HSI_VALUE) \
-                -DIRAM=__RAM_FUNC
+STM32_CFLAGS += -DHSE_VALUE=$(HSE_VALUE) -DHSI_VALUE=$(HSI_VALUE) -DLSE_VALUE=$(LSE_VALUE)
 
 AR = arm-none-eabi-ar
 CC = arm-none-eabi-gcc
@@ -105,20 +106,24 @@ APP0_ELF = $(BUILD_DIR)/$(APP).elf
 APP0_BIN = $(BUILD_DIR)/$(APP).bin
 FLASH_SIZE ?= 0
 SRAM_BASE_ADDR ?= 0x20000000
+SRAM2_BASE_ADDR ?= 0
+SRAM2_SIZE ?= 0
 FLASH_BASE_ADDR ?= 0x8000000
 
 ifneq "$(MGOS_BL_BIN)" ""
 FLASH_FS_OFFSET = $(shell echo $$(($(FLASH_BL_SIZE) + $(FLASH_BL_CFG_SIZE))))
-LD_SCRIPT ?= $(MGOS_PLATFORM_PATH)/ld/stm32_ota_0.ld
-else
-FLASH_FS_OFFSET = $(FLASH_S0_SIZE)
-LD_SCRIPT ?= $(MGOS_PLATFORM_PATH)/ld/stm32_no_ota.ld
-endif
+LD_SCRIPT ?= $(LD_SCRIPT_OTA_0)
 FLASH_BL_SIZE ?= 32768
 FLASH_BL_CFG_SIZE ?= $(FLASH_S0_SIZE)
+else
+FLASH_FS_OFFSET = $(FLASH_S0_SIZE)
+LD_SCRIPT ?= $(LD_SCRIPT_NO_OTA)
+FLASH_BL_SIZE = 0
+FLASH_BL_CFG_SIZE = 0
+endif
 MGOS_ROOT_DEVTAB ?= fs0 stm32flash {"offset": $(FLASH_FS_OFFSET), "size": $(MGOS_ROOT_FS_SIZE), "ese": true}
 MGOS_ROOT_FS_TYPE ?= SPIFFS
-MGOS_ROOT_FS_SIZE ?= $(shell echo $$(($(FLASH_S0_SIZE) * 4 - $(FLASH_FS_OFFSET))))
+MGOS_ROOT_FS_SIZE ?= 0
 MGOS_ROOT_FS_ON_SYS_FLASH ?= 1
 # When FS is not on sys flash, we definitely need to extract.
 MGOS_ROOT_FS_EXTRACT ?= 1-$(MGOS_ROOT_FS_ON_SYS_FLASH)
@@ -241,13 +246,15 @@ CFLAGS += $(APP_CFLAGS)
 CXXFLAGS += $(APP_CXXFLAGS)
 
 CFLAGS  += -DSRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -DSRAM_SIZE=$(SRAM_SIZE) \
-           -DFLASH_BASE_ADDR=$(FLASH_BASE_ADDR) -DFLASH_SIZE=$(FLASH_SIZE) \
+           -DSTM32_SRAM2_BASE_ADDR=$(SRAM2_BASE_ADDR) -DSTM32_SRAM2_SIZE=$(SRAM2_SIZE) \
+           -DSTM32_FLASH_BASE_ADDR=$(FLASH_BASE_ADDR) -DSTM32_FLASH_SIZE=$(FLASH_SIZE) \
            -DMGOS_ROOT_DEVTAB='$(MGOS_ROOT_DEVTAB)' \
            -DMGOS_ROOT_FS_TYPE='$(MGOS_ROOT_FS_TYPE)' \
            -DMGOS_ROOT_FS_OPTS='$(MGOS_ROOT_FS_OPTS)' \
            -DMGOS_ROOT_FS_EXTRACT='$(MGOS_ROOT_FS_EXTRACT)' \
            -DNOCACHE_SIZE=0x400
 LDFLAGS += -Wl,--defsym=SRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -Wl,--defsym=SRAM_SIZE=$(SRAM_SIZE) \
+           -Wl,--defsym=SRAM2_BASE_ADDR=$(SRAM2_BASE_ADDR) -Wl,--defsym=SRAM2_SIZE=$(SRAM2_SIZE) \
            -Wl,--defsym=FLASH_BASE_ADDR=$(FLASH_BASE_ADDR) -Wl,--defsym=FLASH_SIZE=$(FLASH_SIZE) \
            -Wl,--defsym=FLASH_S0_SIZE=$(FLASH_S0_SIZE) \
            -Wl,--defsym=FLASH_BL_SIZE=$(FLASH_BL_SIZE) \

@@ -29,7 +29,6 @@
 #include "mgos_app.h"
 #include "mgos_core_dump.h"
 #include "mgos_debug_internal.h"
-#include "mgos_gpio.h"
 #include "mgos_hal.h"
 #include "mgos_init_internal.h"
 #include "mgos_mongoose_internal.h"

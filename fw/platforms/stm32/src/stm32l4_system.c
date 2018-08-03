@@ -18,39 +18,46 @@
 #include <string.h>
 
 #include "stm32_sdk_hal.h"
+#include "mgos_gpio.h"
 #include "stm32_system.h"
 
-#include <stm32f4xx_ll_rcc.h>
+#include <stm32l4xx_ll_rcc.h>
 
-uint32_t SystemCoreClock = HSI_VALUE;
+#if STM32_SRAM2_SIZE != SRAM2_SIZE
+#error Incorrect STM32_SRAM2_SIZE
+#endif
+
+uint32_t SystemCoreClock = 4000000;
 const uint8_t AHBPrescTable[16] = {0, 0, 0, 0, 0, 0, 0, 0,
                                    1, 2, 3, 4, 6, 7, 8, 9};
 const uint8_t APBPrescTable[8] = {0, 0, 0, 0, 1, 2, 3, 4};
-#define VECT_TAB_OFFSET 0x0
+const uint32_t MSIRangeTable[12] = {100000,   200000,   400000,   800000,
+                                    1000000,  2000000,  4000000,  8000000,
+                                    16000000, 24000000, 32000000, 48000000};
 
 void stm32_system_init(void) {
 #if (__FPU_PRESENT == 1) && (__FPU_USED == 1)
   SCB->CPACR |=
       ((3UL << 10 * 2) | (3UL << 11 * 2)); /* set CP10 and CP11 Full Access */
 #endif
+
   /* Reset the RCC clock configuration to the default reset state ------------*/
-  /* Set HSION bit */
-  RCC->CR |= (uint32_t) 0x00000001;
+  RCC->CR |= RCC_CR_MSION;
 
   /* Reset CFGR register */
   RCC->CFGR = 0x00000000;
 
-  /* Reset HSEON, CSSON and PLLON bits */
-  RCC->CR &= (uint32_t) 0xFEF6FFFF;
+  /* Reset HSEON, CSSON , HSION, and PLLON bits */
+  RCC->CR &= 0xEAF6FFFFU;
 
   /* Reset PLLCFGR register */
-  RCC->PLLCFGR = 0x24003010;
+  RCC->PLLCFGR = 0x00001000U;
 
   /* Reset HSEBYP bit */
   RCC->CR &= (uint32_t) 0xFFFBFFFF;
 
   /* Disable all interrupts */
-  RCC->CIR = 0x00000000;
+  // RCC->CIR = 0x00000000;
 
   __HAL_FLASH_INSTRUCTION_CACHE_ENABLE();
   __HAL_FLASH_DATA_CACHE_ENABLE();
@@ -66,43 +73,66 @@ void stm32_clock_config(void) {
   __HAL_RCC_PWR_CLK_ENABLE();
   __HAL_PWR_VOLTAGESCALING_CONFIG(PWR_REGULATOR_VOLTAGE_SCALE1);
 
-/* Configure the clock source and PLL. */
+  oc.OscillatorType = RCC_OSCILLATORTYPE_LSE;
+  oc.LSEState = (LSE_VALUE == 0 ? RCC_LSE_OFF : RCC_LSE_ON);
 #if HSE_VALUE == 0
-  oc.OscillatorType = RCC_OSCILLATORTYPE_HSI;
-  oc.HSIState = RCC_HSI_ON;
-  oc.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  oc.PLL.PLLM = HSI_VALUE / 1000000;  // VCO input = 1 MHz
-#else
-  oc.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  oc.OscillatorType |= (RCC_OSCILLATORTYPE_HSI | RCC_OSCILLATORTYPE_MSI);
+  oc.HSIState = RCC_HSI_OFF;
+  oc.MSIState = RCC_MSI_ON;
+  oc.MSIClockRange = RCC_MSIRANGE_7; /* 8 MHz */
+  oc.PLL.PLLSource = RCC_PLLSOURCE_MSI;
+#elif HSE_VALUE == 8000000
+  oc.OscillatorType |= RCC_OSCILLATORTYPE_HSE;
   oc.HSEState = RCC_HSE_ON;
   oc.PLL.PLLSource = RCC_PLLSOURCE_HSE;
-  oc.PLL.PLLM = HSE_VALUE / 1000000;  // VCO input = 1 MHz
+#else
+#error Only 8MHz HSE is supported
 #endif
+  oc.PLL.PLLM = 1;             /* 8 / 1 = 8 MHz VCO input */
+  oc.PLL.PLLN = 20;            /* 8 * 20 = 160 MHz VCO output */
+  oc.PLL.PLLP = RCC_PLLP_DIV7; /* not used */
+  oc.PLL.PLLQ = RCC_PLLQ_DIV4; /* not used */
+  oc.PLL.PLLR = RCC_PLLR_DIV2; /* 160 / 2 = 80 MHz PLL output */
   oc.PLL.PLLState = RCC_PLL_ON;
-  oc.PLL.PLLN = 384;            // VCO output = 1 * 384 = 384 MHz
-  oc.PLL.PLLP = RCC_PLLP_DIV4;  // SYSCLK = 384 / 4 = 96 MHz
-  oc.PLL.PLLQ = 8;              // USB FS clock = 384 / 8 = 48 MHz
-  oc.PLL.PLLR = 7;
   HAL_RCC_OscConfig(&oc);
 
   cc.ClockType = (RCC_CLOCKTYPE_SYSCLK | RCC_CLOCKTYPE_HCLK |
                   RCC_CLOCKTYPE_PCLK1 | RCC_CLOCKTYPE_PCLK2);
   cc.SYSCLKSource = RCC_SYSCLKSOURCE_PLLCLK;
-  cc.AHBCLKDivider = RCC_SYSCLK_DIV1;  // 96 MHz
+  cc.AHBCLKDivider = RCC_SYSCLK_DIV1;
   cc.APB1CLKDivider = RCC_HCLK_DIV1;
   cc.APB2CLKDivider = RCC_HCLK_DIV1;
-  HAL_RCC_ClockConfig(&cc, FLASH_LATENCY_3);
+  HAL_RCC_ClockConfig(&cc, FLASH_ACR_LATENCY_4WS);
 
-  /* Use system PLL for USB and RNG. */
-  LL_RCC_SetCK48MClockSource(LL_RCC_CK48M_CLKSOURCE_PLL);
+  /* PLLSAI1 will provide 48 MHz clock for USB, RNG and SDMMC. */
+  RCC_PLLSAI1InitTypeDef pllsai1_cfg = {
+      .PLLSAI1Source = oc.PLL.PLLSource,
+      .PLLSAI1M = oc.PLL.PLLM,
+      .PLLSAI1N = 24,            /* 8 * 24 = 192 MHz VCO output */
+      .PLLSAI1Q = RCC_PLLQ_DIV4, /* 192 / 4 = 48 MHz */
+      .PLLSAI1ClockOut = RCC_PLLSAI1_48M2CLK,
+  };
+  HAL_RCCEx_EnablePLLSAI1(&pllsai1_cfg);
+  __HAL_RCC_PLLCLKOUT_DISABLE(RCC_PLL_48M1CLK);
+  MODIFY_REG(RCC->CCIPR, RCC_CCIPR_CLK48SEL_Msk, LL_RCC_RNG_CLKSOURCE_PLLSAI1);
 
-/* Turn off the unused oscilaltor. */
-#if HSE_VALUE == 0
-  oc.OscillatorType = RCC_OSCILLATORTYPE_HSE;
-  oc.HSEState = RCC_HSE_OFF;
+#if LSE_VALUE != 0
+  /* Enable MSI auto-trimming by LSE. */
+  SET_BIT(RCC->CR, RCC_CR_MSIPLLEN);
 #else
+  CLEAR_BIT(RCC->CR, RCC_CR_MSIPLLEN);
+#endif
+
+  /* Turn off unused oscillators. */
   oc.OscillatorType = RCC_OSCILLATORTYPE_HSI;
   oc.HSIState = RCC_HSI_OFF;
+#if HSE_VALUE == 0
+  oc.OscillatorType |= RCC_OSCILLATORTYPE_HSE;
+  oc.HSEState = RCC_HSE_OFF;
+#endif
+#if LSE_VALUE == 0
+  oc.OscillatorType |= RCC_OSCILLATORTYPE_LSE;
+  oc.LSEState = RCC_LSE_OFF;
 #endif
   oc.PLL.PLLState = RCC_PLL_NONE; /* Don't touch the PLL config */
   HAL_RCC_OscConfig(&oc);

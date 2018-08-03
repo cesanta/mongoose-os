@@ -136,9 +136,8 @@ extern "C" {
   * @brief External Low Speed oscillator (LSE) value.
   */
 #if !defined(LSE_VALUE)
-#define LSE_VALUE \
-  (32768U) /*!< Value of the External Low Speed oscillator in Hz */
-#endif     /* LSE_VALUE */
+#define LSE_VALUE 0
+#endif /* LSE_VALUE */
 
 #if !defined(LSE_STARTUP_TIMEOUT)
 #define LSE_STARTUP_TIMEOUT (5000U) /*!< Time out for LSE start up, in ms */

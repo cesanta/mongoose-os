@@ -65,7 +65,7 @@ static inline void stm32_uart_clear_ovf_int(struct stm32_uart_state *uds) {
   CLEAR_BIT(uds->regs->SR, USART_SR_ORE);
   (void) stm32_uart_rx_byte(uds);
 }
-#elif defined(STM32F7)
+#elif defined(USART_ICR_CTSCF) && defined(USART_ICR_ORECF)
 static inline void stm32_uart_clear_cts_int(struct stm32_uart_state *uds) {
   CLEAR_BIT(uds->regs->ICR, USART_ICR_CTSCF);
 }
@@ -119,7 +119,7 @@ static void stm32_uart_isr(struct mgos_uart_state *us) {
     stm32_uart_clear_ovf_int(uds);
   }
   if (ints & USART_ISR_CTSIF) {
-#ifdef STM32F7
+#ifdef USART_ISR_CTS
     if ((ints & USART_ISR_CTS) == 0 && uds->itx_buf.used > 0) {
       us->stats.tx_throttles++;
     }
@@ -143,7 +143,7 @@ static void stm32_uart_isr(struct mgos_uart_state *us) {
       cs_rbuf_append_one(irxb, data);
     }
     if (irxb->avail > UART_ISR_BUF_DISP_THRESH) {
-#ifdef STM32F7
+#ifdef USART_CR1_RTOIE
       SET_BIT(uds->regs->CR1, USART_CR1_RTOIE);
 #else
       /* F4 does not have timeout, should use idle line detection? TODO(rojer)
@@ -160,7 +160,7 @@ static void stm32_uart_isr(struct mgos_uart_state *us) {
       dispatch = true;
     }
   }
-#ifdef STM32F7
+#ifdef USART_ISR_RTOF
   if ((ints & USART_ISR_RTOF) && (cr1 & USART_CR1_RTOIE)) {
     if (uds->irx_buf.used > 0) dispatch = true;
     CLEAR_BIT(uds->regs->CR1, USART_CR1_RTOIE);
@@ -180,19 +180,27 @@ void stm32_uart2_int_handler(void) {
 void stm32_uart3_int_handler(void) {
   stm32_uart_isr(s_us[3]);
 }
+#ifdef UART4_IRQn
 void stm32_uart4_int_handler(void) {
   stm32_uart_isr(s_us[4]);
 }
+#endif
+#ifdef UART5_IRQn
 void stm32_uart5_int_handler(void) {
   stm32_uart_isr(s_us[5]);
 }
+#endif
+#ifdef USART6_IRQn
 void stm32_uart6_int_handler(void) {
   stm32_uart_isr(s_us[6]);
 }
-#if defined(STM32F7)
+#endif
+#ifdef UART7_IRQn
 void stm32_uart7_int_handler(void) {
   stm32_uart_isr(s_us[7]);
 }
+#endif
+#ifdef UART8_IRQn
 void stm32_uart8_int_handler(void) {
   stm32_uart_isr(s_us[8]);
 }
@@ -308,29 +316,35 @@ bool stm32_uart_setup_pins(int uart_no, const struct mgos_uart_config *cfg) {
       stm32_set_int_handler(USART3_IRQn, stm32_uart3_int_handler);
       irqn = USART3_IRQn;
       break;
-#if defined(STM32F7)
+#ifdef UART4_IRQn
     case 4:
       __HAL_RCC_UART4_CLK_ENABLE();
       stm32_set_int_handler(UART4_IRQn, stm32_uart4_int_handler);
       irqn = UART4_IRQn;
       break;
+#endif
+#ifdef UART5_IRQn
     case 5:
       __HAL_RCC_UART5_CLK_ENABLE();
       stm32_set_int_handler(UART5_IRQn, stm32_uart5_int_handler);
       irqn = UART5_IRQn;
       break;
 #endif
+#ifdef USART6_IRQn
     case 6:
       __HAL_RCC_USART6_CLK_ENABLE();
       stm32_set_int_handler(USART6_IRQn, stm32_uart6_int_handler);
       irqn = USART6_IRQn;
       break;
-#if defined(STM32F7)
+#endif
+#ifdef UART7_IRQn
     case 7:
       __HAL_RCC_UART7_CLK_ENABLE();
       stm32_set_int_handler(UART7_IRQn, stm32_uart7_int_handler);
       irqn = UART7_IRQn;
       break;
+#endif
+#ifdef UART8_IRQn
     case 8:
       __HAL_RCC_UART8_CLK_ENABLE();
       stm32_set_int_handler(UART8_IRQn, stm32_uart8_int_handler);
@@ -359,7 +373,7 @@ bool stm32_uart_configure(int uart_no, const struct mgos_uart_config *cfg) {
   uint32_t brr = 0;
   switch (cfg->num_data_bits) {
     case 7:
-#ifdef STM32F7
+#ifdef USART_CR1_M_1
       cr1 |= USART_CR1_M_1;
 #else
       return false;
@@ -368,7 +382,7 @@ bool stm32_uart_configure(int uart_no, const struct mgos_uart_config *cfg) {
     case 8:
       break;
     case 9:
-#ifdef STM32F7
+#ifdef USART_CR1_M_0
       cr1 |= USART_CR1_M_0;
 #else
       cr1 |= USART_CR1_M;
@@ -414,7 +428,7 @@ bool stm32_uart_configure(int uart_no, const struct mgos_uart_config *cfg) {
       f_uart = HAL_RCC_GetPCLK1Freq();
     }
     div = (uint32_t) roundf((float) f_uart / cfg->baud_rate);
-#elif defined(STM32F7)
+#elif defined(STM32F7) || defined(STM32L4)
     UART_HandleTypeDef huart = {.Instance = (USART_TypeDef *) regs};
     UART_ClockSourceTypeDef cs = UART_CLOCKSOURCE_UNDEFINED;
     UART_GETCLOCKSOURCE(&huart, cs);
@@ -437,6 +451,8 @@ bool stm32_uart_configure(int uart_no, const struct mgos_uart_config *cfg) {
       default:
         return false;
     }
+#else
+#error Unknown UART clocking scheme
 #endif
     if ((div & 0xffff0000) != 0) return false;
     brr = div;
@@ -445,7 +461,7 @@ bool stm32_uart_configure(int uart_no, const struct mgos_uart_config *cfg) {
   regs->CR2 = cr2;
   regs->CR3 = cr3;
   regs->BRR = brr;
-#if defined(STM32F7)
+#if defined(USART_CR1_RTOIE)
   regs->RTOR = 8; /* 8 idle bit intervals before RX timeout. */
   regs->ICR = USART_ERROR_INTS;
 #endif
@@ -492,25 +508,31 @@ void mgos_uart_hal_deinit(struct mgos_uart_state *us) {
       __HAL_RCC_USART3_CLK_DISABLE();
       irqn = USART3_IRQn;
       break;
-#if defined(STM32F7)
+#ifdef UART4_IRQn
     case 4:
       __HAL_RCC_UART4_CLK_DISABLE();
       irqn = UART4_IRQn;
       break;
+#endif
+#ifdef UART5_IRQn
     case 5:
       __HAL_RCC_UART5_CLK_DISABLE();
       irqn = UART5_IRQn;
       break;
 #endif
+#ifdef USART6_IRQn
     case 6:
       __HAL_RCC_USART6_CLK_DISABLE();
       irqn = USART6_IRQn;
       break;
-#if defined(STM32F7)
+#endif
+#ifdef UART7_IRQn
     case 7:
       __HAL_RCC_UART7_CLK_DISABLE();
       irqn = UART7_IRQn;
       break;
+#endif
+#ifdef UART7_IRQn
     case 8:
       __HAL_RCC_UART8_CLK_DISABLE();
       irqn = UART8_IRQn;

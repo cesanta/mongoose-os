@@ -24,6 +24,7 @@
 #include "lwip/tcpip.h"
 
 #include "mgos_hal_freertos_internal.h"
+#include "mgos_gpio.h"
 #include "mgos_system.h"
 
 #include "stm32_sdk_hal.h"
@@ -100,7 +101,8 @@ extern void mgos_nsleep100_cal();
 uint32_t mgos_bitbang_n100_cal = 0;
 
 void SystemCoreClockUpdate(void) {
-  uint32_t presc = AHBPrescTable[((RCC->CFGR & RCC_CFGR_HPRE) >> 4)];
+  uint32_t presc =
+      AHBPrescTable[((RCC->CFGR & RCC_CFGR_HPRE) >> RCC_CFGR_HPRE_Pos)];
   SystemCoreClock = HAL_RCC_GetSysClockFreq() >> presc;
   mgos_nsleep100_cal();
 }

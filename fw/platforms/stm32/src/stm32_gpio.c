@@ -42,9 +42,9 @@ IRAM GPIO_TypeDef *stm32_gpio_port_base(int pin_def) {
       return GPIOF;
     case 'G':
       return GPIOG;
-    case 'H':
-      return GPIOH;
 #ifdef STM32F7
+    case 'H': /* GPIOH is not supported on the F4 and L4 */
+      return GPIOH;
     case 'I':
       return GPIOI;
     case 'J':
@@ -56,6 +56,7 @@ IRAM GPIO_TypeDef *stm32_gpio_port_base(int pin_def) {
   return NULL;
 }
 
+#if defined(STM32F4) || defined(STM32F7)
 static void stm32_gpio_port_en(int pin_def) {
   uint32_t bit = 0;
   switch (STM32_PIN_PORT(pin_def)) {
@@ -80,10 +81,10 @@ static void stm32_gpio_port_en(int pin_def) {
     case 'G':
       bit = RCC_AHB1ENR_GPIOGEN;
       break;
+#ifdef STM32F7
     case 'H':
       bit = RCC_AHB1ENR_GPIOHEN;
       break;
-#ifdef STM32F7
     case 'I':
       bit = RCC_AHB1ENR_GPIOIEN;
       break;
@@ -97,6 +98,47 @@ static void stm32_gpio_port_en(int pin_def) {
   }
   SET_BIT(RCC->AHB1ENR, bit);
 }
+#elif defined(STM32L4)
+static void stm32_gpio_port_en(int pin_def) {
+  uint32_t bit = 0;
+  switch (STM32_PIN_PORT(pin_def)) {
+    case 'A':
+      bit = RCC_AHB2ENR_GPIOAEN;
+      break;
+    case 'B':
+      bit = RCC_AHB2ENR_GPIOBEN;
+      break;
+    case 'C':
+      bit = RCC_AHB2ENR_GPIOCEN;
+      break;
+    case 'D':
+      bit = RCC_AHB2ENR_GPIODEN;
+      break;
+    case 'E':
+      bit = RCC_AHB2ENR_GPIOEEN;
+      break;
+    case 'F':
+      bit = RCC_AHB2ENR_GPIOFEN;
+      break;
+    case 'G':
+      bit = RCC_AHB2ENR_GPIOGEN;
+      break;
+#if 0 /* We don't support GPIOH yet */
+    case 'H':
+      bit = RCC_AHB2ENR_GPIOHEN;
+      break;
+#endif
+  }
+  SET_BIT(RCC->AHB2ENR, bit);
+}
+
+/* L4 has two sets of EXTI registers but GPIO stuff is in set 1. */
+#define PR PR1
+#define IMR IMR1
+#define RTSR RTSR1
+#define FTSR FTSR1
+
+#endif
 
 const char *mgos_gpio_str(int pin_def, char buf[8]) {
   int i = 0;
