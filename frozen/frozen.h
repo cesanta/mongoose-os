@@ -306,6 +306,22 @@ void *json_next_key(const char *s, int len, void *handle, const char *path,
 void *json_next_elem(const char *s, int len, void *handle, const char *path,
                      int *idx, struct json_token *val);
 
+#ifndef JSON_MAX_PATH_LEN
+#define JSON_MAX_PATH_LEN 256
+#endif
+
+#ifndef JSON_MINIMAL
+#define JSON_MINIMAL 0
+#endif
+
+#ifndef JSON_ENABLE_BASE64
+#define JSON_ENABLE_BASE64 !JSON_MINIMAL
+#endif
+
+#ifndef JSON_ENABLE_HEX
+#define JSON_ENABLE_HEX !JSON_MINIMAL
+#endif
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

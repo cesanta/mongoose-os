@@ -19,6 +19,7 @@
 #define _CRT_SECURE_NO_WARNINGS /* Disable deprecation warning in VS2005+ */
 
 #include "frozen.h"
+
 #include <ctype.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -67,8 +68,8 @@ typedef unsigned _int64 uint64_t;
 #define va_copy(x, y) x = y
 #endif
 
-#ifndef JSON_MAX_PATH_LEN
-#define JSON_MAX_PATH_LEN 256
+#ifndef JSON_ENABLE_ARRAY
+#define JSON_ENABLE_ARRAY 1
 #endif
 
 struct frozen {
@@ -92,7 +93,7 @@ struct fstate {
 
 #define SET_STATE(fr, ptr, str, len)              \
   struct fstate fstate = {(ptr), (fr)->path_len}; \
-  append_to_path((fr), (str), (len));
+  json_append_to_path((fr), (str), (len));
 
 #define CALL_BACK(fr, tok, value, len)                                        \
   do {                                                                        \
@@ -110,7 +111,7 @@ struct fstate {
     }                                                                         \
   } while (0)
 
-static int append_to_path(struct frozen *f, const char *str, int size) {
+static int json_append_to_path(struct frozen *f, const char *str, int size) {
   int n = f->path_len;
   int left = sizeof(f->path) - n - 1;
   if (size > left) size = left;
@@ -120,13 +121,13 @@ static int append_to_path(struct frozen *f, const char *str, int size) {
   return n;
 }
 
-static void truncate_path(struct frozen *f, size_t len) {
+static void json_truncate_path(struct frozen *f, size_t len) {
   f->path_len = len;
   f->path[len] = '\0';
 }
 
-static int parse_object(struct frozen *f);
-static int parse_value(struct frozen *f);
+static int json_parse_object(struct frozen *f);
+static int json_parse_value(struct frozen *f);
 
 #define EXPECT(cond, err_code)      \
   do {                              \
@@ -141,25 +142,25 @@ static int parse_value(struct frozen *f);
 
 #define END_OF_STRING (-1)
 
-static int left(const struct frozen *f) {
+static int json_left(const struct frozen *f) {
   return f->end - f->cur;
 }
 
-static int is_space(int ch) {
+static int json_isspace(int ch) {
   return ch == ' ' || ch == '\t' || ch == '\r' || ch == '\n';
 }
 
-static void skip_whitespaces(struct frozen *f) {
-  while (f->cur < f->end && is_space(*f->cur)) f->cur++;
+static void json_skip_whitespaces(struct frozen *f) {
+  while (f->cur < f->end && json_isspace(*f->cur)) f->cur++;
 }
 
-static int cur(struct frozen *f) {
-  skip_whitespaces(f);
+static int json_cur(struct frozen *f) {
+  json_skip_whitespaces(f);
   return f->cur >= f->end ? END_OF_STRING : *(unsigned char *) f->cur;
 }
 
-static int test_and_skip(struct frozen *f, int expected) {
-  int ch = cur(f);
+static int json_test_and_skip(struct frozen *f, int expected) {
+  int ch = json_cur(f);
   if (ch == expected) {
     f->cur++;
     return 0;
@@ -167,24 +168,25 @@ static int test_and_skip(struct frozen *f, int expected) {
   return ch == END_OF_STRING ? JSON_STRING_INCOMPLETE : JSON_STRING_INVALID;
 }
 
-static int is_alpha(int ch) {
+static int json_isalpha(int ch) {
   return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z');
 }
 
-static int is_digit(int ch) {
+static int json_isdigit(int ch) {
   return ch >= '0' && ch <= '9';
 }
 
-static int is_hex_digit(int ch) {
-  return is_digit(ch) || (ch >= 'a' && ch <= 'f') || (ch >= 'A' && ch <= 'F');
+static int json_isxdigit(int ch) {
+  return json_isdigit(ch) || (ch >= 'a' && ch <= 'f') ||
+         (ch >= 'A' && ch <= 'F');
 }
 
-static int get_escape_len(const char *s, int len) {
+static int json_get_escape_len(const char *s, int len) {
   switch (*s) {
     case 'u':
       return len < 6 ? JSON_STRING_INCOMPLETE
-                     : is_hex_digit(s[1]) && is_hex_digit(s[2]) &&
-                               is_hex_digit(s[3]) && is_hex_digit(s[4])
+                     : json_isxdigit(s[1]) && json_isxdigit(s[2]) &&
+                               json_isxdigit(s[3]) && json_isxdigit(s[4])
                            ? 5
                            : JSON_STRING_INVALID;
     case '"':
@@ -202,21 +204,21 @@ static int get_escape_len(const char *s, int len) {
 }
 
 /* identifier = letter { letter | digit | '_' } */
-static int parse_identifier(struct frozen *f) {
-  EXPECT(is_alpha(cur(f)), JSON_STRING_INVALID);
+static int json_parse_identifier(struct frozen *f) {
+  EXPECT(json_isalpha(json_cur(f)), JSON_STRING_INVALID);
   {
     SET_STATE(f, f->cur, "", 0);
     while (f->cur < f->end &&
-           (*f->cur == '_' || is_alpha(*f->cur) || is_digit(*f->cur))) {
+           (*f->cur == '_' || json_isalpha(*f->cur) || json_isdigit(*f->cur))) {
       f->cur++;
     }
-    truncate_path(f, fstate.path_len);
+    json_truncate_path(f, fstate.path_len);
     CALL_BACK(f, JSON_TYPE_STRING, fstate.ptr, f->cur - fstate.ptr);
   }
   return 0;
 }
 
-static int get_utf8_char_len(unsigned char ch) {
+static int json_get_utf8_char_len(unsigned char ch) {
   if ((ch & 0x80) == 0) return 1;
   switch (ch & 0xf0) {
     case 0xf0:
@@ -229,21 +231,21 @@ static int get_utf8_char_len(unsigned char ch) {
 }
 
 /* string = '"' { quoted_printable_chars } '"' */
-static int parse_string(struct frozen *f) {
+static int json_parse_string(struct frozen *f) {
   int n, ch = 0, len = 0;
-  TRY(test_and_skip(f, '"'));
+  TRY(json_test_and_skip(f, '"'));
   {
     SET_STATE(f, f->cur, "", 0);
     for (; f->cur < f->end; f->cur += len) {
       ch = *(unsigned char *) f->cur;
-      len = get_utf8_char_len((unsigned char) ch);
+      len = json_get_utf8_char_len((unsigned char) ch);
       EXPECT(ch >= 32 && len > 0, JSON_STRING_INVALID); /* No control chars */
-      EXPECT(len <= left(f), JSON_STRING_INCOMPLETE);
+      EXPECT(len <= json_left(f), JSON_STRING_INCOMPLETE);
       if (ch == '\\') {
-        EXPECT((n = get_escape_len(f->cur + 1, left(f))) > 0, n);
+        EXPECT((n = json_get_escape_len(f->cur + 1, json_left(f))) > 0, n);
         len += n;
       } else if (ch == '"') {
-        truncate_path(f, fstate.path_len);
+        json_truncate_path(f, fstate.path_len);
         CALL_BACK(f, JSON_TYPE_STRING, fstate.ptr, f->cur - fstate.ptr);
         f->cur++;
         break;
@@ -254,77 +256,79 @@ static int parse_string(struct frozen *f) {
 }
 
 /* number = [ '-' ] digit+ [ '.' digit+ ] [ ['e'|'E'] ['+'|'-'] digit+ ] */
-static int parse_number(struct frozen *f) {
-  int ch = cur(f);
+static int json_parse_number(struct frozen *f) {
+  int ch = json_cur(f);
   SET_STATE(f, f->cur, "", 0);
   if (ch == '-') f->cur++;
   EXPECT(f->cur < f->end, JSON_STRING_INCOMPLETE);
   if (f->cur + 1 < f->end && f->cur[0] == '0' && f->cur[1] == 'x') {
     f->cur += 2;
     EXPECT(f->cur < f->end, JSON_STRING_INCOMPLETE);
-    EXPECT(is_hex_digit(f->cur[0]), JSON_STRING_INVALID);
-    while (f->cur < f->end && is_hex_digit(f->cur[0])) f->cur++;
+    EXPECT(json_isxdigit(f->cur[0]), JSON_STRING_INVALID);
+    while (f->cur < f->end && json_isxdigit(f->cur[0])) f->cur++;
   } else {
-    EXPECT(is_digit(f->cur[0]), JSON_STRING_INVALID);
-    while (f->cur < f->end && is_digit(f->cur[0])) f->cur++;
+    EXPECT(json_isdigit(f->cur[0]), JSON_STRING_INVALID);
+    while (f->cur < f->end && json_isdigit(f->cur[0])) f->cur++;
     if (f->cur < f->end && f->cur[0] == '.') {
       f->cur++;
       EXPECT(f->cur < f->end, JSON_STRING_INCOMPLETE);
-      EXPECT(is_digit(f->cur[0]), JSON_STRING_INVALID);
-      while (f->cur < f->end && is_digit(f->cur[0])) f->cur++;
+      EXPECT(json_isdigit(f->cur[0]), JSON_STRING_INVALID);
+      while (f->cur < f->end && json_isdigit(f->cur[0])) f->cur++;
     }
     if (f->cur < f->end && (f->cur[0] == 'e' || f->cur[0] == 'E')) {
       f->cur++;
       EXPECT(f->cur < f->end, JSON_STRING_INCOMPLETE);
       if ((f->cur[0] == '+' || f->cur[0] == '-')) f->cur++;
       EXPECT(f->cur < f->end, JSON_STRING_INCOMPLETE);
-      EXPECT(is_digit(f->cur[0]), JSON_STRING_INVALID);
-      while (f->cur < f->end && is_digit(f->cur[0])) f->cur++;
+      EXPECT(json_isdigit(f->cur[0]), JSON_STRING_INVALID);
+      while (f->cur < f->end && json_isdigit(f->cur[0])) f->cur++;
     }
   }
-  truncate_path(f, fstate.path_len);
+  json_truncate_path(f, fstate.path_len);
   CALL_BACK(f, JSON_TYPE_NUMBER, fstate.ptr, f->cur - fstate.ptr);
   return 0;
 }
 
+#if JSON_ENABLE_ARRAY
 /* array = '[' [ value { ',' value } ] ']' */
-static int parse_array(struct frozen *f) {
+static int json_parse_array(struct frozen *f) {
   int i = 0, current_path_len;
   char buf[20];
   CALL_BACK(f, JSON_TYPE_ARRAY_START, NULL, 0);
-  TRY(test_and_skip(f, '['));
+  TRY(json_test_and_skip(f, '['));
   {
     {
       SET_STATE(f, f->cur - 1, "", 0);
-      while (cur(f) != ']') {
+      while (json_cur(f) != ']') {
         snprintf(buf, sizeof(buf), "[%d]", i);
         i++;
-        current_path_len = append_to_path(f, buf, strlen(buf));
+        current_path_len = json_append_to_path(f, buf, strlen(buf));
         f->cur_name =
             f->path + strlen(f->path) - strlen(buf) + 1 /*opening brace*/;
         f->cur_name_len = strlen(buf) - 2 /*braces*/;
-        TRY(parse_value(f));
-        truncate_path(f, current_path_len);
-        if (cur(f) == ',') f->cur++;
+        TRY(json_parse_value(f));
+        json_truncate_path(f, current_path_len);
+        if (json_cur(f) == ',') f->cur++;
       }
-      TRY(test_and_skip(f, ']'));
-      truncate_path(f, fstate.path_len);
+      TRY(json_test_and_skip(f, ']'));
+      json_truncate_path(f, fstate.path_len);
       CALL_BACK(f, JSON_TYPE_ARRAY_END, fstate.ptr, f->cur - fstate.ptr);
     }
   }
   return 0;
 }
+#endif /* JSON_ENABLE_ARRAY */
 
-static int expect(struct frozen *f, const char *s, int len,
-                  enum json_token_type tok_type) {
-  int i, n = left(f);
+static int json_expect(struct frozen *f, const char *s, int len,
+                       enum json_token_type tok_type) {
+  int i, n = json_left(f);
   SET_STATE(f, f->cur, "", 0);
   for (i = 0; i < len; i++) {
     if (i >= n) return JSON_STRING_INCOMPLETE;
     if (f->cur[i] != s[i]) return JSON_STRING_INVALID;
   }
   f->cur += len;
-  truncate_path(f, fstate.path_len);
+  json_truncate_path(f, fstate.path_len);
 
   CALL_BACK(f, tok_type, fstate.ptr, f->cur - fstate.ptr);
 
@@ -332,27 +336,29 @@ static int expect(struct frozen *f, const char *s, int len,
 }
 
 /* value = 'null' | 'true' | 'false' | number | string | array | object */
-static int parse_value(struct frozen *f) {
-  int ch = cur(f);
+static int json_parse_value(struct frozen *f) {
+  int ch = json_cur(f);
 
   switch (ch) {
     case '"':
-      TRY(parse_string(f));
+      TRY(json_parse_string(f));
       break;
     case '{':
-      TRY(parse_object(f));
+      TRY(json_parse_object(f));
       break;
+#if JSON_ENABLE_ARRAY
     case '[':
-      TRY(parse_array(f));
+      TRY(json_parse_array(f));
       break;
+#endif
     case 'n':
-      TRY(expect(f, "null", 4, JSON_TYPE_NULL));
+      TRY(json_expect(f, "null", 4, JSON_TYPE_NULL));
       break;
     case 't':
-      TRY(expect(f, "true", 4, JSON_TYPE_TRUE));
+      TRY(json_expect(f, "true", 4, JSON_TYPE_TRUE));
       break;
     case 'f':
-      TRY(expect(f, "false", 5, JSON_TYPE_FALSE));
+      TRY(json_expect(f, "false", 5, JSON_TYPE_FALSE));
       break;
     case '-':
     case '0':
@@ -365,7 +371,7 @@ static int parse_value(struct frozen *f) {
     case '7':
     case '8':
     case '9':
-      TRY(parse_number(f));
+      TRY(json_parse_number(f));
       break;
     default:
       return ch == END_OF_STRING ? JSON_STRING_INCOMPLETE : JSON_STRING_INVALID;
@@ -375,12 +381,12 @@ static int parse_value(struct frozen *f) {
 }
 
 /* key = identifier | string */
-static int parse_key(struct frozen *f) {
-  int ch = cur(f);
-  if (is_alpha(ch)) {
-    TRY(parse_identifier(f));
+static int json_parse_key(struct frozen *f) {
+  int ch = json_cur(f);
+  if (json_isalpha(ch)) {
+    TRY(json_parse_identifier(f));
   } else if (ch == '"') {
-    TRY(parse_string(f));
+    TRY(json_parse_string(f));
   } else {
     return ch == END_OF_STRING ? JSON_STRING_INCOMPLETE : JSON_STRING_INVALID;
   }
@@ -388,44 +394,44 @@ static int parse_key(struct frozen *f) {
 }
 
 /* pair = key ':' value */
-static int parse_pair(struct frozen *f) {
+static int json_parse_pair(struct frozen *f) {
   int current_path_len;
   const char *tok;
-  skip_whitespaces(f);
+  json_skip_whitespaces(f);
   tok = f->cur;
-  TRY(parse_key(f));
+  TRY(json_parse_key(f));
   {
     f->cur_name = *tok == '"' ? tok + 1 : tok;
     f->cur_name_len = *tok == '"' ? f->cur - tok - 2 : f->cur - tok;
-    current_path_len = append_to_path(f, f->cur_name, f->cur_name_len);
+    current_path_len = json_append_to_path(f, f->cur_name, f->cur_name_len);
   }
-  TRY(test_and_skip(f, ':'));
-  TRY(parse_value(f));
-  truncate_path(f, current_path_len);
+  TRY(json_test_and_skip(f, ':'));
+  TRY(json_parse_value(f));
+  json_truncate_path(f, current_path_len);
   return 0;
 }
 
 /* object = '{' pair { ',' pair } '}' */
-static int parse_object(struct frozen *f) {
+static int json_parse_object(struct frozen *f) {
   CALL_BACK(f, JSON_TYPE_OBJECT_START, NULL, 0);
-  TRY(test_and_skip(f, '{'));
+  TRY(json_test_and_skip(f, '{'));
   {
     SET_STATE(f, f->cur - 1, ".", 1);
-    while (cur(f) != '}') {
-      TRY(parse_pair(f));
-      if (cur(f) == ',') f->cur++;
+    while (json_cur(f) != '}') {
+      TRY(json_parse_pair(f));
+      if (json_cur(f) == ',') f->cur++;
     }
-    TRY(test_and_skip(f, '}'));
-    truncate_path(f, fstate.path_len);
+    TRY(json_test_and_skip(f, '}'));
+    json_truncate_path(f, fstate.path_len);
     CALL_BACK(f, JSON_TYPE_OBJECT_END, fstate.ptr, f->cur - fstate.ptr);
   }
   return 0;
 }
 
-static int doit(struct frozen *f) {
+static int json_doit(struct frozen *f) {
   if (f->cur == 0 || f->end < f->cur) return JSON_STRING_INVALID;
   if (f->end == f->cur) return JSON_STRING_INCOMPLETE;
-  return parse_value(f);
+  return json_parse_value(f);
 }
 
 int json_escape(struct json_out *out, const char *p, size_t len) WEAK;
@@ -444,7 +450,7 @@ int json_escape(struct json_out *out, const char *p, size_t len) {
       n += out->printer(out, &specials[ch - '\b'], 1);
     } else if (isprint(ch)) {
       n += out->printer(out, p + i, 1);
-    } else if ((cl = get_utf8_char_len(ch)) == 1) {
+    } else if ((cl = json_get_utf8_char_len(ch)) == 1) {
       n += out->printer(out, "\\u00", 4);
       n += out->printer(out, &hex_digits[(ch >> 4) % 0xf], 1);
       n += out->printer(out, &hex_digits[ch % 0xf], 1);
@@ -476,6 +482,7 @@ int json_printer_file(struct json_out *out, const char *buf, size_t len) {
   return fwrite(buf, 1, len, out->u.fp);
 }
 
+#if JSON_ENABLE_BASE64
 static int b64idx(int c) {
   if (c < 26) {
     return c + 'A';
@@ -502,13 +509,6 @@ static int b64rev(int c) {
   } else {
     return 64;
   }
-}
-
-static unsigned char hexdec(const char *s) {
-#define HEXTOI(x) (x >= '0' && x <= '9' ? x - '0' : x - 'W')
-  int a = tolower(*(const unsigned char *) s);
-  int b = tolower(*(const unsigned char *) (s + 1));
-  return (HEXTOI(a) << 4) | HEXTOI(b);
 }
 
 static int b64enc(struct json_out *out, const unsigned char *p, int n) {
@@ -544,6 +544,16 @@ static int b64dec(const char *src, int n, char *dst) {
   }
   return len;
 }
+#endif /* JSON_ENABLE_BASE64 */
+
+#if JSON_ENABLE_HEX
+static unsigned char hexdec(const char *s) {
+#define HEXTOI(x) (x >= '0' && x <= '9' ? x - '0' : x - 'W')
+  int a = tolower(*(const unsigned char *) s);
+  int b = tolower(*(const unsigned char *) (s + 1));
+  return (HEXTOI(a) << 4) | HEXTOI(b);
+}
+#endif /* JSON_ENABLE_HEX */
 
 int json_vprintf(struct json_out *out, const char *fmt, va_list xap) WEAK;
 int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
@@ -579,6 +589,7 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
         const char *str = val ? "true" : "false";
         len += out->printer(out, str, strlen(str));
       } else if (fmt[1] == 'H') {
+#if JSON_ENABLE_HEX
         const char *hex = "0123456789abcdef";
         int i, n = va_arg(ap, int);
         const unsigned char *p = va_arg(ap, const unsigned char *);
@@ -588,12 +599,15 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
           len += out->printer(out, &hex[p[i] & 0xf], 1);
         }
         len += out->printer(out, quote, 1);
+#endif /* JSON_ENABLE_HEX */
       } else if (fmt[1] == 'V') {
+#if JSON_ENABLE_BASE64
         const unsigned char *p = va_arg(ap, const unsigned char *);
         int n = va_arg(ap, int);
         len += out->printer(out, quote, 1);
         len += b64enc(out, p, n);
         len += out->printer(out, quote, 1);
+#endif /* JSON_ENABLE_BASE64 */
       } else if (fmt[1] == 'Q' ||
                  (fmt[1] == '.' && fmt[2] == '*' && fmt[3] == 'Q')) {
         size_t l = 0;
@@ -712,9 +726,9 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
         }
       }
       fmt += skip;
-    } else if (*fmt == '_' || is_alpha(*fmt)) {
+    } else if (*fmt == '_' || json_isalpha(*fmt)) {
       len += out->printer(out, quote, 1);
-      while (*fmt == '_' || is_alpha(*fmt) || is_digit(*fmt)) {
+      while (*fmt == '_' || json_isalpha(*fmt) || json_isdigit(*fmt)) {
         len += out->printer(out, fmt, 1);
         fmt++;
       }
@@ -800,7 +814,7 @@ int json_walk(const char *json_string, int json_string_length,
   frozen.callback_data = callback_data;
   frozen.callback = callback;
 
-  TRY(doit(&frozen));
+  TRY(json_doit(&frozen));
 
   return frozen.cur - json_string;
 }
@@ -882,16 +896,16 @@ static void json_scanf_cb(void *callback_data, const char *name,
   (void) name;
   (void) name_len;
 
-  if (strcmp(path, info->path) != 0) {
-    /* It's not the path we're looking for, so, just ignore this callback */
-    return;
-  }
-
   if (token->ptr == NULL) {
     /*
      * We're not interested here in the events for which we have no value;
      * namely, JSON_TYPE_OBJECT_START and JSON_TYPE_ARRAY_START
      */
+    return;
+  }
+
+  if (strcmp(path, info->path) != 0) {
+    /* It's not the path we're looking for, so, just ignore this callback */
     return;
   }
 
@@ -940,6 +954,7 @@ static void json_scanf_cb(void *callback_data, const char *name,
       break;
     }
     case 'H': {
+#if JSON_ENABLE_HEX
       char **dst = (char **) info->user_data;
       int i, len = token->len / 2;
       *(int *) info->target = len;
@@ -950,9 +965,11 @@ static void json_scanf_cb(void *callback_data, const char *name,
         (*dst)[len] = '\0';
         info->num_conversions++;
       }
+#endif /* JSON_ENABLE_HEX */
       break;
     }
     case 'V': {
+#if JSON_ENABLE_BASE64
       char **dst = (char **) info->target;
       int len = token->len * 4 / 3 + 2;
       if ((*dst = (char *) malloc(len + 1)) != NULL) {
@@ -961,6 +978,7 @@ static void json_scanf_cb(void *callback_data, const char *name,
         *(int *) info->user_data = n;
         info->num_conversions++;
       }
+#endif /* JSON_ENABLE_BASE64 */
       break;
     }
     case 'T':
@@ -968,11 +986,39 @@ static void json_scanf_cb(void *callback_data, const char *name,
       *(struct json_token *) info->target = *token;
       break;
     default:
-      /* Before scanf, copy into tmp buffer in order to 0-terminate it */
-      if (token->len < (int) sizeof(buf)) {
-        memcpy(buf, token->ptr, token->len);
-        buf[token->len] = '\0';
+      if (token->len >= (int) sizeof(buf)) break;
+      /* Before converting, copy into tmp buffer in order to 0-terminate it */
+      memcpy(buf, token->ptr, token->len);
+      buf[token->len] = '\0';
+      /* NB: Use of base 0 for %d, %ld, %u and %lu is intentional. */
+      if (info->fmt[1] == 'd' || (info->fmt[1] == 'l' && info->fmt[2] == 'd') ||
+          info->fmt[1] == 'i') {
+        char *endptr = NULL;
+        long r = strtol(buf, &endptr, 0 /* base */);
+        if (*endptr == '\0') {
+          if (info->fmt[1] == 'l') {
+            *((long *) info->target) = r;
+          } else {
+            *((int *) info->target) = (int) r;
+          }
+          info->num_conversions++;
+        }
+      } else if (info->fmt[1] == 'u' ||
+                 (info->fmt[1] == 'l' && info->fmt[2] == 'u')) {
+        char *endptr = NULL;
+        unsigned long r = strtoul(buf, &endptr, 0 /* base */);
+        if (*endptr == '\0') {
+          if (info->fmt[1] == 'l') {
+            *((unsigned long *) info->target) = r;
+          } else {
+            *((unsigned int *) info->target) = (unsigned int) r;
+          }
+          info->num_conversions++;
+        }
+      } else {
+#if !JSON_MINIMAL
         info->num_conversions += sscanf(buf, info->fmt, info->target);
+#endif
       }
       break;
   }
@@ -1009,18 +1055,22 @@ int json_vscanf(const char *s, int len, const char *fmt, va_list ap) {
         default: {
           const char *delims = ", \t\r\n]}";
           int conv_len = strcspn(fmt + i + 1, delims) + 1;
-          snprintf(fmtbuf, sizeof(fmtbuf), "%.*s", conv_len, fmt + i);
+          memcpy(fmtbuf, fmt + i, conv_len);
+          fmtbuf[conv_len] = '\0';
           i += conv_len;
           i += strspn(fmt + i, delims);
           break;
         }
       }
       json_walk(s, len, json_scanf_cb, &info);
-    } else if (is_alpha(fmt[i]) || get_utf8_char_len(fmt[i]) > 1) {
+    } else if (json_isalpha(fmt[i]) || json_get_utf8_char_len(fmt[i]) > 1) {
+      char *pe;
       const char *delims = ": \r\n\t";
       int key_len = strcspn(&fmt[i], delims);
       if ((p = strrchr(path, '.')) != NULL) p[1] = '\0';
-      sprintf(path + strlen(path), "%.*s", key_len, &fmt[i]);
+      pe = path + strlen(path);
+      memcpy(pe, fmt + i, key_len);
+      pe[key_len] = '\0';
       i += key_len + strspn(fmt + i + key_len, delims);
     } else {
       i++;
@@ -1106,7 +1156,6 @@ static void json_vsetf_cb(void *userdata, const char *name, size_t name_len,
   int off, len = get_matched_prefix_len(path, data->json_path);
   if (t->ptr == NULL) return;
   off = t->ptr - data->base;
-  // printf("--%d %s %d\n", t->type, path, off);
   if (len > data->matched) data->matched = len;
 
   /*
@@ -1152,16 +1201,14 @@ int json_vsetf(const char *s, int len, struct json_out *out,
   data.json_path = json_path;
   data.base = s;
   data.end = len;
-  // printf("S:[%.*s] %s %p\n", len, s, json_path, json_fmt);
   json_walk(s, len, json_vsetf_cb, &data);
-  // printf("-> %d %d %d\n", data.prev, data.pos, data.end);
   if (json_fmt == NULL) {
     /* Deletion codepath */
     json_printf(out, "%.*s", data.prev, s);
     /* Trim comma after the value that begins at object/array start */
     if (s[data.prev - 1] == '{' || s[data.prev - 1] == '[') {
       int i = data.end;
-      while (i < len && is_space(s[i])) i++;
+      while (i < len && json_isspace(s[i])) i++;
       if (s[i] == ',') data.end = i + 1; /* Point after comma */
     }
     json_printf(out, "%.*s", len - data.end, s + data.end);
@@ -1337,8 +1384,8 @@ static void next_set_key(struct next_data *d, const char *name, int name_len,
   }
 }
 
-static void next_cb(void *userdata, const char *name, size_t name_len,
-                    const char *path, const struct json_token *t) {
+static void json_next_cb(void *userdata, const char *name, size_t name_len,
+                         const char *path, const struct json_token *t) {
   struct next_data *d = (struct next_data *) userdata;
   const char *p = path + d->path_len;
   if (d->found) return;
@@ -1348,10 +1395,8 @@ static void next_cb(void *userdata, const char *name, size_t name_len,
   if (strchr(p + 1, '[') != NULL) return; /* Ditto for arrays */
   // {OBJECT,ARRAY}_END types do not pass name, _START does. Save key.
   if (t->type == JSON_TYPE_OBJECT_START || t->type == JSON_TYPE_ARRAY_START) {
-    // printf("SAV %s %d %p\n", path, t->type, t->ptr);
     next_set_key(d, name, name_len, p[0] == '[');
   } else if (d->handle == NULL || d->handle < (void *) t->ptr) {
-    // printf("END %s %d %p\n", path, t->type, t->ptr);
     if (t->type != JSON_TYPE_OBJECT_END && t->type != JSON_TYPE_ARRAY_END) {
       next_set_key(d, name, name_len, p[0] == '[');
     }
@@ -1367,7 +1412,7 @@ static void *json_next(const char *s, int len, void *handle, const char *path,
   struct json_token tmpkey, *k = key == NULL ? &tmpkey : key;
   int tmpidx, *pidx = i == NULL ? &tmpidx : i;
   struct next_data data = {handle, path, strlen(path), 0, k, v, pidx};
-  json_walk(s, len, next_cb, &data);
+  json_walk(s, len, json_next_cb, &data);
   return data.found ? data.handle : NULL;
 }
 
