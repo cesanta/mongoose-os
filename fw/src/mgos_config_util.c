@@ -123,7 +123,8 @@ void mgos_conf_parse_cb(void *data, const char *name, size_t name_len,
       char *endptr = NULL;
       switch (e->type) {
         case CONF_TYPE_INT:
-          *((int *) vp) = strtol(tok->ptr, &endptr, 10);
+          /* NB: Using base 0 to accept hex numbers. */
+          *((int *) vp) = strtol(tok->ptr, &endptr, 0);
           break;
         case CONF_TYPE_DOUBLE:
           *((double *) vp) = strtod(tok->ptr, &endptr);
