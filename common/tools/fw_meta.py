@@ -108,10 +108,10 @@ def get_git_repo(path):
 
 
 def get_tag_for_commit(repo, commit):
-    for tag in repo.tags:
-        if tag.commit == commit:
-            return tag.name
-    return None
+    tt = [tag.name for tag in repo.tags if tag.commit == commit]
+    if not tt:
+        return None
+    return sorted(tt)[-1]
 
 
 def file_or_stdout(fname):
