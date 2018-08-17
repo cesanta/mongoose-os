@@ -88,6 +88,7 @@ const struct mgos_conf_entry *mgos_conf_find_schema_entry(
 void mgos_conf_parse_cb(void *data, const char *name, size_t name_len,
                         const char *path, const struct json_token *tok) {
   struct parse_ctx *ctx = (struct parse_ctx *) data;
+  char *endptr = NULL;
 
   (void) name;
   (void) name_len;
@@ -106,29 +107,38 @@ void mgos_conf_parse_cb(void *data, const char *name, size_t name_len,
     LOG(LL_INFO, ("Extra key: [%s]", path));
     return;
   }
+#ifndef MGOS_BOOT_BUILD
   if (e->type != CONF_TYPE_OBJECT &&
       !mgos_conf_check_access(mg_mk_str(path), ctx->acl)) {
     LOG(LL_ERROR, ("Not allowed to set [%s]", path));
     return;
   }
+#endif
   char *vp = (((char *) ctx->cfg) + e->offset - ctx->offset_adj);
   switch (e->type) {
+    case CONF_TYPE_DOUBLE:
+#ifdef MGOS_BOOT_BUILD
+      ctx->result = false;
+      break;
+#else
+/* fall through */
+#endif
     case CONF_TYPE_INT:
-    case CONF_TYPE_DOUBLE: {
       if (tok->type != JSON_TYPE_NUMBER) {
         LOG(LL_ERROR, ("[%s] is not a number", path));
         ctx->result = false;
         return;
       }
-      char *endptr = NULL;
       switch (e->type) {
         case CONF_TYPE_INT:
           /* NB: Using base 0 to accept hex numbers. */
           *((int *) vp) = strtol(tok->ptr, &endptr, 0);
           break;
+#ifndef MGOS_BOOT_BUILD
         case CONF_TYPE_DOUBLE:
           *((double *) vp) = strtod(tok->ptr, &endptr);
           break;
+#endif
         default:
           /* Can't happen */
           break;
@@ -140,7 +150,6 @@ void mgos_conf_parse_cb(void *data, const char *name, size_t name_len,
         return;
       }
       break;
-    }
     case CONF_TYPE_BOOL: {
       if (tok->type != JSON_TYPE_TRUE && tok->type != JSON_TYPE_FALSE) {
         LOG(LL_ERROR, ("[%s] is not a boolean", path));

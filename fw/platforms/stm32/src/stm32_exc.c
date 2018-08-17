@@ -30,6 +30,10 @@
  *functions.
  */
 
+#ifndef MGOS_BOOT_BUILD
 void mgos_cd_putc(int c) {
   stm32_uart_dputc(c);
 }
+#else
+/* Bootloader provides its own CD printing function. */
+#endif

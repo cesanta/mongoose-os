@@ -16,6 +16,7 @@ MEMORY {
   FLASH_CS     (rx)  : ORIGIN = FLASH_BASE_ADDR + FLASH_BL_SIZE + FLASH_BL_CFG_SIZE + FLASH_FS_SIZE,
                        LENGTH = FLASH_SIZE - (FLASH_BL_SIZE + FLASH_BL_CFG_SIZE + FLASH_FS_SIZE)
   SRAM         (rwx) : ORIGIN = SRAM_BASE_ADDR,  LENGTH = SRAM_SIZE
+  SRAM2        (rwx) : ORIGIN = SRAM2_BASE_ADDR,  LENGTH = SRAM2_SIZE
 }
 
 /* Define output sections */
@@ -80,7 +81,7 @@ SECTIONS {
     *(.data SORT(.data.*))
     *(.RamFunc SORT(.RamFunc.*))
     _data_end = .;
-  } > SRAM AT > FLASH_CS
+  } > SRAM2 AT > FLASH_CS
   _data_flash_start = LOADADDR(.data);
 
   .bss : {
@@ -89,7 +90,7 @@ SECTIONS {
     *(COMMON)
     . = ALIGN(4);
     _bss_end = .;
-  } > SRAM
+  } > SRAM2
 
   /* For now, max size of no-cache region is 1K */
   .nocache : {
@@ -98,12 +99,12 @@ SECTIONS {
     *(.nocache)
     . = ALIGN(NOCACHE_SIZE);
     __nocache_end__ = .;
-  } > SRAM
+  } > SRAM2
 
   .heap : {
     . = ALIGN(8);
     _heap_start = .;
-    . = . + (LENGTH(SRAM) - SIZEOF(.data) - SIZEOF(.bss) - SIZEOF(.nocache) - _stack_size);
+    . = . + (LENGTH(SRAM) - _stack_size);
     . = ALIGN(8);
     _heap_end = .;
   } > SRAM

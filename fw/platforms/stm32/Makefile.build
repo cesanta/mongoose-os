@@ -135,7 +135,7 @@ ifeq "$(MGOS_ROOT_FS_TYPE)" "SPIFFS"
 else
 ifeq "$(MGOS_ROOT_FS_TYPE)" "LFS"
   MKFS ?= /usr/local/bin/mklfs
-  MGOS_ROOT_FS_OPTS ?= {"bs": 1024, "is": 128}
+  MGOS_ROOT_FS_OPTS ?= {"bs": 4096, "is": 128}
 endif
 endif
 FS_STAGING_DIR = $(BUILD_DIR)/fs
@@ -218,7 +218,7 @@ IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
         $(SDK_IPATH)
 
 CFLAGS ?= -std=gnu99 -Os -ggdb -MD -Wall -Werror -pipe \
-          -fno-common -fno-inline \
+          -fno-common \
           -ffunction-sections -fdata-sections \
           -DFW_ARCHITECTURE=$(APP_PLATFORM) \
           $(STM32_CFLAGS) $(MGOS_FEATURES) \
@@ -248,6 +248,7 @@ CXXFLAGS += $(APP_CXXFLAGS)
 CFLAGS  += -DSRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -DSRAM_SIZE=$(SRAM_SIZE) \
            -DSTM32_SRAM2_BASE_ADDR=$(SRAM2_BASE_ADDR) -DSTM32_SRAM2_SIZE=$(SRAM2_SIZE) \
            -DSTM32_FLASH_BASE_ADDR=$(FLASH_BASE_ADDR) -DSTM32_FLASH_SIZE=$(FLASH_SIZE) \
+           -DSTM32_FLASH_BL_SIZE=$(FLASH_BL_SIZE) \
            -DMGOS_ROOT_DEVTAB='$(MGOS_ROOT_DEVTAB)' \
            -DMGOS_ROOT_FS_TYPE='$(MGOS_ROOT_FS_TYPE)' \
            -DMGOS_ROOT_FS_OPTS='$(MGOS_ROOT_FS_OPTS)' \

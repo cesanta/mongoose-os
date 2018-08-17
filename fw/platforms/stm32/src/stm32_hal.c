@@ -73,8 +73,8 @@ void HAL_Delay(__IO uint32_t ms) __attribute__((alias("mgos_msleep")));
 
 static void delay_cycles(unsigned long n) {
   __asm(
-      "    subs    %0, #1\n"
-      "    bne     delay_cycles\n"
+      "dcy: subs    %0, #1\n"
+      "     bne     dcy\n"
       : /* output */
       : /* input */ "r"(n)
       : /* scratch */);
