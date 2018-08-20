@@ -1225,7 +1225,7 @@ int json_vsetf(const char *s, int len, struct json_out *out,
         json_printf(out, ",");
       }
       if (off > 0 && json_path[off - 1] != '.') break;
-      json_printf(out, "%.*Q:", 1, json_path + off);
+      json_printf(out, "%.*Q:", n, json_path + off);
       off += n;
       if (json_path[off] != '\0') {
         json_printf(out, "%c", json_path[off] == '.' ? '{' : '[');
