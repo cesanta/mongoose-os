@@ -67,6 +67,10 @@ struct mgos_uart_dev_config {
   int8_t cts_gpio;
   int8_t rts_gpio;
 
+  /* Use inverted polarity for Rx and Tx. */
+  bool rx_inverted;
+  bool tx_inverted;
+
   /* Half-duplex mode: if enabled, tx_en_gpio will be configured as an output
    * and will be set to tx_en_gpio_val when data is being transmitted.
    * When transmission is done, it will be returned to !tx_en_gpio_val. */
