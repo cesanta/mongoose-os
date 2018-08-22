@@ -39,23 +39,15 @@ import hashlib
 import json
 import os
 import re
+import six
 import string
+import subprocess
 import sys
 import zipfile
 
-# TODO(rojer): Remove when all the build images have python-six installed.
-try:
-    import six
-    string_types = six.string_types
-except:
-    string_types = basestring
-
-# Debian/Ubuntu: apt-get install python-git
-# PIP: pip install GitPython
-import git
-
 FW_MANIFEST_FILE_NAME = 'manifest.json'
 
+string_types = six.string_types
 
 # From http://stackoverflow.com/questions/241327/python-snippet-to-remove-c-and-c-comments#241506
 def remove_comments(text):
@@ -90,28 +82,6 @@ class FFISymbol:
 
     def signature(self):
         return self.return_type + " " + self.name + self.args
-
-
-def get_git_repo(path):
-    # This is a temporary workaround until we get a version of python-git
-    # that supports search_parent_directories=True (1.0 and up).
-    repo_dir = path
-    repo = None
-    while repo is None:
-        try:
-            return git.Repo(repo_dir)
-        except git.exc.InvalidGitRepositoryError:
-            if repo_dir != '/':
-                repo_dir = os.path.split(repo_dir)[0]
-                continue
-            raise RuntimeError("%s doesn't look like a Git repo" % path)
-
-
-def get_tag_for_commit(repo, commit):
-    tt = [tag.name for tag in repo.tags if tag.commit == commit]
-    if not tt:
-        return None
-    return sorted(tt)[-1]
 
 
 def file_or_stdout(fname):
@@ -174,48 +144,46 @@ def cmd_gen_build_info(args):
     if timestamp is not None:
         bi['build_timestamp'] = timestamp
 
+    try:
+        git_describe_out = subprocess.check_output(["git", "-C", repo_path, "describe", "--dirty", "--tags"])
+        git_revparse_out = subprocess.check_output(["git", "-C", repo_path, "rev-parse", "--abbrev-ref", "HEAD"])
+        git_head_ct_out = subprocess.check_output(["git", "-C", repo_path, "log", "-n", "1", "HEAD", "--format=%ct"])
+    except Exception:
+        git_describe_out = ""
+        git_revparse_out = ""
+        git_head_ct_out = ""
+
     version = None
     if args.version:
         version = args.version
     else:
         version = None
-        if args.tag_as_version:
-            try:
-                repo = get_git_repo(repo_path)
-                version = get_tag_for_commit(repo, repo.head.commit)
-            except Exception as e:
-                pass
+        # If we are precisely at a specific tag, repo is clean - use it as version.
+        if args.tag_as_version and git_describe_out and "-" not in git_describe_out:
+            version = git_describe_out
+        # Otherwise, if it's a clean git repo, use last commit's timestamp.
+        elif git_head_ct_out and "dirty" not in git_describe_out:
+            vts = datetime.datetime.utcfromtimestamp(long(git_head_ct_out))
+        # If all else fails, use current timestamp
+        else:
+            vts = ts
         if version is None:
-            version = ts.strftime('%Y%m%d%H')
+            version = vts.strftime('%Y%m%d%H%M')
     if version is not None:
         bi['build_version'] = version
 
-    id = None
+    build_id = None
     if args.id:
-        id = args.id
+        build_id = args.id
     else:
-        try:
-            repo = repo or get_git_repo(repo_path)
-            if repo.head.is_detached:
-                branch_or_tag = get_tag_for_commit(repo, repo.head.commit)
-                if branch_or_tag is None:
-                    branch_or_tag = '?'
-            else:
-                branch_or_tag = repo.active_branch
-
-            if args.dirty == "auto":
-                dirty = repo.is_dirty()
-            else:
-                dirty = args.dirty == "true"
-            id = '%s/%s@%s%s' % (
-                ts.strftime('%Y%m%d-%H%M%S'),
-                branch_or_tag,
-                str(repo.head.commit)[:8],
-                '+' if dirty else '')
-        except Exception as e:
-            id = '%s/???' % ts.strftime('%Y%m%d-%H%M%S')
-    if id is not None:
-        bi['build_id'] = id
+        build_id = ts.strftime('%Y%m%d-%H%M%S')
+        if git_describe_out:
+            build_id += "/"
+            if git_revparse_out != "HEAD":
+                build_id += "%s-" % git_revparse_out.strip()
+            build_id += git_describe_out.strip()
+    if build_id is not None:
+        bi['build_id'] = build_id
 
     _write_build_info(bi, args)
 
