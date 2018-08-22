@@ -182,7 +182,7 @@ def cmd_gen_build_info(args):
             if git_revparse_out != "HEAD":
                 build_id += "-%s" % git_revparse_out
             head_hash = git_log_head_out.split()[0]
-            if head_hash[:9] not in build_id:
+            if head_hash[:7] not in build_id:
                 build_id += "-g%s" % head_hash[:9]
     if build_id is not None:
         bi['build_id'] = build_id
