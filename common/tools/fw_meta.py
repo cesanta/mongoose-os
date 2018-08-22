@@ -145,13 +145,13 @@ def cmd_gen_build_info(args):
         bi['build_timestamp'] = timestamp
 
     try:
-        git_describe_out = subprocess.check_output(["git", "-C", repo_path, "describe", "--dirty", "--tags"])
-        git_revparse_out = subprocess.check_output(["git", "-C", repo_path, "rev-parse", "--abbrev-ref", "HEAD"])
-        git_head_ct_out = subprocess.check_output(["git", "-C", repo_path, "log", "-n", "1", "HEAD", "--format=%ct"])
+        git_describe_out = subprocess.check_output(["git", "-C", repo_path, "describe", "--dirty", "--tags"]).strip()
+        git_revparse_out = subprocess.check_output(["git", "-C", repo_path, "rev-parse", "--abbrev-ref", "HEAD"]).strip()
+        git_log_head_out = subprocess.check_output(["git", "-C", repo_path, "log", "-n", "1", "HEAD", "--format=%H %ct"]).strip()
     except Exception:
         git_describe_out = ""
         git_revparse_out = ""
-        git_head_ct_out = ""
+        git_log_head_out = ""
 
     version = None
     if args.version:
@@ -162,8 +162,8 @@ def cmd_gen_build_info(args):
         if args.tag_as_version and git_describe_out and "-" not in git_describe_out:
             version = git_describe_out
         # Otherwise, if it's a clean git repo, use last commit's timestamp.
-        elif git_head_ct_out and "dirty" not in git_describe_out:
-            vts = datetime.datetime.utcfromtimestamp(long(git_head_ct_out))
+        elif git_log_head_out and "dirty" not in git_describe_out:
+            vts = datetime.datetime.utcfromtimestamp(long(git_log_head_out.split()[1]))
         # If all else fails, use current timestamp
         else:
             vts = ts
@@ -178,10 +178,12 @@ def cmd_gen_build_info(args):
     else:
         build_id = ts.strftime('%Y%m%d-%H%M%S')
         if git_describe_out:
-            build_id += "/"
+            build_id += "/%s" % git_describe_out
             if git_revparse_out != "HEAD":
-                build_id += "%s-" % git_revparse_out.strip()
-            build_id += git_describe_out.strip()
+                build_id += "-%s" % git_revparse_out
+            head_hash = git_log_head_out.split()[0]
+            if head_hash[:9] not in build_id:
+                build_id += "-g%s" % head_hash[:9]
     if build_id is not None:
         bi['build_id'] = build_id
 
