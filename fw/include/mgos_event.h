@@ -75,21 +75,6 @@ enum mgos_event_sys {
   MGOS_EVENT_REBOOT,
 
   /*
-   * Fired on OTA status changes.
-   *
-   * ev_data: struct mgos_ota_status
-   */
-  MGOS_EVENT_OTA_STATUS,
-
-  /*
-   * Triggered when OTA needs to start, and one of the implementations handles
-   * it and performs the OTA.
-   *
-   * ev_data: struct ota_request_param
-   */
-  MGOS_EVENT_OTA_REQUEST,
-
-  /*
    * Fired when time is changed with `mgos_settimeofday()`.
    *
    * ev_data: `struct mgos_time_changed_arg`.
