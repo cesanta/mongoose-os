@@ -31,6 +31,7 @@
 #include "nvs_flash.h"
 #include "rom/ets_sys.h"
 #include "rom/spi_flash.h"
+#include "soc/efuse_reg.h"
 
 #include "common/cs_dbg.h"
 #include "mgos_core_dump.h"
@@ -117,10 +118,16 @@ enum mgos_init_result mgos_hal_freertos_pre_init(void) {
       ("Boot partition: %s; flash: %uM", esp_ota_get_boot_partition()->label,
        g_rom_flashchip.chip_size / 1048576));
 
-  /* Use default mac as base. Makes no difference but silences warnings. */
-  uint8_t mac[6];
-  esp_efuse_mac_get_default(mac);
-  esp_base_mac_addr_set(mac);
+  {
+    uint8_t mac[6];
+    /* Use cutom MAC as base if it's configured, default otherwise. */
+    if ((REG_READ(EFUSE_BLK3_RDATA5_REG) >> 24) == 1) {
+      esp_efuse_mac_get_custom(mac);
+    } else {
+      esp_efuse_mac_get_default(mac);
+    }
+    esp_base_mac_addr_set(mac);
+  }
 
   /* Disable WDT on idle task(s), mgos task WDT should do fine. */
   TaskHandle_t h;
