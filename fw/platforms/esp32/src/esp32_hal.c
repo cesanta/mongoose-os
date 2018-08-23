@@ -23,9 +23,10 @@
 #include "esp_system.h"
 #include "esp_task_wdt.h"
 
+#include "soc/efuse_reg.h"
+#include "soc/rtc.h"
 #include "soc/timer_group_struct.h"
 #include "soc/timer_group_reg.h"
-#include "soc/rtc.h"
 
 #include "mgos_debug.h"
 #include "mgos_hal.h"
@@ -51,7 +52,12 @@ void mgos_dev_system_restart(void) {
 }
 
 void device_get_mac_address(uint8_t mac[6]) {
-  esp_efuse_mac_get_default(mac);
+  /* Return cutom MAC if it's configured, default otherwise. */
+  if ((REG_READ(EFUSE_BLK3_RDATA5_REG) >> 24) == 1) {
+    esp_efuse_mac_get_custom(mac);
+  } else {
+    esp_efuse_mac_get_default(mac);
+  }
 }
 
 void mgos_msleep(uint32_t msecs) {
