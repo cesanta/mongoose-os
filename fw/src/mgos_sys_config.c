@@ -255,6 +255,7 @@ enum mgos_init_result mgos_sys_config_init(void) {
   mbedtls_debug_set_threshold(mgos_sys_config_get_debug_mbedtls_level());
 #endif
 
+  mgos_ro_vars_set_app(&mgos_sys_ro_vars, MGOS_APP);
   mgos_ro_vars_set_arch(&mgos_sys_ro_vars, CS_STRINGIFY_MACRO(FW_ARCHITECTURE));
   mgos_ro_vars_set_fw_id(&mgos_sys_ro_vars, build_id);
   mgos_ro_vars_set_fw_timestamp(&mgos_sys_ro_vars, build_timestamp);
