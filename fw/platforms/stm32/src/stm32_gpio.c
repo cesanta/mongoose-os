@@ -154,7 +154,7 @@ const char *mgos_gpio_str(int pin_def, char buf[8]) {
     }
     int pin_af = STM32_PIN_AF(pin_def);
     if (pin_af > 0) {
-      buf[i++] = ':';
+      buf[i++] = '.';
       if (pin_af < 10) {
         buf[i++] = '0' + pin_af;
       } else {
