@@ -108,6 +108,16 @@ bool mgos_net_get_ip_info(enum mgos_net_if_type if_type, int if_instance,
 void mgos_net_ip_to_str(const struct sockaddr_in *sin, char *out);
 
 /*
+ * Parses dotted-quad NUL-terminated string into an IPv4 address.
+ */
+bool mgos_net_str_to_ip(const char *ips, struct sockaddr_in *sin);
+
+/*
+ * Parses dotted-quad NUL-terminated string into an IPv4 address.
+ */
+bool mgos_net_str_to_ip_n(const struct mg_str ips, struct sockaddr_in *sin);
+
+/*
  * Returns nameserver address. The caller should `free()` it. Returns NULL
  * in case of no DNS.
  */

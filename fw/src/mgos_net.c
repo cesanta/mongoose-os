@@ -160,6 +160,23 @@ void mgos_net_ip_to_str(const struct sockaddr_in *sin, char *out) {
   mg_sock_addr_to_str(&sa, out, 16, MG_SOCK_STRINGIFY_IP);
 }
 
+bool mgos_net_str_to_ip(const char *ips, struct sockaddr_in *sin) {
+  unsigned int a, b, c, d;
+  if (sscanf(ips, "%u.%u.%u.%u", &a, &b, &c, &d) != 4) {
+    sin->sin_addr.s_addr = 0;
+    return false;
+  }
+  sin->sin_addr.s_addr = htonl((a << 24) | (b << 16) | (c << 8) | d);
+  return true;
+}
+
+bool mgos_net_str_to_ip_n(struct mg_str ips, struct sockaddr_in *sin) {
+  ips = mg_strdup_nul(ips);
+  bool res = mgos_net_str_to_ip(ips.p, sin);
+  free((void *) ips.p);
+  return res;
+}
+
 char *mgos_get_nameserver() {
 #ifdef MGOS_HAVE_WIFI
   char *dns = NULL;
