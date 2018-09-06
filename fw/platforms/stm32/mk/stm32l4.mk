@@ -8,10 +8,10 @@ STM32_CFLAGS += -mthumb -march=armv7e-m -mfloat-abi=hard -mfpu=fpv4-sp-d16 \
                 -DSTM32L4 -DARM_HAVE_FPU=1 -DMGOS_MAX_NUM_UARTS=6 \
                 -DIRAM='__attribute__((section(".RamFunc")))'
 STM32CUBE_PATH = $(STM32CUBE_L4_PATH)
-SDK_IPATH = $(STM32CUBE_PATH)/Drivers/CMSIS/Device/ST/STM32L4xx/Include \
-            $(STM32CUBE_PATH)/Drivers/STM32L4xx_HAL_Driver/Inc
-SDK_VPATH = $(STM32CUBE_PATH)/Drivers/STM32L4xx_HAL_Driver/Src
-SDK_SRCS = \
+STM32_IPATH += $(STM32CUBE_PATH)/Drivers/CMSIS/Device/ST/STM32L4xx/Include \
+               $(STM32CUBE_PATH)/Drivers/STM32L4xx_HAL_Driver/Inc
+STM32_VPATH += $(STM32CUBE_PATH)/Drivers/STM32L4xx_HAL_Driver/Src
+STM32_SRCS += \
 stm32l4xx_hal_adc.c stm32l4xx_hal_adc_ex.c \
 stm32l4xx_hal_can.c \
 stm32l4xx_hal_comp.c \

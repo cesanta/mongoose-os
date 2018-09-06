@@ -7,10 +7,10 @@ STM32_CFLAGS += -mthumb -march=armv7e-m -mfloat-abi=hard -mfpu=fpv4-sp-d16 \
 LD_SCRIPT_NO_OTA = $(MGOS_PLATFORM_PATH)/ld/stm32f_no_ota.ld
 LD_SCRIPT_OTA_0 = $(MGOS_PLATFORM_PATH)/ld/stm32f_ota_0.ld
 STM32CUBE_PATH = $(STM32CUBE_F4_PATH)
-SDK_IPATH = $(STM32CUBE_PATH)/Drivers/CMSIS/Device/ST/STM32F4xx/Include \
-            $(STM32CUBE_PATH)/Drivers/STM32F4xx_HAL_Driver/Inc
-SDK_VPATH = $(STM32CUBE_PATH)/Drivers/STM32F4xx_HAL_Driver/Src
-SDK_SRCS = \
+STM32_IPATH = $(STM32CUBE_PATH)/Drivers/CMSIS/Device/ST/STM32F4xx/Include \
+              $(STM32CUBE_PATH)/Drivers/STM32F4xx_HAL_Driver/Inc
+STM32_VPATH = $(STM32CUBE_PATH)/Drivers/STM32F4xx_HAL_Driver/Src
+STM32_SRCS = \
 stm32f4xx_hal_adc.c stm32f4xx_hal_adc_ex.c \
 stm32f4xx_hal_can.c stm32f4xx_hal_cec.c stm32f4xx_hal_cortex.c \
 stm32f4xx_hal_crc.c stm32f4xx_hal_cryp.c \

@@ -31,6 +31,9 @@ MGOS_BL_BIN ?=
 # will reflash the boot loader as well.
 MGOS_UPDATE_BOOT_LOADER ?= false
 
+MGOS_MG_NET_IF ?= MG_NET_IF_NULL
+MGOS_ENABLE_LWIP ?= 0
+
 BUILD_LIB_NAME ?= lib.a
 
 # Get list of dirs which contain sources and filesystem files
@@ -43,7 +46,6 @@ LWIP_PATH ?= $(STM32CUBE_F4_PATH)/Middlewares/Third_Party/LwIP
 MBEDTLS_PATH ?= /opt/cs_mbedtls
 FREERTOS_PATH ?= $(STM32CUBE_PATH)/Middlewares/Third_Party/FreeRTOS
 MGOS_PLATFORM_PATH ?= $(MGOS_PATH)/fw/platforms/stm32
-MGOS_FEATURES ?=
 
 # Value of the external high-speed crystal in Hz, if present.
 # If set to 0, internal RC oscillator is used.
@@ -54,9 +56,11 @@ LSE_VALUE ?= 0
 HSI_VALUE ?= 0
 
 STM32_LIBC ?= -lc
-STM32_CFLAGS ?=
-STM32_CFLAGS += -DSTM32 -D__WORDSIZE=32 -D_FILE_OFFSET_BITS=32
+STM32_CFLAGS = -DSTM32 -D__WORDSIZE=32 -D_FILE_OFFSET_BITS=32
 STM32_CONF_SCHEMA =
+STM32_IPATH =
+STM32_VPATH =
+STM32_SRCS =
 
 # If it's a known board, it will define family, device and other settings.
 ifneq ("$(BOARD)", "")
@@ -71,17 +75,20 @@ else
 $(error Please, specify FAMILY. Possible values are stm32f4 and stm32f7)
 endif
 
-STM32_CFLAGS += -DHSE_VALUE=$(HSE_VALUE) -DHSI_VALUE=$(HSI_VALUE) -DLSE_VALUE=$(LSE_VALUE)
+STM32_CFLAGS += -DHSE_VALUE=$(HSE_VALUE) \
+                -DHSI_VALUE=$(HSI_VALUE) \
+                -DLSE_VALUE=$(LSE_VALUE)
 
-AR = arm-none-eabi-ar
-CC = arm-none-eabi-gcc
-NM = arm-none-eabi-nm
-OC = arm-none-eabi-objcopy
+MGOS_CFLAGS += -DMGOS_VFS_DEFINE_LIBC_REENT_API \
+               -DMGOS_VFS_DEFINE_LIBC_DIR_API \
+               -DMGOS_VFS_DEFINE_DIRENT
 
 MGOS_DEBUG_UART ?= 1
 
 include $(MGOS_PATH)/fw/common.mk
+
 include $(MGOS_PATH)/fw/src/mgos_features.mk
+
 BUILD_DIR ?= $(CURDIR)/.build
 FW_STAGING_DIR ?= $(BUILD_DIR)/fw_temp
 FW_DIR ?= $(CURDIR)/fw
@@ -94,13 +101,6 @@ override FW_DIR := $(abspath $(FW_DIR))
 override GEN_DIR := $(abspath $(GEN_DIR))
 override BUILD_DIR := $(abspath $(BUILD_DIR))
 override MGOS_BL_BIN := $(abspath $(MGOS_BL_BIN))
-
-# Platform support files
-MGOS_SRCS += arm_exc.c arm_nsleep100.c \
-             stm32_entry.c stm32_exc.c stm32_gpio.c \
-             stm32_hal.c stm32_hw_timers.c \
-             stm32_libc.c \
-             stm32_main.c stm32_uart.c
 
 APP0_ELF = $(BUILD_DIR)/$(APP).elf
 APP0_BIN = $(BUILD_DIR)/$(APP).bin
@@ -170,90 +170,99 @@ GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
 SYMBOLS_DUMP = $(GEN_DIR)/symbols_dump.txt
 FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
 
-SDK_SRCS += $(notdir \
-            $(wildcard $(LWIP_PATH)/src/core/*.c) tcpip.c sys_arch.c \
-            $(wildcard $(LWIP_PATH)/src/core/ipv4/*.c) \
-            $(wildcard $(LWIP_PATH)/src/core/ipv6/*.c) \
-            $(wildcard $(LWIP_PATH)/src/netif/ethernet.c) \
-            $(wildcard $(FREERTOS_PATH)/Source/*.c) port.c heap_3.c cmsis_os.c) \
-
-SDK_IPATH += $(STM32CUBE_PATH) \
-             $(STM32CUBE_PATH)/Drivers/CMSIS/Include \
-             $(LWIP_PATH)/src/include \
-             $(LWIP_PATH)/system \
-             $(MBEDTLS_PATH)/include \
-             $(FREERTOS_PATH)/Source/include \
-             $(FREERTOS_PATH)/Source/CMSIS_RTOS \
-             $(FREERTOS_PATH)/Source/portable/GCC/ARM_CM7/r0p1
-
 MGOS_SRCS += $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
              mgos_config_util.c mgos_core_dump.c mgos_event.c mgos_gpio.c \
              mgos_hal_freertos.c mgos_hw_timers.c mgos_sys_config.c \
              mgos_time.c mgos_timers.c cs_crc32.c cs_file.c \
              json_utils.c frozen.c mgos_uart.c cs_rbuf.c mgos_init.c \
              cs_dbg.c mgos_dlsym.c mgos_system.c mgos_utils.c \
-             arm_exc_top.S
+             arm_exc_top.S arm_exc.c arm_nsleep100.c \
+             stm32_entry.c stm32_exc.c stm32_gpio.c \
+             stm32_hal.c stm32_hw_timers.c \
+             stm32_libc.c \
+             stm32_main.c stm32_uart.c
+
+STM32_IPATH += $(STM32CUBE_PATH)/Drivers/CMSIS/Include \
+               $(FREERTOS_PATH)/Source/include \
+               $(FREERTOS_PATH)/Source/CMSIS_RTOS \
+               $(FREERTOS_PATH)/Source/portable/GCC/ARM_CM7/r0p1
+
+STM32_VPATH += $(FREERTOS_PATH)/Source \
+               $(FREERTOS_PATH)/Source/CMSIS_RTOS \
+               $(FREERTOS_PATH)/Source/portable/MemMang \
+               $(FREERTOS_PATH)/Source/portable/GCC/ARM_CM7/r0p1
+
+STM32_SRCS += $(notdir $(wildcard $(FREERTOS_PATH)/Source/*.c) port.c heap_3.c cmsis_os.c)
+
+ifeq "$(MGOS_ENABLE_LWIP)" "1"
+  MGOS_IPATH += $(LWIP_PATH)/src/include $(LWIP_PATH)/system
+
+  MGOS_VPATH += $(LWIP_PATH)/src/api \
+                $(LWIP_PATH)/src/core \
+                $(LWIP_PATH)/src/core/ipv4 \
+                $(LWIP_PATH)/src/core/ipv6 \
+                $(LWIP_PATH)/src/netif \
+                $(LWIP_PATH)/system/OS
+
+  MGOS_SRCS += $(notdir \
+                 $(wildcard $(LWIP_PATH)/src/core/*.c) tcpip.c sys_arch.c \
+                 $(wildcard $(LWIP_PATH)/src/core/ipv4/*.c) \
+                 $(wildcard $(LWIP_PATH)/src/core/ipv6/*.c) \
+                 $(wildcard $(LWIP_PATH)/src/netif/ethernet.c))
+
+  MGOS_CFLAGS += -DMG_LWIP=1 -DLWIP_TIMEVAL_PRIVATE=0 \
+                 -DLWIP_POSIX_SOCKETS_IO_NAMES=0 \
+                 -DLWIP_TCP_KEEPALIVE=1
+  MGOS_MG_NET_IF = MG_NET_IF_LWIP_LOW_LEVEL
+endif
+
+STM32_CFLAGS += -DSRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -DSRAM_SIZE=$(SRAM_SIZE) \
+                -DSTM32_SRAM2_BASE_ADDR=$(SRAM2_BASE_ADDR) -DSTM32_SRAM2_SIZE=$(SRAM2_SIZE) \
+                -DSTM32_FLASH_BASE_ADDR=$(FLASH_BASE_ADDR) -DSTM32_FLASH_SIZE=$(FLASH_SIZE) \
+                -DSTM32_FLASH_BL_SIZE=$(FLASH_BL_SIZE) \
+                -DMGOS_ROOT_DEVTAB='$(MGOS_ROOT_DEVTAB)' \
+                -DMGOS_ROOT_FS_TYPE='$(MGOS_ROOT_FS_TYPE)' \
+                -DMGOS_ROOT_FS_OPTS='$(MGOS_ROOT_FS_OPTS)' \
+                -DMGOS_ROOT_FS_EXTRACT='$(MGOS_ROOT_FS_EXTRACT)' \
+                -DNOCACHE_SIZE=0x400 \
+                -DMG_LOCALS
+
+IPATH = $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
+        $(MGOS_PLATFORM_PATH)/include $(MGOS_IPATH) $(GEN_DIR) $(STM32_IPATH)
+
+VPATH = $(MGOS_VPATH) $(MGOS_PLATFORM_PATH)/src \
+        $(COMMON_PATH)/platforms/arm \
+        $(GEN_DIR) $(APP_SOURCE_DIRS) $(STM32_VPATH)
 
 APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
 
-VPATH = $(MGOS_VPATH) $(MGOS_PLATFORM_PATH)/src \
-        $(SDK_VPATH) \
-        $(COMMON_PATH)/platforms/arm \
-        $(GEN_DIR) $(APP_SOURCE_DIRS) \
-        $(LWIP_PATH)/src/api \
-        $(LWIP_PATH)/src/core \
-        $(LWIP_PATH)/src/core/ipv4 \
-        $(LWIP_PATH)/src/core/ipv6 \
-        $(LWIP_PATH)/src/netif \
-        $(LWIP_PATH)/system/OS \
-        $(MBEDTLS_PATH)/library \
-        $(FREERTOS_PATH)/Source \
-        $(FREERTOS_PATH)/Source/CMSIS_RTOS \
-        $(FREERTOS_PATH)/Source/portable/MemMang \
-        $(FREERTOS_PATH)/Source/portable/GCC/ARM_CM7/r0p1
-IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
-        $(MGOS_PLATFORM_PATH)/include $(MGOS_PLATFORM_PATH)/include/spiffs \
-        $(GEN_DIR) \
-        $(SDK_IPATH)
-
-CFLAGS ?= -std=gnu99 -Os -ggdb -MD -Wall -Werror -pipe \
-          -fno-common \
-          -ffunction-sections -fdata-sections \
-          -DFW_ARCHITECTURE=$(APP_PLATFORM) \
-          $(STM32_CFLAGS) $(MGOS_FEATURES) \
-          -DLWIP_POSIX_SOCKETS_IO_NAMES=0 \
-          -DMGOS_VFS_DEFINE_LIBC_REENT_API \
-          -DMGOS_VFS_DEFINE_LIBC_DIR_API \
-          -DMGOS_VFS_DEFINE_DIRENT \
-          -DMBEDTLS_CONFIG_FILE=\"mbedtls/config.h\" \
-          ${MG_FEATURES_TINY} -DMG_ENABLE_DIRECTORY_LISTING
-
 SSL_SRCS =
 SSL_LIBS =
 ifeq ("$(SSL)", "mbedTLS")
+  IPATH += $(MBEDTLS_PATH)/include
   SSL_SRCS = $(wildcard $(MBEDTLS_PATH)/library/*.c)
   # If we have no sources, this must be a binary-only distr.
   ifneq "$(SSL_SRCS)" ""
-    SDK_SRCS += $(notdir $(SSL_SRCS))
+    MGOS_VPATH += $(MBEDTLS_PATH)/library
+    MGOS_SRCS += $(notdir $(SSL_SRCS))
   else
     SSL_LIBS += $(addprefix $(MBEDTLS_PATH)/library/,libmbedcrypto.a libmbedtls.a libmbedx509.a)
   endif
-  CFLAGS += -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS
+  MGOS_CFLAGS += -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS -DMBEDTLS_CONFIG_FILE=\"mbedtls/config.h\"
 endif
+
+CFLAGS = -std=gnu99 -Os -ggdb -MD -Wall -Werror -pipe \
+         -fno-common -ffunction-sections -fdata-sections \
+         -DMGOS_APP=\"$(APP)\" \
+         -DFW_ARCHITECTURE=$(APP_PLATFORM) \
+         $(MGOS_CFLAGS) $(MGOS_FEATURES) $(STM32_CFLAGS) \
+         $(MG_FEATURES_TINY) -DMG_ENABLE_DIRECTORY_LISTING \
+         -DMG_NET_IF=$(MGOS_MG_NET_IF)
 
 CFLAGS += $(APP_CFLAGS)
 CXXFLAGS += $(APP_CXXFLAGS)
 
-CFLAGS  += -DSRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -DSRAM_SIZE=$(SRAM_SIZE) \
-           -DSTM32_SRAM2_BASE_ADDR=$(SRAM2_BASE_ADDR) -DSTM32_SRAM2_SIZE=$(SRAM2_SIZE) \
-           -DSTM32_FLASH_BASE_ADDR=$(FLASH_BASE_ADDR) -DSTM32_FLASH_SIZE=$(FLASH_SIZE) \
-           -DSTM32_FLASH_BL_SIZE=$(FLASH_BL_SIZE) \
-           -DMGOS_ROOT_DEVTAB='$(MGOS_ROOT_DEVTAB)' \
-           -DMGOS_ROOT_FS_TYPE='$(MGOS_ROOT_FS_TYPE)' \
-           -DMGOS_ROOT_FS_OPTS='$(MGOS_ROOT_FS_OPTS)' \
-           -DMGOS_ROOT_FS_EXTRACT='$(MGOS_ROOT_FS_EXTRACT)' \
-           -DNOCACHE_SIZE=0x400
 LDFLAGS += -Wl,--defsym=SRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -Wl,--defsym=SRAM_SIZE=$(SRAM_SIZE) \
            -Wl,--defsym=SRAM2_BASE_ADDR=$(SRAM2_BASE_ADDR) -Wl,--defsym=SRAM2_SIZE=$(SRAM2_SIZE) \
            -Wl,--defsym=FLASH_BASE_ADDR=$(FLASH_BASE_ADDR) -Wl,--defsym=FLASH_SIZE=$(FLASH_SIZE) \
@@ -265,9 +274,6 @@ LDFLAGS += -Wl,--defsym=SRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -Wl,--defsym=SRAM_SIZE=
 
 LDFLAGS += -Wl,--gc-sections
 
-CFLAGS += -DMG_NET_IF=3 -D__CPU_H__ -DMG_LWIP=1 -DLWIP_TIMEVAL_PRIVATE=0 \
-          -DLWIP_TCP_KEEPALIVE=1 -DMGOS_APP=\"$(APP)\"
-
 FW_PARTS = app:type=app0,src=$(APP0_BIN),bl_size=$(FLASH_BL_SIZE),bl_cfg_size=$(FLASH_BL_CFG_SIZE),fs_size=$(FLASH_FS_SIZE),update_bl=$(MGOS_UPDATE_BOOT_LOADER)
 ifeq "$(FLASH_FS_SIZE)$(MGOS_ROOT_FS_EXTRACT)" "01-1"
 FW_PARTS += fs:type=fs,src=$(FS_IMG)
@@ -275,7 +281,7 @@ endif
 FW_PARTS += $(APP_EXTRA_FW_PARTS)
 
 MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o))
-SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(SDK_SRCS:=.o))
+STM32_OBJS = $(addprefix $(BUILD_DIR)/,$(STM32_SRCS:=.o))
 APP_OBJS = $(addprefix $(BUILD_DIR)/,$(APP_SRCS:=.o))
 BL_BIN_O = $(addprefix $(BUILD_DIR)/,$(notdir $(BL_BIN_C:=.o)))
 FS_IMG_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FS_IMG_C:=.o)))
@@ -283,6 +289,12 @@ FS_ZIP_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FS_ZIP_C:=.o)))
 FFI_EXPORTS_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FFI_EXPORTS_C:=.o)))
 
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
+
+AR = arm-none-eabi-ar
+CC = arm-none-eabi-gcc
+CXX = arm-none-eabi-g++
+NM = arm-none-eabi-nm
+OC = arm-none-eabi-objcopy
 
 all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(APP0_BIN) $(FW_ZIP)
 
@@ -312,7 +324,7 @@ $(BUILD_DIR)/%.S.o: %.S $(GENFILES_FLAG)
 $(GENFILES_FLAG): $(GENFILES_LIST)
 	$(Q) touch $@
 
-BIN_PARTS = $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(SDK_OBJS) $(SSL_LIBS) $(APP_BIN_LIB_FILES)
+BIN_PARTS = $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(STM32_OBJS) $(SSL_LIBS) $(APP_BIN_LIB_FILES)
 ifeq "$(MGOS_ROOT_FS_ON_SYS_FLASH)" "1"
   BIN_PARTS += $(FS_IMG_O)
 else
