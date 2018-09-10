@@ -175,7 +175,7 @@ uint32_t swap_bytes_32(uint32_t x) {
 }
 
 uint16_t swap_bytes_16(uint16_t x) {
-  return ((x << 16) | (x >> 8));
+  return ((x << 8) | (x >> 8));
 }
 
 const char *inet_ntop(int af, const void *src, char *dst, int size) {

@@ -153,11 +153,12 @@ bool mgos_net_get_ip_info(enum mgos_net_if_type if_type, int if_instance,
   return false;
 }
 
-void mgos_net_ip_to_str(const struct sockaddr_in *sin, char *out) {
+char *mgos_net_ip_to_str(const struct sockaddr_in *sin, char *out) {
   union socket_address sa;
   sa.sa.sa_family = AF_INET;
   memcpy(&sa.sin, sin, sizeof(sa.sin));
   mg_sock_addr_to_str(&sa, out, 16, MG_SOCK_STRINGIFY_IP);
+  return out;
 }
 
 bool mgos_net_str_to_ip(const char *ips, struct sockaddr_in *sin) {

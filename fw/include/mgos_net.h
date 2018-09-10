@@ -104,8 +104,9 @@ bool mgos_net_get_ip_info(enum mgos_net_if_type if_type, int if_instance,
 /*
  * Converts address to dotted-quad NUL-terminated string.
  * `out` must be at least 16 bytes long.
+ * Returns the out pointer.
  */
-void mgos_net_ip_to_str(const struct sockaddr_in *sin, char *out);
+char *mgos_net_ip_to_str(const struct sockaddr_in *sin, char *out);
 
 /*
  * Parses dotted-quad NUL-terminated string into an IPv4 address.
