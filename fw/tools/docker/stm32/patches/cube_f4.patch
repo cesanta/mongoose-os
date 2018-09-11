@@ -1,0 +1,115 @@
+--- Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc_ex.c.orig	2018-02-23 12:07:00.000000000 +0300
++++ Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_adc_ex.c	2018-09-11 10:38:19.636634855 +0300
+@@ -780,6 +780,8 @@
+ {
+   ADC_Common_TypeDef *tmpADC_Common;
+ 
++  UNUSED(hadc);
++
+   /* Pointer to the common control register to which is belonging hadc    */
+   /* (Depending on STM32F4 product, there may be up to 3 ADC and 1 common */
+   /* control register)                                                    */
+--- Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ex.c.orig	2018-02-23 12:07:00.000000000 +0300
++++ Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_flash_ex.c	2018-09-11 10:39:40.983710746 +0300
+@@ -976,6 +976,8 @@
+   CLEAR_BIT(FLASH->CR, FLASH_CR_PSIZE);
+   FLASH->CR |= FLASH_CR_MER;
+   FLASH->CR |= FLASH_CR_STRT | ((uint32_t)VoltageRange <<8U);
++
++  UNUSED(Banks);
+ }
+ 
+ /**
+@@ -1060,6 +1062,8 @@
+   { 
+     *(__IO uint16_t*)OPTCR_BYTE2_ADDRESS &= (~WRPSector);  
+   }
++
++  UNUSED(Banks);
+   
+   return status;
+ }
+@@ -1096,6 +1100,8 @@
+   { 
+     *(__IO uint16_t*)OPTCR_BYTE2_ADDRESS |= (uint16_t)WRPSector; 
+   }
++
++  UNUSED(Banks);
+   
+   return status;
+ }
+--- Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pcd.c.orig	2018-02-23 12:07:00.000000000 +0300
++++ Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pcd.c	2018-09-11 10:41:39.348181506 +0300
+@@ -1268,7 +1268,7 @@
+   ep = &hpcd->IN_ep[epnum];
+   len = ep->xfer_len - ep->xfer_count;
+   
+-  if (len > ep->maxpacket)
++  if (len > (int32_t) ep->maxpacket)
+   {
+     len = ep->maxpacket;
+   }
+@@ -1283,7 +1283,7 @@
+     /* Write the FIFO */
+     len = ep->xfer_len - ep->xfer_count;
+     
+-    if (len > ep->maxpacket)
++    if (len > (int32_t) ep->maxpacket)
+     {
+       len = ep->maxpacket;
+     }
+@@ -1295,7 +1295,7 @@
+     ep->xfer_count += len;
+   }
+   
+-  if(len <= 0U)
++  if(len <= 0)
+   {
+     fifoemptymsk = 0x1U << epnum;
+     USBx_DEVICE->DIEPEMPMSK &= ~fifoemptymsk;
+--- Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr.c.orig	2018-02-23 12:07:00.000000000 +0300
++++ Drivers/STM32F4xx_HAL_Driver/Src/stm32f4xx_hal_pwr.c	2018-09-11 10:42:33.370220366 +0300
+@@ -400,6 +400,8 @@
+     __WFE();
+     __WFE();
+   }
++
++  UNUSED(Regulator);
+ }
+ 
+ /**
+--- Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.c.orig	2018-02-23 12:07:00.000000000 +0300
++++ Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.c	2018-09-11 10:44:41.991071332 +0300
+@@ -639,6 +639,7 @@
+ */
+ osMutexId osMutexCreate (const osMutexDef_t *mutex_def)
+ {
++  (void) mutex_def;
+ #if ( configUSE_MUTEXES == 1)
+ 
+ #if( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
+@@ -754,6 +755,7 @@
+ */
+ osSemaphoreId osSemaphoreCreate (const osSemaphoreDef_t *semaphore_def, int32_t count)
+ { 
++  (void) semaphore_def;
+ #if( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
+ 
+   osSemaphoreId sema;
+@@ -1588,6 +1590,8 @@
+ {
+ #if ( ( configUSE_TRACE_FACILITY == 1 ) && ( configUSE_STATS_FORMATTING_FUNCTIONS == 1 ) )
+   vTaskList((char *)buffer);
++#else
++  (void) buffer;
+ #endif
+   return osOK;
+ }
+@@ -1683,6 +1687,7 @@
+ */
+ osMutexId osRecursiveMutexCreate (const osMutexDef_t *mutex_def)
+ {
++  (void) mutex_def;
+ #if (configUSE_RECURSIVE_MUTEXES == 1)
+ #if( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
+ 

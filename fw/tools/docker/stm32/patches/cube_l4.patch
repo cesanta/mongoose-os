@@ -1,0 +1,46 @@
+--- Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.c.orig	2018-05-23 19:02:36.000000000 +0300
++++ Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.c	2018-09-11 09:56:15.195499031 +0300
+@@ -639,6 +639,7 @@
+ */
+ osMutexId osMutexCreate (const osMutexDef_t *mutex_def)
+ {
++  (void) mutex_def;
+ #if ( configUSE_MUTEXES == 1)
+ 
+ #if( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
+@@ -754,6 +755,7 @@
+ */
+ osSemaphoreId osSemaphoreCreate (const osSemaphoreDef_t *semaphore_def, int32_t count)
+ { 
++  (void) semaphore_def;
+ #if( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
+ 
+   osSemaphoreId sema;
+@@ -1588,6 +1590,8 @@
+ {
+ #if ( ( configUSE_TRACE_FACILITY == 1 ) && ( configUSE_STATS_FORMATTING_FUNCTIONS == 1 ) )
+   vTaskList((char *)buffer);
++#else
++  (void) buffer;
+ #endif
+   return osOK;
+ }
+@@ -1683,6 +1687,7 @@
+ */
+ osMutexId osRecursiveMutexCreate (const osMutexDef_t *mutex_def)
+ {
++  (void) mutex_def;
+ #if (configUSE_RECURSIVE_MUTEXES == 1)
+ #if( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
+ 
+--- Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_nand.c.orig	2018-05-23 19:02:36.000000000 +0300
++++ Drivers/STM32L4xx_HAL_Driver/Src/stm32l4xx_hal_nand.c	2018-09-11 09:52:05.512941613 +0300
+@@ -1834,6 +1834,8 @@
+     return NAND_READY;
+   }
+ 
++  (void) hnand;
++
+   return NAND_BUSY;
+ }
+ 

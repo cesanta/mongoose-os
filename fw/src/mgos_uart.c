@@ -52,6 +52,8 @@ IRAM void mgos_uart_schedule_dispatcher(int uart_no, bool from_isr) {
   if (us == NULL) return;
 #ifndef MGOS_BOOT_BUILD
   mongoose_schedule_poll(from_isr);
+#else
+  (void) from_isr;
 #endif
 }
 

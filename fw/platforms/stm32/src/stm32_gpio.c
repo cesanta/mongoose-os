@@ -406,7 +406,7 @@ enum mgos_init_result mgos_gpio_hal_init(void) {
   };
   EXTI->PR = 0xffff;
   MODIFY_REG(EXTI->IMR, 0xffff, 0);
-  for (int i = 0; i < ARRAY_SIZE(ext_irqs); i++) {
+  for (int i = 0; i < (int) ARRAY_SIZE(ext_irqs); i++) {
     int irqn = ext_irqs[i].irqn;
     stm32_set_int_handler(irqn, ext_irqs[i].handler);
     HAL_NVIC_SetPriority(irqn, 9, 0);

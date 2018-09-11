@@ -4,6 +4,7 @@ MBEDTLS_BRANCH ?= stm32_$(DOCKER_TAG)
 
 include ../docker.mk
 
+DISTR_PATH = ../distr
 STM32CUBE_F4_PATH = STM32Cube_FW_F4_$(STM32CUBE_F4_VERSION)
 STM32CUBE_L4_PATH = STM32Cube_FW_L4_$(STM32CUBE_L4_VERSION)
 STM32CUBE_F7_PATH = STM32Cube_FW_F7_$(STM32CUBE_F4_VERSION)
@@ -12,16 +13,21 @@ EXCL_COMMON = '*/Documentation/*' '*/Examples/*' '*/Middlewares/ST/*' '*/Project
 EXCL_MBEDTLS = '*/Middlewares/Third_Party/mbedTLS/*'
 EXCL_LWIP = '*/Middlewares/Third_Party/LwIP/*'
 
-docker-pre-build-stm32-toolchain: en.stm32cubef4.zip en.stm32cubel4.zip en.stm32cubef7.zip \
+docker-pre-build-stm32-toolchain: $(DISTR_PATH)/en.stm32cubef4.zip \
+                                  $(DISTR_PATH)/en.stm32cubel4.zip \
+                                  $(DISTR_PATH)/en.stm32cubef7.zip \
                                   fw_meta.py serve_core.py \
                                   mklfs mkspiffs mkspiffs8
 	rm -rf tmp && mkdir tmp
-	unzip -q en.stm32cubef4.zip -d tmp -x $(EXCL_COMMON) $(EXCL_MBEDTLS)
-	cd tmp/STM32Cube_FW_F4_* && patch -p 0 -b < ../../lwipopts.patch
+	unzip -q $(DISTR_PATH)/en.stm32cubef4.zip -d tmp -x $(EXCL_COMMON) $(EXCL_MBEDTLS)
+	cd tmp/STM32Cube_FW_F4_* && patch -p 0 -b < ../../patches/cube_f4.patch
+	cd tmp/STM32Cube_FW_F4_* && patch -p 0 -b < ../../patches/lwipopts.patch
 	$(eval STM32CUBE_F4_DIR = $$(shell cd tmp && ls -1 -d STM32Cube_FW_F4_*))
-	unzip -q en.stm32cubel4.zip -d tmp -x $(EXCL_COMMON)
+	unzip -q $(DISTR_PATH)/en.stm32cubel4.zip -d tmp -x $(EXCL_COMMON)
+	cd tmp/STM32Cube_FW_L4_* && patch -p 0 -b < ../../patches/cube_l4.patch
 	$(eval STM32CUBE_L4_DIR = $$(shell cd tmp && ls -1 -d STM32Cube_FW_L4_*))
-	unzip -q en.stm32cubef7.zip -d tmp -x $(EXCL_COMMON) $(EXCL_MBEDTLS) $(EXCL_LWIP)
+	unzip -q $(DISTR_PATH)/en.stm32cubef7.zip -d tmp -x $(EXCL_COMMON) $(EXCL_MBEDTLS) $(EXCL_LWIP)
+	cd tmp/STM32Cube_FW_F7_* && patch -p 0 -b < ../../patches/cube_f7.patch
 	$(eval STM32CUBE_F7_DIR = $$(shell cd tmp && ls -1 -d STM32Cube_FW_F7_*))
 
 docker-build-stm32-toolchain: DOCKER_FLAGS = --build-arg=STM32CUBE_F4_DIR=$(STM32CUBE_F4_DIR) \
@@ -41,18 +47,18 @@ docker-pre-build-stm32-build: mbedtls docker-build-stm32-toolchain
 	  --user $(shell id -u):$(shell id -u) \
 	  docker.io/mgos/stm32-toolchain:$(DOCKER_TAG) /bin/bash -c '\
 	    cd /opt/cs_mbedtls/library && make clean && \
-	    make -j4 CC=arm-none-eabi-gcc CFLAGS="-mthumb -march=armv7e-m -mfloat-abi=hard -mfpu=fpv4-sp-d16 -std=gnu99 -Os -ggdb -MD -Wall -Werror -Wundef -fno-common -fno-inline -ffunction-sections -fdata-sections"' && \
+	    make -j4 CC=arm-none-eabi-gcc CFLAGS="-mthumb -march=armv7e-m -mfloat-abi=hard -mfpu=fpv4-sp-d16 -std=gnu99 -Os -ggdb -MD -Wall -Werror -Wundef -fno-common -fno-inline -ffunction-sections -fdata-sections -DMBEDTLS_X509_CA_CHAIN_ON_DISK"' && \
 	  cp -v mbedtls/library/*.a cs_mbedtls/library \
 
-en.stm32cubef4.zip:
+$(DISTR_PATH)/en.stm32cubef4.zip:
 	@echo "Please obtain $@ from http://www.st.com/content/st_com/en/products/embedded-software/mcus-embedded-software/stm32-embedded-software/stm32cube-mcu-packages/stm32cubef4.html"
 	@exit 1
 
-en.stm32cubel4.zip:
+$(DISTR_PATH)/en.stm32cubel4.zip:
 	@echo "Please obtain $@ from http://www.st.com/content/st_com/en/products/embedded-software/mcus-embedded-software/stm32-embedded-software/stm32cube-mcu-packages/stm32cubel4.html"
 	@exit 1
 
-en.stm32cubef7.zip:
+$(DISTR_PATH)/en.stm32cubef7.zip:
 	@echo "Please obtain $@ from http://www.st.com/content/st_com/en/products/embedded-software/mcus-embedded-software/stm32-embedded-software/stm32cube-mcu-packages/stm32cubef7.html"
 	@exit 1
 

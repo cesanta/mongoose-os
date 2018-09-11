@@ -1,0 +1,178 @@
+--- Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_nand.c.orig	2018-07-02 18:09:40.000000000 +0300
++++ Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_nand.c	2018-09-11 10:19:33.653581122 +0300
+@@ -1833,6 +1833,8 @@
+     return NAND_READY;
+   }
+ 
++  UNUSED(hnand);
++
+   return NAND_BUSY; 
+ }
+ 
+--- Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_nor.c.orig	2018-07-02 18:09:40.000000000 +0300
++++ Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_nor.c	2018-09-11 10:20:47.100342688 +0300
+@@ -796,6 +796,8 @@
+     
+   /* Process unlocked */
+   __HAL_UNLOCK(hnor);
++
++  UNUSED(Address);
+   
+   return HAL_OK;  
+ }
+--- Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr.c.orig	2018-07-02 18:09:40.000000000 +0300
++++ Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_pwr.c	2018-09-11 10:21:32.842061390 +0300
+@@ -426,6 +426,8 @@
+     __WFE();
+     __WFE();
+   }
++
++  UNUSED(Regulator);
+ }
+ 
+ /**
+--- Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_ll_fmc.c.orig	2018-07-02 18:09:40.000000000 +0300
++++ Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_ll_fmc.c	2018-09-11 10:25:42.107731355 +0300
+@@ -540,6 +540,8 @@
+                             
+     /* NAND bank 3 registers configuration */
+     Device->PMEM = tmpr;
++
++  UNUSED(Bank);
+   
+   return HAL_OK;  
+ }
+@@ -578,6 +580,8 @@
+                        
+     /* NAND bank 3 registers configuration */
+     Device->PATT = tmpr;
++
++  UNUSED(Bank);
+   
+   return HAL_OK;
+ }
+@@ -602,6 +606,8 @@
+     Device->SR   = 0x00000040U;
+     Device->PMEM = 0xFCFCFCFCU;
+     Device->PATT = 0xFCFCFCFCU; 
++
++  UNUSED(Bank);
+   
+   return HAL_OK;
+ }
+@@ -640,6 +646,8 @@
+     
+   /* Enable ECC feature */
+     Device->PCR |= FMC_PCR_ECCEN;
++
++  UNUSED(Bank);
+   
+   return HAL_OK;  
+ }
+@@ -660,6 +668,8 @@
+   /* Disable ECC feature */
+     Device->PCR &= ~FMC_PCR_ECCEN;
+ 
++  UNUSED(Bank);
++
+   return HAL_OK;  
+ }
+ 
+@@ -698,6 +708,8 @@
+   /* Get the ECCR register value */
+   *ECCval = (uint32_t)Device->ECCR;
+ 
++  UNUSED(Bank);
++
+   return HAL_OK;  
+ }
+ 
+@@ -1003,7 +1015,9 @@
+                     );
+     
+   Device->SDCMR = tmpr;
+-  
++
++  UNUSED(Timeout);
++
+   return HAL_OK;  
+ }
+ 
+--- Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.c.orig	2018-07-02 18:09:40.000000000 +0300
++++ Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.c	2018-09-11 10:30:54.563731109 +0300
+@@ -639,6 +639,7 @@
+ */
+ osMutexId osMutexCreate (const osMutexDef_t *mutex_def)
+ {
++  (void) mutex_def;
+ #if ( configUSE_MUTEXES == 1)
+ 
+ #if( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
+@@ -754,6 +755,7 @@
+ */
+ osSemaphoreId osSemaphoreCreate (const osSemaphoreDef_t *semaphore_def, int32_t count)
+ { 
++  (void) semaphore_def;
+ #if( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
+ 
+   osSemaphoreId sema;
+@@ -1588,6 +1590,8 @@
+ {
+ #if ( ( configUSE_TRACE_FACILITY == 1 ) && ( configUSE_STATS_FORMATTING_FUNCTIONS == 1 ) )
+   vTaskList((char *)buffer);
++#else
++  (void) buffer;
+ #endif
+   return osOK;
+ }
+@@ -1683,6 +1687,7 @@
+ */
+ osMutexId osRecursiveMutexCreate (const osMutexDef_t *mutex_def)
+ {
++  (void) mutex_def;
+ #if (configUSE_RECURSIVE_MUTEXES == 1)
+ #if( configSUPPORT_STATIC_ALLOCATION == 1 ) && ( configSUPPORT_DYNAMIC_ALLOCATION == 1 )
+ 
+--- Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_adc_ex.c.orig	2018-09-11 10:10:53.177907796 +0300
++++ Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_adc_ex.c	2018-09-11 10:12:21.117249338 +0300
+@@ -754,6 +754,7 @@
+   */
+ uint32_t HAL_ADCEx_MultiModeGetValue(ADC_HandleTypeDef* hadc)
+ {
++  UNUSED(hadc);
+   /* Return the multi mode conversion value */
+   return ADC->CDR;
+ }
+--- Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dcmi.c.orig	2018-07-02 18:09:40.000000000 +0300
++++ Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_dcmi.c	2018-09-11 12:17:05.523651195 +0300
+@@ -602,6 +602,9 @@
+   */
+ __weak void HAL_DCMI_LineEventCallback(DCMI_HandleTypeDef *hdcmi)
+ {
++  /* Prevent unused argument(s) compilation warning */
++  UNUSED(hdcmi);
++
+   /* NOTE : This function Should not be modified, when the callback is needed,
+             the HAL_DCMI_LineEventCallback could be implemented in the user file
+    */
+--- Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_eth.c.orig	2018-07-02 18:09:40.000000000 +0300
++++ Drivers/STM32F7xx_HAL_Driver/Src/stm32f7xx_hal_eth.c	2018-09-11 12:18:55.587499475 +0300
+@@ -1876,6 +1876,8 @@
+   
+   /* Load the selected MAC address low register */
+   (*(__IO uint32_t *)((uint32_t)(ETH_MAC_ADDR_LBASE + MacAddr))) = tmpreg;
++
++  UNUSED(heth);
+ }
+ 
+ /**
+--- Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_ll_rcc.h.orig	2018-07-02 18:09:40.000000000 +0300
++++ Drivers/STM32F7xx_HAL_Driver/Inc/stm32f7xx_ll_rcc.h	2018-09-11 12:21:16.548449718 +0300
+@@ -2755,6 +2755,7 @@
+   */
+ __STATIC_INLINE uint32_t LL_RCC_GetLPTIMClockSource(uint32_t LPTIMx)
+ {
++  (void) LPTIMx;
+   return (uint32_t)(READ_BIT(RCC->DCKCFGR2, RCC_DCKCFGR2_LPTIM1SEL));
+ }
+ 

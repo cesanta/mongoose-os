@@ -113,7 +113,7 @@ static IRAM void mgos_mg_poll_cb(void *arg) {
       timeout_ms = 1000;
     }
     ENTER_CRITICAL();
-  } while (s_mg_want_poll || timeout_ms < portTICK_PERIOD_MS);
+  } while (s_mg_want_poll || timeout_ms < (int) portTICK_PERIOD_MS);
   s_mg_poll_scheduled = false;
   s_mg_last_poll++;
   EXIT_CRITICAL();

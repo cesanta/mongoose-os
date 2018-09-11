@@ -5,10 +5,12 @@ mbedtls/
 simplelink_cc32xx_sdk_*/
 ti-cgt-arm_*/
 
-en.stm32cube*.zip
+distr/
 fw_meta.py
 mklfs
 mkspiffs
 mkspiffs8
 ota_*.ucf*
 serve_core.py
+vfs-fs-lfs/
+vfs-fs-spiffs/
