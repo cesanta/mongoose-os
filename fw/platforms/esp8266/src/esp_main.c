@@ -102,7 +102,11 @@ static void mongoose_poll_cb(void *arg) {
     if (min_timer > 0) {
       /* Note: timeout_ms can get negative if a timer is past due. That's ok. */
       timeout_ms = (int) ((min_timer - mg_time()) * 1000.0);
-      if (timeout_ms < 0) timeout_ms = 0;
+      if (timeout_ms < 0) {
+        timeout_ms = 0;
+      } else if (timeout_ms > 1000) {
+        timeout_ms = 1000;
+      }
     } else {
       timeout_ms = 1000;
     }
