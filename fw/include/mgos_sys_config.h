@@ -15,6 +15,10 @@
  * limitations under the License.
  */
 
+/*
+ * # Config
+ */
+
 #ifndef CS_FW_INCLUDE_MGOS_SYS_CONFIG_H_
 #define CS_FW_INCLUDE_MGOS_SYS_CONFIG_H_
 
