@@ -16,7 +16,7 @@
  */
 
 /*
- * Event API.
+ * # Event
  *
  * Mongoose OS provides a way to get a notification when certain event
  * happens. Each event has an associated event data passed as `void *`.

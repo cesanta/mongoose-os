@@ -16,9 +16,10 @@
  */
 
 /*
- * GPIO API - see [wikipedia
- * article](https://en.wikipedia.org/wiki/General-purpose_input/output)
- * for the background information.
+ * # GPIO
+ *
+ * For general information about GPIO, see
+ * [article](https://en.wikipedia.org/wiki/General-purpose_input/output).
  */
 
 #ifndef CS_FW_INCLUDE_MGOS_GPIO_H_

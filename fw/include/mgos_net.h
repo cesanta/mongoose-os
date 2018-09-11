@@ -16,6 +16,8 @@
  */
 
 /*
+ * # Network
+ *
  * Low-level network configuration API.
  *
  * Contains definitions of the configuration state. Allows to set up an

@@ -16,6 +16,8 @@
  */
 
 /*
+ * # Utilities
+ *
  * Misc utility functions.
  */
 
