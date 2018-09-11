@@ -70,6 +70,7 @@ enum mgos_init_result mgos_set_stderr_uart(int uart_no);
 
 /* Get stdout UART number; -1 indicates that stdout is disabled. */
 int mgos_get_stdout_uart(void);
+
 /* Get stderr UART number; -1 indicates that stderr is disabled. */
 int mgos_get_stderr_uart(void);
 
