@@ -249,8 +249,10 @@ ifeq ("$(SSL)", "mbedTLS")
   else
     SSL_LIBS += $(addprefix $(MBEDTLS_PATH)/library/,libmbedcrypto.a libmbedtls.a libmbedx509.a)
   endif
-  MGOS_CFLAGS += -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS \
-                 -DMBEDTLS_CONFIG_FILE=\"mbedtls/config.h\" \
+  MGOS_CFLAGS += -DMBEDTLS_CONFIG_FILE=\"mbedtls/config.h\" \
+                 -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS \
+                 -DMG_SSL_IF_MBEDTLS_FREE_CERTS \
+                 -DMG_SSL_IF_MBEDTLS_MAX_FRAG_LEN=1024 \
                  -DMBEDTLS_X509_CA_CHAIN_ON_DISK
 endif
 
