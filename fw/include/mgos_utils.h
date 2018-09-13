@@ -15,12 +15,6 @@
  * limitations under the License.
  */
 
-/*
- * # Utilities
- *
- * Misc utility functions.
- */
-
 #ifndef CS_FW_INCLUDE_MGOS_UTILS_H_
 #define CS_FW_INCLUDE_MGOS_UTILS_H_
 

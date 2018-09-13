@@ -16,8 +16,6 @@
  */
 
 /*
- * # Bitbang
- *
  * Bit banging is a technique to implement hardware protocols fully in
  * software, by managing microcontroller pin states - including timing,
  * voltage levels, etc.

@@ -16,9 +16,7 @@
  */
 
 /*
- * # System
- *
- * These API need to be implemented for each hardware platform.
+ * HAL that needs to be implemented for each hardware platform.
  */
 
 #ifndef CS_FW_INCLUDE_MGOS_SYSTEM_H_

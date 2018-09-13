@@ -15,10 +15,6 @@
  * limitations under the License.
  */
 
-/*
- * # Debug
- */
-
 #ifndef CS_FW_INCLUDE_MGOS_DEBUG_H_
 #define CS_FW_INCLUDE_MGOS_DEBUG_H_
 

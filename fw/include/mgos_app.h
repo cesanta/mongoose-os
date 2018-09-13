@@ -16,10 +16,7 @@
  */
 
 /*
- * # App
- *
- * This file contains definitions for the user-defined app entry point,
- * `mgos_app_init()`.
+ * Definitions for the user-defined app entry point, `mgos_app_init()`.
  *
  * The `mgos_app_init()` function is like the `main()` function in the C
  * program. This is a app's entry point.
@@ -28,20 +25,6 @@
  * stub function as a weak symbol, so if user app does not define its own
  * `mgos_app_init()`, a default stub will be used. That's what most of the
  * JavaScript based apps do - they do not contain C code at all.
- *
- * Usage example:
- * ```c
- * #include "mgos_app.h"
- *
- * enum mgos_app_init_result mgos_app_init(void) {
- *   if (!my_super_duper_hardware_init()) {
- *     LOG(LL_ERROR, ("something went bad"));
- *     return MGOS_APP_INIT_ERROR;
- *   }
- *   LOG(LL_INFO, ("my app initialised"));
- *   return MGOS_APP_INIT_SUCCESS;
- * }
- * ```
  */
 
 #ifndef CS_FW_INCLUDE_MGOS_APP_H_
@@ -61,6 +44,20 @@ enum mgos_app_init_result {
 /*
  * User app init function.
  * A weak stub is provided in `mgos_app_init.c`, which can be overridden.
+ *
+ * Example of a user-defined init function:
+ * ```c
+ * #include "mgos_app.h"
+ *
+ * enum mgos_app_init_result mgos_app_init(void) {
+ *   if (!my_super_duper_hardware_init()) {
+ *     LOG(LL_ERROR, ("something went bad"));
+ *     return MGOS_APP_INIT_ERROR;
+ *   }
+ *   LOG(LL_INFO, ("my app initialised"));
+ *   return MGOS_APP_INIT_SUCCESS;
+ * }
+ * ```
  */
 enum mgos_app_init_result mgos_app_init(void);
 

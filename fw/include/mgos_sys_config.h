@@ -16,7 +16,13 @@
  */
 
 /*
- * # Config
+ * A lot of the Mongose OS functionality is driven by the device configuration.
+ * For example, in order to make a device connected to the MQTT server,
+ * there is no need to write a single line of code. It is enough to
+ * modify `mqtt.*` configuration settings.
+ *
+ * A configuration infrastructure is described in the user guide. Below is
+ * the programmatic API for the device configuration.
  */
 
 #ifndef CS_FW_INCLUDE_MGOS_SYS_CONFIG_H_

@@ -15,12 +15,6 @@
  * limitations under the License.
  */
 
-/*
- * # Time
- *
- * Various time API.
- */
-
 #ifndef CS_FW_INCLUDE_MGOS_TIME_H_
 #define CS_FW_INCLUDE_MGOS_TIME_H_
 

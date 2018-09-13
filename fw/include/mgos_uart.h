@@ -16,8 +16,6 @@
  */
 
 /*
- * # UART
- *
  * See https://en.wikipedia.org/wiki/Universal_asynchronous_receiver-transmitter
  * for more information about UART.
  */

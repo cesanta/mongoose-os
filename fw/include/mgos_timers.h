@@ -16,8 +16,6 @@
  */
 
 /*
- * # Timers
- *
  * Mongoose OS supports two types of timers: software timers and hardware
  * timers.
  *

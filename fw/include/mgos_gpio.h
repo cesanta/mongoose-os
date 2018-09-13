@@ -15,13 +15,6 @@
  * limitations under the License.
  */
 
-/*
- * # GPIO
- *
- * For general information about GPIO, see
- * [article](https://en.wikipedia.org/wiki/General-purpose_input/output).
- */
-
 #ifndef CS_FW_INCLUDE_MGOS_GPIO_H_
 #define CS_FW_INCLUDE_MGOS_GPIO_H_
 
