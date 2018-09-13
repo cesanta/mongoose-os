@@ -127,16 +127,14 @@ void stm32_clock_config(void) {
 }
 
 IRAM void stm32_flush_caches(void) {
-  SCB_DisableICache();
-  SCB_DisableDCache();
-  SCB_InvalidateICache();
-  SCB_InvalidateDCache();
-  SCB_EnableICache();
+  /* Disable both caches */
+  SCB->CCR &= ~(SCB_CCR_IC_Msk | SCB_CCR_DC_Msk);
+  SCB->ICIALLU = 0UL; /* Flush ICache */
+  SCB->CCR |= SCB_CCR_IC_Msk;
   /*
    * When re-enabling data cache here a weird crash happens when flash is
    * erased.
    * For now, we just keep the cache disabled.
    * TODO(rojer): Figure it out.
    */
-  // SCB_EnableDCache();
 }
