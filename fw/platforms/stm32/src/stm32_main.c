@@ -123,8 +123,6 @@ void (*stm32_int_vectors[256])(void)
 extern const void *stm32_flash_int_vectors[2];
 
 extern void arm_exc_handler_top(void);
-extern void stm32_system_init(void);
-extern void stm32_clock_config(void);
 extern void __libc_init_array(void);
 extern void SVC_Handler(void);
 extern void PendSV_Handler(void);
