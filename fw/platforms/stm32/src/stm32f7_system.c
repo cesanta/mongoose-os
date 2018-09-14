@@ -28,6 +28,9 @@ const uint8_t APBPrescTable[8] = {0, 0, 0, 0, 1, 2, 3, 4};
 
 #include "mgos_gpio.h"
 
+static IRAM void stm32f7_enable_caches(void);
+static IRAM void stm32f7_disable_caches(void);
+
 void stm32_system_init(void) {
 #if (__FPU_PRESENT == 1) && (__FPU_USED == 1)
   SCB->CPACR |=
@@ -51,9 +54,8 @@ void stm32_system_init(void) {
   /* Disable all interrupts */
   RCC->CIR = 0x00000000;
 
-  __HAL_FLASH_PREFETCH_BUFFER_ENABLE();
-  SCB_EnableICache();
-  SCB_EnableDCache();
+  stm32f7_disable_caches();
+  stm32f7_enable_caches();
 }
 
 void stm32_clock_config(void) {
@@ -126,15 +128,79 @@ void stm32_clock_config(void) {
   HAL_RCC_OscConfig(&oc);
 }
 
-IRAM void stm32_flush_caches(void) {
-  /* Disable both caches */
+static IRAM void stm32f7_disable_caches(void) {
   SCB->CCR &= ~(SCB_CCR_IC_Msk | SCB_CCR_DC_Msk);
+  __DSB();
+  __ISB();
   SCB->ICIALLU = 0UL; /* Flush ICache */
-  SCB->CCR |= SCB_CCR_IC_Msk;
+  FLASH->ACR &= ~(FLASH_ACR_ARTEN | FLASH_ACR_PRFTEN);
+  __DSB();
+  __ISB();
+}
+
+/* D-Cache invalidation routine from ARM CM7 TRM - still not good enough! */
+IRAM void inv_dcache(void) {
+  __asm volatile(
+      "\
+      .EQU CCSIDR, 0xE000ED80 \n\
+      .EQU CSSELR, 0xE000ED84 \n\
+      .EQU DCISW, 0xE000EF60 \n\
+      MOV r0, #0x0 \n\
+      LDR r11, =CSSELR \n\
+      STR r0, [r11] \n\
+      DSB \n\
+      LDR r11, =CCSIDR \n\
+      LDR r2, [r11] \n\
+      AND r1, r2, #0x7 \n\
+      ADD r7, r1, #0x4 \n\
+      MOV r1, #0x3ff \n\
+      ANDS r4, r1, r2, LSR #3 \n\
+      MOV r1, #0x7fff \n\
+      ANDS r2, r1, r2, LSR #13 \n\
+      CLZ r6, r4 \n\
+      # Select Data Cache size \n\
+      # Cache size identification \n\
+      # Number of words in a cache line \n\
+      LDR r11, =DCISW \n\
+inv_loop1: \n\
+      MOV r1, r4 \n\
+inv_loop2: \n\
+      LSL r3, r1, r6 \n\
+      LSL r8, r2, r7 \n\
+      ORR r3, r3, r8 \n\
+      STR r3, [r11] \n\
+      # Invalidate D-cache line \n\
+      SUBS r1, r1, #0x1 \n\
+      BGE inv_loop2 \n\
+      SUBS r2, r2, #0x1 \n\
+      BGE inv_loop1 \n\
+      DSB \n\
+      ISB \n\
+"
+      :
+      :
+      : "r0", "r1", "r2", "r3", "r4", "r6", "r7", "r8", "r11");
+}
+
+static IRAM void stm32f7_enable_caches(void) {
   /*
-   * When re-enabling data cache here a weird crash happens when flash is
-   * erased.
+   * When re-enabling data cache here weird crashes happen when flash is erased.
    * For now, we just keep the cache disabled.
    * TODO(rojer): Figure it out.
    */
+  // inv_dcache();
+  // SCB->CCR |= (SCB_CCR_IC_Msk | SCB_CCR_DC_Msk);
+  SCB->CCR |= SCB_CCR_IC_Msk;
+  FLASH->ACR |= FLASH_ACR_ARTRST;
+  __DSB();
+  __ISB();
+  FLASH->ACR &= ~(FLASH_ACR_ARTRST);
+  __DSB();
+  __ISB();
+  FLASH->ACR |= (FLASH_ACR_ARTEN | FLASH_ACR_PRFTEN);
+}
+
+IRAM void stm32_flush_caches(void) {
+  stm32f7_disable_caches();
+  stm32f7_enable_caches();
 }

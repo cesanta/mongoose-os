@@ -115,6 +115,7 @@ FLASH_FS_OFFSET = $(shell echo $$(($(FLASH_BL_SIZE) + $(FLASH_BL_CFG_SIZE))))
 LD_SCRIPT ?= $(LD_SCRIPT_OTA_0)
 FLASH_BL_SIZE ?= 32768
 FLASH_BL_CFG_SIZE ?= $(FLASH_S0_SIZE)
+MGOS_CFLAGS += -DMGOS_BL_ENABLE
 else
 FLASH_FS_OFFSET = $(FLASH_S0_SIZE)
 LD_SCRIPT ?= $(LD_SCRIPT_NO_OTA)
@@ -346,7 +347,7 @@ $(APP0_ELF): $(BIN_PARTS) $(LD_SCRIPT)
 
 $(APP0_BIN): $(APP0_ELF)
 	$(vecho) "BIN   $@"
-	$(Q) $(OC) -Obinary $^ $@
+	$(Q) $(OC) -Obinary -R .boot_state $^ $@
 	$(vecho) "  Code: $$($(OC) -Obinary -j .text $^ /dev/fd/1 | wc -c)"
 	$(vecho) "  Data: $$($(OC) -Obinary -j .rodata $^ /dev/fd/1 | wc -c) + $$($(OC) -Obinary -j .data $^ /dev/fd/1 | wc -c)"
 

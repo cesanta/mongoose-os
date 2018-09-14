@@ -74,6 +74,11 @@ SECTIONS {
     *(.rodata SORT(.rodata.*))
   } > FLASH_CS
 
+  /* Small area at the top of RAM for communicating between loader and app. */
+  .boot_state : {
+    *(.boot_state)
+  } > SRAM
+
   .data : {
     _data_start = .;
     . = ALIGN(256);  /* Vectors must be aligned to 0x100 */
@@ -104,7 +109,7 @@ SECTIONS {
   .heap : {
     . = ALIGN(8);
     _heap_start = .;
-    . = . + (LENGTH(SRAM) - _stack_size);
+    . = . + (LENGTH(SRAM) - SIZEOF(.boot_state) - _stack_size);
     . = ALIGN(8);
     _heap_end = .;
   } > SRAM
