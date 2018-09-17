@@ -87,7 +87,7 @@ static void mgos_gpio_dbnc_done_cb(void *arg) {
   if (mgos_gpio_read(pin) == s->btn_active_state) s->cb(pin, s->cb_arg);
   s->cb_pending = false;
   /* Clear any noise that happened during debounce timer. */
-  mgos_gpio_hal_int_clr(pin);
+  mgos_gpio_clear_int(pin);
   mgos_gpio_hal_int_done(pin);
 }
 

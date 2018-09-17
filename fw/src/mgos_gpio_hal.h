@@ -46,7 +46,6 @@ bool mgos_gpio_hal_set_int_mode(int pin, enum mgos_gpio_int_mode mode);
  * re-enable the interrupt.
  */
 void mgos_gpio_hal_int_cb(int pin);
-void mgos_gpio_hal_int_clr(int pin);
 void mgos_gpio_hal_int_done(int pin);
 
 /* Note: sys-config is not yet available. */

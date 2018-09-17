@@ -80,6 +80,12 @@ bool mgos_gpio_read_out(int pin);
  * is required, use `mgos_gpio_set_int_handler_isr`, but you'll need to
  * understand the implications, which are platform-specific.
  *
+ * Interrupt is automatically cleared once upon triggering.
+ * Then it is disabled until the handler gets a chance to run, at which point
+ * it is re-enabled. At this point it may re-trigger immediately if the
+ * interrupt condition arose again while the handler was pending or running.
+ * Handler may use `mgos_gpio_clear_int` to explicitly clear the condition.
+ *
  * Note that this will not enable the interrupt, this must be done explicitly
  * with `mgos_gpio_enable_int()`.
  */
@@ -99,6 +105,9 @@ bool mgos_gpio_enable_int(int pin);
 
 /* Disables interrupt (without removing the handler). */
 bool mgos_gpio_disable_int(int pin);
+
+/* Clears a GPIO interrupt flag. */
+void mgos_gpio_clear_int(int pin);
 
 /*
  * Removes a previosuly set interrupt handler.

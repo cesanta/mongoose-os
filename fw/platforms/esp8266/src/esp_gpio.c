@@ -198,7 +198,7 @@ IRAM static void esp8266_gpio_isr(void *arg) {
   (void) arg;
 }
 
-IRAM void mgos_gpio_hal_int_clr(int pin) {
+IRAM void mgos_gpio_clear_int(int pin) {
   GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, 1 << pin);
 }
 

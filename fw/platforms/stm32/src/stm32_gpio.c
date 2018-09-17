@@ -307,7 +307,7 @@ static void stm32_gpio_exti_10_15_int_handler(void) {
 
 static uint32_t s_exti_ena = 0;
 
-void mgos_gpio_hal_int_clr(int pin) {
+void mgos_gpio_clear_int(int pin) {
   uint32_t exti_num = STM32_PIN_NUM(pin);
   uint32_t exti_msk = (1 << exti_num);
   EXTI->PR = exti_msk;
