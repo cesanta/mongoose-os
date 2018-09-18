@@ -6,8 +6,8 @@
 - Security - 	built in flash encryption, crypto chip support, ARM mbedTLS optimized for small memory footprint
 - [Device management dashboard service](https://mongoose-os.com/docs/userguide/dashboard.md) - with on-prem private installation option
 - Supported microcontrollers: CC3220, CC3200, ESP32, ESP8266, STM32F4, STM32L4, STM32F7
-- Recommended dev kits: [ESP32-DevKitC for AWS IoT](https://mongoose-os.com/aws-iot-starter-kit/), [ESP32 Kit for Google IoT Core](https://mongoose-os.com/gcp/)
-- Built-in integration for AWS IoT, Google IoT Core, Microsoft Azure, Samsung Artik, Adafruit IO, generic MQTT servers
+- Recommended dev kits: [ESP32-DevKitC for AWS IoT](https://mongoose-os.com/aws-iot-starter-kit/), [ESP32 Kit for Google IoT Core](https://mongoose-os.com/gcp/),[TI CC3220 kit for Google IoT Core](https://mongoose-os.com/cc3220/), [ESP32-PICO-D4 for AWS IoT](https://mongoose-os.com/aws-pico/)
+- [Built-in integration](https://mongoose-os.com/docs/cloud/aws.md) for AWS IoT, Google IoT Core, Microsoft Azure, Samsung Artik, Adafruit IO, generic MQTT servers
 - Code in C or JavaScript
 - Ready to go [Apps](https://mongoose-os.com/docs/quickstart/apps.md) and [Libraries](https://mongoose-os.com/docs/api/core/adc.md)
 - [Embedded JavaScript engine - mJS](https://github.com/cesanta/mjs)
