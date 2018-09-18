@@ -4,12 +4,12 @@
 
 - Over-The-Air firmware updates and remote management - reliable updates with rollback on failures, remote device access infrastructure
 - Security - 	built in flash encryption, crypto chip support, ARM mbedTLS optimized for small memory footprint
-- [Device management dashboard service](https://mongoose-os.com/docs/overview/dashboard.html) - with on-prem private installation option
+- [Device management dashboard service](https://mongoose-os.com/docs/userguide/dashboard.md) - with on-prem private installation option
 - Supported microcontrollers: CC3220, CC3200, ESP32, ESP8266, STM32F4, STM32L4, STM32F7
 - Recommended dev kits: [ESP32-DevKitC for AWS IoT](https://mongoose-os.com/aws-iot-starter-kit/), [ESP32 Kit for Google IoT Core](https://mongoose-os.com/gcp/)
 - Built-in integration for AWS IoT, Google IoT Core, Microsoft Azure, Samsung Artik, Adafruit IO, generic MQTT servers
 - Code in C or JavaScript
-- Ready to go [Apps](https://mongoose-os.com/docs/reference/apps.html) and [Libraries](https://mongoose-os.com/docs/reference/api.html)
+- Ready to go [Apps](https://mongoose-os.com/docs/quickstart/apps.md) and [Libraries](https://mongoose-os.com/docs/api/core/adc.md)
 - [Embedded JavaScript engine - mJS](https://github.com/cesanta/mjs)
 
 
@@ -20,7 +20,7 @@ Trusted and Recommended By:
 - Espressif Systems - [an official partner of Espressif Systems](http://espressif.com/en/support/download/sdk)
 
 # Docs, Support
-- [Mongoose OS Documentation](https://mongoose-os.com/docs/quickstart/setup.html)
+- [Mongoose OS Documentation](https://mongoose-os.com/docs/quickstart/setup.md)
 - [Support Forum - ask your technical questions here](http://forum.mongoose-os.com/)
 - [Video tutorials](https://www.youtube.com/channel/UCZ9lQ7b-4bDbLOLpKwjpSAw/featured)
 - [Commercial licensing and support available](https://mongoose-os.com/licensing.html)
@@ -40,7 +40,7 @@ Mongoose OS is Open Source and dual-licensed:
 | License | [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) | Commercial - [contact us](https://mongoose-os.com//contact.html) |
 | Allows to close end-product's source code  | Yes | Yes  |
 | Price  | Free | Paid, see [details](https://mongoose-os.com//licensing.html) |
-| Source code & functionality  | [Limited](https://mongoose-os.com/docs/reference/licensing.html#closed-source-libraries) | Full |
+| Source code & functionality  | [Limited](https://mongoose-os.com/docs/userguide/licensing.md) | Full |
 | Technical support  | Community support via [Forum](https://forum.mongoose-os.com) and [Chat](https://gitter.im/cesanta/mongoose-os) | Commercial support by Mongoose OS development team, see [details](https://mongoose-os.com/support.html) |
 
 
