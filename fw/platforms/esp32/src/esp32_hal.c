@@ -101,5 +101,7 @@ int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {
 }
 
 uint32_t mgos_get_cpu_freq(void) {
-  return rtc_clk_cpu_freq_value(rtc_clk_cpu_freq_get());
+  rtc_cpu_freq_config_t c;
+  rtc_clk_cpu_freq_get_config(&c);
+  return c.freq_mhz * 1000000;
 }

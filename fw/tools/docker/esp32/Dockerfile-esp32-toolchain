@@ -1,17 +1,25 @@
-FROM ubuntu:xenial
+FROM ubuntu:bionic
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y -q \
-      apt-utils autoconf bison build-essential flex gawk git gperf help2man \
+      apt-utils autoconf bison build-essential flex gawk gdb-multiarch git gperf help2man \
       libexpat-dev libncurses5-dev libtool-bin \
       python python-dev python-git python-pyelftools python-serial python-six python-yaml \
-      software-properties-common texinfo unzip vim-nox wget zile zip && \
+      python3 python3-dev python3-git python3-pyelftools python3-serial python3-six python3-yaml \
+      software-properties-common texinfo unzip wget zip && \
     apt-get clean
 
 RUN cd /tmp && \
     git clone https://github.com/rojer/fsync-stub && \
     cd /tmp/fsync-stub && ./install.sh && \
     rm -rf /tmp/fsync-stub
+
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y -q \
+      python-future python3-future \
+      python-pkg-resources python3-pkg-resources \
+      python-setuptools python3-setuptools \
+      rsync && \
+    apt-get clean
 
 RUN useradd -d /opt/Espressif -m -s /bin/bash user && chown -R user /opt
 

@@ -58,6 +58,7 @@ FS_PAGE_SIZE = 256
 FS_ERASE_SIZE = 4096
 export NVS_ADDR = 0x9000
 export NVS_SIZE = 0x4000
+export APP_OFFSET = 0x10000
 export OTA_DATA_ADDR = 0xd000
 export OTA_DATA_SIZE = 0x2000
 MAP_FILE = $(BUILD_DIR)/$(APP).map
@@ -138,7 +139,7 @@ COMPONENT_DIRS = $(COMMON_PATH) \
                  /opt
 # Explicitly specify SDK components to build.
 SDK_COMPONENTS = app_trace app_update bootloader bootloader_support cxx driver \
-                 esp_adc_cal esp32 esptool_py ethernet expat freertos heap \
+                 esp_adc_cal esp32 esp_ringbuf esptool_py ethernet expat freertos heap \
                  log lwip micro-ecc newlib nvs_flash partition_table pthread soc \
                  spi_flash smartconfig_ack tcpip_adapter vfs wpa_supplicant xtensa-debug-module
 
@@ -172,12 +173,10 @@ LDFLAGS += -L$(BUILD_DIR)/src
 FW_PARTS = boot:type=boot,addr=0x1000,src=$(BOOTLOADER_BIN),encrypt=true,update=$(MGOS_UPDATE_BOOT_LOADER) \
            pt:type=pt,addr=$(PARTITION_TABLE_OFFSET),src=$(PARTITION_TABLE_BIN),encrypt=true \
            nvs:type=nvs,addr=$(NVS_ADDR),size=$(NVS_SIZE),fill=0xff,encrypt=false \
-           otadata:type=otadata,addr=$(OTA_DATA_ADDR),size=$(OTA_DATA_SIZE),src=$(MGOS_ESP_PATH)/otadata.bin,encrypt=true \
-           app:type=app,addr=$(CONFIG_APP_OFFSET),ptn=app_0,src=$(APP_BIN),encrypt=true \
+           otadata:type=otadata,addr=$(OTA_DATA_OFFSET),size=$(OTA_DATA_SIZE),src=$(MGOS_ESP_PATH)/otadata.bin,encrypt=true \
+           app:type=app,addr=$(APP_OFFSET),ptn=app_0,src=$(APP_BIN),encrypt=true \
            fs:src=$(FS_IMG),type=fs,addr=$(FS_ADDR),ptn=fs_0,fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE) \
            $(APP_EXTRA_FW_PARTS)
-
-export CONFIG_APP_OFFSET
 
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
 include $(MGOS_PATH)/fw/src/mkfs.mk
