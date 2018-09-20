@@ -4,7 +4,6 @@
 #
 # GC_DEBUG: if "true" (default) enables string ASN checks
 # STACK_GUARD: if "true" (default) enables soft stack guard
-# SSL: chooses SSL library to use. Currently onle "mbedTLS" is supported
 # HEAP_LOG: if "1", compiles ESP firmware with heap logging feature: there are
 #           logging wrappers for malloc and friends. You can later view heap
 #           map by `tools/heaplog_viewer/heaplog_viewer.html`
@@ -45,7 +44,6 @@ include $(MGOS_PATH)/fw/common.mk
 COMMON_ESP_PATH ?= $(COMMON_PATH)/platforms/esp/src
 COMMON_ESP8266_PATH ?= $(COMMON_PATH)/platforms/esp8266
 MGOS_ESP8266_PATH ?= $(MGOS_PATH)/fw/platforms/esp8266
-MBEDTLS_PATH ?= /opt/cs_mbedtls
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 UMM_MALLOC_PATH ?= $(COMMON_PATH)/umm_malloc
 BOOTLOADER_PATH ?= $(COMMON_ESP8266_PATH)/rboot
@@ -88,8 +86,6 @@ FS_STAGING_DIR = $(BUILD_DIR)/fs
 FW_SECTS = .text .data .rodata
 FW_USER_ARGS = -quiet -bin -boot2
 
-# SSL can be None or mbedTLS
-SSL ?= mbedTLS
 include $(COMMON_ESP8266_PATH)/common.mk
 
 MGOS_ESP_SRC_PATH = $(MGOS_ESP8266_PATH)/src
@@ -240,30 +236,6 @@ $(LWIP_LIB): $(LWIP_PATH)
 		APP=liblwip_cs BUILD_DIR=$(abspath $(LWIP_BUILD_DIR)) \
 		COMMON_ESP8266_PATH=$(COMMON_ESP8266_PATH) \
 		CFLAGS_EXTRA="$(HEAP_LOG_FLAGS)"
-endif
-
-ifeq "$(SSL)" "mbedTLS"
-  IPATH += $(MBEDTLS_PATH)/include
-  MGOS_SRCS += esp_crypto.c
-  MGOS_ESP_FEATURES += -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS \
-                       -DMG_SSL_IF_MBEDTLS_FREE_CERTS \
-                       -DMG_SSL_IF_MBEDTLS_MAX_FRAG_LEN=1024 \
-                       -DMBEDTLS_X509_CA_CHAIN_ON_DISK
-  MBEDTLS_CFLAGS = $(CFLAGS)
-  MGOS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp_mbedtls_config.yaml
-  ifeq "$(MGOS_HAVE_ATCA)" "1"
-    MBEDTLS_CFLAGS += -DMBEDTLS_ECP_ATCA -DMBEDTLS_X509_CA_CHAIN_ON_DISK -I$(ATCA_PATH)/lib
-    SSL_LIBS = $(addprefix $(MBEDTLS_PATH)/library/,libmbedcrypto_atca.a libmbedtls_atca.a libmbedx509_atca.a)
-  else
-    SSL_LIBS = $(addprefix $(MBEDTLS_PATH)/library/,libmbedcrypto.a libmbedtls.a libmbedx509.a)
-  endif
-
-$(SSL_LIBS):
-	$(Q) $(MAKE) -j4 -C $(MBEDTLS_PATH)/library $(notdir $@) \
-		CC=$(CC) AR=$(AR) \
-		CFLAGS="$(MBEDTLS_CFLAGS)"
-else
-  SSL_LIBS =
 endif
 
 MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o)) \
@@ -420,7 +392,7 @@ $(BREAKDOWN_FILE): $(APP_ELF)
 # -- Linking.
 
 # Link the main ELF output file.
-BIN_PARTS = $(BUILD_DIR)/esp_cache.c.o $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(ATCA_LIB) $(LWIP_LIB) $(SSL_LIBS) $(APP_BIN_LIB_FILES)
+BIN_PARTS = $(BUILD_DIR)/esp_cache.c.o $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(ATCA_LIB) $(LWIP_LIB) $(APP_BIN_LIB_FILES)
 $(APP_ELF): $(BIN_PARTS) $(LD_SCRIPT)
 ifeq "$(MGOS_ESP8266_RTOS)" "1"
 	$(OBJCOPY) --weaken-symbol printf --weaken-symbol puts /opt/Espressif/esp-open-sdk/xtensa-lx106-elf/xtensa-lx106-elf/lib/libc.a
@@ -522,6 +494,3 @@ $(BOOT_LOADER_BIN): $(ESPTOOL2) $(GENFILES_LIST)
 
 clean:
 	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)
-ifeq "$(SSL)" "mbedTLS"
-	$(Q) $(MAKE) -C $(MBEDTLS_PATH)/library clean
-endif

@@ -50,7 +50,6 @@ FREERTOS_PATH ?=
 COMMON_CC3200_PATH ?= $(MGOS_PATH)/common/platforms/cc3200
 MGOS_CC3220_PATH ?= $(MGOS_PATH)/fw/platforms/cc3220
 MGOS_CC32XX_PATH ?= $(MGOS_PATH)/fw/platforms/cc32xx
-MBEDTLS_PATH ?= /opt/cs_mbedtls
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 MKSPIFFS ?= /usr/local/bin/mkspiffs8
 
@@ -91,8 +90,7 @@ VPATH = $(MGOS_VPATH) $(APP_SOURCE_DIRS) $(MGOS_CC32XX_PATH)/src $(MGOS_CC3220_P
         $(GEN_DIR)
 IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
         $(MGOS_CC32XX_PATH)/include $(MGOS_CC32XX_PATH)/include/spiffs \
-        $(MGOS_CC32XX_PATH)/src $(MGOS_CC3220_PATH)/src $(GEN_DIR) \
-        $(MBEDTLS_PATH)/include $(MBEDTLS_PATH)/cc32xx
+        $(MGOS_CC32XX_PATH)/src $(MGOS_CC3220_PATH)/src $(GEN_DIR)
 
 # Note: CC3220 has only 32 GPIO but our port uses pin-based numbering
 # and those go from 1 to 64.
@@ -113,11 +111,7 @@ MG_FEATURES ?= $(MG_FEATURES_TINY) \
                -DMG_SIMPLELINK_NO_OSI \
                -DCS_DISABLE_MD5 -DMG_EXT_MD5 \
                -DCS_DISABLE_SHA1 -DMG_EXT_SHA1 \
-               -DFS_MAX_OPEN_FILES=5 \
-               -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS \
-               -DMG_SSL_IF_MBEDTLS_FREE_CERTS \
-               -DMG_SSL_IF_MBEDTLS_MAX_FRAG_LEN=1024 \
-               -DMBEDTLS_X509_CA_CHAIN_ON_DISK
+               -DFS_MAX_OPEN_FILES=5
 
 MGOS_FEATURES ?= -DMGOS_VFS_DECLARE_LIBC_DIR_API \
                  -DMGOS_VFS_DEFINE_LIBC_DIR_API \
@@ -203,7 +197,7 @@ MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3220_PATH)/src/*.c)) \
              mgos_hw_timers.c mgos_system.c mgos_time.c mgos_timers.c mgos_uart.c mgos_utils.c \
              cc32xx_exc.c arm_exc.c arm_exc_top.S arm_nsleep100.c arm_nsleep100_m4.S \
              cc32xx_gpio.c \
-             cc32xx_hal.c cc32xx_hash.c cc32xx_hw_timers.c cc32xx_libc.c cc32xx_main.c cc32xx_sl_spawn.c cc32xx_uart.c \
+             cc32xx_hal.c cc32xx_hw_timers.c cc32xx_libc.c cc32xx_main.c cc32xx_sl_spawn.c cc32xx_uart.c \
              $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C))
 
 IPATH += $(SPIFFS_PATH)
@@ -257,7 +251,6 @@ include $(MGOS_PATH)/common/scripts/fw_meta.mk
 SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(SDK_SRCS:=.o))
 MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o))
 APP_OBJS = $(addprefix $(BUILD_DIR)/,$(APP_SRCS:=.o))
-MBEDTLS_LIBS = $(addprefix $(MBEDTLS_PATH)/library/,libmbedcrypto.a libmbedtls.a libmbedx509.a)
 
 MGOS_OBJS += $(BUILD_DIR)/portasm.asm.o
 
@@ -313,8 +306,8 @@ $(APP_BIN): $(APP_ELF)
 	$(Q) $(OBJCOPY) -O binary $< $@
 	$(Q) echo "     Code size: $$(ls -l $@ | awk '{print $$5}')"
 
-$(APP_ELF): $(APP_OBJS) $(MGOS_LIB) $(MBEDTLS_LIBS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES) $(APP_LD_SCRIPT)
-	$(call link,$(APP_LD_SCRIPT),$(APP_LDFLAGS),$(APP_OBJS) $(MGOS_LIB) $(MBEDTLS_LIBS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES))
+$(APP_ELF): $(APP_OBJS) $(MGOS_LIB) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES) $(APP_LD_SCRIPT)
+	$(call link,$(APP_LD_SCRIPT),$(APP_LDFLAGS),$(APP_OBJS) $(MGOS_LIB) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES))
 
 $(MGOS_LIB): $(MGOS_OBJS) $(SDK_OBJS)
 	$(call ar,$^)

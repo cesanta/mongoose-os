@@ -51,7 +51,6 @@ SDK_PATH ?= /cc3200-sdk
 MGOS_CC3200_PATH ?= $(MGOS_PATH)/fw/platforms/cc3200
 MGOS_CC32XX_PATH ?= $(MGOS_PATH)/fw/platforms/cc32xx
 COMMON_CC3200_PATH ?= $(MGOS_PATH)/common/platforms/cc3200
-MBEDTLS_PATH ?= /opt/cs_mbedtls
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 BOOT_PATH ?= $(MGOS_CC3200_PATH)/boot
 
@@ -96,8 +95,7 @@ VPATH = $(MGOS_VPATH) $(APP_SOURCE_DIRS) $(MGOS_SRC_PATH) $(MGOS_CC32XX_PATH)/sr
 IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
         $(MGOS_CC32XX_PATH)/include $(MGOS_CC32XX_PATH)/include/spiffs \
         $(MGOS_CC32XX_PATH)/src $(MGOS_CC3200_PATH)/src \
-        $(BOOT_PATH)/lib $(GEN_DIR) \
-        $(MBEDTLS_PATH)/include $(MBEDTLS_PATH)/cc32xx
+        $(BOOT_PATH)/lib $(GEN_DIR)
 
 # Note: CC3200 has only 32 GPIO but our port uses pin-based numbering
 # and those go from 1 to 64.
@@ -181,7 +179,7 @@ SDK_CFLAGS = -DTARGET_IS_CC3200 -DUSE_FREERTOS
 
 MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3200_PATH)/src/*.c)) \
              cc32xx_exc.c arm_exc.c arm_exc_top.S arm_nsleep100.c arm_nsleep100_m4.S \
-             cc32xx_fs.c cc32xx_gpio.c cc32xx_hal.c cc32xx_hash.c cc32xx_hw_timers.c \
+             cc32xx_fs.c cc32xx_gpio.c cc32xx_hal.c cc32xx_hw_timers.c \
              cc32xx_libc.c cc32xx_main.c cc32xx_sl_spawn.c cc32xx_uart.c
 APP_SRCS = $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
@@ -189,6 +187,7 @@ APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
 MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" -DCS_PLATFORM=CS_P_CC3200 \
               -DMGOS_MAX_NUM_UARTS=2 -DMGOS_DEBUG_UART=$(MGOS_DEBUG_UART) \
               -DSYS_CLK=80000000 -D__SF_DEBUG__ \
+              -DMG_ENABLE_SSL \
               -DMG_SSL_IF_SIMPLELINK_SLFS_PREFIX=\"/slfs/\" \
               $(SDK_CFLAGS) \
               -DC_DISABLE_BUILTIN_SNPRINTF
@@ -243,7 +242,6 @@ include $(MGOS_PATH)/common/scripts/fw_meta.mk
 SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(SDK_SRCS:=.o))
 MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o))
 APP_OBJS = $(addprefix $(BUILD_DIR)/,$(APP_SRCS:=.o))
-MBEDTLS_LIBS = $(addprefix $(MBEDTLS_PATH)/library/,libmbedcrypto.a libmbedtls.a libmbedx509.a)
 
 include $(MGOS_PATH)/common/scripts/build_info.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
@@ -340,8 +338,8 @@ $(APP_BIN): $(APP_ELF)
 	$(Q) $(OBJCOPY) -O binary $< $@
 	$(Q) echo "     Code size: $$(ls -l $@ | awk '{print $$5}')"
 
-$(APP_ELF): $(APP_OBJS) $(MGOS_LIB) $(MBEDTLS_LIBS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES) $(APP_LD_SCRIPT)
-	$(call link,$(APP_LD_SCRIPT),$(APP_LDFLAGS),$(APP_OBJS) $(MGOS_LIB) $(MBEDTLS_LIBS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES))
+$(APP_ELF): $(APP_OBJS) $(MGOS_LIB) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES) $(APP_LD_SCRIPT)
+	$(call link,$(APP_LD_SCRIPT),$(APP_LDFLAGS),$(APP_OBJS) $(MGOS_LIB) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES))
 
 $(MGOS_LIB): $(MGOS_OBJS) $(SDK_OBJS)
 	$(call ar,$^)

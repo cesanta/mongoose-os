@@ -77,9 +77,6 @@ C_CXX_CFLAGS += -DMGOS_APP=\"$(APP)\" -DFW_ARCHITECTURE=$(APP_PLATFORM) \
                 -DMGOS_DEBUG_UART=$(MGOS_DEBUG_UART) \
                 -DMGOS_NUM_GPIO=40 \
                 -DMG_ENABLE_FILESYSTEM \
-                -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS \
-                -DMG_SSL_IF_MBEDTLS_FREE_CERTS \
-                -DMG_SSL_IF_MBEDTLS_MAX_FRAG_LEN=1024 \
                 -DMG_ENABLE_DIRECTORY_LISTING \
                 -DCS_DISABLE_MD5 -DMG_EXT_MD5 \
                 -DCS_DISABLE_SHA1 -DMG_EXT_SHA1
@@ -128,5 +125,5 @@ $(FFI_EXPORTS_C): $(APP_FS_FILES)
 	  -c $< -o $@
 
 COMPONENT_EXTRA_INCLUDES = $(MGOS_ESP_SRC_PATH) $(MGOS_ESP_PATH)/include $(MGOS_ESP_PATH)/include/spiffs \
-                           $(SPIFFS_PATH) $(GEN_DIR) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) $(MGOS_IPATH) \
+                           $(SPIFFS_PATH) $(GEN_DIR) $(sort $(APP_SOURCE_DIRS)) $(MGOS_IPATH) \
                            $(IDF_PATH)/components/freertos/include/freertos

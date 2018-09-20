@@ -4,7 +4,6 @@ MAKEFLAGS += --warn-undefined-variables
 .PHONY: all clean
 
 MGOS_ENABLE_DEBUG_UDP = 0
-SSL ?= mbedTLS
 
 MGOS_PATH ?= ../../..
 
@@ -43,7 +42,6 @@ APP_FS_DIRS = $(sort $(dir $(APP_FS_FILES)))
 APP_PATH := $(CURDIR)
 # We always use LwIP from F4, it's the same everywhere anyway.
 LWIP_PATH ?= $(STM32CUBE_F4_PATH)/Middlewares/Third_Party/LwIP
-MBEDTLS_PATH ?= /opt/cs_mbedtls
 FREERTOS_PATH ?= $(STM32CUBE_PATH)/Middlewares/Third_Party/FreeRTOS
 MGOS_PLATFORM_PATH ?= $(MGOS_PATH)/fw/platforms/stm32
 
@@ -238,25 +236,6 @@ VPATH = $(MGOS_VPATH) $(MGOS_PLATFORM_PATH)/src \
 APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
 
-SSL_SRCS =
-SSL_LIBS =
-ifeq ("$(SSL)", "mbedTLS")
-  IPATH += $(MBEDTLS_PATH)/include
-  SSL_SRCS = $(wildcard $(MBEDTLS_PATH)/library/*.c)
-  # If we have no sources, this must be a binary-only distr.
-  ifneq "$(SSL_SRCS)" ""
-    MGOS_VPATH += $(MBEDTLS_PATH)/library
-    MGOS_SRCS += $(notdir $(SSL_SRCS))
-  else
-    SSL_LIBS += $(addprefix $(MBEDTLS_PATH)/library/,libmbedcrypto.a libmbedtls.a libmbedx509.a)
-  endif
-  MGOS_CFLAGS += -DMBEDTLS_CONFIG_FILE=\"mbedtls/config.h\" \
-                 -DMG_ENABLE_SSL -DMG_SSL_IF=MG_SSL_IF_MBEDTLS \
-                 -DMG_SSL_IF_MBEDTLS_FREE_CERTS \
-                 -DMG_SSL_IF_MBEDTLS_MAX_FRAG_LEN=1024 \
-                 -DMBEDTLS_X509_CA_CHAIN_ON_DISK
-endif
-
 CFLAGS = -std=gnu99 -Os -ggdb -MD -Wall -Wextra -Werror -pipe \
          -fno-common -ffunction-sections -fdata-sections \
          -DMGOS_APP=\"$(APP)\" \
@@ -329,7 +308,7 @@ $(BUILD_DIR)/%.S.o: %.S $(GENFILES_FLAG)
 $(GENFILES_FLAG): $(GENFILES_LIST)
 	$(Q) touch $@
 
-BIN_PARTS = $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(STM32_OBJS) $(SSL_LIBS) $(APP_BIN_LIB_FILES)
+BIN_PARTS = $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(STM32_OBJS) $(APP_BIN_LIB_FILES)
 ifeq "$(MGOS_ROOT_FS_ON_SYS_FLASH)" "1"
   BIN_PARTS += $(FS_IMG_O)
 else

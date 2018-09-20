@@ -121,9 +121,8 @@ export MGOS_IPATH
 CFLAGS += -Wall -Werror -pipe -mtext-section-literals \
           -I$(MGOS_PATH) -I$(MGOS_SRC_PATH) -I$(MGOS_INCLUDE_PATH) \
           -I$(MGOS_PATH)/fw/platforms/esp32/include/spiffs \
-          -DMBEDTLS_X509_CA_CHAIN_ON_DISK \
-          $(APP_CFLAGS)
-CXXFLAGS += -pipe $(APP_CXXFLAGS)
+          $(APP_CFLAGS) $(addprefix -I ,$(APP_INCLUDES))
+CXXFLAGS += -pipe $(APP_CXXFLAGS) $(addprefix -I ,$(APP_INCLUDES))
 
 # Settings for the ESP-IDF build system
 # See docs here:
@@ -145,7 +144,7 @@ SDK_COMPONENTS = app_trace app_update bootloader bootloader_support cxx driver \
 
 MGOS_MAIN_COMPONENT ?= mosapp
 
-COMPONENTS = $(SDK_COMPONENTS) $(MGOS_MAIN_COMPONENT) spiffs cryptoauthlib cs_mbedtls $(ESP_IDF_EXTRA_COMPONENTS)
+COMPONENTS = $(SDK_COMPONENTS) $(MGOS_MAIN_COMPONENT) spiffs $(ESP_IDF_EXTRA_COMPONENTS)
 
 ESPFLASHMODE = qio
 ESPFLASHSIZE = 4MB
