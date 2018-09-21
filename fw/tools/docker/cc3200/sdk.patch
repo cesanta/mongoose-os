@@ -1,0 +1,13 @@
+--- cc3200-sdk/simplelink/cc_pal.c.orig	2017-07-19 12:01:01.335361972 +0300
++++ cc3200-sdk/simplelink/cc_pal.c	2018-09-21 12:42:15.082769781 +0300
+@@ -623,8 +623,9 @@
+     int write_size = 0;
+     unsigned int pBuffAddr = (unsigned int)pBuff;
+ 
+-    if(fd!=1 || g_SpiFd!=1)
++    if(fd!=1 || g_SpiFd!=1) {
+         return -1;
++    }
+ 
+ 	if(len>DMA_BUFF_SIZE_MIN && g_ucDMAEnabled && ((pBuffAddr % 4) == 0))
+ 	{

@@ -13,26 +13,6 @@ MGOS_FEATURES += -DMGOS_DEBUG_UART=$(MGOS_DEBUG_UART) \
                  -DMGOS_DEBUG_UART_BAUD_RATE=$(MGOS_DEBUG_UART_BAUD_RATE) \
                  -DMG_ENABLE_CALLBACK_USERDATA
 
-ifdef MGOS_HAVE_ATCA
-  ATCA_PATH ?= /opt/cryptoauthlib
-  ATCA_LIB = $(BUILD_DIR)/libatca.a
-
-  MGOS_FEATURES += -I$(ATCA_PATH)/lib
-
-$(BUILD_DIR)/atca/libatca.a:
-	$(Q) mkdir -p $(BUILD_DIR)/atca
-	$(Q) make -C $(ATCA_PATH)/lib \
-		CC=$(CC) AR=$(AR) BUILD_DIR=$(BUILD_DIR)/atca \
-	  CFLAGS="$(CFLAGS)"
-
-$(ATCA_LIB): $(BUILD_DIR)/atca/libatca.a
-	$(Q) cp $< $@
-	$(Q) $(OBJCOPY) --rename-section .rodata=.irom0.text $@
-	$(Q) $(OBJCOPY) --rename-section .rodata.str1.1=.irom0.text $@
-else
-  ATCA_LIB =
-endif
-
 ifeq "$(MGOS_ENABLE_DEBUG_UDP)" "1"
   MGOS_FEATURES += -DMGOS_ENABLE_DEBUG_UDP
   MGOS_CONF_SCHEMA += $(MGOS_SRC_PATH)/mgos_debug_udp_config.yaml
