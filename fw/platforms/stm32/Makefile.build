@@ -60,17 +60,14 @@ STM32_IPATH =
 STM32_VPATH =
 STM32_SRCS =
 
-# If it's a known board, it will define family, device and other settings.
-ifneq ("$(BOARD)", "")
-include $(MGOS_PLATFORM_PATH)/mk/boards/$(BOARD).mk
-endif
+# If it's a known device, it will define family other settings.
 ifneq ("$(DEVICE)", "")
 include $(MGOS_PLATFORM_PATH)/mk/devices/$(DEVICE).mk
 endif
 ifneq ("$(FAMILY)", "")
 include $(MGOS_PLATFORM_PATH)/mk/$(FAMILY).mk
 else
-$(error Please, specify FAMILY. Possible values are stm32f4 and stm32f7)
+$(error Please, specify FAMILY. Possible values are stm32f4, stm32f7 and stm32l4)
 endif
 
 STM32_CFLAGS += -DHSE_VALUE=$(HSE_VALUE) \
