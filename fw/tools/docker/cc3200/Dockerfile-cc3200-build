@@ -1,4 +1,4 @@
-FROM ubuntu:bionic
+FROM ubuntu:xenial
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y -q \
@@ -14,8 +14,9 @@ RUN cd /tmp && \
     cd /tmp/fsync-stub && ./install.sh && \
     rm -rf /tmp/fsync-stub
 
-RUN DEBIAN_FRONTEND=noninteractive add-apt-repository -y -u ppa:team-gcc-arm-embedded/ppa && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y -q gcc-arm-embedded && \
+# Note: CC3200 bootloader doesn't build properly with newer GCC.
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y -q \
+      gcc-arm-none-eabi gdb-arm-none-eabi libnewlib-arm-none-eabi libnewlib-dev && \
     apt-get clean
 
 ARG TI_COMPILER_DIR

@@ -110,5 +110,5 @@ $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(OBJS)
 $(BUILD_INFO_O): $(BUILD_INFO_C)
 
 $(MKCFG_BIN): tools/mkcfg.c lib/boot_meta.h
-	$(vecho) "GCC   $< -> $@"
+	$(vecho) "GCC   $<"
 	$(Q) gcc -Wall -I$(MGOS_PATH)/fw/platforms/cc3200/src -Werror -o $@ $^
