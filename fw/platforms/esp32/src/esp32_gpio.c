@@ -32,12 +32,8 @@
 
 #include "common/cs_dbg.h"
 
-#if MGOS_NUM_GPIO != GPIO_PIN_COUNT
-#error MGOS_NUM_GPIO must match GPIO_PIN_COUNT
-#endif
-
 gpio_isr_handle_t s_int_handle;
-static uint8_t s_int_ena[MGOS_NUM_GPIO];
+static uint8_t s_int_ena[GPIO_PIN_COUNT];
 
 /* Invoked by SDK, runs in ISR context. */
 IRAM static void esp32_gpio_isr(void *arg) {
@@ -49,7 +45,7 @@ IRAM static void esp32_gpio_isr(void *arg) {
     mgos_gpio_hal_int_cb(i);
   }
   int_st = GPIO.status1.intr_st;
-  for (uint32_t i = 32, mask = 1; i < MGOS_NUM_GPIO; i++, mask <<= 1) {
+  for (uint32_t i = 32, mask = 1; i < GPIO_PIN_COUNT; i++, mask <<= 1) {
     if (s_int_ena[i] == 0 || !(int_st & mask)) continue;
     GPIO.pin[i].int_ena = 0;
     mgos_gpio_clear_int(i);
@@ -217,7 +213,7 @@ uint32_t mgos_bitbang_n100_cal;
 
 enum mgos_init_result mgos_gpio_hal_init() {
   /* Soft reset does not clear GPIO_PINn_INT_ENA, we have to do it ourselves. */
-  for (int i = 0; i < MGOS_NUM_GPIO; i++) {
+  for (int i = 0; i < GPIO_PIN_COUNT; i++) {
     if (GPIO_IS_VALID_GPIO(i)) gpio_intr_disable(i);
   }
   esp_err_t r = gpio_isr_register(esp32_gpio_isr, NULL, 0, &s_int_handle);

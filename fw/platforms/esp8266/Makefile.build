@@ -180,7 +180,6 @@ MEMORY_FLAGS = -DFS_MAX_OPEN_FILES=5
 
 MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" \
               -DMGOS_MAX_NUM_UARTS=2 \
-              -DMGOS_NUM_GPIO=16 \
               -DC_DISABLE_BUILTIN_SNPRINTF
 
 MGOS_LIB = $(BUILD_DIR)/mongoose-os.a
@@ -392,7 +391,7 @@ $(BREAKDOWN_FILE): $(APP_ELF)
 # -- Linking.
 
 # Link the main ELF output file.
-BIN_PARTS = $(BUILD_DIR)/esp_cache.c.o $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(ATCA_LIB) $(LWIP_LIB) $(APP_BIN_LIB_FILES)
+BIN_PARTS = $(BUILD_DIR)/esp_cache.c.o $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(LWIP_LIB) $(APP_BIN_LIB_FILES)
 $(APP_ELF): $(BIN_PARTS) $(LD_SCRIPT)
 ifeq "$(MGOS_ESP8266_RTOS)" "1"
 	$(OBJCOPY) --weaken-symbol printf --weaken-symbol puts /opt/Espressif/esp-open-sdk/xtensa-lx106-elf/xtensa-lx106-elf/lib/libc.a

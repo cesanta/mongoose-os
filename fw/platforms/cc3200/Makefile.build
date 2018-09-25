@@ -99,7 +99,7 @@ IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
 
 # Note: CC3200 has only 32 GPIO but our port uses pin-based numbering
 # and those go from 1 to 64.
-MGOS_CC3200_FEATURES ?= -DMGOS_NUM_GPIO=65 '-DUMM_ONFREE(ptr, size)=memset(ptr, 0xff, size)'
+MGOS_CC3200_FEATURES ?= '-DUMM_ONFREE(ptr, size)=memset(ptr, 0xff, size)'
 
 MG_FEATURES ?= $(MG_FEATURES_TINY) \
                -DMG_LOCALS -DMG_ENABLE_SSL \

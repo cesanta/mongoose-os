@@ -280,14 +280,17 @@ IRAM struct mgos_rlock_type *mgos_rlock_create(void) {
 }
 
 IRAM void mgos_rlock(struct mgos_rlock_type *l) {
+  if (l == NULL) return;
   xSemaphoreTakeRecursive((SemaphoreHandle_t) l, portMAX_DELAY);
 }
 
 IRAM void mgos_runlock(struct mgos_rlock_type *l) {
+  if (l == NULL) return;
   xSemaphoreGiveRecursive((SemaphoreHandle_t) l);
 }
 
 IRAM void mgos_rlock_destroy(struct mgos_rlock_type *l) {
+  if (l == NULL) return;
   vSemaphoreDelete((SemaphoreHandle_t) l);
 }
 #endif /* MGOS_BOOT_BUILD */

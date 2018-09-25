@@ -75,7 +75,6 @@ C_CXX_CFLAGS += -DMGOS_APP=\"$(APP)\" -DFW_ARCHITECTURE=$(APP_PLATFORM) \
                 $(MG_FEATURES_TINY) -DMG_NET_IF=MG_NET_IF_LWIP_LOW_LEVEL \
                 $(MGOS_FEATURES) -DMGOS_MAX_NUM_UARTS=3 \
                 -DMGOS_DEBUG_UART=$(MGOS_DEBUG_UART) \
-                -DMGOS_NUM_GPIO=40 \
                 -DMG_ENABLE_FILESYSTEM \
                 -DMG_ENABLE_DIRECTORY_LISTING \
                 -DCS_DISABLE_MD5 -DMG_EXT_MD5 \

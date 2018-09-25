@@ -32,10 +32,6 @@
 #include "common/cs_dbg.h"
 #include "esp_periph.h"
 
-#if MGOS_NUM_GPIO != GPIO_PIN_COUNT
-#error MGOS_NUM_GPIO must match GPIO_PIN_COUNT
-#endif
-
 #define GPIO_PIN_COUNT 16
 
 static uint8_t s_int_config[GPIO_PIN_COUNT];
