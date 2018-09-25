@@ -16,7 +16,6 @@
  */
 
 #include <stdio.h>
-#include "common/cs_dbg.h"
 
 #include "mgos_gpio_hal.h"
 #include "mgos_gpio_internal.h"
@@ -29,10 +28,19 @@
 
 struct mgos_gpio_state {
   int pin;
+  union {
+    struct {
+      unsigned int on_ms : 16;
+      unsigned int off_ms : 16;
+      mgos_timer_id timer_id;
+    } blink;
+    struct {
+      unsigned int debounce_ms : 16;
+      unsigned int active_state : 1;
+    } button;
+  };
   unsigned int isr : 1;
   unsigned int cb_pending : 1;
-  unsigned int btn_active_state : 1;
-  unsigned int debounce_ms : 16;
   mgos_gpio_int_handler_f cb;
   void *cb_arg;
 };
@@ -95,13 +103,13 @@ static void mgos_gpio_int_cb(void *arg) {
   mgos_rlock(s_lock);
   struct mgos_gpio_state *s = mgos_gpio_get_state(pin);
   if (s == NULL || !s->cb_pending || s->cb == NULL) goto out;
-  if (s->debounce_ms == 0) {
+  if (s->button.debounce_ms == 0) {
     s->cb(pin, s->cb_arg);
     s->cb_pending = false;
     mgos_gpio_hal_int_done(pin);
   } else {
     /* Keep the int disabled for the duration of the debounce time */
-    mgos_set_timer(s->debounce_ms, false, mgos_gpio_dbnc_done_cb, arg);
+    mgos_set_timer(s->button.debounce_ms, false, mgos_gpio_dbnc_done_cb, arg);
   }
 out:
   mgos_runlock(s_lock);
@@ -116,7 +124,7 @@ static void mgos_gpio_dbnc_done_cb(void *arg) {
     mgos_rlock(s_lock);
     struct mgos_gpio_state *s = mgos_gpio_get_state(pin);
     if (s != NULL) {
-      active_state = s->btn_active_state;
+      active_state = s->button.active_state;
       cb = s->cb;
       cb_arg = s->cb_arg;
       s->cb_pending = false;
@@ -195,8 +203,8 @@ bool mgos_gpio_set_button_handler(int pin, enum mgos_gpio_pull_type pull_type,
   {
     mgos_rlock(s_lock);
     struct mgos_gpio_state *s = mgos_gpio_get_state(pin);
-    s->btn_active_state = (int_mode == MGOS_GPIO_INT_EDGE_POS);
-    s->debounce_ms = debounce_ms;
+    s->button.active_state = (int_mode == MGOS_GPIO_INT_EDGE_POS);
+    s->button.debounce_ms = debounce_ms;
     mgos_runlock(s_lock);
   }
   return mgos_gpio_enable_int(pin);
@@ -206,6 +214,48 @@ IRAM bool mgos_gpio_toggle(int pin) {
   bool v = !mgos_gpio_read_out(pin);
   mgos_gpio_write(pin, v);
   return v;
+}
+
+static void mgos_gpio_blink_timer_cb(void *arg) {
+  int pin = (intptr_t) arg;
+  mgos_rlock(s_lock);
+  struct mgos_gpio_state *s = mgos_gpio_get_state(pin);
+  if (s != NULL) {
+    bool cur = mgos_gpio_toggle(pin);
+    if (s->blink.on_ms != s->blink.off_ms) {
+      int timeout = (cur ? s->blink.on_ms : s->blink.off_ms);
+      s->blink.timer_id =
+          mgos_set_timer(timeout, 0, mgos_gpio_blink_timer_cb, (void *) pin);
+    }
+  }
+  mgos_runlock(s_lock);
+}
+
+bool mgos_gpio_blink(int pin, int on_ms, int off_ms) {
+  bool res = !(on_ms < 0 || off_ms < 0 || on_ms >= 65536 || off_ms >= 65536);
+  if (res) {
+    mgos_rlock(s_lock);
+    struct mgos_gpio_state *s = mgos_gpio_get_or_create_state(pin);
+    if (s != NULL) {
+      s->blink.on_ms = on_ms;
+      s->blink.off_ms = off_ms;
+      if (s->blink.timer_id != MGOS_INVALID_TIMER_ID) {
+        mgos_clear_timer(s->blink.timer_id);
+        s->blink.timer_id = MGOS_INVALID_TIMER_ID;
+      }
+      if (on_ms != 0 && off_ms != 0) {
+        s->blink.timer_id = mgos_set_timer(
+            on_ms,
+            (on_ms == off_ms ? MGOS_TIMER_REPEAT : 0) | MGOS_TIMER_RUN_NOW,
+            mgos_gpio_blink_timer_cb, (void *) pin);
+        res = (s->blink.timer_id != MGOS_INVALID_TIMER_ID);
+      }
+    } else {
+      res = false;
+    }
+    mgos_runlock(s_lock);
+  }
+  return res;
 }
 
 enum mgos_init_result mgos_gpio_init() {

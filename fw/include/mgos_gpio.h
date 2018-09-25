@@ -140,6 +140,14 @@ bool mgos_gpio_set_button_handler(int pin, enum mgos_gpio_pull_type pull_type,
                                   int debounce_ms, mgos_gpio_int_handler_f cb,
                                   void *arg);
 
+/*
+ * A utility function that takes care of blinking an LED.
+ * The pin must be configured as output first.
+ * On (output "1") and off ("0") times are specified in milliseconds.
+ * Set to (0, 0) to disable.
+ */
+bool mgos_gpio_blink(int pin, int on_ms, int off_ms);
+
 /* String representation of pin number.
  * Will return "PA5" or "PK3" for platforms that have port banks. */
 const char *mgos_gpio_str(int pin_def, char buf[8]);

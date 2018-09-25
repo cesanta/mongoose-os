@@ -375,7 +375,7 @@ $(MG_BUILD_INFO_C): $(MGOS_OBJS)
 	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
 
 $(MK_FS_META_BIN): $(MGOS_CC3200_PATH)/tools/mkfsmeta.c
-	$(vecho) "GCC   $< -> $@"
+	$(vecho) "GCC   $<"
 	$(Q) gcc -Wall -Werror -I$(MGOS_CC3200_PATH)/src -o $@ $^
 
 # Build lib.a
