@@ -52,7 +52,7 @@ struct mgos_rlock_type *s_lock = NULL;
 static void mgos_gpio_int_cb(void *arg);
 static void mgos_gpio_dbnc_done_cb(void *arg);
 
-static struct mgos_gpio_state *mgos_gpio_get_state(int pin) {
+static IRAM struct mgos_gpio_state *mgos_gpio_get_state(int pin) {
   for (int i = 0; i < s_num_gpio_states; i++) {
     if (s_state[i].pin == pin) return &s_state[i];
   }
