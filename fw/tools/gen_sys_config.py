@@ -151,6 +151,8 @@ class SchemaEntry(object):
     def ValidateDefault(self):
         if (self.vtype == SchemaEntry.V_BOOL and not isinstance(self.default, bool) or
             self.vtype == SchemaEntry.V_INT and not isinstance(self.default, int) or
+            # In Python, boolvalue is an instance of int, but we don't want that.
+            self.vtype == SchemaEntry.V_INT and isinstance(self.default, bool) or
             self.vtype == SchemaEntry.V_DOUBLE and not isinstance(self.default, float) or
             self.vtype == SchemaEntry.V_STRING and not isinstance(self.default, basestring)):
             raise TypeError("%s: Invalid default value type (%s)" % (self.path, type(self.default)))
