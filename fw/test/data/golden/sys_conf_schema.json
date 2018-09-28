@@ -1,6 +1,6 @@
 [
   ["wifi", "o", {"hide": true}],
-  ["wifi.sta", "o", {"title": "WiFi Station"}],
+  ["wifi.sta", "o", {}],
   ["wifi.sta.ssid", "s", {"title": "SSID"}],
   ["wifi.sta.pass", "s", {"title": "Password", "type": "password"}],
   ["wifi.ap", "o", {"title": "WiFi Access Point"}],
@@ -8,6 +8,7 @@
   ["wifi.ap.pass", "s", {"title": "Password", "type": "password"}],
   ["wifi.ap.channel", "i", {"title": "Channel"}],
   ["wifi.ap.dhcp_end", "s", {"title": "DHCP End Address"}],
+  ["foo", "i", {}],
   ["http", "o", {"title": "HTTP Server"}],
   ["http.enable", "b", {"title": "Enable HTTP Server"}],
   ["http.port", "i", {"title": "Listening port"}],

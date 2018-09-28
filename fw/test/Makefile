@@ -37,7 +37,7 @@ $(PROG): $(SOURCES)
 
 #include $(REPO_ROOT)/common/scripts/test.mk
 $(SYS_CONF_C): data/sys_conf_wifi.yaml data/sys_conf_http.yaml data/sys_conf_debug.yaml
-	$(PYTHON) $(REPO_ROOT)/fw/tools/gen_sys_config.py \
+	$(REPO_ROOT)/fw/tools/gen_sys_config.py \
 	  --c_name=sys_conf \
 	  --dest_dir=$(BUILD_DIR) \
 	  $^

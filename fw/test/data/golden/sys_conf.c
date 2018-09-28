@@ -1,10 +1,14 @@
-/* Generated file - do not edit. */
+/* clang-format off */
+/*
+ * Generated file - do not edit.
+ * Command: ../../fw/tools/gen_sys_config.py --c_name=sys_conf --dest_dir=.build data/sys_conf_wifi.yaml data/sys_conf_http.yaml data/sys_conf_debug.yaml
+ */
 
 #include <stddef.h>
 #include "sys_conf.h"
 
-const struct mgos_conf_entry sys_conf_schema_[16] = {
-  {.type = CONF_TYPE_OBJECT, .key = "", .offset = 0, .num_desc = 15},
+const struct mgos_conf_entry sys_conf_schema_[17] = {
+  {.type = CONF_TYPE_OBJECT, .key = "", .offset = 0, .num_desc = 16},
   {.type = CONF_TYPE_OBJECT, .key = "wifi", .offset = offsetof(struct sys_conf, wifi), .num_desc = 8},
   {.type = CONF_TYPE_OBJECT, .key = "sta", .offset = offsetof(struct sys_conf, wifi.sta), .num_desc = 2},
   {.type = CONF_TYPE_STRING, .key = "ssid", .offset = offsetof(struct sys_conf, wifi.sta.ssid)},
@@ -14,6 +18,7 @@ const struct mgos_conf_entry sys_conf_schema_[16] = {
   {.type = CONF_TYPE_STRING, .key = "pass", .offset = offsetof(struct sys_conf, wifi.ap.pass)},
   {.type = CONF_TYPE_INT, .key = "channel", .offset = offsetof(struct sys_conf, wifi.ap.channel)},
   {.type = CONF_TYPE_STRING, .key = "dhcp_end", .offset = offsetof(struct sys_conf, wifi.ap.dhcp_end)},
+  {.type = CONF_TYPE_INT, .key = "foo", .offset = offsetof(struct sys_conf, foo)},
   {.type = CONF_TYPE_OBJECT, .key = "http", .offset = offsetof(struct sys_conf, http), .num_desc = 2},
   {.type = CONF_TYPE_BOOL, .key = "enable", .offset = offsetof(struct sys_conf, http.enable)},
   {.type = CONF_TYPE_INT, .key = "port", .offset = offsetof(struct sys_conf, http.port)},
@@ -54,6 +59,9 @@ int         sys_conf_get_wifi_ap_channel(struct sys_conf *cfg) {
 const char *sys_conf_get_wifi_ap_dhcp_end(struct sys_conf *cfg) {
   return cfg->wifi.ap.dhcp_end;
 }
+int         sys_conf_get_foo(struct sys_conf *cfg) {
+  return cfg->foo;
+}
 const struct sys_conf_http *sys_conf_get_http(struct sys_conf *cfg) {
   return &cfg->http;
 }
@@ -92,6 +100,9 @@ void sys_conf_set_wifi_ap_channel(struct sys_conf *cfg, int         val) {
 }
 void sys_conf_set_wifi_ap_dhcp_end(struct sys_conf *cfg, const char *val) {
   mgos_conf_set_str(&cfg->wifi.ap.dhcp_end, val);
+}
+void sys_conf_set_foo(struct sys_conf *cfg, int         val) {
+  cfg->foo = val;
 }
 void sys_conf_set_http_enable(struct sys_conf *cfg, int         val) {
   cfg->http.enable = val;

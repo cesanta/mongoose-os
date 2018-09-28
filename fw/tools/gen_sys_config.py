@@ -125,6 +125,8 @@ class SchemaEntry(object):
                 self.default = 0.0
             elif self.vtype == SchemaEntry.V_STRING:
                 self.default = ""
+            else:
+                self.default = None
         elif len(e) == 4:
             self.path, self.vtype, self.default, self.params = e
         else:
@@ -163,29 +165,39 @@ class SchemaEntry(object):
         self.default = other.default
         self.params = other.params
 
+    def __str__(self):
+        return '["%s", "%s", "%s", %s]' % (self.path, self.vtype, self.default, self.params)
+
 
 class Schema(object):
     def __init__(self):
         self._schema = []
+
+    def _FindEntry(self, path):
+        for e in self._schema:
+            if e.path == path: return e
+        return None
 
     def Merge(self, s):
         if type(s) is not list:
             raise TypeError("Schema must be a list, not %s" % (type(s)))
         for el in s:
             e = SchemaEntry(el)
-            for oe in self._schema:
-                if oe.path == e.path:
-                    if oe.vtype == SchemaEntry.V_OBJECT:
-                        raise TypeError("%s: Cannot override an object" % e.path)
-                    break
-            else:
-                oe = None
+            oe = self._FindEntry(e.path)
             if e.vtype is None:
                 if oe is not None:
+                    if oe.vtype == SchemaEntry.V_OBJECT:
+                        raise TypeError("%s: Cannot override an object" % e.path)
                     oe.default = e.default
                     oe.ValidateDefault()
             else:
                 if oe is None:
+                    # Construct containing objects as needed.
+                    pc = e.path.split(".")
+                    for l in range(1, len(pc)):
+                        op = ".".join(pc[:l])
+                        if not self._FindEntry(op):
+                            self._schema.append(SchemaEntry([op, SchemaEntry.V_OBJECT, {}]))
                     self._schema.append(e)
                 else:
                     oe.Assign(e)
@@ -440,6 +452,7 @@ class HWriter(object):
 
     def __str__(self):
         return """\
+/* clang-format off */
 /*
  * Generated file - do not edit.
  * Command: {cmd}
@@ -508,7 +521,11 @@ class CWriter(object):
 
     def __str__(self):
         return """\
-/* Generated file - do not edit. */
+/* clang-format off */
+/*
+ * Generated file - do not edit.
+ * Command: {cmd}
+ */
 
 #include <stddef.h>
 #include "{name}.h"
@@ -523,7 +540,8 @@ const struct mgos_conf_entry *{name}_schema() {{
 }}
 
 {accessor_lines}
-""".format(name=self._struct_name,
+""".format(cmd=' '.join(sys.argv),
+           name=self._struct_name,
            num_entries=len(self._schema_lines) + 1,
            num_desc=len(self._schema_lines),
            schema_lines="\n".join(self._schema_lines),

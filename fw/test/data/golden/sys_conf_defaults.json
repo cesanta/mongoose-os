@@ -7,6 +7,7 @@
    "dhcp_end": "192.168.4.200"
   }
  },
+ "foo": 123,
  "http": {
   "enable": true,
   "port": 80
