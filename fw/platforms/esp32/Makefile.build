@@ -32,6 +32,21 @@ ESP_IDF_EXTRA_PARTITION ?=
 
 MGOS_UPDATE_BOOT_LOADER ?= false
 
+MGOS_ROOT_DEVTAB ?=
+MGOS_ROOT_FS_TYPE ?= SPIFFS
+MGOS_ROOT_FS_SIZE ?= 262144
+ifeq "$(MGOS_ROOT_FS_TYPE)" "SPIFFS"
+  MKFS ?= /usr/local/bin/mkspiffs8
+  MGOS_ROOT_FS_OPTS ?= {"bs": 4096, "ps": 256, "es": 4096}
+else
+ifeq "$(MGOS_ROOT_FS_TYPE)" "LFS"
+  MKFS ?= /usr/local/bin/mklfs
+  MGOS_ROOT_FS_OPTS ?= {"bs": 4096, "is": 128}
+endif
+endif
+
+export MGOS_ROOT_FS_SIZE
+
 APP_FS_DIRS = $(sort $(dir $(APP_FS_FILES)))
 
 MGOS_PATH ?= ../../..
@@ -51,11 +66,6 @@ GEN_DIR ?= $(BUILD_DIR)/gen
 export APP_SLOT_SIZE ?= 0x180000
 FS_IMG = $(FW_STAGING_DIR)/fs.img
 export ESP_IDF_EXTRA_PARTITION
-export FS_ADDR ?= 0x190000
-export FS_SIZE ?= 262144
-FS_BLOCK_SIZE = 4096
-FS_PAGE_SIZE = 256
-FS_ERASE_SIZE = 4096
 export NVS_ADDR = 0x9000
 export NVS_SIZE = 0x4000
 export APP_OFFSET = 0x10000
@@ -121,7 +131,11 @@ export MGOS_IPATH
 CFLAGS += -Wall -Werror -pipe -mtext-section-literals \
           -I$(MGOS_PATH) -I$(MGOS_SRC_PATH) -I$(MGOS_INCLUDE_PATH) \
           -I$(MGOS_PATH)/fw/platforms/esp32/include/spiffs \
-          $(APP_CFLAGS) $(addprefix -I ,$(APP_INCLUDES))
+          $(APP_CFLAGS) $(addprefix -I ,$(APP_INCLUDES)) \
+          -DMGOS_ROOT_DEVTAB='$(MGOS_ROOT_DEVTAB)' \
+          -DMGOS_ROOT_FS_TYPE='$(MGOS_ROOT_FS_TYPE)' \
+          -DMGOS_ROOT_FS_OPTS='$(MGOS_ROOT_FS_OPTS)' \
+          -DMGOS_ROOT_FS_EXTRACT='$(MGOS_ROOT_FS_EXTRACT)'
 CXXFLAGS += -pipe $(APP_CXXFLAGS) $(addprefix -I ,$(APP_INCLUDES))
 
 # Settings for the ESP-IDF build system
@@ -154,7 +168,6 @@ SDKCONFIG = $(GEN_DIR)/sdkconfig
 BATCH_BUILD = 1
 
 PARTITION_TABLE_CSV_PATH = $(MGOS_ESP_PATH)/src/partitions_mgos.csv
-MKSPIFFS ?= /usr/local/bin/mkspiffs8
 
 include $(IDF_PATH)/make/project.mk
 
@@ -174,7 +187,7 @@ FW_PARTS = boot:type=boot,addr=0x1000,src=$(BOOTLOADER_BIN),encrypt=true,update=
            nvs:type=nvs,addr=$(NVS_ADDR),size=$(NVS_SIZE),fill=0xff,encrypt=false \
            otadata:type=otadata,addr=$(OTA_DATA_OFFSET),size=$(OTA_DATA_SIZE),src=$(MGOS_ESP_PATH)/otadata.bin,encrypt=true \
            app:type=app,addr=$(APP_OFFSET),ptn=app_0,src=$(APP_BIN),encrypt=true \
-           fs:src=$(FS_IMG),type=fs,addr=$(FS_ADDR),ptn=fs_0,fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE) \
+           fs:src=$(FS_IMG),type=fs,ptn=fs_0,fs_size=$(MGOS_ROOT_FS_SIZE) \
            $(APP_EXTRA_FW_PARTS)
 
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
@@ -188,7 +201,7 @@ $(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
 	$(vecho) "MKDIR $@"
 	$(Q) mkdir -p $@
 
-$(FW_MANIFEST): $(APP_BIN) $(BOOTLOADER_BIN) $(PARTITION_TABLE_BIN) $(FS_IMG) $(MKSPIFFS)
+$(FW_MANIFEST): $(APP_BIN) $(BOOTLOADER_BIN) $(PARTITION_TABLE_BIN) $(FS_IMG) $(MKFS)
 
 # mgos_config is generated during binary build
 $(GEN_DIR)/mgos_config_schema.json $(GEN_DIR)/mgos_ro_vars_schema.json: all_binaries
@@ -196,8 +209,8 @@ $(GEN_DIR)/mgos_config_schema.json $(GEN_DIR)/mgos_ro_vars_schema.json: all_bina
 $(GEN_DIR)/conf0.json: all_binaries
 	$(Q) rsync -mt $(GEN_DIR)/mgos_config_defaults.json $(GEN_DIR)/conf0.json
 
-$(FS_IMG): $(MKSPIFFS) $(APP_FS_DIRS) $(FS_FILES)
-	$(call mkspiffs,$(FS_SIZE),$(FS_BLOCK_SIZE),$(FS_PAGE_SIZE),$(FS_ERASE_SIZE))
+$(FS_IMG): $(MKFS) $(APP_FS_DIRS) $(FS_FILES)
+	$(call mkfs,$(MGOS_ROOT_FS_SIZE),$(MGOS_ROOT_FS_OPTS))
 
 $(BREAKDOWN_FILE) : $(APP_BIN)
 	$(vecho) "Generating breakdown"
