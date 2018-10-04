@@ -33,6 +33,7 @@
 #include "mgos_init_internal.h"
 #include "mgos_mongoose_internal.h"
 #include "mgos_uart_internal.h"
+#include "mgos_utils.h"
 #ifdef MGOS_HAVE_OTA_COMMON
 #include "mgos_updater_common.h"
 #include "mgos_updater_hal.h"
@@ -117,11 +118,11 @@ static IRAM void mgos_mg_poll_cb(void *arg) {
       timeout_ms = 1000;
     }
     ENTER_CRITICAL();
-  } while (s_mg_want_poll || timeout_ms < (int) portTICK_PERIOD_MS);
+  } while (s_mg_want_poll);
   s_mg_poll_scheduled = false;
   s_mg_last_poll++;
   EXIT_CRITICAL();
-  int timeout_ticks = (timeout_ms / portTICK_PERIOD_MS);
+  int timeout_ticks = MAX(1, (timeout_ms / portTICK_PERIOD_MS));
   xTimerChangePeriod(s_mg_poll_timer, timeout_ticks, 10);
   xTimerReset(s_mg_poll_timer, 10);
   (void) arg;
