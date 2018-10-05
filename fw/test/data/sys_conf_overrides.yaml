@@ -1,0 +1,2 @@
+- ["debug.test_d1", 2]  # Can override double with int value
+- ["debug.nonexistent", 10]  # Ignored

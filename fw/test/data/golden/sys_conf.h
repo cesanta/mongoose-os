@@ -1,7 +1,7 @@
 /* clang-format off */
 /*
  * Generated file - do not edit.
- * Command: ../../fw/tools/gen_sys_config.py --c_name=sys_conf --dest_dir=.build data/sys_conf_wifi.yaml data/sys_conf_http.yaml data/sys_conf_debug.yaml
+ * Command: ../../fw/tools/gen_sys_config.py --c_name=sys_conf --dest_dir=.build data/sys_conf_wifi.yaml data/sys_conf_http.yaml data/sys_conf_debug.yaml data/sys_conf_overrides.yaml
  */
 
 #ifndef SYS_CONF_H_
@@ -38,6 +38,8 @@ struct sys_conf_http {
 struct sys_conf_debug {
   int level;
   char *dest;
+  double test_d1;
+  double test_d2;
 };
 
 struct sys_conf {
@@ -67,6 +69,8 @@ int         sys_conf_get_http_port(struct sys_conf *cfg);
 const struct sys_conf_debug *sys_conf_get_debug(struct sys_conf *cfg);
 int         sys_conf_get_debug_level(struct sys_conf *cfg);
 const char *sys_conf_get_debug_dest(struct sys_conf *cfg);
+double      sys_conf_get_debug_test_d1(struct sys_conf *cfg);
+double      sys_conf_get_debug_test_d2(struct sys_conf *cfg);
 
 void sys_conf_set_wifi_sta_ssid(struct sys_conf *cfg, const char *val);
 void sys_conf_set_wifi_sta_pass(struct sys_conf *cfg, const char *val);
@@ -79,6 +83,8 @@ void sys_conf_set_http_enable(struct sys_conf *cfg, int         val);
 void sys_conf_set_http_port(struct sys_conf *cfg, int         val);
 void sys_conf_set_debug_level(struct sys_conf *cfg, int         val);
 void sys_conf_set_debug_dest(struct sys_conf *cfg, const char *val);
+void sys_conf_set_debug_test_d1(struct sys_conf *cfg, double      val);
+void sys_conf_set_debug_test_d2(struct sys_conf *cfg, double      val);
 /* }}} */
 
 

@@ -1,14 +1,14 @@
 /* clang-format off */
 /*
  * Generated file - do not edit.
- * Command: ../../fw/tools/gen_sys_config.py --c_name=sys_conf --dest_dir=.build data/sys_conf_wifi.yaml data/sys_conf_http.yaml data/sys_conf_debug.yaml
+ * Command: ../../fw/tools/gen_sys_config.py --c_name=sys_conf --dest_dir=.build data/sys_conf_wifi.yaml data/sys_conf_http.yaml data/sys_conf_debug.yaml data/sys_conf_overrides.yaml
  */
 
 #include <stddef.h>
 #include "sys_conf.h"
 
-const struct mgos_conf_entry sys_conf_schema_[17] = {
-  {.type = CONF_TYPE_OBJECT, .key = "", .offset = 0, .num_desc = 16},
+const struct mgos_conf_entry sys_conf_schema_[19] = {
+  {.type = CONF_TYPE_OBJECT, .key = "", .offset = 0, .num_desc = 18},
   {.type = CONF_TYPE_OBJECT, .key = "wifi", .offset = offsetof(struct sys_conf, wifi), .num_desc = 8},
   {.type = CONF_TYPE_OBJECT, .key = "sta", .offset = offsetof(struct sys_conf, wifi.sta), .num_desc = 2},
   {.type = CONF_TYPE_STRING, .key = "ssid", .offset = offsetof(struct sys_conf, wifi.sta.ssid)},
@@ -22,9 +22,11 @@ const struct mgos_conf_entry sys_conf_schema_[17] = {
   {.type = CONF_TYPE_OBJECT, .key = "http", .offset = offsetof(struct sys_conf, http), .num_desc = 2},
   {.type = CONF_TYPE_BOOL, .key = "enable", .offset = offsetof(struct sys_conf, http.enable)},
   {.type = CONF_TYPE_INT, .key = "port", .offset = offsetof(struct sys_conf, http.port)},
-  {.type = CONF_TYPE_OBJECT, .key = "debug", .offset = offsetof(struct sys_conf, debug), .num_desc = 2},
+  {.type = CONF_TYPE_OBJECT, .key = "debug", .offset = offsetof(struct sys_conf, debug), .num_desc = 4},
   {.type = CONF_TYPE_INT, .key = "level", .offset = offsetof(struct sys_conf, debug.level)},
   {.type = CONF_TYPE_STRING, .key = "dest", .offset = offsetof(struct sys_conf, debug.dest)},
+  {.type = CONF_TYPE_DOUBLE, .key = "test_d1", .offset = offsetof(struct sys_conf, debug.test_d1)},
+  {.type = CONF_TYPE_DOUBLE, .key = "test_d2", .offset = offsetof(struct sys_conf, debug.test_d2)},
 };
 
 const struct mgos_conf_entry *sys_conf_schema() {
@@ -80,6 +82,12 @@ int         sys_conf_get_debug_level(struct sys_conf *cfg) {
 const char *sys_conf_get_debug_dest(struct sys_conf *cfg) {
   return cfg->debug.dest;
 }
+double      sys_conf_get_debug_test_d1(struct sys_conf *cfg) {
+  return cfg->debug.test_d1;
+}
+double      sys_conf_get_debug_test_d2(struct sys_conf *cfg) {
+  return cfg->debug.test_d2;
+}
 /* }}} */
 
 /* Setters {{{ */
@@ -115,5 +123,11 @@ void sys_conf_set_debug_level(struct sys_conf *cfg, int         val) {
 }
 void sys_conf_set_debug_dest(struct sys_conf *cfg, const char *val) {
   mgos_conf_set_str(&cfg->debug.dest, val);
+}
+void sys_conf_set_debug_test_d1(struct sys_conf *cfg, double      val) {
+  cfg->debug.test_d1 = val;
+}
+void sys_conf_set_debug_test_d2(struct sys_conf *cfg, double      val) {
+  cfg->debug.test_d2 = val;
 }
 /* }}} */

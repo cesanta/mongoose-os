@@ -149,6 +149,8 @@ class SchemaEntry(object):
             raise TypeError("%s: Invalid params" % self.path)
 
     def ValidateDefault(self):
+        if self.vtype == SchemaEntry.V_DOUBLE and type(self.default) is int:
+            self.default = float(self.default)
         if (self.vtype == SchemaEntry.V_BOOL and not isinstance(self.default, bool) or
             self.vtype == SchemaEntry.V_INT and not isinstance(self.default, int) or
             # In Python, boolvalue is an instance of int, but we don't want that.
