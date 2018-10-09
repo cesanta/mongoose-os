@@ -19,6 +19,7 @@
 #include "common/mg_str.h"
 #include "common/platform.h"
 
+#include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
 
