@@ -94,6 +94,26 @@ enum mgos_event_sys {
    * ```
    */
   MGOS_EVENT_TIME_CHANGED,
+
+  /*
+   * Fired when device is connected/disconnected to the cloud server.
+   * ev_data: `struct mgos_cloud_arg`
+   */
+  MGOS_EVENT_CLOUD_CONNECTED,
+  MGOS_EVENT_CLOUD_DISCONNECTED,
+};
+
+/* Parameter for the MGOS_EVENT_CLOUD_* events */
+enum mgos_cloud_type {
+  MGOS_CLOUD_MQTT,
+  MGOS_CLOUD_DASH,
+  MGOS_CLOUD_AWS,
+  MGOS_CLOUD_AZURE,
+  MGOS_CLOUD_GCP,
+  MGOS_CLOUD_WATSON,
+};
+struct mgos_cloud_arg {
+  enum mgos_cloud_type type;
 };
 
 /* Parameter for the MGOS_EVENT_OTA_REQUEST event */
