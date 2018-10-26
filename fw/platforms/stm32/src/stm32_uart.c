@@ -67,10 +67,10 @@ static inline void stm32_uart_clear_ovf_int(struct stm32_uart_state *uds) {
 }
 #elif defined(USART_ICR_CTSCF) && defined(USART_ICR_ORECF)
 static inline void stm32_uart_clear_cts_int(struct stm32_uart_state *uds) {
-  CLEAR_BIT(uds->regs->ICR, USART_ICR_CTSCF);
+  uds->regs->ICR = USART_ICR_CTSCF;
 }
 static inline void stm32_uart_clear_ovf_int(struct stm32_uart_state *uds) {
-  CLEAR_BIT(uds->regs->ICR, USART_ICR_ORECF);
+  uds->regs->ICR = USART_ICR_ORECF;
 }
 #endif
 
