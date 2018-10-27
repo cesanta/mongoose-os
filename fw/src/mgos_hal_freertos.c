@@ -242,6 +242,50 @@ IRAM bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
   }
 }
 
+#if configSUPPORT_STATIC_ALLOCATION
+void vApplicationGetIdleTaskMemory(StaticTask_t **ppxIdleTaskTCBBuffer,
+                                   StackType_t **ppxIdleTaskStackBuffer,
+                                   uint32_t *pulIdleTaskStackSize) {
+  static StaticTask_t xIdleTaskTCB;
+  static StackType_t uxIdleTaskStack[configMINIMAL_STACK_SIZE];
+  *ppxIdleTaskTCBBuffer = &xIdleTaskTCB;
+  *ppxIdleTaskStackBuffer = uxIdleTaskStack;
+  *pulIdleTaskStackSize = configMINIMAL_STACK_SIZE;
+}
+
+void vApplicationGetTimerTaskMemory(StaticTask_t **ppxTimerTaskTCBBuffer,
+                                    StackType_t **ppxTimerTaskStackBuffer,
+                                    uint32_t *pulTimerTaskStackSize) {
+  static StaticTask_t xTimerTaskTCB;
+  static StackType_t uxTimerTaskStack[configTIMER_TASK_STACK_DEPTH];
+  *ppxTimerTaskTCBBuffer = &xTimerTaskTCB;
+  *ppxTimerTaskStackBuffer = uxTimerTaskStack;
+  *pulTimerTaskStackSize = configTIMER_TASK_STACK_DEPTH;
+}
+
+void mgos_hal_freertos_run_mgos_task(bool start_scheduler) {
+  static StaticTask_t mgos_task_tcb;
+  static StackType_t
+      mgos_task_stack[MGOS_TASK_STACK_SIZE_BYTES / sizeof(StackType_t)];
+  mgos_app_preinit();
+
+  s_main_queue =
+      xQueueCreate(MGOS_TASK_QUEUE_LENGTH, sizeof(struct mgos_event));
+  s_mgos_mux = xSemaphoreCreateRecursiveMutex();
+  s_mg_poll_timer = xTimerCreate("mg_poll", 10, pdFALSE /* reload */, 0,
+                                 mgos_mg_poll_timer_cb);
+  xTaskCreateStatic(mgos_task, "mgos",
+                    MGOS_TASK_STACK_SIZE_BYTES / STACK_SIZE_UNIT, NULL,
+                    MGOS_TASK_PRIORITY, mgos_task_stack, &mgos_task_tcb);
+  if (start_scheduler) {
+    vTaskStartScheduler();
+    mgos_cd_puts("Scheduler failed to start!\n");
+    mgos_dev_system_restart();
+  }
+}
+
+#else
+
 void mgos_hal_freertos_run_mgos_task(bool start_scheduler) {
   mgos_app_preinit();
 
@@ -258,6 +302,7 @@ void mgos_hal_freertos_run_mgos_task(bool start_scheduler) {
     mgos_dev_system_restart();
   }
 }
+#endif /* configSUPPORT_STATIC_ALLOCATION */
 
 #ifndef MGOS_BOOT_BUILD
 IRAM void mgos_ints_disable(void) {

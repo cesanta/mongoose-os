@@ -98,7 +98,7 @@
 /* Constants used to specify if only static allocation is to be supported (in
 which case a heap_n.c file is not required), only dynamic allocation is to be
 supported, or if both static and dynamic allocation are supported. */
-#define configSUPPORT_STATIC_ALLOCATION 0
+#define configSUPPORT_STATIC_ALLOCATION 1
 #define configSUPPORT_DYNAMIC_ALLOCATION 1
 
 /* Constants that describe the hardware and memory usage. */
