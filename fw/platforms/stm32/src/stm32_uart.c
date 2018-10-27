@@ -43,7 +43,7 @@ static struct mgos_uart_state *s_us[MGOS_MAX_NUM_UARTS];
 
 extern struct stm32_uart_def const s_uart_defs[MGOS_MAX_NUM_UARTS];
 
-static inline uint8_t stm32_uart_rx_byte(struct stm32_uart_state *uds);
+static inline uint8_t stm32_uart_rx_byte(struct mgos_uart_state *us);
 
 #ifdef MGOS_BOOT_BUILD
 #define stm32_set_int_handler(irqn, handler)
@@ -61,15 +61,17 @@ static inline uint8_t stm32_uart_rx_byte(struct stm32_uart_state *uds);
 static inline void stm32_uart_clear_cts_int(struct stm32_uart_state *uds) {
   CLEAR_BIT(uds->regs->SR, USART_SR_CTS);
 }
-static inline void stm32_uart_clear_ovf_int(struct stm32_uart_state *uds) {
+static inline void stm32_uart_clear_ovf_int(struct mgos_uart_state *us) {
+  struct stm32_uart_state *uds = (struct stm32_uart_state *) us->dev_data;
   CLEAR_BIT(uds->regs->SR, USART_SR_ORE);
-  (void) stm32_uart_rx_byte(uds);
+  (void) stm32_uart_rx_byte(us);
 }
 #elif defined(USART_ICR_CTSCF) && defined(USART_ICR_ORECF)
 static inline void stm32_uart_clear_cts_int(struct stm32_uart_state *uds) {
   uds->regs->ICR = USART_ICR_CTSCF;
 }
-static inline void stm32_uart_clear_ovf_int(struct stm32_uart_state *uds) {
+static inline void stm32_uart_clear_ovf_int(struct mgos_uart_state *us) {
+  struct stm32_uart_state *uds = (struct stm32_uart_state *) us->dev_data;
   uds->regs->ICR = USART_ICR_ORECF;
 }
 #endif
@@ -86,22 +88,28 @@ void stm32_uart_putc(int uart_no, char c) {
   regs->TDR = c;
 }
 
-static inline uint8_t stm32_uart_rx_byte(struct stm32_uart_state *uds) {
-  return uds->regs->RDR;
+static inline uint8_t stm32_uart_rx_byte(struct mgos_uart_state *us) {
+  struct stm32_uart_state *uds = (struct stm32_uart_state *) us->dev_data;
+  uint8_t byte = uds->regs->RDR;
+  us->stats.rx_bytes++;
+  return byte;
 }
 
-static inline void stm32_uart_tx_byte(struct stm32_uart_state *uds,
+static inline void stm32_uart_tx_byte(struct mgos_uart_state *us,
                                       uint8_t byte) {
+  struct stm32_uart_state *uds = (struct stm32_uart_state *) us->dev_data;
   while (!(uds->regs->ISR & USART_ISR_TXE)) {
   }
   uds->regs->TDR = byte;
+  us->stats.tx_bytes++;
 }
 
-static inline void stm32_uart_tx_byte_from_buf(struct stm32_uart_state *uds) {
+static inline void stm32_uart_tx_byte_from_buf(struct mgos_uart_state *us) {
+  struct stm32_uart_state *uds = (struct stm32_uart_state *) us->dev_data;
   struct cs_rbuf *itxb = &uds->itx_buf;
   uint8_t *data = NULL;
   if (cs_rbuf_get(itxb, 1, &data) == 1) {
-    stm32_uart_tx_byte(uds, *data);
+    stm32_uart_tx_byte(us, *data);
     cs_rbuf_consume(itxb, 1);
   }
 }
@@ -116,7 +124,7 @@ static void stm32_uart_isr(struct mgos_uart_state *us) {
   us->stats.ints++;
   if (ints & USART_ISR_ORE) {
     us->stats.rx_overflows++;
-    stm32_uart_clear_ovf_int(uds);
+    stm32_uart_clear_ovf_int(us);
   }
   if (ints & USART_ISR_CTSIF) {
 #ifdef USART_ISR_CTS
@@ -129,7 +137,7 @@ static void stm32_uart_isr(struct mgos_uart_state *us) {
   if ((ints & USART_ISR_TXE) && (cr1 & USART_CR1_TXEIE)) {
     struct cs_rbuf *itxb = &uds->itx_buf;
     us->stats.tx_ints++;
-    stm32_uart_tx_byte_from_buf(uds);
+    stm32_uart_tx_byte_from_buf(us);
     if (itxb->used < UART_ISR_BUF_DISP_THRESH) {
       dispatch = true;
     }
@@ -139,7 +147,7 @@ static void stm32_uart_isr(struct mgos_uart_state *us) {
     struct cs_rbuf *irxb = &uds->irx_buf;
     us->stats.rx_ints++;
     if (irxb->avail > 0) {
-      uint8_t data = stm32_uart_rx_byte(uds);
+      uint8_t data = stm32_uart_rx_byte(us);
       cs_rbuf_append_one(irxb, data);
     }
     if (irxb->avail > UART_ISR_BUF_DISP_THRESH) {
@@ -153,7 +161,7 @@ static void stm32_uart_isr(struct mgos_uart_state *us) {
     } else {
       if (cfg->rx_fc_type == MGOS_UART_FC_SW &&
           irxb->avail < UART_ISR_BUF_XOFF_THRESH && !us->xoff_sent) {
-        stm32_uart_tx_byte(uds, MGOS_UART_XOFF_CHAR);
+        stm32_uart_tx_byte(us, MGOS_UART_XOFF_CHAR);
         us->xoff_sent = true;
       }
       if (irxb->avail == 0) CLEAR_BIT(uds->regs->CR1, USART_CR1_RXNEIE);
@@ -209,7 +217,7 @@ void stm32_uart8_int_handler(void) {
 void stm32_uart_dputc(int c) {
   int uart_no = mgos_get_stderr_uart();
   if (uart_no < 0 || s_us[uart_no] == NULL) return;
-  stm32_uart_tx_byte((struct stm32_uart_state *) s_us[uart_no]->dev_data, c);
+  stm32_uart_tx_byte(s_us[uart_no], c);
 }
 
 void stm32_uart_dprintf(const char *fmt, ...) {
@@ -263,7 +271,7 @@ void mgos_uart_hal_flush_fifo(struct mgos_uart_state *us) {
   struct cs_rbuf *itxb = &uds->itx_buf;
   CLEAR_BIT(uds->regs->CR1, USART_CR1_TXEIE);
   while (itxb->used > 0) {
-    stm32_uart_tx_byte_from_buf(uds);
+    stm32_uart_tx_byte_from_buf(us);
   }
   while (!(uds->regs->ISR & USART_ISR_TC)) {
   }
