@@ -338,6 +338,19 @@ static const char *test_mg_strstrip(void) {
   return NULL;
 }
 
+static const char *test_mg_str_starts_with(void) {
+  struct mg_str s0 = MG_NULL_STR;
+
+  ASSERT(mg_str_starts_with(s0, s0));
+  ASSERT(!mg_str_starts_with(s0, mg_mk_str("foo")));
+  ASSERT(mg_str_starts_with(mg_mk_str("foo"), s0));
+  ASSERT(mg_str_starts_with(mg_mk_str("foobar"), mg_mk_str("foo")));
+  ASSERT(!mg_str_starts_with(mg_mk_str("foobar"), mg_mk_str("bar")));
+  ASSERT(!mg_str_starts_with(mg_mk_str("foo"), mg_mk_str("foobar")));
+
+  return NULL;
+}
+
 void tests_setup(void) {
 }
 
@@ -352,6 +365,7 @@ const char *tests_run(const char *filter) {
   RUN_TEST(test_mg_strchr);
   RUN_TEST(test_mg_strstr);
   RUN_TEST(test_mg_strstrip);
+  RUN_TEST(test_mg_str_starts_with);
   return NULL;
 }
 
