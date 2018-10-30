@@ -60,6 +60,15 @@ bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode);
 /* Set pull-up or pull-down type. */
 bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull);
 
+/* Sets up a pin as an input and confiures pull-up or pull-down. */
+bool mgos_gpio_setup_input(int pin, enum mgos_gpio_pull_type pull);
+
+/*
+ * Sets up pin output while avoiding spurious transitions:
+ * desired output level is configured first, then mode.
+ */
+bool mgos_gpio_setup_output(int pin, bool level);
+
 /* Read pin input level. */
 bool mgos_gpio_read(int pin);
 

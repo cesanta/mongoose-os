@@ -74,16 +74,21 @@ static uint32_t gpio_no_to_port_base(int gpio_no) {
   return (GPIOA0_BASE + 0x1000 * (gpio_no / 8));
 }
 
-bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
+bool cc32xx_gpio_port_en(int pin) {
   int gpio_no = pin_to_gpio_no(pin);
   if (gpio_no < 0) return false;
-
   uint32_t port_no = (gpio_no / 8); /* A0 - A4 */
+  MAP_PRCMPeripheralClkEnable(PRCM_GPIOA0 + port_no, PRCM_RUN_MODE_CLK);
+  return true;
+}
+
+bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
+  if (!cc32xx_gpio_port_en(pin)) return false;
+  int gpio_no = pin_to_gpio_no(pin);
+
   uint32_t port_base = gpio_no_to_port_base(gpio_no);
   uint32_t port_bit_no = (gpio_no % 8);
   uint32_t port_bit_mask = (1 << port_bit_no);
-
-  MAP_PRCMPeripheralClkEnable(PRCM_GPIOA0 + port_no, PRCM_RUN_MODE_CLK);
 
   uint32_t pad_config = PIN_MODE_0 /* GPIO is always mode 0 */;
   switch (mode) {
@@ -124,6 +129,12 @@ bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
   }
   HWREG(pad_reg) = pad_config;
   return true;
+}
+
+bool mgos_gpio_setup_output(int pin, bool level) {
+  if (!cc32xx_gpio_port_en(pin)) return false;
+  mgos_gpio_write(pin, level);
+  return mgos_gpio_set_mode(pin, MGOS_GPIO_MODE_OUTPUT);
 }
 
 bool mgos_gpio_read(int pin) {

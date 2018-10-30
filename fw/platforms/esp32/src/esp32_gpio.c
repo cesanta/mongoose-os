@@ -125,6 +125,11 @@ IRAM bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
   return (gpio_set_pull_mode(pin, pm) == ESP_OK);
 }
 
+bool mgos_gpio_setup_output(int pin, bool level) {
+  mgos_gpio_write(pin, level);
+  return mgos_gpio_set_mode(pin, MGOS_GPIO_MODE_OUTPUT);
+}
+
 IRAM bool mgos_gpio_read(int pin) {
   return gpio_get_level(pin);
 }

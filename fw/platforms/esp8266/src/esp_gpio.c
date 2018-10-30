@@ -151,6 +151,11 @@ IRAM bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
   return true;
 }
 
+bool mgos_gpio_setup_output(int pin, bool level) {
+  mgos_gpio_write(pin, level);
+  return mgos_gpio_set_mode(pin, MGOS_GPIO_MODE_OUTPUT);
+}
+
 IRAM void mgos_gpio_write(int pin, bool level) {
   if (pin >= 0 && pin < 16) {
     uint32_t mask = 1 << pin;

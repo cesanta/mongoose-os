@@ -216,6 +216,11 @@ IRAM bool mgos_gpio_toggle(int pin) {
   return v;
 }
 
+bool mgos_gpio_setup_input(int pin, enum mgos_gpio_pull_type pull) {
+  return (mgos_gpio_set_mode(pin, MGOS_GPIO_MODE_INPUT) &&
+          mgos_gpio_set_pull(pin, pull));
+}
+
 static void mgos_gpio_blink_timer_cb(void *arg) {
   int pin = (intptr_t) arg;
   mgos_rlock(s_lock);

@@ -57,7 +57,7 @@ IRAM GPIO_TypeDef *stm32_gpio_port_base(int pin_def) {
 }
 
 #if defined(STM32F4) || defined(STM32F7)
-static void stm32_gpio_port_en(int pin_def) {
+static bool stm32_gpio_port_en(int pin_def) {
   uint32_t bit = 0;
   switch (STM32_PIN_PORT(pin_def)) {
     case 'A':
@@ -95,11 +95,14 @@ static void stm32_gpio_port_en(int pin_def) {
       bit = RCC_AHB1ENR_GPIOKEN;
       break;
 #endif
+    default:
+      return false;
   }
   SET_BIT(RCC->AHB1ENR, bit);
+  return true;
 }
 #elif defined(STM32L4)
-static void stm32_gpio_port_en(int pin_def) {
+static bool stm32_gpio_port_en(int pin_def) {
   uint32_t bit = 0;
   switch (STM32_PIN_PORT(pin_def)) {
     case 'A':
@@ -128,8 +131,11 @@ static void stm32_gpio_port_en(int pin_def) {
       bit = RCC_AHB2ENR_GPIOHEN;
       break;
 #endif
+    default:
+      return false;
   }
   SET_BIT(RCC->AHB2ENR, bit);
+  return true;
 }
 
 /* L4 has two sets of EXTI registers but GPIO stuff is in set 1. */
@@ -210,7 +216,7 @@ bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
       otyper_val = 1;
       break;
   }
-  stm32_gpio_port_en(pin);
+  if (!stm32_gpio_port_en(pin)) return false;
   MODIFY_REG(*afrp, afr_msk, afr_val);
   if (afr_val != 0) moder_val = 2;
   MODIFY_REG(regs->MODER, moder_msk, (moder_val << (pin_num * 2)));
@@ -240,6 +246,12 @@ bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
   }
   MODIFY_REG(regs->PUPDR, pupdr_msk, (pupdr_val << pin_num));
   return true;
+}
+
+bool mgos_gpio_setup_output(int pin, bool level) {
+  if (!stm32_gpio_port_en(pin)) return false;
+  mgos_gpio_write(pin, level);
+  return mgos_gpio_set_mode(pin, MGOS_GPIO_MODE_OUTPUT);
 }
 
 bool stm32_gpio_set_ospeed(int pin, enum stm32_gpio_ospeed ospeed) {
