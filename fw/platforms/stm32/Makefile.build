@@ -3,6 +3,10 @@ MAKEFLAGS += --warn-undefined-variables
 
 .PHONY: all clean
 
+ifdef MGOS_VARS_FILE
+include $(MGOS_VARS_FILE)
+endif
+
 MGOS_ENABLE_DEBUG_UDP = 0
 
 MGOS_PATH ?= ../../..

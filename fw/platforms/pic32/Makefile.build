@@ -1,6 +1,9 @@
-
 MAKEFLAGS += --warn-undefined-variables
 .DEFAULT_GOAL := all
+
+ifdef MGOS_VARS_FILE
+include $(MGOS_VARS_FILE)
+endif
 
 APP ?= mongoose-os
 APP_PLATFORM = pic32

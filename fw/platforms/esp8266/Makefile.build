@@ -1,15 +1,9 @@
-# -*- mode: makefile -*-
-#
-# Mongoose OS for ESP8266
-#
-# GC_DEBUG: if "true" (default) enables string ASN checks
-# STACK_GUARD: if "true" (default) enables soft stack guard
-# HEAP_LOG: if "1", compiles ESP firmware with heap logging feature: there are
-#           logging wrappers for malloc and friends. You can later view heap
-#           map by `tools/heaplog_viewer/heaplog_viewer.html`
-#
 MAKEFLAGS += --warn-undefined-variables
 .DEFAULT_GOAL := all
+
+ifdef MGOS_VARS_FILE
+include $(MGOS_VARS_FILE)
+endif
 
 APP ?= mongoose-os
 APP_PLATFORM = esp8266

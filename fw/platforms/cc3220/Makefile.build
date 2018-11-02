@@ -1,11 +1,9 @@
-# -*- mode: makefile -*-
-#
-# Mongoose OS for CC3220
-#
-# This file is executed inside Docker build container.
-# It can be used without container too if SDK_PATH are configured.
 MAKEFLAGS += --warn-undefined-variables
 .DEFAULT_GOAL := all
+
+ifdef MGOS_VARS_FILE
+include $(MGOS_VARS_FILE)
+endif
 
 APP ?= mongoose-os
 APP_PLATFORM = cc3220
