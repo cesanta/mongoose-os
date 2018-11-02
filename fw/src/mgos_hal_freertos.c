@@ -51,8 +51,8 @@
 #define MGOS_TASK_QUEUE_LENGTH 32
 #endif
 
-#ifndef IRAM
-#define IRAM
+#ifndef MGOS_MONGOOSE_MAX_POLL_SLEEP_MS
+#define MGOS_MONGOOSE_MAX_POLL_SLEEP_MS 1000
 #endif
 
 extern const char *build_version, *build_id;
@@ -111,11 +111,11 @@ static IRAM void mgos_mg_poll_cb(void *arg) {
       timeout_ms = (int) ((min_timer - mg_time()) * 1000.0);
       if (timeout_ms < 0) {
         timeout_ms = 0;
-      } else if (timeout_ms > 1000) {
-        timeout_ms = 1000;
+      } else if (timeout_ms > MGOS_MONGOOSE_MAX_POLL_SLEEP_MS) {
+        timeout_ms = MGOS_MONGOOSE_MAX_POLL_SLEEP_MS;
       }
     } else {
-      timeout_ms = 1000;
+      timeout_ms = MGOS_MONGOOSE_MAX_POLL_SLEEP_MS;
     }
     ENTER_CRITICAL();
   } while (s_mg_want_poll);
