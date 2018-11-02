@@ -94,6 +94,7 @@ override _MGOS_PATH = $(MGOS_PATH)
 # It seems to be impossible to override vars passed to submake from the
 # command line, so we pass them via a separate set of varoables, which
 # submake then uses to override the values it received.
+export APP
 export APP_BUILD_ID
 export APP_CFLAGS
 export APP_CXXFLAGS
