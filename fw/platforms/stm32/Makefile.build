@@ -57,7 +57,7 @@ LSE_VALUE ?= 0
 # Internal oscillator frequency. Set for each device.
 HSI_VALUE ?= 0
 
-STM32_LIBC ?= -lc
+STM32_LIBC ?= -lc -lstdc++
 STM32_CFLAGS = -DSTM32 -D__WORDSIZE=32 -D_FILE_OFFSET_BITS=32
 STM32_CONF_SCHEMA =
 STM32_IPATH =
@@ -237,16 +237,17 @@ VPATH = $(MGOS_VPATH) $(MGOS_PLATFORM_PATH)/src \
 APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
 
-CFLAGS = -std=gnu99 -Os -ggdb -MD -Wall -Wextra -Werror -pipe \
-         -fno-common -ffunction-sections -fdata-sections \
-         -DMGOS_APP=\"$(APP)\" \
-         -DFW_ARCHITECTURE=$(APP_PLATFORM) \
+C_CXX_FLAGS = -Os -ggdb -MD -Wall -Wextra -Werror -pipe \
+              -fno-common -ffunction-sections -fdata-sections \
+              -DMGOS_APP=\"$(APP)\" \
+              -DFW_ARCHITECTURE=$(APP_PLATFORM) \
+
+CFLAGS = -std=gnu99 $(C_CXX_FLAGS) $(MGOS_CFLAGS) \
          $(MGOS_CFLAGS) $(MGOS_FEATURES) $(STM32_CFLAGS) \
          $(MG_FEATURES_TINY) -DMG_ENABLE_DIRECTORY_LISTING \
-         -DMG_NET_IF=$(MGOS_MG_NET_IF)
-
-CFLAGS += $(APP_CFLAGS)
-CXXFLAGS += $(APP_CXXFLAGS)
+         -DMG_NET_IF=$(MGOS_MG_NET_IF) \
+         $(APP_CFLAGS)
+CXXFLAGS = -std=gnu++11 -fno-exceptions $(C_CXX_FLAGS) $(STM32_CFLAGS) $(APP_CXXFLAGS)
 
 LDFLAGS += -Wl,--defsym=SRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -Wl,--defsym=SRAM_SIZE=$(SRAM_SIZE) \
            -Wl,--defsym=SRAM2_BASE_ADDR=$(SRAM2_BASE_ADDR) -Wl,--defsym=SRAM2_SIZE=$(SRAM2_SIZE) \
@@ -301,6 +302,10 @@ $(BUILD_DIR)/$(BUILD_LIB_NAME): $(BUILD_DIR) $(APP_OBJS)
 $(BUILD_DIR)/%.c.o: %.c $(GENFILES_FLAG)
 	$(vecho) "CC    $<"
 	$(Q) $(CC) $(CFLAGS) $(addprefix -I, $(IPATH)) -c $< -o $@
+
+$(BUILD_DIR)/%.cpp.o: %.cpp $(GENFILES_FLAG)
+	$(vecho) "CXX   $<"
+	$(Q) $(CXX) $(CXXFLAGS) $(addprefix -I, $(IPATH)) -c $< -o $@
 
 $(BUILD_DIR)/%.S.o: %.S $(GENFILES_FLAG)
 	$(vecho) "ASM   $<"
