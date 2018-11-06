@@ -260,6 +260,12 @@ void sdk_init_done_cb(void) {
 
 #endif
 
+extern void __libc_init_array(void);
+
+void _init(void) {
+  // Called by __libc_init_array after global ctors. No further action required.
+}
+
 void user_init(void) {
   uart_div_modify(0, UART_CLK_FREQ / MGOS_DEBUG_UART_BAUD_RATE);
 #ifdef MGOS_HAVE_ADC
@@ -284,6 +290,7 @@ void user_init(void) {
               NULL, MGOS_TASK_PRIORITY, NULL);
 #else
   esp_exception_handler_init();
+  __libc_init_array(); /* C++ global contructors. */
   system_init_done_cb(sdk_init_done_cb);
 #endif
 }
