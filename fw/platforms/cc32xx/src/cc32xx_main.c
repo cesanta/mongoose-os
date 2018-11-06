@@ -93,6 +93,24 @@ static int cc32xx_start_nwp(void) {
 #ifdef __TI_COMPILER_VERSION__
 __attribute__((section(".heap_start"))) uint32_t _heap_start;
 __attribute__((section(".heap_end"))) uint32_t _heap_end;
+#if CS_PLATFORM == CS_P_CC3200
+__attribute__((section(".bss_start"))) uint32_t _bss_start;
+__attribute__((section(".bss_end"))) uint32_t _bss_end;
+#endif
+
+/*
+ * This is invoked very, very early - before C/C++ init.
+ * C++ init requires heap, so we need to zero the UMM's arena.
+ * On CC3200 we also zero bss, on CC3220 .cinit takes care of that.
+ */
+int _system_pre_init(void) {
+#if CS_PLATFORM == CS_P_CC3200
+  memset(&_bss_start, 0, ((char *) &_bss_end - (char *) &_bss_start));
+#endif
+  /* C++ init requires heap, so it needs to be inited early. */
+  memset(UMM_MALLOC_CFG__HEAP_ADDR, 0, UMM_MALLOC_CFG__HEAP_SIZE);
+  return 1;
+}
 #endif
 
 enum mgos_init_result mgos_hal_freertos_pre_init(void) {
@@ -109,7 +127,8 @@ enum mgos_init_result mgos_hal_freertos_pre_init(void) {
 
 void umm_oom_cb(size_t size, unsigned short int blocks_cnt) {
   (void) blocks_cnt;
-  cc32xx_exc_printf("E:M %u\r\n", size, blocks_cnt);
+  cc32xx_exc_printf("E:M %u %u\r\n", size, blocks_cnt);
+  abort();
 }
 
 uint32_t mgos_bitbang_n100_cal = 0;
@@ -118,10 +137,6 @@ extern void mgos_nsleep100_cal(void);
 void cc32xx_main(void) {
   PRCMCC3200MCUInit();
   cc32xx_exc_init();
-#ifdef __TI_COMPILER_VERSION__
-  /* UMM malloc expects heap to be zeroed */
-  memset(UMM_MALLOC_CFG__HEAP_ADDR, 0, UMM_MALLOC_CFG__HEAP_SIZE);
-#endif
   cc32xx_exc_puts("\r\n");
 
   mgos_nsleep100_cal();

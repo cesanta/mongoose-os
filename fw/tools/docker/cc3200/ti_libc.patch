@@ -92,3 +92,13 @@
  void abort(void)
  {
      loader_exit();
+--- src/pre_init.c.orig	2018-09-12 07:00:00.000000000 +0100
++++ src/pre_init.c	2018-11-06 12:28:07.376354656 +0000
+@@ -53,6 +53,7 @@
+ /* linking with the C/C++ runtime library.                                   */
+ /*****************************************************************************/
+ 
++int _system_pre_init(void) __attribute__((weak));
+ int _system_pre_init(void)
+ {
+     return 1;

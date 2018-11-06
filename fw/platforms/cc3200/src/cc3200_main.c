@@ -114,12 +114,8 @@ enum mgos_init_result cc32xx_init(void) {
  */
 void *cc3200_tmp_gettimeofday_workaround = settimeofday;
 
-__attribute__((section(".bss_start"))) uint32_t _bss_start;
-__attribute__((section(".bss_end"))) uint32_t _bss_end;
-
 int main(void) {
   MAP_IntVTableBaseSet((unsigned long) &g_pfnVectors[0]);
-  memset(&_bss_start, 0, ((char *) &_bss_end - (char *) &_bss_start));
 
   MAP_IntEnable(FAULT_SYSTICK);
   MAP_IntMasterEnable();

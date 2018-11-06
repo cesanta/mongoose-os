@@ -27,13 +27,6 @@ extern void xPortSysTickHandler(void);
 
 /* Linker variable that marks the top of the stack. */
 extern unsigned long __STACK_END;
-/*
-void ResetISR(void) {
-  __asm(
-      "  .global _c_int00\n"
-      "  b.w     _c_int00");
-}
-*/
 
 extern void _c_int00(void);
 
