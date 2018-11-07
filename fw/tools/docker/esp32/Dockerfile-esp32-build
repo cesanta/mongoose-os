@@ -15,6 +15,7 @@ RUN cd /tmp && \
     rm -rf /tmp/fsync-stub
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y -q \
+      python-cryptography python3-cryptography \
       python-future python3-future \
       python-pkg-resources python3-pkg-resources \
       python-setuptools python3-setuptools \
