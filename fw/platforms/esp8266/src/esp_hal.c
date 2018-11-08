@@ -61,6 +61,8 @@ void mgos_wdt_enable(void) {
 
 void mgos_wdt_feed(void) {
   esp_hw_wdt_feed();
+  /* Keep the soft WDT stopped. */
+  system_soft_wdt_stop();
 }
 
 void mgos_wdt_set_timeout(int secs) {
