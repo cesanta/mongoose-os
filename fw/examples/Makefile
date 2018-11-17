@@ -14,7 +14,7 @@ export PLATFORM
 all: $(EXAMPLES)
 
 clean:
-	@true
+	@rm -rf */build
 
 list_examples:
 	@echo $(EXAMPLES)

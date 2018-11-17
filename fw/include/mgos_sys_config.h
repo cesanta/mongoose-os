@@ -29,6 +29,7 @@
 #define CS_FW_INCLUDE_MGOS_SYS_CONFIG_H_
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #include "common/mg_str.h"
 
