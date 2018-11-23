@@ -68,6 +68,8 @@ inline bool Status::operator!=(const Status &other) const {
   return !(*this == other);
 }
 
-Status Statusf(int code, const char *msg_fmt, ...);
+Status Errorf(int code, const char *msg_fmt, ...);
+
+Status Annotatef(const Status &other, const char *msg_fmt, ...);
 
 }  // namespace mgos

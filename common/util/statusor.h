@@ -14,9 +14,9 @@
 
 #pragma once
 
-#include <assert.h>
+#include "common/util/status.h"
 
-#include <common/util/status.h>
+#include <stdlib.h>
 
 namespace mgos {
 
@@ -88,7 +88,7 @@ inline StatusOr<T>::StatusOr()
 template <typename T>
 inline StatusOr<T>::StatusOr(const Status &status)
     : status_(status) {
-  assert(!status.ok());
+  if (status.ok()) abort();
 }
 
 template <typename T>
@@ -104,7 +104,7 @@ inline StatusOr<T>::StatusOr(T &&value)
 template <typename T>
 inline StatusOr<T>::StatusOr(StatusOr<T> &&other)
     : status_(other.status_), value_(std::move(other.value_)) {
-  other.status_ = Status::UNKNOWN;
+  other.status_ = Status::UNKNOWN();
 }
 
 template <typename T>
@@ -117,7 +117,7 @@ template <typename T>
 template <typename U>
 inline StatusOr<T>::StatusOr(StatusOr<U> &&other)
     : status_(other.status_), value_(std::move(other.value_)) {
-  other.status_ = Status::UNKNOWN;
+  other.status_ = Status::UNKNOWN();
 }
 
 template <typename T>
@@ -131,7 +131,7 @@ template <typename T>
 inline StatusOr<T> &StatusOr<T>::operator=(StatusOr &&other) {
   status_ = std::move(other.status_);
   if (status_.ok()) value_ = std::move(other.value_);
-  other.status_ = Status::UNKNOWN;
+  other.status_ = Status::UNKNOWN();
   return *this;
 }
 
@@ -148,20 +148,20 @@ template <typename U>
 inline StatusOr<T> &StatusOr<T>::operator=(StatusOr<U> &&other) {
   status_ = other.status_;
   if (status_.ok()) value_ = std::move(other.value_);
-  other.status_ = Status::UNKNOWN;
+  other.status_ = Status::UNKNOWN();
   return *this;
 }
 
 template <typename T>
 const T &StatusOr<T>::ValueOrDie() const {
-  assert(ok());
+  if (!ok()) abort();
   return value_;
 }
 
 template <typename T>
 inline T StatusOr<T>::MoveValueOrDie() {
-  assert(ok());
-  status_ = Status::UNKNOWN;
+  if (!ok()) abort();
+  status_ = Status::UNKNOWN();
   return std::move(value_);
 }
 

@@ -23,34 +23,34 @@
 #define STATUS_OK 0
 
 // The operation was cancelled (typically by the caller).
-#define STATUS_CANCELLED 1
+#define STATUS_CANCELLED -101
 
 // Unknown error.
-#define STATUS_UNKNOWN 2
+#define STATUS_UNKNOWN -102
 
 // Client specified an invalid argument.  Note that this differs
 // from FAILED_PRECONDITION.  INVALID_ARGUMENT indicates arguments
 // that are problematic regardless of the state of the system
 // (e.g., a malformed file name).
-#define STATUS_INVALID_ARGUMENT 3
+#define STATUS_INVALID_ARGUMENT -103
 
 // Deadline expired before operation could complete.
-#define STATUS_DEADLINE_EXCEEDED 4
+#define STATUS_DEADLINE_EXCEEDED -104
 
 // Some requested entity (e.g., file or directory) was not found.
-#define STATUS_NOT_FOUND 5
+#define STATUS_NOT_FOUND -105
 
 // Some entity that we attempted to create (e.g., file or directory)
 // already exists.
-#define STATUS_ALREADY_EXISTS 6
+#define STATUS_ALREADY_EXISTS -106
 
 // The caller does not have permission to execute the specified
 // operation.
-#define STATUS_PERMISSION_DENIED 7
+#define STATUS_PERMISSION_DENIED -107
 
 // Some resource has been exhausted, perhaps a per-user quota, or
 // perhaps the entire file system is out of space.
-#define STATUS_RESOURCE_EXHAUSTED 8
+#define STATUS_RESOURCE_EXHAUSTED -108
 
 // Operation was rejected because the system is not in a state
 // required for the operation's execution.  For example, directory
@@ -67,14 +67,14 @@
 //      fails because the directory is non-empty, FAILED_PRECONDITION
 //      should be returned since the client should not retry unless
 //      they have first fixed up the directory by deleting files from it.
-#define STATUS_FAILED_PRECONDITION 9
+#define STATUS_FAILED_PRECONDITION -109
 
 // The operation was aborted, typically due to a concurrency issue
 // like sequencer check failures, transaction aborts, etc.
 //
 // See litmus test above for deciding between FAILED_PRECONDITION,
 // ABORTED, and UNAVAILABLE.
-#define STATUS_ABORTED 10
+#define STATUS_ABORTED -110
 
 // Operation was attempted past the valid range.  E.g., seeking or
 // reading past end of file.
@@ -85,15 +85,15 @@
 // offset that is not in the range [0,2^32-1], but it will generate
 // OUT_OF_RANGE if asked to read from an offset past the current
 // file size.
-#define STATUS_OUT_OF_RANGE 11
+#define STATUS_OUT_OF_RANGE -111
 
 // Operation is not implemented or not supported/enabled in this service.
-#define STATUS_UNIMPLEMENTED 12
+#define STATUS_UNIMPLEMENTED -112
 
 // Internal errors.  Means some invariants expected by underlying
 // system has been broken.  If you see one of these errors,
 // something is very broken.
-#define STATUS_INTERNAL 13
+#define STATUS_INTERNAL -113
 
 // The service is currently unavailable.  This is a most likely a
 // transient condition and may be corrected by retrying with
@@ -101,9 +101,9 @@
 //
 // See litmus test above for deciding between FAILED_PRECONDITION,
 // ABORTED, and UNAVAILABLE.
-#define STATUS_UNAVAILABLE 14
+#define STATUS_UNAVAILABLE -114
 
 // Unrecoverable data loss or corruption.
-#define STATUS_DATA_LOSS 15
+#define STATUS_DATA_LOSS -115
 
 std::string StatusToString(int error_code);

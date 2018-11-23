@@ -65,13 +65,25 @@ std::string Status::ToString() const {
   return StatusToString(code_) + ": " + message_;
 }
 
-Status Statusf(int code, const char *msg_fmt, ...) {
+Status Errorf(int code, const char *msg_fmt, ...) {
   va_list ap;
   va_start(ap, msg_fmt);
   char *msg = NULL;
   mg_avprintf(&msg, 0, msg_fmt, ap);
   va_end(ap);
   Status res(code, std::string(msg ? msg : ""));
+  free(msg);
+  return res;
+}
+
+Status Annotatef(const Status &other, const char *msg_fmt, ...) {
+  va_list ap;
+  va_start(ap, msg_fmt);
+  char *msg = NULL;
+  mg_avprintf(&msg, 0, msg_fmt, ap);
+  va_end(ap);
+  Status res = Errorf(other.error_code(), "%s : %s", (msg ? msg : ""),
+                      other.error_message().c_str());
   free(msg);
   return res;
 }
