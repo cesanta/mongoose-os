@@ -40,7 +40,8 @@ MGOS_SRCS += mgos_config_util.c mgos_core_dump.c mgos_dlsym.c mgos_event.c mgos_
              mgos_hw_timers.c mgos_system.c mgos_time.c mgos_timers.c mgos_uart.c mgos_utils.c \
              esp32_crypto.c esp32_debug.c esp32_exc.c esp32_fs_crypt.c \
              esp32_gpio.c esp32_hal.c esp32_hw_timers.c \
-             esp32_main.c esp32_uart.c
+             esp32_main.c esp32_uart.c \
+             error_codes.cpp status.cpp
 
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
 
@@ -110,14 +111,14 @@ $(FFI_EXPORTS_C): $(APP_FS_FILES)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
 ./%.o: %.c $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
-	$(summary) "CC $@"
+	$(summary) "  CC $@"
 	$(CC) $(CFLAGS) $(CPPFLAGS) \
 	  $(addprefix -I ,$(COMPONENT_INCLUDES)) \
 	  $(addprefix -I ,$(COMPONENT_EXTRA_INCLUDES)) \
 	  -c $< -o $@
 
 ./%.o: %.cpp $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
-	$(summary) "CXX $@"
+	$(summary) "  CXX $@"
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) \
 	  $(addprefix -I ,$(COMPONENT_INCLUDES)) \
 	  $(addprefix -I ,$(COMPONENT_EXTRA_INCLUDES)) \

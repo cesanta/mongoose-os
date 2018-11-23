@@ -20,11 +20,19 @@
 
 #include <stdbool.h>
 
-#include "common/json_utils.h"
 #include "common/platform.h"
 
 #include "common/cs_dbg.h"
 #include "common/cs_file.h"
+#include "common/json_utils.h"
+#include "common/mbuf.h"
+#include "common/str_util.h"
+#ifdef __cplusplus
+#ifndef __TI_COMPILER_VERSION__
+#include "common/util/status.h"
+#include "common/util/statusor.h"
+#endif
+#endif
 
 #include "mgos_app.h"
 #include "mgos_bitbang.h"

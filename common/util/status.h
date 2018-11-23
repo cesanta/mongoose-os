@@ -12,15 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef CS_COMMON_UTIL_STATUS_H_
-#define CS_COMMON_UTIL_STATUS_H_
+#pragma once
 
 #include <string>
 
 #include <common/util/error_codes.h>
-#include <common/util/logging.h>
 
-namespace util {
+namespace mgos {
 
 // A Status is a combination of an error code and a string message (for non-OK
 // error codes).
@@ -30,29 +28,35 @@ class Status {
   Status();
 
   // Make a Status from the specified error and message.
-  Status(error::Code error, const ::std::string& error_message);
+  Status(int error, const ::std::string &error_message);
 
-  Status(const Status& other);
-  Status& operator=(const Status& other);
+  Status(const Status &other);
+  Status &operator=(const Status &other);
 
-  // Some pre-defined Status objects
-  static const Status& OK;             // Identical to 0-arg constructor
-  static const Status& CANCELLED;
-  static const Status& UNIMPLEMENTED;
-  static const Status& UNKNOWN;
+  // Some shortcuts
+  static Status OK();  // Identical to 0-arg constructor
+  static Status CANCELLED();
+  static Status UNIMPLEMENTED();
+  static Status UNKNOWN();
 
   // Accessors
-  bool ok() const { return code_ == error::OK; }
-  error::Code error_code() const { return code_; }
-  const ::std::string& error_message() const { return message_; }
+  bool ok() const {
+    return code_ == STATUS_OK;
+  }
+  int error_code() const {
+    return code_;
+  }
+  const ::std::string &error_message() const {
+    return message_;
+  }
 
-  bool operator==(const Status& x) const;
-  bool operator!=(const Status& x) const;
+  bool operator==(const Status &x) const;
+  bool operator!=(const Status &x) const;
 
   ::std::string ToString() const;
 
  private:
-  error::Code code_;
+  int code_;
   ::std::string message_;
 };
 
@@ -64,11 +68,6 @@ inline bool Status::operator!=(const Status &other) const {
   return !(*this == other);
 }
 
-extern ::std::ostream& operator<<(::std::ostream& os, const Status& status);
+Status Statusf(int code, const char *msg_fmt, ...);
 
-#define CHECK_OK(status) CHECK(status.ok()) << status
-#define CHECK_NOT_OK(status) CHECK(!status.ok())
-
-}  // namespace util
-
-#endif /* CS_COMMON_UTIL_STATUS_H_ */
+}  // namespace mgos

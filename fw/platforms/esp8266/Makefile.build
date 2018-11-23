@@ -117,7 +117,8 @@ MGOS_SRCS += esp_config.c \
              esp_libc.c \
              esp_main.c \
              esp_periph.c \
-             esp_uart.c
+             esp_uart.c \
+             error_codes.cpp status.cpp
 
 MGOS_SRCS += $(notdir $(foreach m,$(SPIFFS_PATH) $(COMMON_ESP8266_PATH),$(wildcard $(m)/*.c)))
 APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)

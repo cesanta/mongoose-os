@@ -2,21 +2,20 @@
 
 #include <stdlib.h>
 
-namespace util {
+namespace mgos {
 
-LogMessage::LogMessage(const char* file, int line)
-    : file_(file), line_(line) {
+LogMessage::LogMessage(const char *file, int line) : file_(file), line_(line) {
 }
 
 LogMessage::~LogMessage() {
   std::cerr << std::endl;
 }
 
-std::ostream& LogMessage::stream() {
+std::ostream &LogMessage::stream() {
   return std::cerr << file_ << ":" << line_ << ": ";
 }
 
-LogMessageAndDie::LogMessageAndDie(const char* file, int line)
+LogMessageAndDie::LogMessageAndDie(const char *file, int line)
     : LogMessage(file, line) {
 }
 
@@ -25,4 +24,4 @@ LogMessageAndDie::~LogMessageAndDie() {
   abort();
 }
 
-}  // namespace util
+}  // namespace mgos
