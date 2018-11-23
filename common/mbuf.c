@@ -121,4 +121,9 @@ void mbuf_remove(struct mbuf *mb, size_t n) {
   }
 }
 
+void mbuf_clear(struct mbuf *mb) WEAK;
+void mbuf_clear(struct mbuf *mb) {
+  mb->len = 0;
+}
+
 #endif /* EXCLUDE_COMMON */
