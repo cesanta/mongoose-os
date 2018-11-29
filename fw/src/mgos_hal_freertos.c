@@ -35,8 +35,7 @@
 #include "mgos_uart_internal.h"
 #include "mgos_utils.h"
 #ifdef MGOS_HAVE_OTA_COMMON
-#include "mgos_updater_common.h"
-#include "mgos_updater_hal.h"
+#include "mgos_updater.h"
 #endif
 
 #ifndef MGOS_TASK_STACK_SIZE_BYTES

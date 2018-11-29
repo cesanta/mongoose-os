@@ -38,7 +38,7 @@
 #include "mgos_mongoose_internal.h"
 #include "mgos_uart_internal.h"
 #ifdef MGOS_HAVE_OTA_COMMON
-#include "mgos_updater_common.h"
+#include "mgos_updater.h"
 #endif
 
 #ifdef MGOS_HAVE_ADC

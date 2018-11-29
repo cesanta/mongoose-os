@@ -116,12 +116,6 @@ struct mgos_cloud_arg {
   enum mgos_cloud_type type;
 };
 
-/* Parameter for the MGOS_EVENT_OTA_REQUEST event */
-struct ota_request_param {
-  char *location;
-  void *updater_context;
-};
-
 /*
  * Register a base event number in order to prevent event number conflicts.
  * Use `MGOS_EVENT_BASE()` macro to get `base_event_number`; `name` is an
