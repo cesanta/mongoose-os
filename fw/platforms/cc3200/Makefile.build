@@ -210,8 +210,8 @@ CREATE_RAW_FS ?= 0
 
 FW_PARTS =
 ifneq "$(CC3200_SP_FILE)" ""
-  FW_PARTS += /sys/servicepack.ucf:type=slfile,src=$(CC3200_SP_FILE),falloc=49152,sign=$(notdir $(CC3200_SP_FILE)).sign \
-              $(notdir $(CC3200_SP_FILE)).sign:type=signature,src=$(CC3200_SP_FILE).sign
+  FW_PARTS += /sys/servicepack.ucf:type=slfile,src=$(CC3200_SP_FILE),falloc=49152,sig=$(notdir $(CC3200_SP_FILE)).sign \
+              $(notdir $(CC3200_SP_FILE)).sign:type=sig,src=$(CC3200_SP_FILE).sign
 endif
 ifdef MGOS_HAVE_OTA_COMMON
   CC3200_APP_ORG = 0x20000000
