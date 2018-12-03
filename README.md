@@ -20,7 +20,7 @@ Trusted and Recommended By:
 - Espressif Systems - [an official partner of Espressif Systems](http://espressif.com/en/support/download/sdk)
 
 # Docs, Support
-- [Mongoose OS Documentation](https://mongoose-os.com/docs/quickstart/setup.html)
+- [Mongoose OS Documentation](https://mongoose-os.com/docs/quickstart/setup.md)
 - [Support Forum - ask your technical questions here](http://forum.mongoose-os.com/)
 - [Video tutorials](https://www.youtube.com/channel/UCZ9lQ7b-4bDbLOLpKwjpSAw/featured)
 - [Commercial licensing and support available](https://mongoose-os.com/licensing.html)
