@@ -36,10 +36,10 @@
 #include "mgos_hal.h"
 #include "mgos_init_internal.h"
 #include "mgos_mongoose_internal.h"
-#include "mgos_uart_internal.h"
 #ifdef MGOS_HAVE_OTA_COMMON
-#include "mgos_updater.h"
+#include "mgos_ota.h"
 #endif
+#include "mgos_uart_internal.h"
 
 #ifdef MGOS_HAVE_ADC
 #include "esp_adc.h"
@@ -192,7 +192,7 @@ static void esp_mgos_init(void) {
   enum mgos_init_result result = esp_mgos_init2();
   bool success = (result == MGOS_INIT_OK);
 #ifdef MGOS_HAVE_OTA_COMMON
-  mgos_upd_boot_finish(success, mgos_upd_is_first_boot());
+  mgos_ota_boot_finish(success, mgos_ota_is_first_boot());
 #endif
   if (!success) {
     LOG(LL_ERROR, ("Init failed: %d", result));
