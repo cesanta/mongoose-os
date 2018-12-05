@@ -16,7 +16,8 @@
 
 #include <string>
 
-#include <common/util/error_codes.h>
+#include "common/platform.h"
+#include "common/util/error_codes.h"
 
 namespace mgos {
 
@@ -68,8 +69,9 @@ inline bool Status::operator!=(const Status &other) const {
   return !(*this == other);
 }
 
-Status Errorf(int code, const char *msg_fmt, ...);
+Status Errorf(int code, const char *msg_fmt, ...) PRINTF_LIKE(2, 3);
 
-Status Annotatef(const Status &other, const char *msg_fmt, ...);
+Status Annotatef(const Status &other, const char *msg_fmt, ...)
+    PRINTF_LIKE(2, 3);
 
 }  // namespace mgos
