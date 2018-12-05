@@ -75,6 +75,10 @@
 #define MGOS_TASK_QUEUE_LENGTH 32
 #endif
 
+#ifndef MGOS_MONGOOSE_MAX_POLL_SLEEP_MS
+#define MGOS_MONGOOSE_MAX_POLL_SLEEP_MS 1000
+#endif
+
 extern const char *build_version, *build_id;
 extern const char *mg_build_version, *mg_build_id;
 
@@ -82,34 +86,33 @@ bool uart_initialized = false;
 
 static os_timer_t s_mg_poll_tmr;
 
-/* Note: we cannot use mutex here because there is no recursive mutex
- * that can be used from ISR as well as from task. mgos_invoke_cb pust an item
- * on the queue and may cause a context switch and re-enter schedule_poll.
- * Hence this elaborate dance we perform with poll counter. */
-static volatile uint32_t s_mg_last_poll = 0;
-static volatile bool s_mg_poll_scheduled = false;
+static uint32_t s_mg_polls_in_flight = 0;
 
-static void mongoose_poll_cb(void *arg) {
-  s_mg_poll_scheduled = false;
-  s_mg_last_poll++;
-  /* While things are happening, keep polling. */
-  while (mongoose_poll(0) != 0)
-    ;
-  if (!s_mg_poll_scheduled) {
-    /* Things are not happening now, see when they are due to happen. */
-    int timeout_ms;
+static IRAM void mgos_mg_poll_cb(void *arg) {
+  mgos_ints_disable();
+  s_mg_polls_in_flight--;
+  mgos_ints_enable();
+  int timeout_ms = 0;
+  if (mongoose_poll(0) == 0) {
+    /* Nothing is happening now, see when next timer is due. */
     double min_timer = mg_mgr_min_timer(mgos_get_mgr());
     if (min_timer > 0) {
       /* Note: timeout_ms can get negative if a timer is past due. That's ok. */
       timeout_ms = (int) ((min_timer - mg_time()) * 1000.0);
       if (timeout_ms < 0) {
-        timeout_ms = 0;
-      } else if (timeout_ms > 1000) {
-        timeout_ms = 1000;
+        timeout_ms = 0; /* Now */
+      } else if (timeout_ms > MGOS_MONGOOSE_MAX_POLL_SLEEP_MS) {
+        timeout_ms = MGOS_MONGOOSE_MAX_POLL_SLEEP_MS;
       }
     } else {
-      timeout_ms = 1000;
+      timeout_ms = MGOS_MONGOOSE_MAX_POLL_SLEEP_MS;
     }
+  } else {
+    /* Things are happening, we need another poll ASAP. */
+  }
+  if (timeout_ms == 0) {
+    mongoose_schedule_poll(false /* from_isr */);
+  } else {
     os_timer_disarm(&s_mg_poll_tmr);
     /* We set repeat = true in case things get stuck for any reason. */
     os_timer_arm(&s_mg_poll_tmr, timeout_ms, 1 /* repeat */);
@@ -118,13 +121,25 @@ static void mongoose_poll_cb(void *arg) {
 }
 
 IRAM void mongoose_schedule_poll(bool from_isr) {
-  /* Prevent piling up of poll callbacks. */
-  if (s_mg_poll_scheduled) return;
-  uint32_t last_poll = s_mg_last_poll;
-  if (mgos_invoke_cb(mongoose_poll_cb, NULL, from_isr) &&
-      s_mg_last_poll == last_poll) {
-    s_mg_poll_scheduled = true;
+  mgos_ints_disable();
+  if (s_mg_polls_in_flight < 2) {
+    s_mg_polls_in_flight++;
+    mgos_ints_enable();
+    if (mgos_invoke_cb(mgos_mg_poll_cb, NULL, from_isr)) {
+      return;
+    } else {
+      /* Ok, that didn't work, roll back our counter change. */
+      mgos_ints_disable();
+      s_mg_polls_in_flight--;
+      /*
+       * Not much else we can do here, the queue is full.
+       * Background poll timer will eventually restart polling.
+       */
+    }
+  } else {
+    /* There are at least two pending callbacks, don't bother. */
   }
+  mgos_ints_enable();
 }
 
 void mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr) {

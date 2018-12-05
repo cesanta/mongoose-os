@@ -60,13 +60,7 @@ extern const char *mg_build_version, *mg_build_id;
 static QueueHandle_t s_main_queue;
 static SemaphoreHandle_t s_mgos_mux;
 
-/* Note: we cannot use mutex here because there is no recursive mutex
- * that can be used from ISR as well as from task. mgos_invoke_cb puts an item
- * on the queue and may cause a context switch and re-enter schedule_poll.
- * Hence this elaborate dance we perform with poll counter. */
-static volatile uint32_t s_mg_last_poll = 0;
-static volatile bool s_mg_poll_scheduled = false;
-static volatile bool s_mg_want_poll = false;
+static uint32_t s_mg_polls_in_flight = 0;
 static TimerHandle_t s_mg_poll_timer;
 
 /* ESP32 has a slightly different FreeRTOS API */
@@ -95,56 +89,57 @@ static portMUX_TYPE s_poll_spinlock = portMUX_INITIALIZER_UNLOCKED;
 #endif
 
 static IRAM void mgos_mg_poll_cb(void *arg) {
-  int timeout_ms;
   ENTER_CRITICAL();
-  do {
-    s_mg_want_poll = false;
-    EXIT_CRITICAL();
-    /* While things are happening, keep polling. */
-    while (mongoose_poll(0) != 0)
-      ;
-    /* Things are not happening now, see when they are due to happen. */
+  s_mg_polls_in_flight--;
+  EXIT_CRITICAL();
+  int timeout_ms = 0, timeout_ticks = 0;
+  if (mongoose_poll(0) == 0) {
+    /* Nothing is happening now, see when next timer is due. */
     double min_timer = mg_mgr_min_timer(mgos_get_mgr());
     if (min_timer > 0) {
       /* Note: timeout_ms can get negative if a timer is past due. That's ok. */
       timeout_ms = (int) ((min_timer - mg_time()) * 1000.0);
       if (timeout_ms < 0) {
-        timeout_ms = 0;
+        timeout_ms = 0; /* Now */
       } else if (timeout_ms > MGOS_MONGOOSE_MAX_POLL_SLEEP_MS) {
         timeout_ms = MGOS_MONGOOSE_MAX_POLL_SLEEP_MS;
       }
     } else {
       timeout_ms = MGOS_MONGOOSE_MAX_POLL_SLEEP_MS;
     }
-    ENTER_CRITICAL();
-  } while (s_mg_want_poll);
-  s_mg_poll_scheduled = false;
-  s_mg_last_poll++;
-  EXIT_CRITICAL();
-  int timeout_ticks = MAX(1, (timeout_ms / portTICK_PERIOD_MS));
-  xTimerChangePeriod(s_mg_poll_timer, timeout_ticks, 10);
-  xTimerReset(s_mg_poll_timer, 10);
+  } else {
+    /* Things are happening, we need another poll ASAP. */
+  }
+  if (timeout_ms == 0 ||
+      (timeout_ticks = (timeout_ms / portTICK_PERIOD_MS)) == 0) {
+    mongoose_schedule_poll(false /* from_isr */);
+  } else {
+    xTimerChangePeriod(s_mg_poll_timer, timeout_ticks, 10);
+    xTimerReset(s_mg_poll_timer, 10);
+  }
   (void) arg;
 }
 
 IRAM void mongoose_schedule_poll(bool from_isr) {
   /* Prevent piling up of poll callbacks. */
   ENTER_CRITICAL_NO_ISR(from_isr);
-  s_mg_want_poll = true;
-  if (!s_mg_poll_scheduled) {
-    uint32_t last_poll = s_mg_last_poll;
+  if (s_mg_polls_in_flight < 2) {
+    s_mg_polls_in_flight++;
     EXIT_CRITICAL_NO_ISR(from_isr);
-    if (mgos_invoke_cb(mgos_mg_poll_cb, NULL, from_isr)) {
+    if (!mgos_invoke_cb(mgos_mg_poll_cb, NULL, from_isr)) {
+      /* Ok, that didn't work, roll back our counter change. */
       ENTER_CRITICAL_NO_ISR(from_isr);
-      if (s_mg_last_poll == last_poll) {
-        s_mg_poll_scheduled = true;
-      }
-    } else {
-      /* Not in a critical section, just return. */
-      return;
+      s_mg_polls_in_flight--;
+      EXIT_CRITICAL_NO_ISR(from_isr);
+      /*
+       * Not much else we can do here, the queue is full.
+       * Background poll timer will eventually restart polling.
+       */
     }
+  } else {
+    /* There are at least two pending callbacks, don't bother. */
+    EXIT_CRITICAL_NO_ISR(from_isr);
   }
-  EXIT_CRITICAL_NO_ISR(from_isr);
 }
 
 void mgos_mg_poll_timer_cb(TimerHandle_t t) {
