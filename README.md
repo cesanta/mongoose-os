@@ -37,10 +37,10 @@ Mongoose OS is Open Source and dual-licensed:
 
 |              |  Community Edition |  Enterprise Edition  |
 | -------------| ------------------ | -------------------- |
-| License | [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) | Commercial - [contact us](https://mongoose-os.com//contact.html) |
+| License | [Apache 2.0](https://www.apache.org/licenses/LICENSE-2.0) | Commercial - [contact us](https://mongoose-os.com/contact.html) |
 | Allows to close end-product's source code  | Yes | Yes  |
 | Price  | Free | Paid, see [details](https://mongoose-os.com//licensing.html) |
-| Source code & functionality  | [Limited](https://mongoose-os.com/docs/reference/licensing.html#closed-source-libraries) | Full |
+| Source code & functionality  | [Limited](https://mongoose-os.com/docs/mos/userguide/licensing.md) | Full |
 | Technical support  | Community support via [Forum](https://forum.mongoose-os.com) and [Chat](https://gitter.im/cesanta/mongoose-os) | Commercial support by Mongoose OS development team, see [details](https://mongoose-os.com/support.html) |
 
 
