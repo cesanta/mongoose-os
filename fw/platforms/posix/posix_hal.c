@@ -17,8 +17,8 @@
 
 #include "fw.h"
 
-#include <stdlib.h>
 #include <signal.h>
+#include <stdlib.h>
 #include <time.h>
 #ifdef __APPLE__
 #include <sys/time.h>
@@ -27,11 +27,11 @@ typedef unsigned long u_long;
 typedef unsigned int u_int;
 typedef unsigned char u_char;
 typedef unsigned short u_short;
-#include <sys/sysctl.h>
 #include <mach/host_info.h>
 #include <mach/mach_host.h>
-#include <mach/task_info.h>
 #include <mach/task.h>
+#include <mach/task_info.h>
+#include <sys/sysctl.h>
 #endif
 
 #ifdef _WIN32
@@ -40,10 +40,10 @@ typedef unsigned short u_short;
 #include <unistd.h>
 #endif
 
-#include "mongoose.h"
 #include "mgos_hal.h"
 #include "mgos_mongoose.h"
 #include "mgos_net_hal.h"
+#include "mongoose.h"
 
 extern int mgos_please_quit;
 
@@ -179,4 +179,9 @@ int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {
   }
   (void) ctx;
   return 0;
+}
+
+void mongoose_schedule_poll(bool from_isr) {
+  mongoose_poll(0);
+  (void) from_isr;
 }
