@@ -17,26 +17,23 @@
 
 #pragma once
 
-#ifndef MIN
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-#endif
-#ifndef MAX
-#define MAX(a, b) ((a) > (b) ? (a) : (b))
-#endif
+#include <stdbool.h>
+#include <stdint.h>
 
-#define CS_CTASSERT_JOIN(a, b) a##b
-#define CS_CTASSERT(pred, msg) \
-  extern char CS_CTASSERT_JOIN(ASSERTION_FAILED_, msg)[!!(pred) ? 1 : -1]
+#include "mbedtls/md.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-/* Restart system after the specified number of milliseconds */
-void mgos_system_restart_after(int delay_ms);
+/* Copy a file */
+bool mgos_file_copy(const char *from, const char *to);
 
-/* Return random number in a given range. */
-float mgos_rand_range(float from, float to);
+/* Compute file's digest. *digest must have enough space for the digest type. */
+bool mgos_file_digest(const char *fname, mbedtls_md_type_t dt, uint8_t *digest);
+
+/* Copy the file if target does not exist or is different. */
+bool mgos_file_copy_if_different(const char *from, const char *to);
 
 #ifdef __cplusplus
 }

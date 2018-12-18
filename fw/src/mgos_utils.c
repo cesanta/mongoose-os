@@ -15,9 +15,12 @@
  * limitations under the License.
  */
 
+#include "mgos_utils.h"
+
 #include <stdlib.h>
 
 #include "common/cs_dbg.h"
+
 #include "mgos_hal.h"
 #include "mgos_timers.h"
 
