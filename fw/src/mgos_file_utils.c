@@ -129,7 +129,9 @@ bool mgos_file_copy_if_different(const char *from, const char *to) {
   if (!mgos_file_digest(from, MBEDTLS_MD_SHA256, df)) goto out;
   if (!mgos_file_digest(to, MBEDTLS_MD_SHA256, dt)) goto out;
   res = (memcmp(df, dt, sizeof(df)) == 0);
-  if (res) LOG(LL_DEBUG, ("%s and %s are the same", from, to));
+  if (res) {
+    LOG(LL_DEBUG, ("%s and %s are the same", from, to));
+  }
 
 out:
   if (!res) res = mgos_file_copy(from, to);
