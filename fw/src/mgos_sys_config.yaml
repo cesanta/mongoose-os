@@ -1,7 +1,7 @@
 [
   ["device", "o", {title: "Device settings"}],
   ["device.id", "s", {title: "Device ID"}],  # Note: Each arch defines a default
-  ["device.password", "s", {title: "Device password"}],
+  ["device.license", "s", {title: "License code"}],
 
   ["debug", "o", {title: "Debug Settings"}],
   ["debug.level", "i", 2, {
