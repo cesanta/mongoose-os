@@ -99,7 +99,7 @@ struct fstate {
   do {                                                                        \
     if ((fr)->callback &&                                                     \
         ((fr)->path_len == 0 || (fr)->path[(fr)->path_len - 1] != '.')) {     \
-      struct json_token t = {(value), (len), (tok)};                          \
+      struct json_token t = {(value), (int)(len), (tok)};                          \
                                                                               \
       /* Call the callback with the given value and current name */           \
       (fr)->callback((fr)->callback_data, (fr)->cur_name, (fr)->cur_name_len, \
@@ -1411,7 +1411,7 @@ static void *json_next(const char *s, int len, void *handle, const char *path,
   struct json_token tmpval, *v = val == NULL ? &tmpval : val;
   struct json_token tmpkey, *k = key == NULL ? &tmpkey : key;
   int tmpidx, *pidx = i == NULL ? &tmpidx : i;
-  struct next_data data = {handle, path, strlen(path), 0, k, v, pidx};
+  struct next_data data = {handle, path, (int)strlen(path), 0, k, v, pidx};
   json_walk(s, len, json_next_cb, &data);
   return data.found ? data.handle : NULL;
 }
