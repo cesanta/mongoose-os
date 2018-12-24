@@ -195,7 +195,6 @@ GENFILES_FLAG = $(GEN_DIR)/genfiles.done
 GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
 IMAGE_HEADER_SIZE = 0
 MAP_FILE = $(BUILD_DIR)/$(APP).elf.map
-BREAKDOWN_FILE = $(BUILD_DIR)/breakdown.txt
 FS_IMG = $(FW_STAGING_DIR)/fs.bin
 
 ifeq "$(MGOS_ESP8266_RTOS)" "1"
@@ -372,17 +371,13 @@ FW_PARTS = boot:addr=$(BOOT_LOADER_ADDR),src=$(BOOT_LOADER_BIN),update=$(MGOS_UP
 
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
 
-all: $(FW_DIR) $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(FW_ZIP) $(BREAKDOWN_FILE)
+all: $(FW_DIR) $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(FW_ZIP)
 
 $(FW_MANIFEST): $(BOOT_LOADER_BIN) $(APP_BIN) $(FS_IMG) $(FS_FILES)
 
 $(APP_BIN): $(APP_ELF) $(BUILD_DIR)/esptool2
 	$(vecho) "FW    $< -> $@"
 	$(Q) $(ESPTOOL2) $(FW_USER_ARGS) $< $@ $(FW_SECTS)
-
-$(BREAKDOWN_FILE): $(APP_ELF)
-	$(vecho) "Generating breakdown"
-	$(Q) python $(COMMON_PATH)/tools/breakdown.py $(MAP_FILE) .text,.irom0.text .bss,.data,.rodata /opt > $(BREAKDOWN_FILE)
 
 # -- Linking.
 

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # vim: tabstop=4 expandtab shiftwidth=4 ai cin smarttab
 #
 # Copyright (c) 2014-2016 Cesanta Software Limited
@@ -132,7 +132,7 @@ class SchemaEntry(object):
         else:
             raise ValueError("Invalid entry length: %s (%s)" % (len(e), e))
 
-        if not isinstance(self.path, basestring):
+        if not isinstance(self.path, str):
             raise TypeError("Path is not a string (%s)" % e)
 
         if self.path in RESERVED_WORDS:
@@ -156,7 +156,7 @@ class SchemaEntry(object):
             # In Python, boolvalue is an instance of int, but we don't want that.
             self.vtype == SchemaEntry.V_INT and isinstance(self.default, bool) or
             self.vtype == SchemaEntry.V_DOUBLE and not isinstance(self.default, float) or
-            self.vtype == SchemaEntry.V_STRING and not isinstance(self.default, basestring)):
+            self.vtype == SchemaEntry.V_STRING and not isinstance(self.default, str)):
             raise TypeError("%s: Invalid default value type (%s)" % (self.path, type(self.default)))
 
     @property
@@ -559,7 +559,7 @@ def open_with_temp(name):
     dirname = os.path.dirname(name)
     if dirname:
         try:
-            os.makedirs(dirname, mode=0755)
+            os.makedirs(dirname, mode=0o755)
         except Exception:
             pass
     f = open(tmpname, "w")
@@ -570,7 +570,7 @@ def open_with_temp(name):
             # This is no longer atomic, but Win does not support atomic renames.
             os.remove(name)
         os.rename(tmpname, name)
-    except Exception, e:
+    except Exception as e:
         os.remove(tmpname)
         raise
 
@@ -583,8 +583,8 @@ if __name__ == "__main__":
             s = yaml.load(sf)
             try:
                 schema.Merge(s)
-            except (TypeError, ValueError, KeyError), e:
-                print >>sys.stderr, ("While parsing %s: %s" % (schema_file, e))
+            except (TypeError, ValueError, KeyError) as e:
+                print("While parsing %s: %s" % (schema_file, e), file=sys.stderr)
                 sys.exit(1)
 
     dw = DefaultsJSONWriter()

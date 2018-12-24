@@ -76,7 +76,6 @@ export APP_OFFSET = 0x10000
 export OTA_DATA_ADDR = 0xd000
 export OTA_DATA_SIZE = 0x2000
 MAP_FILE = $(BUILD_DIR)/$(APP).map
-BREAKDOWN_FILE = $(BUILD_DIR)/breakdown.txt
 
 # Absolutize all paths which can be given by the caller
 override APP_SOURCES := $(abspath $(APP_SOURCES))
@@ -198,7 +197,7 @@ FW_PARTS = boot:type=boot,addr=0x1000,src=$(BOOTLOADER_BIN),encrypt=true,update=
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
 include $(MGOS_PATH)/fw/src/mkfs.mk
 
-all: $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(FW_ZIP) $(BREAKDOWN_FILE)
+all: $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(FW_ZIP)
 
 FS_FILES += $(GEN_DIR)/conf0.json
 
@@ -216,12 +215,6 @@ $(GEN_DIR)/conf0.json: all_binaries
 
 $(FS_IMG): $(MKFS) $(APP_FS_DIRS) $(FS_FILES)
 	$(call mkfs,$(MGOS_ROOT_FS_SIZE),$(MGOS_ROOT_FS_OPTS))
-
-$(BREAKDOWN_FILE) : $(APP_BIN)
-	$(vecho) "Generating breakdown"
-	$(Q) python $(COMMON_PATH)/tools/breakdown.py $(MAP_FILE) \
-         .iram0.vectors,.iram0.text,.flash.rodata,.flash.text \
-         .dram0.data,.dram0.bss /opt > $(BREAKDOWN_FILE)
 
 clean:
 	rm -rf $(BUILD_DIR) $(FW_DIR)

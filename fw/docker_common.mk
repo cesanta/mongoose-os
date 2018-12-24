@@ -10,7 +10,7 @@
 MAKEFLAGS += --warn-undefined-variables
 APP_VERSION ?=
 APP_BUILD_ID ?=
-PYTHON ?= python
+PYTHON ?= python3
 PLATFORM ?=
 DOCKER_EXTRA ?=
 MAKEFILE_BUILD ?= $(MAKE_MGOS_PATH)/fw/platforms/$(APP_PLATFORM)/Makefile.build

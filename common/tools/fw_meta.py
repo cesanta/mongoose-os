@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # Firmware metadata management script.
 #
@@ -32,22 +32,18 @@
 #    ZIP file will nclude the manifest and any files mentioned in "src"
 #    attributes of the parts.
 
-from __future__ import print_function
 import argparse
 import datetime
 import hashlib
 import json
 import os
 import re
-import six
 import string
 import subprocess
 import sys
 import zipfile
 
 FW_MANIFEST_FILE_NAME = 'manifest.json'
-
-string_types = six.string_types
 
 # From http://stackoverflow.com/questions/241327/python-snippet-to-remove-c-and-c-comments#241506
 def remove_comments(text):
@@ -68,7 +64,7 @@ class FFISymbol:
     def __init__(self, name, return_type, args):
         self.name = name
         self.return_type = return_type
-        self.args = string.replace(args, "userdata", "void *")
+        self.args = args.replace("userdata", "void *")
         if self.return_type == "":
             self.return_type = "void"
         if self.args == "":
@@ -145,10 +141,16 @@ def cmd_gen_build_info(args):
         bi['build_timestamp'] = timestamp
 
     try:
-        git_describe_out = subprocess.check_output(["git", "-C", repo_path, "describe", "--dirty", "--tags"]).strip()
-        git_revparse_out = subprocess.check_output(["git", "-C", repo_path, "rev-parse", "--abbrev-ref", "HEAD"]).strip()
-        git_log_head_out = subprocess.check_output(["git", "-C", repo_path, "log", "-n", "1", "HEAD", "--format=%H %ct"]).strip()
-    except Exception:
+        git_describe_out = subprocess.check_output(
+                ["git", "-C", repo_path, "describe", "--dirty", "--tags"],
+                universal_newlines=True).strip()
+        git_revparse_out = subprocess.check_output(
+                ["git", "-C", repo_path, "rev-parse", "--abbrev-ref", "HEAD"],
+                universal_newlines=True).strip()
+        git_log_head_out = subprocess.check_output(
+                ["git", "-C", repo_path, "log", "-n", "1", "HEAD", "--format=%H %ct"],
+                universal_newlines=True).strip()
+    except Exception as e:
         git_describe_out = ""
         git_revparse_out = ""
         git_log_head_out = ""
@@ -163,7 +165,7 @@ def cmd_gen_build_info(args):
             version = git_describe_out
         # Otherwise, if it's a clean git repo, use last commit's timestamp.
         elif git_log_head_out and "dirty" not in git_describe_out:
-            vts = datetime.datetime.utcfromtimestamp(long(git_log_head_out.split()[1]))
+            vts = datetime.datetime.utcfromtimestamp(int(git_log_head_out.split()[1]))
         # If all else fails, use current timestamp
         else:
             vts = ts
@@ -266,13 +268,13 @@ def unquote_string(qs):
 
 
 def stage_file_and_calc_digest(args, part, fname, staging_dir):
-    with open(fname) as f:
+    with open(fname, 'rb') as f:
         data = f.read()
         part['size'] = len(data)
         if staging_dir:
             staging_file = os.path.join(staging_dir,
                                         os.path.basename(fname))
-            with open(staging_file, 'w') as sf:
+            with open(staging_file, 'wb') as sf:
                 sf.write(data)
         for algo in args.checksums.split(','):
             h = hashlib.new(algo)
@@ -370,7 +372,7 @@ def cmd_create_fw(args):
                 continue
             # TODO(rojer): Support non-local sources.
             src = part['src']
-            if isinstance(src, string_types):
+            if isinstance(src, str):
                 add_file_to_arc(args, part, arc_dir, src, to_add)
             else:
                 # src is object with files as a keys
@@ -424,7 +426,7 @@ def cmd_xxd(args):
             bb = f.read(16)
             if len(bb) == 0: break
             print("  ", end="")
-            print(*["0x%02x" % ord(b) for b in bb], sep=", ", end=",\n")
+            print(*["0x%02x" % b for b in bb], sep=", ", end=",\n")
             total_len += len(bb)
     print("""\
 };

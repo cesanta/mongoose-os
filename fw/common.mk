@@ -1,5 +1,5 @@
 CFLAGS_EXTRA ?=
-PYTHON ?= python
+PYTHON ?= python3
 
 MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
 MGOS_INCLUDE_PATH ?= $(MGOS_PATH)/fw/include

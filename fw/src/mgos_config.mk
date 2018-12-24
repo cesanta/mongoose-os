@@ -3,7 +3,7 @@ MGOS_CONF_SCHEMA ?=
 APP_CONF_SCHEMA ?=
 MGOS_RO_VARS_SCHEMA ?= $(MGOS_PATH)/fw/src/mgos_ro_vars_schema.yaml
 GSC_TOOL ?= $(MGOS_PATH)/fw/tools/gen_sys_config.py
-PYTHON ?= python
+PYTHON ?= python3
 
 MGOS_CONF_SCHEMA += $(MGOS_PATH)/fw/src/mgos_sys_config.yaml
 

@@ -1,6 +1,6 @@
 PROG = unit_test
 REPO_ROOT ?= ../..
-PYTHON ?= python
+PYTHON ?= python3
 BUILD_DIR = .build
 SYS_CONF_C = $(BUILD_DIR)/sys_conf.c
 

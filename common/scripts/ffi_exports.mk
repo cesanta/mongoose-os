@@ -1,4 +1,4 @@
-PYTHON ?= python
+PYTHON ?= python3
 FW_META_CMD ?= $(MGOS_PATH)/common/tools/fw_meta.py
 
 define gen_ffi_exports

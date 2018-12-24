@@ -1,4 +1,4 @@
-PYTHON ?= python
+PYTHON ?= python3
 BUILD_DIR ?= ./.build
 BUILD_INFO_C ?= $(BUILD_DIR)/build_info.c
 BUILD_INFO_JSON ?= $(BUILD_DIR)/build_info.json

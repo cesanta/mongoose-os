@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 #
 # usage: tools/serve_core.py build/fw/objs/fw.elf /tmp/console.log
@@ -14,7 +14,7 @@
 # If you run on OSX or windows, you have to put the IP of your host instead of
 # localhost since gdb will run in a virtualmachine.
 
-import SocketServer
+import socketserver
 import argparse
 import base64
 import binascii
@@ -114,15 +114,15 @@ class Core(object):
             size = f.tell()
             end_pos = self._search_backwards(f, f.tell(), END_DELIM)
             if end_pos == -1:
-                print >>sys.stderr, "Cannot find end delimiter:", END_DELIM
+                print("Cannot find end delimiter:", END_DELIM, file=sys.stderr)
                 sys.exit(1)
             start_pos = self._search_backwards(f, end_pos, START_DELIM)
             if start_pos == -1:
-                print >>sys.stderr, "Cannot find start delimiter:", START_DELIM
+                print("Cannot find start delimiter:", START_DELIM, file=sys.stderr)
                 sys.exit(1)
             start_pos += len(START_DELIM)
 
-            print >>sys.stderr, "Found core at %d - %d" % (start_pos, end_pos)
+            print("Found core at %d - %d" % (start_pos, end_pos), file=sys.stderr)
             f.seek(start_pos)
             core_json = f.read(end_pos - start_pos)
             stripped = re.sub(r'(?im)\s+(\[.{1,40}\])?\s*', '', core_json)
@@ -130,16 +130,16 @@ class Core(object):
 
     def _map_core(self, core):
         mem = []
-        for k, v in core.items():
+        for k, v in list(core.items()):
             if not isinstance(v, dict) or k == 'REGS':
                 continue
             data = base64.decodestring(v["data"])
-            print >>sys.stderr, "Mapping {0}: {1} @ {2:#02x}".format(k, len(data), v["addr"])
+            print("Mapping {0}: {1} @ {2:#02x}".format(k, len(data), v["addr"]), file=sys.stderr)
             if "crc32" in v:
                 crc32 = ctypes.c_uint32(binascii.crc32(data))
                 expected_crc32 = ctypes.c_uint32(v["crc32"])
                 if crc32.value != expected_crc32.value:
-                    print >>sys.stderr, "CRC mismatch, section corrupted %s %s" % (crc32, expected_crc32)
+                    print("CRC mismatch, section corrupted %s %s" % (crc32, expected_crc32), file=sys.stderr)
                     sys.exit(1)
             mem.append((v["addr"], v["addr"] + len(data), data))
         return mem
@@ -153,11 +153,11 @@ class Core(object):
             if magic == 0xea and count == 0x04:
                 # This is a V2 image, IRAM will be inside.
                 (magic, count, f1, f2, entry, _, irom_len) = struct.unpack('<BBBBIII', data[i:i+16])
-                print >>sys.stderr, "Mapping IROM: {0} @ {1:#02x}".format(irom_len, addr)
+                print("Mapping IROM: {0} @ {1:#02x}".format(irom_len, addr), file=sys.stderr)
                 result.append((addr, addr + irom_len, data[i:i+irom_len+16]))
                 # The rest (IRAM) will be in the core.
             else:
-                print >>sys.stderr, "Mapping {0} at {1:#02x}".format(filename, addr)
+                print("Mapping {0} at {1:#02x}".format(filename, addr), file=sys.stderr)
                 result.append((addr, addr + len(data), data))
             return result
 
@@ -168,7 +168,7 @@ class Core(object):
         for i, sec in enumerate(ef.iter_sections()):
             addr, size, off = sec["sh_addr"], sec["sh_size"], sec["sh_offset"]
             if addr > 0 and size > 0:
-                print >>sys.stderr, "Mapping {0} {1}: {2} @ {3:#02x}".format(elf_file_name, sec.name, size, addr)
+                print("Mapping {0} {1}: {2} @ {3:#02x}".format(elf_file_name, sec.name, size, addr), file=sys.stderr)
                 f.seek(off)
                 assert f.tell() == off
                 data = f.read(size)
@@ -180,15 +180,15 @@ class Core(object):
         for base, end, data in self.mem:
             if addr >= base and addr < end:
                 return data[addr - base : addr - base + size]
-        print >>sys.stderr, "Unmapped addr", hex(addr)
+        print("Unmapped addr", hex(addr), file=sys.stderr)
         return "\0" * size
 
 
-class GDBHandler(SocketServer.BaseRequestHandler):
+class GDBHandler(socketserver.BaseRequestHandler):
     def handle(self):
         self._core = core = Core(args.log)
         self._curtask = None
-        print >>sys.stderr, "Loaded core dump from last snippet in ", args.log
+        print("Loaded core dump from last snippet in ", args.log, file=sys.stderr)
 
         while self.expect_packet_start():
             pkt = self.read_packet()
@@ -224,7 +224,7 @@ class GDBHandler(SocketServer.BaseRequestHandler):
             elif pkt[0] == "m": # read memory
                 addr, size = [int(n, 16) for n in pkt[1:].split(',')]
                 if args.xtensa_addr_fixup and addr < 0x10000000 and addr > 0x80000:
-                    print >>sys.stderr, 'fixup %08x' % addr
+                    print('fixup %08x' % addr, file=sys.stderr)
                     addr |= 0x40000000
                 bs = core.read(addr, size)
                 #if bs == "\0\0\0\0":
@@ -266,10 +266,10 @@ class GDBHandler(SocketServer.BaseRequestHandler):
                 # silently ignore
                 self.send_str("")
             else:
-                print >>sys.stderr, "Ignoring unknown command '%s'" % (pkt,)
+                print("Ignoring unknown command '%s'" % (pkt,), file=sys.stderr)
                 self.send_str("")
 
-        print >>sys.stderr, "GDB closed the connection"
+        print("GDB closed the connection", file=sys.stderr)
 
     def encode_bytes(self, bs):
         return "".join("{0:02x}".format(ord(i)) for i in bs)
@@ -300,7 +300,7 @@ class GDBHandler(SocketServer.BaseRequestHandler):
         if len(chk) != 2:
             return ""
         if int(chk, 16) != self._checksum(pkt):
-            print >>sys.stderr, "Bad checksum for {0}; got: {1} want: {2:02x}".format(pkt, chk, "want:", self._checksum(pkt))
+            print("Bad checksum for {0}; got: {1} want: {2:02x}".format(pkt, chk, "want:", self._checksum(pkt)), file=sys.stderr)
             self.send_nack()
             return ""
 
@@ -326,9 +326,9 @@ class GDBHandler(SocketServer.BaseRequestHandler):
 
 
 
-class TCPServer(SocketServer.TCPServer):
+class TCPServer(socketserver.TCPServer):
     allow_reuse_address = True
 
 server = TCPServer(('0.0.0.0', args.port), GDBHandler)
-print "Waiting for gdb on", args.port
+print("Waiting for gdb on", args.port)
 server.serve_forever()
