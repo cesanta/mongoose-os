@@ -89,7 +89,7 @@ def file_or_stdout(fname):
             os.makedirs(dirname, mode=0o755)
         except Exception:
             pass
-    return open(fname, 'w')
+    return open(fname, "w", encoding="utf-8")
 
 
 def _write_build_info(bi, args):
@@ -204,7 +204,7 @@ def cmd_gen_ffi_exports(args):
     # Scan all provided js files for ffi("..."), and fetch symbol names from
     # there
     for js_file in args.js_files:
-        with open(js_file) as f:
+        with open(js_file, encoding="utf-8") as f:
             data = f.read()
             # Remove // and /* */ comments from the data
             data = remove_comments(data)
@@ -248,7 +248,7 @@ const struct mgos_ffi_export ffi_exports[] = {""", file=out)
 
 
 def cmd_get_build_info(args):
-    manifest = json.load(open(args.manifest))
+    manifest = json.load(open(args.manifest, encoding="utf-8"))
     bi = dict(
         build_timestamp=manifest.get("build_timestamp"),
         build_version=manifest.get("version"),
@@ -291,7 +291,7 @@ def cmd_create_manifest(args):
         manifest['description'] = args.description
 
     if os.path.exists(args.build_info):
-        bi = json.load(open(args.build_info))
+        bi = json.load(open(args.build_info, encoding="utf-8"))
     else:
         bi = json.loads(args.build_info)
 
@@ -345,7 +345,7 @@ def cmd_create_manifest(args):
         manifest.setdefault('parts', {})[name] = part
 
     if args.output:
-        out = open(args.output, 'w')
+        out = open(args.output, 'w', encoding="utf-8")
     else:
         out = sys.stdout
     json.dump(manifest, out, indent=2, sort_keys=True)
@@ -360,7 +360,7 @@ def add_file_to_arc(args, part, arc_dir, src_file, added):
 
 
 def cmd_create_fw(args):
-    manifest = json.load(open(args.manifest))
+    manifest = json.load(open(args.manifest, encoding="utf-8"))
     arc_dir = '%s-%s' % (manifest['name'], manifest['version'])
     to_add = {}
     with zipfile.ZipFile(args.output, 'w', zipfile.ZIP_STORED) as zf:
@@ -386,7 +386,7 @@ def cmd_create_fw(args):
 
 
 def cmd_get(args):
-    o = json.load(open(args.json_file))
+    o = json.load(open(args.json_file, encoding="utf-8"))
     for key in args.keys:
         d = o
         parts = key.split('.')
@@ -397,7 +397,7 @@ def cmd_get(args):
 
 
 def cmd_set(args):
-    o = json.load(open(args.json_file))
+    o = json.load(open(args.json_file, encoding="utf-8"))
     for key_value in args.key_values:
         key, value = key_value.split("=")
         d = o
@@ -407,7 +407,7 @@ def cmd_set(args):
             d = v
         d[parts[-1]] = value
     if args.inplace:
-        json.dump(o, open(args.json_file, "w"))
+        json.dump(o, open(args.json_file, "w", encoding="utf-8"))
     else:
         print(json.dumps(o))
 
