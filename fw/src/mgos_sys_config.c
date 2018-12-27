@@ -109,17 +109,21 @@ bool load_config_defaults(struct mgos_config *cfg) {
   return true;
 }
 
+bool mgos_config_validate(const struct mgos_config *cfg, char **msg) {
+  *msg = NULL;
+  for (int i = 0; i < s_num_validators; i++) {
+    if (!s_validators[i](cfg, msg)) return false;
+  }
+  return true;
+}
+
 bool save_cfg(const struct mgos_config *cfg, char **msg) {
   bool result = false;
   struct mgos_config *defaults = calloc(1, sizeof(*defaults));
   char *ptr = NULL;
   if (defaults == NULL) goto clean;
   if (msg == NULL) msg = &ptr;
-  *msg = NULL;
-  int i;
-  for (i = 0; i < s_num_validators; i++) {
-    if (!s_validators[i](cfg, msg)) goto clean;
-  }
+  if (!mgos_config_validate(cfg, msg)) goto clean;
   if (!load_config_defaults(defaults)) {
     *msg = strdup("failed to load defaults");
     goto clean;
@@ -299,7 +303,7 @@ enum mgos_init_result mgos_sys_config_init(void) {
   return MGOS_INIT_OK;
 }
 
-void mgos_register_config_validator(mgos_config_validator_fn fn) {
+void mgos_sys_config_register_validator(mgos_config_validator_fn fn) {
   s_validators = (mgos_config_validator_fn *) realloc(
       s_validators, (s_num_validators + 1) * sizeof(*s_validators));
   if (s_validators == NULL) return;

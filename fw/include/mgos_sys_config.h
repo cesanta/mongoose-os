@@ -86,7 +86,10 @@ void mgos_config_reset(int level);
  */
 typedef bool (*mgos_config_validator_fn)(const struct mgos_config *cfg,
                                          char **msg);
-void mgos_register_config_validator(mgos_config_validator_fn fn);
+void mgos_sys_config_register_validator(mgos_config_validator_fn fn);
+
+/* Run validators on the specified config. */
+bool mgos_config_validate(const struct mgos_config *cfg, char **msg);
 
 void device_get_mac_address(uint8_t mac[6]);
 
