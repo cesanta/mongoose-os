@@ -42,10 +42,16 @@ size_t mgos_get_min_free_heap_size(void);
 /* Get filesystem memory usage */
 size_t mgos_get_fs_memory_usage(void);
 
-/* Get filesystem size. */
+/*
+ * Get filesystem size.
+ * Deprecated, please use mgos_vfs_get_space_total("/") instead.
+ */
 size_t mgos_get_fs_size(void);
 
-/* Get filesystem free space. */
+/*
+ * Get filesystem free space.
+ * Deprecated, please use mgos_vfs_get_space_free("/") instead.
+ */
 size_t mgos_get_free_fs_size(void);
 
 /* Garbage-collect filesystem */
