@@ -115,6 +115,18 @@ static IRAM size_t fill_tx_fifo(struct mgos_uart_state *us) {
   return len;
 }
 
+IRAM NOINSTR static void empty_rx_fifo(int uart_no) {
+  /*
+   * ESP32 has a hardware bug where UART2 FIFO reset requires also resetting
+   * UART1.
+   * https://github.com/espressif/esp-idf/commit/4052803e161ba06d1cae8d36bc66dde15b3fc8c7
+   * So, like ESP-IDF, we avoid using FIFO_RST and empty RX FIFO by reading it.
+   */
+  while (esp32_uart_rx_fifo_len(uart_no) > 0) {
+    (void) rx_byte(uart_no);
+  }
+}
+
 IRAM NOINSTR static void esp32_handle_uart_int(struct mgos_uart_state *us) {
   const int uart_no = us->uart_no;
   /*
@@ -136,6 +148,8 @@ IRAM NOINSTR static void esp32_handle_uart_int(struct mgos_uart_state *us) {
      * longer than 128 bytes (UART_RX_SIZE is 0x1).
      * For now we just flush the RX FIFO on overflow, which gets rid of this
      * behavior. This looks like a hardware bug to me.
+     *
+     * TODO(rojer): Test on UART1,2 and see how it behaves.
      */
     SET_PERI_REG_MASK(UART_CONF0_REG(uart_no), UART_RXFIFO_RST);
     CLEAR_PERI_REG_MASK(UART_CONF0_REG(uart_no), UART_RXFIFO_RST);
@@ -149,8 +163,7 @@ IRAM NOINSTR static void esp32_handle_uart_int(struct mgos_uart_state *us) {
     /* Switch to RX mode and flush the FIFO (depending on the wiring,
      * it may contain transmitted data or garbage received during TX). */
     mgos_gpio_write(uds->tx_en_gpio, !uds->tx_en_gpio_val);
-    SET_PERI_REG_MASK(UART_CONF0_REG(uart_no), UART_RXFIFO_RST);
-    CLEAR_PERI_REG_MASK(UART_CONF0_REG(uart_no), UART_RXFIFO_RST);
+    empty_rx_fifo(uart_no);
     CLEAR_PERI_REG_MASK(UART_INT_ENA_REG(uart_no), UART_TX_DONE_INT_ENA);
   }
   if (int_st & UART_RX_INTS) {
@@ -354,6 +367,7 @@ bool mgos_uart_hal_init(struct mgos_uart_state *us) {
     LOG(LL_ERROR, ("Error allocating int for UART%d: %d", us->uart_no, r));
     return false;
   }
+  empty_rx_fifo(uart_no);
   return true;
 }
 
@@ -369,7 +383,6 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
 
   WRITE_PERI_REG(UART_INT_ENA_REG(uart_no), 0);
 
-  WRITE_PERI_REG(UART_INT_ENA_REG(uart_no), 0);
   if (cfg->baud_rate > 0) {
     uint32_t clk_div = (((UART_CLK_FREQ) << 4) / cfg->baud_rate);
     uint32_t clkdiv_v = ((clk_div & UART_CLKDIV_FRAG_V) << UART_CLKDIV_FRAG_S) |
