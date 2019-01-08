@@ -110,6 +110,9 @@ class SchemaEntry(object):
     V_OBJECT = "o"
 
     def __init__(self, e):
+        if isinstance(e, SchemaEntry):
+            self.Assign(e)
+            return
         if not isinstance(e, list):
             raise TypeError("Invalid entry type '%s' (%s)" % (type(e), e))
         if len(e) == 2:  # Default override.
@@ -135,18 +138,27 @@ class SchemaEntry(object):
         if not isinstance(self.path, str):
             raise TypeError("Path is not a string (%s)" % e)
 
-        if self.path in RESERVED_WORDS:
-            raise NameError("Cannot use '%s' as a config key, it's a C/C++ reserved keyword" % self.path)
+        for part in self.path.split("."):
+            if part in RESERVED_WORDS:
+                raise NameError("Cannot use '%s' as a config key, it's a C/C++ reserved keyword" % part)
+
+        self.orig_path = None
 
         if self.vtype is not None:
-            if self.vtype not in (self.V_OBJECT, self.V_BOOL, self.V_INT, self.V_DOUBLE, self.V_STRING):
-                raise TypeError("%s: Invalid value type '%s'" % (self.path, self.vtype))
             if self.vtype == SchemaEntry.V_DOUBLE and isinstance(self.default, int):
                 self.default = float(self.default)
-            self.ValidateDefault()
+            if self.IsPrimitiveType():
+                self.ValidateDefault()
+            else:
+                # Postpone validation, it may refer to an entry that doesn't exist yet.
+                pass
 
         if self.params is not None and not isinstance(self.params, dict):
             raise TypeError("%s: Invalid params" % self.path)
+
+    def IsPrimitiveType(self):
+        return self.vtype in (self.V_OBJECT, self.V_BOOL, self.V_INT, self.V_DOUBLE, self.V_STRING)
+
 
     def ValidateDefault(self):
         if self.vtype == SchemaEntry.V_DOUBLE and type(self.default) is int:
@@ -168,6 +180,7 @@ class SchemaEntry(object):
         self.vtype = other.vtype
         self.default = other.default
         self.params = other.params
+        self.orig_path = other.orig_path
 
     def __str__(self):
         return '["%s", "%s", "%s", %s]' % (self.path, self.vtype, self.default, self.params)
@@ -176,6 +189,7 @@ class SchemaEntry(object):
 class Schema(object):
     def __init__(self):
         self._schema = []
+        self._overrides = {}
 
     def _FindEntry(self, path):
         for e in self._schema:
@@ -187,14 +201,10 @@ class Schema(object):
             raise TypeError("Schema must be a list, not %s" % (type(s)))
         for el in s:
             e = SchemaEntry(el)
-            oe = self._FindEntry(e.path)
             if e.vtype is None:
-                if oe is not None:
-                    if oe.vtype == SchemaEntry.V_OBJECT:
-                        raise TypeError("%s: Cannot override an object" % e.path)
-                    oe.default = e.default
-                    oe.ValidateDefault()
+                self._overrides[e.path] = e.default
             else:
+                oe = self._FindEntry(e.path)
                 if oe is None:
                     # Construct containing objects as needed.
                     pc = e.path.split(".")
@@ -221,14 +231,56 @@ class Schema(object):
     def _EmitEntry(self, e, writer):
         if e.vtype == SchemaEntry.V_OBJECT:
             self._EmitObj(e, writer)
-        else:
+        elif e.IsPrimitiveType():
+            if e.path in self._overrides:
+                e.default = self._overrides[e.path]
+                e.ValidateDefault()
             writer.Value(e)
+        else:
+            # Reference to some other entry. Let's look it up.
+            for e1 in self._schema:
+                if e1.path == e.vtype:
+                    break
+            else:
+                print("%s references a non-existent entry %s" % (e.path, e.vtype))
+                sys.exit(1)
+
+            # Now emit this entry but rewrite paths.
+            prw = PathRewriter(self, e1.path, e.path, writer)
+            self._EmitEntry(e1, prw)
 
     def Walk(self, writer):
         for e in self._schema:
             if '.' in e.path:
                 continue
             self._EmitEntry(e, writer)
+
+
+class PathRewriter(object):
+    def __init__(self, schema, from_prefix, to_prefix, writer):
+        self._schema = schema
+        self._from_prefix = from_prefix
+        self._to_prefix = to_prefix
+        self._writer = writer
+
+    def _RewritePath(self, e):
+        ec = SchemaEntry(e)
+        ec.orig_path = ec.path
+        ec.path = ec.path.replace(self._from_prefix, self._to_prefix, 1)
+        return ec
+
+    def ObjectStart(self, e):
+        self._writer.ObjectStart(self._RewritePath(e))
+
+    def Value(self, e):
+        e1 = self._RewritePath(e)
+        if e1.path in self._schema._overrides:
+            e1.default = self._schema._overrides[e1.path]
+            e1.ValidateDefault()
+        self._writer.Value(e1)
+
+    def ObjectEnd(self, e):
+        self._writer.ObjectEnd(self._RewritePath(e))
 
 
 # Writes a JSON object with defaults.
@@ -307,7 +359,8 @@ class StructDefGen(object):
         self._stack = []
 
     def ObjectStart(self, e):
-        new_obj_type = "struct %s_%s" % (self._struct_name, e.path.replace(".", "_"))
+        p = e.orig_path if e.orig_path else e.path
+        new_obj_type = "struct %s_%s" % (self._struct_name, p.replace(".", "_"))
         self._fields.append("%s %s" % (new_obj_type, e.key))
         self._stack.append((self._obj_type, self._fields))
         self._obj_type, self._fields = new_obj_type, []
@@ -318,7 +371,8 @@ class StructDefGen(object):
         self._fields.append("%s%s" % (ctype_field, key))
 
     def ObjectEnd(self, e):
-        self._objs.append((len(self._stack), self._obj_type, self._fields))
+        if not e.orig_path:
+            self._objs.append((len(self._stack), self._obj_type, self._fields))
         self._obj_type, self._fields = self._stack.pop()
 
     def GetLines(self):
@@ -340,32 +394,29 @@ class AccessorsGen(object):
     def __init__(self, struct_name, c_global_name):
         self._struct_name = struct_name
         self._c_global_name = c_global_name
-        self._stack = []
         self._getters = []
         self._setters = []
-        self._cur_acc_prefix = ""
 
     def ObjectStart(self, e):
-        self._stack.append(self._cur_acc_prefix)
-        self._cur_acc_prefix += ".%s" % e.key
-        self._getters.append(("const struct %s%s *" % (self._struct_name, self._cur_acc_prefix.replace(".", "_")), "", self._cur_acc_prefix))
+        self._cur_acc_prefix = e.path
+        p = e.orig_path if e.orig_path else e.path
+        self._getters.append(("const struct %s_%s *" % (self._struct_name, p.replace(".", "_")), "", e.path))
 
     def Value(self, e):
-        key = e.key
         ctype_api, ctype_field = get_ctype(e.vtype)
-        cur_path = "%s.%s" % (self._cur_acc_prefix, key)
-        self._getters.append((ctype_api, ctype_field, cur_path))
-        self._setters.append((ctype_api, ctype_field, cur_path))
+        self._getters.append((ctype_api, ctype_field, e.path))
+        self._setters.append((ctype_api, ctype_field, e.path))
 
     def ObjectEnd(self, e):
-        self._cur_acc_prefix = self._stack.pop()
+        pass
 
     def GetGetterSignature(self, path, ctype):
         name = path.replace(".", "_")
-        return "%s%s_get%s(struct %s *cfg)" % (ctype, self._struct_name, name, self._struct_name)
+        return "%s%s_get_%s(struct %s *cfg)" % (ctype, self._struct_name, name, self._struct_name)
+
     def GetSetterSignature(self, path, ctype):
         name = path.replace(".", "_")
-        return "void %s_set%s(struct %s *cfg, %sval)" % (self._struct_name, name, self._struct_name, ctype)
+        return "void %s_set_%s(struct %s *cfg, %sval)" % (self._struct_name, name, self._struct_name, ctype)
 
     # Returns array of lines to be pasted to the header.
     def GetHeaderLines(self):
@@ -373,6 +424,8 @@ class AccessorsGen(object):
 
         lines.append("/* Parametrized accessor prototypes {{{ */")
         for ctype_api, ctype_field, path in self._getters:
+            name = path.replace(".", "_")
+            lines.append("#define %s_HAVE_%s" % (self._struct_name.upper(), name.upper()))
             lines.append("%s;" % self.GetGetterSignature(path, ctype_api))
         lines.append("")
 
@@ -389,12 +442,14 @@ class AccessorsGen(object):
             lines.append("")
             for ctype_api, ctype_field, path in self._getters:
                 name = path.replace(".", "_")
-                lines.append("static inline %s%s_get%s(void) { return %s_get%s(&%s); }" % (ctype_api, self._c_global_name, name, self._struct_name, name, self._c_global_name))
+                lines.append("#define %s_HAVE_%s" % (self._c_global_name.upper(), name.upper()))
+                lines.append("static inline %s%s_get_%s(void) { return %s_get_%s(&%s); }" % (
+                    ctype_api, self._c_global_name, name, self._struct_name, name, self._c_global_name))
             lines.append("")
             for ctype_api, ctype_field, path in self._setters:
                 name = path.replace(".", "_")
-                lines.append("static inline void %s_set%s(%sval) { %s_set%s(&%s, val); }" % (self._c_global_name, name, ctype_api, self._struct_name, name, self._c_global_name))
-            lines.append("")
+                lines.append("static inline void %s_set_%s(%sval) { %s_set_%s(&%s, val); }" % (
+                    self._c_global_name, name, ctype_api, self._struct_name, name, self._c_global_name))
 
         return lines
 
@@ -417,7 +472,7 @@ class AccessorsGen(object):
                 ampersand = "&"
 
             lines.append("%s {" % self.GetGetterSignature(path, ctype_api))
-            lines.append("  return %scfg->%s;" % (ampersand, path[1:]))
+            lines.append("  return %scfg->%s;" % (ampersand, path))
             lines.append("}")
         lines.append("/* }}} */")
         lines.append("")
@@ -426,9 +481,9 @@ class AccessorsGen(object):
         for ctype_api, ctype_field, path in self._setters:
             lines.append("%s {" % self.GetSetterSignature(path, ctype_api))
             if "char" in ctype_api:
-                lines.append("  mgos_conf_set_str(&cfg->%s, val);" % path[1:])
+                lines.append("  mgos_conf_set_str(&cfg->%s, val);" % path)
             else:
-                lines.append("  cfg->%s = val;" % path[1:])
+                lines.append("  cfg->%s = val;" % path)
             lines.append("}")
         lines.append("/* }}} */")
 
@@ -462,14 +517,13 @@ class HWriter(object):
  * Command: {cmd}
  */
 
-#ifndef {name_uc}_H_
-#define {name_uc}_H_
+#pragma once
 
 #include "mgos_config_util.h"
 
 #ifdef __cplusplus
 extern "C" {{
-#endif /* __cplusplus */
+#endif
 
 {struct_def_lines}
 
@@ -479,12 +533,9 @@ const struct mgos_conf_entry *{name}_schema();
 
 #ifdef __cplusplus
 }}
-#endif /* __cplusplus */
-
-#endif /* {name_uc}_H_ */
+#endif
 """.format(cmd=' '.join(sys.argv),
            name=self._struct_name,
-           name_uc=self._struct_name.upper(),
            struct_def_lines="\n".join(self._struct_def_gen.GetLines()),
            lines="\n".join(self._acc_gen.GetHeaderLines()))
 

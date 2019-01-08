@@ -1,14 +1,14 @@
 /* clang-format off */
 /*
  * Generated file - do not edit.
- * Command: ../../fw/tools/gen_sys_config.py --c_name=sys_conf --dest_dir=.build data/sys_conf_wifi.yaml data/sys_conf_http.yaml data/sys_conf_debug.yaml data/sys_conf_overrides.yaml
+ * Command: ../../fw/tools/gen_sys_config.py --c_name=sys_conf --c_global_name=sys_conf_global --dest_dir=.build data/sys_conf_wifi.yaml data/sys_conf_http.yaml data/sys_conf_debug.yaml data/sys_conf_overrides.yaml
  */
 
 #include <stddef.h>
 #include "sys_conf.h"
 
-const struct mgos_conf_entry sys_conf_schema_[19] = {
-  {.type = CONF_TYPE_OBJECT, .key = "", .offset = 0, .num_desc = 18},
+const struct mgos_conf_entry sys_conf_schema_[26] = {
+  {.type = CONF_TYPE_OBJECT, .key = "", .offset = 0, .num_desc = 25},
   {.type = CONF_TYPE_OBJECT, .key = "wifi", .offset = offsetof(struct sys_conf, wifi), .num_desc = 8},
   {.type = CONF_TYPE_OBJECT, .key = "sta", .offset = offsetof(struct sys_conf, wifi.sta), .num_desc = 2},
   {.type = CONF_TYPE_STRING, .key = "ssid", .offset = offsetof(struct sys_conf, wifi.sta.ssid)},
@@ -27,11 +27,21 @@ const struct mgos_conf_entry sys_conf_schema_[19] = {
   {.type = CONF_TYPE_STRING, .key = "dest", .offset = offsetof(struct sys_conf, debug.dest)},
   {.type = CONF_TYPE_DOUBLE, .key = "test_d1", .offset = offsetof(struct sys_conf, debug.test_d1)},
   {.type = CONF_TYPE_DOUBLE, .key = "test_d2", .offset = offsetof(struct sys_conf, debug.test_d2)},
+  {.type = CONF_TYPE_OBJECT, .key = "test", .offset = offsetof(struct sys_conf, test), .num_desc = 6},
+  {.type = CONF_TYPE_OBJECT, .key = "bar", .offset = offsetof(struct sys_conf, test.bar), .num_desc = 2},
+  {.type = CONF_TYPE_BOOL, .key = "enable", .offset = offsetof(struct sys_conf, test.bar.enable)},
+  {.type = CONF_TYPE_INT, .key = "param1", .offset = offsetof(struct sys_conf, test.bar.param1)},
+  {.type = CONF_TYPE_OBJECT, .key = "bar1", .offset = offsetof(struct sys_conf, test.bar1), .num_desc = 2},
+  {.type = CONF_TYPE_BOOL, .key = "enable", .offset = offsetof(struct sys_conf, test.bar1.enable)},
+  {.type = CONF_TYPE_INT, .key = "param1", .offset = offsetof(struct sys_conf, test.bar1.param1)},
 };
 
 const struct mgos_conf_entry *sys_conf_schema() {
   return sys_conf_schema_;
 }
+
+/* Global instance */
+struct sys_conf sys_conf_global;
 
 /* Getters {{{ */
 const struct sys_conf_wifi *sys_conf_get_wifi(struct sys_conf *cfg) {
@@ -88,6 +98,27 @@ double      sys_conf_get_debug_test_d1(struct sys_conf *cfg) {
 double      sys_conf_get_debug_test_d2(struct sys_conf *cfg) {
   return cfg->debug.test_d2;
 }
+const struct sys_conf_test *sys_conf_get_test(struct sys_conf *cfg) {
+  return &cfg->test;
+}
+const struct sys_conf_test_bar *sys_conf_get_test_bar(struct sys_conf *cfg) {
+  return &cfg->test.bar;
+}
+int         sys_conf_get_test_bar_enable(struct sys_conf *cfg) {
+  return cfg->test.bar.enable;
+}
+int         sys_conf_get_test_bar_param1(struct sys_conf *cfg) {
+  return cfg->test.bar.param1;
+}
+const struct sys_conf_test_bar *sys_conf_get_test_bar1(struct sys_conf *cfg) {
+  return &cfg->test.bar1;
+}
+int         sys_conf_get_test_bar1_enable(struct sys_conf *cfg) {
+  return cfg->test.bar1.enable;
+}
+int         sys_conf_get_test_bar1_param1(struct sys_conf *cfg) {
+  return cfg->test.bar1.param1;
+}
 /* }}} */
 
 /* Setters {{{ */
@@ -129,5 +160,17 @@ void sys_conf_set_debug_test_d1(struct sys_conf *cfg, double      val) {
 }
 void sys_conf_set_debug_test_d2(struct sys_conf *cfg, double      val) {
   cfg->debug.test_d2 = val;
+}
+void sys_conf_set_test_bar_enable(struct sys_conf *cfg, int         val) {
+  cfg->test.bar.enable = val;
+}
+void sys_conf_set_test_bar_param1(struct sys_conf *cfg, int         val) {
+  cfg->test.bar.param1 = val;
+}
+void sys_conf_set_test_bar1_enable(struct sys_conf *cfg, int         val) {
+  cfg->test.bar1.enable = val;
+}
+void sys_conf_set_test_bar1_param1(struct sys_conf *cfg, int         val) {
+  cfg->test.bar1.param1 = val;
 }
 /* }}} */

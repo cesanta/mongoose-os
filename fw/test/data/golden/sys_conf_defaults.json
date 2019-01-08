@@ -16,5 +16,13 @@
   "level": 2,
   "dest": "uart1",
   "test_d1": 2.0
+ },
+ "test": {
+  "bar": {
+   "param1": 111
+  },
+  "bar1": {
+   "param1": 222
+  }
  }
 }

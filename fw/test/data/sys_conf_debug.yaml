@@ -15,4 +15,9 @@
   ["debug.dest", "s", "uart1", {title: "Where to send debug"}],
   ["debug.test_d1", "d", 0.123, {title: "Test doubles 1"}],
   ["debug.test_d2", "d", 0, {}],
+  ["test.bar", "o", {}],
+  ["test.bar.enable", "b", {}],
+  ["test.bar.param1", "i", 111, {}],
+  ["test.bar1", "test.bar", {}], # Object of the same type as previous.
+  ["test.bar1.param1", 222],     # Types are the same but defaults are separate.
 ]
