@@ -49,10 +49,3 @@ void mg_hash_sha1_v(size_t num_msgs, const uint8_t *msgs[],
   mbedtls_sha1_finish(&sha1_ctx, digest);
   mbedtls_sha1_free(&sha1_ctx);
 }
-
-/* For CryptoAuthLib host crypto. We use mbedTLS functions. */
-int atcac_sw_sha2_256(const uint8_t *data, size_t data_size,
-                      uint8_t digest[32]) {
-  mbedtls_sha256(data, data_size, digest, false /* is_224 */);
-  return 0;
-}
