@@ -117,12 +117,13 @@ static IRAM size_t fill_tx_fifo(struct mgos_uart_state *us) {
 
 IRAM NOINSTR static void empty_rx_fifo(int uart_no) {
   /*
-   * ESP32 has a hardware bug where UART2 FIFO reset requires also resetting
-   * UART1.
+   * ESP32 has a bug where UART2 FIFO reset requires also resetting UART1.
    * https://github.com/espressif/esp-idf/commit/4052803e161ba06d1cae8d36bc66dde15b3fc8c7
    * So, like ESP-IDF, we avoid using FIFO_RST and empty RX FIFO by reading it.
    */
-  while (esp32_uart_rx_fifo_len(uart_no) > 0) {
+  while ((esp32_uart_rx_fifo_len(uart_no) > 0) ||
+         (REG_GET_FIELD(UART_MEM_RX_STATUS_REG(0), UART_MEM_RX_RD_ADDR) !=
+          REG_GET_FIELD(UART_MEM_RX_STATUS_REG(0), UART_MEM_RX_WR_ADDR))) {
     (void) rx_byte(uart_no);
   }
 }
@@ -141,18 +142,7 @@ IRAM NOINSTR static void esp32_handle_uart_int(struct mgos_uart_state *us) {
   us->stats.ints++;
   if (int_st & UART_RXFIFO_OVF_INT_ST) {
     us->stats.rx_overflows++;
-    /*
-     * On ESP32, FIFO behaves weirdly on overflow: after it's been completely
-     * read out and emptied, it later produces data overflowed, giving an
-     * impression that it is actually longer. And no, it is not configured to be
-     * longer than 128 bytes (UART_RX_SIZE is 0x1).
-     * For now we just flush the RX FIFO on overflow, which gets rid of this
-     * behavior. This looks like a hardware bug to me.
-     *
-     * TODO(rojer): Test on UART1,2 and see how it behaves.
-     */
-    SET_PERI_REG_MASK(UART_CONF0_REG(uart_no), UART_RXFIFO_RST);
-    CLEAR_PERI_REG_MASK(UART_CONF0_REG(uart_no), UART_RXFIFO_RST);
+    empty_rx_fifo(uart_no);
   }
   if (int_st & UART_CTS_CHG_INT_ST) {
     if (esp32_uart_cts(uart_no) != 0 && esp32_uart_tx_fifo_len(uart_no) > 0) {
