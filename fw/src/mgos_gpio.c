@@ -37,12 +37,13 @@ struct mgos_gpio_state {
     struct {
       unsigned int debounce_ms : 16;
       unsigned int active_state : 1;
+      mgos_timer_id timer_id;
     } button;
   };
-  unsigned int isr : 1;
-  unsigned int cb_pending : 1;
   mgos_gpio_int_handler_f cb;
   void *cb_arg;
+  uint16_t cnt;
+  uint8_t isr;
 };
 
 static struct mgos_gpio_state *s_state = NULL;
@@ -81,19 +82,20 @@ IRAM void mgos_gpio_hal_int_cb(int pin) {
   if (s == NULL || s->cb == NULL) return;
   if (s->isr) {
     s->cb(pin, s->cb_arg);
-    mgos_gpio_hal_int_done(pin);
     return;
   }
-  if (s->cb_pending) return;
-  if (mgos_invoke_cb(mgos_gpio_int_cb, (void *) (intptr_t) pin,
-                     true /* from_isr */)) {
-    s->cb_pending = true;
+  if (s->cnt == 0) {
+    if (mgos_invoke_cb(mgos_gpio_int_cb, (void *) (intptr_t) pin,
+                       true /* from_isr */)) {
+      s->cnt++;
+    } else {
+      /*
+       * Hopefully it wasn't a level-triggered intr or we'll get into a loop.
+       * But what else can we do?
+       */
+    }
   } else {
-    /*
-     * Hopefully it wasn't a level-triggered intr or we'll get into a loop.
-     * But what else can we do?
-     */
-    mgos_gpio_hal_int_done(pin);
+    s->cnt++;
   }
 }
 
@@ -102,14 +104,19 @@ static void mgos_gpio_int_cb(void *arg) {
   int pin = (intptr_t) arg;
   mgos_rlock(s_lock);
   struct mgos_gpio_state *s = mgos_gpio_get_state(pin);
-  if (s == NULL || !s->cb_pending || s->cb == NULL) goto out;
+  if (s == NULL || !s->cnt || s->cb == NULL) goto out;
   if (s->button.debounce_ms == 0) {
-    s->cb(pin, s->cb_arg);
-    s->cb_pending = false;
-    mgos_gpio_hal_int_done(pin);
+    while (s->cnt > 0) {
+      mgos_runlock(s_lock);
+      s->cb(pin, s->cb_arg);
+      mgos_rlock(s_lock);
+      s->cnt--;
+    }
   } else {
-    /* Keep the int disabled for the duration of the debounce time */
-    mgos_set_timer(s->button.debounce_ms, false, mgos_gpio_dbnc_done_cb, arg);
+    if (s->button.timer_id == MGOS_INVALID_TIMER_ID) {
+      s->button.timer_id = mgos_set_timer(s->button.debounce_ms, false,
+                                          mgos_gpio_dbnc_done_cb, arg);
+    }
   }
 out:
   mgos_runlock(s_lock);
@@ -124,10 +131,11 @@ static void mgos_gpio_dbnc_done_cb(void *arg) {
     mgos_rlock(s_lock);
     struct mgos_gpio_state *s = mgos_gpio_get_state(pin);
     if (s != NULL) {
+      s->button.timer_id = MGOS_INVALID_TIMER_ID;
       active_state = s->button.active_state;
       cb = s->cb;
       cb_arg = s->cb_arg;
-      s->cb_pending = false;
+      s->cnt = 0;
     }
     mgos_runlock(s_lock);
   }
@@ -136,7 +144,6 @@ static void mgos_gpio_dbnc_done_cb(void *arg) {
   }
   /* Clear any noise that happened during debounce timer. */
   mgos_gpio_clear_int(pin);
-  mgos_gpio_hal_int_done(pin);
 }
 
 static bool gpio_set_int_handler_common(int pin, enum mgos_gpio_int_mode mode,

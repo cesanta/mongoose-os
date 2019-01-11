@@ -39,18 +39,16 @@ static uint8_t s_int_ena[GPIO_PIN_COUNT];
 IRAM static void esp32_gpio_isr(void *arg) {
   uint32_t int_st = GPIO.status;
   for (uint32_t i = 0, mask = 1; i < 32; i++, mask <<= 1) {
-    if (s_int_ena[i] == 0 || !(int_st & mask)) continue;
-    GPIO.pin[i].int_ena = 0;
-    mgos_gpio_clear_int(i);
+    if ((int_st & mask) == 0 || !GPIO.pin[i].int_ena) continue;
     mgos_gpio_hal_int_cb(i);
   }
+  GPIO.status_w1tc = int_st;
   int_st = GPIO.status1.intr_st;
   for (uint32_t i = 32, mask = 1; i < GPIO_PIN_COUNT; i++, mask <<= 1) {
-    if (s_int_ena[i] == 0 || !(int_st & mask)) continue;
-    GPIO.pin[i].int_ena = 0;
-    mgos_gpio_clear_int(i);
+    if ((int_st & mask) == 0 || !GPIO.pin[i].int_ena) continue;
     mgos_gpio_hal_int_cb(i);
   }
+  GPIO.status1_w1tc.val = int_st;
 }
 
 IRAM void mgos_gpio_clear_int(int pin) {
@@ -60,10 +58,6 @@ IRAM void mgos_gpio_clear_int(int pin) {
     reg += 12; /* GPIO_STATUS_W1TC -> GPIO_STATUS1_W1TC */
   }
   WRITE_PERI_REG(reg, (1 << pin));
-}
-
-IRAM void mgos_gpio_hal_int_done(int pin) {
-  GPIO.pin[pin].int_ena = s_int_ena[pin];
 }
 
 IRAM bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {

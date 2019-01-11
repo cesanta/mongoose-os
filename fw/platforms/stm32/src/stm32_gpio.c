@@ -289,7 +289,7 @@ static void stm32_gpio_ext_int_handler(uint32_t exti_min, uint32_t exti_max) {
   for (uint32_t i = exti_min; i <= exti_max; i++, exti_msk <<= 1) {
     if (!(EXTI->PR & exti_msk)) continue;
     /* Disable int now, it will be re-enabled when handled. */
-    CLEAR_BIT(EXTI->IMR, exti_msk);
+    // CLEAR_BIT(EXTI->IMR, exti_msk);
     EXTI->PR = exti_msk;
     mgos_gpio_hal_int_cb(STM32_GPIO(exti_selected_port_num(i) + 'A', i));
   }
@@ -317,20 +317,10 @@ static void stm32_gpio_exti_10_15_int_handler(void) {
   stm32_gpio_ext_int_handler(10, 15);
 }
 
-static uint32_t s_exti_ena = 0;
-
 void mgos_gpio_clear_int(int pin) {
   uint32_t exti_num = STM32_PIN_NUM(pin);
   uint32_t exti_msk = (1 << exti_num);
   EXTI->PR = exti_msk;
-}
-
-void mgos_gpio_hal_int_done(int pin) {
-  uint32_t exti_num = STM32_PIN_NUM(pin);
-  uint32_t exti_msk = (1 << exti_num);
-  if (s_exti_ena & exti_msk) {
-    SET_BIT(EXTI->IMR, exti_msk);
-  }
 }
 
 bool mgos_gpio_hal_set_int_mode(int pin, enum mgos_gpio_int_mode mode) {
@@ -368,7 +358,6 @@ bool mgos_gpio_hal_set_int_mode(int pin, enum mgos_gpio_int_mode mode) {
       return false;
     }
   }
-  CLEAR_BIT(s_exti_ena, exti_msk);
   CLEAR_BIT(EXTI->IMR, exti_msk);
   MODIFY_REG(EXTI->RTSR, exti_msk, rtr_val);
   MODIFY_REG(EXTI->FTSR, exti_msk, ftr_val);
@@ -387,7 +376,6 @@ bool mgos_gpio_enable_int(int pin) {
   if (exti_selected_port_num(exti_num) != STM32_PIN_PORT_NUM(pin)) {
     return false;
   }
-  SET_BIT(s_exti_ena, exti_msk);
   SET_BIT(EXTI->IMR, exti_msk);
   return true;
 }
@@ -398,7 +386,6 @@ bool mgos_gpio_disable_int(int pin) {
   if (exti_selected_port_num(exti_num) != STM32_PIN_PORT_NUM(pin)) {
     return false;
   }
-  CLEAR_BIT(s_exti_ena, exti_msk);
   CLEAR_BIT(EXTI->IMR, exti_msk);
   return true;
 }

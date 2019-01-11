@@ -63,8 +63,6 @@ static signed char s_gpio_to_pin_map[32] = {
 };
 /* clang-format on */
 
-static uint32_t s_enabled_ints = 0;
-
 int pin_to_gpio_no(int pin) {
   if (pin < 1 || pin > 64) return -1;
   return s_pin_to_gpio_map[pin - 1];
@@ -164,8 +162,7 @@ bool mgos_gpio_read_out(int pin) {
 }
 
 static void gpio_common_int_handler(uint32_t port_base, uint8_t offset) {
-  uint32_t ints =
-      HWREG(port_base + GPIO_O_GPIO_MIS) & (s_enabled_ints >> offset);
+  uint32_t ints = HWREG(port_base + GPIO_O_GPIO_MIS);
   uint8_t gpio_no;
   uint32_t port_bit_mask;
   for (port_bit_mask = 1, gpio_no = offset; port_bit_mask < 0x100;
@@ -173,7 +170,6 @@ static void gpio_common_int_handler(uint32_t port_base, uint8_t offset) {
     if (!(ints & port_bit_mask)) continue;
     int pin = s_gpio_to_pin_map[gpio_no];
     if (pin < 0) continue;
-    HWREG(port_base + GPIO_O_GPIO_IM) &= ~port_bit_mask;
     mgos_gpio_hal_int_cb(pin);
   }
   HWREG(port_base + GPIO_O_GPIO_ICR) = ints; /* Clear all ints. */
@@ -185,15 +181,6 @@ void mgos_gpio_clear_int(int pin) {
   uint32_t port_bit_no = (gpio_no % 8);
   uint32_t port_bit_mask = (1U << port_bit_no);
   HWREG(port_base + GPIO_O_GPIO_ICR) = port_bit_mask;
-}
-
-void mgos_gpio_hal_int_done(int pin) {
-  int gpio_no = pin_to_gpio_no(pin);
-  if (!(s_enabled_ints & (1U << gpio_no))) return;
-  uint32_t port_base = gpio_no_to_port_base(gpio_no);
-  uint32_t port_bit_no = (gpio_no % 8);
-  uint32_t port_bit_mask = (1U << port_bit_no);
-  HWREG(port_base + GPIO_O_GPIO_IM) |= port_bit_mask;
 }
 
 static void gpio_a0_int_handler(void) {
@@ -257,10 +244,7 @@ bool mgos_gpio_hal_set_int_mode(int pin, enum mgos_gpio_int_mode mode) {
     MAP_IntRegister(int_no, handlers[port_no]);
     MAP_IntPrioritySet(int_no, INT_PRIORITY_LVL_1);
     MAP_IntEnable(int_no);
-    s_enabled_ints |= (1 << gpio_no);
     HWREG(port_base + GPIO_O_GPIO_ICR) = port_bit_mask;
-  } else {
-    s_enabled_ints &= ~(1 << gpio_no);
   }
   return true;
 }
