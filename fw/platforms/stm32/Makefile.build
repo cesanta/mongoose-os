@@ -118,8 +118,8 @@ MGOS_CFLAGS += -DMGOS_BL_ENABLE
 else
 FLASH_FS_OFFSET = $(FLASH_S0_SIZE)
 LD_SCRIPT ?= $(LD_SCRIPT_NO_OTA)
-FLASH_BL_SIZE = 0
-FLASH_BL_CFG_SIZE = 0
+FLASH_BL_SIZE ?= 0
+FLASH_BL_CFG_SIZE ?= 0
 endif
 MGOS_ROOT_DEVTAB ?= fs0 stm32flash {"offset": $(FLASH_FS_OFFSET), "size": $(MGOS_ROOT_FS_SIZE), "ese": true}
 MGOS_ROOT_FS_TYPE ?= SPIFFS
@@ -242,11 +242,11 @@ C_CXX_FLAGS = -Os -ggdb -MD -Wall -Wextra -Werror -pipe \
               -fno-common -ffunction-sections -fdata-sections \
               -DMGOS_APP=\"$(APP)\" \
               -DFW_ARCHITECTURE=$(APP_PLATFORM) \
+              $(MGOS_CFLAGS) $(MGOS_FEATURES) \
+              $(MG_FEATURES_TINY) -DMG_ENABLE_DIRECTORY_LISTING \
+              -DMG_NET_IF=$(MGOS_MG_NET_IF)
 
-CFLAGS = -std=gnu99 $(C_CXX_FLAGS) $(MGOS_CFLAGS) \
-         $(MGOS_CFLAGS) $(MGOS_FEATURES) $(STM32_CFLAGS) \
-         $(MG_FEATURES_TINY) -DMG_ENABLE_DIRECTORY_LISTING \
-         -DMG_NET_IF=$(MGOS_MG_NET_IF) \
+CFLAGS = -std=gnu99 $(C_CXX_FLAGS) $(STM32_CFLAGS) \
          $(APP_CFLAGS)
 CXXFLAGS = -std=gnu++11 -fno-exceptions $(C_CXX_FLAGS) $(STM32_CFLAGS) $(APP_CXXFLAGS)
 

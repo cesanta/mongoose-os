@@ -204,7 +204,7 @@ IRAM void mgos_task(void *arg) {
     LOG(LL_ERROR, ("MGOS init failed: %d", r));
   }
 
-#if MGOS_HAVE_OTA_COMMON
+#ifdef MGOS_HAVE_OTA_COMMON
   mgos_ota_boot_finish(success, mgos_ota_is_first_boot());
 #endif
 
