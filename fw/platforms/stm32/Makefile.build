@@ -203,13 +203,15 @@ ifeq "$(MGOS_ENABLE_LWIP)" "1"
                 $(LWIP_PATH)/src/core/ipv4 \
                 $(LWIP_PATH)/src/core/ipv6 \
                 $(LWIP_PATH)/src/netif \
+                $(LWIP_PATH)/src/netif/ppp \
                 $(LWIP_PATH)/system/OS
 
   MGOS_SRCS += $(notdir \
                  $(wildcard $(LWIP_PATH)/src/core/*.c) tcpip.c sys_arch.c \
                  $(wildcard $(LWIP_PATH)/src/core/ipv4/*.c) \
                  $(wildcard $(LWIP_PATH)/src/core/ipv6/*.c) \
-                 $(wildcard $(LWIP_PATH)/src/netif/ethernet.c))
+                 $(wildcard $(LWIP_PATH)/src/netif/ppp/*.c) \
+                 $(LWIP_PATH)/src/netif/ethernet.c)
 
   MGOS_CFLAGS += -DMG_LWIP=1 -DLWIP_TIMEVAL_PRIVATE=0 \
                  -DLWIP_POSIX_SOCKETS_IO_NAMES=0 \

@@ -38,7 +38,8 @@ typedef uint32_t u32_t;
 #define TCPIP_MBOX_SIZE 32
 #define MEM_ALIGNMENT 4
 #define MEM_LIBC_MALLOC 1
-#define MEMP_NUM_SYS_TIMEOUT 6
+#define MEMP_MEM_MALLOC 1
+#define MEMP_NUM_SYS_TIMEOUT 16
 #define LWIP_ETHERNET 1
 #define LWIP_MULTICAST_TX_OPTIONS 1
 #define LWIP_IGMP 1
@@ -54,6 +55,8 @@ typedef uint32_t u32_t;
 #define SYS_LIGHTWEIGHT_PROT 0
 
 #define LWIP_NOASSERT
+
+#define LWIP_USE_EXTERNAL_MBEDTLS 1
 
 #ifdef __cplusplus
 }

@@ -125,6 +125,10 @@ uint32_t sys_now(void) {
   return HAL_GetTick();
 }
 
+uint32_t sys_jiffies(void) {
+  return sys_now();
+}
+
 #define IWDG_1_SECOND 128
 IWDG_HandleTypeDef hiwdg = {
     .Instance = IWDG,
