@@ -126,6 +126,12 @@ static void stm32_uart_isr(struct mgos_uart_state *us) {
     us->stats.rx_overflows++;
     stm32_uart_clear_ovf_int(us);
   }
+#ifdef USART_ICR_FECF
+  if (ints & (USART_ISR_FE | USART_ISR_NE)) {
+    // We don't handle these errors but must acknowledged the ints.
+    uds->regs->ICR = USART_ICR_FECF | USART_ICR_NECF;
+  }
+#endif
   if (ints & USART_ISR_CTSIF) {
 #ifdef USART_ISR_CTS
     if ((ints & USART_ISR_CTS) == 0 && uds->itx_buf.used > 0) {
