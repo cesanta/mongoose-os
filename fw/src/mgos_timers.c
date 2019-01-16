@@ -158,7 +158,10 @@ static void mgos_time_change_cb(int ev, void *evd, void *arg) {
   mgos_rlock(s_timer_data_lock);
   struct timer_info *ti;
   LIST_FOREACH(ti, &td->timers, entries) {
-    ti->next_invocation += ev_data->delta;
+    /* 1547596800 is Wed Jan 16 00:00:00 UTC 2019 */
+    if(ti->next_invocation < 1547596800){
+      ti->next_invocation += ev_data->delta;
+    }
   }
   mgos_runlock(s_timer_data_lock);
 
