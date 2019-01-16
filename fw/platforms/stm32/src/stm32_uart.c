@@ -129,7 +129,7 @@ static void stm32_uart_isr(struct mgos_uart_state *us) {
 #ifdef USART_ICR_FECF
   if (ints & (USART_ISR_FE | USART_ISR_NE)) {
     // We don't handle these errors but must acknowledged the ints.
-    uds->regs->ICR = USART_ICR_FECF | USART_ICR_NECF;
+    uds->regs->ICR = USART_ICR_FECF | USART_ICR_NCF;
   }
 #endif
   if (ints & USART_ISR_CTSIF) {
