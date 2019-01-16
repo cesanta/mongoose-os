@@ -119,8 +119,9 @@ static void stm32_uart_isr(struct mgos_uart_state *us) {
   bool dispatch = false;
   const struct mgos_uart_config *cfg = &us->cfg;
   struct stm32_uart_state *uds = (struct stm32_uart_state *) us->dev_data;
-  const uint32_t ints = uds->regs->ISR;
-  const uint32_t cr1 = uds->regs->CR1;
+  volatile USART_TypeDef *regs = uds->regs;
+  const uint32_t ints = regs->ISR;
+  const uint32_t cr1 = regs->CR1;
   us->stats.ints++;
   if (ints & USART_ISR_ORE) {
     us->stats.rx_overflows++;
@@ -129,7 +130,7 @@ static void stm32_uart_isr(struct mgos_uart_state *us) {
 #ifdef USART_ICR_FECF
   if (ints & (USART_ISR_FE | USART_ISR_NE)) {
     // We don't handle these errors but must acknowledged the ints.
-    uds->regs->ICR = USART_ICR_FECF | USART_ICR_NCF;
+    regs->ICR = USART_ICR_FECF | USART_ICR_NCF;
   }
 #endif
   if (ints & USART_ISR_CTSIF) {
@@ -147,7 +148,7 @@ static void stm32_uart_isr(struct mgos_uart_state *us) {
     if (itxb->used < UART_ISR_BUF_DISP_THRESH) {
       dispatch = true;
     }
-    if (itxb->used == 0) CLEAR_BIT(uds->regs->CR1, USART_CR1_TXEIE);
+    if (itxb->used == 0) CLEAR_BIT(regs->CR1, USART_CR1_TXEIE);
   }
   if ((ints & USART_ISR_RXNE) && (cr1 & USART_CR1_RXNEIE)) {
     struct cs_rbuf *irxb = &uds->irx_buf;
@@ -158,10 +159,10 @@ static void stm32_uart_isr(struct mgos_uart_state *us) {
     }
     if (irxb->avail > UART_ISR_BUF_DISP_THRESH) {
 #ifdef USART_CR1_RTOIE
-      SET_BIT(uds->regs->CR1, USART_CR1_RTOIE);
+      regs->ICR = USART_ICR_RTOCF;
+      SET_BIT(regs->CR1, USART_CR1_RTOIE);
 #else
-      /* F4 does not have timeout, should use idle line detection? TODO(rojer)
-       */
+      /* F4 does not have timeout, use idle line detection? TODO(rojer) */
       dispatch = true;
 #endif
     } else {
@@ -170,14 +171,15 @@ static void stm32_uart_isr(struct mgos_uart_state *us) {
         stm32_uart_tx_byte(us, MGOS_UART_XOFF_CHAR);
         us->xoff_sent = true;
       }
-      if (irxb->avail == 0) CLEAR_BIT(uds->regs->CR1, USART_CR1_RXNEIE);
+      if (irxb->avail == 0) CLEAR_BIT(regs->CR1, USART_CR1_RXNEIE);
       dispatch = true;
     }
   }
 #ifdef USART_ISR_RTOF
   if ((ints & USART_ISR_RTOF) && (cr1 & USART_CR1_RTOIE)) {
     if (uds->irx_buf.used > 0) dispatch = true;
-    CLEAR_BIT(uds->regs->CR1, USART_CR1_RTOIE);
+    CLEAR_BIT(regs->CR1, USART_CR1_RTOIE);
+    regs->ICR = USART_ICR_RTOCF;
   }
 #endif
   if (dispatch) {
@@ -471,14 +473,15 @@ bool stm32_uart_configure(int uart_no, const struct mgos_uart_config *cfg) {
     if ((div & 0xffff0000) != 0) return false;
     brr = div;
   }
+#if defined(USART_CR1_RTOIE)
+  regs->RTOR = 8; /* 8 idle bit intervals before RX timeout. */
+  cr2 |= USART_CR2_RTOEN;
+  regs->ICR = USART_ERROR_INTS;
+#endif
   regs->CR1 = cr1;
   regs->CR2 = cr2;
   regs->CR3 = cr3;
   regs->BRR = brr;
-#if defined(USART_CR1_RTOIE)
-  regs->RTOR = 8; /* 8 idle bit intervals before RX timeout. */
-  regs->ICR = USART_ERROR_INTS;
-#endif
   SET_BIT(regs->CR1, USART_CR1_UE);
   return true;
 }
