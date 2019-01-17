@@ -99,3 +99,41 @@ bool mgos_eth_dev_get_ip_info(int if_instance, struct mgos_net_ip_info *ip_info)
 
   (void)if_instance;
 }
+
+void device_get_mac_address(uint8_t mac[6]) {
+  char gw_dev[64];
+  struct sockaddr_in gw;
+  int i;
+
+  if (mgos_eth_dev_get_default_gateway(gw_dev, sizeof(gw_dev), &gw)) {
+    char buf[100];
+    int  hex[6];
+    int  fd;
+    int  len;
+    snprintf(buf, sizeof(buf), "/sys/class/net/%s/address", gw_dev);
+    if (!(fd = open(buf, O_RDONLY))) {
+      goto fallback;
+    }
+    len = read(fd, buf, sizeof(buf));
+    if (len < 17) {
+      goto fallback;
+    }
+
+    len = sscanf(buf, "%x:%x:%x:%x:%x:%x", &hex[0], &hex[1], &hex[2], &hex[3], &hex[4], &hex[5]);
+    if (len != 6) {
+      goto fallback;
+    }
+
+    for (i = 0; i < 6; i++) {
+      mac[i] = (uint8_t)hex[i];
+    }
+    return;
+  }
+
+fallback:
+  LOG(LL_WARN, ("Cannot get default gateway, generating a random one"));
+  srand(time(NULL));
+  for (i = 0; i < 6; i++) {
+    mac[i] = (double)rand() / RAND_MAX * 255;
+  }
+}

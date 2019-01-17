@@ -42,15 +42,6 @@ void mongoose_schedule_poll(bool from_isr) {
   (void)from_isr;
 }
 
-void device_get_mac_address(uint8_t mac[6]) {
-  int i;
-
-  srand(time(NULL));
-  for (i = 0; i < 6; i++) {
-    mac[i] = (double)rand() / RAND_MAX * 255;
-  }
-}
-
 enum mgos_init_result mongoose_init(void) {
   enum mgos_init_result r;
   int    cpu_freq;
