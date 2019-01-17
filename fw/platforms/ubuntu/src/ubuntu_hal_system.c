@@ -79,7 +79,7 @@ size_t mgos_get_free_heap_size(void) {
 }
 
 size_t mgos_get_min_free_heap_size(void) {
-  LOG(LL_INFO, ("Not implemented yet"));
+  // LOG(LL_INFO, ("Not implemented"));
   return 0;
 }
 
@@ -150,17 +150,17 @@ void mgos_usleep(uint32_t usecs) {
 }
 
 void mgos_ints_disable(void) {
-  LOG(LL_INFO, ("Not implemented yet"));
+  // LOG(LL_INFO, ("Not implemented"));
   return;
 }
 
 void mgos_ints_enable(void) {
-  LOG(LL_INFO, ("Not implemented yet"));
+  // LOG(LL_INFO, ("Not implemented"));
   return;
 }
 
 bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
-  LOG(LL_INFO, ("Not implemented yet"));
+  // LOG(LL_INFO, ("Not implemented"));
   return true;
 
   (void)cb;

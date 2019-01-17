@@ -38,21 +38,21 @@ void mgos_uart_hal_config_set_defaults(int uart_no, struct mgos_uart_config *cfg
 }
 
 void mgos_uart_hal_dispatch_rx_top(struct mgos_uart_state *us) {
-  LOG(LL_INFO, ("Not implemented yet"));
+//  LOG(LL_INFO, ("rx: Not implemented yet"));
   return;
 
   (void)us;
 }
 
 void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us) {
-  LOG(LL_INFO, ("Not implemented yet"));
+//  LOG(LL_INFO, ("tx: Not implemented yet"));
   return;
 
   (void)us;
 }
 
 void mgos_uart_hal_dispatch_bottom(struct mgos_uart_state *us) {
-  LOG(LL_INFO, ("Not implemented yet"));
+//  LOG(LL_INFO, ("bottom: Not implemented yet"));
   return;
 
   (void)us;
