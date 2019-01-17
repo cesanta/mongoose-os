@@ -45,13 +45,19 @@ void mgos_rlock_destroy(struct mgos_rlock_type *l) {
 }
 
 size_t mgos_get_heap_size(void) {
-  LOG(LL_INFO, ("Not implemented yet"));
-  return 0;
+  long s, ps;
+
+  s  = sysconf(_SC_PHYS_PAGES);
+  ps = sysconf(_SC_PAGESIZE);
+  return s * ps;
 }
 
 size_t mgos_get_free_heap_size(void) {
-  LOG(LL_INFO, ("Not implemented yet"));
-  return 0;
+  long s, ps;
+
+  s  = sysconf(_SC_AVPHYS_PAGES);
+  ps = sysconf(_SC_PAGESIZE);
+  return s * ps;
 }
 
 size_t mgos_get_min_free_heap_size(void) {
