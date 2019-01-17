@@ -27,9 +27,6 @@ MGOS_ENABLE_DEBUG_UDP = 0
 MGOS_ENABLE_BITBANG = 0
 MGOS_ENABLE_SYS_SERVICE = 0
 
-LINKER ?= gcc
-LDFLAGS ?=
-
 MGOS_POSIX_FEATURES ?= -DMGOS_PROMPT_DISABLE_ECHO -DMGOS_MAX_NUM_UARTS=2 \
                        -DMGOS_HAVE_ETHERNET \
                        -DMGOS_NUM_HW_TIMERS=0
@@ -48,7 +45,7 @@ MGOS_SRCS = $(notdir $(wildcard *.c)) mgos_init.c  \
             json_utils.c cs_rbuf.c mgos_uart.c \
             mgos_utils.c cs_file.c cs_crc32.c
 
-PLATFORM_SRCS = ubuntu_main.c
+PLATFORM_SRCS = ubuntu_hal_system.c  ubuntu_hal_timers.c  ubuntu_hal_uart.c  ubuntu_hal_gpio.c ubuntu_gpio.c ubuntu_main.c
 
 # Need solution for these:
 #	    mgos_gpio.c mgos_vfs.c mgos_vfs_dev.c $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C))
@@ -65,7 +62,9 @@ CFLAGS ?= -std=c99 -fno-inline -W -Wall -Wundef -Werror -g -Wno-unused-function 
           $(CFLAGS_EXTRA)
 
 INCDIRS = $(addprefix -I,$(INCLUDES))
-LIBS  ?=
+LINKER ?= gcc
+LDFLAGS ?=
+LIBS  ?= pthread
 LDLIBS = $(addprefix -l,$(LIBS))
 
 # Generated artifacts

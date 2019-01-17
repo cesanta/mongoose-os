@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <time.h>
 
+#include "mgos.h"
+#include "mgos_mongoose.h"
 #include "common/cs_dbg.h"
 #include "mgos_init.h"
 #include "mgos_mongoose_internal.h"
