@@ -115,6 +115,7 @@ void device_get_mac_address(uint8_t mac[6]) {
       goto fallback;
     }
     len = read(fd, buf, sizeof(buf));
+    close(fd);
     if (len < 17) {
       goto fallback;
     }
