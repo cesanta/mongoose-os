@@ -3,45 +3,55 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
+#include <pthread.h>
 
 #include "mgos.h"
 #include "mgos_hal.h"
 #include "mgos_system.h"
 
+static pthread_mutex_t s_mgos_mux = PTHREAD_MUTEX_INITIALIZER;
+
 void mgos_lock(void) {
-  LOG(LL_INFO, ("Not implemented yet"));
+  pthread_mutex_lock(&s_mgos_mux);
   return;
 }
 
 void mgos_unlock(void) {
-  LOG(LL_INFO, ("Not implemented yet"));
+  pthread_mutex_unlock(&s_mgos_mux);
   return;
 }
 
 struct mgos_rlock_type *mgos_rlock_create(void) {
-  LOG(LL_INFO, ("Not implemented yet"));
-  return NULL;
+  pthread_mutex_t *l = calloc(1, sizeof(pthread_mutex_t));
+
+  pthread_mutex_init(l, NULL);
+  return (struct mgos_rlock_type *)l;
 }
 
 void mgos_rlock(struct mgos_rlock_type *l) {
-  LOG(LL_INFO, ("Not implemented yet"));
+  if (!l) {
+    return;
+  }
+  pthread_mutex_lock((pthread_mutex_t *)l);
   return;
-
-  (void)l;
 }
 
 void mgos_runlock(struct mgos_rlock_type *l) {
-  LOG(LL_INFO, ("Not implemented yet"));
-  return;
+  if (!l) {
+    return;
+  }
 
-  (void)l;
+  pthread_mutex_unlock((pthread_mutex_t *)l);
+  return;
 }
 
 void mgos_rlock_destroy(struct mgos_rlock_type *l) {
-  LOG(LL_INFO, ("Not implemented yet"));
+  if (!l) {
+    return;
+  }
+  pthread_mutex_destroy((pthread_mutex_t *)l);
+  free(l);
   return;
-
-  (void)l;
 }
 
 size_t mgos_get_heap_size(void) {
