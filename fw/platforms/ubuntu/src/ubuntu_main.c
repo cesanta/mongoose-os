@@ -7,6 +7,7 @@
 #include "mgos_debug_internal.h"
 #include "mgos_mongoose_internal.h"
 #include "mgos_uart_internal.h"
+#include "mgos_net_hal.h"
 
 extern const char *build_version, *build_id;
 extern const char *mg_build_version, *mg_build_id;
@@ -54,6 +55,8 @@ enum mgos_init_result mongoose_init(void) {
   enum mgos_init_result r;
   int    cpu_freq;
   size_t heap_size, free_heap_size;
+  struct mgos_net_ip_info ipaddr;
+  char ip[INET_ADDRSTRLEN], netmask[INET_ADDRSTRLEN], gateway[INET_ADDRSTRLEN];
 
   r = mgos_uart_init();
   if (r != MGOS_INIT_OK) {
@@ -85,6 +88,12 @@ enum mgos_init_result mongoose_init(void) {
   heap_size      = mgos_get_heap_size();
   free_heap_size = mgos_get_free_heap_size();
   LOG(LL_INFO, ("CPU: %d MHz, heap: %lu total, %lu free", cpu_freq, heap_size, free_heap_size));
+
+  mgos_eth_dev_get_ip_info(0, &ipaddr);
+  inet_ntop(AF_INET, (void *)&ipaddr.gw.sin_addr, gateway, INET_ADDRSTRLEN);
+  inet_ntop(AF_INET, (void *)&ipaddr.ip.sin_addr, ip, INET_ADDRSTRLEN);
+  inet_ntop(AF_INET, (void *)&ipaddr.netmask.sin_addr, netmask, INET_ADDRSTRLEN);
+  LOG(LL_INFO, ("Network: ip=%s netmask=%s gateway=%s", ip, netmask, gateway));
 
   return mgos_init();
 }
