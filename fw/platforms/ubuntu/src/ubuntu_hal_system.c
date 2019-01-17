@@ -9,6 +9,14 @@
 #include "mgos_hal.h"
 #include "mgos_system.h"
 
+struct ubuntu_wdt {
+  bool           enabled;
+  int            timeout;
+  struct timeval last_feed;
+};
+
+static struct ubuntu_wdt s_mgos_wdt;
+
 static pthread_mutex_t s_mgos_mux = PTHREAD_MUTEX_INITIALIZER;
 
 void mgos_lock(void) {
@@ -104,24 +112,24 @@ size_t mgos_get_fs_memory_usage(void) {
  */
 
 void mgos_wdt_feed(void) {
-  LOG(LL_INFO, ("Not implemented yet"));
+  gettimeofday(&s_mgos_wdt.last_feed, NULL);
   return;
 }
 
 void mgos_wdt_set_timeout(int secs) {
-  LOG(LL_INFO, ("Not implemented yet"));
+  s_mgos_wdt.timeout = secs;
   return;
 
   (void)secs;
 }
 
 void mgos_wdt_enable(void) {
-  LOG(LL_INFO, ("Not implemented yet"));
+  s_mgos_wdt.enabled = true;
   return;
 }
 
 void mgos_wdt_disable(void) {
-  LOG(LL_INFO, ("Not implemented yet"));
+  s_mgos_wdt.enabled = false;
   return;
 }
 
