@@ -161,6 +161,36 @@ bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
 }
 
 uint32_t mgos_get_cpu_freq(void) {
-  LOG(LL_INFO, ("Not implemented yet"));
-  return 0;
+  int      fd = open("/proc/cpuinfo", O_RDONLY);
+  char *   p;
+  char     buf[2048];
+  ssize_t  len;
+  uint32_t freq = 0;
+
+  if (!fd) {
+    LOG(LL_ERROR, ("Cannot open /proc/cpuinfo"));
+    goto exit;
+  }
+  len = read(fd, buf, 2048);
+  p   = NULL;
+  while (len > 0 && !p) {
+    long mhz;
+
+    p  = strcasestr(buf, "cpu MHz");
+    p += 7;
+    while (*p && (isspace(*p) || *p == ':')) {
+      p++;
+    }
+    mhz = atol(p);
+    if (mhz > 0) {
+      freq = mhz * 1e6; goto exit;
+    }
+    len = read(fd, buf, 2048);
+  }
+
+exit:
+  if (fd > 0) {
+    close(fd);
+  }
+  return freq;
 }
