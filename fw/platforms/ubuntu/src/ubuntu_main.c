@@ -1,9 +1,3 @@
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <time.h>
-
 #include "mgos.h"
 #include "mgos_mongoose.h"
 #include "common/cs_dbg.h"
@@ -30,13 +24,8 @@ static void dummy_handler(struct mg_connection *nc, int ev, void *ev_data,
 }
 
 void mongoose_schedule_poll(bool from_isr) {
-  (void) from_isr;
   mg_broadcast(mgos_get_mgr(), dummy_handler, NULL, 0);
-}
-
-enum mgos_init_result mgos_sys_config_init_platform(struct mgos_config *cfg) {
-  cs_log_set_level(cfg->debug.level);
-  return MGOS_INIT_OK;
+  (void) from_isr;
 }
 
 void device_get_mac_address(uint8_t mac[6]) {
@@ -46,3 +35,8 @@ void device_get_mac_address(uint8_t mac[6]) {
     mac[i] = (double) rand() / RAND_MAX * 255;
   }
 }
+
+enum mgos_init_result mongoose_init(void) {
+  return true;
+}
+
