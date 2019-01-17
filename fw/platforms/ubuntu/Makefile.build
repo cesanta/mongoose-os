@@ -6,13 +6,15 @@ MAKEFLAGS += --warn-undefined-variables
 .DEFAULT_GOAL := all
 
 MGOS_PATH ?= ../../..
-VPATH = $(MGOS_VPATH) $(SRC_PATH)
+VPATH = $(MGOS_VPATH) $(SRC_PATH) $(PLATFORM_VPATH)
 include $(MGOS_PATH)/fw/common.mk
 
+APP_PATH := $(CURDIR)
 SRC_PATH ?= ../../src
+PLATFORM_VPATH ?= $(MGOS_PATH)/fw/platforms/$(BUILD_PLATFORM)/src
 BUILD_DIR ?= ./build
-BIN_DIR ?= $(BUILD_DIR)/bin
-GEN_DIR ?= $(BUILD_DIR)/gen
+BIN_DIR = build/bin
+GEN_DIR = $(BUILD_DIR)/gen
 APP ?= mongoose-os
 VERBOSE ?= 0
 SSL ?= None
@@ -25,6 +27,7 @@ MGOS_ENABLE_DEBUG_UDP = 0
 MGOS_ENABLE_BITBANG = 0
 MGOS_ENABLE_SYS_SERVICE = 0
 
+LINKER ?= gcc
 LDFLAGS ?=
 
 MGOS_POSIX_FEATURES ?= -DMGOS_PROMPT_DISABLE_ECHO -DMGOS_MAX_NUM_UARTS=2 \
@@ -45,13 +48,12 @@ MGOS_SRCS = $(notdir $(wildcard *.c)) mgos_init.c  \
             json_utils.c cs_rbuf.c mgos_uart.c \
             mgos_utils.c cs_file.c cs_crc32.c
 
+PLATFORM_SRCS = ubuntu_main.c
+
 # Need solution for these:
 #	    mgos_gpio.c mgos_vfs.c mgos_vfs_dev.c $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C))
 
-include $(MGOS_PATH)/fw/src/mgos_features.mk
 
-# inline causes crashes in the compacting GC
-# TODO(pim) figure out which functions are inline sensitive and annotate them
 CFLAGS_EXTRA =
 CFLAGS ?= -std=c99 -fno-inline -W -Wall -Wundef -Werror -g -Wno-unused-function \
           -Wno-missing-field-initializers \
@@ -63,42 +65,40 @@ CFLAGS ?= -std=c99 -fno-inline -W -Wall -Wundef -Werror -g -Wno-unused-function 
           $(CFLAGS_EXTRA)
 
 INCDIRS = $(addprefix -I,$(INCLUDES))
-LIBS = $(addprefix -l,$(ADD_LIBS))
-
-MGOS_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(MGOS_SRCS))
-APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SOURCES))
-OBJS = $(MGOS_OBJS) $(APP_OBJS) $(BUILD_DIR)/build_info.o
+LIBS  ?=
+LDLIBS = $(addprefix -l,$(LIBS))
 
 # Generated artifacts
 BUILD_INFO_C = $(GEN_DIR)/build_info.c
-BUILD_INFO_O = $(BUILD_DIR)/build_info.c.o
 BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
 MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
-MG_BUILD_INFO_O = $(BUILD_DIR)/mg_build_info.c.o
 MGOS_CONFIG_C = $(GEN_DIR)/mgos_config.c
 MGOS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/conf0.json
 MGOS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/mgos_config_schema.json
 MGOS_RO_VARS_C = $(GEN_DIR)/mgos_ro_vars.c
 MGOS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/mgos_ro_vars_schema.json
-GENFILES_FLAG = $(GEN_DIR)/genfiles.done
-GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
+GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C)
+GENFILES_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(GENFILES_LIST))
+
+PLATFORM_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(PLATFORM_SRCS))
+MGOS_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(MGOS_SRCS))
+APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SOURCES))
+OBJS = $(MGOS_OBJS) $(APP_OBJS) $(PLATFORM_OBJS) $(GENFILES_OBJS)
 
 .PHONY: all clean
 
-define compile
-$(vecho) "CC    $< -> $@"
-$(Q) $(CC_WRAPPER) $(CC) -MD $(INCDIRS) $(CFLAGS) $1 -c $< -o $@
-endef
-
-all: $(BIN_DIR) $(BUILD_DIR) $(GENFILES_FLAG) $(OBJS) deliverables
+all: $(BUILD_DIR) $(GENFILES_LIST) $(OBJS) $(BIN_DIR)/$(APP)
 
 include $(MGOS_PATH)/common/scripts/build_info.mk
 include $(MGOS_PATH)/fw/src/mgos_config.mk
+include $(MGOS_PATH)/fw/src/mgos_features.mk
+
 
 $(BIN_DIR) $(BUILD_DIR):
 	$(vecho) MKDIR $@
 	$(Q) mkdir -p $@
 
+# Mock to see what we need to output back to mos
 deliverables:
 	mkdir -p build/fw/ build/objs/
 	touch build/fw/empty-ubuntu-last
@@ -107,22 +107,21 @@ deliverables:
 	zip build/fw/empty-ubuntu-last.zip build/fw/empty-ubuntu-last build/objs/empty.elf
 
 $(OBJS): $(BUILD_DIR)/%.o : %.c
-	$(call compile,)
+	$(Q) mkdir -p $(shell dirname $(OBJS))
+	$(vecho) "CC    $< -> $@"
+	$(Q) $(CC_WRAPPER) $(CC) -MD $(INCDIRS) $(CFLAGS) -c $< -o $@
 
-# Common gathering point for all generated files.
-# Except build info, which is special because it depends on objects.
-$(GENFILES_FLAG): $(GENFILES_LIST)
-	$(Q) touch $@
+$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MGOS_OBJS)
+	$(call gen_build_info,$@,$(APP_PATH),$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
 
-# Generate build info. Only regenerates if there are changes in objects.
-$(BUILD_INFO_C): $(OBJS)
-	$(call gen_build_info,$@,,,,,$(BUILD_INFO_C),)
+$(MG_BUILD_INFO_C): $(MGOS_OBJS)
+	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
 
 -include $(wildcard $(BUILD_DIR)/*.d)
 
 $(BIN_DIR)/$(APP): $(BIN_DIR) $(OBJS)
-	@echo "LD $@"
-	$(Q) $(CC_WRAPPER) $(CC) $(OBJS) $(LIBS) $(LDFLAGS) -o $@
+	$(vecho) "LD    $@"
+	$(CC_WRAPPER) $(LINKER) $(OBJS) $(LDLIBS) $(LDFLAGS) -o $(BIN_DIR)/$(APP)
 
 clean:
 	$(Q) rm -rf $(BIN_DIR) $(BUILD_DIR)
