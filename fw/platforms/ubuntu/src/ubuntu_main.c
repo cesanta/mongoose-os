@@ -56,20 +56,20 @@ enum mgos_init_result mongoose_init(void) {
   size_t heap_size, free_heap_size;
 
   r = mgos_uart_init();
-  LOG(LL_ERROR, ("mgos_uart_init=%d", r));
   if (r != MGOS_INIT_OK) {
+    LOG(LL_ERROR, ("Failed to mgos_uart_init: %d", r));
     return r;
   }
 
   r = mgos_debug_init();
-  LOG(LL_ERROR, ("mgos_debug_init=%d", r));
   if (r != MGOS_INIT_OK) {
+    LOG(LL_ERROR, ("Failed to mgos_debug_init: %d", r));
     return r;
   }
 
   r = mgos_debug_uart_init();
-  LOG(LL_ERROR, ("mgos_debug_uart_init=%d", r));
   if (r != MGOS_INIT_OK) {
+    LOG(LL_ERROR, ("Failed to mgos_debug_uart_init: %d", r));
     return r;
   }
 
@@ -78,14 +78,12 @@ enum mgos_init_result mongoose_init(void) {
   setvbuf(stdout, NULL, _IOLBF, 256);
   setvbuf(stderr, NULL, _IOLBF, 256);
 
-  if (strcmp(MGOS_APP, "mongoose-os") != 0) {
-    LOG(LL_INFO, ("%s %s (%s)", MGOS_APP, build_version, build_id));
-  }
+  LOG(LL_INFO, ("Mongoose OS %s (%s)", mg_build_version, mg_build_id));
+  LOG(LL_INFO, ("%s %s (%s)", MGOS_APP, build_version, build_id));
 
   cpu_freq       = (int)(mgos_get_cpu_freq() / 1000000);
   heap_size      = mgos_get_heap_size();
   free_heap_size = mgos_get_free_heap_size();
-  LOG(LL_INFO, ("Mongoose OS %s (%s)", mg_build_version, mg_build_id));
   LOG(LL_INFO, ("CPU: %d MHz, heap: %lu total, %lu free", cpu_freq, heap_size, free_heap_size));
 
   return mgos_init();
