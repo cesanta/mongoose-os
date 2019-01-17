@@ -154,13 +154,17 @@ IRAM void mgos_clear_timer(mgos_timer_id id) {
 
 static void mgos_time_change_cb(int ev, void *evd, void *arg) {
   struct timer_data *td = (struct timer_data *) arg;
-  struct mgos_time_changed_arg *ev_data = (struct mgos_time_changed_arg *) evd;
+  const double delta = ((struct mgos_time_changed_arg *) evd)->delta;
   mgos_rlock(s_timer_data_lock);
   struct timer_info *ti;
   LIST_FOREACH(ti, &td->timers, entries) {
     /* 1547596800 is Wed Jan 16 00:00:00 UTC 2019 */
-    if(ti->next_invocation < 1547596800){
-      ti->next_invocation += ev_data->delta;
+    if(delta > 1547596800){
+      if(ti->next_invocation < 1547596800){
+        ti->next_invocation += delta;
+      }
+    }else{
+      ti->next_invocation += delta;
     }
   }
   mgos_runlock(s_timer_data_lock);
