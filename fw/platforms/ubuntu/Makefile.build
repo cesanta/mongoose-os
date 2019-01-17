@@ -125,7 +125,7 @@ $(MG_BUILD_INFO_C): $(MGOS_OBJS)
 
 $(BIN_DIR)/$(APP): $(BIN_DIR) $(OBJS)
 	$(vecho) "LD    $@"
-	$(CC_WRAPPER) $(LINKER) $(OBJS) $(LDLIBS) $(LDFLAGS) -o $(BIN_DIR)/$(APP)
+	$(Q) $(CC_WRAPPER) $(LINKER) $(OBJS) $(LDLIBS) $(LDFLAGS) -o $(BIN_DIR)/$(APP)
 
 clean:
 	$(Q) rm -rf $(BIN_DIR) $(BUILD_DIR)
