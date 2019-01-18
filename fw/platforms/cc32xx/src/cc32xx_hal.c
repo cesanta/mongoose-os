@@ -31,14 +31,6 @@
 #include "mgos_hal.h"
 #include "mgos_mongoose.h"
 
-/* TODO(rojer): make accurate to account for vTaskDelay inaccuracy */
-void mgos_usleep(uint32_t usecs) {
-  int ticks = usecs / (1000000 / configTICK_RATE_HZ);
-  int remainder = usecs % (1000000 / configTICK_RATE_HZ);
-  if (ticks > 0) vTaskDelay(ticks);
-  if (remainder > 0) MAP_UtilsDelay(remainder * (SYS_CLK / 1000000) / 3);
-}
-
 void mgos_msleep(uint32_t msecs) {
   mgos_usleep(msecs * 1000);
 }

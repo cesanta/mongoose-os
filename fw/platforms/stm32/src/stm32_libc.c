@@ -26,33 +26,17 @@
 
 #include "mgos_debug.h"
 #include "mgos_system.h"
+#include "mgos_time.h"
 
+#include "stm32_system.h"
 #include "stm32_uart_internal.h"
 
 #include <stm32_sdk_hal.h>
 
-/*
- * This will prevent counter wrap if time is read regularly.
- * At least Mongoose poll queries time, so we're covered.
- */
-static int64_t get_time64_micros(void) {
-  static uint32_t prev_time = 0;
-  static uint32_t num_overflows = 0;
-  mgos_ints_disable();
-  uint32_t time = xTaskGetTickCount();
-  int64_t time64 = time;
-  time64 *= (portTICK_PERIOD_MS * 1000);
-  if (prev_time > 0 && time < prev_time) num_overflows++;
-  time64 += (((uint64_t) num_overflows) * (1ULL << 32));
-  prev_time = time;
-  mgos_ints_enable();
-  return time64;
-}
-
 static int64_t sys_time_adj = 0;
 
 int _gettimeofday_r(struct _reent *r, struct timeval *tv, struct timezone *tz) {
-  int64_t time64 = get_time64_micros() + sys_time_adj;
+  int64_t time64 = mgos_uptime_micros() + sys_time_adj;
   tv->tv_sec = time64 / 1000000ULL;
   tv->tv_usec = time64 % 1000000ULL;
   return 0;
@@ -61,7 +45,7 @@ int _gettimeofday_r(struct _reent *r, struct timeval *tv, struct timezone *tz) {
 }
 
 int settimeofday(const struct timeval *tv, const struct timezone *tz) {
-  int64_t time64_cur = get_time64_micros();
+  int64_t time64_cur = mgos_uptime_micros();
   int64_t time64_new = tv->tv_sec * 1000000LL + tv->tv_usec;
   sys_time_adj = (time64_new - time64_cur);
   (void) tz;

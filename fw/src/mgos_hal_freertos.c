@@ -35,6 +35,7 @@
 #ifdef MGOS_HAVE_OTA_COMMON
 #include "mgos_ota.h"
 #endif
+#include "mgos_system.h"
 #include "mgos_uart_internal.h"
 #include "mgos_utils.h"
 
@@ -333,4 +334,55 @@ IRAM void mgos_rlock_destroy(struct mgos_rlock_type *l) {
   if (l == NULL) return;
   vSemaphoreDelete((SemaphoreHandle_t) l);
 }
+
+#if CS_PLATFORM == CS_P_ESP32
+
+IRAM int64_t mgos_uptime_micros(void) {
+  return (int64_t) esp_timer_get_time();
+}
+
+#else /* All the ARM cores have SYSTICK */
+
+#if defined(__arm__) || defined(__TI_COMPILER_VERSION__)
+#define SYSTICK_VAL (*((volatile uint32_t *) 0xe000e018))
+#define SYSTICK_RLD (*((volatile uint32_t *) 0xe000e014))
+#else
+#error Does not look like an ARM processor to me. Help!
+#endif
+
+#if CS_PLATFORM == CS_P_CC3200 || CS_PLATFORM == CS_P_CC3220
+#define SystemCoreClockMHZ (SYS_CLK / 1000000)
+#else
+extern uint32_t SystemCoreClockMHZ;
+#endif
+
+IRAM int64_t mgos_uptime_micros(void) {
+  static uint8_t num_overflows = 0;
+  static uint32_t prev_tc = 0;
+  uint32_t tc, frac;
+  do {
+    tc = xTaskGetTickCount();
+    frac = (SYSTICK_RLD - SYSTICK_VAL);
+    // If a tick happens in between, fraction calculation may be wrong.
+  } while (xTaskGetTickCount() != tc);
+  if (tc < prev_tc) num_overflows++;
+  prev_tc = tc;
+  return ((((int64_t) num_overflows) << 32) + tc) * portTICK_PERIOD_MS * 1000 +
+         (int64_t)(frac / SystemCoreClockMHZ);
+}
+
+#endif /* CS_P_ESP32 */
+
+IRAM void mgos_usleep(uint32_t usecs) {
+  if (usecs < (1000000 / configTICK_RATE_HZ)) {
+    (*mgos_nsleep100)(usecs * 10);
+  } else {
+    int64_t threshold = mgos_uptime_micros() + (int64_t) usecs;
+    int ticks = usecs / (1000000 / configTICK_RATE_HZ);
+    if (ticks > 0) vTaskDelay(ticks);
+    while (mgos_uptime_micros() < threshold) {
+    }
+  }
+}
+
 #endif /* MGOS_BOOT_BUILD */

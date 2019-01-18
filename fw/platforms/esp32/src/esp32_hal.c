@@ -58,14 +58,6 @@ void mgos_msleep(uint32_t msecs) {
   mgos_usleep(msecs * 1000);
 }
 
-IRAM void mgos_usleep(uint32_t usecs) {
-  uint64_t threshold = esp_timer_get_time() + (uint64_t) usecs;
-  int ticks = usecs / (1000000 / configTICK_RATE_HZ);
-  if (ticks > 0) vTaskDelay(ticks);
-  while (esp_timer_get_time() < threshold) {
-  }
-}
-
 void mgos_wdt_feed(void) {
   esp_task_wdt_reset();
 }

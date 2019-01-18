@@ -37,6 +37,9 @@ struct timezone;
 /* Get number of seconds since last reboot */
 double mgos_uptime(void);
 
+/* Get number of microseconds since last reboot */
+int64_t mgos_uptime_micros(void);
+
 /*
  * Format `time` according to a `strftime()`-conformant format.
  * Write the result into the `s,size` buffer. Return resulting string length.

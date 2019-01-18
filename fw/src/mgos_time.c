@@ -15,8 +15,6 @@
  * limitations under the License.
  */
 
-#include "mgos_time_internal.h"
-
 #include "mgos.h"
 #include "mgos_event.h"
 #include "mgos_hal.h"
@@ -24,26 +22,8 @@
 
 #include "common/queue.h"
 
-static double s_start_time = 0;
-
-static void time_change_cb(int ev, void *evd, void *arg) {
-  struct mgos_time_changed_arg *ev_data = (struct mgos_time_changed_arg *) evd;
-  mgos_lock();
-  s_start_time += ev_data->delta;
-  mgos_unlock();
-
-  (void) ev;
-  (void) arg;
-}
-
 double mgos_uptime(void) {
-  return mg_time() - s_start_time;
-}
-
-void mgos_uptime_init(void) {
-  s_start_time = mg_time();
-
-  mgos_event_add_handler(MGOS_EVENT_TIME_CHANGED, time_change_cb, NULL);
+  return mgos_uptime_micros() / 1000000.0;
 }
 
 int mgos_strftime(char *s, int size, char *fmt, int time) {

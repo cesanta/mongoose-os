@@ -17,6 +17,8 @@
 
 #pragma once
 
+#include <stdint.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -25,6 +27,8 @@ void stm32_system_init(void);
 void stm32_clock_config(void);
 void stm32_flush_caches(void);
 void stm32_set_int_handler(int irqn, void (*handler)(void));
+
+extern uint32_t SystemCoreClockMHZ;
 
 #ifdef __cplusplus
 }

@@ -71,26 +71,6 @@ void mgos_msleep(uint32_t msecs) {
 
 void HAL_Delay(__IO uint32_t ms) __attribute__((alias("mgos_msleep")));
 
-static void delay_cycles(unsigned long n) {
-  __asm(
-      "dcy: subs    %0, #1\n"
-      "     bne     dcy\n"
-      : /* output */
-      : /* input */ "r"(n)
-      : /* scratch */);
-}
-
-void mgos_usleep(uint32_t usecs) {
-#ifndef MGOS_BOOT_BUILD
-  int ticks = usecs / (1000000 / configTICK_RATE_HZ);
-  int remainder = usecs % (1000000 / configTICK_RATE_HZ);
-  if (ticks > 0) vTaskDelay(ticks);
-#else
-  uint32_t remainder = usecs;
-#endif
-  if (remainder > 0) delay_cycles(remainder * (SystemCoreClock / 1000000));
-}
-
 /* Note: PLL must be enabled for RNG to work */
 int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {
   RCC->AHB2ENR |= RCC_AHB2ENR_RNGEN;
