@@ -1,3 +1,4 @@
+#include <pthread.h>
 #include "mgos.h"
 #include "mgos_mongoose.h"
 #include "common/cs_dbg.h"
@@ -8,22 +9,56 @@
 #include "mgos_mongoose_internal.h"
 #include "mgos_uart_internal.h"
 #include "mgos_net_hal.h"
+#include "ubuntu.h"
 
 extern const char *build_version, *build_id;
 extern const char *mg_build_version, *mg_build_id;
 
-int main(int argc, char *argv[]) {
+static bool      mongoose_running = false;
+static pthread_t mongoose_thr;
+
+static void *ubuntu_mongoose(void *arg) {
   enum mgos_init_result r;
 
   r = mongoose_init();
   if (r != MGOS_INIT_OK) {
-    LOG(LL_ERROR, ("mongoose_init=%d (expecting %d), exiting", r, MGOS_INIT_OK));
-    return EXIT_FAILURE;
+    fprintf(stderr, "mongoose_init=%d (expecting %d), exiting\n", r, MGOS_INIT_OK);
+    return (void *)-1;
   }
-  for (;;) {
+
+  while (mongoose_running) {
     mongoose_poll(1000);
   }
-  return EXIT_SUCCESS;
+
+  return (void *)0;
+
+  (void)arg;
+}
+
+int main(int argc, char *argv[]) {
+  pthread_attr_t attr;
+
+  ubuntu_cap_init();
+
+  LOG(LL_INFO, ("Starting Watchdog thread"));
+  mongoose_running = true;
+  pthread_attr_init(&attr);
+  pthread_attr_setdetachstate(&attr, PTHREAD_CREATE_JOINABLE);
+  pthread_create(&mongoose_thr, &attr, ubuntu_mongoose, NULL);
+  pthread_attr_destroy(&attr);
+
+  mgos_wdt_enable();
+  mgos_wdt_feed();
+  while (mongoose_running) {
+    if (!ubuntu_wdt_ok()) {
+      LOG(LL_ERROR, ("Watchdog timeout -- stopping Mongoose"));
+      pthread_kill(mongoose_thr, 0);
+      break;
+    }
+    sleep(1);
+  }
+
+  return 0;
 
   (void)argc;
   (void)argv;

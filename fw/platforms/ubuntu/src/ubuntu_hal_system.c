@@ -111,6 +111,19 @@ size_t mgos_get_fs_memory_usage(void) {
  * }
  */
 
+bool ubuntu_wdt_ok(void) {
+  struct timeval now;
+
+  if (!s_mgos_wdt.enabled) {
+    return true;
+  }
+  gettimeofday(&now, NULL);
+  if (now.tv_sec > s_mgos_wdt.last_feed.tv_sec + s_mgos_wdt.timeout) {
+    return false;
+  }
+  return true;
+}
+
 void mgos_wdt_feed(void) {
   gettimeofday(&s_mgos_wdt.last_feed, NULL);
   return;

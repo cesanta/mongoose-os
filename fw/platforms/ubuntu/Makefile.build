@@ -35,7 +35,6 @@ MONGOOSE_FEATURES = \
   -DMG_ENABLE_HTTP_STREAMING_MULTIPART -DMG_DISABLE_DAV \
   -DMG_MODULE_LINES
 
-
 GEN_INCLUDES ?= $(GEN_DIR)
 INCLUDES = $(MGOS_IPATH) $(SRC_PATH) $(BUILD_DIR) $(APP_INCLUDES) $(GEN_INCLUDES)
 MGOS_SRCS = $(notdir $(wildcard *.c)) mgos_init.c  \
@@ -45,16 +44,7 @@ MGOS_SRCS = $(notdir $(wildcard *.c)) mgos_init.c  \
             json_utils.c cs_rbuf.c mgos_uart.c \
             mgos_utils.c cs_file.c cs_crc32.c
 
-PLATFORM_SRCS = ubuntu_hal.c ubuntu_hal_system.c \
-				ubuntu_hal_timers.c ubuntu_hal_uart.c \
-				ubuntu_hal_gpio.c ubuntu_gpio.c \
-				ubuntu_hal_net.c \
-				ubuntu_fs.c \
-				ubuntu_main.c
-
-# Need solution for these:
-#	    mgos_gpio.c mgos_vfs.c mgos_vfs_dev.c $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C))
-
+PLATFORM_SRCS = $(wildcard $(PLATFORM_VPATH)/*.c)
 
 CFLAGS_EXTRA =
 CFLAGS ?= -std=c99 -fno-inline -W -Wall -Wundef -Werror -g -Wno-unused-function \
@@ -69,7 +59,7 @@ CFLAGS ?= -std=c99 -fno-inline -W -Wall -Wundef -Werror -g -Wno-unused-function 
 INCDIRS = $(addprefix -I,$(INCLUDES))
 LINKER ?= gcc
 LDFLAGS ?=
-LIBS  ?= pthread
+LIBS  ?= pthread cap
 LDLIBS = $(addprefix -l,$(LIBS))
 
 # Generated artifacts
