@@ -8,12 +8,15 @@
 #include "mgos_mongoose_internal.h"
 #include "mgos_uart_internal.h"
 #include "mgos_net_hal.h"
+#include "ubuntu.h"
 
 extern const char *build_version, *build_id;
 extern const char *mg_build_version, *mg_build_id;
 
 int main(int argc, char *argv[]) {
   enum mgos_init_result r;
+
+  ubuntu_set_boottime();
 
   r = mongoose_init();
   if (r != MGOS_INIT_OK) {
