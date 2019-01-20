@@ -67,10 +67,12 @@ CFLAGS ?= -std=c99 -fno-inline -W -Wall -Wundef -Werror -g -Wno-unused-function 
           $(CFLAGS_EXTRA)
 
 INCDIRS = $(addprefix -I,$(INCLUDES))
+AR ?= ar
 LINKER ?= gcc
 LDFLAGS ?=
 LIBS  ?= pthread
 LDLIBS = $(addprefix -l,$(LIBS))
+BUILD_LIB_NAME ?= lib.a
 
 # Generated artifacts
 BUILD_INFO_C = $(GEN_DIR)/build_info.c
@@ -81,13 +83,15 @@ MGOS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/conf0.json
 MGOS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/mgos_config_schema.json
 MGOS_RO_VARS_C = $(GEN_DIR)/mgos_ro_vars.c
 MGOS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/mgos_ro_vars_schema.json
-GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C)
+GENFILES_LIB_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
+GENFILES_LIST = $(GENFILES_LIB_LIST) $(BUILD_INFO_C) $(MG_BUILD_INFO_C)
 GENFILES_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(GENFILES_LIST))
 
 PLATFORM_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(PLATFORM_SRCS))
 MGOS_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(MGOS_SRCS))
 APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SOURCES))
 OBJS = $(MGOS_OBJS) $(APP_OBJS) $(PLATFORM_OBJS) $(GENFILES_OBJS)
+LIB_OBJS = $(GENFILES_LIB_OBJS) $(APP_OBJS)
 
 .PHONY: all clean
 
@@ -109,6 +113,11 @@ deliverables:
 	touch build/objs/empty.elf
 	rm -f build/fw/empty-ubuntu-last.zip
 	zip build/fw/empty-ubuntu-last.zip build/fw/empty-ubuntu-last build/objs/empty.elf
+
+# lib.a, used during lib release build.
+$(BUILD_DIR)/$(BUILD_LIB_NAME): $(BUILD_DIR) $(GENFILES_LIB_LIST) $(APP_OBJS)
+	$(vecho) "AR    $@"
+	$(Q) $(AR) cr $@ $(APP_OBJS)
 
 $(OBJS): $(BUILD_DIR)/%.o : %.c
 	$(Q) mkdir -p $(shell dirname $(OBJS))
