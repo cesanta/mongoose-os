@@ -1,3 +1,19 @@
+/*
+ * Copyright 2019 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #pragma once
 
 // This is a public header that (system) libraries can use to send IPC
@@ -11,14 +27,13 @@
 // Usage:
 // #include "ubuntu_ipc.h"
 //
-// char in[] = "Hello World!";
-// char out[100];
-// size_t len;
-//
-// ubuntu_ipc_cmd(UBUNTU_CMD_PING, in, sizeof(in), out, sizeof(out), &len);
-// LOG(LL_INFO, ("Sent: cmd=%u len=%lu msg='%.*s'", UBUNTU_CMD_PING, sizeof(in), (int)sizeof(in), in));
-// LOG(LL_INFO, ("Received: cmd=%u len=%lu msg='%.*s'", UBUNTU_CMD_PING, len, (int)len, out));
-//
+//  struct ubuntu_pipe_message out, in;
+//  out.cmd=UBUNTU_CMD_PING;
+//  out.len=4;
+//  memcpy(&out.data, "PING", out.len);
+//  ubuntu_ipc_cmd(&out, &in);
+//  LOG(LL_INFO, ("Sent: cmd=%u len=%u msg='%.*s'", out.cmd, out.len, (int)out.len, out.data));
+//  LOG(LL_INFO, ("Received: cmd=%u len=%u msg='%.*s'", in.cmd, in.len, (int)in.len, in.data));
 
 #include "mgos.h"
 
