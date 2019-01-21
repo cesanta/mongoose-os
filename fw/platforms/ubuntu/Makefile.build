@@ -30,6 +30,7 @@ MGOS_ENABLE_SYS_SERVICE = 0
 MGOS_POSIX_FEATURES ?= -DMGOS_PROMPT_DISABLE_ECHO -DMGOS_MAX_NUM_UARTS=2 \
                        -DMGOS_HAVE_ETHERNET \
                        -DMGOS_NUM_HW_TIMERS=0
+
 MONGOOSE_FEATURES = \
   -DMG_USE_READ_WRITE -DMG_ENABLE_THREADS -DMG_ENABLE_THREADS \
   -DMG_ENABLE_HTTP_STREAMING_MULTIPART -DMG_DISABLE_DAV \
@@ -88,26 +89,28 @@ APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SOURCES))
 OBJS = $(MGOS_OBJS) $(APP_OBJS) $(PLATFORM_OBJS) $(GENFILES_OBJS)
 LIB_OBJS = $(GENFILES_LIB_OBJS) $(APP_OBJS)
 
+# Files
+FS_STAGING_DIR ?= $(BUILD_DIR)/fs
+FS_FILES += $(foreach m,$(APP_FS_FILES),$(wildcard $(m)))
+
 .PHONY: all clean
 
-all: $(BUILD_DIR) $(GENFILES_LIST) $(OBJS) $(BIN_DIR)/$(APP)
+all: $(BUILD_DIR) $(GENFILES_LIST) $(OBJS) $(BIN_DIR)/$(APP) $(FS_STAGING_DIR)
 
 include $(MGOS_PATH)/common/scripts/build_info.mk
 include $(MGOS_PATH)/fw/src/mgos_config.mk
 include $(MGOS_PATH)/fw/src/mgos_features.mk
 
-
 $(BIN_DIR) $(BUILD_DIR):
 	$(vecho) MKDIR $@
 	$(Q) mkdir -p $@
 
-# Mock to see what we need to output back to mos
-deliverables:
-	mkdir -p build/fw/ build/objs/
-	touch build/fw/empty-ubuntu-last
-	touch build/objs/empty.elf
-	rm -f build/fw/empty-ubuntu-last.zip
-	zip build/fw/empty-ubuntu-last.zip build/fw/empty-ubuntu-last build/objs/empty.elf
+$(FS_STAGING_DIR): $(MGOS_CONFIG_DEFAULTS_JSON)
+	$(vecho) "MKDIR $@"
+	$(Q) mkdir -p $@
+	$(Q) $(foreach f,$(shell echo $(FS_FILES) | tr ' ' '\n' | sort | uniq), \
+		echo "  CP    $(f) -> $(FS_STAGING_DIR)"; \
+		cp $(f) $(FS_STAGING_DIR);)
 
 # lib.a, used during lib release build.
 $(BUILD_DIR)/$(BUILD_LIB_NAME): $(BUILD_DIR) $(GENFILES_LIB_LIST) $(APP_OBJS)
