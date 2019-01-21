@@ -37,7 +37,7 @@ MONGOOSE_FEATURES = \
 
 
 GEN_INCLUDES ?= $(GEN_DIR)
-INCLUDES = $(MGOS_IPATH) $(SRC_PATH) $(BUILD_DIR) $(APP_INCLUDES) $(GEN_INCLUDES)
+INCLUDES = $(MGOS_IPATH) $(SRC_PATH) $(BUILD_DIR) $(APP_INCLUDES) $(GEN_INCLUDES) $(PLATFORM_VPATH)
 MGOS_SRCS = $(notdir $(wildcard *.c)) mgos_init.c  \
             frozen.c mgos_event.c \
             mgos_system.c mgos_time.c mgos_timers.c \
@@ -45,12 +45,7 @@ MGOS_SRCS = $(notdir $(wildcard *.c)) mgos_init.c  \
             json_utils.c cs_rbuf.c mgos_uart.c \
             mgos_utils.c cs_file.c cs_crc32.c
 
-PLATFORM_SRCS = ubuntu_hal.c ubuntu_hal_system.c \
-				ubuntu_hal_timers.c ubuntu_hal_uart.c \
-				ubuntu_hal_gpio.c ubuntu_gpio.c \
-				ubuntu_hal_net.c \
-				ubuntu_fs.c \
-				ubuntu_main.c
+PLATFORM_SRCS = $(wildcard $(PLATFORM_VPATH)/*.c)
 
 # Need solution for these:
 #	    mgos_gpio.c mgos_vfs.c mgos_vfs_dev.c $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C))
