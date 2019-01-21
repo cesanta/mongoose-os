@@ -24,10 +24,11 @@
 #include "mgos.h"
 #include "mgos_hal.h"
 #include "mgos_system.h"
+#include "ubuntu_ipc.h"
 
 struct ubuntu_wdt {
-  bool enabled;
-  int timeout;
+  bool           enabled;
+  int            timeout;
   struct timeval last_feed;
 };
 
@@ -49,14 +50,14 @@ struct mgos_rlock_type *mgos_rlock_create(void) {
   pthread_mutex_t *l = calloc(1, sizeof(pthread_mutex_t));
 
   pthread_mutex_init(l, NULL);
-  return (struct mgos_rlock_type *) l;
+  return (struct mgos_rlock_type *)l;
 }
 
 void mgos_rlock(struct mgos_rlock_type *l) {
   if (!l) {
     return;
   }
-  pthread_mutex_lock((pthread_mutex_t *) l);
+  pthread_mutex_lock((pthread_mutex_t *)l);
   return;
 }
 
@@ -65,7 +66,7 @@ void mgos_runlock(struct mgos_rlock_type *l) {
     return;
   }
 
-  pthread_mutex_unlock((pthread_mutex_t *) l);
+  pthread_mutex_unlock((pthread_mutex_t *)l);
   return;
 }
 
@@ -73,7 +74,7 @@ void mgos_rlock_destroy(struct mgos_rlock_type *l) {
   if (!l) {
     return;
   }
-  pthread_mutex_destroy((pthread_mutex_t *) l);
+  pthread_mutex_destroy((pthread_mutex_t *)l);
   free(l);
   return;
 }
@@ -81,7 +82,7 @@ void mgos_rlock_destroy(struct mgos_rlock_type *l) {
 size_t mgos_get_heap_size(void) {
   long s, ps;
 
-  s = sysconf(_SC_PHYS_PAGES);
+  s  = sysconf(_SC_PHYS_PAGES);
   ps = sysconf(_SC_PAGESIZE);
   return s * ps;
 }
@@ -89,7 +90,7 @@ size_t mgos_get_heap_size(void) {
 size_t mgos_get_free_heap_size(void) {
   long s, ps;
 
-  s = sysconf(_SC_AVPHYS_PAGES);
+  s  = sysconf(_SC_AVPHYS_PAGES);
   ps = sysconf(_SC_PAGESIZE);
   return s * ps;
 }
@@ -127,25 +128,81 @@ size_t mgos_get_fs_memory_usage(void) {
  * }
  */
 
-void mgos_wdt_feed(void) {
+bool ubuntu_wdt_ok(void) {
+  struct timeval now;
+
+  if (!s_mgos_wdt.enabled) {
+    return true;
+  }
+
+  gettimeofday(&now, NULL);
+  return now.tv_sec < s_mgos_wdt.last_feed.tv_sec + s_mgos_wdt.timeout;
+}
+
+bool ubuntu_wdt_feed(void) {
+//  printf("Feeding watchdog\n");
   gettimeofday(&s_mgos_wdt.last_feed, NULL);
+  return true;
+}
+
+bool ubuntu_wdt_enable(void) {
+//  printf("Enabling WDT\n");
+  s_mgos_wdt.enabled = true;
+  return true;
+}
+
+bool ubuntu_wdt_disable(void) {
+//  printf("Disabling WDT\n");
+  s_mgos_wdt.enabled = false;
+  return true;
+}
+
+void ubuntu_wdt_set_timeout(int secs) {
+//  printf("Setting WDT timeout to %d secs\n", secs);
+  s_mgos_wdt.timeout = secs;
   return;
 }
 
 void mgos_wdt_set_timeout(int secs) {
-  s_mgos_wdt.timeout = secs;
-  return;
+  struct ubuntu_pipe_message out, in;
 
-  (void) secs;
+  mgos_wdt_feed();
+
+  out.cmd = UBUNTU_CMD_WDT_TIMEOUT;
+  out.len = sizeof(int);
+  memcpy(&out.data, &secs, out.len);
+  ubuntu_ipc_cmd(&out, &in);
+
+  mgos_wdt_enable();
+  return;
+}
+
+void mgos_wdt_feed(void) {
+  struct ubuntu_pipe_message out, in;
+
+  out.cmd = UBUNTU_CMD_WDT;
+  out.len = 0;
+  ubuntu_ipc_cmd(&out, &in);
+  return;
 }
 
 void mgos_wdt_enable(void) {
-  s_mgos_wdt.enabled = true;
+  struct ubuntu_pipe_message out, in;
+
+  mgos_wdt_feed();
+
+  out.cmd = UBUNTU_CMD_WDT_EN;
+  out.len = 0;
+  ubuntu_ipc_cmd(&out, &in);
   return;
 }
 
 void mgos_wdt_disable(void) {
-  s_mgos_wdt.enabled = false;
+  struct ubuntu_pipe_message out, in;
+
+  out.cmd = UBUNTU_CMD_WDT_DIS;
+  out.len = 0;
+  ubuntu_ipc_cmd(&out, &in);
   return;
 }
 
@@ -179,16 +236,16 @@ bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
   // LOG(LL_INFO, ("Not implemented"));
   return true;
 
-  (void) cb;
-  (void) arg;
-  (void) from_isr;
+  (void)cb;
+  (void)arg;
+  (void)from_isr;
 }
 
 uint32_t mgos_get_cpu_freq(void) {
-  int fd = open("/proc/cpuinfo", O_RDONLY);
-  char *p;
-  char buf[2048];
-  ssize_t len;
+  int      fd = open("/proc/cpuinfo", O_RDONLY);
+  char *   p;
+  char     buf[2048];
+  ssize_t  len;
   uint32_t freq = 0;
 
   if (!fd) {
@@ -196,11 +253,11 @@ uint32_t mgos_get_cpu_freq(void) {
     goto exit;
   }
   len = read(fd, buf, 2048);
-  p = NULL;
+  p   = NULL;
   while (len > 0 && !p) {
     long mhz;
 
-    p = strcasestr(buf, "cpu MHz");
+    p  = strcasestr(buf, "cpu MHz");
     p += 7;
     while (*p && (isspace(*p) || *p == ':')) {
       p++;

@@ -21,3 +21,27 @@
 
 bool ubuntu_set_boottime(void);
 
+// Create a socketpair
+bool ubuntu_ipc_init(void);
+
+// Initialize the socketpair in main
+bool ubuntu_ipc_init_main(void);
+
+// Initialize the socketpair in mongoose
+bool ubuntu_ipc_init_mongoose(void);
+
+// Handle incoming IPC requests from mongoose to main.
+bool ubuntu_ipc_handle(uint16_t timeout_ms);
+
+// Destroy the socketpair in main
+bool ubuntu_ipc_destroy_main(void);
+
+// Destroy the socketpair in mongoose
+bool ubuntu_ipc_destroy_mongoose(void);
+
+// The Ubuntu side of the watchdog
+bool ubuntu_wdt_ok(void);
+bool ubuntu_wdt_feed(void);
+bool ubuntu_wdt_enable(void);
+bool ubuntu_wdt_disable(void);
+void ubuntu_wdt_set_timeout(int secs);
