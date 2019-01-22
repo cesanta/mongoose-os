@@ -119,15 +119,15 @@ $(BUILD_DIR)/$(BUILD_LIB_NAME): $(BUILD_DIR) $(GENFILES_LIB_LIST) $(APP_OBJS)
 	$(vecho) "AR    $@"
 	$(Q) $(AR) cr $@ $(APP_OBJS)
 
-$(OBJS): $(BUILD_DIR)/%.o : %.c
+$(OBJS): $(BUILD_DIR)/%.o : %.c $(GENFILES_LIST)
 	$(Q) mkdir -p $(shell dirname $(OBJS))
 	$(vecho) "CC    $< -> $@"
 	$(Q) $(CC_WRAPPER) $(CC) -MD $(INCDIRS) $(CFLAGS) -c $< -o $@
 
-$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MGOS_OBJS)
+$(BUILD_INFO_C) $(BUILD_INFO_JSON):
 	$(call gen_build_info,$@,$(APP_PATH),$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
 
-$(MG_BUILD_INFO_C): $(MGOS_OBJS)
+$(MG_BUILD_INFO_C):
 	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
 
 -include $(wildcard $(BUILD_DIR)/*.d)
