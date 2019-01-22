@@ -83,6 +83,8 @@ GENFILES_LIB_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
 GENFILES_LIST = $(GENFILES_LIB_LIST) $(BUILD_INFO_C) $(MG_BUILD_INFO_C)
 GENFILES_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(GENFILES_LIST))
 
+MGOS_CONF_SCHEMA += $(PLATFORM_VPATH)/ubuntu_sys_config.yaml
+
 PLATFORM_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(PLATFORM_SRCS))
 MGOS_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(MGOS_SRCS))
 APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SOURCES))
