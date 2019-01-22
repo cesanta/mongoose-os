@@ -7,7 +7,6 @@ MAKEFLAGS += --warn-undefined-variables
 
 MGOS_PATH ?= ../../..
 VPATH = $(MGOS_VPATH) $(SRC_PATH) $(PLATFORM_VPATH)
-include $(MGOS_PATH)/fw/common.mk
 
 APP_PATH := $(CURDIR)
 SRC_PATH ?= ../../src
@@ -48,10 +47,6 @@ MGOS_SRCS = $(notdir $(wildcard *.c)) mgos_init.c  \
 
 PLATFORM_SRCS = $(wildcard $(PLATFORM_VPATH)/*.c)
 
-# Need solution for these:
-#	    mgos_gpio.c mgos_vfs.c mgos_vfs_dev.c $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C))
-
-
 CFLAGS_EXTRA =
 CFLAGS ?= -std=c99 -fno-inline -W -Wall -Wundef -Werror -g -Wno-unused-function \
           -Wno-missing-field-initializers \
@@ -79,8 +74,7 @@ MGOS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/conf0.json
 MGOS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/mgos_config_schema.json
 MGOS_RO_VARS_C = $(GEN_DIR)/mgos_ro_vars.c
 MGOS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/mgos_ro_vars_schema.json
-GENFILES_LIB_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
-GENFILES_LIST = $(GENFILES_LIB_LIST) $(BUILD_INFO_C) $(MG_BUILD_INFO_C)
+GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C)
 GENFILES_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(GENFILES_LIST))
 
 MGOS_CONF_SCHEMA += $(PLATFORM_VPATH)/ubuntu_sys_config.yaml
@@ -89,7 +83,6 @@ PLATFORM_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(PLATFORM_SRCS))
 MGOS_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(MGOS_SRCS))
 APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SOURCES))
 OBJS = $(MGOS_OBJS) $(APP_OBJS) $(PLATFORM_OBJS) $(GENFILES_OBJS)
-LIB_OBJS = $(GENFILES_LIB_OBJS) $(APP_OBJS)
 
 # Files
 FS_STAGING_DIR ?= $(BUILD_DIR)/fs
@@ -99,14 +92,24 @@ FS_FILES += $(foreach m,$(APP_FS_FILES),$(wildcard $(m)))
 
 all: $(BUILD_DIR) $(GENFILES_LIST) $(OBJS) $(BIN_DIR)/$(APP) $(FS_STAGING_DIR)
 
+include $(MGOS_PATH)/fw/common.mk
 include $(MGOS_PATH)/common/scripts/build_info.mk
 include $(MGOS_PATH)/fw/src/mgos_config.mk
 include $(MGOS_PATH)/fw/src/mgos_features.mk
 
+# Directories
 $(BIN_DIR) $(BUILD_DIR):
 	$(vecho) MKDIR $@
 	$(Q) mkdir -p $@
 
+# Generated files
+$(BUILD_INFO_C) $(BUILD_INFO_JSON):
+	$(call gen_build_info,$@,$(APP_PATH),$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
+
+$(MG_BUILD_INFO_C):
+	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
+
+# Output filesystem directory
 $(FS_STAGING_DIR): $(MGOS_CONFIG_DEFAULTS_JSON)
 	$(vecho) "MKDIR $@"
 	$(Q) mkdir -p $@
@@ -114,24 +117,19 @@ $(FS_STAGING_DIR): $(MGOS_CONFIG_DEFAULTS_JSON)
 		echo "  CP    $(f) -> $(FS_STAGING_DIR)"; \
 		cp $(f) $(FS_STAGING_DIR);)
 
-# lib.a, used during lib release build.
-$(BUILD_DIR)/$(BUILD_LIB_NAME): $(BUILD_DIR) $(GENFILES_LIB_LIST) $(APP_OBJS)
-	$(vecho) "AR    $@"
-	$(Q) $(AR) cr $@ $(APP_OBJS)
-
+# Objects of all sorts
+-include $(wildcard $(BUILD_DIR)/*.d)
 $(OBJS): $(BUILD_DIR)/%.o : %.c $(GENFILES_LIST)
 	$(Q) mkdir -p $(shell dirname $(OBJS))
 	$(vecho) "CC    $< -> $@"
 	$(Q) $(CC_WRAPPER) $(CC) -MD $(INCDIRS) $(CFLAGS) -c $< -o $@
 
-$(BUILD_INFO_C) $(BUILD_INFO_JSON):
-	$(call gen_build_info,$@,$(APP_PATH),$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
+# lib.a, used during lib release build
+$(BUILD_DIR)/$(BUILD_LIB_NAME): $(BUILD_DIR) $(GENFILES_LIST) $(APP_OBJS)
+	$(vecho) "AR    $@"
+	$(Q) $(AR) cr $@ $(APP_OBJS)
 
-$(MG_BUILD_INFO_C):
-	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
-
--include $(wildcard $(BUILD_DIR)/*.d)
-
+# Application target.
 $(BIN_DIR)/$(APP): $(BIN_DIR) $(OBJS)
 	$(vecho) "LD    $@"
 	$(Q) $(CC_WRAPPER) $(LINKER) $(OBJS) $(LDLIBS) $(LDFLAGS) -o $(BIN_DIR)/$(APP)
