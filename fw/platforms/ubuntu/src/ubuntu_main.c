@@ -43,7 +43,6 @@ static int ubuntu_mongoose(void) {
     return -1;
   }
   mongoose_running = true;
-  mgos_wdt_set_timeout(30);
   while (mongoose_running) {
     mongoose_poll(1000);
   }
