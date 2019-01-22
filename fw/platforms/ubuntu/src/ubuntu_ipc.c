@@ -25,21 +25,33 @@ static struct ubuntu_pipe s_pipe;
 // Send a message (cmd, and inlen bytes) to the privileged (main) thread,
 // then read back response and return it in *out, and the message length in *len.
 bool ubuntu_ipc_cmd(const struct ubuntu_pipe_message *in, struct ubuntu_pipe_message *out) {
-  size_t _len;
-  bool   ret = false;
+  size_t        _len;
+  bool          ret = false;
+  struct msghdr msg;
+  struct iovec  iov[1];
 
   if (!in || !out) {
     return false;
   }
 
+  memset(&msg, 0, sizeof(struct msghdr));
+  iov[0].iov_base = (void *)in;
+  iov[0].iov_len  = in->len + 2;
+  msg.msg_iov     = iov;
+  msg.msg_iovlen  = 1;
+
   mgos_rlock(s_pipe.lock);
-  _len = write(s_pipe.mongoose_fd, in, in->len + 2);
+  _len = sendmsg(s_pipe.mongoose_fd, &msg, 0);
   if (_len < 2) {
     LOG(LL_ERROR, ("Cannot write message"));
     goto exit;
   }
 
-  _len = read(s_pipe.mongoose_fd, out, sizeof(struct ubuntu_pipe_message));
+  iov[0].iov_base = (void *)out;
+  iov[0].iov_len  = sizeof(struct ubuntu_pipe_message);
+  msg.msg_iov     = iov;
+  msg.msg_iovlen  = 1;
+  _len            = recvmsg(s_pipe.mongoose_fd, &msg, 0);
   if (_len < 2) {
     LOG(LL_ERROR, ("Cannot read message"));
     goto exit;
@@ -74,7 +86,9 @@ bool ubuntu_ipc_handle(uint16_t timeout_ms) {
   struct timeval             tv;
   int                        retval;
   size_t                     _len;
-  struct ubuntu_pipe_message in_msg, out_msg;
+  struct msghdr              msg;
+  struct iovec               iov[1];
+  struct ubuntu_pipe_message iovec_payload;
 
   FD_ZERO(&rfds);
   FD_SET(s_pipe.main_fd, &rfds);
@@ -92,20 +106,22 @@ bool ubuntu_ipc_handle(uint16_t timeout_ms) {
     return true;
   }
 
-  memset(&in_msg, 0, sizeof(struct ubuntu_pipe_message));
-  memset(&out_msg, 0, sizeof(struct ubuntu_pipe_message));
+  memset(&msg, 0, sizeof(struct msghdr));
+  iov[0].iov_base = (void *)&iovec_payload;
+  iov[0].iov_len  = sizeof(struct ubuntu_pipe_message);
+  msg.msg_iov     = iov;
+  msg.msg_iovlen  = 1;
 
-  _len = read(s_pipe.main_fd, &in_msg, sizeof(struct ubuntu_pipe_message));
+  _len = recvmsg(s_pipe.main_fd, &msg, 0);
   if (_len < 2) {
     perror("Cannot read message\n");
     return false;
   }
-  // printf("Received: cmd=%d len=%u msg='%.*s'\n", in_msg.cmd, in_msg.len, (int)in_msg.len, (char *)in_msg.data);
+  // printf("Received: cmd=%d len=%u msg='%.*s'\n", iovec_payload.cmd, iovec_payload.len, (int)iovec_payload.len, (char *)iovec_payload.data);
 
-  out_msg.cmd = in_msg.cmd;
-  out_msg.len = 0;
+  iovec_payload.len = 0;
   // Handle command
-  switch (in_msg.cmd) {
+  switch (iovec_payload.cmd) {
   case UBUNTU_CMD_WDT:
     ubuntu_wdt_feed();
     break;
@@ -120,27 +136,33 @@ bool ubuntu_ipc_handle(uint16_t timeout_ms) {
 
   case UBUNTU_CMD_WDT_TIMEOUT: {
     int secs;
-    memcpy(&secs, &in_msg.data, sizeof(int));
+    memcpy(&secs, &iovec_payload.data, sizeof(int));
     ubuntu_wdt_set_timeout(secs);
     break;
   }
 
   case UBUNTU_CMD_OPEN:
-    ubuntu_ipc_handle_open(&in_msg, &out_msg);
+    ubuntu_ipc_handle_open(&iovec_payload, &iovec_payload);
+    // TODO(pim): Add control message here, see Stevens Unix Network
+    // Programming page 428 functions Write_fd() and Read_fd()
     break;
 
   case UBUNTU_CMD_PING:
   default:
-    out_msg.len = 5;
-    memcpy(&out_msg.data, "PONG!", out_msg.len);
+    iovec_payload.len = 5;
+    memcpy(&iovec_payload.data, "PONG!", iovec_payload.len);
   }
 
-  _len = write(s_pipe.main_fd, &out_msg, out_msg.len + 2);
+  iov[0].iov_base = (void *)&iovec_payload;
+  iov[0].iov_len  = iovec_payload.len + 2;
+  msg.msg_iov     = iov;
+  msg.msg_iovlen  = 1;
+  _len            = sendmsg(s_pipe.main_fd, &msg, 0);
   if (_len < 2) {
     perror("Cannot write message data\n");
     return false;
   }
-//  printf("Sent: cmd=%d len=%u msg='%.*s'\n", out_msg.cmd, out_msg.len, (int)out_msg.len, (char *)out_msg.data);
+//  printf("Sent: cmd=%d len=%u msg='%.*s'\n", iovec_payload.cmd, iovec_payload.len, (int)iovec_payload.len, (char *)iovec_payload.data);
   return true;
 }
 
