@@ -59,7 +59,7 @@ bool ubuntu_ipc_handle(uint16_t timeout_ms) {
 //  printf("Selecting for %u ms\n", timeout_ms);
   retval = select(FD_SETSIZE, &rfds, NULL, NULL, &tv);
   if (retval < 0) {
-    perror("Cannot not select\n");
+    perror("Cannot not select");
     return false;
   } else if (retval == 0) {
 //    printf("No data within %u ms\n", timeout_ms);
@@ -74,8 +74,7 @@ bool ubuntu_ipc_handle(uint16_t timeout_ms) {
   msg.msg_iovlen  = 1;
 
   _len = recvmsg(s_pipe.main_fd, &msg, 0);
-  if (_len < 2) {
-    perror("Cannot read message\n");
+  if (_len <= 0) {
     return false;
   }
   // printf("Received: cmd=%d len=%u msg='%.*s'\n", iovec_payload.cmd, iovec_payload.len, (int)iovec_payload.len, (char *)iovec_payload.data);
@@ -141,8 +140,7 @@ bool ubuntu_ipc_handle(uint16_t timeout_ms) {
   msg.msg_iov     = iov;
   msg.msg_iovlen  = 1;
   _len            = sendmsg(s_pipe.main_fd, &msg, 0);
-  if (_len < 2) {
-    perror("Cannot write message data\n");
+  if (_len <= 0) {
     return false;
   }
   if (fd > 0) {

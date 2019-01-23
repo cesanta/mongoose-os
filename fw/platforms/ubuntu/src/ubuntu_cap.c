@@ -1,9 +1,12 @@
 #include <sys/capability.h>
+#include <sys/stat.h>
 #include "mgos.h"
 #include "ubuntu.h"
 
 // Note: Requires libcap-dev to be installed.
 //
+extern struct ubuntu_flags Flags;
+
 static bool ubuntu_cap_have(cap_value_t c) {
   cap_t            cap;
   pid_t            pid;
@@ -22,24 +25,49 @@ static bool ubuntu_cap_have(cap_value_t c) {
 
 bool ubuntu_cap_init(void) {
   if (!ubuntu_cap_have(CAP_NET_BIND_SERVICE)) {
-    LOG(LL_ERROR, ("Lacking capability to bind ports <1024!"));
+    printf("WARNING: Lacking capability to bind ports <1024, continuing anyway\n");
   }
+
+  if (Flags.secure) {
+    struct stat s;
+    char        conf_fn[200];
+    if (!ubuntu_cap_have(CAP_SYS_CHROOT)) {
+      printf("Cannot chroot(), but secure mode is requested.\n");
+      return false;
+    }
+    if (0 != chdir(Flags.chroot)) {
+      printf("Cannot change directory %s\n", Flags.chroot);
+      return false;
+    }
+
+    snprintf(conf_fn, sizeof(conf_fn), "%s/conf0.json", Flags.chroot);
+    if (0 != stat(conf_fn, &s)) {
+      printf("Cannot stat %s\n", conf_fn);
+      return false;
+    }
+
+    if (0 != chroot(Flags.chroot)) {
+      printf("Cannot chroot to %s\n", Flags.chroot);
+      return false;
+    }
+    printf("ubuntu_cap_init: Changed root to %s\n", Flags.chroot);
+    chdir("/");
+  }
+
+  if ((Flags.gid != getgid()) && 0 != setgid(Flags.gid)) {
+    printf("Cannot setgid to %d.\n", Flags.gid);
+    return false;
+  }
+
+  if ((Flags.uid != getuid()) && 0 != setuid(Flags.uid)) {
+    printf("Cannot setuid to %d.\n", Flags.uid);
+    return false;
+  }
+
+  if (getuid() == 0 || getgid() == 0) {
+    printf("Refusing to run as uid=%d gid=%d.\n", getuid(), getgid());
+    return false;
+  }
+  printf("ubuntu_cap_init: pid=%d uid=%d gid=%d euid=%d egid=%d chroot=%s\n", getpid(), getuid(), getgid(), geteuid(), getegid(), Flags.chroot);
   return true;
-}
-
-bool ubuntu_cap_chroot(const char *path) {
-  if (!ubuntu_cap_have(CAP_SYS_CHROOT)) {
-    LOG(LL_ERROR, ("Lacking capability to chroot, using host filesystem, this is insecure!"));
-    return false;
-  }
-  if (0 != chdir(path)) {
-    LOG(LL_ERROR, ("Cannot change directory %s", path));
-    return false;
-  }
-
-  LOG(LL_INFO, ("Changing root to %s", path));
-  if (0 != chroot(path)) {
-    return false;
-  }
-  return 0 == chdir("/");
 }

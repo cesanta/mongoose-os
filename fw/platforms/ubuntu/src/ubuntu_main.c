@@ -25,24 +25,29 @@
 #include "mgos_uart_internal.h"
 #include "mgos_net_hal.h"
 #include "ubuntu.h"
+#include <sys/wait.h>
 
 extern const char *build_version, *build_id;
 extern const char *mg_build_version, *mg_build_id;
 
+struct ubuntu_flags Flags;
+
 static bool  mongoose_running = false;
 static pid_t s_parent, s_child;
+
 
 static int ubuntu_mongoose(void) {
   enum mgos_init_result r;
 
   ubuntu_set_boottime();
-  ubuntu_cap_init();
-  ubuntu_cap_chroot("/var/tmp");
+  if (!ubuntu_cap_init()) {
+    return -2;
+  }
 
   r = mongoose_init();
   if (r != MGOS_INIT_OK) {
     LOG(LL_ERROR, ("mongoose_init=%d (expecting %d), exiting", r, MGOS_INIT_OK));
-    return -1;
+    return -3;
   }
   mongoose_running = true;
   while (mongoose_running) {
@@ -53,40 +58,54 @@ static int ubuntu_mongoose(void) {
 
 static int ubuntu_main(void) {
   for (;;) {
+    int   wstatus;
+    pid_t wpid;
+
     ubuntu_ipc_handle(1000);
     if (!ubuntu_wdt_ok()) {
       printf("Watchdog timeout\n");
       kill(s_child, SIGTERM);
       break;
     }
+
+    wpid = waitpid(-1, &wstatus, WNOHANG);
+    if (wpid > 0) {
+      return WEXITSTATUS(wstatus);
+    }
   }
   return 0;
 }
 
 int main(int argc, char *argv[]) {
-  for (;;) {
-    if (!ubuntu_ipc_init()) {
-      perror("opening stream socket pair failed");
-      return -1;
-    }
-    s_parent = getpid();
-    if ((s_child = fork()) == -1) {
-      perror("forking child failed");
-      return -2;
-    } else if (s_child) {
-      printf("PIDs: parent=%d child=%d\n", s_parent, s_child);
-      ubuntu_ipc_init_main();
-      ubuntu_main();
-      ubuntu_ipc_destroy_main();
-      break;
-    } else {
-      ubuntu_ipc_init_mongoose();
-      ubuntu_mongoose();
-      ubuntu_ipc_destroy_mongoose();
-    }
+  int ret = -1;
+
+  if (!ubuntu_flags_init(argc, argv)) {
+    return -1;
+  }
+
+  if (!ubuntu_ipc_init()) {
+    perror("opening stream socket pair failed");
+    return -1;
+  }
+  s_parent = getpid();
+  if ((s_child = fork()) == -1) {
+    perror("forking child failed");
+    return -2;
+  } else if (s_child) {
+    // Parent
+    printf("main: PIDs: parent=%d child=%d uid=%d gid=%d euid=%d egid=%d\n", s_parent, s_child, getuid(), getgid(), geteuid(), getegid());
+    ubuntu_ipc_init_main();
+    ret = ubuntu_main();
+    ubuntu_ipc_destroy_main();
+    return ret;
+  } else {
+    // Child
+    ubuntu_ipc_init_mongoose();
+    ubuntu_mongoose();
+    ubuntu_ipc_destroy_mongoose();
   }
   printf("Exiting. Have a great day!\n");
-  return 0;
+  return ret;
 
   (void)argc;
   (void)argv;

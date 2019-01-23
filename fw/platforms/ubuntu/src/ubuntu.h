@@ -19,6 +19,13 @@
 #include "mgos.h"
 #include "mgos_system.h"
 
+struct ubuntu_flags {
+  uid_t uid;
+  gid_t gid;
+  char *chroot;
+  int   secure;
+};
+
 bool ubuntu_set_boottime(void);
 
 // Create a socketpair
@@ -46,6 +53,9 @@ bool ubuntu_wdt_enable(void);
 bool ubuntu_wdt_disable(void);
 void ubuntu_wdt_set_timeout(int secs);
 
-// Capabilities
+// Capabilities (drop privs, chroot, et al)
 bool ubuntu_cap_init(void);
-bool ubuntu_cap_chroot(const char *path);
+
+// Flags -- returns true if flags are parsed correctly.
+// Returns false (and prints usage to stdout) otherwise.
+bool ubuntu_flags_init(int argc, char **argv);
