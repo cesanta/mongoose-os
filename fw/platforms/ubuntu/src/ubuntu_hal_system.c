@@ -163,49 +163,6 @@ void ubuntu_wdt_set_timeout(int secs) {
   return;
 }
 
-void mgos_wdt_set_timeout(int secs) {
-  struct ubuntu_pipe_message out, in;
-
-  mgos_wdt_feed();
-
-  out.cmd = UBUNTU_CMD_WDT_TIMEOUT;
-  out.len = sizeof(int);
-  memcpy(&out.data, &secs, out.len);
-  ubuntu_ipc_cmd(&out, &in);
-
-  mgos_wdt_enable();
-  return;
-}
-
-void mgos_wdt_feed(void) {
-  struct ubuntu_pipe_message out, in;
-
-  out.cmd = UBUNTU_CMD_WDT;
-  out.len = 0;
-  ubuntu_ipc_cmd(&out, &in);
-  return;
-}
-
-void mgos_wdt_enable(void) {
-  struct ubuntu_pipe_message out, in;
-
-  mgos_wdt_feed();
-
-  out.cmd = UBUNTU_CMD_WDT_EN;
-  out.len = 0;
-  ubuntu_ipc_cmd(&out, &in);
-  return;
-}
-
-void mgos_wdt_disable(void) {
-  struct ubuntu_pipe_message out, in;
-
-  out.cmd = UBUNTU_CMD_WDT_DIS;
-  out.len = 0;
-  ubuntu_ipc_cmd(&out, &in);
-  return;
-}
-
 /* in mongoose-os/fw/src/mgos_system.c
  * void mgos_system_restart(void) {
  * return;

@@ -20,65 +20,24 @@
 #include "ubuntu.h"
 #include "ubuntu_ipc.h"
 
-static struct ubuntu_pipe s_pipe;
+struct ubuntu_pipe s_pipe;
 
-// Send a message (cmd, and inlen bytes) to the privileged (main) thread,
-// then read back response and return it in *out, and the message length in *len.
-bool ubuntu_ipc_cmd(const struct ubuntu_pipe_message *in, struct ubuntu_pipe_message *out) {
-  size_t        _len;
-  bool          ret = false;
-  struct msghdr msg;
-  struct iovec  iov[1];
+static int ubuntu_ipc_handle_open(const char *pathname, int flags) {
+  const char *patterns[] = { "/dev/i2c-*", "/dev/spidev*.*", "/proc/cpuinfo", NULL };
+  int         i;
+  bool        ok = false;
 
-  if (!in || !out) {
-    return false;
+  for (i = 0; patterns[i]; i++) {
+    if (0 == fnmatch(patterns[i], pathname, FNM_PATHNAME)) {
+      ok = true;
+      break;
+    }
   }
-
-  memset(&msg, 0, sizeof(struct msghdr));
-  iov[0].iov_base = (void *)in;
-  iov[0].iov_len  = in->len + 2;
-  msg.msg_iov     = iov;
-  msg.msg_iovlen  = 1;
-
-  mgos_rlock(s_pipe.lock);
-  _len = sendmsg(s_pipe.mongoose_fd, &msg, 0);
-  if (_len < 2) {
-    LOG(LL_ERROR, ("Cannot write message"));
-    goto exit;
+  if (!ok) {
+    printf("Refusing to open '%s'\n", pathname);
+    return -1;
   }
-
-  iov[0].iov_base = (void *)out;
-  iov[0].iov_len  = sizeof(struct ubuntu_pipe_message);
-  msg.msg_iov     = iov;
-  msg.msg_iovlen  = 1;
-  _len            = recvmsg(s_pipe.mongoose_fd, &msg, 0);
-  if (_len < 2) {
-    LOG(LL_ERROR, ("Cannot read message"));
-    goto exit;
-  }
-exit:
-  mgos_runlock(s_pipe.lock);
-  return ret;
-}
-
-static bool ubuntu_ipc_handle_open(const struct ubuntu_pipe_message *in, struct ubuntu_pipe_message *out) {
-  int fd = -1;
-
-  if (!in || !out) {
-    return false;
-  }
-
-  if (0 == fnmatch("/dev/i2c-[0-9]*", (const char *)in->data, FNM_PATHNAME)) {
-    fd = open((const char *)in->data, O_RDONLY);
-  } else if (0 == fnmatch("/dev/spidev[0-9]*.[0-9]*", (const char *)in->data, FNM_PATHNAME)) {
-    fd = open((const char *)in->data, O_RDONLY);
-  } else {
-    printf("Refusing to open '%s'", (char *)in->data);
-  }
-
-  memcpy(&out->data, &fd, sizeof(int));
-  out->len = sizeof(int);
-  return true;
+  return open(pathname, flags);
 }
 
 bool ubuntu_ipc_handle(uint16_t timeout_ms) {
@@ -89,6 +48,7 @@ bool ubuntu_ipc_handle(uint16_t timeout_ms) {
   struct msghdr              msg;
   struct iovec               iov[1];
   struct ubuntu_pipe_message iovec_payload;
+  int                        fd = -1;
 
   FD_ZERO(&rfds);
   FD_SET(s_pipe.main_fd, &rfds);
@@ -107,6 +67,7 @@ bool ubuntu_ipc_handle(uint16_t timeout_ms) {
   }
 
   memset(&msg, 0, sizeof(struct msghdr));
+  memset(&iovec_payload, 0, sizeof(struct ubuntu_pipe_message));
   iov[0].iov_base = (void *)&iovec_payload;
   iov[0].iov_len  = sizeof(struct ubuntu_pipe_message);
   msg.msg_iov     = iov;
@@ -141,11 +102,33 @@ bool ubuntu_ipc_handle(uint16_t timeout_ms) {
     break;
   }
 
-  case UBUNTU_CMD_OPEN:
-    ubuntu_ipc_handle_open(&iovec_payload, &iovec_payload);
-    // TODO(pim): Add control message here, see Stevens Unix Network
-    // Programming page 428 functions Write_fd() and Read_fd()
+  case UBUNTU_CMD_OPEN: {
+    const char *fn;
+    int         flags = O_RDONLY;
+    union {
+      struct cmsghdr cm;
+      char           control[CMSG_SPACE(sizeof(int))];
+    } control_un;
+    struct cmsghdr *cmptr;
+
+    fn = (const char *)iovec_payload.data;
+
+    fd = ubuntu_ipc_handle_open(fn, flags);
+
+    // Add control message here, see Stevens Unix Network Programming
+    // page 428 functions Write_fd() and Read_fd()
+    printf("Opened '%s' as fd=%d\n", fn, fd);
+    msg.msg_control    = control_un.control;
+    msg.msg_controllen = sizeof(control_un.control);
+
+    cmptr             = CMSG_FIRSTHDR(&msg);
+    cmptr->cmsg_len   = CMSG_LEN(sizeof(int));
+    cmptr->cmsg_level = SOL_SOCKET;
+    cmptr->cmsg_type  = SCM_RIGHTS;
+
+    *((int *)CMSG_DATA(cmptr)) = fd;
     break;
+  }
 
   case UBUNTU_CMD_PING:
   default:
@@ -162,7 +145,10 @@ bool ubuntu_ipc_handle(uint16_t timeout_ms) {
     perror("Cannot write message data\n");
     return false;
   }
-//  printf("Sent: cmd=%d len=%u msg='%.*s'\n", iovec_payload.cmd, iovec_payload.len, (int)iovec_payload.len, (char *)iovec_payload.data);
+  if (fd > 0) {
+    close(fd);         // Close the UBUNTU_CMD_OPEN fd in parent
+  }
+//  printf("Sent: cmd=%d len=%u msg='%.*s' fd=%d\n", iovec_payload.cmd, iovec_payload.len, (int)iovec_payload.len, (char *)iovec_payload.data, fd);
   return true;
 }
 

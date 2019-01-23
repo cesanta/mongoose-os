@@ -59,4 +59,8 @@ struct ubuntu_pipe_message {
   uint8_t data[256];
 };
 
-bool ubuntu_ipc_cmd(const struct ubuntu_pipe_message *in, struct ubuntu_pipe_message *out);
+// Helper -- perform open() on the Main process, and return the filedescriptor.
+int ubuntu_ipc_open(const char *pathname, int flags);
+
+// Send a ping message from Mongoose to Main and back.
+void ubuntu_ipc_ping(void);
