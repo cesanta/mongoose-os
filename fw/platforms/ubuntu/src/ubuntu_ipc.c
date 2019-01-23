@@ -103,7 +103,7 @@ bool ubuntu_ipc_handle(uint16_t timeout_ms) {
 
   case UBUNTU_CMD_OPEN: {
     const char *fn;
-    int         flags = O_RDONLY;
+    int         flags;
     union {
       struct cmsghdr cm;
       char           control[CMSG_SPACE(sizeof(int))];
@@ -112,8 +112,9 @@ bool ubuntu_ipc_handle(uint16_t timeout_ms) {
 
     fn = (const char *)iovec_payload.data;
 
+    memcpy(&flags, &iovec_payload.data[strlen(fn)+1], sizeof(int));
     fd = ubuntu_ipc_handle_open(fn, flags);
-
+    if (fd > 0) {
     // Add control message here, see Stevens Unix Network Programming
     // page 428 functions Write_fd() and Read_fd()
     // printf("Opened '%s' as fd=%d\n", fn, fd);
@@ -126,6 +127,7 @@ bool ubuntu_ipc_handle(uint16_t timeout_ms) {
     cmptr->cmsg_type  = SCM_RIGHTS;
 
     *((int *)CMSG_DATA(cmptr)) = fd;
+    }
     break;
   }
 
