@@ -63,7 +63,7 @@ static int ubuntu_main(void) {
 
     ubuntu_ipc_handle(1000);
     if (!ubuntu_wdt_ok()) {
-      printf("Watchdog timeout\n");
+      LOGM(LL_INFO, ("Watchdog timeout"));
       kill(s_child, SIGTERM);
       break;
     }
@@ -84,16 +84,16 @@ int main(int argc, char *argv[]) {
   }
 
   if (!ubuntu_ipc_init()) {
-    perror("opening stream socket pair failed");
+    LOGM(LL_ERROR, ("Opening stream socket pair failed"));
     return -1;
   }
   s_parent = getpid();
   if ((s_child = fork()) == -1) {
-    perror("forking child failed");
+    LOGM(LL_ERROR, ("Forking child failed"));
     return -2;
   } else if (s_child) {
     // Parent
-    printf("main: PIDs: parent=%d child=%d uid=%d gid=%d euid=%d egid=%d\n", s_parent, s_child, getuid(), getgid(), geteuid(), getegid());
+    LOGM(LL_INFO, ("PIDs: parent=%d child=%d uid=%d gid=%d euid=%d egid=%d", s_parent, s_child, getuid(), getgid(), geteuid(), getegid()));
     ubuntu_ipc_init_main();
     ret = ubuntu_main();
     ubuntu_ipc_destroy_main();
@@ -104,7 +104,7 @@ int main(int argc, char *argv[]) {
     ubuntu_mongoose();
     ubuntu_ipc_destroy_mongoose();
   }
-  printf("Exiting. Have a great day!\n");
+  LOGM(LL_INFO, ("Exiting. Have a great day!"));
   return ret;
 
   (void)argc;

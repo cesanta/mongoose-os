@@ -140,25 +140,25 @@ bool ubuntu_wdt_ok(void) {
 }
 
 bool ubuntu_wdt_feed(void) {
-//  printf("Feeding watchdog\n");
+//  LOGM(LL_DEBUG, ("Feeding watchdog"));
   gettimeofday(&s_mgos_wdt.last_feed, NULL);
   return true;
 }
 
 bool ubuntu_wdt_enable(void) {
-//  printf("Enabling WDT\n");
+//  LOGM(LL_DEBUG, ("Enabling WDT"));
   s_mgos_wdt.enabled = true;
   return true;
 }
 
 bool ubuntu_wdt_disable(void) {
-//  printf("Disabling WDT\n");
+//  LOGM(LL_DEBUG, ("Disabling WDT"));
   s_mgos_wdt.enabled = false;
   return true;
 }
 
 void ubuntu_wdt_set_timeout(int secs) {
-//  printf("Setting WDT timeout to %d secs\n", secs);
+//  LOGM(LL_DEBUG, ("Setting WDT timeout to %d secs", secs));
   s_mgos_wdt.timeout = secs;
   return;
 }

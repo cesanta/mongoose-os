@@ -34,7 +34,7 @@ static int ubuntu_ipc_handle_open(const char *pathname, int flags) {
     }
   }
   if (!ok) {
-    printf("Refusing to open '%s'\n", pathname);
+    LOG(LL_ERROR, ("Refusing to open '%s'", pathname));
     return -1;
   }
   return open(pathname, flags);
@@ -56,13 +56,13 @@ bool ubuntu_ipc_handle(uint16_t timeout_ms) {
   tv.tv_sec  = 0;
   tv.tv_usec = timeout_ms * 1000;
 
-//  printf("Selecting for %u ms\n", timeout_ms);
+//  LOG(LL_INFO, ("Selecting for %u ms", timeout_ms));
   retval = select(FD_SETSIZE, &rfds, NULL, NULL, &tv);
   if (retval < 0) {
-    perror("Cannot not select");
+    LOGM(LL_ERROR, ("Cannot not select"));
     return false;
   } else if (retval == 0) {
-//    printf("No data within %u ms\n", timeout_ms);
+//    LOG(LL_INFO, ("No data within %u ms", timeout_ms));
     return true;
   }
 
@@ -77,7 +77,7 @@ bool ubuntu_ipc_handle(uint16_t timeout_ms) {
   if (_len <= 0) {
     return false;
   }
-  // printf("Received: cmd=%d len=%u msg='%.*s'\n", iovec_payload.cmd, iovec_payload.len, (int)iovec_payload.len, (char *)iovec_payload.data);
+  // LOG(LL_INFO, ("Received: cmd=%d len=%u msg='%.*s'", iovec_payload.cmd, iovec_payload.len, (int)iovec_payload.len, (char *)iovec_payload.data));
 
   iovec_payload.len = 0;
   // Handle command
@@ -117,7 +117,7 @@ bool ubuntu_ipc_handle(uint16_t timeout_ms) {
     if (fd > 0) {
       // Add control message here, see Stevens Unix Network Programming
       // page 428 functions Write_fd() and Read_fd()
-      // printf("Opened '%s' as fd=%d\n", fn, fd);
+      // LOG(LL_INFO, ("Opened '%s' as fd=%d", fn, fd));
       msg.msg_control    = control_un.control;
       msg.msg_controllen = sizeof(control_un.control);
 
@@ -148,7 +148,7 @@ bool ubuntu_ipc_handle(uint16_t timeout_ms) {
   if (fd > 0) {
     close(fd);         // Close the UBUNTU_CMD_OPEN fd in parent
   }
-//  printf("Sent: cmd=%d len=%u msg='%.*s' fd=%d\n", iovec_payload.cmd, iovec_payload.len, (int)iovec_payload.len, (char *)iovec_payload.data, fd);
+//  LOG(LL_INFO, ("Sent: cmd=%d len=%u msg='%.*s' fd=%d", iovec_payload.cmd, iovec_payload.len, (int)iovec_payload.len, (char *)iovec_payload.data, fd));
   return true;
 }
 

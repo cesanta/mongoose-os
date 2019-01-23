@@ -26,6 +26,17 @@ struct ubuntu_flags {
   int   secure;
 };
 
+// Logging for the main process (using different colors)
+int logm_print_prefix(enum cs_log_level l, const char *func, const char *file);
+
+#define LOGM(l, x) do { \
+        if (logm_print_prefix(l, __func__, __FILE__)) { \
+          printf x; \
+        } \
+        printf("\033[0m\r\n"); \
+      } while (0)
+
+
 bool ubuntu_set_boottime(void);
 
 // Create a socketpair
