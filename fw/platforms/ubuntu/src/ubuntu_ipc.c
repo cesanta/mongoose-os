@@ -112,21 +112,21 @@ bool ubuntu_ipc_handle(uint16_t timeout_ms) {
 
     fn = (const char *)iovec_payload.data;
 
-    memcpy(&flags, &iovec_payload.data[strlen(fn)+1], sizeof(int));
+    memcpy(&flags, &iovec_payload.data[strlen(fn) + 1], sizeof(int));
     fd = ubuntu_ipc_handle_open(fn, flags);
     if (fd > 0) {
-    // Add control message here, see Stevens Unix Network Programming
-    // page 428 functions Write_fd() and Read_fd()
-    // printf("Opened '%s' as fd=%d\n", fn, fd);
-    msg.msg_control    = control_un.control;
-    msg.msg_controllen = sizeof(control_un.control);
+      // Add control message here, see Stevens Unix Network Programming
+      // page 428 functions Write_fd() and Read_fd()
+      // printf("Opened '%s' as fd=%d\n", fn, fd);
+      msg.msg_control    = control_un.control;
+      msg.msg_controllen = sizeof(control_un.control);
 
-    cmptr             = CMSG_FIRSTHDR(&msg);
-    cmptr->cmsg_len   = CMSG_LEN(sizeof(int));
-    cmptr->cmsg_level = SOL_SOCKET;
-    cmptr->cmsg_type  = SCM_RIGHTS;
+      cmptr             = CMSG_FIRSTHDR(&msg);
+      cmptr->cmsg_len   = CMSG_LEN(sizeof(int));
+      cmptr->cmsg_level = SOL_SOCKET;
+      cmptr->cmsg_type  = SCM_RIGHTS;
 
-    *((int *)CMSG_DATA(cmptr)) = fd;
+      *((int *)CMSG_DATA(cmptr)) = fd;
     }
     break;
   }

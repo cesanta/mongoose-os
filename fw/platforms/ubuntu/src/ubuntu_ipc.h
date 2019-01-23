@@ -44,12 +44,12 @@ struct ubuntu_pipe {
 };
 
 enum ubuntu_pipe_cmd {
-  UBUNTU_CMD_WDT=0,       // in=NULL, out=NULL
-  UBUNTU_CMD_WDT_EN,      // in=NULL, out=NULL
-  UBUNTU_CMD_WDT_DIS,     // in=NULL, out=NULL
-  UBUNTU_CMD_WDT_TIMEOUT, // in=int *secs, out=NULL
-  UBUNTU_CMD_PING,        // in=char *msg, out=char *msg
-  UBUNTU_CMD_OPEN,        // in=char *path, out=int *fd;
+  UBUNTU_CMD_WDT=0,       // in=NULL; out=NULL
+  UBUNTU_CMD_WDT_EN,      // in=NULL; out=NULL
+  UBUNTU_CMD_WDT_DIS,     // in=NULL; out=NULL
+  UBUNTU_CMD_WDT_TIMEOUT, // in=int *secs; out=NULL
+  UBUNTU_CMD_PING,        // in=char *msg; out=char *msg
+  UBUNTU_CMD_OPEN,        // in=char *path, int *flags; out=NULL (fd in cmsg)
 };
 typedef uint8_t ubuntu_pipe_cmd;
 

@@ -83,9 +83,9 @@ int ubuntu_ipc_open(const char *pathname, int flags) {
 
   memset(&iovec_payload, 0, sizeof(struct ubuntu_pipe_message));
   iovec_payload.cmd = UBUNTU_CMD_OPEN;
-  iovec_payload.len = strlen(pathname)+1+sizeof(int);
+  iovec_payload.len = strlen(pathname) + 1 + sizeof(int);
   memcpy(&iovec_payload.data, pathname, strlen(pathname));
-  memcpy(&iovec_payload.data[strlen(pathname)+1], &flags, sizeof(int));
+  memcpy(&iovec_payload.data[strlen(pathname) + 1], &flags, sizeof(int));
   memset(&msg, 0, sizeof(struct msghdr));
   iov[0].iov_base = (void *)&iovec_payload;
   iov[0].iov_len  = iovec_payload.len + 2;
