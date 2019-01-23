@@ -36,6 +36,8 @@ static int ubuntu_mongoose(void) {
   enum mgos_init_result r;
 
   ubuntu_set_boottime();
+  ubuntu_cap_init();
+  ubuntu_cap_chroot("/var/tmp");
 
   r = mongoose_init();
   if (r != MGOS_INIT_OK) {

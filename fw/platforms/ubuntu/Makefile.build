@@ -60,8 +60,8 @@ CFLAGS ?= -std=c99 -fno-inline -W -Wall -Wundef -Werror -g -Wno-unused-function 
 INCDIRS = $(addprefix -I,$(INCLUDES))
 AR ?= ar
 LINKER ?= gcc
-LDFLAGS ?=
-LIBS  ?= pthread
+LDFLAGS ?= -static
+LIBS  ?= pthread cap
 LDLIBS = $(addprefix -l,$(LIBS))
 BUILD_LIB_NAME ?= lib.a
 

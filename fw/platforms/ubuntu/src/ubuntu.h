@@ -45,3 +45,7 @@ bool ubuntu_wdt_feed(void);
 bool ubuntu_wdt_enable(void);
 bool ubuntu_wdt_disable(void);
 void ubuntu_wdt_set_timeout(int secs);
+
+// Capabilities
+bool ubuntu_cap_init(void);
+bool ubuntu_cap_chroot(const char *path);
