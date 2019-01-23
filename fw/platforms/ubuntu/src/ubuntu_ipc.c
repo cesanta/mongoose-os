@@ -117,7 +117,7 @@ bool ubuntu_ipc_handle(uint16_t timeout_ms) {
 
     // Add control message here, see Stevens Unix Network Programming
     // page 428 functions Write_fd() and Read_fd()
-    printf("Opened '%s' as fd=%d\n", fn, fd);
+    // printf("Opened '%s' as fd=%d\n", fn, fd);
     msg.msg_control    = control_un.control;
     msg.msg_controllen = sizeof(control_un.control);
 
