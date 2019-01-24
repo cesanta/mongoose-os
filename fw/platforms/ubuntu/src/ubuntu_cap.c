@@ -31,19 +31,19 @@ bool ubuntu_cap_init(void) {
     LOGM(LL_WARN, ("Lacking capability to bind ports <1024, continuing anyway"));
   }
 
+  if (0 != chdir(Flags.chroot)) {
+    LOGM(LL_ERROR, ("Cannot change to directory %s", Flags.chroot));
+    return false;
+  }
+  snprintf(conf_fn, sizeof(conf_fn), "%s/conf0.json", Flags.chroot);
+  if (0 != stat(conf_fn, &s)) {
+    LOGM(LL_ERROR, ("Cannot stat %s", conf_fn));
+    return false;
+  }
+
   if (Flags.secure) {
     if (!ubuntu_cap_have(CAP_SYS_CHROOT)) {
       LOGM(LL_ERROR, ("Cannot chroot(), but secure mode is requested."));
-      return false;
-    }
-    if (0 != chdir(Flags.chroot)) {
-      LOGM(LL_ERROR, ("Cannot change directory %s", Flags.chroot));
-      return false;
-    }
-
-    snprintf(conf_fn, sizeof(conf_fn), "%s/conf0.json", Flags.chroot);
-    if (0 != stat(conf_fn, &s)) {
-      LOGM(LL_ERROR, ("Cannot stat %s", conf_fn));
       return false;
     }
 
