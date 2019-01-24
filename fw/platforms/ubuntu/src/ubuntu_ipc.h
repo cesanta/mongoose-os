@@ -32,8 +32,10 @@
 //  out.len=4;
 //  memcpy(&out.data, "PING", out.len);
 //  ubuntu_ipc_cmd(&out, &in);
-//  LOG(LL_INFO, ("Sent: cmd=%u len=%u msg='%.*s'", out.cmd, out.len, (int)out.len, out.data));
-//  LOG(LL_INFO, ("Received: cmd=%u len=%u msg='%.*s'", in.cmd, in.len, (int)in.len, in.data));
+//  LOG(LL_INFO, ("Sent: cmd=%u len=%u msg='%.*s'", out.cmd, out.len,
+//  (int)out.len, out.data));
+//  LOG(LL_INFO, ("Received: cmd=%u len=%u msg='%.*s'", in.cmd, in.len,
+//  (int)in.len, in.data));
 
 #include <stdbool.h>
 #include <stdio.h>
@@ -45,17 +47,17 @@ extern "C" {
 
 struct ubuntu_pipe {
   struct mgos_rlock_type *lock;
-  int                     main_fd;
-  int                     mongoose_fd;
+  int main_fd;
+  int mongoose_fd;
 };
 
 enum ubuntu_pipe_cmd {
-  UBUNTU_CMD_WDT=0,       // in=NULL; out=NULL
-  UBUNTU_CMD_WDT_EN,      // in=NULL; out=NULL
-  UBUNTU_CMD_WDT_DIS,     // in=NULL; out=NULL
-  UBUNTU_CMD_WDT_TIMEOUT, // in=int *secs; out=NULL
-  UBUNTU_CMD_PING,        // in=char *msg; out=char *msg
-  UBUNTU_CMD_OPEN,        // in=char *path, int *flags; out=NULL (fd in cmsg)
+  UBUNTU_CMD_WDT = 0,      // in=NULL; out=NULL
+  UBUNTU_CMD_WDT_EN,       // in=NULL; out=NULL
+  UBUNTU_CMD_WDT_DIS,      // in=NULL; out=NULL
+  UBUNTU_CMD_WDT_TIMEOUT,  // in=int *secs; out=NULL
+  UBUNTU_CMD_PING,         // in=char *msg; out=char *msg
+  UBUNTU_CMD_OPEN,         // in=char *path, int *flags; out=NULL (fd in cmsg)
 };
 typedef uint8_t ubuntu_pipe_cmd;
 

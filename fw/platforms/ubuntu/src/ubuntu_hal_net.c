@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#include <netdb.h>
 #include <ifaddrs.h>
+#include <netdb.h>
 
 #include "mgos_hal.h"
 #include "mgos_mongoose.h"
@@ -168,7 +168,8 @@ void device_get_mac_address(uint8_t mac[6]) {
   }
 
 fallback:
-  LOG(LL_WARN, ("Cannot find device with default gateway, generating a random MAC"));
+  LOG(LL_WARN,
+      ("Cannot find device with default gateway, generating a random MAC"));
   srand(time(NULL));
   for (i = 0; i < 6; i++) {
     mac[i] = (double) rand() / RAND_MAX * 255;

@@ -23,9 +23,11 @@
 struct ubuntu_pipe s_pipe;
 
 static int ubuntu_ipc_handle_open(const char *pathname, int flags) {
-  const char *patterns[] = { "/dev/i2c-*", "/dev/spidev*.*", "/proc/cpuinfo", "/sys/class/net/*/address", "/proc/net/route", NULL };
-  int         i;
-  bool        ok = false;
+  const char *patterns[] = {"/dev/i2c-*",      "/dev/spidev*.*",
+                            "/proc/cpuinfo",   "/sys/class/net/*/address",
+                            "/proc/net/route", NULL};
+  int i;
+  bool ok = false;
 
   for (i = 0; patterns[i]; i++) {
     if (0 == fnmatch(patterns[i], pathname, FNM_PATHNAME)) {
@@ -41,114 +43,117 @@ static int ubuntu_ipc_handle_open(const char *pathname, int flags) {
 }
 
 bool ubuntu_ipc_handle(uint16_t timeout_ms) {
-  fd_set                     rfds;
-  struct timeval             tv;
-  int                        retval;
-  size_t                     _len;
-  struct msghdr              msg;
-  struct iovec               iov[1];
+  fd_set rfds;
+  struct timeval tv;
+  int retval;
+  size_t _len;
+  struct msghdr msg;
+  struct iovec iov[1];
   struct ubuntu_pipe_message iovec_payload;
-  int                        fd = -1;
+  int fd = -1;
 
   FD_ZERO(&rfds);
   FD_SET(s_pipe.main_fd, &rfds);
 
-  tv.tv_sec  = 0;
+  tv.tv_sec = 0;
   tv.tv_usec = timeout_ms * 1000;
 
-//  LOG(LL_INFO, ("Selecting for %u ms", timeout_ms));
+  //  LOG(LL_INFO, ("Selecting for %u ms", timeout_ms));
   retval = select(FD_SETSIZE, &rfds, NULL, NULL, &tv);
   if (retval < 0) {
     LOGM(LL_ERROR, ("Cannot not select"));
     return false;
   } else if (retval == 0) {
-//    LOG(LL_INFO, ("No data within %u ms", timeout_ms));
+    //    LOG(LL_INFO, ("No data within %u ms", timeout_ms));
     return true;
   }
 
   memset(&msg, 0, sizeof(struct msghdr));
   memset(&iovec_payload, 0, sizeof(struct ubuntu_pipe_message));
-  iov[0].iov_base = (void *)&iovec_payload;
-  iov[0].iov_len  = sizeof(struct ubuntu_pipe_message);
-  msg.msg_iov     = iov;
-  msg.msg_iovlen  = 1;
+  iov[0].iov_base = (void *) &iovec_payload;
+  iov[0].iov_len = sizeof(struct ubuntu_pipe_message);
+  msg.msg_iov = iov;
+  msg.msg_iovlen = 1;
 
   _len = recvmsg(s_pipe.main_fd, &msg, 0);
   if (_len <= 0) {
     return false;
   }
-  // LOG(LL_INFO, ("Received: cmd=%d len=%u msg='%.*s'", iovec_payload.cmd, iovec_payload.len, (int)iovec_payload.len, (char *)iovec_payload.data));
+  // LOG(LL_INFO, ("Received: cmd=%d len=%u msg='%.*s'", iovec_payload.cmd,
+  // iovec_payload.len, (int)iovec_payload.len, (char *)iovec_payload.data));
 
   iovec_payload.len = 0;
   // Handle command
   switch (iovec_payload.cmd) {
-  case UBUNTU_CMD_WDT:
-    ubuntu_wdt_feed();
-    break;
+    case UBUNTU_CMD_WDT:
+      ubuntu_wdt_feed();
+      break;
 
-  case UBUNTU_CMD_WDT_EN:
-    ubuntu_wdt_enable();
-    break;
+    case UBUNTU_CMD_WDT_EN:
+      ubuntu_wdt_enable();
+      break;
 
-  case UBUNTU_CMD_WDT_DIS:
-    ubuntu_wdt_disable();
-    break;
+    case UBUNTU_CMD_WDT_DIS:
+      ubuntu_wdt_disable();
+      break;
 
-  case UBUNTU_CMD_WDT_TIMEOUT: {
-    int secs;
-    memcpy(&secs, &iovec_payload.data, sizeof(int));
-    ubuntu_wdt_set_timeout(secs);
-    break;
-  }
-
-  case UBUNTU_CMD_OPEN: {
-    const char *fn;
-    int         flags;
-    union {
-      struct cmsghdr cm;
-      char           control[CMSG_SPACE(sizeof(int))];
-    } control_un;
-    struct cmsghdr *cmptr;
-
-    fn = (const char *)iovec_payload.data;
-
-    memcpy(&flags, &iovec_payload.data[strlen(fn) + 1], sizeof(int));
-    fd = ubuntu_ipc_handle_open(fn, flags);
-    if (fd > 0) {
-      // Add control message here, see Stevens Unix Network Programming
-      // page 428 functions Write_fd() and Read_fd()
-      // LOG(LL_INFO, ("Opened '%s' as fd=%d", fn, fd));
-      msg.msg_control    = control_un.control;
-      msg.msg_controllen = sizeof(control_un.control);
-
-      cmptr             = CMSG_FIRSTHDR(&msg);
-      cmptr->cmsg_len   = CMSG_LEN(sizeof(int));
-      cmptr->cmsg_level = SOL_SOCKET;
-      cmptr->cmsg_type  = SCM_RIGHTS;
-
-      *((int *)CMSG_DATA(cmptr)) = fd;
+    case UBUNTU_CMD_WDT_TIMEOUT: {
+      int secs;
+      memcpy(&secs, &iovec_payload.data, sizeof(int));
+      ubuntu_wdt_set_timeout(secs);
+      break;
     }
-    break;
+
+    case UBUNTU_CMD_OPEN: {
+      const char *fn;
+      int flags;
+      union {
+        struct cmsghdr cm;
+        char control[CMSG_SPACE(sizeof(int))];
+      } control_un;
+      struct cmsghdr *cmptr;
+
+      fn = (const char *) iovec_payload.data;
+
+      memcpy(&flags, &iovec_payload.data[strlen(fn) + 1], sizeof(int));
+      fd = ubuntu_ipc_handle_open(fn, flags);
+      if (fd > 0) {
+        // Add control message here, see Stevens Unix Network Programming
+        // page 428 functions Write_fd() and Read_fd()
+        // LOG(LL_INFO, ("Opened '%s' as fd=%d", fn, fd));
+        msg.msg_control = control_un.control;
+        msg.msg_controllen = sizeof(control_un.control);
+
+        cmptr = CMSG_FIRSTHDR(&msg);
+        cmptr->cmsg_len = CMSG_LEN(sizeof(int));
+        cmptr->cmsg_level = SOL_SOCKET;
+        cmptr->cmsg_type = SCM_RIGHTS;
+
+        *((int *) CMSG_DATA(cmptr)) = fd;
+      }
+      break;
+    }
+
+    case UBUNTU_CMD_PING:
+    default:
+      iovec_payload.len = 5;
+      memcpy(&iovec_payload.data, "PONG!", iovec_payload.len);
   }
 
-  case UBUNTU_CMD_PING:
-  default:
-    iovec_payload.len = 5;
-    memcpy(&iovec_payload.data, "PONG!", iovec_payload.len);
-  }
-
-  iov[0].iov_base = (void *)&iovec_payload;
-  iov[0].iov_len  = iovec_payload.len + 2;
-  msg.msg_iov     = iov;
-  msg.msg_iovlen  = 1;
-  _len            = sendmsg(s_pipe.main_fd, &msg, 0);
+  iov[0].iov_base = (void *) &iovec_payload;
+  iov[0].iov_len = iovec_payload.len + 2;
+  msg.msg_iov = iov;
+  msg.msg_iovlen = 1;
+  _len = sendmsg(s_pipe.main_fd, &msg, 0);
   if (_len <= 0) {
     return false;
   }
   if (fd > 0) {
-    close(fd);         // Close the UBUNTU_CMD_OPEN fd in parent
+    close(fd);  // Close the UBUNTU_CMD_OPEN fd in parent
   }
-//  LOG(LL_INFO, ("Sent: cmd=%d len=%u msg='%.*s' fd=%d", iovec_payload.cmd, iovec_payload.len, (int)iovec_payload.len, (char *)iovec_payload.data, fd));
+  //  LOG(LL_INFO, ("Sent: cmd=%d len=%u msg='%.*s' fd=%d", iovec_payload.cmd,
+  //  iovec_payload.len, (int)iovec_payload.len, (char *)iovec_payload.data,
+  //  fd));
   return true;
 }
 
@@ -163,7 +168,7 @@ bool ubuntu_ipc_init(void) {
     LOG(LL_ERROR, ("Can't create socketpair(): %s", strerror(errno)));
     return false;
   }
-  s_pipe.main_fd     = fd[1];
+  s_pipe.main_fd = fd[1];
   s_pipe.mongoose_fd = fd[0];
 
   return true;

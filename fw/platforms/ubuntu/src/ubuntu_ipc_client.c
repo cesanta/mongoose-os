@@ -22,21 +22,22 @@
 
 extern struct ubuntu_pipe s_pipe;
 
-static bool ubuntu_ipc_cmd(const struct ubuntu_pipe_message *in, struct ubuntu_pipe_message *out) {
-  size_t        _len;
-  bool          ret = false;
+static bool ubuntu_ipc_cmd(const struct ubuntu_pipe_message *in,
+                           struct ubuntu_pipe_message *out) {
+  size_t _len;
+  bool ret = false;
   struct msghdr msg;
-  struct iovec  iov[1];
+  struct iovec iov[1];
 
   if (!in || !out) {
     return false;
   }
 
   memset(&msg, 0, sizeof(struct msghdr));
-  iov[0].iov_base = (void *)in;
-  iov[0].iov_len  = in->len + 2;
-  msg.msg_iov     = iov;
-  msg.msg_iovlen  = 1;
+  iov[0].iov_base = (void *) in;
+  iov[0].iov_len = in->len + 2;
+  msg.msg_iov = iov;
+  msg.msg_iovlen = 1;
 
   mgos_rlock(s_pipe.lock);
   _len = sendmsg(s_pipe.mongoose_fd, &msg, 0);
@@ -45,11 +46,11 @@ static bool ubuntu_ipc_cmd(const struct ubuntu_pipe_message *in, struct ubuntu_p
     goto exit;
   }
 
-  iov[0].iov_base = (void *)out;
-  iov[0].iov_len  = sizeof(struct ubuntu_pipe_message);
-  msg.msg_iov     = iov;
-  msg.msg_iovlen  = 1;
-  _len            = recvmsg(s_pipe.mongoose_fd, &msg, 0);
+  iov[0].iov_base = (void *) out;
+  iov[0].iov_len = sizeof(struct ubuntu_pipe_message);
+  msg.msg_iov = iov;
+  msg.msg_iovlen = 1;
+  _len = recvmsg(s_pipe.mongoose_fd, &msg, 0);
   if (_len < 2) {
     LOG(LL_ERROR, ("Cannot read message"));
     goto exit;
@@ -61,14 +62,14 @@ exit:
 }
 
 int ubuntu_ipc_open(const char *pathname, int flags) {
-  size_t        _len;
+  size_t _len;
   struct msghdr msg;
-  struct iovec  iov[1];
+  struct iovec iov[1];
   struct ubuntu_pipe_message iovec_payload;
 
   union {
     struct cmsghdr cm;
-    char           control[CMSG_SPACE(sizeof(int))];
+    char control[CMSG_SPACE(sizeof(int))];
   } control_un;
   struct cmsghdr *cmptr;
 
@@ -87,10 +88,10 @@ int ubuntu_ipc_open(const char *pathname, int flags) {
   memcpy(&iovec_payload.data, pathname, strlen(pathname));
   memcpy(&iovec_payload.data[strlen(pathname) + 1], &flags, sizeof(int));
   memset(&msg, 0, sizeof(struct msghdr));
-  iov[0].iov_base = (void *)&iovec_payload;
-  iov[0].iov_len  = iovec_payload.len + 2;
-  msg.msg_iov     = iov;
-  msg.msg_iovlen  = 1;
+  iov[0].iov_base = (void *) &iovec_payload;
+  iov[0].iov_len = iovec_payload.len + 2;
+  msg.msg_iov = iov;
+  msg.msg_iovlen = 1;
 
   mgos_rlock(s_pipe.lock);
   _len = sendmsg(s_pipe.mongoose_fd, &msg, 0);
@@ -100,11 +101,11 @@ int ubuntu_ipc_open(const char *pathname, int flags) {
   }
 
   memset(&iovec_payload, 0, sizeof(struct ubuntu_pipe_message));
-  iov[0].iov_base    = (void *)&iovec_payload;
-  iov[0].iov_len     = sizeof(struct ubuntu_pipe_message);
-  msg.msg_iov        = iov;
-  msg.msg_iovlen     = 1;
-  msg.msg_control    = control_un.control;
+  iov[0].iov_base = (void *) &iovec_payload;
+  iov[0].iov_len = sizeof(struct ubuntu_pipe_message);
+  msg.msg_iov = iov;
+  msg.msg_iovlen = 1;
+  msg.msg_control = control_un.control;
   msg.msg_controllen = sizeof(control_un.control);
 
   _len = recvmsg(s_pipe.mongoose_fd, &msg, 0);
@@ -115,17 +116,17 @@ int ubuntu_ipc_open(const char *pathname, int flags) {
 
   if ((cmptr = CMSG_FIRSTHDR(&msg)) != NULL &&
       cmptr->cmsg_len == CMSG_LEN(sizeof(int)) &&
-      cmptr->cmsg_level == SOL_SOCKET &&
-      cmptr->cmsg_type == SCM_RIGHTS) {
-    fd = *((int *)CMSG_DATA(cmptr));
+      cmptr->cmsg_level == SOL_SOCKET && cmptr->cmsg_type == SCM_RIGHTS) {
+    fd = *((int *) CMSG_DATA(cmptr));
   }
 
-  // LOG(LL_INFO, ("Received: cmd=%u len=%u msg='%.*s', fd=%d", iovec_payload.cmd, iovec_payload.len, (int)iovec_payload.len, (char *)iovec_payload.data, fd));
+// LOG(LL_INFO, ("Received: cmd=%u len=%u msg='%.*s', fd=%d", iovec_payload.cmd,
+// iovec_payload.len, (int)iovec_payload.len, (char *)iovec_payload.data, fd));
 exit:
   mgos_runlock(s_pipe.lock);
   return fd;
 
-  (void)flags;
+  (void) flags;
 }
 
 void mgos_wdt_set_timeout(int secs) {
@@ -180,6 +181,8 @@ void ubuntu_ipc_ping(void) {
   out.len = 4;
   memcpy(&out.data, "PING", out.len);
   ubuntu_ipc_cmd(&out, &in);
-  LOG(LL_INFO, ("Sent: cmd=%u len=%u msg='%.*s'", out.cmd, out.len, (int)out.len, out.data));
-  LOG(LL_INFO, ("Received: cmd=%u len=%u msg='%.*s'", in.cmd, in.len, (int)in.len, in.data));
+  LOG(LL_INFO, ("Sent: cmd=%u len=%u msg='%.*s'", out.cmd, out.len,
+                (int) out.len, out.data));
+  LOG(LL_INFO, ("Received: cmd=%u len=%u msg='%.*s'", in.cmd, in.len,
+                (int) in.len, in.data));
 }

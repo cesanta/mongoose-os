@@ -17,34 +17,34 @@
 #include "ubuntu.h"
 
 int logm_print_prefix(enum cs_log_level l, const char *func, const char *file) {
-  char   ll_color[8];
-  char   ll_file[31];
-  char   ll_func[41];
+  char ll_color[8];
+  char ll_file[31];
+  char ll_func[41];
   size_t offset = 0;
 
   switch (l) {
-  case LL_ERROR:
-    strncpy(ll_color, "\033[1;31m", sizeof(ll_color));
-    break;
+    case LL_ERROR:
+      strncpy(ll_color, "\033[1;31m", sizeof(ll_color));
+      break;
 
-  case LL_WARN:
-    strncpy(ll_color, "\033[0;31m", sizeof(ll_color));
-    break;
+    case LL_WARN:
+      strncpy(ll_color, "\033[0;31m", sizeof(ll_color));
+      break;
 
-  case LL_INFO:
-    strncpy(ll_color, "\033[0;32m", sizeof(ll_color));
-    break;
+    case LL_INFO:
+      strncpy(ll_color, "\033[0;32m", sizeof(ll_color));
+      break;
 
-  case LL_DEBUG:
-    strncpy(ll_color, "\033[0;34m", sizeof(ll_color));
-    break;
+    case LL_DEBUG:
+      strncpy(ll_color, "\033[0;34m", sizeof(ll_color));
+      break;
 
-  case LL_VERBOSE_DEBUG:
-    strncpy(ll_color, "\033[1;34m", sizeof(ll_color));
-    break;
+    case LL_VERBOSE_DEBUG:
+      strncpy(ll_color, "\033[1;34m", sizeof(ll_color));
+      break;
 
-  default:                       // LL_NONE
-    return 0;
+    default:  // LL_NONE
+      return 0;
   }
 
   offset = 0;

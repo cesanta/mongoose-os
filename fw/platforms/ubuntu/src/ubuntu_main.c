@@ -16,14 +16,14 @@
 
 #include <sys/wait.h>
 
-#include "mgos_mongoose.h"
-#include "mgos_init_internal.h"
-#include "mgos_mongoose_internal.h"
-#include "mgos_sys_config.h"
 #include "mgos_debug_internal.h"
+#include "mgos_init_internal.h"
+#include "mgos_mongoose.h"
 #include "mgos_mongoose_internal.h"
-#include "mgos_uart_internal.h"
+#include "mgos_mongoose_internal.h"
 #include "mgos_net_hal.h"
+#include "mgos_sys_config.h"
+#include "mgos_uart_internal.h"
 #include "ubuntu.h"
 
 extern const char *build_version, *build_id;
@@ -31,9 +31,8 @@ extern const char *mg_build_version, *mg_build_id;
 
 struct ubuntu_flags Flags;
 
-static bool  mongoose_running = false;
+static bool mongoose_running = false;
 static pid_t s_parent, s_child;
-
 
 static int ubuntu_mongoose(void) {
   enum mgos_init_result r;
@@ -46,7 +45,8 @@ static int ubuntu_mongoose(void) {
 
   r = mongoose_init();
   if (r != MGOS_INIT_OK) {
-    LOG(LL_ERROR, ("mongoose_init=%d (expecting %d), exiting", r, MGOS_INIT_OK));
+    LOG(LL_ERROR,
+        ("mongoose_init=%d (expecting %d), exiting", r, MGOS_INIT_OK));
     return -3;
   }
   mongoose_running = true;
@@ -58,7 +58,7 @@ static int ubuntu_mongoose(void) {
 
 static int ubuntu_main(void) {
   for (;;) {
-    int   wstatus;
+    int wstatus;
     pid_t wpid;
 
     ubuntu_ipc_handle(1000);
@@ -93,7 +93,9 @@ int main(int argc, char *argv[]) {
     return -2;
   } else if (s_child) {
     // Parent
-    LOGM(LL_INFO, ("PIDs: parent=%d child=%d uid=%d gid=%d euid=%d egid=%d", s_parent, s_child, getuid(), getgid(), geteuid(), getegid()));
+    LOGM(LL_INFO,
+         ("PIDs: parent=%d child=%d uid=%d gid=%d euid=%d egid=%d", s_parent,
+          s_child, getuid(), getgid(), geteuid(), getegid()));
     ubuntu_ipc_init_main();
     ret = ubuntu_main();
     ubuntu_ipc_destroy_main();
@@ -107,26 +109,26 @@ int main(int argc, char *argv[]) {
   LOGM(LL_INFO, ("Exiting. Have a great day!"));
   return ret;
 
-  (void)argc;
-  (void)argv;
+  (void) argc;
+  (void) argv;
 }
 
 static void dummy_handler(struct mg_connection *nc, int ev, void *ev_data,
                           void *user_data) {
-  (void)nc;
-  (void)ev;
-  (void)ev_data;
-  (void)user_data;
+  (void) nc;
+  (void) ev;
+  (void) ev_data;
+  (void) user_data;
 }
 
 void mongoose_schedule_poll(bool from_isr) {
   mg_broadcast(mgos_get_mgr(), dummy_handler, NULL, 0);
-  (void)from_isr;
+  (void) from_isr;
 }
 
 enum mgos_init_result mongoose_init(void) {
   enum mgos_init_result r;
-  int    cpu_freq;
+  int cpu_freq;
   size_t heap_size, free_heap_size;
   struct mgos_net_ip_info ipaddr;
   char ip[INET_ADDRSTRLEN], netmask[INET_ADDRSTRLEN], gateway[INET_ADDRSTRLEN];
@@ -157,16 +159,16 @@ enum mgos_init_result mongoose_init(void) {
   LOG(LL_INFO, ("Mongoose OS %s (%s)", mg_build_version, mg_build_id));
   LOG(LL_INFO, ("%s %s (%s)", MGOS_APP, build_version, build_id));
 
-  cpu_freq       = (int)(mgos_get_cpu_freq() / 1000000);
-  heap_size      = mgos_get_heap_size();
+  cpu_freq = (int) (mgos_get_cpu_freq() / 1000000);
+  heap_size = mgos_get_heap_size();
   free_heap_size = mgos_get_free_heap_size();
   LOG(LL_INFO, ("CPU: %d MHz, heap: %lu total, %lu free", cpu_freq, heap_size,
                 free_heap_size));
 
   mgos_eth_dev_get_ip_info(0, &ipaddr);
-  inet_ntop(AF_INET, (void *)&ipaddr.gw.sin_addr, gateway, INET_ADDRSTRLEN);
-  inet_ntop(AF_INET, (void *)&ipaddr.ip.sin_addr, ip, INET_ADDRSTRLEN);
-  inet_ntop(AF_INET, (void *)&ipaddr.netmask.sin_addr, netmask,
+  inet_ntop(AF_INET, (void *) &ipaddr.gw.sin_addr, gateway, INET_ADDRSTRLEN);
+  inet_ntop(AF_INET, (void *) &ipaddr.ip.sin_addr, ip, INET_ADDRSTRLEN);
+  inet_ntop(AF_INET, (void *) &ipaddr.netmask.sin_addr, netmask,
             INET_ADDRSTRLEN);
   LOG(LL_INFO, ("Network: ip=%s netmask=%s gateway=%s", ip, netmask, gateway));
 

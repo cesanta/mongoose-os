@@ -16,8 +16,8 @@
 
 #include <sys/capability.h>
 #include <sys/stat.h>
-#include <sys/types.h>
 #include <sys/stat.h>
+#include <sys/types.h>
 #include <unistd.h>
 
 #include "ubuntu.h"
@@ -27,8 +27,8 @@
 extern struct ubuntu_flags Flags;
 
 static bool ubuntu_cap_have(cap_value_t c) {
-  cap_t            cap;
-  pid_t            pid;
+  cap_t cap;
+  pid_t pid;
   cap_flag_value_t f;
 
   if (!CAP_IS_SUPPORTED(c)) {
@@ -44,10 +44,11 @@ static bool ubuntu_cap_have(cap_value_t c) {
 
 bool ubuntu_cap_init(void) {
   struct stat s;
-  char        conf_fn[200];
+  char conf_fn[200];
 
   if (!ubuntu_cap_have(CAP_NET_BIND_SERVICE)) {
-    LOGM(LL_WARN, ("Lacking capability to bind ports <1024, continuing anyway"));
+    LOGM(LL_WARN,
+         ("Lacking capability to bind ports <1024, continuing anyway"));
   }
 
   if (0 != chdir(Flags.chroot)) {
@@ -83,7 +84,8 @@ bool ubuntu_cap_init(void) {
 
   if (getgid() == 0) {
     if (0 != setgid(s.st_gid)) {
-      LOGM(LL_ERROR, ("Cannot setgid to the group of %s (%d).", conf_fn, s.st_gid));
+      LOGM(LL_ERROR,
+           ("Cannot setgid to the group of %s (%d).", conf_fn, s.st_gid));
       return false;
     }
     LOGM(LL_INFO, ("Set gid=%d based on %s.", getgid(), conf_fn));
@@ -98,7 +100,8 @@ bool ubuntu_cap_init(void) {
 
   if (getuid() == 0) {
     if (0 != setuid(s.st_uid)) {
-      LOGM(LL_ERROR, ("Cannot setuid to the owner of %s (%d).", conf_fn, s.st_uid));
+      LOGM(LL_ERROR,
+           ("Cannot setuid to the owner of %s (%d).", conf_fn, s.st_uid));
       return false;
     }
     LOGM(LL_INFO, ("Set uid=%d based on %s.", getuid(), conf_fn));
@@ -109,6 +112,7 @@ bool ubuntu_cap_init(void) {
     LOGM(LL_ERROR, ("Refusing to run as uid=%d gid=%d.", getuid(), getgid()));
     return false;
   }
-  LOGM(LL_INFO, ("pid=%d uid=%d gid=%d euid=%d egid=%d", getpid(), getuid(), getgid(), geteuid(), getegid()));
+  LOGM(LL_INFO, ("pid=%d uid=%d gid=%d euid=%d egid=%d", getpid(), getuid(),
+                 getgid(), geteuid(), getegid()));
   return true;
 }

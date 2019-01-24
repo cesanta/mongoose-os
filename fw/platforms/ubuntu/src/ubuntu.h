@@ -30,19 +30,19 @@ struct ubuntu_flags {
   uid_t uid;
   gid_t gid;
   char *chroot;
-  int   secure;
+  int secure;
 };
 
 // Logging for the main process (using different colors)
 int logm_print_prefix(enum cs_log_level l, const char *func, const char *file);
 
-#define LOGM(l, x) do { \
-        if (logm_print_prefix(l, __func__, __FILE__)) { \
-          printf x; \
-        } \
-        printf("\033[0m\r\n"); \
-      } while (0)
-
+#define LOGM(l, x)                                  \
+  do {                                              \
+    if (logm_print_prefix(l, __func__, __FILE__)) { \
+      printf x;                                     \
+    }                                               \
+    printf("\033[0m\r\n");                          \
+  } while (0)
 
 // Mongoose helper initializers
 bool ubuntu_set_boottime(void);
