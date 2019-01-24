@@ -228,7 +228,7 @@ uint32_t mgos_get_cpu_freq(void) {
   while (len > 0 && !p) {
     long mhz;
 
-    p = strcasestr(buf, "cpu MHz");
+    p = strstr(buf, "cpu MHz");
     p += 7;
     while (*p && (isspace(*p) || *p == ':')) {
       p++;

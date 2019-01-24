@@ -23,9 +23,9 @@
 struct ubuntu_pipe s_pipe;
 
 static int ubuntu_ipc_handle_open(const char *pathname, int flags) {
-  const char *patterns[] = {"/dev/i2c-*",      "/dev/spidev*.*",
-                            "/proc/cpuinfo",   "/sys/class/net/*/address",
-                            "/proc/net/route", NULL};
+  const char *patterns[] = {"/dev/i2c-*", "/dev/spidev*.*", "/proc/cpuinfo",
+                            "/sys/class/net/*/address", "/proc/net/route",
+                            NULL};
   int i;
   bool ok = false;
 

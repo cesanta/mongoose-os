@@ -1,1 +1,1 @@
-mgos/ubuntu-build:latest
+docker.io/mgos/ubuntu-build:bionic-r2
