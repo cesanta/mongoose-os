@@ -59,6 +59,7 @@ INCDIRS = $(addprefix -I,$(INCLUDES))
 AR ?= ar
 LINKER ?= gcc
 LDFLAGS ?= -static
+APP_BIN_LIBS ?=
 LIBS  ?= pthread cap
 LDLIBS = $(addprefix -l,$(LIBS))
 BUILD_LIB_NAME ?= lib.a
@@ -130,7 +131,7 @@ $(BUILD_DIR)/$(BUILD_LIB_NAME): $(BUILD_DIR) $(GENFILES_LIST) $(APP_OBJS)
 # Application target.
 $(BIN_DIR)/$(APP): $(BIN_DIR) $(OBJS)
 	$(vecho) "LD    $@"
-	$(Q) $(CC_WRAPPER) $(LINKER) $(OBJS) $(LDLIBS) $(LDFLAGS) -o $(BIN_DIR)/$(APP)
+	$(Q) $(CC_WRAPPER) $(LINKER) -Wl,--start-group $(OBJS) $(APP_BIN_LIBS) $(LDLIBS) -Wl,--end-group $(LDFLAGS) -o $(BIN_DIR)/$(APP)
 
 clean:
 	$(Q) rm -rf $(BIN_DIR) $(BUILD_DIR)
