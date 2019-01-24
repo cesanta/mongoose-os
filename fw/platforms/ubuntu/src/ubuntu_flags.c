@@ -16,6 +16,7 @@
 
 #include <getopt.h>
 #include <grp.h>
+#include <libgen.h>
 #include <pwd.h>
 
 #include "ubuntu.h"
