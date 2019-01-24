@@ -179,6 +179,19 @@ void mgos_usleep(uint32_t usecs) {
   return;
 }
 
+static void mgos_nsleep100_impl(uint32_t n) {
+  struct timespec ts;
+
+  ts.tv_sec  = 0;
+  ts.tv_nsec = n * 100;
+  pselect(0, NULL, NULL, NULL, &ts, NULL);
+}
+
+void (*mgos_nsleep100)(uint32_t n);
+void ubuntu_set_nsleep100(void) {
+   mgos_nsleep100 = mgos_nsleep100_impl;
+}
+
 void mgos_ints_disable(void) {
   // LOG(LL_INFO, ("Not implemented"));
   return;

@@ -40,6 +40,7 @@ static int ubuntu_mongoose(void) {
   enum mgos_init_result r;
 
   ubuntu_set_boottime();
+  ubuntu_set_nsleep100();
   if (!ubuntu_cap_init()) {
     return -2;
   }

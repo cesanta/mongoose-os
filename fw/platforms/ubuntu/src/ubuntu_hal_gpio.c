@@ -90,6 +90,13 @@ void mgos_gpio_hal_int_cb(int pin) {
   (void) pin;
 }
 
+bool mgos_gpio_setup_output(int pin, bool level) {
+  LOG(LL_INFO, ("Not implemented yet"));
+  return false;
+  (void) pin;
+  (void) level;
+}
+
 enum mgos_init_result mgos_gpio_hal_init(void) {
   LOG(LL_INFO, ("Not implemented yet"));
   return MGOS_INIT_OK;

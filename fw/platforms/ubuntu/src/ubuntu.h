@@ -37,7 +37,9 @@ int logm_print_prefix(enum cs_log_level l, const char *func, const char *file);
       } while (0)
 
 
+// Mongoose helper initializers
 bool ubuntu_set_boottime(void);
+bool ubuntu_set_nsleep100(void);
 
 // Create a socketpair
 bool ubuntu_ipc_init(void);
