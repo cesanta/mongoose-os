@@ -58,7 +58,6 @@ CFLAGS ?= -std=gnu99 -fno-inline -W -Wall -Wundef -Werror -g -Wno-unused-functio
 INCDIRS = $(addprefix -I,$(INCLUDES))
 AR ?= ar
 LINKER ?= gcc
-LFLAGS = -Wl,--start-group
 LDFLAGS ?= -static
 APP_BIN_LIBS ?=
 LIBS  ?= pthread cap
@@ -132,7 +131,7 @@ $(BUILD_DIR)/$(BUILD_LIB_NAME): $(BUILD_DIR) $(GENFILES_LIST) $(APP_OBJS)
 # Application target.
 $(BIN_DIR)/$(APP): $(BIN_DIR) $(OBJS)
 	$(vecho) "LD    $@"
-	$(Q) $(CC_WRAPPER) $(LINKER) $(LFLAGS) $(OBJS) $(APP_BIN_LIBS) $(LDLIBS) $(LDFLAGS) -o $(BIN_DIR)/$(APP)
+	$(Q) $(CC_WRAPPER) $(LINKER) -Wl,--start-group $(OBJS) $(APP_BIN_LIBS) -Wl,--end-group $(LDLIBS) $(LDFLAGS) -o $(BIN_DIR)/$(APP)
 
 clean:
 	$(Q) rm -rf $(BIN_DIR) $(BUILD_DIR)
