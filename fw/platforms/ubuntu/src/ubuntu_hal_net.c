@@ -16,10 +16,11 @@
 
 #include <netdb.h>
 #include <ifaddrs.h>
-#include "mgos.h"
+
 #include "mgos_hal.h"
 #include "mgos_mongoose.h"
 #include "mgos_net_hal.h"
+#include "ubuntu.h"
 #include "ubuntu_ipc.h"
 
 /* in mongoose-os/fw/src/mgos_net.c

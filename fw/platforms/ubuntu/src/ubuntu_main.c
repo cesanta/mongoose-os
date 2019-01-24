@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-#include "mgos.h"
+#include <sys/wait.h>
+
 #include "mgos_mongoose.h"
-#include "common/cs_dbg.h"
 #include "mgos_init_internal.h"
 #include "mgos_mongoose_internal.h"
 #include "mgos_sys_config.h"
@@ -25,7 +25,6 @@
 #include "mgos_uart_internal.h"
 #include "mgos_net_hal.h"
 #include "ubuntu.h"
-#include <sys/wait.h>
 
 extern const char *build_version, *build_id;
 extern const char *mg_build_version, *mg_build_id;

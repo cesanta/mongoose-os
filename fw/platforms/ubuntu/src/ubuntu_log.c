@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-#include "mgos.h"
 #include "ubuntu.h"
 
 int logm_print_prefix(enum cs_log_level l, const char *func, const char *file) {

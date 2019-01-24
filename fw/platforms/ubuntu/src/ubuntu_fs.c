@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-#include "mgos.h"
+#include "ubuntu.h"
 
 // TODO(pim): This file belongs in vfs-common/src/ubuntu_fs.c eventually
 

@@ -20,8 +20,8 @@
 #include <string.h>
 #include <sys/time.h>
 
-#include "mgos.h"
 #include "mgos_hw_timers_hal.h"
+#include "ubuntu.h"
 
 bool mgos_hw_timers_dev_set(struct mgos_hw_timer_info *ti, int usecs,
                             int flags) {

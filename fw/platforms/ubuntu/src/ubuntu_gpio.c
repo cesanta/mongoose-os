@@ -16,11 +16,11 @@
 
 #include <stdio.h>
 
-#include "mgos.h"
 #include "mgos_gpio_hal.h"
 #include "mgos_gpio_internal.h"
 #include "mgos_system.h"
 #include "mgos_timers.h"
+#include "ubuntu.h"
 
 #ifndef IRAM
 #define IRAM

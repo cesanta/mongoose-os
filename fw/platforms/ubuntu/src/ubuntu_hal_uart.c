@@ -20,8 +20,8 @@
 #include <string.h>
 #include <sys/time.h>
 
-#include "mgos.h"
 #include "mgos_uart_hal.h"
+#include "ubuntu.h"
 
 /* in mongoose-os/fw/src/mgos_uart.c
  * struct mgos_uart_state *mgos_uart_hal_get_state(int uart_no) {

@@ -39,6 +39,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 struct ubuntu_pipe {
   struct mgos_rlock_type *lock;
   int                     main_fd;
@@ -66,3 +70,7 @@ int ubuntu_ipc_open(const char *pathname, int flags);
 
 // Send a ping message from Mongoose to Main and back.
 void ubuntu_ipc_ping(void);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */

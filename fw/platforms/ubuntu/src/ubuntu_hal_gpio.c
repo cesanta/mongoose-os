@@ -20,8 +20,8 @@
 #include <string.h>
 #include <sys/time.h>
 
-#include "mgos.h"
 #include "mgos_gpio_hal.h"
+#include "ubuntu.h"
 
 bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
   LOG(LL_INFO, ("Not implemented yet"));

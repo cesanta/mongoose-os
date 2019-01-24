@@ -16,8 +16,15 @@
 
 #pragma once
 
-#include "mgos.h"
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include "common/cs_dbg.h"
 #include "mgos_system.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
 
 struct ubuntu_flags {
   uid_t uid;
@@ -72,3 +79,7 @@ bool ubuntu_cap_init(void);
 // Flags -- returns true if flags are parsed correctly.
 // Returns false (and prints usage to stdout) otherwise.
 bool ubuntu_flags_init(int argc, char **argv);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */

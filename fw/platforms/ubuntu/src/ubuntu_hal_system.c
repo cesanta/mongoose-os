@@ -21,9 +21,9 @@
 #include <sys/time.h>
 #include <pthread.h>
 
-#include "mgos.h"
 #include "mgos_hal.h"
 #include "mgos_system.h"
+#include "ubuntu.h"
 #include "ubuntu_ipc.h"
 
 struct ubuntu_wdt {
@@ -188,8 +188,9 @@ static void mgos_nsleep100_impl(uint32_t n) {
 }
 
 void (*mgos_nsleep100)(uint32_t n);
-void ubuntu_set_nsleep100(void) {
+bool ubuntu_set_nsleep100(void) {
    mgos_nsleep100 = mgos_nsleep100_impl;
+   return true;
 }
 
 void mgos_ints_disable(void) {

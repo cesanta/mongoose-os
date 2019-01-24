@@ -15,7 +15,7 @@
  */
 
 #include <fnmatch.h>
-#include "mgos.h"
+
 #include "mgos_system.h"
 #include "ubuntu.h"
 #include "ubuntu_ipc.h"
