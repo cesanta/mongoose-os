@@ -48,10 +48,9 @@ MGOS_SRCS = $(notdir $(wildcard *.c)) mgos_init.c  \
 PLATFORM_SRCS = $(wildcard $(PLATFORM_VPATH)/*.c)
 
 CFLAGS_EXTRA =
-CFLAGS ?= -std=c99 -fno-inline -W -Wall -Wundef -Werror -g -Wno-unused-function \
+CFLAGS ?= -std=gnu99 -fno-inline -W -Wall -Wundef -Werror -g -Wno-unused-function \
           -Wno-missing-field-initializers \
           -D_DEFAULT_SOURCE \
-          -D_GNU_SOURCE \
           $(MGOS_FEATURES) $(MGOS_POSIX_FEATURES) \
           $(MONGOOSE_FEATURES) \
           -DMGOS_APP=\"$(APP)\" -DFW_ARCHITECTURE=$(BUILD_PLATFORM) \
