@@ -212,7 +212,7 @@ bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
 }
 
 uint32_t mgos_get_cpu_freq(void) {
-  int      fd = open("/proc/cpuinfo", O_RDONLY);
+  int      fd = ubuntu_ipc_open("/proc/cpuinfo", O_RDONLY);
   char *   p;
   char     buf[2048];
   ssize_t  len;
