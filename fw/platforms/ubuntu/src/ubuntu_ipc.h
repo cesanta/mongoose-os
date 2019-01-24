@@ -35,7 +35,9 @@
 //  LOG(LL_INFO, ("Sent: cmd=%u len=%u msg='%.*s'", out.cmd, out.len, (int)out.len, out.data));
 //  LOG(LL_INFO, ("Received: cmd=%u len=%u msg='%.*s'", in.cmd, in.len, (int)in.len, in.data));
 
-#include "mgos.h"
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 struct ubuntu_pipe {
   struct mgos_rlock_type *lock;
