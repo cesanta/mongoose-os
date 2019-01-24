@@ -1,13 +1,30 @@
+/*
+ * Copyright 2019 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include <malloc.h>
+#include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
-#include <pthread.h>
 
-#include "mgos.h"
 #include "mgos_hal.h"
 #include "mgos_system.h"
+#include "ubuntu.h"
+#include "ubuntu_ipc.h"
 
 struct ubuntu_wdt {
   bool enabled;
@@ -111,25 +128,38 @@ size_t mgos_get_fs_memory_usage(void) {
  * }
  */
 
-void mgos_wdt_feed(void) {
+bool ubuntu_wdt_ok(void) {
+  struct timeval now;
+
+  if (!s_mgos_wdt.enabled) {
+    return true;
+  }
+
+  gettimeofday(&now, NULL);
+  return now.tv_sec < s_mgos_wdt.last_feed.tv_sec + s_mgos_wdt.timeout;
+}
+
+bool ubuntu_wdt_feed(void) {
+  //  LOGM(LL_DEBUG, ("Feeding watchdog"));
   gettimeofday(&s_mgos_wdt.last_feed, NULL);
-  return;
+  return true;
 }
 
-void mgos_wdt_set_timeout(int secs) {
-  s_mgos_wdt.timeout = secs;
-  return;
-
-  (void) secs;
-}
-
-void mgos_wdt_enable(void) {
+bool ubuntu_wdt_enable(void) {
+  //  LOGM(LL_DEBUG, ("Enabling WDT"));
   s_mgos_wdt.enabled = true;
-  return;
+  return true;
 }
 
-void mgos_wdt_disable(void) {
+bool ubuntu_wdt_disable(void) {
+  //  LOGM(LL_DEBUG, ("Disabling WDT"));
   s_mgos_wdt.enabled = false;
+  return true;
+}
+
+void ubuntu_wdt_set_timeout(int secs) {
+  //  LOGM(LL_DEBUG, ("Setting WDT timeout to %d secs", secs));
+  s_mgos_wdt.timeout = secs;
   return;
 }
 
@@ -147,6 +177,20 @@ void mgos_msleep(uint32_t msecs) {
 void mgos_usleep(uint32_t usecs) {
   usleep(usecs);
   return;
+}
+
+static void mgos_nsleep100_impl(uint32_t n) {
+  struct timespec ts;
+
+  ts.tv_sec = 0;
+  ts.tv_nsec = n * 100;
+  pselect(0, NULL, NULL, NULL, &ts, NULL);
+}
+
+void (*mgos_nsleep100)(uint32_t n);
+bool ubuntu_set_nsleep100(void) {
+  mgos_nsleep100 = mgos_nsleep100_impl;
+  return true;
 }
 
 void mgos_ints_disable(void) {
@@ -169,7 +213,7 @@ bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
 }
 
 uint32_t mgos_get_cpu_freq(void) {
-  int fd = open("/proc/cpuinfo", O_RDONLY);
+  int fd = ubuntu_ipc_open("/proc/cpuinfo", O_RDONLY);
   char *p;
   char buf[2048];
   ssize_t len;

@@ -1,9 +1,27 @@
-#include <netdb.h>
+/*
+ * Copyright 2019 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include <ifaddrs.h>
-#include "mgos.h"
+#include <netdb.h>
+
 #include "mgos_hal.h"
 #include "mgos_mongoose.h"
 #include "mgos_net_hal.h"
+#include "ubuntu.h"
+#include "ubuntu_ipc.h"
 
 /* in mongoose-os/fw/src/mgos_net.c
  * void mgos_net_dev_event_cb(enum mgos_net_if_type if_type, int if_instance,
@@ -17,6 +35,7 @@
 
 static bool mgos_eth_dev_get_default_gateway(char *dev, size_t devlen,
                                              struct sockaddr_in *gw) {
+  int fd;
   FILE *f = NULL;
   char line[100], *p, *c, *g, *saveptr;
   bool ret = false;
@@ -25,7 +44,12 @@ static bool mgos_eth_dev_get_default_gateway(char *dev, size_t devlen,
     return false;
   }
 
-  f = fopen("/proc/net/route", "r");
+  fd = ubuntu_ipc_open("/proc/net/route", O_RDONLY);
+  if (fd < 0) {
+    LOG(LL_ERROR, ("Could not open /proc/net/route"));
+    return false;
+  }
+  f = fdopen(fd, "r");
   if (!f) {
     return false;
   }
@@ -53,6 +77,7 @@ static bool mgos_eth_dev_get_default_gateway(char *dev, size_t devlen,
   }
 
   fclose(f);
+  close(fd);
   return ret;
 }
 
@@ -121,7 +146,7 @@ void device_get_mac_address(uint8_t mac[6]) {
     int fd;
     int len;
     snprintf(buf, sizeof(buf), "/sys/class/net/%s/address", gw_dev);
-    if (!(fd = open(buf, O_RDONLY))) {
+    if (!(fd = ubuntu_ipc_open(buf, O_RDONLY))) {
       goto fallback;
     }
     len = read(fd, buf, sizeof(buf));
@@ -143,7 +168,8 @@ void device_get_mac_address(uint8_t mac[6]) {
   }
 
 fallback:
-  LOG(LL_WARN, ("Cannot get default gateway, generating a random one"));
+  LOG(LL_WARN,
+      ("Cannot find device with default gateway, generating a random MAC"));
   srand(time(NULL));
   for (i = 0; i < 6; i++) {
     mac[i] = (double) rand() / RAND_MAX * 255;

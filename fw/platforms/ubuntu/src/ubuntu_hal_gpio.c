@@ -1,11 +1,27 @@
+/*
+ * Copyright 2019 Google Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include <malloc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
 
-#include "mgos.h"
 #include "mgos_gpio_hal.h"
+#include "ubuntu.h"
 
 bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
   LOG(LL_INFO, ("Not implemented yet"));
@@ -72,6 +88,13 @@ void mgos_gpio_hal_int_cb(int pin) {
   return;
 
   (void) pin;
+}
+
+bool mgos_gpio_setup_output(int pin, bool level) {
+  LOG(LL_INFO, ("Not implemented yet"));
+  return false;
+  (void) pin;
+  (void) level;
 }
 
 enum mgos_init_result mgos_gpio_hal_init(void) {
