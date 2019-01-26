@@ -254,7 +254,7 @@ enum mgos_init_result mgos_sys_config_init(void) {
       mgos_sys_config_get_debug_level() < _LL_MAX) {
     cs_log_set_level((enum cs_log_level) mgos_sys_config_get_debug_level());
   }
-  cs_log_set_filter(mgos_sys_config_get_debug_filter());
+  cs_log_set_file_level(mgos_sys_config_get_debug_file_level());
 #if MG_SSL_IF == MG_SSL_IF_MBEDTLS
   mbedtls_debug_set_threshold(mgos_sys_config_get_debug_mbedtls_level());
 #endif

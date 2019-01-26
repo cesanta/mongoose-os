@@ -24,7 +24,7 @@
 #include "mgos_hal.h"
 #include "mgos_timers.h"
 
-extern enum cs_log_level cs_log_threshold;
+extern enum cs_log_level cs_log_level;
 #if CS_ENABLE_STDIO
 extern FILE *cs_log_file;
 #endif
@@ -48,10 +48,8 @@ float mgos_rand_range(float from, float to) {
  * Intended for ffi
  */
 void mgos_log(const char *filename, int line_no, int level, const char *msg) {
-  if (cs_log_threshold >= level) {
-    fprintf(cs_log_file, "%17s:%-3d ", filename, line_no);
+  if (cs_log_print_prefix((enum cs_log_level) level, filename, line_no)) {
     cs_log_printf("%s", msg);
   }
-  // LOG(level, ("%s", msg));
 };
 #endif
