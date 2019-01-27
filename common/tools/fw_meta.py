@@ -141,9 +141,17 @@ def cmd_gen_build_info(args):
         bi['build_timestamp'] = timestamp
 
     try:
+        # This will output distance to most recent tag and dirty marker:
+        # 2.10.0
+        # 2.10.0-dirty
+        # 2.10.0-280-g20ab9a031-dirty
+        # or, for repo that doesn;t have any tags:
+        # 20ab9a031
+        # 20ab9a031-dirty
         git_describe_out = subprocess.check_output(
-                ["git", "-C", repo_path, "describe", "--dirty", "--tags"],
+                ["git", "-C", repo_path, "describe", "--dirty", "--tags", "--always"],
                 universal_newlines=True).strip()
+        # branch name (if any)
         git_revparse_out = subprocess.check_output(
                 ["git", "-C", repo_path, "rev-parse", "--abbrev-ref", "HEAD"],
                 universal_newlines=True).strip()
@@ -180,12 +188,34 @@ def cmd_gen_build_info(args):
     else:
         build_id = ts.strftime('%Y%m%d-%H%M%S')
         if git_describe_out:
-            build_id += "/%s" % git_describe_out
+            build_id += "/"
+            parts = []
+            if "-dirty" in git_describe_out:
+                dirty = True
+                git_describe_out = git_describe_out.replace("-dirty", "")
+            else:
+                dirty = False
+            # Most recent tag + offset
+            head_hash = git_log_head_out.split()[0][:7]
+            if not git_describe_out.startswith(head_hash):
+                # We have tag(s).
+                parts.append(git_describe_out)
+            # Add current hash (it won't be there if HEAD is exactly at tag)
+            if head_hash not in git_describe_out or git_describe_out.startswith(head_hash):
+                parts.append("g%s" % head_hash)
+            # Branch name
             if git_revparse_out != "HEAD":
-                build_id += "-%s" % git_revparse_out
-            head_hash = git_log_head_out.split()[0]
-            if head_hash[:7] not in build_id:
-                build_id += "-g%s" % head_hash[:9]
+                parts.append(git_revparse_out)
+            if dirty:
+                parts.append("dirty")
+            build_id += "-".join(parts)
+            # Some possible results:
+            # 20190127-050931/gc2393b3-master - repo with no tags, master branch, clean.
+            # 20190127-050931/gc2393b3-master-dirty - as above + local chnages.
+            # 20190127-051054/2.0.0-gc2393b3-master - tag 2.0.0 (exactly), master branch, clean.
+            # 20190127-051234/2.0.0-gc2393b3-master-dirty - as above + local changes.
+            # 20190127-051341/2.0.0-1-g02e78c7-master - 1 commit from 2.0.0, master branch, clean.
+
     if build_id is not None:
         bi['build_id'] = build_id
 
