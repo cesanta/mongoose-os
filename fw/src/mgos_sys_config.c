@@ -48,6 +48,8 @@
 #define CONF_USER_FILE_OLD "conf.json"
 #define CONF_VENDOR_FILE "conf_vendor.json"
 
+#define CONF_FILE_TRY_SUFFIX ".try"
+
 /* Must be provided externally, usually auto-generated. */
 extern const char *build_id;
 extern const char *build_timestamp;
@@ -63,7 +65,10 @@ static mgos_config_validator_fn *s_validators;
 static int s_num_validators;
 
 static int load_config_file(const char *filename, const char *acl,
+                            bool check_try, bool delete_try,
                             struct mgos_config *cfg);
+static bool load_config_defaults_internal(struct mgos_config *cfg,
+                                          bool check_try, bool delete_try);
 
 void mgos_expand_mac_address_placeholders(char *str) {
   struct mg_str s = mg_mk_str(str);
@@ -87,26 +92,32 @@ void mgos_expand_placeholders(const struct mg_str src, struct mg_str *str) {
   }
 }
 
-bool load_config_defaults(struct mgos_config *cfg) {
+static bool load_config_defaults_internal(struct mgos_config *cfg,
+                                          bool check_try, bool delete_try) {
   int i;
-  char fname[sizeof(CONF_USER_FILE)];
+  char fname[sizeof(CONF_USER_FILE) + 10];
   memset(cfg, 0, sizeof(*cfg));
   memcpy(fname, CONF_USER_FILE, sizeof(fname));
   const char *acl = "*";
   for (i = 0; i < MGOS_CONFIG_LEVEL_USER; i++) {
     fname[CONF_USER_FILE_NUM_IDX] = '0' + i;
-    if (!load_config_file(fname, acl, cfg)) {
+    if (!load_config_file(fname, acl, check_try, delete_try, cfg)) {
       /* conf0 must exist, everything else is optional. */
       if (i == 0) return false;
     }
     acl = cfg->conf_acl;
     /* Backward compat: load conf_vendor.json at level 5.5 */
     if (i == 5) {
-      load_config_file(CONF_VENDOR_FILE, cfg->conf_acl, cfg);
+      load_config_file(CONF_VENDOR_FILE, cfg->conf_acl, false, false, cfg);
       acl = cfg->conf_acl;
     }
   }
   return true;
+}
+
+bool load_config_defaults(struct mgos_config *cfg) {
+  return load_config_defaults_internal(cfg, true /* check_try */,
+                                       false /* delete_try */);
 }
 
 bool mgos_config_validate(const struct mgos_config *cfg, char **msg) {
@@ -117,20 +128,31 @@ bool mgos_config_validate(const struct mgos_config *cfg, char **msg) {
   return true;
 }
 
-bool save_cfg(const struct mgos_config *cfg, char **msg) {
+bool mgos_sys_config_save(const struct mgos_config *cfg, bool try_once,
+                          char **msg) {
   bool result = false;
+  const char *fname, *try_fname;
   struct mgos_config *defaults = calloc(1, sizeof(*defaults));
   char *ptr = NULL;
   if (defaults == NULL) goto clean;
   if (msg == NULL) msg = &ptr;
   if (!mgos_config_validate(cfg, msg)) goto clean;
-  if (!load_config_defaults(defaults)) {
+  if (!load_config_defaults_internal(defaults, true /* check_try */,
+                                     false /* delete_try */)) {
     *msg = strdup("failed to load defaults");
     goto clean;
   }
+  try_fname = CONF_USER_FILE CONF_FILE_TRY_SUFFIX;
+  if (try_once) {
+    fname = try_fname;
+  } else {
+    fname = CONF_USER_FILE;
+    /* Delete stale try file that may be there. */
+    remove(try_fname);
+  }
   if (mgos_conf_emit_f(cfg, defaults, mgos_config_schema(), true /* pretty */,
-                       CONF_USER_FILE)) {
-    LOG(LL_INFO, ("Saved to %s", CONF_USER_FILE));
+                       fname)) {
+    LOG(LL_INFO, ("Saved to %s", fname));
     result = true;
   } else {
     *msg = strdup("failed to write file");
@@ -142,6 +164,10 @@ clean:
     free(defaults);
   }
   return result;
+}
+
+bool save_cfg(const struct mgos_config *cfg, char **msg) {
+  return mgos_sys_config_save(cfg, false, msg);
 }
 
 void mgos_config_reset(int level) {
@@ -157,14 +183,31 @@ void mgos_config_reset(int level) {
 }
 
 static int load_config_file(const char *filename, const char *acl,
+                            bool check_try, bool delete_try,
                             struct mgos_config *cfg) {
   char *data = NULL, *acl_copy = NULL;
   size_t size;
   int result = 1;
-  LOG(LL_DEBUG, ("=== Loading %s", filename));
+  struct stat st;
+  char tfn_buf[32], *try_filename = tfn_buf;
+  // See if we have "${filename}.try" and prefer that.
+  // Delete the file immediately after loading.
+  if (check_try &&
+      mg_asprintf(&try_filename, sizeof(tfn_buf), "%s%s", filename,
+                  CONF_FILE_TRY_SUFFIX) > 0 &&
+      stat(try_filename, &st) == 0) {
+    filename = try_filename;
+  } else {
+    if (try_filename != tfn_buf) free(try_filename);
+    try_filename = NULL;
+  }
+  if (stat(filename, &st) != 0) {
+    result = 0;
+    goto clean;
+  }
+  LOG(LL_INFO, ("Loading %s", filename));
   data = cs_read_file(filename, &size);
   if (data == NULL) {
-    /* File not found or read error */
     result = 0;
     goto clean;
   }
@@ -179,6 +222,10 @@ static int load_config_file(const char *filename, const char *acl,
 clean:
   free(data);
   free(acl_copy);
+  if (try_filename != NULL) {
+    if (delete_try) remove(try_filename);
+    if (try_filename != tfn_buf) free(try_filename);
+  }
   return result;
 }
 
@@ -186,7 +233,8 @@ void mbedtls_debug_set_threshold(int threshold);
 
 enum mgos_init_result mgos_sys_config_init(void) {
   /* Load system defaults - mandatory */
-  if (!load_config_defaults(&mgos_sys_config)) {
+  if (!load_config_defaults_internal(&mgos_sys_config, true /* check_try */,
+                                     true /* delete_try */)) {
     LOG(LL_ERROR, ("Failed to load config defaults"));
     return MGOS_INIT_CONFIG_LOAD_DEFAULTS_FAILED;
   }
@@ -209,14 +257,13 @@ enum mgos_init_result mgos_sys_config_init(void) {
     }
   }
 
-#if CS_PLATFORM != CS_P_PIC32
   struct stat st;
   if (stat(CONF_USER_FILE_OLD, &st) == 0) {
     rename(CONF_USER_FILE_OLD, CONF_USER_FILE);
   }
-#endif
   /* Successfully loaded system config. Try overrides - they are optional. */
   load_config_file(CONF_USER_FILE, mgos_sys_config_get_conf_acl(),
+                   true /* check_try */, true /* delete_try */,
                    &mgos_sys_config);
 
   s_initialized = true;

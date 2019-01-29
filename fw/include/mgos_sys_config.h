@@ -59,10 +59,16 @@ bool mgos_sys_config_is_initialized(void);
 /*
  * Save config. Performs diff against defaults and only saves diffs.
  * Reboot is required to reload the config.
+ * If try_once is set, the config will only take effect for one boot.
+ *
  * If return value is false, a message may be provided in *msg.
  * If non-NULL, it must be free()d.
  * It is safe to pass a NULL `msg`
  */
+bool mgos_sys_config_save(const struct mgos_config *cfg, bool try_once,
+                          char **msg);
+
+/* Deprecated API, equivalent to mgos_sys_config_save(cfg, false, msg). */
 bool save_cfg(const struct mgos_config *cfg, char **msg);
 
 /*
