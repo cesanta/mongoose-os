@@ -1,4 +1,4 @@
-# This is an example ATECC508A configuration file that can be used for testing.
+# This is an example ATECC608A configuration file that can be used for testing.
 #
 # Slots 0-3 are ECC slots with ECDH enabled. They can be generated on the device
 # or rewritten using key in slot 4, which itself can be reset at any time.
@@ -6,7 +6,7 @@
 # NB: This setup is NOT secure and is only meant for development.
 #
 # To apply this config use the following command:
-#   mos -X atca-set-config --port /dev/ttyUSB0 atca-test-config.yaml --dry-run=false
+#   mos atca-set-config --port /dev/ttyUSB0 atca-test-config.yaml --dry-run=false
 
 reserved13: 192
 i2cenable: true
