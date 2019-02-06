@@ -37,8 +37,7 @@
 #define UART_TX_INTS (UART_TXFIFO_EMPTY_INT_ENA)
 #define UART_INFO_INTS (UART_RXFIFO_OVF_INT_ENA | UART_CTS_CHG_INT_ENA)
 
-/* Note: ESP32 supports FIFO lengths > 128. For now, we ignore that. */
-#define UART_FIFO_MAX_LEN 127
+#define UART_TX_FIFO_SIZE 128
 
 struct esp32_uart_state {
   bool hd;
@@ -54,7 +53,18 @@ IRAM bool esp32_uart_cts(int uart_no) {
 }
 
 IRAM int esp32_uart_rx_fifo_len(int uart_no) {
-  return REG_GET_FIELD(UART_STATUS_REG(uart_no), UART_RXFIFO_CNT);
+  uint32_t base = REG_UART_BASE(uart_no);
+  uint32_t status_reg = base + 0x1c;
+  uint32_t mem_cnt_status_reg = base + 0x64;
+  uint32_t n1, n2;
+  // Ensure consistent reading.
+  do {
+    n1 = ((REG_GET_FIELD(mem_cnt_status_reg, UART_RX_MEM_CNT) << 8) |
+          REG_GET_FIELD(status_reg, UART_RXFIFO_CNT));
+    n2 = ((REG_GET_FIELD(mem_cnt_status_reg, UART_RX_MEM_CNT) << 8) |
+          REG_GET_FIELD(status_reg, UART_RXFIFO_CNT));
+  } while (n1 != n2);
+  return n1;
 }
 
 IRAM static int rx_byte(int uart_no) {
@@ -87,8 +97,8 @@ IRAM uint8_t get_rx_fifo_full_thresh(int uart_no) {
 
 IRAM bool adj_rx_fifo_full_thresh(struct mgos_uart_state *us) {
   int uart_no = us->uart_no;
-  uint8_t thresh = us->cfg.dev.rx_fifo_full_thresh;
-  uint8_t rx_fifo_len = esp32_uart_rx_fifo_len(uart_no);
+  int thresh = us->cfg.dev.rx_fifo_full_thresh;
+  int rx_fifo_len = esp32_uart_rx_fifo_len(uart_no);
   if (rx_fifo_len >= thresh && us->cfg.rx_fc_type == MGOS_UART_FC_SW) {
     thresh = us->cfg.dev.rx_fifo_fc_thresh;
   }
@@ -103,7 +113,7 @@ static IRAM size_t fill_tx_fifo(struct mgos_uart_state *us) {
   int uart_no = us->uart_no;
   size_t tx_av = us->tx_buf.len - uds->isr_tx_bytes;
   if (tx_av == 0) return 0;
-  size_t fifo_av = UART_FIFO_MAX_LEN - esp32_uart_tx_fifo_len(uart_no);
+  size_t fifo_av = UART_TX_FIFO_SIZE - esp32_uart_tx_fifo_len(uart_no);
   if (fifo_av == 0) return 0;
   size_t len = MIN(tx_av, fifo_av);
   const char *src = us->tx_buf.buf + uds->isr_tx_bytes;
@@ -164,7 +174,7 @@ IRAM NOINSTR static void esp32_handle_uart_int(struct mgos_uart_state *us) {
       SET_PERI_REG_MASK(UART_INT_ENA_REG(uart_no), UART_RXFIFO_FULL_INT_ENA);
     } else if (cfg->rx_fc_type == MGOS_UART_FC_SW) {
       /* Send XOFF and keep RX ints disabled */
-      while (esp32_uart_tx_fifo_len(uart_no) >= UART_FIFO_MAX_LEN) {
+      while (esp32_uart_tx_fifo_len(uart_no) >= UART_TX_FIFO_SIZE) {
       }
       esp32_uart_tx_byte(uart_no, MGOS_UART_XOFF_CHAR);
       us->xoff_sent = true;
@@ -184,7 +194,7 @@ IRAM NOINSTR static void esp32_handle_uart_int(struct mgos_uart_state *us) {
     } else {
       CLEAR_PERI_REG_MASK(UART_INT_ENA_REG(uart_no), UART_TX_INTS);
     }
-    if (tx_av < UART_FIFO_MAX_LEN) {
+    if (tx_av < UART_TX_FIFO_SIZE / 2) {
       mgos_uart_schedule_dispatcher(uart_no, true /* from_isr */);
     } else {
       /* No need to bother dispatcher, we have plenty of data */
@@ -465,8 +475,17 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
                            << UART_RX_FLOW_THRHD_S);
   }
   WRITE_PERI_REG(UART_CONF1_REG(uart_no), conf1);
-  /* Configure FIFOs for 128 bytes. */
-  WRITE_PERI_REG(UART_MEM_CONF_REG(uart_no), 0x88);
+  if (uart_no != 2) {
+    /* For UART0 and 1 use 128 byte FIFOs. */
+    WRITE_PERI_REG(UART_MEM_CONF_REG(uart_no), 0x88);
+  } else {
+    /*
+     * UART2 is special: there are 256 unused bytes after the end of its RX FIFO
+     * NB: TRM 13.3.3 fig.81 is wrong: UART0/1/2/ Rx_FIFOs start at 384/512/640,
+     * i.e. there is no gap at 384-512 as the figure suggests.
+     */
+    WRITE_PERI_REG(UART_MEM_CONF_REG(uart_no), 0x98);
+  }
   /* Disable idle after transmission, reset defaults are non-zero. */
   WRITE_PERI_REG(UART_IDLE_CONF_REG(uart_no), 0);
 
