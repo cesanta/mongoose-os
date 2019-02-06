@@ -121,9 +121,10 @@ IRAM NOINSTR static void empty_rx_fifo(int uart_no) {
    * https://github.com/espressif/esp-idf/commit/4052803e161ba06d1cae8d36bc66dde15b3fc8c7
    * So, like ESP-IDF, we avoid using FIFO_RST and empty RX FIFO by reading it.
    */
-  while ((esp32_uart_rx_fifo_len(uart_no) > 0) ||
-         (REG_GET_FIELD(UART_MEM_RX_STATUS_REG(0), UART_MEM_RX_RD_ADDR) !=
-          REG_GET_FIELD(UART_MEM_RX_STATUS_REG(0), UART_MEM_RX_WR_ADDR))) {
+  while (
+      (esp32_uart_rx_fifo_len(uart_no) > 0) ||
+      (REG_GET_FIELD(UART_MEM_RX_STATUS_REG(uart_no), UART_MEM_RX_RD_ADDR) !=
+       REG_GET_FIELD(UART_MEM_RX_STATUS_REG(uart_no), UART_MEM_RX_WR_ADDR))) {
     (void) rx_byte(uart_no);
   }
 }
