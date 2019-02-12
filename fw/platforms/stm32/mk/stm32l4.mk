@@ -4,13 +4,15 @@ MGOS_ROOT_FS_SIZE ?= 131072
 SRAM2_BASE_ADDR = 0x10000000
 LD_SCRIPT_NO_OTA = $(MGOS_PLATFORM_PATH)/ld/stm32l4_no_ota.ld
 LD_SCRIPT_OTA_0 = $(MGOS_PLATFORM_PATH)/ld/stm32l4_ota_0.ld
-STM32_CFLAGS += -mthumb -march=armv7e-m -mfloat-abi=hard -mfpu=fpv4-sp-d16 \
+STM32_CFLAGS += -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 \
                 -DSTM32L4 -DARM_HAVE_FPU=1 -DMGOS_MAX_NUM_UARTS=6 \
                 -DIRAM='__attribute__((section(".RamFunc")))'
 STM32CUBE_PATH = $(STM32CUBE_L4_PATH)
 STM32_IPATH += $(STM32CUBE_PATH)/Drivers/CMSIS/Device/ST/STM32L4xx/Include \
-               $(STM32CUBE_PATH)/Drivers/STM32L4xx_HAL_Driver/Inc
-STM32_VPATH += $(STM32CUBE_PATH)/Drivers/STM32L4xx_HAL_Driver/Src
+               $(STM32CUBE_PATH)/Drivers/STM32L4xx_HAL_Driver/Inc \
+               $(FREERTOS_PATH)/Source/portable/GCC/ARM_CM4F
+STM32_VPATH += $(STM32CUBE_PATH)/Drivers/STM32L4xx_HAL_Driver/Src \
+               $(FREERTOS_PATH)/Source/portable/GCC/ARM_CM4F
 STM32_SRCS += \
 stm32l4xx_hal_adc.c stm32l4xx_hal_adc_ex.c \
 stm32l4xx_hal_can.c \

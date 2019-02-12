@@ -1,0 +1,39 @@
+--- Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.c.orig	2017-09-13 11:55:44.000000000 +0100
++++ Middlewares/Third_Party/FreeRTOS/Source/CMSIS_RTOS/cmsis_os.c	2019-02-11 14:10:20.638368717 +0000
+@@ -1589,6 +1589,7 @@
+ #if ( ( configUSE_TRACE_FACILITY == 1 ) && ( configUSE_STATS_FORMATTING_FUNCTIONS == 1 ) )
+   vTaskList((char *)buffer);
+ #endif
++  (void) buffer;
+   return osOK;
+ }
+ 
+--- Drivers/STM32F2xx_HAL_Driver/Src/stm32f2xx_hal_pcd.c.orig	2017-09-13 16:07:52.000000000 +0100
++++ Drivers/STM32F2xx_HAL_Driver/Src/stm32f2xx_hal_pcd.c	2019-02-11 14:02:35.190042984 +0000
+@@ -1208,7 +1208,7 @@
+   ep = &hpcd->IN_ep[epnum];
+   len = ep->xfer_len - ep->xfer_count;
+   
+-  if (len > ep->maxpacket)
++  if (len > (int32_t) ep->maxpacket)
+   {
+     len = ep->maxpacket;
+   }
+@@ -1223,7 +1223,7 @@
+     /* Write the FIFO */
+     len = ep->xfer_len - ep->xfer_count;
+     
+-    if (len > ep->maxpacket)
++    if (len > (int32_t) ep->maxpacket)
+     {
+       len = ep->maxpacket;
+     }
+@@ -1235,7 +1235,7 @@
+     ep->xfer_count += len;
+   }
+   
+-  if(len <= 0U)
++  if(len <= 0)
+   {
+     fifoemptymsk = 0x1U << epnum;
+     USBx_DEVICE->DIEPEMPMSK &= ~fifoemptymsk;

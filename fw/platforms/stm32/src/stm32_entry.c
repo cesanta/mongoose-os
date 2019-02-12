@@ -18,6 +18,8 @@
 #include <stdint.h>
 #include <string.h>
 
+#include "mgos_gpio.h"
+
 extern int main(void);
 extern void arm_exc_handler_top(void);
 

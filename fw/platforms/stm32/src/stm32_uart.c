@@ -49,7 +49,7 @@ static inline uint8_t stm32_uart_rx_byte(struct mgos_uart_state *us);
 #define stm32_set_int_handler(irqn, handler)
 #endif
 
-#if defined(STM32F4)
+#if defined(STM32F2) || defined(STM32F4)
 #define ISR SR
 #define USART_ISR_CTSIF USART_SR_CTS
 #define USART_ISR_ORE USART_SR_ORE
@@ -436,7 +436,7 @@ bool stm32_uart_configure(int uart_no, const struct mgos_uart_config *cfg) {
   }
   {
     uint32_t div = 0;
-#if defined(STM32F4)
+#if defined(STM32F2) || defined(STM32F4)
     uint32_t f_uart;
     if (uart_no == 1 || uart_no == 6) {
       f_uart = HAL_RCC_GetPCLK2Freq();

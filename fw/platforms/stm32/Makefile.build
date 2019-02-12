@@ -185,13 +185,11 @@ MGOS_SRCS += $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
 
 STM32_IPATH += $(STM32CUBE_PATH)/Drivers/CMSIS/Include \
                $(FREERTOS_PATH)/Source/include \
-               $(FREERTOS_PATH)/Source/CMSIS_RTOS \
-               $(FREERTOS_PATH)/Source/portable/GCC/ARM_CM7/r0p1
+               $(FREERTOS_PATH)/Source/CMSIS_RTOS
 
 STM32_VPATH += $(FREERTOS_PATH)/Source \
                $(FREERTOS_PATH)/Source/CMSIS_RTOS \
-               $(FREERTOS_PATH)/Source/portable/MemMang \
-               $(FREERTOS_PATH)/Source/portable/GCC/ARM_CM7/r0p1
+               $(FREERTOS_PATH)/Source/portable/MemMang
 
 STM32_SRCS += $(notdir $(wildcard $(FREERTOS_PATH)/Source/*.c) port.c heap_3.c cmsis_os.c)
 

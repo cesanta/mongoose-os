@@ -56,7 +56,7 @@ IRAM GPIO_TypeDef *stm32_gpio_port_base(int pin_def) {
   return NULL;
 }
 
-#if defined(STM32F4) || defined(STM32F7)
+#if defined(STM32F2) || defined(STM32F4) || defined(STM32F7)
 static bool stm32_gpio_port_en(int pin_def) {
   uint32_t bit = 0;
   switch (STM32_PIN_PORT(pin_def)) {

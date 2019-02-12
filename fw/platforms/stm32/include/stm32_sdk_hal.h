@@ -18,7 +18,10 @@
 #ifndef CS_FW_PLATFORMS_STM32_INCLUDE_STM32_SDK_HAL_H_
 #define CS_FW_PLATFORMS_STM32_INCLUDE_STM32_SDK_HAL_H_
 
-#if defined(STM32F4)
+#if defined(STM32F2)
+#include "stm32f2xx_hal.h"
+#include "stm32f2xx_ll_utils.h"
+#elif defined(STM32F4)
 #include "stm32f4xx_hal.h"
 #include "stm32f4xx_ll_utils.h"
 #elif defined(STM32L4)
