@@ -147,7 +147,6 @@ IRAM NOINSTR static void esp32_handle_uart_int(struct mgos_uart_state *us) {
    */
   const unsigned int int_st = READ_PERI_REG(UART_INT_ST_REG(uart_no)) &
                               READ_PERI_REG(UART_INT_ENA_REG(uart_no));
-  const struct mgos_uart_config *cfg = &us->cfg;
   struct esp32_uart_state *uds = (struct esp32_uart_state *) us->dev_data;
   if (int_st == 0) return;
   us->stats.ints++;
@@ -172,12 +171,6 @@ IRAM NOINSTR static void esp32_handle_uart_int(struct mgos_uart_state *us) {
     CLEAR_PERI_REG_MASK(UART_INT_ENA_REG(uart_no), UART_RX_INTS);
     if (adj_rx_fifo_full_thresh(us)) {
       SET_PERI_REG_MASK(UART_INT_ENA_REG(uart_no), UART_RXFIFO_FULL_INT_ENA);
-    } else if (cfg->rx_fc_type == MGOS_UART_FC_SW) {
-      /* Send XOFF and keep RX ints disabled */
-      while (esp32_uart_tx_fifo_len(uart_no) >= UART_TX_FIFO_SIZE) {
-      }
-      esp32_uart_tx_byte(uart_no, MGOS_UART_XOFF_CHAR);
-      us->xoff_sent = true;
     }
     mgos_uart_schedule_dispatcher(uart_no, true /* from_isr */);
   }
@@ -488,6 +481,18 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
   }
   /* Disable idle after transmission, reset defaults are non-zero. */
   WRITE_PERI_REG(UART_IDLE_CONF_REG(uart_no), 0);
+
+  if (cfg->rx_fc_type == MGOS_UART_FC_SW && cfg->dev.rx_fifo_fc_thresh > 0) {
+    uint32_t swfc_conf = 0x13110000;
+    /* Note: TRM's description of these fields is incorrect (swapped?) */
+    swfc_conf |= ((cfg->dev.rx_fifo_fc_thresh & 0xff) << 8);
+    swfc_conf |= (cfg->dev.rx_fifo_full_thresh & 0xff);  // UART_XON_THRESHOLD
+    WRITE_PERI_REG(UART_SWFC_CONF_REG(uart_no), swfc_conf);
+    // Turn SW FC on. Note: this also sends a XON char to unblock transmitter.
+    WRITE_PERI_REG(UART_FLOW_CONF_REG(uart_no), 1);
+  } else {
+    WRITE_PERI_REG(UART_FLOW_CONF_REG(uart_no), 0);
+  }
 
   uds->hd = cfg->dev.hd;
   uds->tx_en_gpio = cfg->dev.tx_en_gpio;
