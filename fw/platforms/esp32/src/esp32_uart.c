@@ -361,6 +361,17 @@ bool mgos_uart_hal_init(struct mgos_uart_state *us) {
     LOG(LL_ERROR, ("Error allocating int for UART%d: %d", us->uart_no, r));
     return false;
   }
+  if (uart_no != 2) {
+    /* For UART0 and 1 use 128 byte FIFOs. */
+    WRITE_PERI_REG(UART_MEM_CONF_REG(uart_no), 0x88);
+  } else {
+    /*
+     * UART2 is special: there are 256 unused bytes after the end of its RX FIFO
+     * NB: TRM 13.3.3 fig.81 is wrong: UART0/1/2/ Rx_FIFOs start at 384/512/640,
+     * i.e. there is no gap at 384-512 as the figure suggests.
+     */
+    WRITE_PERI_REG(UART_MEM_CONF_REG(uart_no), 0x98);
+  }
   empty_rx_fifo(uart_no);
   return true;
 }
@@ -468,17 +479,6 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
                            << UART_RX_FLOW_THRHD_S);
   }
   WRITE_PERI_REG(UART_CONF1_REG(uart_no), conf1);
-  if (uart_no != 2) {
-    /* For UART0 and 1 use 128 byte FIFOs. */
-    WRITE_PERI_REG(UART_MEM_CONF_REG(uart_no), 0x88);
-  } else {
-    /*
-     * UART2 is special: there are 256 unused bytes after the end of its RX FIFO
-     * NB: TRM 13.3.3 fig.81 is wrong: UART0/1/2/ Rx_FIFOs start at 384/512/640,
-     * i.e. there is no gap at 384-512 as the figure suggests.
-     */
-    WRITE_PERI_REG(UART_MEM_CONF_REG(uart_no), 0x98);
-  }
   /* Disable idle after transmission, reset defaults are non-zero. */
   WRITE_PERI_REG(UART_IDLE_CONF_REG(uart_no), 0);
 
