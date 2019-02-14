@@ -196,27 +196,27 @@ void stm32_uart2_int_handler(void) {
 void stm32_uart3_int_handler(void) {
   stm32_uart_isr(s_us[3]);
 }
-#ifdef UART4_IRQn
+#ifdef UART4
 void stm32_uart4_int_handler(void) {
   stm32_uart_isr(s_us[4]);
 }
 #endif
-#ifdef UART5_IRQn
+#ifdef UART5
 void stm32_uart5_int_handler(void) {
   stm32_uart_isr(s_us[5]);
 }
 #endif
-#ifdef USART6_IRQn
+#ifdef USART6
 void stm32_uart6_int_handler(void) {
   stm32_uart_isr(s_us[6]);
 }
 #endif
-#ifdef UART7_IRQn
+#ifdef UART7
 void stm32_uart7_int_handler(void) {
   stm32_uart_isr(s_us[7]);
 }
 #endif
-#ifdef UART8_IRQn
+#ifdef UART8
 void stm32_uart8_int_handler(void) {
   stm32_uart_isr(s_us[8]);
 }
@@ -332,35 +332,35 @@ bool stm32_uart_setup_pins(int uart_no, const struct mgos_uart_config *cfg) {
       stm32_set_int_handler(USART3_IRQn, stm32_uart3_int_handler);
       irqn = USART3_IRQn;
       break;
-#ifdef UART4_IRQn
+#ifdef UART4
     case 4:
       __HAL_RCC_UART4_CLK_ENABLE();
       stm32_set_int_handler(UART4_IRQn, stm32_uart4_int_handler);
       irqn = UART4_IRQn;
       break;
 #endif
-#ifdef UART5_IRQn
+#ifdef UART5
     case 5:
       __HAL_RCC_UART5_CLK_ENABLE();
       stm32_set_int_handler(UART5_IRQn, stm32_uart5_int_handler);
       irqn = UART5_IRQn;
       break;
 #endif
-#ifdef USART6_IRQn
+#ifdef USART6
     case 6:
       __HAL_RCC_USART6_CLK_ENABLE();
       stm32_set_int_handler(USART6_IRQn, stm32_uart6_int_handler);
       irqn = USART6_IRQn;
       break;
 #endif
-#ifdef UART7_IRQn
+#ifdef UART7
     case 7:
       __HAL_RCC_UART7_CLK_ENABLE();
       stm32_set_int_handler(UART7_IRQn, stm32_uart7_int_handler);
       irqn = UART7_IRQn;
       break;
 #endif
-#ifdef UART8_IRQn
+#ifdef UART8
     case 8:
       __HAL_RCC_UART8_CLK_ENABLE();
       stm32_set_int_handler(UART8_IRQn, stm32_uart8_int_handler);
@@ -525,31 +525,31 @@ void mgos_uart_hal_deinit(struct mgos_uart_state *us) {
       __HAL_RCC_USART3_CLK_DISABLE();
       irqn = USART3_IRQn;
       break;
-#ifdef UART4_IRQn
+#ifdef UART4
     case 4:
       __HAL_RCC_UART4_CLK_DISABLE();
       irqn = UART4_IRQn;
       break;
 #endif
-#ifdef UART5_IRQn
+#ifdef UART5
     case 5:
       __HAL_RCC_UART5_CLK_DISABLE();
       irqn = UART5_IRQn;
       break;
 #endif
-#ifdef USART6_IRQn
+#ifdef USART6
     case 6:
       __HAL_RCC_USART6_CLK_DISABLE();
       irqn = USART6_IRQn;
       break;
 #endif
-#ifdef UART7_IRQn
+#ifdef UART7
     case 7:
       __HAL_RCC_UART7_CLK_DISABLE();
       irqn = UART7_IRQn;
       break;
 #endif
-#ifdef UART7_IRQn
+#ifdef UART7
     case 8:
       __HAL_RCC_UART8_CLK_DISABLE();
       irqn = UART8_IRQn;
