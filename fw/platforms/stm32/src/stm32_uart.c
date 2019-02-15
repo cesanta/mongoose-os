@@ -387,7 +387,22 @@ bool stm32_uart_configure(int uart_no, const struct mgos_uart_config *cfg) {
   uint32_t cr2 = 0;
   uint32_t cr3 = USART_CR3_EIE;
   uint32_t brr = 0;
-  switch (cfg->num_data_bits) {
+  int num_bits = cfg->num_data_bits;
+  switch (cfg->parity) {
+    case MGOS_UART_PARITY_NONE:
+      break;
+    case MGOS_UART_PARITY_EVEN:
+      cr1 |= USART_CR1_PCE;
+      num_bits++;
+      break;
+    case MGOS_UART_PARITY_ODD:
+      cr1 |= (USART_CR1_PCE | USART_CR1_PS);
+      num_bits++;
+      break;
+    default:
+      return false;
+  }
+  switch (num_bits) {
     case 7:
 #ifdef USART_CR1_M_1
       cr1 |= USART_CR1_M_1;
@@ -403,18 +418,6 @@ bool stm32_uart_configure(int uart_no, const struct mgos_uart_config *cfg) {
 #else
       cr1 |= USART_CR1_M;
 #endif
-      break;
-    default:
-      return false;
-  }
-  switch (cfg->parity) {
-    case MGOS_UART_PARITY_NONE:
-      break;
-    case MGOS_UART_PARITY_EVEN:
-      cr1 |= USART_CR1_PCE;
-      break;
-    case MGOS_UART_PARITY_ODD:
-      cr1 |= (USART_CR1_PCE | USART_CR1_PS);
       break;
     default:
       return false;
