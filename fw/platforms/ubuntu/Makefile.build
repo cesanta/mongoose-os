@@ -92,7 +92,6 @@ OBJS = $(MGOS_OBJS) $(APP_OBJS) $(PLATFORM_OBJS) $(GENFILES_OBJS)
 
 # Files
 FS_STAGING_DIR ?= $(BUILD_DIR)/fs
-FS_FILES += $(foreach m,$(APP_FS_FILES),$(wildcard $(m)))
 
 FW_PARTS = app:type=app,src=$(APP_BIN)
 FW_PARTS += $(APP_EXTRA_FW_PARTS)
@@ -104,6 +103,7 @@ include $(MGOS_PATH)/common/scripts/build_info.mk
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
 include $(MGOS_PATH)/fw/src/mgos_config.mk
 include $(MGOS_PATH)/fw/src/mgos_features.mk
+include $(MGOS_PATH)/fw/src/mkfs.mk
 
 all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GENFILES_LIST) $(OBJS) $(FS_STAGING_DIR) $(FW_ZIP) $(APP_ELF)
 
@@ -120,9 +120,9 @@ $(MG_BUILD_INFO_C):
 	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
 
 # Output filesystem directory
-$(FS_STAGING_DIR): $(MGOS_CONFIG_DEFAULTS_JSON)
+$(FS_STAGING_DIR): $(FS_FILES)
 	$(vecho) "MKDIR $@"
-	$(Q) mkdir -p $@
+	$(Q) rm -rf $(@) && mkdir -p $@
 	$(Q) $(foreach f,$(shell echo $(FS_FILES) | tr ' ' '\n' | sort | uniq), \
 		echo "  CP    $(f) -> $(FS_STAGING_DIR)"; \
 		cp $(f) $(FS_STAGING_DIR);)
