@@ -97,7 +97,7 @@ static bool load_config_defaults_internal(struct mgos_config *cfg,
   int i;
   char fname[sizeof(CONF_USER_FILE) + 10];
   memset(cfg, 0, sizeof(*cfg));
-  memcpy(fname, CONF_USER_FILE, sizeof(fname));
+  memcpy(fname, CONF_USER_FILE, sizeof(CONF_USER_FILE));
   const char *acl = "*";
   for (i = 0; i < MGOS_CONFIG_LEVEL_USER; i++) {
     fname[CONF_USER_FILE_NUM_IDX] = '0' + i;

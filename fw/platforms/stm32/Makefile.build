@@ -244,11 +244,11 @@ C_CXX_FLAGS = -Os -ggdb -MD -Wall -Wextra -Werror -pipe \
               -DFW_ARCHITECTURE=$(APP_PLATFORM) \
               $(MGOS_CFLAGS) $(MGOS_FEATURES) \
               $(MG_FEATURES_TINY) -DMG_ENABLE_DIRECTORY_LISTING \
-              -DMG_NET_IF=$(MGOS_MG_NET_IF)
+              -DMG_NET_IF=$(MGOS_MG_NET_IF) \
+              $(STM32_CFLAGS)
 
-CFLAGS = -std=gnu99 $(C_CXX_FLAGS) $(STM32_CFLAGS) \
-         $(APP_CFLAGS)
-CXXFLAGS = -std=gnu++11 -fno-exceptions $(C_CXX_FLAGS) $(STM32_CFLAGS) $(APP_CXXFLAGS)
+CFLAGS = -std=gnu99 $(C_CXX_FLAGS) $(APP_CFLAGS)
+CXXFLAGS = -std=gnu++11 -fno-exceptions $(C_CXX_FLAGS) $(APP_CXXFLAGS)
 
 LDFLAGS += -Wl,--defsym=SRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -Wl,--defsym=SRAM_SIZE=$(SRAM_SIZE) \
            -Wl,--defsym=SRAM2_BASE_ADDR=$(SRAM2_BASE_ADDR) -Wl,--defsym=SRAM2_SIZE=$(SRAM2_SIZE) \

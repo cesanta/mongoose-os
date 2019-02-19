@@ -10,7 +10,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
     apt-get clean
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y -q \
-      libcap-dev && \
+      clang libcap-dev valgrind && \
     apt-get clean
 
 RUN useradd -d /opt -m -s /bin/bash user && chown -R user /opt

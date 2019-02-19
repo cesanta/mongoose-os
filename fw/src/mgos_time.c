@@ -15,12 +15,20 @@
  * limitations under the License.
  */
 
+#ifndef __TI_COMPILER_VERSION__
+#include <unistd.h>
+#endif
+
 #include "mgos.h"
 #include "mgos_event.h"
 #include "mgos_hal.h"
 #include "mgos_mongoose.h"
 
 #include "common/queue.h"
+
+#if defined(_DEFAULT_SOURCE) || defined(_BSD_SOURCE)
+#include <sys/time.h>
+#endif
 
 double mgos_uptime(void) {
   return mgos_uptime_micros() / 1000000.0;

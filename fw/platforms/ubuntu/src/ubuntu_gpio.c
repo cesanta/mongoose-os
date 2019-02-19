@@ -50,7 +50,6 @@ static struct mgos_gpio_state *s_state = NULL;
 static int s_num_gpio_states = 0;
 struct mgos_rlock_type *s_lock = NULL;
 
-static void mgos_gpio_int_cb(void *arg);
 static void mgos_gpio_dbnc_done_cb(void *arg);
 
 static IRAM struct mgos_gpio_state *mgos_gpio_get_state(int pin) {
@@ -85,7 +84,7 @@ static struct mgos_gpio_state *mgos_gpio_get_or_create_state(int pin) {
 }
 
 /* In MGOS task context. */
-static void mgos_gpio_int_cb(void *arg) {
+void mgos_gpio_int_cb(void *arg) {
   int pin = (intptr_t) arg;
 
   mgos_rlock(s_lock);

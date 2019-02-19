@@ -18,12 +18,10 @@ BIN_DIR = build/bin
 GEN_DIR = $(BUILD_DIR)/gen
 FW_STAGING_DIR ?= $(BUILD_DIR)/fw_temp
 FW_DIR ?= $(CURDIR)/fw
-VERBOSE ?= 0
-SSL ?= None
-DEBUG ?= 0
-CC_WRAPPER ?=
 # Extra parts to include in firmware
 APP_EXTRA_FW_PARTS ?=
+
+ASAN ?= 0
 
 # Explicitly disable updater, it's not supported on POSIX build yet.
 MGOS_ENABLE_DEBUG_UDP = 0
@@ -37,6 +35,7 @@ MGOS_POSIX_FEATURES ?= -DMGOS_PROMPT_DISABLE_ECHO -DMGOS_MAX_NUM_UARTS=2 \
 MONGOOSE_FEATURES = \
   -DMG_USE_READ_WRITE -DMG_ENABLE_THREADS -DMG_ENABLE_THREADS \
   -DMG_ENABLE_HTTP_STREAMING_MULTIPART -DMG_DISABLE_DAV \
+  -DMG_ENABLE_DIRECTORY_LISTING \
   -DMG_MODULE_LINES
 
 
@@ -51,18 +50,25 @@ MGOS_SRCS = $(notdir $(wildcard *.c)) mgos_init.c  \
 
 PLATFORM_SRCS = $(wildcard $(PLATFORM_VPATH)/*.c)
 
-CFLAGS ?= -std=gnu99 -fno-inline -W -Wall -Wundef -Werror -g -Wno-unused-function \
-          -Wno-missing-field-initializers \
-          -D_DEFAULT_SOURCE \
-          $(MGOS_FEATURES) $(MGOS_POSIX_FEATURES) \
-          $(MONGOOSE_FEATURES) \
-          -DMGOS_APP=\"$(APP)\" -DFW_ARCHITECTURE=$(APP_PLATFORM) \
-          $(APP_CFLAGS)
+C_CXX_FLAGS = -ggdb -MD -Wall -Wextra -Werror -pipe \
+              -ffunction-sections -fdata-sections \
+              -DMGOS_APP=\"$(APP)\" \
+              -DFW_ARCHITECTURE=$(APP_PLATFORM) \
+              $(MGOS_FEATURES) $(MGOS_POSIX_FEATURES) \
+              $(MONGOOSE_FEATURES)
+ifeq "$(ASAN)" "1"
+C_CXX_FLAGS += -fsanitize=address -fno-omit-frame-pointer
+LDFLAGS += -fsanitize=address
+else
+LDFLAGS += -static
+endif
+
+CFLAGS = -std=gnu99 $(C_CXX_FLAGS) $(APP_CFLAGS)
+CXXFLAGS = -std=gnu++11 -fno-exceptions $(C_CXX_FLAGS) $(APP_CXXFLAGS)
 
 INCDIRS = $(addprefix -I,$(INCLUDES))
 AR ?= ar
-LINKER ?= gcc
-LDFLAGS ?= -static
+LDFLAGS ?=
 APP_BIN_LIBS ?=
 LIBS  ?= pthread cap
 LDLIBS = $(addprefix -l,$(LIBS))
@@ -130,9 +136,9 @@ $(FS_STAGING_DIR): $(FS_FILES)
 # Objects of all sorts
 -include $(wildcard $(BUILD_DIR)/*.d)
 $(OBJS): $(BUILD_DIR)/%.o : %.c $(GENFILES_LIST)
-	$(Q) mkdir -p $(shell dirname $(OBJS))
-	$(vecho) "CC    $< -> $@"
-	$(Q) $(CC_WRAPPER) $(CC) -MD $(INCDIRS) $(CFLAGS) -c $< -o $@
+	$(vecho) "CC    $<"
+	$(Q) mkdir -p $(dir $@)
+	$(Q) $(CC) $(CFLAGS) $(INCDIRS) -c $< -o $@
 
 # lib.a, used during lib release build
 $(BUILD_DIR)/$(BUILD_LIB_NAME): $(BUILD_DIR) $(GENFILES_LIST) $(APP_OBJS)
@@ -142,7 +148,9 @@ $(BUILD_DIR)/$(BUILD_LIB_NAME): $(BUILD_DIR) $(GENFILES_LIST) $(APP_OBJS)
 # Application target.
 $(APP_BIN): $(BIN_DIR) $(OBJS)
 	$(vecho) "LD    $@"
-	$(Q) $(CC_WRAPPER) $(LINKER) -Wl,--start-group $(OBJS) $(APP_BIN_LIBS) $(LDLIBS) -Wl,--end-group $(LDFLAGS) -o $(BIN_DIR)/$(APP)
+	$(Q) $(CC) -Wl,--gc-sections -Wl,-Map=$@.map \
+	  -Wl,--start-group $(OBJS) $(APP_BIN_LIBS) $(LDLIBS) -Wl,--end-group \
+	  $(LDFLAGS) -o $(BIN_DIR)/$(APP)
 
 $(APP_ELF): $(APP_BIN)
 	$(Q) cp -v $(APP_BIN) $@

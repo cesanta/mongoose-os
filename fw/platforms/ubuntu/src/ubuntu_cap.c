@@ -71,7 +71,9 @@ bool ubuntu_cap_init(void) {
       LOGM(LL_ERROR, ("Cannot chroot to %s", Flags.chroot));
       return false;
     }
-    chdir("/");
+    if (chdir("/") != 0) {
+      return false;
+    }
     LOGM(LL_INFO, ("Setting chroot=%s", Flags.chroot));
   }
 

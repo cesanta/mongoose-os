@@ -24,7 +24,7 @@ extern struct ubuntu_pipe s_pipe;
 
 static bool ubuntu_ipc_cmd(const struct ubuntu_pipe_message *in,
                            struct ubuntu_pipe_message *out) {
-  size_t _len;
+  ssize_t len;
   bool ret = false;
   struct msghdr msg;
   struct iovec iov[1];
@@ -40,9 +40,9 @@ static bool ubuntu_ipc_cmd(const struct ubuntu_pipe_message *in,
   msg.msg_iovlen = 1;
 
   mgos_rlock(s_pipe.lock);
-  _len = sendmsg(s_pipe.mongoose_fd, &msg, 0);
-  if (_len < 2) {
-    LOG(LL_ERROR, ("Cannot write message"));
+  len = sendmsg(s_pipe.mongoose_fd, &msg, 0);
+  if (len < 2) {
+    LOG(LL_ERROR, ("Cannot write message %d %d", (int) len, errno));
     goto exit;
   }
 
@@ -50,9 +50,9 @@ static bool ubuntu_ipc_cmd(const struct ubuntu_pipe_message *in,
   iov[0].iov_len = sizeof(struct ubuntu_pipe_message);
   msg.msg_iov = iov;
   msg.msg_iovlen = 1;
-  _len = recvmsg(s_pipe.mongoose_fd, &msg, 0);
-  if (_len < 2) {
-    LOG(LL_ERROR, ("Cannot read message"));
+  len = recvmsg(s_pipe.mongoose_fd, &msg, 0);
+  if (len < 2) {
+    LOG(LL_ERROR, ("Cannot read message %d %d", (int) len, errno));
     goto exit;
   }
 
@@ -62,12 +62,12 @@ exit:
 }
 
 int ubuntu_ipc_open(const char *pathname, int flags) {
-  size_t _len;
+  ssize_t len;
   struct msghdr msg;
   struct iovec iov[1];
   struct ubuntu_pipe_message iovec_payload;
 
-  union {
+  static union {
     struct cmsghdr cm;
     char control[CMSG_SPACE(sizeof(int))];
   } control_un;
@@ -94,9 +94,9 @@ int ubuntu_ipc_open(const char *pathname, int flags) {
   msg.msg_iovlen = 1;
 
   mgos_rlock(s_pipe.lock);
-  _len = sendmsg(s_pipe.mongoose_fd, &msg, 0);
-  if (_len < 2) {
-    LOG(LL_ERROR, ("Cannot write message"));
+  len = sendmsg(s_pipe.mongoose_fd, &msg, 0);
+  if (len < 2) {
+    LOG(LL_ERROR, ("Cannot write message %d", (int) len));
     goto exit;
   }
 
@@ -108,8 +108,8 @@ int ubuntu_ipc_open(const char *pathname, int flags) {
   msg.msg_control = control_un.control;
   msg.msg_controllen = sizeof(control_un.control);
 
-  _len = recvmsg(s_pipe.mongoose_fd, &msg, 0);
-  if (_len < 2) {
+  len = recvmsg(s_pipe.mongoose_fd, &msg, 0);
+  if (len < 2) {
     LOG(LL_ERROR, ("Cannot read message"));
     goto exit;
   }
