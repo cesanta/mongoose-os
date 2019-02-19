@@ -16,6 +16,8 @@
 
 #include <sys/wait.h>
 
+#include "common/queue.h"
+
 #include "mgos_debug_internal.h"
 #include "mgos_init_internal.h"
 #include "mgos_mongoose.h"
@@ -34,8 +36,21 @@ struct ubuntu_flags Flags;
 static bool mongoose_running = false;
 static pid_t s_parent, s_child;
 
+struct cb_info {
+  void (*cb)(void *arg);
+  void *cb_arg;
+  STAILQ_ENTRY(cb_info) next;
+};
+
+STAILQ_HEAD(s_cbs, cb_info) s_cbs = STAILQ_HEAD_INITIALIZER(s_cbs);
+struct mgos_rlock_type *s_cbs_lock = NULL;
+struct mgos_rlock_type *s_mgos_lock = NULL;
+
 static int ubuntu_mongoose(void) {
   enum mgos_init_result r;
+
+  s_cbs_lock = mgos_rlock_create();
+  s_mgos_lock = mgos_rlock_create();
 
   ubuntu_set_boottime();
   ubuntu_set_nsleep100();
@@ -51,9 +66,31 @@ static int ubuntu_mongoose(void) {
   }
   mongoose_running = true;
   while (mongoose_running) {
-    mongoose_poll(1000);
+    mgos_rlock(s_cbs_lock);
+    while (!STAILQ_EMPTY(&s_cbs)) {
+      struct cb_info *cbi = STAILQ_FIRST(&s_cbs);
+      STAILQ_REMOVE_HEAD(&s_cbs, next);
+      mgos_runlock(s_cbs_lock);
+      cbi->cb(cbi->cb_arg);
+      free(cbi);
+      mgos_rlock(s_cbs_lock);
+    }
+    mgos_runlock(s_cbs_lock);
+    mongoose_poll(1);
   }
   return 0;
+}
+
+bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
+  struct cb_info *cbi = (struct cb_info *) calloc(1, sizeof(*cbi));
+  if (cbi == NULL) return false;
+  cbi->cb = cb;
+  cbi->cb_arg = arg;
+  mgos_rlock(s_cbs_lock);
+  STAILQ_INSERT_TAIL(&s_cbs, cbi, next);
+  mgos_runlock(s_cbs_lock);
+  (void) from_isr;
+  return true;
 }
 
 static int ubuntu_main(void) {
@@ -126,12 +163,33 @@ void mongoose_schedule_poll(bool from_isr) {
   (void) from_isr;
 }
 
+static void ubuntu_net_up(void *arg) {
+  struct mgos_net_ip_info ipaddr;
+  char ip[INET_ADDRSTRLEN], netmask[INET_ADDRSTRLEN], gateway[INET_ADDRSTRLEN];
+  mgos_eth_dev_get_ip_info(0, &ipaddr);
+  inet_ntop(AF_INET, (void *) &ipaddr.gw.sin_addr, gateway, INET_ADDRSTRLEN);
+  inet_ntop(AF_INET, (void *) &ipaddr.ip.sin_addr, ip, INET_ADDRSTRLEN);
+  inet_ntop(AF_INET, (void *) &ipaddr.netmask.sin_addr, netmask,
+            INET_ADDRSTRLEN);
+  LOG(LL_INFO, ("Network: ip=%s netmask=%s gateway=%s", ip, netmask, gateway));
+  mgos_event_trigger(MGOS_NET_EV_CONNECTING, NULL);
+  mgos_event_trigger(MGOS_NET_EV_CONNECTED, NULL);
+  mgos_event_trigger(MGOS_NET_EV_IP_ACQUIRED, NULL);
+  (void) arg;
+}
+
+void mgos_lock(void) {
+  mgos_rlock(s_mgos_lock);
+}
+
+void mgos_unlock(void) {
+  mgos_runlock(s_mgos_lock);
+}
+
 enum mgos_init_result mongoose_init(void) {
   enum mgos_init_result r;
   int cpu_freq;
   size_t heap_size, free_heap_size;
-  struct mgos_net_ip_info ipaddr;
-  char ip[INET_ADDRSTRLEN], netmask[INET_ADDRSTRLEN], gateway[INET_ADDRSTRLEN];
 
   r = mgos_uart_init();
   if (r != MGOS_INIT_OK) {
@@ -165,12 +223,7 @@ enum mgos_init_result mongoose_init(void) {
   LOG(LL_INFO, ("CPU: %d MHz, heap: %lu total, %lu free", cpu_freq, heap_size,
                 free_heap_size));
 
-  mgos_eth_dev_get_ip_info(0, &ipaddr);
-  inet_ntop(AF_INET, (void *) &ipaddr.gw.sin_addr, gateway, INET_ADDRSTRLEN);
-  inet_ntop(AF_INET, (void *) &ipaddr.ip.sin_addr, ip, INET_ADDRSTRLEN);
-  inet_ntop(AF_INET, (void *) &ipaddr.netmask.sin_addr, netmask,
-            INET_ADDRSTRLEN);
-  LOG(LL_INFO, ("Network: ip=%s netmask=%s gateway=%s", ip, netmask, gateway));
+  mgos_invoke_cb(ubuntu_net_up, NULL, false /* from_isr */);
 
   return mgos_init();
 }

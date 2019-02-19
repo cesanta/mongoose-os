@@ -265,6 +265,12 @@ bool mgos_gpio_blink(int pin, int on_ms, int off_ms) {
   return res;
 }
 
+const char *mgos_gpio_str(int pin_def, char buf[8]) {
+  snprintf(buf, 8, "%d", pin_def);
+  buf[7] = '\0';
+  return buf;
+}
+
 enum mgos_init_result mgos_gpio_init() {
   s_lock = mgos_rlock_create();
   return mgos_gpio_hal_init();

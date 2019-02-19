@@ -34,49 +34,34 @@ struct ubuntu_wdt {
 
 static struct ubuntu_wdt s_mgos_wdt;
 
-static pthread_mutex_t s_mgos_mux = PTHREAD_MUTEX_INITIALIZER;
-
-void mgos_lock(void) {
-  pthread_mutex_lock(&s_mgos_mux);
-  return;
-}
-
-void mgos_unlock(void) {
-  pthread_mutex_unlock(&s_mgos_mux);
-  return;
-}
+struct mgos_rlock_type {
+  pthread_mutex_t m;
+  pthread_mutexattr_t ma;
+};
 
 struct mgos_rlock_type *mgos_rlock_create(void) {
-  pthread_mutex_t *l = calloc(1, sizeof(pthread_mutex_t));
-
-  pthread_mutex_init(l, NULL);
-  return (struct mgos_rlock_type *) l;
+  struct mgos_rlock_type *l = (struct mgos_rlock_type *) calloc(1, sizeof(*l));
+  pthread_mutexattr_init(&l->ma);
+  pthread_mutexattr_settype(&l->ma, PTHREAD_MUTEX_RECURSIVE);
+  pthread_mutex_init(&l->m, &l->ma);
+  return l;
 }
 
 void mgos_rlock(struct mgos_rlock_type *l) {
-  if (!l) {
-    return;
-  }
-  pthread_mutex_lock((pthread_mutex_t *) l);
-  return;
+  if (l == NULL) return;
+  pthread_mutex_lock(&l->m);
 }
 
 void mgos_runlock(struct mgos_rlock_type *l) {
-  if (!l) {
-    return;
-  }
-
-  pthread_mutex_unlock((pthread_mutex_t *) l);
-  return;
+  if (l == NULL) return;
+  pthread_mutex_unlock(&l->m);
 }
 
 void mgos_rlock_destroy(struct mgos_rlock_type *l) {
-  if (!l) {
-    return;
-  }
-  pthread_mutex_destroy((pthread_mutex_t *) l);
+  if (l == NULL) return;
+  pthread_mutex_destroy(&l->m);
+  pthread_mutexattr_destroy(&l->ma);
   free(l);
-  return;
 }
 
 size_t mgos_get_heap_size(void) {
@@ -201,15 +186,6 @@ void mgos_ints_disable(void) {
 void mgos_ints_enable(void) {
   // LOG(LL_INFO, ("Not implemented"));
   return;
-}
-
-bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
-  // LOG(LL_INFO, ("Not implemented"));
-  return true;
-
-  (void) cb;
-  (void) arg;
-  (void) from_isr;
 }
 
 uint32_t mgos_get_cpu_freq(void) {

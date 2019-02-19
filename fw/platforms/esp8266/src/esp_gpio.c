@@ -273,6 +273,8 @@ const char *mgos_gpio_str(int pin_def, char buf[8]) {
       buf[i++] = '1';
       buf[i++] = '0' + (pin_def - 10);
     }
+  } else {
+    buf[i++] = '-';
   }
   buf[i++] = '\0';
   return buf;
