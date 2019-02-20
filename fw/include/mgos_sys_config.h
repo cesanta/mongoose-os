@@ -68,12 +68,19 @@ bool mgos_sys_config_is_initialized(void);
 bool mgos_sys_config_save(const struct mgos_config *cfg, bool try_once,
                           char **msg);
 
+/* Saves given coonfig at the specified level. Performs diff against level-1. */
+bool mgos_sys_config_save_level(const struct mgos_config *cfg,
+                                enum mgos_config_level level, bool try_once,
+                                char **msg);
+
+/* Loads config up to and including level. */
+bool mgos_sys_config_load_level(struct mgos_config *cfg,
+                                enum mgos_config_level level);
+
 /* Deprecated API, equivalent to mgos_sys_config_save(cfg, false, msg). */
 bool save_cfg(const struct mgos_config *cfg, char **msg);
 
-/*
- * Reset all config values to defaults.
- */
+/* Loads configs up to MGOS_CONFIG_LEVEL_USER - 1. Deprecated. */
 bool load_config_defaults(struct mgos_config *cfg);
 
 /*
