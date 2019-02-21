@@ -230,8 +230,8 @@ bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
 bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
   GPIO_TypeDef *regs = stm32_gpio_port_base(pin);
   if (regs == NULL) return false;
-  const uint32_t pin_num = STM32_PIN_NUM(pin);
-  uint32_t pupdr_msk = (3 << pin_num), pupdr_val = 0;
+  const uint32_t shift = STM32_PIN_NUM(pin) * 2;
+  uint32_t pupdr_val = 0;
   switch (pull) {
     case MGOS_GPIO_PULL_NONE:
       break;
@@ -244,7 +244,7 @@ bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
     default:
       return false;
   }
-  MODIFY_REG(regs->PUPDR, pupdr_msk, (pupdr_val << pin_num));
+  MODIFY_REG(regs->PUPDR, (3 << shift), (pupdr_val << shift));
   return true;
 }
 
