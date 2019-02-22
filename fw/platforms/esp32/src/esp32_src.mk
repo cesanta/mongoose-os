@@ -19,8 +19,6 @@ include $(MGOS_PATH)/fw/common.mk
 # Get list of dirs which contain sources (used for IPATH and VPATH)
 APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
 
-MGOS_DEBUG_UART ?= 0
-
 BUILD_INFO_C = $(GEN_DIR)/build_info.c
 MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
 MGOS_CONFIG_C = $(GEN_DIR)/mgos_config.c
