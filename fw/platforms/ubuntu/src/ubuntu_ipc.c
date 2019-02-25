@@ -50,6 +50,10 @@ bool ubuntu_ipc_handle(uint16_t timeout_ms) {
   struct msghdr msg;
   struct iovec iov[1];
   struct ubuntu_pipe_message iovec_payload;
+  union {
+    struct cmsghdr cm;
+    char control[CMSG_SPACE(sizeof(int))];
+  } control_un;
   int fd = -1;
 
   FD_ZERO(&rfds);
@@ -107,10 +111,6 @@ bool ubuntu_ipc_handle(uint16_t timeout_ms) {
     case UBUNTU_CMD_OPEN: {
       const char *fn;
       int flags;
-      union {
-        struct cmsghdr cm;
-        char control[CMSG_SPACE(sizeof(int))];
-      } control_un;
       struct cmsghdr *cmptr;
 
       fn = (const char *) iovec_payload.data;
