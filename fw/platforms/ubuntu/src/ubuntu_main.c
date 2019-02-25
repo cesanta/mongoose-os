@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+#include <signal.h>
 #include <sys/wait.h>
 
 #include "common/queue.h"
@@ -46,6 +47,11 @@ STAILQ_HEAD(s_cbs, cb_info) s_cbs = STAILQ_HEAD_INITIALIZER(s_cbs);
 struct mgos_rlock_type *s_cbs_lock = NULL;
 struct mgos_rlock_type *s_mgos_lock = NULL;
 
+static void ubuntu_sigint_handler(int sig) {
+  mongoose_running = false;
+  (void) sig;
+}
+
 static int ubuntu_mongoose(void) {
   enum mgos_init_result r;
 
@@ -65,6 +71,10 @@ static int ubuntu_mongoose(void) {
     return -3;
   }
   mongoose_running = true;
+  struct sigaction sa = {
+      .sa_handler = ubuntu_sigint_handler,
+  };
+  sigaction(SIGINT, &sa, NULL);
   while (mongoose_running) {
     mgos_rlock(s_cbs_lock);
     while (!STAILQ_EMPTY(&s_cbs)) {
