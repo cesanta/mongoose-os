@@ -261,7 +261,7 @@ LDFLAGS += -Wl,--defsym=SRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -Wl,--defsym=SRAM_SIZE=
 
 LDFLAGS += -Wl,--gc-sections
 
-FW_PARTS = app:type=app0,src=$(APP0_BIN),bl_size=$(FLASH_BL_SIZE),bl_cfg_size=$(FLASH_BL_CFG_SIZE),fs_size=$(FLASH_FS_SIZE),update_bl=$(MGOS_UPDATE_BOOT_LOADER)
+FW_PARTS = app:type=app0,src=$(APP0_BIN),addr=$(FLASH_BASE_ADDR),bl_size=$(FLASH_BL_SIZE),bl_cfg_size=$(FLASH_BL_CFG_SIZE),fs_size=$(FLASH_FS_SIZE),update_bl=$(MGOS_UPDATE_BOOT_LOADER)
 ifeq "$(FLASH_FS_SIZE)$(MGOS_ROOT_FS_EXTRACT)" "01-1"
 FW_PARTS += fs:type=fs,src=$(FS_IMG)
 endif
