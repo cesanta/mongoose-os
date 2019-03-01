@@ -302,11 +302,11 @@ $(BUILD_DIR)/$(BUILD_LIB_NAME): $(BUILD_DIR) $(APP_OBJS)
 
 $(BUILD_DIR)/%.c.o: %.c $(GENFILES_FLAG)
 	$(vecho) "CC    $<"
-	$(Q) $(CC) $(CFLAGS) $(addprefix -I, $(IPATH)) -c $< -o $@
+	$(Q) cd $(dir $<) && $(CC) $(CFLAGS) $(addprefix -I, $(IPATH)) -c $(notdir $<) -o $@
 
 $(BUILD_DIR)/%.cpp.o: %.cpp $(GENFILES_FLAG)
 	$(vecho) "CXX   $<"
-	$(Q) $(CXX) $(CXXFLAGS) $(addprefix -I, $(IPATH)) -c $< -o $@
+	$(Q) cd $(dir $<) && $(CXX) $(CXXFLAGS) $(addprefix -I, $(IPATH)) -c $(notdir $<) -o $@
 
 $(BUILD_DIR)/%.S.o: %.S $(GENFILES_FLAG)
 	$(vecho) "ASM   $<"
