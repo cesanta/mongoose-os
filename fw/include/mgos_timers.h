@@ -40,7 +40,7 @@
  *
  * static void my_timer_cb(void *arg) {
  *   bool val = mgos_gpio_toggle(mgos_sys_config_get_pins_led());
- *   LOG(LL_INFO, ("uptime: %.2lf", mgos_uptime());
+ *   LOG(LL_INFO, ("uptime: %.2lf", mgos_uptime()));
  *   (void) arg;
  * }
  *
@@ -99,7 +99,7 @@ typedef uintptr_t mgos_timer_id;
  * ```c
  * static void my_timer_cb(void *arg) {
  *   bool val = mgos_gpio_toggle(mgos_sys_config_get_pins_led());
- *   LOG(LL_INFO, ("uptime: %.2lf", mgos_uptime());
+ *   LOG(LL_INFO, ("uptime: %.2lf", mgos_uptime()));
  *   (void) arg;
  * }
  *
