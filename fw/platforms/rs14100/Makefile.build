@@ -12,7 +12,7 @@ MGOS_ENABLE_DEBUG_UDP = 0
 MGOS_PATH ?= ../../..
 
 APP ?= mongoose-os
-APP_PLATFORM = stm32
+APP_PLATFORM = rs14100
 APP_CFLAGS ?=
 APP_EXTRA_SRCS ?=
 FFI_SYMBOLS ?=
@@ -27,12 +27,6 @@ APP_FS_FILES ?=
 APP_BIN_LIBS ?=
 # Extra parts to include in firmware
 APP_EXTRA_FW_PARTS ?=
-# Bootloader path
-MGOS_BL_BIN ?=
-# Normally boot loader is not updated during OTA update.
-# The firmware built with this flag set to true will, when used for OTA,
-# will reflash the boot loader as well.
-MGOS_UPDATE_BOOT_LOADER ?= false
 
 MGOS_MG_NET_IF ?= MG_NET_IF_NULL
 MGOS_ENABLE_LWIP ?= 0
@@ -44,38 +38,22 @@ APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
 APP_FS_DIRS = $(sort $(dir $(APP_FS_FILES)))
 
 APP_PATH := $(CURDIR)
-# We always use LwIP from F4, it's the same everywhere anyway.
-LWIP_PATH ?= $(STM32CUBE_F4_PATH)/Middlewares/Third_Party/LwIP
-FREERTOS_PATH ?= $(STM32CUBE_PATH)/Middlewares/Third_Party/FreeRTOS
-MGOS_PLATFORM_PATH ?= $(MGOS_PATH)/fw/platforms/stm32
+FREERTOS_PATH ?= $(RS14100_DFP_PATH)/Driver/Freertos
+MGOS_PLATFORM_PATH ?= $(MGOS_PATH)/fw/platforms/rs14100
 
-# Value of the external high-speed crystal in Hz, if present.
-# If set to 0, internal RC oscillator is used.
-HSE_VALUE ?= 0
-# Value of the 32 KHz crystal. If present, set to 32768.
-LSE_VALUE ?= 0
-# Internal oscillator frequency. Set for each device.
-HSI_VALUE ?= 0
+RS14100_LIBC ?= -lc -lstdc++
+RS14100_CFLAGS = -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 \
+                 -DRS14100 -D_FILE_OFFSET_BITS=32 \
+                 -DIRAM='__attribute__((section(".RamFunc")))' \
+                 -D__FPU_PRESENT=1 -D__IOM=volatile -D__IM='volatile const' -D__OM=volatile \
+                 -D__error_t_defined=1 \
+                 -DARM_HAVE_FPU=1 -DMGOS_MAX_NUM_UARTS=7
 
-STM32_LIBC ?= -lc -lstdc++
-STM32_CFLAGS = -DSTM32 -D__WORDSIZE=32 -D_FILE_OFFSET_BITS=32
-STM32_IPATH =
-STM32_VPATH =
-STM32_SRCS =
+# TODO(rojer): Figure out which ROM drivers are present and set XXX_ROMDRIVER_PRESENT macros.
 
-# If it's a known device, it will define family other settings.
-ifneq ("$(DEVICE)", "")
-include $(MGOS_PLATFORM_PATH)/mk/devices/$(DEVICE).mk
-endif
-ifneq ("$(FAMILY)", "")
-include $(MGOS_PLATFORM_PATH)/mk/$(FAMILY).mk
-else
-$(error Please, specify FAMILY. Possible values are stm32f4, stm32f7 and stm32l4)
-endif
-
-STM32_CFLAGS += -DHSE_VALUE=$(HSE_VALUE) \
-                -DHSI_VALUE=$(HSI_VALUE) \
-                -DLSE_VALUE=$(LSE_VALUE)
+RS14100_IPATH =
+RS14100_VPATH =
+RS14100_SRCS =
 
 MGOS_CFLAGS += -DMGOS_VFS_DEFINE_LIBC_REENT_API \
                -DMGOS_VFS_DEFINE_LIBC_DIR_API \
@@ -102,32 +80,17 @@ override MGOS_BL_BIN := $(abspath $(MGOS_BL_BIN))
 
 APP0_ELF = $(BUILD_DIR)/$(APP).elf
 APP0_BIN = $(BUILD_DIR)/$(APP).bin
-FLASH_SIZE ?= 0
-SRAM_BASE_ADDR ?= 0x20000000
-SRAM2_BASE_ADDR ?= 0
-SRAM2_SIZE ?= 0
-FLASH_BASE_ADDR ?= 0x8000000
+SRAM_BASE_ADDR = 0x0
+SRAM_SIZE ?= 0x20000
+FLASH_BASE_ADDR = 0x8012000
+FLASH_SIZE ?= 0x3ee000
+FLASH_FS_OFFSET ?= 0x300000
 
-ifneq "$(MGOS_BL_BIN)" ""
-FLASH_FS_OFFSET = $(shell echo $$(($(FLASH_BL_SIZE) + $(FLASH_BL_CFG_SIZE))))
-LD_SCRIPT ?= $(LD_SCRIPT_OTA_0)
-FLASH_BL_SIZE ?= 32768
-FLASH_BL_CFG_SIZE ?= $(FLASH_S0_SIZE)
-MGOS_CFLAGS += -DMGOS_BL_ENABLE
-else
-FLASH_FS_OFFSET = $(FLASH_S0_SIZE)
-LD_SCRIPT ?= $(LD_SCRIPT_NO_OTA)
-FLASH_BL_SIZE ?= 0
-FLASH_BL_CFG_SIZE ?= 0
-endif
-MGOS_ROOT_DEVTAB ?= fs0 stm32flash {"offset": $(FLASH_FS_OFFSET), "size": $(MGOS_ROOT_FS_SIZE), "ese": true}
+MGOS_ROOT_DEVTAB ?= fs0 rsiflash {"offset": $(FLASH_FS_OFFSET), "size": $(MGOS_ROOT_FS_SIZE)}
 MGOS_ROOT_FS_TYPE ?= SPIFFS
 MGOS_ROOT_FS_SIZE ?= 0
-MGOS_ROOT_FS_ON_SYS_FLASH ?= 1
 # When FS is not on sys flash, we definitely need to extract.
-MGOS_ROOT_FS_EXTRACT ?= 1-$(MGOS_ROOT_FS_ON_SYS_FLASH)
-# Note: FS options do not correspond to the characteristics of on-board flash,
-# we fake small erases by performing an RMW which is unsafe but works.
+MGOS_ROOT_FS_EXTRACT ?= 0
 ifeq "$(MGOS_ROOT_FS_TYPE)" "SPIFFS"
   MKFS ?= /usr/local/bin/mkspiffs8
   MGOS_ROOT_FS_OPTS ?= {"bs": 4096, "ps": 128, "es": 4096}
@@ -142,14 +105,8 @@ FS_STAGING_DIR = $(BUILD_DIR)/fs
 FS_IMG = $(FW_STAGING_DIR)/fs.bin
 FS_ZIP = $(FW_STAGING_DIR)/fs.zip
 
-BL_BIN_C = $(GEN_DIR)/bl_bin.c
 FS_IMG_C = $(GEN_DIR)/fs_img.c
 FS_ZIP_C = $(GEN_DIR)/fs_zip.c
-ifeq "$(MGOS_ROOT_FS_ON_SYS_FLASH)" "1"
-  FLASH_FS_SIZE = $(MGOS_ROOT_FS_SIZE)
-else
-  FLASH_FS_SIZE = 0
-endif
 
 include $(MGOS_PATH)/fw/src/mkfs.mk
 
@@ -175,64 +132,53 @@ MGOS_SRCS += $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
              mgos_time.c mgos_timers.c cs_crc32.c cs_file.c \
              json_utils.c frozen.c mgos_uart.c cs_rbuf.c mgos_init.c \
              cs_dbg.c mgos_dlsym.c mgos_file_utils.c mgos_system.c mgos_utils.c \
-             arm_exc_top.S arm_exc.c arm_nsleep100.c \
-             stm32_entry.c stm32_exc.c stm32_gpio.c \
-             stm32_hal.c stm32_hw_timers.c \
-             stm32_libc.c \
-             stm32_main.c stm32_uart.c \
+             arm_exc_top.S arm_exc.c arm_nsleep100.c arm_nsleep100_m3.S \
              error_codes.cpp status.cpp
+# Driver/Peripheral_Library/driver/src/*.c
+MGOS_SRCS += clock_update.c rsi_adc.c rsi_cci.c rsi_comparator.c rsi_crc.c \
+             rsi_ct.c rsi_cts.c rsi_dac.c rsi_efuse.c rsi_egpio.c rsi_ethernet.c \
+             rsi_gpdma.c rsi_gspi.c rsi_ir.c \
+             rsi_opamp.c rsi_pwm.c rsi_qei.c rsi_qspi.c rsi_rng.c rsi_sdioh.c \
+             rsi_sio.c rsi_timers.c rsi_udma.c rsi_vad.c rsi_wurx.c
+# Driver/Peripheral_Library/systemlevel/src/*.c
+MGOS_SRCS += rsi_bod.c rsi_ipmu.c rsi_pll.c rsi_power_save.c rsi_processor_sensor.c \
+             rsi_rtc.c rsi_temp_sensor.c rsi_time_period.c rsi_ulpss_clk.c rsi_wwdt.c
 
-STM32_IPATH += $(STM32CUBE_PATH)/Drivers/CMSIS/Include \
-               $(FREERTOS_PATH)/Source/include \
-               $(FREERTOS_PATH)/Source/CMSIS_RTOS
+MGOS_SRCS += system_RS1xxxx.c rsi_system_config.c \
+             rs14100_entry.c rs14100_libc.c rs14100_main.c
 
-STM32_VPATH += $(FREERTOS_PATH)/Source \
-               $(FREERTOS_PATH)/Source/CMSIS_RTOS \
-               $(FREERTOS_PATH)/Source/portable/MemMang
+RS14100_IPATH += $(RS14100_DFP_PATH)/Driver/Common/chip/inc \
+                 $(RS14100_DFP_PATH)/Driver/Common/cmsis \
+                 $(RS14100_DFP_PATH)/Driver/Peripheral_Library/driver/inc \
+                 $(RS14100_DFP_PATH)/Driver/Peripheral_Library/rom_driver/inc \
+                 $(RS14100_DFP_PATH)/Driver/Peripheral_Library/systemlevel/inc \
+                 $(FREERTOS_PATH)/Source/include \
+                 $(FREERTOS_PATH)/Source/portable/GCC/ARM_CM4F
 
-STM32_SRCS += $(notdir $(wildcard $(FREERTOS_PATH)/Source/*.c) port.c heap_3.c cmsis_os.c)
+RS14100_VPATH += $(RS14100_DFP_PATH)/Driver/Common/chip/src \
+                 $(RS14100_DFP_PATH)/Driver/Peripheral_Library/driver/src \
+                 $(RS14100_DFP_PATH)/Driver/Peripheral_Library/systemlevel/src \
+                 $(FREERTOS_PATH)/Source \
+                 $(FREERTOS_PATH)/Source/portable/MemMang \
+                 $(FREERTOS_PATH)/Source/portable/GCC/ARM_CM4F
 
-ifeq "$(MGOS_ENABLE_LWIP)" "1"
-  MGOS_IPATH += $(LWIP_PATH)/src/include $(LWIP_PATH)/system
+RS14100_SRCS += $(notdir $(wildcard $(FREERTOS_PATH)/Source/*.c) port.c heap_3.c)
 
-  MGOS_VPATH += $(LWIP_PATH)/src/api \
-                $(LWIP_PATH)/src/core \
-                $(LWIP_PATH)/src/core/ipv4 \
-                $(LWIP_PATH)/src/core/ipv6 \
-                $(LWIP_PATH)/src/netif \
-                $(LWIP_PATH)/src/netif/ppp \
-                $(LWIP_PATH)/system/OS
-
-  MGOS_SRCS += $(notdir \
-                 $(wildcard $(LWIP_PATH)/src/core/*.c) tcpip.c sys_arch.c \
-                 $(wildcard $(LWIP_PATH)/src/core/ipv4/*.c) \
-                 $(wildcard $(LWIP_PATH)/src/core/ipv6/*.c) \
-                 $(wildcard $(LWIP_PATH)/src/netif/ppp/*.c) \
-                 $(LWIP_PATH)/src/netif/ethernet.c)
-
-  MGOS_CFLAGS += -DMG_LWIP=1 -DLWIP_TIMEVAL_PRIVATE=0 \
-                 -DLWIP_POSIX_SOCKETS_IO_NAMES=0 \
-                 -DLWIP_TCP_KEEPALIVE=1
-  MGOS_MG_NET_IF = MG_NET_IF_LWIP_LOW_LEVEL
-endif
-
-STM32_CFLAGS += -DSRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -DSRAM_SIZE=$(SRAM_SIZE) \
-                -DSTM32_SRAM2_BASE_ADDR=$(SRAM2_BASE_ADDR) -DSTM32_SRAM2_SIZE=$(SRAM2_SIZE) \
-                -DSTM32_FLASH_BASE_ADDR=$(FLASH_BASE_ADDR) -DSTM32_FLASH_SIZE=$(FLASH_SIZE) \
-                -DSTM32_FLASH_BL_SIZE=$(FLASH_BL_SIZE) \
-                -DMGOS_ROOT_DEVTAB='$(MGOS_ROOT_DEVTAB)' \
-                -DMGOS_ROOT_FS_TYPE='$(MGOS_ROOT_FS_TYPE)' \
-                -DMGOS_ROOT_FS_OPTS='$(MGOS_ROOT_FS_OPTS)' \
-                -DMGOS_ROOT_FS_EXTRACT='$(MGOS_ROOT_FS_EXTRACT)' \
-                -DNOCACHE_SIZE=0x400 \
-                -DMG_LOCALS
+RS14100_CFLAGS += -DSRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -DSRAM_SIZE=$(SRAM_SIZE) \
+                  -DMGOS_ROOT_DEVTAB='$(MGOS_ROOT_DEVTAB)' \
+                  -DMGOS_ROOT_FS_TYPE='$(MGOS_ROOT_FS_TYPE)' \
+                  -DMGOS_ROOT_FS_OPTS='$(MGOS_ROOT_FS_OPTS)' \
+                  -DMGOS_ROOT_FS_EXTRACT='$(MGOS_ROOT_FS_EXTRACT)' \
+                  -DNOCACHE_SIZE=0x400 \
+                  -DMG_LOCALS -DCS_PLATFORM=CS_P_CUSTOM \
+                  -DMGOS_NUM_HW_TIMERS=0
 
 IPATH = $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
-        $(MGOS_PLATFORM_PATH)/include $(MGOS_IPATH) $(GEN_DIR) $(STM32_IPATH)
+        $(MGOS_PLATFORM_PATH)/include $(MGOS_IPATH) $(GEN_DIR) $(RS14100_IPATH)
 
 VPATH = $(MGOS_VPATH) $(MGOS_PLATFORM_PATH)/src \
         $(COMMON_PATH)/platforms/arm \
-        $(GEN_DIR) $(APP_SOURCE_DIRS) $(STM32_VPATH)
+        $(GEN_DIR) $(APP_SOURCE_DIRS) $(RS14100_VPATH)
 
 APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
@@ -244,32 +190,23 @@ C_CXX_FLAGS = -Os -ggdb -MD -Wall -Wextra -Werror -pipe \
               $(MGOS_CFLAGS) $(MGOS_FEATURES) \
               $(MG_FEATURES_TINY) -DMG_ENABLE_DIRECTORY_LISTING \
               -DMG_NET_IF=$(MGOS_MG_NET_IF) \
-              $(STM32_CFLAGS)
+              $(RS14100_CFLAGS)
 
 CFLAGS = -std=gnu99 $(C_CXX_FLAGS) $(APP_CFLAGS)
 CXXFLAGS = -std=gnu++11 -fno-exceptions $(C_CXX_FLAGS) $(APP_CXXFLAGS)
 
 LDFLAGS += -Wl,--defsym=SRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -Wl,--defsym=SRAM_SIZE=$(SRAM_SIZE) \
-           -Wl,--defsym=SRAM2_BASE_ADDR=$(SRAM2_BASE_ADDR) -Wl,--defsym=SRAM2_SIZE=$(SRAM2_SIZE) \
-           -Wl,--defsym=FLASH_BASE_ADDR=$(FLASH_BASE_ADDR) -Wl,--defsym=FLASH_SIZE=$(FLASH_SIZE) \
-           -Wl,--defsym=FLASH_S0_SIZE=$(FLASH_S0_SIZE) \
-           -Wl,--defsym=FLASH_BL_SIZE=$(FLASH_BL_SIZE) \
-           -Wl,--defsym=FLASH_BL_CFG_SIZE=$(FLASH_BL_CFG_SIZE) \
-           -Wl,--defsym=FLASH_FS_SIZE=$(FLASH_FS_SIZE) \
-           -Wl,--defsym=NOCACHE_SIZE=0x400
-
+           -Wl,--defsym=FLASH_BASE_ADDR=$(FLASH_BASE_ADDR) -Wl,--defsym=FLASH_SIZE=$(FLASH_SIZE)
 LDFLAGS += -Wl,--gc-sections
 
-FW_PARTS = app:type=app0,src=$(APP0_BIN),addr=$(FLASH_BASE_ADDR),bl_size=$(FLASH_BL_SIZE),bl_cfg_size=$(FLASH_BL_CFG_SIZE),fs_size=$(FLASH_FS_SIZE),update_bl=$(MGOS_UPDATE_BOOT_LOADER)
-ifeq "$(FLASH_FS_SIZE)$(MGOS_ROOT_FS_EXTRACT)" "01-1"
-FW_PARTS += fs:type=fs,src=$(FS_IMG)
-endif
+LD_SCRIPT = $(MGOS_PLATFORM_PATH)/ld/rs14100.ld
+
+FW_PARTS = app:type=app0,src=$(APP0_BIN),addr=$(FLASH_BASE_ADDR)
 FW_PARTS += $(APP_EXTRA_FW_PARTS)
 
 MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o))
-STM32_OBJS = $(addprefix $(BUILD_DIR)/,$(STM32_SRCS:=.o))
+RS14100_OBJS = $(addprefix $(BUILD_DIR)/,$(RS14100_SRCS:=.o))
 APP_OBJS = $(addprefix $(BUILD_DIR)/,$(APP_SRCS:=.o))
-BL_BIN_O = $(addprefix $(BUILD_DIR)/,$(notdir $(BL_BIN_C:=.o)))
 FS_IMG_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FS_IMG_C:=.o)))
 FS_ZIP_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FS_ZIP_C:=.o)))
 FFI_EXPORTS_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FFI_EXPORTS_C:=.o)))
@@ -287,7 +224,7 @@ all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(APP0_BIN) $(FW_ZIP)
 $(FW_MANIFEST): $(APP0_BIN) $(MGOS_CONFIG_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C)
 
 $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR):
-	$(vecho) "MKDIR $@"
+	$(vecho) "MKDIR $@ $(RS14100_DFP_PATH)"
 	$(Q) mkdir -p $@
 
 $(MGOS_LIB): $(MGOS_OBJS)
@@ -314,20 +251,12 @@ $(BUILD_DIR)/%.S.o: %.S $(GENFILES_FLAG)
 $(GENFILES_FLAG): $(GENFILES_LIST)
 	$(Q) touch $@
 
-BIN_PARTS = $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(STM32_OBJS) $(APP_BIN_LIB_FILES)
-ifeq "$(MGOS_ROOT_FS_ON_SYS_FLASH)" "1"
-  BIN_PARTS += $(FS_IMG_O)
-else
-  BIN_PARTS += $(FS_ZIP_O)
-endif
-ifneq "$(MGOS_BL_BIN)" ""
-  BIN_PARTS += $(BL_BIN_O)
-endif
+BIN_PARTS = $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(RS14100_OBJS) $(APP_BIN_LIB_FILES)
 
 $(APP0_ELF): $(BIN_PARTS) $(LD_SCRIPT)
 	$(vecho) "LD    $@ (BL=$(notdir $(MGOS_BL_BIN)) LDS=$(notdir $(LD_SCRIPT)))"
 	$(Q) $(CC) $(CFLAGS) $(LDFLAGS) \
-	  -Wl,-Map=$@.map -Wl,--start-group $(BIN_PARTS) $(STM32_LIBC) -lgcc -lnosys -Wl,--end-group \
+	  -Wl,-Map=$@.map -Wl,--start-group $(BIN_PARTS) $(RS14100_LIBC) -lgcc -lnosys -Wl,--end-group \
 	  -T$(LD_SCRIPT) -o $@
 
 $(APP0_BIN): $(APP0_ELF)
@@ -340,7 +269,7 @@ include $(MGOS_PATH)/common/scripts/build_info.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
 include $(MGOS_PATH)/fw/src/mgos_config.mk
 
-MGOS_CONF_SCHEMA += $(MGOS_PLATFORM_PATH)/stm32_sys_config.yaml
+MGOS_CONF_SCHEMA += $(MGOS_PLATFORM_PATH)/rs14100_sys_config.yaml
 
 $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MGOS_OBJS) $(FFI_EXPORTS_O)
 	$(call gen_build_info,$@,$(APP_PATH),$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
@@ -349,9 +278,6 @@ $(MG_BUILD_INFO_C): $(MGOS_OBJS)
 	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
 
 $(MGOS_CONFIG_C): $(MGOS_CONF_SCHEMA) $(MANIFEST_FINAL)
-
-# Pull in auto-generated .c dependencies (if any).
--include $(wildcard $(BUILD_DIR)/*.d)
 
 $(FS_IMG): $(APP_FS_DIRS) $(FS_FILES) $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(MKFS)
 	$(call mkfs,$(MGOS_ROOT_FS_SIZE),$(MGOS_ROOT_FS_OPTS))
@@ -378,6 +304,9 @@ $(FFI_EXPORTS_C): $(FS_FILES)
 # In ffi exports file we use fake signatures: void func(void), and it conflicts
 # with the builtin functions like fopen, etc.
 $(FFI_EXPORTS_O): CFLAGS += -fno-builtin
+
+# Pull in auto-generated .c dependencies (if any).
+-include $(wildcard $(BUILD_DIR)/*.d)
 
 clean:
 	@rm -rf $(BUILD_DIR)

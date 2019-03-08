@@ -53,4 +53,4 @@ $(DISTR_PATH)/en.stm32cubef7.zip:
 	@exit 1
 
 clean:
-	rm -rf fw_meta.py mklfs mkspiffs mkspiffs8
+	rm -rf fw_meta.py mklfs mkspiffs mkspiffs8 tmp
