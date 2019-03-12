@@ -56,12 +56,12 @@ class FreeRTOSTask(object):
 
     def __init__(self, handle, data):
         self.handle = handle
-        self.pxTopOfStack = struct.unpack('<I', data[0:4])[0]
-        (self.uxPriority, self.pxStack) = struct.unpack('<II', data[48:56])
+        self.pxTopOfStack = struct.unpack("<I", data[0:4])[0]
+        (self.uxPriority, self.pxStack) = struct.unpack("<II", data[48:56])
         self.pcTaskName = data[56:56+configMAX_TASK_NAME_LEN]
-        i = self.pcTaskName.find('\0')
+        i = self.pcTaskName.find(0)
         if i >= 0:
-            self.pcTaskName = self.pcTaskName[0:i]
+            self.pcTaskName = self.pcTaskName[0:i].decode("ascii")
 
     def __str__(self):
         return "0x%08x '%s' pri %d sp 0x%08x (%d free)" % (
@@ -76,11 +76,11 @@ class Core(object):
         if args.rom:
             self.mem.extend(self._map_firmware(args.rom_addr, args.rom))
         self.mem.extend(self._map_elf(args.elf))
-        self.regs = base64.decodebytes(bytes(self._dump['REGS']['data'], "ascii"))
-        self.tasks = dict((a, self._parse_tcb(a)) for a in self._dump.get('tasks', []))
+        self.regs = base64.decodebytes(bytes(self._dump["REGS"]["data"], "ascii"))
+        self.tasks = dict((a, self._parse_tcb(a)) for a in self._dump.get("tasks", []))
 
     def get_cur_task_for_cpu(self, cpu_no):
-        tt = self._dump.get('tasks', [])
+        tt = self._dump.get("tasks", [])
         if cpu_no < len(tt):
             return tt[cpu_no]
         else:
@@ -90,9 +90,10 @@ class Core(object):
         sizeofTCB = 352  # sizeof(taskTCB)
         # Task ID is the address of the TCB and must be in DRAM.
         tcb_data = self.read(addr, sizeofTCB)
-        if tcb_data[3] != '\x3f':
+        if tcb_data[3] != 0x3f:
             return None
-        return FreeRTOSTask(addr, tcb_data)
+        r = FreeRTOSTask(addr, tcb_data)
+        return r
 
 
     def _search_backwards(self, f, start_offset, pattern):
@@ -183,7 +184,7 @@ class Core(object):
             if addr >= base and addr < end:
                 return data[addr - base : addr - base + size]
         print("Unmapped addr", hex(addr), file=sys.stderr)
-        return "\0" * size
+        return b"\0" * size
 
 
 class GDBHandler(socketserver.BaseRequestHandler):
@@ -286,6 +287,8 @@ class GDBHandler(socketserver.BaseRequestHandler):
         self.request.sendall(b"-");
 
     def send_str(self, s):
+        if type(s) is bytes:
+            s = s.decode("ascii")
         self.request.sendall("${0}#{1:02x}".format(s, self._checksum(s)).encode("ascii"))
 
     def _checksum(self, s):
@@ -325,9 +328,9 @@ class GDBHandler(socketserver.BaseRequestHandler):
     def send_thread_extra_info(self, tid):
         task = self._core.tasks.get(tid)
         if task:
-            self.send_str(binascii.hexlify(str(task)))
+            self.send_str(binascii.hexlify(str(task).encode("ascii")))
         else:
-            self.send_str(binascii.hexlify('[Invalid task 0x%08x]' % tid))
+            self.send_str(binascii.hexlify(("[Invalid task 0x%08x]" % tid).encode("ascii")))
 
 
 
