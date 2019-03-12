@@ -14,7 +14,6 @@
 # If you run on OSX or windows, you have to put the IP of your host instead of
 # localhost since gdb will run in a virtualmachine.
 
-import socketserver
 import argparse
 import base64
 import binascii
@@ -22,6 +21,7 @@ import ctypes
 import json
 import os
 import re
+import socketserver
 import struct
 import sys
 
@@ -76,7 +76,7 @@ class Core(object):
         if args.rom:
             self.mem.extend(self._map_firmware(args.rom_addr, args.rom))
         self.mem.extend(self._map_elf(args.elf))
-        self.regs = base64.decodestring(self._dump['REGS']['data'])
+        self.regs = base64.decodebytes(bytes(self._dump['REGS']['data'], "ascii"))
         self.tasks = dict((a, self._parse_tcb(a)) for a in self._dump.get('tasks', []))
 
     def get_cur_task_for_cpu(self, cpu_no):
@@ -121,10 +121,12 @@ class Core(object):
                 print("Cannot find start delimiter:", START_DELIM, file=sys.stderr)
                 sys.exit(1)
             start_pos += len(START_DELIM)
-
             print("Found core at %d - %d" % (start_pos, end_pos), file=sys.stderr)
             f.seek(start_pos)
-            core_json = f.read(end_pos - start_pos)
+            core_lines = []
+            while f.tell() < end_pos:
+                core_lines.append(f.readline())
+            core_json = ''.join(core_lines)
             stripped = re.sub(r'(?im)\s+(\[.{1,40}\])?\s*', '', core_json)
             return json.loads(stripped)
 
@@ -133,7 +135,7 @@ class Core(object):
         for k, v in list(core.items()):
             if not isinstance(v, dict) or k == 'REGS':
                 continue
-            data = base64.decodestring(v["data"])
+            data = base64.decodebytes(bytes(v["data"], "ascii"))
             print("Mapping {0}: {1} @ {2:#02x}".format(k, len(data), v["addr"]), file=sys.stderr)
             if "crc32" in v:
                 crc32 = ctypes.c_uint32(binascii.crc32(data))
@@ -145,7 +147,7 @@ class Core(object):
         return mem
 
     def _map_firmware(self, addr, filename):
-        with open(filename) as f:
+        with open(filename, "rb") as f:
             data = f.read()
             result = []
             i = 0
@@ -163,7 +165,7 @@ class Core(object):
 
     def _map_elf(self, elf_file_name):
         result = []
-        f = open(elf_file_name)
+        f = open(elf_file_name, "rb")
         ef = elftools.elf.elffile.ELFFile(f)
         for i, sec in enumerate(ef.iter_sections()):
             addr, size, off = sec["sh_addr"], sec["sh_size"], sec["sh_offset"]
@@ -192,7 +194,7 @@ class GDBHandler(socketserver.BaseRequestHandler):
 
         while self.expect_packet_start():
             pkt = self.read_packet()
-            #print >>sys.stderr, ">>", pkt
+            #print(">>", pkt, file=sys.stderr)
             if pkt == "?": # status -> trap
                 self.send_str("S09")
             elif pkt == "g": # dump registers
@@ -272,29 +274,32 @@ class GDBHandler(socketserver.BaseRequestHandler):
         print("GDB closed the connection", file=sys.stderr)
 
     def encode_bytes(self, bs):
-        return "".join("{0:02x}".format(ord(i)) for i in bs)
+        return binascii.hexlify(bs).decode("ascii")
 
     def decode_bytes(self, s):
-        return s.decode('hex')
+        return binascii.unhexlify(s)
 
     def send_ack(self):
-        self.request.sendall("+");
+        self.request.sendall(b"+");
 
     def send_nack(self):
-        self.request.sendall("-");
+        self.request.sendall(b"-");
 
     def send_str(self, s):
-        self.request.sendall("${0}#{1:02x}".format(s, self._checksum(s)))
+        self.request.sendall("${0}#{1:02x}".format(s, self._checksum(s)).encode("ascii"))
 
     def _checksum(self, s):
-        return sum(ord(i) for i in s) % 0x100
+        if type(s) is str:
+            return sum(ord(i) for i in s) % 0x100
+        else: # bytes
+            return sum(s) % 0x100
 
     def expect_packet_start(self):
         return len(self.read_until('$')) > 0
 
     def read_packet(self):
         pkt = self.read_until('#')
-        chk = ""
+        chk = b""
         chk += self.request.recv(1)
         chk += self.request.recv(1)
         if len(chk) != 2:
@@ -303,12 +308,12 @@ class GDBHandler(socketserver.BaseRequestHandler):
             print("Bad checksum for {0}; got: {1} want: {2:02x}".format(pkt, chk, "want:", self._checksum(pkt)), file=sys.stderr)
             self.send_nack()
             return ""
-
         self.send_ack()
-        return pkt
+        return pkt.decode("ascii")
 
     def read_until(self, limit):
-        buf = ''
+        buf = b""
+        limit = bytes(limit, "ascii")
         while True:
             ch = self.request.recv(1)
             if len(ch) == 0: # eof
