@@ -15,12 +15,9 @@
  * limitations under the License.
  */
 
-#include <platform_custom.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <string.h>
-
 #pragma once
+
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
