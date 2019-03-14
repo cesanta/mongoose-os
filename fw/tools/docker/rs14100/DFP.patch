@@ -749,3 +749,20 @@
  	return RSI_OK;
  }
  
+--- ./Driver/Common/chip/inc/base_types.h.orig	2018-09-25 17:32:06.000000000 +0100
++++ ./Driver/Common/chip/inc/base_types.h	2019-03-12 13:02:22.328725875 +0000
+@@ -46,10 +46,14 @@
+ #endif  
+ 
+ /** Returns the minimum value out of two values */
++#ifndef MIN
+ #define MIN( X, Y )  ((X) < (Y) ? (X) : (Y))
++#endif
+ 
+ /** Returns the maximum value out of two values */
++#ifndef MAX
+ #define MAX( X, Y )  ((X) > (Y) ? (X) : (Y))
++#endif
+ 
+ /** Returns the dimension of an array */
+ #define  DIM( X )  (sizeof(X) / sizeof(X[0]))

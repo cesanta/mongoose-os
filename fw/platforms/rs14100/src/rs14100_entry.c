@@ -39,7 +39,7 @@ extern void SysTick_Handler1(void);
 
 /* Initial int vectors, in flash */
 const __attribute__((
-    section(".flash_int_vectors"))) void *stm32_flash_int_vectors[] = {
+    section(".flash_int_vectors"))) void *flash_int_vectors[60] = {
     (void *) 0x2000,    // ROM boot loader stack pointer.
     (void *) 0x300001,  // ROM boot loader entrypoint.
     0,                  // NMI_Handler
@@ -52,7 +52,7 @@ const __attribute__((
     0,                  // DebugMon_Handler
     0,                  // Reserved
     0,                  // PendSV_Handler
-    SysTick_Handler1,   // SysTick_Handler
+    0,                  // SysTick_Handler
     // External interrupts
     0,                                                        // VAD interrupt
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  // ULP (19)

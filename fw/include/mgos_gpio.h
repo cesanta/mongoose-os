@@ -22,6 +22,9 @@
 
 #include "common/platform.h"
 
+#ifdef RS14100
+#include "rs14100_gpio.h"
+#endif
 #if CS_PLATFORM == CS_P_STM32
 #include "stm32_gpio.h"
 #endif

@@ -15,49 +15,55 @@
  * limitations under the License.
  */
 
+#include "common/platform.h"
+
+#include "mgos_gpio.h"
+
 #include "system_RS1xxxx.h"
 #include "rsi_chip.h"
 
-typedef struct {
-  uint8_t port;
-  uint8_t pin;
-} PORT_PIN_T;
+#define LED_ON 0
+#define LED1_PIN RS14100_ULP_GPIO(0) /* TRI LED green, 0 = on, 1 = off */
+#define LED2_PIN RS14100_ULP_GPIO(2) /* TRI LED blue,  0 = on, 1 = off */
 
-static const PORT_PIN_T ledBits[] = {{0, 0}, {0, 2}, {0, 12}};
-static const uint32_t ledBitsCnt = sizeof(ledBits) / sizeof(PORT_PIN_T);
+#define TEST_PIN RS14100_HP_GPIO(66)
 
-void RSI_Board_Init(void) {
-  unsigned int i;
-
-  for (i = 0; i < ledBitsCnt; i++) {
-    /*Set the GPIO pin MUX */
-    RSI_EGPIO_SetPinMux(EGPIO1, ledBits[i].port, ledBits[i].pin, 0);
-    /*Set GPIO direction*/
-    RSI_EGPIO_SetDir(EGPIO1, ledBits[i].port, ledBits[i].pin, 0);
-    /*Receive enable */
-    RSI_EGPIO_PadReceiverEnable(((ledBits[i].port) * 16) + ledBits[i].pin);
-  }
-  /*Enable PAD selection*/
-  RSI_EGPIO_PadSelectionEnable(1);
-}
-
-void RSI_Board_LED_Set(int x, int y) {
-  RSI_EGPIO_SetPin(EGPIO1, ledBits[x].port, ledBits[x].pin, y);
-}
-
-void RSI_Board_LED_Toggle(int x) {
-  RSI_EGPIO_TogglePort(EGPIO1, ledBits[x].port, (1 << ledBits[x].pin));
-}
+// 31: debug
 
 void SysTick_Handler1(void) {
-  RSI_Board_LED_Toggle(1);
+  mgos_gpio_toggle(RS14100_UULP_GPIO(2));
+  mgos_gpio_write(RS14100_ULP_GPIO(5), mgos_gpio_read(RS14100_HP_GPIO(50)));
+  mgos_gpio_toggle(TEST_PIN);
+}
+
+extern void arm_exc_handler_top(void);
+extern const void *flash_int_vectors[60];
+static void (*int_vectors[256])(void)
+    __attribute__((section(".ram_int_vectors")));
+
+void rs14100_set_int_handler(int irqn, void (*handler)(void)) {
+  int_vectors[irqn + 16] = handler;
 }
 
 int main(void) {
+  /* Move int vectors to RAM. */
+  for (int i = 0; i < (int) ARRAY_SIZE(int_vectors); i++) {
+    int_vectors[i] = 0;  // arm_exc_handler_top;
+  }
+  memcpy(int_vectors, flash_int_vectors, sizeof(flash_int_vectors));
+  // rs14100_set_int_handler(SVCall_IRQn, SVC_Handler);
+  // rs14100_set_int_handler(PendSV_IRQn, PendSV_Handler);
+  rs14100_set_int_handler(SysTick_IRQn, SysTick_Handler1);
+  SCB->VTOR = (uint32_t) &int_vectors[0];
+
   SystemInit();
   SystemCoreClockUpdate();
-  RSI_Board_Init();
-  RSI_Board_LED_Set(0, 1);
+  mgos_gpio_setup_output(LED1_PIN, !LED_ON);
+  mgos_gpio_setup_output(LED2_PIN, !LED_ON);
+  mgos_gpio_setup_output(TEST_PIN, 1);
+  mgos_gpio_setup_input(RS14100_HP_GPIO(50), MGOS_GPIO_PULL_UP);
+  mgos_gpio_setup_output(RS14100_ULP_GPIO(5), 1);
+  mgos_gpio_setup_output(RS14100_UULP_GPIO(2), 1);
   SysTick_Config(SystemCoreClock / 10);
   while (1) {
     // uint32_t tc = SysTick->VAL;

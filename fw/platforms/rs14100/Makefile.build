@@ -44,10 +44,13 @@ MGOS_PLATFORM_PATH ?= $(MGOS_PATH)/fw/platforms/rs14100
 RS14100_LIBC ?= -lc -lstdc++
 RS14100_CFLAGS = -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 \
                  -DRS14100 -D_FILE_OFFSET_BITS=32 \
-                 -DIRAM='__attribute__((section(".RamFunc")))' \
+                 -DIRAM= \
                  -D__FPU_PRESENT=1 -D__IOM=volatile -D__IM='volatile const' -D__OM=volatile \
                  -D__error_t_defined=1 \
                  -DARM_HAVE_FPU=1 -DMGOS_MAX_NUM_UARTS=7
+
+# Figure out -ffunction-sections for IRAM funcs.
+# -DIRAM='__attribute__((section(".RamFunc")))' \
 
 # TODO(rojer): Figure out which ROM drivers are present and set XXX_ROMDRIVER_PRESENT macros.
 
@@ -145,7 +148,7 @@ MGOS_SRCS += rsi_bod.c rsi_ipmu.c rsi_pll.c rsi_power_save.c rsi_processor_senso
              rsi_rtc.c rsi_temp_sensor.c rsi_time_period.c rsi_ulpss_clk.c rsi_wwdt.c
 
 MGOS_SRCS += system_RS1xxxx.c rsi_system_config.c \
-             rs14100_entry.c rs14100_libc.c rs14100_main.c
+             rs14100_entry.c rs14100_gpio.c rs14100_libc.c rs14100_main.c
 
 RS14100_IPATH += $(RS14100_DFP_PATH)/Driver/Common/chip/inc \
                  $(RS14100_DFP_PATH)/Driver/Common/cmsis \
@@ -224,7 +227,7 @@ all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(APP0_BIN) $(FW_ZIP)
 $(FW_MANIFEST): $(APP0_BIN) $(MGOS_CONFIG_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C)
 
 $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR):
-	$(vecho) "MKDIR $@ $(RS14100_DFP_PATH)"
+	$(vecho) "MKDIR $@"
 	$(Q) mkdir -p $@
 
 $(MGOS_LIB): $(MGOS_OBJS)
