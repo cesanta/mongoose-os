@@ -27,3 +27,7 @@
 #include "rsi_rom_clks.h"
 #include "rsi_rom_egpio.h"
 #include "rsi_rom_ulpss_clk.h"
+#include "clock_update.h"
+
+void rs14100_set_int_handler(int irqn, void (*handler)(void));
+uint32_t rs14100_get_lf_fsm_clk(void);

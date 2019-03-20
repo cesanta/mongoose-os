@@ -37,12 +37,12 @@ const char *mgos_gpio_str(int pin, char buf[8]) {
   int i = 0;
   if (pin >= 0) {
     switch (RS14100_PIN_DOMAIN(pin)) {
-      case RS14100_DOMAIN_HP:
+      case RS14100_HP:
         break;
-      case RS14100_DOMAIN_UULP:
+      case RS14100_UULP:
         buf[i++] = 'U';
       // fallthrough
-      case RS14100_DOMAIN_ULP:
+      case RS14100_ULP:
         buf[i++] = 'U';
         break;
       default:
@@ -66,17 +66,17 @@ IRAM bool mgos_gpio_read(int pin) {
   int pin_num;
   volatile EGPIO_Type *regs;
   switch (RS14100_PIN_DOMAIN(pin)) {
-    case RS14100_DOMAIN_HP: {
+    case RS14100_HP: {
       regs = EGPIO;
       pin_num = RS14100_HP_PIN_NUM(pin);
       break;
     }
-    case RS14100_DOMAIN_ULP: {
+    case RS14100_ULP: {
       regs = EGPIO1;
       pin_num = RS14100_ULP_PIN_NUM(pin);
       break;
     }
-    case RS14100_DOMAIN_UULP: {
+    case RS14100_UULP: {
       pin_num = RS14100_UULP_PIN_NUM(pin);
       return RSI_NPSSGPIO_GetPin(pin_num);
     }
@@ -92,17 +92,17 @@ IRAM bool mgos_gpio_read_out(int pin) {
   int pin_num;
   volatile EGPIO_Type *regs;
   switch (RS14100_PIN_DOMAIN(pin)) {
-    case RS14100_DOMAIN_HP: {
+    case RS14100_HP: {
       regs = EGPIO;
       pin_num = RS14100_HP_PIN_NUM(pin);
       break;
     }
-    case RS14100_DOMAIN_ULP: {
+    case RS14100_ULP: {
       regs = EGPIO1;
       pin_num = RS14100_ULP_PIN_NUM(pin);
       break;
     }
-    case RS14100_DOMAIN_UULP: {
+    case RS14100_UULP: {
       pin_num = RS14100_UULP_PIN_NUM(pin);
       return MCU_RET->NPSS_GPIO_CNTRL[pin_num].NPSS_GPIO_CTRLS_b.NPSS_GPIO_OUT;
     }
@@ -118,19 +118,19 @@ IRAM void mgos_gpio_write(int pin, bool level) {
   int pin_num, od;
   volatile EGPIO_Type *regs;
   switch (RS14100_PIN_DOMAIN(pin)) {
-    case RS14100_DOMAIN_HP: {
+    case RS14100_HP: {
       regs = EGPIO;
       pin_num = RS14100_HP_PIN_NUM(pin);
       od = s_rs14100_gpio_od.hp[pin_num];
       break;
     }
-    case RS14100_DOMAIN_ULP: {
+    case RS14100_ULP: {
       regs = EGPIO1;
       pin_num = RS14100_ULP_PIN_NUM(pin);
       od = s_rs14100_gpio_od.ulp[pin_num];
       break;
     }
-    case RS14100_DOMAIN_UULP: {
+    case RS14100_UULP: {
       pin_num = RS14100_UULP_PIN_NUM(pin);
       if (pin_num > 4) return;
       RSI_NPSSGPIO_SetPin(pin_num, level);
@@ -186,15 +186,15 @@ static void rs14100_gpio_claim_pad(int n) {
 
 static bool rs14100_gpio_clk_en(int pin) {
   switch (RS14100_PIN_DOMAIN(pin)) {
-    case RS14100_DOMAIN_HP: {
+    case RS14100_HP: {
       RSI_CLK_PeripheralClkEnable(M4CLK, EGPIO_CLK, ENABLE_STATIC_CLK);
       break;
     }
-    case RS14100_DOMAIN_ULP: {
+    case RS14100_ULP: {
       RSI_ULPSS_PeripheralEnable(ULPCLK, ULP_EGPIO_CLK, ENABLE_STATIC_CLK);
       break;
     }
-    case RS14100_DOMAIN_UULP: {
+    case RS14100_UULP: {
       // Nothing to do, it's always on.
       break;
     }
@@ -220,7 +220,7 @@ bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
     oen = !(mode == MGOS_GPIO_MODE_OUTPUT);
   }
   switch (RS14100_PIN_DOMAIN(pin)) {
-    case RS14100_DOMAIN_HP: {
+    case RS14100_HP: {
       pin_num = RS14100_HP_PIN_NUM(pin);
       if (pin_num <= 5 || pin_num > 79) return false;
       if (pin_num < 64) rs14100_gpio_claim_pad(pin_num);
@@ -238,7 +238,7 @@ bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
       s_rs14100_gpio_od.hp[pin_num] = od;
       break;
     }
-    case RS14100_DOMAIN_ULP: {
+    case RS14100_ULP: {
       pin_num = RS14100_ULP_PIN_NUM(pin);
       if (pin_num < 0 || pin_num > 15) return false;
       EGPIO1->PIN_CONFIG[pin_num].GPIO_CONFIG_REG_b.MODE = pin_mode;
@@ -251,7 +251,7 @@ bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
       s_rs14100_gpio_od.ulp[pin_num] = od;
       break;
     }
-    case RS14100_DOMAIN_UULP: {
+    case RS14100_UULP: {
       pin_num = RS14100_UULP_PIN_NUM(pin);
       if (pin_num < 0 || pin_num > 4) return false;
       RSI_NPSSGPIO_SetDir(pin_num, oen);
@@ -282,18 +282,18 @@ bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
       return false;
   }
   switch (RS14100_PIN_DOMAIN(pin)) {
-    case RS14100_DOMAIN_HP: {
+    case RS14100_HP: {
       RSI_EGPIO_PadDriverDisableState(RS14100_HP_PIN_NUM(pin), eds);
       break;
     }
-    case RS14100_DOMAIN_ULP: {
+    case RS14100_ULP: {
       // NB: ULP pin pull-up/down settings are applied to groups of 4:
       // 0:3, 3:7, 8:11 and 12:15 have pull setting controlled by the same bit.
       RSI_EGPIO_UlpPadDriverDisableState(RS14100_ULP_PIN_NUM(pin),
                                          (en_ulp_driver_disable_state_t) eds);
       break;
     }
-    case RS14100_DOMAIN_UULP: {
+    case RS14100_UULP: {
       return false;
     }
     default:

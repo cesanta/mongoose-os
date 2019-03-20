@@ -125,9 +125,6 @@ extern const void *stm32_flash_int_vectors[2];
 
 extern void arm_exc_handler_top(void);
 extern void __libc_init_array(void);
-extern void SVC_Handler(void);
-extern void PendSV_Handler(void);
-extern void SysTick_Handler(void);
 
 void stm32_set_int_handler(int irqn, void (*handler)(void)) {
   stm32_int_vectors[irqn + 16] = handler;
@@ -140,9 +137,6 @@ int main(void) {
   }
   memcpy(stm32_int_vectors, stm32_flash_int_vectors,
          sizeof(stm32_flash_int_vectors));
-  stm32_set_int_handler(SVCall_IRQn, SVC_Handler);
-  stm32_set_int_handler(PendSV_IRQn, PendSV_Handler);
-  stm32_set_int_handler(SysTick_IRQn, SysTick_Handler);
   SCB->VTOR = (uint32_t) &stm32_int_vectors[0];
 
   stm32_system_init();
@@ -155,7 +149,9 @@ int main(void) {
   HAL_NVIC_SetPriority(BusFault_IRQn, 0, 0);
   HAL_NVIC_SetPriority(UsageFault_IRQn, 0, 0);
   HAL_NVIC_SetPriority(DebugMonitor_IRQn, 0, 0);
-
+  stm32_set_int_handler(SVCall_IRQn, SVC_Handler);
+  stm32_set_int_handler(PendSV_IRQn, PendSV_Handler);
+  stm32_set_int_handler(SysTick_IRQn, SysTick_Handler);
   mgos_hal_freertos_run_mgos_task(true /* start_scheduler */);
   /* not reached */
   abort();

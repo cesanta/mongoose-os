@@ -36,6 +36,8 @@
 #include "esp32_uart.h"
 #elif CS_PLATFORM == CS_P_ESP8266
 #include "esp_uart.h"
+#elif defined(RS14100)
+#include "rs14100_uart.h"
 #elif CS_PLATFORM == CS_P_STM32
 #include "stm32_uart.h"
 #else

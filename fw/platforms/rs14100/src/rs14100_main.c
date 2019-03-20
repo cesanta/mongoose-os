@@ -17,24 +17,19 @@
 
 #include "common/platform.h"
 
+#include "mgos_hal_freertos_internal.h"
+#include "mgos_core_dump.h"
 #include "mgos_gpio.h"
+#include "mgos_system.h"
+#include "mgos_uart.h"
 
-#include "system_RS1xxxx.h"
-#include "rsi_chip.h"
+#include "rs14100_sdk.h"
 
 #define LED_ON 0
 #define LED1_PIN RS14100_ULP_GPIO(0) /* TRI LED green, 0 = on, 1 = off */
 #define LED2_PIN RS14100_ULP_GPIO(2) /* TRI LED blue,  0 = on, 1 = off */
 
-#define TEST_PIN RS14100_HP_GPIO(66)
-
 // 31: debug
-
-void SysTick_Handler1(void) {
-  mgos_gpio_toggle(RS14100_UULP_GPIO(2));
-  mgos_gpio_write(RS14100_ULP_GPIO(5), mgos_gpio_read(RS14100_HP_GPIO(50)));
-  mgos_gpio_toggle(TEST_PIN);
-}
 
 extern void arm_exc_handler_top(void);
 extern const void *flash_int_vectors[60];
@@ -45,29 +40,50 @@ void rs14100_set_int_handler(int irqn, void (*handler)(void)) {
   int_vectors[irqn + 16] = handler;
 }
 
+#define ICACHE_BASE 0x20280000
+#define ICACHE_CTRL_REG (*((volatile uint32_t *) (ICACHE_BASE + 0x14)))
+#define ICACHE_XLATE_REG (*((volatile uint32_t *) (ICACHE_BASE + 0x24)))
+
+uint32_t SystemCoreClockMHZ = 0;
+
+static void rs14100_enable_icache(void) {
+  // Enable instruction cache.
+  M4CLK->CLK_ENABLE_SET_REG1_b.ICACHE_CLK_ENABLE_b = 1;
+  M4CLK->CLK_ENABLE_SET_REG1_b.ICACHE_CLK_2X_ENABLE_b = 1;
+  // Per HRM, only required for 120MHz+, but we do it always, just in case.
+  ICACHE_XLATE_REG |= (1 << 21);
+  ICACHE_CTRL_REG = 0x1;  // 4-Way assoc, enable.
+}
+
+enum mgos_init_result mgos_hal_freertos_pre_init(void) {
+  return MGOS_INIT_OK;
+}
+
 int main(void) {
   /* Move int vectors to RAM. */
   for (int i = 0; i < (int) ARRAY_SIZE(int_vectors); i++) {
-    int_vectors[i] = 0;  // arm_exc_handler_top;
+    int_vectors[i] = arm_exc_handler_top;
   }
   memcpy(int_vectors, flash_int_vectors, sizeof(flash_int_vectors));
-  // rs14100_set_int_handler(SVCall_IRQn, SVC_Handler);
-  // rs14100_set_int_handler(PendSV_IRQn, PendSV_Handler);
-  rs14100_set_int_handler(SysTick_IRQn, SysTick_Handler1);
   SCB->VTOR = (uint32_t) &int_vectors[0];
 
   SystemInit();
   SystemCoreClockUpdate();
-  mgos_gpio_setup_output(LED1_PIN, !LED_ON);
-  mgos_gpio_setup_output(LED2_PIN, !LED_ON);
-  mgos_gpio_setup_output(TEST_PIN, 1);
-  mgos_gpio_setup_input(RS14100_HP_GPIO(50), MGOS_GPIO_PULL_UP);
-  mgos_gpio_setup_output(RS14100_ULP_GPIO(5), 1);
-  mgos_gpio_setup_output(RS14100_UULP_GPIO(2), 1);
-  SysTick_Config(SystemCoreClock / 10);
-  while (1) {
-    // uint32_t tc = SysTick->VAL;
-    // while (SysTick->VAL == tc);
-    // RSI_Board_LED_Toggle(0);
-  }
+  SystemCoreClockMHZ = SystemCoreClock / 1000000;
+  rs14100_enable_icache();
+
+  // mgos_gpio_setup_output(LED1_PIN, !LED_ON);
+  // mgos_gpio_setup_output(LED2_PIN, !LED_ON);
+
+  NVIC_SetPriorityGrouping(3 /* NVIC_PRIORITYGROUP_4 */);
+  NVIC_SetPriority(MemoryManagement_IRQn, 0);
+  NVIC_SetPriority(BusFault_IRQn, 0);
+  NVIC_SetPriority(UsageFault_IRQn, 0);
+  NVIC_SetPriority(DebugMonitor_IRQn, 0);
+  rs14100_set_int_handler(SVCall_IRQn, SVC_Handler);
+  rs14100_set_int_handler(PendSV_IRQn, PendSV_Handler);
+  rs14100_set_int_handler(SysTick_IRQn, SysTick_Handler);
+  mgos_hal_freertos_run_mgos_task(true /* start_scheduler */);
+  /* not reached */
+  abort();
 }

@@ -18,7 +18,6 @@
 #include <sys/time.h>
 
 #include <stm32_sdk_hal.h>
-//#include "stm32f7xx_hal_iwdg.h"
 
 #include "FreeRTOS.h"
 #include "semphr.h"

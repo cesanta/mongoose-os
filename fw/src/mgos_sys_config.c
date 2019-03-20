@@ -361,16 +361,6 @@ enum mgos_init_result mgos_sys_config_init(void) {
       mgos_sys_config_get_debug_mg_mgr_hexdump_file();
 #endif
 
-  if (mgos_sys_config_get_sys_mount_path() != NULL) {
-    if (!mgos_vfs_mount(mgos_sys_config_get_sys_mount_path(),
-                        mgos_sys_config_get_sys_mount_dev_type(),
-                        mgos_sys_config_get_sys_mount_dev_opts(),
-                        mgos_sys_config_get_sys_mount_fs_type(),
-                        mgos_sys_config_get_sys_mount_fs_opts())) {
-      return MGOS_INIT_MOUNT_FAILED;
-    }
-  }
-
   return MGOS_INIT_OK;
 }
 

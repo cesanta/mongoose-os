@@ -36,8 +36,8 @@
 #endif
 
 static struct mgos_rlock_type *s_debug_lock = NULL;
-static int8_t s_stdout_uart = -1;
-static int8_t s_stderr_uart = -1;
+static int8_t s_stdout_uart = MGOS_DEBUG_UART;
+static int8_t s_stderr_uart = MGOS_DEBUG_UART;
 static int8_t s_uart_suspended = 0;
 static int8_t s_in_debug = 0;
 

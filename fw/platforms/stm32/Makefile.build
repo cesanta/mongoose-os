@@ -176,7 +176,7 @@ MGOS_SRCS += $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
              json_utils.c frozen.c mgos_uart.c cs_rbuf.c mgos_init.c \
              cs_dbg.c mgos_dlsym.c mgos_file_utils.c mgos_system.c mgos_utils.c \
              arm_exc_top.S arm_exc.c arm_nsleep100.c \
-             stm32_entry.c stm32_exc.c stm32_gpio.c \
+             stm32_entry.c stm32_gpio.c \
              stm32_hal.c stm32_hw_timers.c \
              stm32_libc.c \
              stm32_main.c stm32_uart.c \

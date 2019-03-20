@@ -111,6 +111,7 @@ extern uint32_t SystemCoreClock;
 #define configUSE_APPLICATION_TASK_TAG 0
 #define configUSE_COUNTING_SEMAPHORES 1
 #define configGENERATE_RUN_TIME_STATS 0
+#define configSUPPORT_STATIC_ALLOCATION 1
 
 #define configENABLE_BACKWARD_COMPATIBILITY 0
 

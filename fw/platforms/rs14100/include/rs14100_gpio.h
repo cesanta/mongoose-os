@@ -32,13 +32,13 @@ extern "C" {
   (((((int) (mode)) & 0xf) << 16) | ((((int) (domain)) & 0x3) << 8) | \
    (((int) (pin_num)) & 0xff))
 
-#define RS14100_DOMAIN_HP 0
-#define RS14100_DOMAIN_ULP 1
-#define RS14100_DOMAIN_UULP 2
+#define RS14100_HP 0
+#define RS14100_ULP 1
+#define RS14100_UULP 2
 
-#define RS14100_HP_GPIO(n) RS14100_PIN(RS14100_DOMAIN_HP, ((n) &0x7f), 0)
-#define RS14100_ULP_GPIO(n) RS14100_PIN(RS14100_DOMAIN_ULP, ((n) &0xf), 0)
-#define RS14100_UULP_GPIO(n) RS14100_PIN(RS14100_DOMAIN_UULP, ((n) &0x7), 0)
+#define RS14100_HP_GPIO(n) RS14100_PIN(RS14100_HP, ((n) &0x7f), 0)
+#define RS14100_ULP_GPIO(n) RS14100_PIN(RS14100_ULP, ((n) &0xf), 0)
+#define RS14100_UULP_GPIO(n) RS14100_PIN(RS14100_UULP, ((n) &0x7), 0)
 
 #define RS14100_HP_PIN_NUM(pin) ((pin) &0x7f)
 #define RS14100_ULP_PIN_NUM(pin) ((pin) &0xf)

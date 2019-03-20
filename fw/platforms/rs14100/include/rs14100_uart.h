@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2018 Cesanta Software Limited
+ * Copyright (c) 2014-2019 Cesanta Software Limited
  * All rights reserved
  *
  * Licensed under the Apache License, Version 2.0 (the ""License"");
@@ -15,27 +15,20 @@
  * limitations under the License.
  */
 
-#ifndef CS_FW_PLATFORMS_STM32_INCLUDE_STM32_UART_INTERNAL_H_
-#define CS_FW_PLATFORMS_STM32_INCLUDE_STM32_UART_INTERNAL_H_
-
-#include "mgos_uart.h"
-
-#include "stm32_sdk_hal.h"
+#pragma once
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-struct stm32_uart_def {
-  USART_TypeDef *regs;
-  struct stm32_uart_pins default_pins;
+struct rs14100_uart_pins {
+  int tx, rx, ck, cts, rts;
 };
 
-bool stm32_uart_configure(int uart_no, const struct mgos_uart_config *cfg);
-void stm32_uart_putc(int uart_no, char c);
+struct mgos_uart_dev_config {
+  struct rs14100_uart_pins pins;
+};
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* CS_FW_PLATFORMS_STM32_INCLUDE_STM32_UART_INTERNAL_H_ */

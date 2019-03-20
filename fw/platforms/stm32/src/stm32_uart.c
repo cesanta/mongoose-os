@@ -24,6 +24,7 @@
 #include "common/cs_dbg.h"
 #include "common/cs_rbuf.h"
 
+#include "mgos_core_dump.h"
 #include "mgos_debug.h"
 #include "mgos_gpio.h"
 #include "mgos_uart_hal.h"
@@ -81,13 +82,6 @@ static inline void stm32_uart_clear_ovf_int(struct mgos_uart_state *us) {
 #define UART_ISR_BUF_XOFF_THRESH 8
 #define USART_ERROR_INTS (USART_ICR_ORECF | USART_ICR_FECF | USART_ICR_PECF);
 
-void stm32_uart_putc(int uart_no, char c) {
-  volatile USART_TypeDef *regs = s_uart_defs[uart_no].regs;
-  while (!(regs->ISR & USART_ISR_TXE)) {
-  }
-  regs->TDR = c;
-}
-
 static inline uint8_t stm32_uart_rx_byte(struct mgos_uart_state *us) {
   struct stm32_uart_state *uds = (struct stm32_uart_state *) us->dev_data;
   uint8_t byte = uds->regs->RDR;
@@ -97,6 +91,7 @@ static inline uint8_t stm32_uart_rx_byte(struct mgos_uart_state *us) {
 
 static inline void stm32_uart_tx_byte(struct mgos_uart_state *us,
                                       uint8_t byte) {
+  if (us == NULL) return;
   struct stm32_uart_state *uds = (struct stm32_uart_state *) us->dev_data;
   while (!(uds->regs->ISR & USART_ISR_TXE)) {
   }
@@ -113,6 +108,19 @@ static inline void stm32_uart_tx_byte_from_buf(struct mgos_uart_state *us) {
     cs_rbuf_consume(itxb, 1);
   }
 }
+
+void stm32_uart_putc(int uart_no, char c) {
+  if (uart_no < 0 || uart_no >= MGOS_MAX_NUM_UARTS) return;
+  stm32_uart_tx_byte(s_us[uart_no], c);
+}
+
+#ifndef MGOS_BOOT_BUILD
+void mgos_cd_putc(int c) {
+  stm32_uart_putc(mgos_get_stderr_uart(), c);
+}
+#else
+/* Bootloader provides its own CD printing function. */
+#endif
 
 static void stm32_uart_isr(struct mgos_uart_state *us) {
   if (us == NULL) return;
@@ -222,21 +230,6 @@ void stm32_uart8_int_handler(void) {
 }
 #endif
 
-void stm32_uart_dputc(int c) {
-  int uart_no = mgos_get_stderr_uart();
-  if (uart_no < 0 || s_us[uart_no] == NULL) return;
-  stm32_uart_tx_byte(s_us[uart_no], c);
-}
-
-void stm32_uart_dprintf(const char *fmt, ...) {
-  va_list ap;
-  char buf[100];
-  va_start(ap, fmt);
-  int result = vsnprintf(buf, sizeof(buf), fmt, ap);
-  va_end(ap);
-  for (int i = 0; i < result; i++) stm32_uart_dputc(buf[i]);
-}
-
 void mgos_uart_hal_dispatch_rx_top(struct mgos_uart_state *us) {
   struct stm32_uart_state *uds = (struct stm32_uart_state *) us->dev_data;
   size_t rxb_free;
@@ -300,7 +293,11 @@ void mgos_uart_hal_config_set_defaults(int uart_no,
          sizeof(cfg->dev.pins));
 }
 
-bool stm32_uart_setup_pins(int uart_no, const struct mgos_uart_config *cfg) {
+bool mgos_uart_hal_configure(struct mgos_uart_state *us,
+                             const struct mgos_uart_config *cfg) {
+  struct stm32_uart_state *uds = (struct stm32_uart_state *) us->dev_data;
+  volatile USART_TypeDef *regs = uds->regs;
+
   mgos_gpio_set_mode(cfg->dev.pins.tx, MGOS_GPIO_MODE_OUTPUT);
 
   mgos_gpio_set_mode(cfg->dev.pins.rx, MGOS_GPIO_MODE_INPUT);
@@ -316,7 +313,7 @@ bool stm32_uart_setup_pins(int uart_no, const struct mgos_uart_config *cfg) {
   }
 
   int irqn = 0;
-  switch (uart_no) {
+  switch (us->uart_no) {
     case 1:
       __HAL_RCC_USART1_CLK_ENABLE();
       stm32_set_int_handler(USART1_IRQn, stm32_uart1_int_handler);
@@ -372,13 +369,6 @@ bool stm32_uart_setup_pins(int uart_no, const struct mgos_uart_config *cfg) {
   }
   HAL_NVIC_SetPriority(irqn, 10, 0);
   HAL_NVIC_EnableIRQ(irqn);
-  return true;
-}
-
-bool stm32_uart_configure(int uart_no, const struct mgos_uart_config *cfg) {
-  volatile USART_TypeDef *regs = s_uart_defs[uart_no].regs;
-
-  if (!stm32_uart_setup_pins(uart_no, cfg)) return false;
 
   /* Disable for reconfig */
   CLEAR_BIT(regs->CR1, USART_CR1_UE);
@@ -489,16 +479,6 @@ bool stm32_uart_configure(int uart_no, const struct mgos_uart_config *cfg) {
   return true;
 }
 
-bool mgos_uart_hal_configure(struct mgos_uart_state *us,
-                             const struct mgos_uart_config *cfg) {
-  s_us[us->uart_no] = us;
-  bool res = stm32_uart_configure(us->uart_no, cfg);
-  if (!res) {
-    s_us[us->uart_no] = NULL;
-  }
-  return res;
-}
-
 bool mgos_uart_hal_init(struct mgos_uart_state *us) {
   if (s_uart_defs[us->uart_no].regs == NULL) return false;
   struct stm32_uart_state *uds =
@@ -507,6 +487,7 @@ bool mgos_uart_hal_init(struct mgos_uart_state *us) {
   cs_rbuf_init(&uds->irx_buf, UART_ISR_BUF_SIZE);
   cs_rbuf_init(&uds->itx_buf, UART_ISR_BUF_SIZE);
   us->dev_data = uds;
+  s_us[us->uart_no] = us;
   return true;
 }
 
@@ -559,7 +540,7 @@ void mgos_uart_hal_deinit(struct mgos_uart_state *us) {
       break;
 #endif
     default:
-      break;
+      return;
   }
   HAL_NVIC_DisableIRQ(irqn);
   us->dev_data = NULL;

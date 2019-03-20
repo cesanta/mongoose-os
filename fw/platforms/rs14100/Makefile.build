@@ -29,7 +29,6 @@ APP_BIN_LIBS ?=
 APP_EXTRA_FW_PARTS ?=
 
 MGOS_MG_NET_IF ?= MG_NET_IF_NULL
-MGOS_ENABLE_LWIP ?= 0
 
 BUILD_LIB_NAME ?= lib.a
 
@@ -46,8 +45,10 @@ RS14100_CFLAGS = -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 \
                  -DRS14100 -D_FILE_OFFSET_BITS=32 \
                  -DIRAM= \
                  -D__FPU_PRESENT=1 -D__IOM=volatile -D__IM='volatile const' -D__OM=volatile \
+                 -D__MPU_PRESENT=1 \
                  -D__error_t_defined=1 \
-                 -DARM_HAVE_FPU=1 -DMGOS_MAX_NUM_UARTS=7
+                 -DARM_HAVE_FPU=1 -DMGOS_MAX_NUM_UARTS=4 \
+                 -DROMDRIVER_PRESENT=1
 
 # Figure out -ffunction-sections for IRAM funcs.
 # -DIRAM='__attribute__((section(".RamFunc")))' \
@@ -141,14 +142,16 @@ MGOS_SRCS += $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
 MGOS_SRCS += clock_update.c rsi_adc.c rsi_cci.c rsi_comparator.c rsi_crc.c \
              rsi_ct.c rsi_cts.c rsi_dac.c rsi_efuse.c rsi_egpio.c rsi_ethernet.c \
              rsi_gpdma.c rsi_gspi.c rsi_ir.c \
-             rsi_opamp.c rsi_pwm.c rsi_qei.c rsi_qspi.c rsi_rng.c rsi_sdioh.c \
+             rsi_opamp.c rsi_pwm.c rsi_qei.c rsi_qspi.c rsi_rng.c \
              rsi_sio.c rsi_timers.c rsi_udma.c rsi_vad.c rsi_wurx.c
+# rsi_sdioh.c - uses SysTick
 # Driver/Peripheral_Library/systemlevel/src/*.c
 MGOS_SRCS += rsi_bod.c rsi_ipmu.c rsi_pll.c rsi_power_save.c rsi_processor_sensor.c \
              rsi_rtc.c rsi_temp_sensor.c rsi_time_period.c rsi_ulpss_clk.c rsi_wwdt.c
 
 MGOS_SRCS += system_RS1xxxx.c rsi_system_config.c \
-             rs14100_entry.c rs14100_gpio.c rs14100_libc.c rs14100_main.c
+             rs14100_entry.c rs14100_gpio.c rs14100_hal.c rs14100_libc.c rs14100_main.c \
+             rs14100_uart.c rs14100_wdt.c
 
 RS14100_IPATH += $(RS14100_DFP_PATH)/Driver/Common/chip/inc \
                  $(RS14100_DFP_PATH)/Driver/Common/cmsis \
@@ -186,7 +189,7 @@ VPATH = $(MGOS_VPATH) $(MGOS_PLATFORM_PATH)/src \
 APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
 
-C_CXX_FLAGS = -Os -ggdb -MD -Wall -Wextra -Werror -pipe \
+C_CXX_FLAGS = -Os -ggdb -MD -Wall -Wextra -Werror -Wundef -pipe \
               -fno-common -ffunction-sections -fdata-sections \
               -DMGOS_APP=\"$(APP)\" \
               -DFW_ARCHITECTURE=$(APP_PLATFORM) \

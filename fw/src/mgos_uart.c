@@ -178,6 +178,7 @@ bool mgos_uart_configure(int uart_no, const struct mgos_uart_config *cfg) {
   struct mgos_uart_state *us = s_uart_state[uart_no];
   if (us == NULL) {
     us = (struct mgos_uart_state *) calloc(1, sizeof(*us));
+    if (us == NULL) return false;
     us->uart_no = uart_no;
     mbuf_init(&us->rx_buf, 0);
     mbuf_init(&us->tx_buf, 0);

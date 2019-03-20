@@ -24,6 +24,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
+#include "mgos_core_dump.h"
 #include "mgos_debug.h"
 #include "mgos_system.h"
 #include "mgos_time.h"
@@ -59,7 +60,7 @@ void abort(void) {
   mgos_debug_flush();
   void *sp;
   __asm volatile("mov %0, sp" : "=r"(sp) : :);
-  stm32_uart_dprintf("\nabort() called, sp = %p\n", sp);
+  mgos_cd_printf("\nabort() called, sp = %p\n", sp);
 #endif
   __builtin_trap();  // Executes an illegal instruction.
 }

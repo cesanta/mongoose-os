@@ -18,6 +18,11 @@ void mgos_hal_freertos_run_mgos_task(bool start_scheduler);
 
 extern enum mgos_init_result mgos_hal_freertos_pre_init(void);
 
+// FreeRTOS handlers.
+extern void SVC_Handler(void);
+extern void PendSV_Handler(void);
+extern void SysTick_Handler(void);
+
 #ifdef __cplusplus
 }
 #endif
