@@ -1,0 +1,17 @@
+.toggle { display: inline; height: 2em; }
+.toggle > input { display: none; padding: 0; margin: 0; }
+.toggle > label {
+  background: #ddd; width: 5em; height: 2em;
+  border-radius: 1em; position: relative; cursor: pointer;
+}
+.toggle > label > span {
+  display: inline-block; position: absolute; border-radius: 1em; 
+  width: 1.6em; height: 1.6em; margin-top: 0.2em; margin-left: 0.2em;
+  left: 0; background: #aaa; transition: transform .2s ease-in;
+}
+.toggle > input:checked ~ label { background: #9f9; }
+.toggle > input:checked ~ label > span {
+  background: #2ecc71;
+  transform: translatex(3em);
+  transition: transform .2s ease-in;
+}
