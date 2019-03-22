@@ -291,6 +291,122 @@ void mgos_uart_hal_config_set_defaults(int uart_no,
                                        struct mgos_uart_config *cfg) {
   memcpy(&cfg->dev.pins, &s_uart_defs[uart_no].default_pins,
          sizeof(cfg->dev.pins));
+  struct stm32_uart_pins *pins = &cfg->dev.pins;
+  switch (uart_no) {
+    case 1:
+#ifdef STM32_UART1_TX_PIN
+      pins->tx = STM32_UART1_TX_PIN;
+#endif
+#ifdef STM32_UART1_RX_PIN
+      pins->rx = STM32_UART1_RX_PIN;
+#endif
+#ifdef STM32_UART1_CTS_PIN
+      pins->cts = STM32_UART1_CTS_PIN;
+#endif
+#ifdef STM32_UART1_RTS_PIN
+      pins->rts = STM32_UART1_RTS_PIN;
+#endif
+      break;
+    case 2:
+#ifdef STM32_UART2_TX_PIN
+      pins->tx = STM32_UART2_TX_PIN;
+#endif
+#ifdef STM32_UART2_RX_PIN
+      pins->rx = STM32_UART2_RX_PIN;
+#endif
+#ifdef STM32_UART2_CTS_PIN
+      pins->cts = STM32_UART2_CTS_PIN;
+#endif
+#ifdef STM32_UART2_RTS_PIN
+      pins->rts = STM32_UART2_RTS_PIN;
+#endif
+      break;
+    case 3:
+#ifdef STM32_UART3_TX_PIN
+      pins->tx = STM32_UART3_TX_PIN;
+#endif
+#ifdef STM32_UART3_RX_PIN
+      pins->rx = STM32_UART3_RX_PIN;
+#endif
+#ifdef STM32_UART3_CTS_PIN
+      pins->cts = STM32_UART3_CTS_PIN;
+#endif
+#ifdef STM32_UART3_RTS_PIN
+      pins->rts = STM32_UART3_RTS_PIN;
+#endif
+      break;
+    case 4:
+#ifdef STM32_UART4_TX_PIN
+      pins->tx = STM32_UART4_TX_PIN;
+#endif
+#ifdef STM32_UART4_RX_PIN
+      pins->rx = STM32_UART4_RX_PIN;
+#endif
+#ifdef STM32_UART4_CTS_PIN
+      pins->cts = STM32_UART4_CTS_PIN;
+#endif
+#ifdef STM32_UART4_RTS_PIN
+      pins->rts = STM32_UART4_RTS_PIN;
+#endif
+      break;
+    case 5:
+#ifdef STM32_UART5_TX_PIN
+      pins->tx = STM32_UART5_TX_PIN;
+#endif
+#ifdef STM32_UART5_RX_PIN
+      pins->rx = STM32_UART5_RX_PIN;
+#endif
+#ifdef STM32_UART5_CTS_PIN
+      pins->cts = STM32_UART5_CTS_PIN;
+#endif
+#ifdef STM32_UART5_RTS_PIN
+      pins->rts = STM32_UART5_RTS_PIN;
+#endif
+      break;
+    case 6:
+#ifdef STM32_UART6_TX_PIN
+      pins->tx = STM32_UART6_TX_PIN;
+#endif
+#ifdef STM32_UART6_RX_PIN
+      pins->rx = STM32_UART6_RX_PIN;
+#endif
+#ifdef STM32_UART6_CTS_PIN
+      pins->cts = STM32_UART6_CTS_PIN;
+#endif
+#ifdef STM32_UART6_RTS_PIN
+      pins->rts = STM32_UART6_RTS_PIN;
+#endif
+      break;
+    case 7:
+#ifdef STM32_UART7_TX_PIN
+      pins->tx = STM32_UART7_TX_PIN;
+#endif
+#ifdef STM32_UART7_RX_PIN
+      pins->rx = STM32_UART7_RX_PIN;
+#endif
+#ifdef STM32_UART7_CTS_PIN
+      pins->cts = STM32_UART7_CTS_PIN;
+#endif
+#ifdef STM32_UART7_RTS_PIN
+      pins->rts = STM32_UART7_RTS_PIN;
+#endif
+      break;
+    case 8:
+#ifdef STM32_UART8_TX_PIN
+      pins->tx = STM32_UART8_TX_PIN;
+#endif
+#ifdef STM32_UART8_RX_PIN
+      pins->rx = STM32_UART8_RX_PIN;
+#endif
+#ifdef STM32_UART8_CTS_PIN
+      pins->cts = STM32_UART8_CTS_PIN;
+#endif
+#ifdef STM32_UART8_RTS_PIN
+      pins->rts = STM32_UART8_RTS_PIN;
+#endif
+      break;
+  }
+  (void) pins;
 }
 
 bool mgos_uart_hal_configure(struct mgos_uart_state *us,
@@ -431,7 +547,7 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
     uint32_t div = 0;
 #if defined(STM32F2) || defined(STM32F4)
     uint32_t f_uart;
-    if (uart_no == 1 || uart_no == 6) {
+    if (us->uart_no == 1 || us->uart_no == 6) {
       f_uart = HAL_RCC_GetPCLK2Freq();
     } else {
       f_uart = HAL_RCC_GetPCLK1Freq();
