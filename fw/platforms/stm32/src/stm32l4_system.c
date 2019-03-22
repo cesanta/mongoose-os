@@ -76,20 +76,20 @@ void stm32_clock_config(void) {
   oc.OscillatorType = RCC_OSCILLATORTYPE_LSE;
   oc.LSEState = (LSE_VALUE == 0 ? RCC_LSE_OFF : RCC_LSE_ON);
 #if HSE_VALUE == 0
-  oc.OscillatorType |= (RCC_OSCILLATORTYPE_HSI | RCC_OSCILLATORTYPE_MSI);
-  oc.HSIState = RCC_HSI_OFF;
+  oc.OscillatorType |= RCC_OSCILLATORTYPE_MSI;
   oc.MSIState = RCC_MSI_ON;
   oc.MSIClockRange = RCC_MSIRANGE_7; /* 8 MHz */
   oc.PLL.PLLSource = RCC_PLLSOURCE_MSI;
-#elif HSE_VALUE == 8000000
+  oc.PLL.PLLM = 2;
+#elif(HSE_VALUE <= 32000000) && (HSE_VALUE % 4000000 == 0)
   oc.OscillatorType |= RCC_OSCILLATORTYPE_HSE;
   oc.HSEState = RCC_HSE_ON;
   oc.PLL.PLLSource = RCC_PLLSOURCE_HSE;
+  oc.PLL.PLLM = (HSE_VALUE / 4000000);
 #else
-#error Only 8MHz HSE is supported
+#error Only HSE between 4 and 32MHz is supported
 #endif
-  oc.PLL.PLLM = 1;             /* 8 / 1 = 8 MHz VCO input */
-  oc.PLL.PLLN = 20;            /* 8 * 20 = 160 MHz VCO output */
+  oc.PLL.PLLN = 40;            /* 4 * 40 = 160 MHz VCO output */
   oc.PLL.PLLP = RCC_PLLP_DIV7; /* not used */
   oc.PLL.PLLQ = RCC_PLLQ_DIV4; /* not used */
   oc.PLL.PLLR = RCC_PLLR_DIV2; /* 160 / 2 = 80 MHz PLL output */
@@ -136,6 +136,9 @@ void stm32_clock_config(void) {
 #endif
   oc.PLL.PLLState = RCC_PLL_NONE; /* Don't touch the PLL config */
   HAL_RCC_OscConfig(&oc);
+
+  // Test frequency output.
+  // HAL_RCC_MCOConfig(RCC_MCO1, RCC_MCO1SOURCE_SYSCLK, RCC_MCODIV_2);
 }
 
 IRAM void stm32_flush_caches(void) {
