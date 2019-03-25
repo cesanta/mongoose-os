@@ -26,6 +26,8 @@
 extern "C" {
 #endif
 
+enum mgos_gpio_pull_type;
+
 /*
  * Pin definition, including function.
  */
@@ -69,6 +71,13 @@ enum stm32_gpio_ospeed {
   STM32_GPIO_OSPEED_VERY_HIGH = 2,
 };
 bool stm32_gpio_set_ospeed(int pin, enum stm32_gpio_ospeed ospeed);
+
+/*
+ * Set pull up/down mode during sleep and shutdown.
+ */
+#ifdef STM32L4
+bool stm32_gpio_set_sleep_pull(int pin, enum mgos_gpio_pull_type pull);
+#endif
 
 #ifdef __cplusplus
 }

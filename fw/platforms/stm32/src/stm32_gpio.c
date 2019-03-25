@@ -245,8 +245,35 @@ bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
       return false;
   }
   MODIFY_REG(regs->PUPDR, (3 << shift), (pupdr_val << shift));
+#ifdef STM32L4
+  // Start with sleep mode pull disabled, user will enable if required.
+  stm32_gpio_set_sleep_pull(pin, MGOS_GPIO_PULL_NONE);
+#endif
   return true;
 }
+
+#ifdef STM32L4
+bool stm32_gpio_set_sleep_pull(int pin, enum mgos_gpio_pull_type pull) {
+  if (pull != MGOS_GPIO_PULL_NONE) {
+    SET_BIT(PWR->CR3, PWR_CR3_APC);
+  }
+  int port_no = (STM32_PIN_PORT(pin) - 'A');
+  uint32_t pin_mask = (1 << STM32_PIN_NUM(pin));
+  volatile uint32_t *pu_reg = &PWR->PUCRA + port_no * 2;
+  if (pull == MGOS_GPIO_PULL_UP) {
+    SET_BIT(*pu_reg, pin_mask);
+  } else {
+    CLEAR_BIT(*pu_reg, pin_mask);
+  }
+  volatile uint32_t *pd_reg = &PWR->PDCRA + port_no * 2;
+  if (pull == MGOS_GPIO_PULL_DOWN) {
+    SET_BIT(*pd_reg, pin_mask);
+  } else {
+    CLEAR_BIT(*pd_reg, pin_mask);
+  }
+  return true;
+}
+#endif
 
 bool mgos_gpio_setup_output(int pin, bool level) {
   if (!stm32_gpio_port_en(pin)) return false;
