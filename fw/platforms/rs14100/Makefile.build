@@ -42,16 +42,14 @@ MGOS_PLATFORM_PATH ?= $(MGOS_PATH)/fw/platforms/rs14100
 
 RS14100_LIBC ?= -lc -lstdc++
 RS14100_CFLAGS = -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 \
-                 -DRS14100 -D_FILE_OFFSET_BITS=32 \
-                 -DIRAM= \
-                 -D__FPU_PRESENT=1 -D__IOM=volatile -D__IM='volatile const' -D__OM=volatile \
-                 -D__MPU_PRESENT=1 \
+                 -DRS14100 -D__FPU_PRESENT=1 -D__MPU_PRESENT=1 \
+                 -D__IOM=volatile -D__IM='volatile const' -D__OM=volatile \
                  -D__error_t_defined=1 \
-                 -DARM_HAVE_FPU=1 -DMGOS_MAX_NUM_UARTS=4 \
-                 -DROMDRIVER_PRESENT=1
+                 -DMGOS_MAX_NUM_UARTS=4 -D_FILE_OFFSET_BITS=32 \
+                 -DROMDRIVER_PRESENT=1 \
+                 -include mgos_iram.h
 
 # Figure out -ffunction-sections for IRAM funcs.
-# -DIRAM='__attribute__((section(".RamFunc")))' \
 
 # TODO(rojer): Figure out which ROM drivers are present and set XXX_ROMDRIVER_PRESENT macros.
 
@@ -84,17 +82,17 @@ override MGOS_BL_BIN := $(abspath $(MGOS_BL_BIN))
 
 APP0_ELF = $(BUILD_DIR)/$(APP).elf
 APP0_BIN = $(BUILD_DIR)/$(APP).bin
-SRAM_BASE_ADDR = 0x0
+SRAM_BASE = 0
 SRAM_SIZE ?= 0x20000
-FLASH_BASE_ADDR = 0x8012000
-FLASH_SIZE ?= 0x3ee000
-FLASH_FS_OFFSET ?= 0x300000
+FLASH_BASE = 0x8000000
+FLASH_SIZE = 0x400000
+FLASH_APP0_ADDR = 0x12000
+FLASH_FS0_ADDR = 0x300000
 
-MGOS_ROOT_DEVTAB ?= fs0 rsiflash {"offset": $(FLASH_FS_OFFSET), "size": $(MGOS_ROOT_FS_SIZE)}
+MGOS_ROOT_DEVTAB ?= qspi0 rsi1x_flash {"cs": 0} | \
+                    fs0   part        {"dev": "qspi0", "offset": $(FLASH_FS0_ADDR), "size": $(MGOS_ROOT_FS_SIZE)}
 MGOS_ROOT_FS_TYPE ?= SPIFFS
-MGOS_ROOT_FS_SIZE ?= 0
-# When FS is not on sys flash, we definitely need to extract.
-MGOS_ROOT_FS_EXTRACT ?= 0
+MGOS_ROOT_FS_SIZE ?= 262144
 ifeq "$(MGOS_ROOT_FS_TYPE)" "SPIFFS"
   MKFS ?= /usr/local/bin/mkspiffs8
   MGOS_ROOT_FS_OPTS ?= {"bs": 4096, "ps": 128, "es": 4096}
@@ -109,7 +107,6 @@ FS_STAGING_DIR = $(BUILD_DIR)/fs
 FS_IMG = $(FW_STAGING_DIR)/fs.bin
 FS_ZIP = $(FW_STAGING_DIR)/fs.zip
 
-FS_IMG_C = $(GEN_DIR)/fs_img.c
 FS_ZIP_C = $(GEN_DIR)/fs_zip.c
 
 include $(MGOS_PATH)/fw/src/mkfs.mk
@@ -170,11 +167,10 @@ RS14100_VPATH += $(RS14100_DFP_PATH)/Driver/Common/chip/src \
 
 RS14100_SRCS += $(notdir $(wildcard $(FREERTOS_PATH)/Source/*.c) port.c heap_3.c)
 
-RS14100_CFLAGS += -DSRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -DSRAM_SIZE=$(SRAM_SIZE) \
+RS14100_CFLAGS += -DSRAM_BASE=$(SRAM_BASE) -DSRAM_BASE_ADDR=$(SRAM_BASE) -DSRAM_SIZE=$(SRAM_SIZE) \
                   -DMGOS_ROOT_DEVTAB='$(MGOS_ROOT_DEVTAB)' \
                   -DMGOS_ROOT_FS_TYPE='$(MGOS_ROOT_FS_TYPE)' \
                   -DMGOS_ROOT_FS_OPTS='$(MGOS_ROOT_FS_OPTS)' \
-                  -DMGOS_ROOT_FS_EXTRACT='$(MGOS_ROOT_FS_EXTRACT)' \
                   -DNOCACHE_SIZE=0x400 \
                   -DMG_LOCALS -DCS_PLATFORM=CS_P_CUSTOM \
                   -DMGOS_NUM_HW_TIMERS=0
@@ -201,20 +197,20 @@ C_CXX_FLAGS = -Os -ggdb -MD -Wall -Wextra -Werror -Wundef -pipe \
 CFLAGS = -std=gnu99 $(C_CXX_FLAGS) $(APP_CFLAGS)
 CXXFLAGS = -std=gnu++11 -fno-exceptions $(C_CXX_FLAGS) $(APP_CXXFLAGS)
 
-LDFLAGS += -Wl,--defsym=SRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -Wl,--defsym=SRAM_SIZE=$(SRAM_SIZE) \
-           -Wl,--defsym=FLASH_BASE_ADDR=$(FLASH_BASE_ADDR) -Wl,--defsym=FLASH_SIZE=$(FLASH_SIZE)
+LDFLAGS += -Wl,--defsym=SRAM_BASE=$(SRAM_BASE) -Wl,--defsym=SRAM_SIZE=$(SRAM_SIZE) \
+           -Wl,--defsym=FLASH_BASE=$(FLASH_BASE) -Wl,--defsym=FLASH_SIZE=$(FLASH_SIZE) \
+           -Wl,--defsym=FLASH_APP0_ADDR=$(FLASH_APP0_ADDR)
 LDFLAGS += -Wl,--gc-sections
 
 LD_SCRIPT = $(MGOS_PLATFORM_PATH)/ld/rs14100.ld
 
-FW_PARTS = app:type=app0,src=$(APP0_BIN),addr=$(FLASH_BASE_ADDR)
+FW_PARTS = app0:type=app,src=$(APP0_BIN),addr=$(FLASH_APP0_ADDR) \
+           fs0:type=fs,src=$(FS_IMG),addr=$(FLASH_FS0_ADDR)
 FW_PARTS += $(APP_EXTRA_FW_PARTS)
 
 MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o))
 RS14100_OBJS = $(addprefix $(BUILD_DIR)/,$(RS14100_SRCS:=.o))
 APP_OBJS = $(addprefix $(BUILD_DIR)/,$(APP_SRCS:=.o))
-FS_IMG_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FS_IMG_C:=.o)))
-FS_ZIP_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FS_ZIP_C:=.o)))
 FFI_EXPORTS_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FFI_EXPORTS_C:=.o)))
 
 include $(MGOS_PATH)/common/scripts/fw_meta.mk
@@ -227,7 +223,7 @@ OC = arm-none-eabi-objcopy
 
 all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(APP0_BIN) $(FW_ZIP)
 
-$(FW_MANIFEST): $(APP0_BIN) $(MGOS_CONFIG_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C)
+$(FW_MANIFEST): $(APP0_BIN) $(MGOS_CONFIG_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C) $(FS_IMG)
 
 $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR):
 	$(vecho) "MKDIR $@"
@@ -287,18 +283,6 @@ $(MGOS_CONFIG_C): $(MGOS_CONF_SCHEMA) $(MANIFEST_FINAL)
 
 $(FS_IMG): $(APP_FS_DIRS) $(FS_FILES) $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(MKFS)
 	$(call mkfs,$(MGOS_ROOT_FS_SIZE),$(MGOS_ROOT_FS_OPTS))
-
-$(FS_ZIP): $(FS_IMG)
-	$(Q) rm -f $@
-	$(Q) cd $(FS_STAGING_DIR) && zip -9 -r $@ .
-
-$(FS_ZIP_C): $(FS_ZIP)
-	$(vecho) "GEN   $@"
-	$(Q) $(FW_META_CMD) xxd --var_name fs_zip --const $(FS_ZIP) > $@
-
-$(FS_IMG_C): $(FS_IMG)
-	$(vecho) "GEN   $@"
-	$(Q) $(FW_META_CMD) xxd --var_name fs_img --const --section .fs_img $(FS_IMG) > $@
 
 $(BL_BIN_C): $(MGOS_BL_BIN)
 	$(vecho) "GEN   $@"

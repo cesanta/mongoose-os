@@ -2,8 +2,8 @@ HSI_VALUE = 16000000
 FLASH_S0_SIZE = 16384
 MGOS_ROOT_FS_SIZE ?= 98304
 STM32_CFLAGS += -mcpu=cortex-m3 \
-                -DSTM32F2 -DARM_HAVE_FPU=0 -DMGOS_MAX_NUM_UARTS=7 \
-                -DIRAM='__attribute__((section(".RamFunc")))'
+                -DSTM32F2 -D__FPU_PRESENT=0 -D__MPU_PRESENT=1 \
+                -DMGOS_MAX_NUM_UARTS=7
 LD_SCRIPT_NO_OTA = $(MGOS_PLATFORM_PATH)/ld/stm32f_no_ota.ld
 LD_SCRIPT_OTA_0 = $(MGOS_PLATFORM_PATH)/ld/stm32f_ota_0.ld
 STM32CUBE_PATH = $(STM32CUBE_F2_PATH)

@@ -2,8 +2,8 @@ HSI_VALUE = 16000000
 FLASH_S0_SIZE = 32768
 MGOS_ROOT_FS_SIZE ?= 65536
 STM32_CFLAGS += -mthumb -march=armv7e-m -mfloat-abi=hard -mfpu=fpv4-sp-d16 \
-                -DSTM32F7 -DARM_HAVE_FPU=1 -DMGOS_MAX_NUM_UARTS=9 \
-                -DIRAM=__RAM_FUNC
+                -DSTM32F7 -D__FPU_PRESENT=1 -D__MPU_PRESENT=1 \
+                -DMGOS_MAX_NUM_UARTS=9
 LD_SCRIPT_NO_OTA = $(MGOS_PLATFORM_PATH)/ld/stm32f_no_ota.ld
 LD_SCRIPT_OTA_0 = $(MGOS_PLATFORM_PATH)/ld/stm32f_ota_0.ld
 STM32CUBE_PATH = $(STM32CUBE_F7_PATH)

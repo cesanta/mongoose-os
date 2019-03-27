@@ -292,7 +292,7 @@ $(BUILD_DIR)/port.c.o: CFLAGS += --diag_suppress=193,225
 $(BUILD_DIR)/tasks.c.o: CFLAGS += --diag_suppress=225
 endif
 
-C_CXX_FLAGS += -DNDEBUG -DCS_NDEBUG -DARM_HAVE_FPU=0 \
+C_CXX_FLAGS += -DNDEBUG -DCS_NDEBUG -D__FPU_PRESENT=0 -D__MPU_PRESENT=0 \
                -DFW_ARCHITECTURE=$(APP_PLATFORM) -DIRAM= \
                -DSRAM_BASE_ADDR=$(CC3200_SRAM_BASE_ADDR) \
                -DSRAM_SIZE=$(CC3200_SRAM_SIZE) \

@@ -271,7 +271,7 @@ APP_LD_SCRIPT ?= $(MGOS_CC3220_PATH)/ld/CC3220SF_LAUNCHXL_FREERTOS.cmd
 APP_LDFLAGS += --rom_model --heap_size=0 --stack_size=0x1000 \
                --disable_auto_rts -l rtsv7M4_T_le_eabi_cesanta.lib
 
-C_CXX_FLAGS += -DFW_ARCHITECTURE=$(APP_PLATFORM) -DARM_HAVE_FPU=0 \
+C_CXX_FLAGS += -DFW_ARCHITECTURE=$(APP_PLATFORM) -D__FPU_PRESENT=0 -D__MPU_PRESENT=0 \
                -DIRAM='__attribute__((section(".iram")))' \
                -DSRAM_BASE_ADDR=0x20000000 -DSRAM_SIZE=0x40000 \
                $(patsubst %,-I%,$(subst :, ,$(IPATH))) \

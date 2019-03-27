@@ -29,6 +29,17 @@ SECTIONS {
     KEEP(*(.fs_img))
   } > FLASH_FS
 
+  .data : {
+    _data_start = .;
+    . = ALIGN(256);  /* Vectors must be aligned to 0x100 */
+    KEEP(*(.ram_int_vectors))
+    *(.RamFunc)
+    *(SORT(.text.IRAM.*))
+    *(.data SORT(.data.*))
+    _data_end = .;
+  } > SRAM2 AT > FLASH_CS
+  _data_flash_start = LOADADDR(.data);
+
   .text : {
     . = ALIGN(4);
     *(.text SORT(.text.*))
@@ -69,16 +80,6 @@ SECTIONS {
   .rodata : {
     *(.rodata SORT(.rodata.*))
   } > FLASH_CS
-
-  .data : {
-    _data_start = .;
-    . = ALIGN(256);  /* Vectors must be aligned to 0x100 */
-    KEEP(*(.ram_int_vectors))
-    *(.data SORT(.data.*))
-    *(.RamFunc SORT(.RamFunc.*))
-    _data_end = .;
-  } > SRAM2 AT > FLASH_CS
-  _data_flash_start = LOADADDR(.data);
 
   .bss : {
     _bss_start = .;

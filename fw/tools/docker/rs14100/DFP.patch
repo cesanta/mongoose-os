@@ -766,3 +766,61 @@
  
  /** Returns the dimension of an array */
  #define  DIM( X )  (sizeof(X) / sizeof(X[0]))
+--- ./Driver/Common/chip/src/system_RS1xxxx.c.orig	2019-03-21 14:44:28.145494775 +0000
++++ ./Driver/Common/chip/src/system_RS1xxxx.c	2019-03-26 18:53:08.614073981 +0000
+@@ -233,7 +233,7 @@
+  *         retrieved from cpu registers.
+  * @return none
+  */
+-void SystemCoreClockUpdate (void)            /* Get Core Clock Frequency      */
++void xxx_SystemCoreClockUpdate (void)            /* Get Core Clock Frequency      */
+ {
+   /*Updated the default SOC clock frequency*/
+ 	SystemCoreClock = DEFAULT_32MHZ_RC_CLOCK;
+--- Driver/Freertos/Source/portable/GCC/ARM_CM4F/port.c.orig	2018-09-25 17:32:06.000000000 +0100
++++ Driver/Freertos/Source/portable/GCC/ARM_CM4F/port.c	2019-03-28 20:29:25.072347889 +0000
+@@ -392,7 +392,7 @@
+ }
+ /*-----------------------------------------------------------*/
+ 
+-void vPortEnterCritical( void )
++IRAM void vPortEnterCritical( void )
+ {
+ 	portDISABLE_INTERRUPTS();
+ 	uxCriticalNesting++;
+@@ -401,7 +401,7 @@
+ }
+ /*-----------------------------------------------------------*/
+ 
+-void vPortExitCritical( void )
++IRAM void vPortExitCritical( void )
+ {
+ 	configASSERT( uxCriticalNesting );
+ 	uxCriticalNesting--;
+@@ -412,7 +412,7 @@
+ }
+ /*-----------------------------------------------------------*/
+ 
+-__attribute__(( naked )) uint32_t ulPortSetInterruptMask( void )
++IRAM __attribute__(( naked )) uint32_t ulPortSetInterruptMask( void )
+ {
+ 	__asm volatile														\
+ 	(																	\
+@@ -429,7 +429,7 @@
+ }
+ /*-----------------------------------------------------------*/
+ 
+-__attribute__(( naked )) void vPortClearInterruptMask( uint32_t ulNewMaskValue )
++IRAM __attribute__(( naked )) void vPortClearInterruptMask( uint32_t ulNewMaskValue )
+ {
+ 	__asm volatile													\
+ 	(																\
+@@ -499,7 +499,7 @@
+ }
+ /*-----------------------------------------------------------*/
+ 
+-void xPortSysTickHandler( void )
++IRAM void xPortSysTickHandler( void )
+ {
+ 	/* The SysTick runs at the lowest interrupt priority, so when this interrupt
+ 	executes all interrupts must be unmasked.  There is therefore no need to

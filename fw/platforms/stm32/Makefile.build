@@ -244,6 +244,7 @@ C_CXX_FLAGS = -Os -ggdb -MD -Wall -Wextra -Werror -pipe \
               $(MGOS_CFLAGS) $(MGOS_FEATURES) \
               $(MG_FEATURES_TINY) -DMG_ENABLE_DIRECTORY_LISTING \
               -DMG_NET_IF=$(MGOS_MG_NET_IF) \
+              -include mgos_iram.h \
               $(STM32_CFLAGS)
 
 CFLAGS = -std=gnu99 $(C_CXX_FLAGS) $(APP_CFLAGS)

@@ -35,24 +35,25 @@ void rs14100_entry(void) {
   }
 }
 
+extern uint32_t _stack;
 extern void arm_exc_handler_top(void);
 
 /* Initial int vectors, in flash */
 const __attribute__((
     section(".flash_int_vectors"))) void *flash_int_vectors[60] = {
-    (void *) 0x2000,      // ROM boot loader stack pointer.
-    (void *) 0x300001,    // ROM boot loader entrypoint.
-    arm_exc_handler_top,  // NMI_Handler
-    arm_exc_handler_top,  // HardFault_Handler
-    arm_exc_handler_top,  // MemManage_Handler
-    arm_exc_handler_top,  // BusFault_Handler
-    arm_exc_handler_top,  // UsageFault_Handler
-    0, 0, 0, 0,           // Reserved
-    0,                    // SVC_Handler
-    0,                    // DebugMon_Handler
-    0,                    // Reserved
-    0,                    // PendSV_Handler
-    0,                    // SysTick_Handler
+    &_stack,            // ROM boot loader stack pointer.
+    (void *) 0x300001,  // ROM boot loader entrypoint.
+    0,                  // NMI_Handler
+    0,                  // HardFault_Handler
+    0,                  // MemManage_Handler
+    0,                  // BusFault_Handler
+    0,                  // UsageFault_Handler
+    0, 0, 0, 0,         // Reserved
+    0,                  // SVC_Handler
+    0,                  // DebugMon_Handler
+    0,                  // Reserved
+    0,                  // PendSV_Handler
+    0,                  // SysTick_Handler
     // External interrupts
     0,                                                        // VAD interrupt
     0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,  // ULP (19)
