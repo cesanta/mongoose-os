@@ -17,8 +17,8 @@
 
 #include "common/platform.h"
 
-#include "mgos_hal_freertos_internal.h"
 #include "mgos_core_dump.h"
+#include "mgos_freertos.h"
 #include "mgos_gpio.h"
 #include "mgos_system.h"
 #include "mgos_uart.h"
@@ -56,7 +56,7 @@ void rs14100_enable_icache(void) {
   ICACHE_CTRL_REG = 0x1;  // 4-Way assoc, enable.
 }
 
-enum mgos_init_result mgos_hal_freertos_pre_init(void) {
+enum mgos_init_result mgos_freertos_pre_init(void) {
   return MGOS_INIT_OK;
 }
 
@@ -179,14 +179,14 @@ int main(void) {
   // For some reason cache just doesn't help, even slows things down a bit.
   // rs14100_enable_icache();
 
-  // Set up region 7 (highest priority) to block first 256 bytes of SRAM (to
+  // Set up region 7 (highest priority) to block first megabyte of SRAM (to
   // catch NULL derefs).
   MPU->RNR = 7;
   MPU->RBAR = 0;
   MPU->RASR = MPU_RASR_ENABLE_Msk |
-              (7 << MPU_RASR_SIZE_Pos) |  // 256 bytes (2^(7+1)).
-              (0 << MPU_RASR_AP_Pos) |    // No RW access.
-              (1 << MPU_RASR_XN_Pos);     // No code execution.
+              (19 << MPU_RASR_SIZE_Pos) |  // 1M bytes (2^(19+1)).
+              (0 << MPU_RASR_AP_Pos) |     // No RW access.
+              (1 << MPU_RASR_XN_Pos);      // No code execution.
   // We run in privileged mode all the time so PRIVDEFENA acts as
   // "allow everything else".
   MPU->CTRL = MPU_CTRL_ENABLE_Msk | MPU_CTRL_PRIVDEFENA_Msk;
@@ -200,10 +200,10 @@ int main(void) {
   NVIC_SetPriority(BusFault_IRQn, 0);
   NVIC_SetPriority(UsageFault_IRQn, 0);
   NVIC_SetPriority(DebugMonitor_IRQn, 0);
-  rs14100_set_int_handler(SVCall_IRQn, SVC_Handler);
-  rs14100_set_int_handler(PendSV_IRQn, PendSV_Handler);
-  rs14100_set_int_handler(SysTick_IRQn, SysTick_Handler);
-  mgos_hal_freertos_run_mgos_task(true /* start_scheduler */);
+  rs14100_set_int_handler(SVCall_IRQn, vPortSVCHandler);
+  rs14100_set_int_handler(PendSV_IRQn, xPortPendSVHandler);
+  rs14100_set_int_handler(SysTick_IRQn, xPortSysTickHandler);
+  mgos_freertos_run_mgos_task(true /* start_scheduler */);
   /* not reached */
   abort();
 }

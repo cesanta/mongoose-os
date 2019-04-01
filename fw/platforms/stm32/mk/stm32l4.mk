@@ -9,10 +9,8 @@ STM32_CFLAGS += -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 \
                 -DMGOS_MAX_NUM_UARTS=6
 STM32CUBE_PATH = $(STM32CUBE_L4_PATH)
 STM32_IPATH += $(STM32CUBE_PATH)/Drivers/CMSIS/Device/ST/STM32L4xx/Include \
-               $(STM32CUBE_PATH)/Drivers/STM32L4xx_HAL_Driver/Inc \
-               $(FREERTOS_PATH)/Source/portable/GCC/ARM_CM4F
-STM32_VPATH += $(STM32CUBE_PATH)/Drivers/STM32L4xx_HAL_Driver/Src \
-               $(FREERTOS_PATH)/Source/portable/GCC/ARM_CM4F
+               $(STM32CUBE_PATH)/Drivers/STM32L4xx_HAL_Driver/Inc
+STM32_VPATH += $(STM32CUBE_PATH)/Drivers/STM32L4xx_HAL_Driver/Src
 STM32_SRCS += \
 stm32l4xx_hal_adc.c stm32l4xx_hal_adc_ex.c \
 stm32l4xx_hal_can.c \

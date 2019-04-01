@@ -34,7 +34,7 @@
 #include "mgos_debug_internal.h"
 #include "mgos_features.h"
 #include "mgos_hal.h"
-#include "mgos_hal_freertos_internal.h"
+#include "mgos_freertos.h"
 #include "mgos_init_internal.h"
 #include "mgos_mongoose_internal.h"
 #include "mgos_uart_internal.h"
@@ -113,7 +113,7 @@ int _system_pre_init(void) {
 }
 #endif
 
-enum mgos_init_result mgos_hal_freertos_pre_init(void) {
+enum mgos_init_result mgos_freertos_pre_init(void) {
   enum mgos_init_result r = cc32xx_pre_nwp_init();
   if (r != MGOS_INIT_OK) return r;
 
@@ -151,6 +151,6 @@ void cc32xx_main(void) {
   cc32xx_hash_module_init();
   cc32xx_sl_spawn_init();
 
-  mgos_hal_freertos_run_mgos_task(true /* start_scheduler */);
+  mgos_freertos_run_mgos_task(true /* start_scheduler */);
   /* Not reached */
 }

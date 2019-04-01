@@ -25,6 +25,7 @@
 
 #include "mongoose.h"
 
+#include "mgos_core_dump.h"
 #include "mgos_event.h"
 #include "mgos_features.h"
 #include "mgos_sys_config.h"
@@ -121,6 +122,23 @@ bool mgos_debug_uart_custom_cfg(int uart_no, struct mgos_uart_config *cfg) {
   (void) cfg;
   return true;
 }
+
+#if CS_PLATFORM != CS_P_ESP32
+void __assert_func(const char *file, int line, const char *func,
+                   const char *failedexpr) {
+#if CS_ENABLE_STDIO
+  mgos_cd_printf("assertion \"%s\" failed: file \"%s\", line %d%s%s\n",
+                 failedexpr, file, line, (func ? ", function: " : ""),
+                 (func ? func : ""));
+#else
+  (void) file;
+  (void) line;
+  (void) func;
+  (void) failedexpr;
+#endif
+  abort();
+}
+#endif
 
 static enum mgos_init_result mgos_init_debug_uart(int uart_no) {
   if (uart_no < 0) return MGOS_INIT_OK;

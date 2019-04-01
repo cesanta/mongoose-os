@@ -25,7 +25,7 @@
 #include "lwip/tcpip.h"
 #endif
 
-#include "mgos_hal_freertos_internal.h"
+#include "mgos_freertos.h"
 #include "mgos_gpio.h"
 #include "mgos_system.h"
 
@@ -98,7 +98,7 @@ static void stm32_set_nocache(void) {
       ("Marked [%p, %p) as no-cache", &__nocache_start__, &__nocache_end__));
 }
 
-enum mgos_init_result mgos_hal_freertos_pre_init() {
+enum mgos_init_result mgos_freertos_pre_init() {
   stm32_set_nocache();
 #if MG_LWIP
   stm32_init_lwip();
@@ -149,10 +149,10 @@ int main(void) {
   HAL_NVIC_SetPriority(BusFault_IRQn, 0, 0);
   HAL_NVIC_SetPriority(UsageFault_IRQn, 0, 0);
   HAL_NVIC_SetPriority(DebugMonitor_IRQn, 0, 0);
-  stm32_set_int_handler(SVCall_IRQn, SVC_Handler);
-  stm32_set_int_handler(PendSV_IRQn, PendSV_Handler);
-  stm32_set_int_handler(SysTick_IRQn, SysTick_Handler);
-  mgos_hal_freertos_run_mgos_task(true /* start_scheduler */);
+  stm32_set_int_handler(SVCall_IRQn, vPortSVCHandler);
+  stm32_set_int_handler(PendSV_IRQn, xPortPendSVHandler);
+  stm32_set_int_handler(SysTick_IRQn, xPortSysTickHandler);
+  mgos_freertos_run_mgos_task(true /* start_scheduler */);
   /* not reached */
   abort();
 }

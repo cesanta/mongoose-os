@@ -51,3 +51,48 @@
  #define lwip_md4_context mbedtls_md4_context
  #define lwip_md4_init mbedtls_md4_init
  #define lwip_md4_starts mbedtls_md4_starts
+--- Middlewares/Third_Party/LwIP/system/OS/sys_arch.c.orig	2018-02-23 10:07:00.000000000 +0000
++++ Middlewares/Third_Party/LwIP/system/OS/sys_arch.c	2019-04-01 13:28:33.940488861 +0100
+@@ -49,7 +49,8 @@
+ //  Creates an empty mailbox.
+ err_t sys_mbox_new(sys_mbox_t *mbox, int size)
+ {
+-  osMessageQDef(QUEUE, size, void *);
++  (void) size;
++  osMessageQDef(QUEUE, 32, void *);
+   
+   *mbox = osMessageCreate(osMessageQ(QUEUE), NULL);
+ 
+@@ -73,7 +74,7 @@
+ */
+ void sys_mbox_free(sys_mbox_t *mbox)
+ {
+-	if( osMessageWaiting(*mbox) )
++	if( osMessageQueueGetCount(*mbox) )
+ 	{
+ 		/* Line for breakpoint.  Should never break here! */
+ 		portNOP();
+@@ -84,7 +85,7 @@
+ 		// TODO notify the user of failure.
+ 	}
+ 
+-	osMessageDelete(*mbox);
++	osMessageQueueDelete(*mbox);
+ 
+ #if SYS_STATS
+      --lwip_stats.sys.mbox.used;
+@@ -375,8 +376,12 @@
+ */
+ sys_thread_t sys_thread_new(const char *name, lwip_thread_fn thread , void *arg, int stacksize, int prio)
+ {
+-  const osThreadDef_t os_thread_def = { (char *)name, (os_pthread)thread, (osPriority)prio, 0, stacksize};
+-  return osThreadCreate(&os_thread_def, arg);
++  const osThreadAttr_t os_thread_attr = {
++    .name = (char *)name,
++    .priority = (osPriority)prio,
++    .stack_size = stacksize,
++  };
++  return osThreadNew((osThreadFunc_t) thread, arg, &os_thread_attr);
+ }
+ 
+ /*

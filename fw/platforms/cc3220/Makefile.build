@@ -44,7 +44,6 @@ APP_IMAGE_MAX_SIZE ?= 262144
 
 APP_PATH := $(CURDIR)
 SDK_PATH ?=
-FREERTOS_PATH ?=
 COMMON_CC3200_PATH ?= $(MGOS_PATH)/common/platforms/cc3200
 MGOS_CC3220_PATH ?= $(MGOS_PATH)/fw/platforms/cc3220
 MGOS_CC32XX_PATH ?= $(MGOS_PATH)/fw/platforms/cc32xx
@@ -141,8 +140,7 @@ GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
 MGOS_SRCS += umm_malloc.c
 VPATH += $(COMMON_PATH)/umm_malloc
 
-FREERTOS_SRCS = heap_3.c list.c port.c queue.c tasks.c timers.c
-FREERTOS_SRCS += ClockP_freertos.c HwiPCC32XX_freertos.c MutexP_freertos.c PowerCC32XX_freertos.c SemaphoreP_freertos.c SystemP_freertos.c
+FREERTOS_SRCS = ClockP_freertos.c HwiPCC32XX_freertos.c MutexP_freertos.c PowerCC32XX_freertos.c SemaphoreP_freertos.c SystemP_freertos.c
 DRIVER_SRCS = GPIOCC32XX.c ListUtils.c PowerCC32XX.c SPI.c SPICC32XXDMA.c UDMACC32XX.c
 DRIVERLIB_SRCS = cpu.c flash.c interrupt.c pin.c prcm.c utils.c
 SL_SRCS = sl_socket.c wlan.c driver.c device.c eventreg.c flowcont.c netapp.c netcfg.c netutil.c cc_pal.c fs.c
@@ -150,9 +148,7 @@ SDK_SRCS = $(FREERTOS_SRCS) $(DRIVER_SRCS) $(DRIVERLIB_SRCS) $(SL_SRCS)
 
 IPATH += $(SDK_PATH)/source \
          $(SDK_PATH)/source/ti/boards/CC3220SF_LAUNCHXL \
-         $(SDK_PATH)/source/ti/devices/cc32xx \
-         $(FREERTOS_PATH)/Source/include \
-         $(FREERTOS_PATH)/Source/portable/CCS/ARM_CM3
+         $(SDK_PATH)/source/ti/devices/cc32xx
 
 VPATH += $(SDK_PATH)/source/ti/devices/cc32xx/driverlib \
          $(SDK_PATH)/source/ti/display \
@@ -179,10 +175,7 @@ VPATH += $(SDK_PATH)/source/ti/devices/cc32xx/driverlib \
          $(SDK_PATH)/source/ti/drivers/uart \
          $(SDK_PATH)/source/ti/drivers/utils \
          $(SDK_PATH)/source/ti/drivers/watchdog \
-         $(SDK_PATH)/kernel/freertos/dpl \
-         $(FREERTOS_PATH)/Source \
-         $(FREERTOS_PATH)/Source/portable/CCS/ARM_CM3 \
-         $(FREERTOS_PATH)/Source/portable/MemMang
+         $(SDK_PATH)/kernel/freertos/dpl
 
 SDK_CFLAGS = -DTARGET_IS_CC3220 -DUSE_CC3220_ROM_DRV_API -DUSE_FREERTOS
 
@@ -190,7 +183,7 @@ MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3220_PATH)/src/*.c)) \
              cs_crc32.c cs_dbg.c cs_file.c cs_rbuf.c mbuf.c \
              frozen.c json_utils.c \
              mgos_config_util.c mgos_core_dump.c mgos_debug.c mgos_dlsym.c mgos_event.c mgos_gpio.c \
-             mgos_file_utils.c mgos_hal_freertos.c mgos_init.c \
+             mgos_file_utils.c mgos_init.c \
              mgos_sys_config.c \
              mgos_hw_timers.c mgos_system.c mgos_time.c mgos_timers.c mgos_uart.c mgos_utils.c \
              cc32xx_exc.c arm_exc.c arm_exc_top.S arm_nsleep100.c arm_nsleep100_m4.S \

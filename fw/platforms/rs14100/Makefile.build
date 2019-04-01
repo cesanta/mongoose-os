@@ -37,7 +37,6 @@ APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
 APP_FS_DIRS = $(sort $(dir $(APP_FS_FILES)))
 
 APP_PATH := $(CURDIR)
-FREERTOS_PATH ?= $(RS14100_DFP_PATH)/Driver/Freertos
 MGOS_PLATFORM_PATH ?= $(MGOS_PATH)/fw/platforms/rs14100
 
 RS14100_LIBC ?= -lc -lstdc++
@@ -82,7 +81,7 @@ override MGOS_BL_BIN := $(abspath $(MGOS_BL_BIN))
 
 APP0_ELF = $(BUILD_DIR)/$(APP).elf
 APP0_BIN = $(BUILD_DIR)/$(APP).bin
-SRAM_BASE = 0
+SRAM_BASE = 0x200000
 SRAM_SIZE ?= 0x20000
 FLASH_BASE = 0x8000000
 FLASH_SIZE = 0x400000
@@ -129,7 +128,7 @@ FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
 
 MGOS_SRCS += $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
              mgos_config_util.c mgos_core_dump.c mgos_event.c mgos_gpio.c \
-             mgos_hal_freertos.c mgos_hw_timers.c mgos_sys_config.c \
+             mgos_hw_timers.c mgos_sys_config.c \
              mgos_time.c mgos_timers.c cs_crc32.c cs_file.c \
              json_utils.c frozen.c mgos_uart.c cs_rbuf.c mgos_init.c \
              cs_dbg.c mgos_dlsym.c mgos_file_utils.c mgos_system.c mgos_utils.c \
@@ -154,18 +153,11 @@ RS14100_IPATH += $(RS14100_DFP_PATH)/Driver/Common/chip/inc \
                  $(RS14100_DFP_PATH)/Driver/Common/cmsis \
                  $(RS14100_DFP_PATH)/Driver/Peripheral_Library/driver/inc \
                  $(RS14100_DFP_PATH)/Driver/Peripheral_Library/rom_driver/inc \
-                 $(RS14100_DFP_PATH)/Driver/Peripheral_Library/systemlevel/inc \
-                 $(FREERTOS_PATH)/Source/include \
-                 $(FREERTOS_PATH)/Source/portable/GCC/ARM_CM4F
+                 $(RS14100_DFP_PATH)/Driver/Peripheral_Library/systemlevel/inc
 
 RS14100_VPATH += $(RS14100_DFP_PATH)/Driver/Common/chip/src \
                  $(RS14100_DFP_PATH)/Driver/Peripheral_Library/driver/src \
-                 $(RS14100_DFP_PATH)/Driver/Peripheral_Library/systemlevel/src \
-                 $(FREERTOS_PATH)/Source \
-                 $(FREERTOS_PATH)/Source/portable/MemMang \
-                 $(FREERTOS_PATH)/Source/portable/GCC/ARM_CM4F
-
-RS14100_SRCS += $(notdir $(wildcard $(FREERTOS_PATH)/Source/*.c) port.c heap_3.c)
+                 $(RS14100_DFP_PATH)/Driver/Peripheral_Library/systemlevel/src
 
 RS14100_CFLAGS += -DSRAM_BASE=$(SRAM_BASE) -DSRAM_BASE_ADDR=$(SRAM_BASE) -DSRAM_SIZE=$(SRAM_SIZE) \
                   -DMGOS_ROOT_DEVTAB='$(MGOS_ROOT_DEVTAB)' \
@@ -240,7 +232,7 @@ $(BUILD_DIR)/$(BUILD_LIB_NAME): $(BUILD_DIR) $(APP_OBJS)
 
 $(BUILD_DIR)/%.c.o: %.c $(GENFILES_FLAG)
 	$(vecho) "CC    $<"
-	$(Q) cd $(dir $<) && $(CC) $(CFLAGS) $(addprefix -I, $(IPATH)) -c $(notdir $<) -o $@
+	$(Q) cd $(dir $<) && $(CC) $(CFLAGS) $(addprefix -I, $(IPATH)) -c $< -o $@
 
 $(BUILD_DIR)/%.cpp.o: %.cpp $(GENFILES_FLAG)
 	$(vecho) "CXX   $<"

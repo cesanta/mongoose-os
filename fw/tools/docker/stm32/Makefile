@@ -1,4 +1,5 @@
 DOCKERFILES = stm32-build
+SPIFFS_CONFIG_PATH = /vfs-fs-spiffs/include/stm32
 DOCKER_FLAGS = --build-arg=DOCKER_TAG=$(DOCKER_TAG) \
                --build-arg=STM32CUBE_F2_DIR=$(STM32CUBE_F2_DIR) \
                --build-arg=STM32CUBE_F4_DIR=$(STM32CUBE_F4_DIR) \

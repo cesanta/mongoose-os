@@ -22,9 +22,6 @@ SECTIONS {
 
   .data : {
     _data_start = .;
-    /* First 256 bytes are inaccessible (protected by MPU). */
-    BYTE(0xff)
-    FILL(0xff)
     . = ALIGN(256);  /* Vectors must be aligned to 0x100 */
     KEEP(*(.ram_int_vectors))
     *(.data SORT(.data.*))

@@ -37,7 +37,7 @@
 #include "mgos_core_dump.h"
 #include "mgos_debug_internal.h"
 #include "mgos_event.h"
-#include "mgos_hal_freertos_internal.h"
+#include "mgos_freertos.h"
 #include "mgos_net_hal.h"
 #include "mgos_system.h"
 #include "mgos_vfs_internal.h"
@@ -101,7 +101,7 @@ esp_err_t event_handler(void *ctx, system_event_t *event) {
   return ESP_OK;
 }
 
-enum mgos_init_result mgos_hal_freertos_pre_init(void) {
+enum mgos_init_result mgos_freertos_pre_init(void) {
   enum mgos_init_result r;
 
   srand(esp_random()); /* esp_random() uses HW RNG */
@@ -173,6 +173,6 @@ void app_main(void) {
   esp_log_set_vprintf(sdk_debug_vprintf);
   ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
   /* Scheduler is already running at this point */
-  mgos_hal_freertos_run_mgos_task(false /* start_scheduler */);
+  mgos_freertos_run_mgos_task(false /* start_scheduler */);
   /* Unlike other platforms, we return and abandon this task. */
 }

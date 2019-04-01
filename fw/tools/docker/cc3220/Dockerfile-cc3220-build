@@ -18,13 +18,13 @@ RUN DEBIAN_FRONTEND=noninteractive add-apt-repository -y -u ppa:team-gcc-arm-emb
     DEBIAN_FRONTEND=noninteractive apt-get install -y -q gcc-arm-embedded && \
     apt-get clean
 
+ADD fw_meta.py serve_core.py mklfs mkspiffs mkspiffs8 /usr/local/bin/
+
 ARG TI_COMPILER_DIR
-ADD $TI_COMPILER_DIR /opt/$TI_COMPILER_DIR
+ADD tmp/$TI_COMPILER_DIR /opt/$TI_COMPILER_DIR
 
 # Create our own version of libc - with no HOSTIO and malloc functions.
-ADD ti_libc.patch /opt/$TI_COMPILER_DIR/lib
 RUN cd /opt/$TI_COMPILER_DIR/lib && rm *.lib && \
-    patch -p 0 < ti_libc.patch && \
     ./mklib --index=libc.a --pattern=rtsv7M4_T_le_eabi.lib \
             --extra_options='-O4 --opt_for_speed=0' \
             --compiler_bin_dir=../bin \
@@ -32,24 +32,11 @@ RUN cd /opt/$TI_COMPILER_DIR/lib && rm *.lib && \
             --parallel=4
 
 ARG SDK_DIR
-ADD $SDK_DIR /opt/$SDK_DIR
-ADD user.h /opt/$SDK_DIR/source/ti/drivers/net/wifi/porting/user.h
-# There is List.c in the SDK and then there's list.c in FreeRTOS.
-# MacOS, in its infinite wisdom, confuses the two. Hilarity ensues.
-RUN mv /opt/$SDK_DIR/source/ti/drivers/utils/List.c \
-       /opt/$SDK_DIR/source/ti/drivers/utils/ListUtils.c
-
-RUN cd /opt && \
-    wget -q http://www.realtimeengineers.com/ReferencedDownloads/170425_FreeRTOS_SimpleLink_CC3220SF_CCS.zip && \
-    unzip -q 170425_FreeRTOS_SimpleLink_CC3220SF_CCS.zip && \
-    rm 170425_FreeRTOS_SimpleLink_CC3220SF_CCS.zip
-
-ADD fw_meta.py serve_core.py mklfs mkspiffs mkspiffs8 /usr/local/bin/
+ADD tmp/$SDK_DIR /opt/$SDK_DIR
 
 ARG DOCKER_TAG
 ENV SDK_PATH=/opt/$SDK_DIR
 ENV TI_COMPILER_PATH=/opt/$TI_COMPILER_DIR
-ENV FREERTOS_PATH=/opt/FreeRTOS_SimpleLink_CC3220SF_CCS/FreeRTOS
 ENV MGOS_TARGET_GDB=/usr/bin/arm-none-eabi-gdb
 ENV MGOS_SDK_REVISION $DOCKER_TAG
 ENV MGOS_SDK_BUILD_IMAGE docker.io/mgos/cc3220-build:$DOCKER_TAG

@@ -18,7 +18,7 @@ RUN DEBIAN_FRONTEND=noninteractive add-apt-repository -y -u ppa:team-gcc-arm-emb
     DEBIAN_FRONTEND=noninteractive apt-get install -y -q gcc-arm-embedded && \
     apt-get clean
 
-ADD fw_meta.py serve_core.py mklfs mkspiffs mkspiffs8 /usr/local/bin/
+ADD fw_meta.py  serve_core.py mklfs mkspiffs mkspiffs8 /usr/local/bin/
 
 ARG STM32CUBE_F2_DIR
 ADD tmp/$STM32CUBE_F2_DIR /opt/$STM32CUBE_F2_DIR

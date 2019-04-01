@@ -46,7 +46,6 @@ APP_FS_DIRS = $(sort $(dir $(APP_FS_FILES)))
 APP_PATH := $(CURDIR)
 # We always use LwIP from F4, it's the same everywhere anyway.
 LWIP_PATH ?= $(STM32CUBE_F4_PATH)/Middlewares/Third_Party/LwIP
-FREERTOS_PATH ?= $(STM32CUBE_PATH)/Middlewares/Third_Party/FreeRTOS
 MGOS_PLATFORM_PATH ?= $(MGOS_PATH)/fw/platforms/stm32
 
 # Value of the external high-speed crystal in Hz, if present.
@@ -171,7 +170,7 @@ FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
 
 MGOS_SRCS += $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
              mgos_config_util.c mgos_core_dump.c mgos_event.c mgos_gpio.c \
-             mgos_hal_freertos.c mgos_hw_timers.c mgos_sys_config.c \
+             mgos_hw_timers.c mgos_sys_config.c \
              mgos_time.c mgos_timers.c cs_crc32.c cs_file.c \
              json_utils.c frozen.c mgos_uart.c cs_rbuf.c mgos_init.c \
              cs_dbg.c mgos_dlsym.c mgos_file_utils.c mgos_system.c mgos_utils.c \
@@ -182,15 +181,7 @@ MGOS_SRCS += $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
              stm32_main.c stm32_uart.c \
              error_codes.cpp status.cpp
 
-STM32_IPATH += $(STM32CUBE_PATH)/Drivers/CMSIS/Include \
-               $(FREERTOS_PATH)/Source/include \
-               $(FREERTOS_PATH)/Source/CMSIS_RTOS
-
-STM32_VPATH += $(FREERTOS_PATH)/Source \
-               $(FREERTOS_PATH)/Source/CMSIS_RTOS \
-               $(FREERTOS_PATH)/Source/portable/MemMang
-
-STM32_SRCS += $(notdir $(wildcard $(FREERTOS_PATH)/Source/*.c) port.c heap_3.c cmsis_os.c)
+STM32_IPATH += $(STM32CUBE_PATH)/Drivers/CMSIS/Include
 
 ifeq "$(MGOS_ENABLE_LWIP)" "1"
   MGOS_IPATH += $(LWIP_PATH)/src/include $(LWIP_PATH)/system
