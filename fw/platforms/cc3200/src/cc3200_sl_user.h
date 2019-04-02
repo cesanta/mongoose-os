@@ -76,6 +76,7 @@ extern "C" {
 
 #define SL_PLATFORM_MULTI_THREADED
 
+#ifdef MGOS_HAVE_FREERTOS
 #include "osi.h"
 #define SL_OS_RET_CODE_OK ((int) OSI_OK)
 #define SL_OS_WAIT_FOREVER ((OsiTime_t) OSI_WAIT_FOREVER)
@@ -92,6 +93,7 @@ typedef OsiLockObj_t _SlLockObj_t;
 #define sl_LockObjDelete(pLockObj) osi_LockObjDelete(pLockObj)
 #define sl_LockObjLock(pLockObj, Timeout) osi_LockObjLock(pLockObj, Timeout)
 #define sl_LockObjUnlock(pLockObj) osi_LockObjUnlock(pLockObj)
+#endif /* MGOS_HAVE_FREERTOS */
 
 #define SL_PLATFORM_EXTERNAL_SPAWN
 #define sl_Spawn(pEntry, pValue, flags) cc32xx_sl_spawn(pEntry, pValue, flags)
