@@ -241,7 +241,9 @@ void mgos_uart_hal_dispatch_rx_top(struct mgos_uart_state *us) {
     mbuf_append(&us->rx_buf, data, n);
     cs_rbuf_consume(irxb, n);
   }
-  if (irxb->avail > 0) SET_BIT(uds->regs->CR1, USART_CR1_RXNEIE);
+  if (irxb->avail > 0 && us->rx_enabled) {
+    SET_BIT(uds->regs->CR1, USART_CR1_RXNEIE);
+  }
 }
 
 void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us) {

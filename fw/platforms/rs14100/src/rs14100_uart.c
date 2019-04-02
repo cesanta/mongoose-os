@@ -51,7 +51,6 @@ static inline uint8_t rs14100_uart_rx_byte(struct mgos_uart_state *us);
 #define UART_ISR_BUF_SIZE 128
 #define UART_ISR_BUF_DISP_THRESH 16
 #define UART_ISR_BUF_XOFF_THRESH 8
-#define USART_ERROR_INTS (USART_ICR_ORECF | USART_ICR_FECF | USART_ICR_PECF);
 #define UART_FIFO_LEN 16
 
 static inline uint8_t rs14100_uart_rx_byte(struct mgos_uart_state *us) {
@@ -61,8 +60,7 @@ static inline uint8_t rs14100_uart_rx_byte(struct mgos_uart_state *us) {
   return byte;
 }
 
-static inline void rs14100_uart_tx_byte(struct mgos_uart_state *us,
-                                        uint8_t byte) {
+static void rs14100_uart_tx_byte(struct mgos_uart_state *us, uint8_t byte) {
   if (us == NULL) return;
   struct rs14100_uart_state *uds = (struct rs14100_uart_state *) us->dev_data;
   while (uds->regs->TFL >= (UART_FIFO_LEN - 1)) {
@@ -71,7 +69,7 @@ static inline void rs14100_uart_tx_byte(struct mgos_uart_state *us,
   us->stats.tx_bytes++;
 }
 
-static inline void rs14100_uart_flush_tx_fifo(struct mgos_uart_state *us) {
+static void rs14100_uart_flush_tx_fifo(struct mgos_uart_state *us) {
   if (us == NULL) return;
   struct rs14100_uart_state *uds = (struct rs14100_uart_state *) us->dev_data;
   while (!uds->regs->LSR_b.TEMT) {
@@ -104,10 +102,52 @@ static inline void rs14100_uart_tx_byte_from_buf(struct mgos_uart_state *us) {
 
 static void rs14100_uart_isr(struct mgos_uart_state *us) {
   if (us == NULL) return;
+  struct rs14100_uart_state *uds = (struct rs14100_uart_state *) us->dev_data;
   bool dispatch = false;
-  // TODO(rojer)
-  if (dispatch) {
-    mgos_uart_schedule_dispatcher(us->uart_no, true /* from_isr */);
+  us->stats.ints++;
+  while (true) {
+    uint32_t iid = (uds->regs->IIR & 0xf);
+    switch (iid) {
+      case 2: {  // THR empty
+        struct cs_rbuf *itxb = &uds->itx_buf;
+        us->stats.tx_ints++;
+        while (itxb->used > 0 && uds->regs->TFL < (UART_FIFO_LEN - 1)) {
+          rs14100_uart_tx_byte_from_buf(us);
+        }
+        if (itxb->used < UART_ISR_BUF_DISP_THRESH) dispatch = true;
+        if (itxb->used == 0) {
+          uds->regs->IER_b.ETBEI = uds->regs->IER_b.PTIME = false;
+        }
+        mgos_gpio_toggle(LED1_PIN);
+        break;
+      }
+      case 12:  // RX char timeout
+        dispatch = true;
+      // fallthrough
+      case 4: {  // RX data available
+        struct cs_rbuf *irxb = &uds->irx_buf;
+        us->stats.rx_ints++;
+        while (uds->regs->RFL > 0 && irxb->avail > 0) {
+          cs_rbuf_append_one(irxb, rs14100_uart_rx_byte(us));
+        }
+        if (irxb->used >= UART_ISR_BUF_DISP_THRESH) dispatch = true;
+        if (us->cfg.rx_fc_type == MGOS_UART_FC_SW &&
+            irxb->avail < UART_ISR_BUF_XOFF_THRESH && !us->xoff_sent) {
+          rs14100_uart_tx_byte(us, MGOS_UART_XOFF_CHAR);
+          us->xoff_sent = true;
+        }
+        if (irxb->avail == 0) uds->regs->IER_b.ERBFI = false;
+        break;
+      }
+      case 1: {  // No pending ints
+        if (dispatch) {
+          mgos_uart_schedule_dispatcher(us->uart_no, true /* from_isr */);
+        }
+        return;
+      }
+      default:
+        break;
+    }
   }
 }
 
@@ -127,12 +167,12 @@ void mgos_uart_hal_dispatch_rx_top(struct mgos_uart_state *us) {
   struct cs_rbuf *irxb = &uds->irx_buf;
   while (irxb->used > 0 && (rxb_free = mgos_uart_rxb_free(us)) > 0) {
     uint8_t *data = NULL;
-    // CLEAR_BIT(uds->regs->CR1, USART_CR1_RXNEIE);
+    uds->regs->IER_b.ERBFI = false;
     uint16_t n = cs_rbuf_get(irxb, rxb_free, &data);
     mbuf_append(&us->rx_buf, data, n);
     cs_rbuf_consume(irxb, n);
   }
-  // if (irxb->avail > 0) SET_BIT(uds->regs->CR1, USART_CR1_RXNEIE);
+  if (irxb->avail > 0) uds->regs->IER_b.ERBFI = us->rx_enabled;
 }
 
 void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us) {
@@ -141,20 +181,22 @@ void mgos_uart_hal_dispatch_tx_top(struct mgos_uart_state *us) {
   struct cs_rbuf *itxb = &uds->itx_buf;
   uint16_t n = MIN(txb->len, itxb->avail);
   if (n > 0) {
-    // CLEAR_BIT(uds->regs->CR1, USART_CR1_TXEIE);
+    uds->regs->IER_b.ETBEI = uds->regs->IER_b.PTIME = false;
     cs_rbuf_append(itxb, txb->buf, n);
   }
-  // if (itxb->used > 0) SET_BIT(uds->regs->CR1, USART_CR1_TXEIE);
+  if (itxb->used > 0) {
+    uds->regs->IER_b.ETBEI = uds->regs->IER_b.PTIME = true;
+  }
   mbuf_remove(txb, n);
 }
 
 void mgos_uart_hal_dispatch_bottom(struct mgos_uart_state *us) {
   struct rs14100_uart_state *uds = (struct rs14100_uart_state *) us->dev_data;
   if (us->rx_enabled && uds->irx_buf.avail > 0) {
-    // SET_BIT(uds->regs->CR1, USART_CR1_RXNEIE);
+    uds->regs->IER_b.ERBFI = us->rx_enabled;
   }
   if (uds->itx_buf.used > 0) {
-    // SET_BIT(uds->regs->CR1, USART_CR1_TXEIE);
+    uds->regs->IER_b.ETBEI = uds->regs->IER_b.PTIME = true;
   }
 }
 
@@ -169,7 +211,7 @@ void mgos_uart_hal_flush_fifo(struct mgos_uart_state *us) {
 
 void mgos_uart_hal_set_rx_enabled(struct mgos_uart_state *us, bool enabled) {
   struct rs14100_uart_state *uds = (struct rs14100_uart_state *) us->dev_data;
-  uds->regs->IER_b.ERBFI = enabled;  // Disabled RX ints.
+  uds->regs->IER_b.ERBFI = enabled;  // Enable/disable RX ints.
   // It is not possible to disable receiver so it is still still running.
   // TODO(rojer): In HW FC mode deassert RTS.
 }
@@ -246,7 +288,7 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
     default:
       return false;
   }
-  uint32_t mcr = 0;
+  uint32_t mcr = 3; /* RTS and DTR both active */
   if (cfg->rx_fc_type == MGOS_UART_FC_HW &&
       cfg->tx_fc_type == MGOS_UART_FC_HW) {
     mcr |= (1 << 5);  // AFCE

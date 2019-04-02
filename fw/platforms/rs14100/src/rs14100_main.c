@@ -25,12 +25,6 @@
 
 #include "rs14100_sdk.h"
 
-#define LED_ON 0
-#define LED1_PIN RS14100_ULP_GPIO(0) /* TRI LED green, 0 = on, 1 = off */
-#define LED2_PIN RS14100_ULP_GPIO(2) /* TRI LED blue,  0 = on, 1 = off */
-
-// 31: debug
-
 extern void arm_exc_handler_top(void);
 extern const void *flash_int_vectors[60];
 static void (*int_vectors[256])(void)
@@ -190,10 +184,6 @@ int main(void) {
   // We run in privileged mode all the time so PRIVDEFENA acts as
   // "allow everything else".
   MPU->CTRL = MPU_CTRL_ENABLE_Msk | MPU_CTRL_PRIVDEFENA_Msk;
-  // MPU->CTRL = 0;
-
-  // mgos_gpio_setup_output(LED1_PIN, !LED_ON);
-  // mgos_gpio_setup_output(LED2_PIN, !LED_ON);
 
   NVIC_SetPriorityGrouping(3 /* NVIC_PRIORITYGROUP_4 */);
   NVIC_SetPriority(MemoryManagement_IRQn, 0);
