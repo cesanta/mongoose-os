@@ -23,8 +23,9 @@
 #include "rs14100_sdk.h"
 
 void device_get_mac_address(uint8_t mac[6]) {
-  /* TODO(rojer) */
-  memcpy(mac, "\x12\x34\x56\x78\x90\xab", 6);
+  if (rsi_wlan_get(RSI_MAC_ADDRESS, mac, 6) != RSI_SUCCESS) {
+    memset(mac, 0xaa, 6);
+  }
 }
 
 void mgos_dev_system_restart(void) {

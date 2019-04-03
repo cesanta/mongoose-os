@@ -15,25 +15,7 @@
  * limitations under the License.
  */
 
-#pragma once
+#include "Common/chip/inc/rsi_error.h"
+#include "Wireless_Library/include/rsi_error.h"
+
 // no_extern_c_check
-
-#include "RS1xxxx.h"
-#include "rsi_chip.h"
-#include "rsi_rom_table_RS1xxxx.h"
-#include "rsi_egpio.h"
-#include "rsi_power_save.h"
-#include "rsi_retention.h"
-#include "rsi_rom_clks.h"
-#include "rsi_rom_egpio.h"
-#include "rsi_rom_ulpss_clk.h"
-#include "clock_update.h"
-
-#include "rsi_data_types.h"
-#include "rsi_common_apis.h"
-#include "rsi_driver.h"
-#include "rsi_os.h"
-#include "rsi_wlan_apis.h"
-
-void rs14100_set_int_handler(int irqn, void (*handler)(void));
-uint32_t rs14100_get_lf_fsm_clk(void);

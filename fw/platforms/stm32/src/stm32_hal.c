@@ -64,11 +64,9 @@ void device_get_mac_address(uint8_t mac[6]) {
   memcpy(mac, s_dev_mac, 6);
 }
 
-void mgos_msleep(uint32_t msecs) {
-  mgos_usleep(msecs * 1000);
+void HAL_Delay(__IO uint32_t ms) {
+  mgos_msleep(ms);
 }
-
-void HAL_Delay(__IO uint32_t ms) __attribute__((alias("mgos_msleep")));
 
 /* Note: PLL must be enabled for RNG to work */
 int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {

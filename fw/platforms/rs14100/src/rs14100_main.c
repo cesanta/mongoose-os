@@ -15,7 +15,11 @@
  * limitations under the License.
  */
 
+#include "common/cs_dbg.h"
 #include "common/platform.h"
+
+#include "FreeRTOS.h"
+#include "task.h"
 
 #include "mgos_core_dump.h"
 #include "mgos_freertos.h"
@@ -50,7 +54,53 @@ void rs14100_enable_icache(void) {
   ICACHE_CTRL_REG = 0x1;  // 4-Way assoc, enable.
 }
 
+void rsi_delay_ms(uint32_t delay_ms) {
+  mgos_msleep(delay_ms);
+}
+
+extern void IRQ074_Handler(void);
+
 enum mgos_init_result mgos_freertos_pre_init(void) {
+  int32_t status = 0;
+  static uint8_t buf[4096];
+  static StaticTask_t rsi_driver_task_tcb;
+  static StackType_t rsi_driver_task_stack[8192 / sizeof(StackType_t)];
+
+  rs14100_set_int_handler(M4_ISR_IRQ, IRQ074_Handler);
+  NVIC_SetPriority(M4_ISR_IRQ, 12);
+  NVIC_EnableIRQ(M4_ISR_IRQ);
+
+  if ((status = rsi_driver_init(buf, sizeof(buf))) != RSI_SUCCESS) {
+    LOG(LL_ERROR, ("RSI %s init failed: %ld", "driver", status));
+    return MGOS_INIT_NET_INIT_FAILED;
+  }
+
+  if ((status = rsi_device_init(RSI_LOAD_IMAGE_I_FW)) != RSI_SUCCESS) {
+    LOG(LL_ERROR, ("RSI %s init failed: %ld", "device", status));
+    return MGOS_INIT_NET_INIT_FAILED;
+  }
+
+  xTaskCreateStatic((TaskFunction_t) rsi_wireless_driver_task, "RSIWireless",
+                    sizeof(rsi_driver_task_stack) / sizeof(StackType_t), NULL,
+                    6, rsi_driver_task_stack, &rsi_driver_task_tcb);
+
+  uint8_t fw_version[16] = {0};
+  while (rsi_wlan_get(RSI_FW_VERSION, fw_version, sizeof(fw_version)) ==
+         RSI_ERROR_COMMAND_GIVEN_IN_WRONG_STATE) {
+  }
+  LOG(LL_INFO, ("NWP fw version %s", fw_version));
+
+  // Perform enough init to be able to get MAC address.
+  // The rest will be done by the libraries.
+  if ((status = rsi_wireless_init(RSI_WLAN_CLIENT_MODE, 0)) != RSI_SUCCESS) {
+    LOG(LL_ERROR, ("RSI %s init failed: %ld", "wireless", status));
+    return MGOS_INIT_NET_INIT_FAILED;
+  }
+
+  if ((status = rsi_wlan_radio_init()) != RSI_SUCCESS) {
+    LOG(LL_ERROR, ("RSI %s init failed: %ld", "radio", status));
+  }
+
   return MGOS_INIT_OK;
 }
 

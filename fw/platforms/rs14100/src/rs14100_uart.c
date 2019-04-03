@@ -118,7 +118,6 @@ static void rs14100_uart_isr(struct mgos_uart_state *us) {
         if (itxb->used == 0) {
           uds->regs->IER_b.ETBEI = uds->regs->IER_b.PTIME = false;
         }
-        mgos_gpio_toggle(LED1_PIN);
         break;
       }
       case 12:  // RX char timeout

@@ -54,10 +54,6 @@ void device_get_mac_address(uint8_t mac[6]) {
   esp_base_mac_addr_get(mac);
 }
 
-void mgos_msleep(uint32_t msecs) {
-  mgos_usleep(msecs * 1000);
-}
-
 void mgos_wdt_feed(void) {
   esp_task_wdt_reset();
 }

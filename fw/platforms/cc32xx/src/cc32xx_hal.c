@@ -31,10 +31,6 @@
 #include "mgos_hal.h"
 #include "mgos_mongoose.h"
 
-void mgos_msleep(uint32_t msecs) {
-  mgos_usleep(msecs * 1000);
-}
-
 void mgos_wdt_feed(void) {
   MAP_WatchdogIntClear(WDT_BASE);
 }

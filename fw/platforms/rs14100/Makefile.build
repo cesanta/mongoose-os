@@ -45,12 +45,10 @@ RS14100_CFLAGS = -mcpu=cortex-m4 -mfloat-abi=hard -mfpu=fpv4-sp-d16 \
                  -D__IOM=volatile -D__IM='volatile const' -D__OM=volatile \
                  -D__error_t_defined=1 \
                  -DMGOS_MAX_NUM_UARTS=4 -D_FILE_OFFSET_BITS=32 \
-                 -DROMDRIVER_PRESENT=1 \
                  -include mgos_iram.h
 
-# Figure out -ffunction-sections for IRAM funcs.
-
-# TODO(rojer): Figure out which ROM drivers are present and set XXX_ROMDRIVER_PRESENT macros.
+# These save a few K of flash but break stack unwinding.
+# -DROMDRIVER_PRESENT -DROM_WIRELESS
 
 RS14100_IPATH =
 RS14100_VPATH =
@@ -144,28 +142,65 @@ MGOS_SRCS += clock_update.c rsi_adc.c rsi_cci.c rsi_comparator.c rsi_crc.c \
 # Driver/Peripheral_Library/systemlevel/src/*.c
 MGOS_SRCS += rsi_bod.c rsi_ipmu.c rsi_pll.c rsi_power_save.c rsi_processor_sensor.c \
              rsi_rtc.c rsi_temp_sensor.c rsi_time_period.c rsi_ulpss_clk.c rsi_wwdt.c
+MGOS_SRCS += rsi_apis_non_rom.c \
+             rsi_apis_rom.c \
+             rsi_bootup_config.c \
+             rsi_common.c \
+             rsi_common_apis.c \
+             rsi_device_init.c \
+             rsi_device_init_apis.c \
+             rsi_driver_event_handlers.c \
+             rsi_events.c \
+             rsi_events_rom.c \
+             rsi_hal_mcu_m4.c \
+             rsi_hal_mcu_m4_rom.c \
+             rsi_nwk.c \
+             rsi_nwk_rom.c \
+             rsi_os_wrapper.c \
+             rsi_pkt_mgmt.c \
+             rsi_pkt_mgmt_rom.c \
+             rsi_queue.c \
+             rsi_queue_rom.c \
+             rsi_scheduler.c \
+             rsi_scheduler_rom.c \
+             rsi_scheduler.c \
+             rsi_utils.c \
+             rsi_utils_rom.c \
+             rsi_wlan.c \
+             rsi_wlan_apis.c
 
 MGOS_SRCS += system_RS1xxxx.c rsi_system_config.c \
              rs14100_entry.c rs14100_gpio.c rs14100_hal.c rs14100_libc.c rs14100_main.c \
              rs14100_uart.c rs14100_wdt.c
 
-RS14100_IPATH += $(RS14100_SDK_PATH)/Common/chip/inc \
+RS14100_IPATH += $(RS14100_SDK_PATH) \
+                 $(RS14100_SDK_PATH)/Common/chip/inc \
                  $(RS14100_SDK_PATH)/Common/cmsis \
                  $(RS14100_SDK_PATH)/Peripheral_Library/driver/inc \
                  $(RS14100_SDK_PATH)/Peripheral_Library/rom_driver/inc \
-                 $(RS14100_SDK_PATH)/Peripheral_Library/systemlevel/inc
+                 $(RS14100_SDK_PATH)/Peripheral_Library/systemlevel/inc \
+                 $(RS14100_SDK_PATH)/Wireless_Library/hal_WiSeMcu/inc \
+                 $(RS14100_SDK_PATH)/Wireless_Library/include \
+                 $(RS14100_SDK_PATH)/Wireless_Library/rom
 
 RS14100_VPATH += $(RS14100_SDK_PATH)/Common/chip/src \
                  $(RS14100_SDK_PATH)/Peripheral_Library/driver/src \
-                 $(RS14100_SDK_PATH)/Peripheral_Library/systemlevel/src
+                 $(RS14100_SDK_PATH)/Peripheral_Library/systemlevel/src \
+                 $(RS14100_SDK_PATH)/Wireless_Library/common \
+                 $(RS14100_SDK_PATH)/Wireless_Library/driver \
+                 $(RS14100_SDK_PATH)/Wireless_Library/hal_WiSeMcu/src \
+                 $(RS14100_SDK_PATH)/Wireless_Library/os/free_rtos \
+                 $(RS14100_SDK_PATH)/Wireless_Library/rom \
+                 $(RS14100_SDK_PATH)/Wireless_Library/wlan
 
 RS14100_CFLAGS += -DSRAM_BASE=$(SRAM_BASE) -DSRAM_BASE_ADDR=$(SRAM_BASE) -DSRAM_SIZE=$(SRAM_SIZE) \
                   -DMGOS_ROOT_DEVTAB='$(MGOS_ROOT_DEVTAB)' \
                   -DMGOS_ROOT_FS_TYPE='$(MGOS_ROOT_FS_TYPE)' \
                   -DMGOS_ROOT_FS_OPTS='$(MGOS_ROOT_FS_OPTS)' \
-                  -DNOCACHE_SIZE=0x400 \
                   -DMG_LOCALS -DCS_PLATFORM=CS_P_CUSTOM \
-                  -DMGOS_NUM_HW_TIMERS=0
+                  -DMGOS_NUM_HW_TIMERS=0 \
+                  -DRSI_SAMPLE_HAL -DRSI_WLAN_ENABLE -DRSI_M4_INTERFACE -DRSI_LITTLE_ENDIAN \
+                  -DRSI_WITH_OS -DBOOTLOADER_VERSION_CHECK=0
 
 IPATH = $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
         $(MGOS_PLATFORM_PATH)/include $(MGOS_IPATH) $(GEN_DIR) $(RS14100_IPATH)
