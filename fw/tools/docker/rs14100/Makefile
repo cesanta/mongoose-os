@@ -1,5 +1,7 @@
-DOCKERFILES = rs14100-build
-DOCKER_FLAGS = --build-arg=DOCKER_TAG=$(DOCKER_TAG)
+DOCKERFILES = rs14100-build-private
+RS14100_SDK = RS14100.NB0.WM.GENR.1.0.4
+DOCKER_FLAGS = --build-arg=DOCKER_TAG=$(DOCKER_TAG) \
+               --build-arg=RS14100_SDK=$(RS14100_SDK)
 # Use ESP8266 config for now.
 SPIFFS_CONFIG_PATH = /vfs-fs-spiffs/include/rs14100
 
@@ -7,17 +9,17 @@ include ../docker.mk
 
 DISTR_PATH = ../distr
 
-docker-pre-build-rs14100-build: $(DISTR_PATH)/RS14100_DFP \
-                                fw_meta.py serve_core.py \
-                                mklfs mkspiffs mkspiffs8
-	rm -rf tmp && mkdir tmp
-	rsync -a $(DISTR_PATH)/RS14100_DFP/ tmp/RS14100_DFP/
-	find tmp/RS14100_DFP/ -type d -print0 | xargs -0 chmod g+rx,o+rx
-	find tmp/RS14100_DFP/ -type f -print0 | xargs -0 chmod u+w
-	cd tmp/RS14100_DFP/1.0.4 && patch -p 0 < ../../../DFP.patch
+RS14100_SDK_ZIP = $(DISTR_PATH)/$(RS14100_SDK).zip
 
-$(DISTR_PATH)/RS14100_DFP:
-	@echo "Get the DFP and put in $@ - download RS14100 device support pack for Keil and copy from there"
+docker-pre-build-rs14100-build-private: $(RS14100_SDK_ZIP) \
+                                        fw_meta.py serve_core.py \
+                                        mklfs mkspiffs mkspiffs8
+	rm -rf tmp && mkdir tmp
+	unzip -q -d tmp $(RS14100_SDK_ZIP)
+	cd tmp/$(RS14100_SDK) && patch -b -p 0 < ../../SDK.patch
+
+$(RS14100_SDK_ZIP):
+	@echo "Get $(notdir $@) from Redpine OpenKM and put in $(DISTR_PATH)"
 	@exit 1
 
 clean:

@@ -22,19 +22,19 @@ docker-pre-build-stm32-build: $(DISTR_PATH)/en.stm32cubef2.zip \
                               mklfs mkspiffs mkspiffs8
 	rm -rf tmp && mkdir tmp
 	unzip -q $(DISTR_PATH)/en.stm32cubef2.zip -d tmp -x $(EXCL_COMMON) $(EXCL_MBEDTLS) $(EXCL_LWIP)
-	cd tmp/STM32Cube_FW_F2_* && patch -p 0 -b < ../../patches/cube_f2.patch
+	cd tmp/STM32Cube_FW_F2_* && patch -b -p 0 -b < ../../patches/cube_f2.patch
 	$(eval STM32CUBE_F2_DIR = $$(shell cd tmp && ls -1 -d STM32Cube_FW_F2_*))
 	unzip -q $(DISTR_PATH)/en.stm32cubef4.zip -d tmp -x $(EXCL_COMMON) $(EXCL_MBEDTLS)
-	cd tmp/STM32Cube_FW_F4_* && patch -p 0 -b < ../../patches/cube_f4.patch
+	cd tmp/STM32Cube_FW_F4_* && patch -b -p 0 -b < ../../patches/cube_f4.patch
 	# LwIP's ecp.c conflicts with ecp.c from mbedTLS.
 	cd tmp/STM32Cube_FW_F4_* && mv Middlewares/Third_Party/LwIP/src/netif/ppp/ecp.c Middlewares/Third_Party/LwIP/src/netif/ppp/ppp_ecp.c
-	cd tmp/STM32Cube_FW_F4_* && patch -p 0 -b < ../../patches/lwip.patch
+	cd tmp/STM32Cube_FW_F4_* && patch -b -p 0 -b < ../../patches/lwip.patch
 	$(eval STM32CUBE_F4_DIR = $$(shell cd tmp && ls -1 -d STM32Cube_FW_F4_*))
 	unzip -q $(DISTR_PATH)/en.stm32cubel4.zip -d tmp -x $(EXCL_COMMON)
-	cd tmp/STM32Cube_FW_L4_* && patch -p 0 -b < ../../patches/cube_l4.patch
+	cd tmp/STM32Cube_FW_L4_* && patch -b -p 0 -b < ../../patches/cube_l4.patch
 	$(eval STM32CUBE_L4_DIR = $$(shell cd tmp && ls -1 -d STM32Cube_FW_L4_*))
 	unzip -q $(DISTR_PATH)/en.stm32cubef7.zip -d tmp -x $(EXCL_COMMON) $(EXCL_MBEDTLS) $(EXCL_LWIP)
-	cd tmp/STM32Cube_FW_F7_* && patch -p 0 -b < ../../patches/cube_f7.patch
+	cd tmp/STM32Cube_FW_F7_* && patch -b -p 0 -b < ../../patches/cube_f7.patch
 	$(eval STM32CUBE_F7_DIR = $$(shell cd tmp && ls -1 -d STM32Cube_FW_F7_*))
 
 $(DISTR_PATH)/en.stm32cubef2.zip:

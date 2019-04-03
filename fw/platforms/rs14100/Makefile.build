@@ -149,15 +149,15 @@ MGOS_SRCS += system_RS1xxxx.c rsi_system_config.c \
              rs14100_entry.c rs14100_gpio.c rs14100_hal.c rs14100_libc.c rs14100_main.c \
              rs14100_uart.c rs14100_wdt.c
 
-RS14100_IPATH += $(RS14100_DFP_PATH)/Driver/Common/chip/inc \
-                 $(RS14100_DFP_PATH)/Driver/Common/cmsis \
-                 $(RS14100_DFP_PATH)/Driver/Peripheral_Library/driver/inc \
-                 $(RS14100_DFP_PATH)/Driver/Peripheral_Library/rom_driver/inc \
-                 $(RS14100_DFP_PATH)/Driver/Peripheral_Library/systemlevel/inc
+RS14100_IPATH += $(RS14100_SDK_PATH)/Common/chip/inc \
+                 $(RS14100_SDK_PATH)/Common/cmsis \
+                 $(RS14100_SDK_PATH)/Peripheral_Library/driver/inc \
+                 $(RS14100_SDK_PATH)/Peripheral_Library/rom_driver/inc \
+                 $(RS14100_SDK_PATH)/Peripheral_Library/systemlevel/inc
 
-RS14100_VPATH += $(RS14100_DFP_PATH)/Driver/Common/chip/src \
-                 $(RS14100_DFP_PATH)/Driver/Peripheral_Library/driver/src \
-                 $(RS14100_DFP_PATH)/Driver/Peripheral_Library/systemlevel/src
+RS14100_VPATH += $(RS14100_SDK_PATH)/Common/chip/src \
+                 $(RS14100_SDK_PATH)/Peripheral_Library/driver/src \
+                 $(RS14100_SDK_PATH)/Peripheral_Library/systemlevel/src
 
 RS14100_CFLAGS += -DSRAM_BASE=$(SRAM_BASE) -DSRAM_BASE_ADDR=$(SRAM_BASE) -DSRAM_SIZE=$(SRAM_SIZE) \
                   -DMGOS_ROOT_DEVTAB='$(MGOS_ROOT_DEVTAB)' \

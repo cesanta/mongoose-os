@@ -19,9 +19,9 @@ docker-pre-build-cc3220-build: $(DISTR_PATH)/$(TI_COMPILER_DIR) $(DISTR_PATH)/$(
                                fw_meta.py serve_core.py mklfs mkspiffs mkspiffs8
 	rm -rf tmp && mkdir tmp
 	rsync -a $(DISTR_PATH)/$(TI_COMPILER_DIR)/ tmp/$(TI_COMPILER_DIR)/
-	cd tmp/$(TI_COMPILER_DIR)/lib && patch -p 0 < ../../../ti_libc.patch
+	cd tmp/$(TI_COMPILER_DIR)/lib && patch -b -p 0 < ../../../ti_libc.patch
 	rsync -a $(DISTR_PATH)/$(SDK_DIR)/ tmp/$(SDK_DIR)/
-	cd tmp/$(SDK_DIR) && patch -p 0 < ../../sdk.patch
+	cd tmp/$(SDK_DIR) && patch -b -p 0 < ../../sdk.patch
 	# There is List.c in the SDK and then there's list.c in FreeRTOS.
 	# MacOS, in its infinite wisdom, confuses the two. Hilarity ensues.
 	mv tmp/$(SDK_DIR)/source/ti/drivers/utils/List.c \

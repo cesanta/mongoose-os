@@ -20,10 +20,11 @@ RUN DEBIAN_FRONTEND=noninteractive add-apt-repository -y -u ppa:team-gcc-arm-emb
 
 ADD fw_meta.py serve_core.py mklfs mkspiffs mkspiffs8 /usr/local/bin/
 
-ADD tmp/RS14100_DFP /opt/RS14100_DFP
+ARG RS14100_SDK
+ADD tmp/$RS14100_SDK /opt/$RS14100_SDK
 
 ARG DOCKER_TAG
 ENV MGOS_TARGET_GDB /usr/bin/arm-none-eabi-gdb
 ENV MGOS_SDK_REVISION $DOCKER_TAG
 ENV MGOS_SDK_BUILD_IMAGE docker.io/mgos/rs14100-build:$DOCKER_TAG
-ENV RS14100_DFP_PATH /opt/RS14100_DFP/1.0.4
+ENV RS14100_SDK_PATH /opt/$RS14100_SDK
