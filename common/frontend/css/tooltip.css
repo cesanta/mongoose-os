@@ -1,0 +1,64 @@
+[tooltip] {
+  position: relative;
+}
+
+[tooltip]::before {
+  content: attr(tooltip);
+  white-space: nowrap;
+  position: absolute;
+  top: -24px;
+  background: #000;
+  color: #FFF;
+  border-radius: 0.3em;
+  opacity: 0;
+  transition: 0.3s;
+  padding: 2px 5px;
+  left: 50%;
+  margin-left: -7em;
+  margin-top: 0;
+  overflow: visible;
+  pointer-events: none;
+  font-size: small;
+  text-align: center;
+  width: 14em;
+  height: 28px;
+  z-index: 99;
+  border: 1px solid #000 !important;
+}
+
+[tooltip]:hover::before {
+  opacity: 0.75;
+  top: -36px;
+}
+
+[tooltip]:after {
+  opacity: 0;
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  transition: 0.3s;
+  margin-left: -5px;
+  width: 0;
+  border-top: 5px solid #000;
+  border-right: 5px solid transparent;
+  border-left: 5px solid transparent;
+  content: " ";
+  font-size: 0;
+  line-height: 0;
+  pointer-events: none;
+}
+
+[tooltip]:hover:after {
+  opacity: 0.75;
+  top: -8px;
+}
+
+[tooltip] {text-decoration:none;}
+[tooltip]:hover {text-decoration:none;}
+
+[tooltip]::before, [tooltip]:after, [tooltip]:hover::before, [tooltip]:hover::after {
+  text-decoration: underline;
+}
+[tooltip]::before, [tooltip]:after, [tooltip]:hover::before, [tooltip]:hover::after {
+  text-decoration: none;
+}

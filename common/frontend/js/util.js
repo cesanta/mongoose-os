@@ -148,11 +148,38 @@ util.SpinButton = util.createClass({
           }
         },
         h('i', {
-          class: 'mr-2 fa fa-fw ' +
+          class: 'mr-1 fa fa-fw ' +
               (state.spin ? 'fa-refresh' : (props.icon || 'fa-save')) +
               (state.spin ? ' fa-spin' : '')
         }),
         props.title || 'submit');
+  },
+});
+
+util.Dropdown = util.createClass({
+  init: function() {
+    this.state = {expanded: false};
+  },
+  render: function(props, state) {
+    var self = this, dd = '';
+    if (state.expanded) {
+      dd =
+          h('div', {
+            class: 'position-absolute bg-white border rounded mt-1 p-2',
+            style: 'right: 1em; z-index: 9',
+          },
+            props.children);
+    }
+    return h(
+        'div', {class: 'position-relative d-inline-block'},
+        h('div', {
+          class: props.class || 'btn',
+          onClick: function() {
+            self.setState({expanded: !state.expanded});
+          },
+        },
+          props.text || '', h('i', {class: 'fa fa-caret-down ml-2'})),
+        dd);
   },
 });
 
