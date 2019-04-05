@@ -1,0 +1,7 @@
+<?xml version="1.0"?>
+<!DOCTYPE feature SYSTEM "gdb-target.dtd">
+<feature name="org.gnu.gdb.arm.m-profile-sys">
+  <!-- Leave gap for FP registers -->
+  <reg name="msp" bitsize="32" regnum="50" type="data_ptr"/>
+  <reg name="psp" bitsize="32" regnum="51" type="data_ptr"/>
+</feature>

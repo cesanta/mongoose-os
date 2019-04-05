@@ -4,7 +4,6 @@ DOCKER_FLAGS = --build-arg DOCKER_TAG=$(DOCKER_TAG)
 
 include ../docker.mk
 
-docker-pre-build-esp8266-build: fw_meta.py serve_core.py mklfs mkspiffs mkspiffs8
+docker-pre-build-esp8266-build: fw_meta.py serve_core mklfs mkspiffs mkspiffs8
 
-clean:
-	rm -rf fw_meta.py serve_core.py mklfs mkspiffs mkspiffs8
+clean: clean-tools

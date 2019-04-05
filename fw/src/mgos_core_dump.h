@@ -1,10 +1,21 @@
 /*
- * Copyright (c) 2014-2017 Cesanta Software Limited
+ * Copyright (c) 2014-2019 Cesanta Software Limited
  * All rights reserved
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
-#ifndef CS_FW_SRC_MGOS_CORE_DUMP_H_
-#define CS_FW_SRC_MGOS_CORE_DUMP_H_
+#pragma once
 
 #include <stdlib.h>
 
@@ -14,9 +25,11 @@ extern "C" {
 
 #define MGOS_CORE_DUMP_SECTION_REGS "REGS"
 
-void mgos_cd_emit_header(void);
-void mgos_cd_emit_section(const char *name, const void *p, size_t len);
-void mgos_cd_emit_footer(void);
+typedef void (*mgos_cd_section_writer_f)(void);
+void mgos_cd_register_section_writer(mgos_cd_section_writer_f writer);
+
+void mgos_cd_write(void);
+void mgos_cd_write_section(const char *name, const void *p, size_t len);
 
 #ifndef MGOS_BOOT_BUILD
 void mgos_cd_puts(const char *s);
@@ -37,5 +50,3 @@ extern void mgos_cd_putc(int c);
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* CS_FW_SRC_MGOS_CORE_DUMP_H_ */

@@ -30,8 +30,8 @@ docker-push-%:
 fw_meta.py: $(REPO_PATH)/common/tools/fw_meta.py
 	cp -v $< .
 
-serve_core.py: $(REPO_PATH)/common/tools/serve_core.py
-	cp -v $< .
+serve_core: $(wildcard $(REPO_PATH)/fw/tools/serve_core/*.py)
+	rsync -av $(REPO_PATH)/fw/tools/serve_core/ $@/
 
 mklfs:
 	rm -rf vfs-fs-lfs
@@ -56,3 +56,6 @@ mkspiffs mkspiffs8:
 	    FROZEN_PATH=/mongoose-os/frozen \
 	    SPIFFS_CONFIG_PATH=$(SPIFFS_CONFIG_PATH)'
 	cp -v vfs-fs-spiffs/tools/$@ $@
+
+clean-tools:
+	rm -rf fw_meta.py serve_core serve_core.py mklfs mkspiffs mkspiffs8 vfs-fs-*

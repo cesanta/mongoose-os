@@ -18,4 +18,6 @@
 #include "Common/chip/inc/rsi_error.h"
 #include "Wireless_Library/include/rsi_error.h"
 
+#include "common/cs_dbg.h"
+
 // no_extern_c_check

@@ -32,6 +32,7 @@
 #include "common/cs_dbg.h"
 #include "common/platforms/esp8266/esp_umm_malloc.h"
 #include "mgos_app.h"
+#include "mgos_core_dump.h"
 #include "mgos_debug_internal.h"
 #include "mgos_hal.h"
 #include "mgos_init_internal.h"
@@ -44,6 +45,7 @@
 #ifdef MGOS_HAVE_ADC
 #include "esp_adc.h"
 #endif
+#include "esp_coredump.h"
 #include "esp_exc.h"
 #include "esp_fs.h"
 #include "esp_hw.h"
@@ -269,6 +271,7 @@ static void mgos_lwip_task(os_event_t *e) {
 void sdk_init_done_cb(void) {
   system_os_task(mgos_lwip_task, MGOS_TASK_PRIORITY, s_main_queue,
                  MGOS_TASK_QUEUE_LENGTH);
+  esp_core_dump_init();
   esp_mgos_init();
   mongoose_schedule_poll(false);
 }

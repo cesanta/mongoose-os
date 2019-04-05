@@ -16,7 +16,7 @@ $(DISTR_PATH)/$(TI_COMPILER_DIR) $(DISTR_PATH)/$(SDK_DIR):
 	@exit 1
 
 docker-pre-build-cc3220-build: $(DISTR_PATH)/$(TI_COMPILER_DIR) $(DISTR_PATH)/$(SDK_DIR) \
-                               fw_meta.py serve_core.py mklfs mkspiffs mkspiffs8
+                               fw_meta.py serve_core mklfs mkspiffs mkspiffs8
 	rm -rf tmp && mkdir tmp
 	rsync -a $(DISTR_PATH)/$(TI_COMPILER_DIR)/ tmp/$(TI_COMPILER_DIR)/
 	cd tmp/$(TI_COMPILER_DIR)/lib && patch -b -p 0 < ../../../ti_libc.patch
@@ -28,5 +28,5 @@ docker-pre-build-cc3220-build: $(DISTR_PATH)/$(TI_COMPILER_DIR) $(DISTR_PATH)/$(
 	   tmp/$(SDK_DIR)/source/ti/drivers/utils/ListUtils.c
 	rsync -a user.h tmp/$(SDK_DIR)/source/ti/drivers/net/wifi/porting/user.h
 
-clean:
-	rm -rf fw_meta.py serve_core.py mklfs mkspiffs mkspiffs8
+clean: clean-tools
+	rm -rf tmp

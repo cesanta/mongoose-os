@@ -28,10 +28,12 @@ import sys
 import elftools.elf.elffile  # apt install python-pyelftools
 
 parser = argparse.ArgumentParser(description='Serve ESP core dump to GDB')
-parser.add_argument('--port', dest='port', default=1234, type=int, help='listening port')
-parser.add_argument('--rom', dest='rom', required=False, help='rom section')
-parser.add_argument('--rom_addr', dest='rom_addr', required=False, type=lambda x: int(x,16), help='rom map addr')
-parser.add_argument('--xtensa_addr_fixup', dest='xtensa_addr_fixup', default=False, type=bool)
+parser.add_argument('--port', default=1234, type=int, help='listening port')
+parser.add_argument('--rom', required=False, help='rom section')
+parser.add_argument('--rom_addr', required=False, type=lambda x: int(x,16), help='rom map addr')
+parser.add_argument('--debug', action='store_true', default=False)
+parser.add_argument('--xtensa_addr_fixup', default=False, type=bool)
+parser.add_argument('--target_descriptions', default='/opt/serve_core')
 parser.add_argument('elf', help='Program executable')
 parser.add_argument('log', help='serial log containing core dump snippet')
 
@@ -41,32 +43,25 @@ START_DELIM = '--- BEGIN CORE DUMP ---'
 END_DELIM =   '---- END CORE DUMP ----'
 
 
-configMAX_TASK_NAME_LEN = 16
-XT_SOL_FRMSZ = 32
-XT_STK_FRMSZ = 192
-XT_STK_EXTRA = 112
-XCHAL_EXTRA_SA_SIZE = 48
-
 class FreeRTOSTask(object):
-    handle = 0
-    pxTopOfStack = 0
-    uxPriority = 0
-    pxStack = 0
-    pcTaskName = ""
 
-    def __init__(self, handle, data):
-        self.handle = handle
-        self.pxTopOfStack = struct.unpack("<I", data[0:4])[0]
-        (self.uxPriority, self.pxStack) = struct.unpack("<II", data[48:56])
-        self.pcTaskName = data[56:56+configMAX_TASK_NAME_LEN]
-        i = self.pcTaskName.find(0)
-        if i >= 0:
-            self.pcTaskName = self.pcTaskName[0:i].decode("ascii")
+    def __init__(self, e):
+        self.xHandle = e["h"]
+        self.pcTaskName = e["n"]
+        self.eCurrentState = e["st"]
+        self.uxCurrentPriority = e["cpri"]
+        self.uxBasePriority = e["bpri"]
+        self.pxStackBase = e["sb"]
+        self.pxTopOfStack = e["sp"]
+        if "regs" in e:
+            self.regs = base64.decodebytes(bytes(e["regs"]["data"], "ascii"))
+        else:
+            self.regs = None
 
     def __str__(self):
-        return "0x%08x '%s' pri %d sp 0x%08x (%d free)" % (
-                self.handle, self.pcTaskName, self.uxPriority, self.pxTopOfStack,
-                self.pxTopOfStack - self.pxStack)
+        return "0x%x '%s' pri %d/%d sp 0x%x (%d free)" % (
+                self.xHandle, self.pcTaskName, self.uxCurrentPriority, self.uxBasePriority,
+                self.pxTopOfStack, self.pxTopOfStack - self.pxStackBase)
 
 
 class Core(object):
@@ -77,24 +72,13 @@ class Core(object):
             self.mem.extend(self._map_firmware(args.rom_addr, args.rom))
         self.mem.extend(self._map_elf(args.elf))
         self.regs = base64.decodebytes(bytes(self._dump["REGS"]["data"], "ascii"))
-        self.tasks = dict((a, self._parse_tcb(a)) for a in self._dump.get("tasks", []))
+        if "freertos" in self._dump:
+            print("Dump contains FreeRTOS task info")
+            self.tasks = dict((t["h"], FreeRTOSTask(t)) for t in self._dump["freertos"]["tasks"])
+        self.target_features = self._dump.get("target_features")
 
-    def get_cur_task_for_cpu(self, cpu_no):
-        tt = self._dump.get("tasks", [])
-        if cpu_no < len(tt):
-            return tt[cpu_no]
-        else:
-            return None
-
-    def _parse_tcb(self, addr):
-        sizeofTCB = 352  # sizeof(taskTCB)
-        # Task ID is the address of the TCB and must be in DRAM.
-        tcb_data = self.read(addr, sizeofTCB)
-        if tcb_data[3] != 0x3f:
-            return None
-        r = FreeRTOSTask(addr, tcb_data)
-        return r
-
+    def get_cur_task(self):
+        return self._dump.get("freertos", {}).get("cur", None)
 
     def _search_backwards(self, f, start_offset, pattern):
         offset = start_offset
@@ -125,8 +109,11 @@ class Core(object):
             print("Found core at %d - %d" % (start_pos, end_pos), file=sys.stderr)
             f.seek(start_pos)
             core_lines = []
-            while f.tell() < end_pos:
-                core_lines.append(f.readline())
+            while True:
+                l = f.readline().strip()
+                if l == END_DELIM:
+                    break
+                core_lines.append(l)
             core_json = ''.join(core_lines)
             stripped = re.sub(r'(?im)\s+(\[.{1,40}\])?\s*', '', core_json)
             return json.loads(stripped)
@@ -134,7 +121,7 @@ class Core(object):
     def _map_core(self, core):
         mem = []
         for k, v in list(core.items()):
-            if not isinstance(v, dict) or k == 'REGS':
+            if not isinstance(v, dict) or k == 'REGS' or "addr" not in v:
                 continue
             data = base64.decodebytes(bytes(v["data"], "ascii"))
             print("Mapping {0}: {1} @ {2:#02x}".format(k, len(data), v["addr"]), file=sys.stderr)
@@ -195,31 +182,16 @@ class GDBHandler(socketserver.BaseRequestHandler):
 
         while self.expect_packet_start():
             pkt = self.read_packet()
-            #print(">>", pkt, file=sys.stderr)
+            if args.debug:
+                print("<<", pkt, file=sys.stderr)
             if pkt == "?": # status -> trap
                 self.send_str("S09")
             elif pkt == "g": # dump registers
-                regs = core.regs
-                if self._curtask:
+                if self._curtask and self._curtask.regs:
                     # Dump specific task's registers
-                    t = self._curtask
-                    sp = t.pxTopOfStack
-                    # The first word on the stack of a task determines how
-                    # task's execution ended: by yield (0) or int/exc (non-0).
-                    exit, pc, ps = struct.unpack('<III', core.read(sp, 12))
-                    pc = 0x40000000 | (pc & 0x3fffffff)
-                    if exit == 0:
-                        sp += XT_SOL_FRMSZ
-                        a0a4 = core.read(sp - 0x10, 16)
-                        regs = (struct.pack('<I', pc) + a0a4 + regs[20:100] +
-                                struct.pack('<I', ps) + regs[104:])
-                    else:
-                        # This is the exception frame, so all regs are already
-                        # as they were reported in core dump's REGS section.
-                        sp += XT_STK_FRMSZ
-                        regs = (struct.pack('<I', pc) + regs[4:100] +
-                                struct.pack('<I', ps) + regs[104:])
-                    #print >>sys.stderr, "task %x pc %x sp %x" % (self._curtask.handle, pc, sp)
+                    regs = self._curtask.regs
+                else:
+                    regs = core.regs
                 self.send_str(self.encode_bytes(regs))
             elif pkt[0] == "G": # set registers
                 core.regs = self.decode_bytes(pkt[1:])
@@ -242,10 +214,11 @@ class GDBHandler(socketserver.BaseRequestHandler):
                 # cannot continue, this is post mortem debugging
                 self.send_str("E01")
             elif pkt == "qC":
-                t = core.get_cur_task_for_cpu(0)
+                t = core.get_cur_task()
                 if t:
                     self.send_str("QC%016x" % t)
-                self.send_str("1")
+                else:
+                    self.send_str("1")
             elif pkt == "qAttached":
                 self.send_str("1")
             elif pkt == "qSymbol::":
@@ -265,14 +238,55 @@ class GDBHandler(socketserver.BaseRequestHandler):
                     self.send_str("OK")
                 else:
                     self.send_str("ERR00")
-            elif pkt in ("qTStatus", "qOffsets", "D") or pkt.startswith("qSupported"):
+            elif pkt == "D":
+                self.send_str("OK")
+            elif pkt in ("qTStatus", "qOffsets", "vMustReplyEmpty"):
                 # silently ignore
                 self.send_str("")
+            elif pkt.startswith("qSupported"):
+                features = []
+                if self._core.target_features:
+                    features.append("qXfer:features:read+")
+                    print("Target features: %s" % self._core.target_features)
+                else:
+                    features.append("qXfer:features:read-")
+                self.send_str(";".join(features))
+            elif pkt.startswith("qXfer:features:read:"):
+                self.send_file(pkt)
             else:
                 print("Ignoring unknown command '%s'" % (pkt,), file=sys.stderr)
                 self.send_str("")
 
         print("GDB closed the connection", file=sys.stderr)
+        sys.exit(0)
+
+    def send_file(self, pkt):
+        _, _, _, fname, off_len = pkt.split(":")
+        if fname == "target.xml":
+            fname = self._core.target_features
+        if "/" in fname:
+            self.send_str("E00")
+            return
+        fname = os.path.join(args.target_descriptions, fname)
+        off_s, length_s = off_len.split(",")
+        off, length = int(off_s, 16), int(length_s, 16)
+        try:
+            if off == 0:
+                print("Serving %s" % fname)
+            with open(fname, "rb") as f:
+                if f.seek(off) != off:
+                    self.send_str("l")
+                    return
+                data = f.read(length)
+                if len(data) == length:
+                    self.send_str("m" + data.decode("ascii"))
+                elif len(data) > 0:
+                    self.send_str("l" + data.decode("ascii"))
+                else:
+                    self.send_str("l")
+        except IOError as e:
+            print("error reading %s, %d @ %d: %s" % (fname, length, off, e))
+            self.send_str("E00")
 
     def encode_bytes(self, bs):
         return binascii.hexlify(bs).decode("ascii")
@@ -289,6 +303,8 @@ class GDBHandler(socketserver.BaseRequestHandler):
     def send_str(self, s):
         if type(s) is bytes:
             s = s.decode("ascii")
+        if args.debug:
+            print(">>", s, file=sys.stderr)
         self.request.sendall("${0}#{1:02x}".format(s, self._checksum(s)).encode("ascii"))
 
     def _checksum(self, s):

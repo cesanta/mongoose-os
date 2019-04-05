@@ -29,6 +29,9 @@
 
 #include "rs14100_sdk.h"
 
+#include "FreeRTOS.h"
+#include "task.h"
+
 static int64_t sys_time_adj = 0;
 
 int _gettimeofday_r(struct _reent *r, struct timeval *tv, struct timezone *tz) {
@@ -60,20 +63,13 @@ void abort(void) {
   __builtin_trap();  // Executes an illegal instruction.
 }
 
-#ifdef MGOS_BOOT_BUILD
-#undef portENTER_CRITICAL
-#define portENTER_CRITICAL()
-#undef portEXIT_CRITICAL
-#define portEXIT_CRITICAL()
-#endif
-
 void __malloc_lock(struct _reent *r) {
-  // portENTER_CRITICAL();
+  taskENTER_CRITICAL();
   (void) r;
 }
 
 void __malloc_unlock(struct _reent *r) {
-  // portEXIT_CRITICAL();
+  taskEXIT_CRITICAL();
   (void) r;
 }
 

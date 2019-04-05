@@ -35,6 +35,8 @@
 
 extern const char *build_version, *build_id;
 
+static mgos_cd_section_writer_f s_section_writers[8];
+
 void mgos_cd_puts(const char *s) {
   while (*s != '\0') mgos_cd_putc(*s++);
 }
@@ -54,7 +56,7 @@ struct section_ctx {
   uint32_t crc32;
 };
 
-static NOINSTR void emit_char(char c, void *user_data) {
+static NOINSTR void write_char(char c, void *user_data) {
   struct section_ctx *ctx = (struct section_ctx *) user_data;
   mgos_cd_putc(c);
   ctx->col_counter++;
@@ -65,13 +67,12 @@ static NOINSTR void emit_char(char c, void *user_data) {
   }
 }
 
-NOINSTR void mgos_cd_emit_section(const char *name, const void *p, size_t len) {
-  char buf[100];
+NOINSTR void mgos_cd_write_section(const char *name, const void *p,
+                                   size_t len) {
   struct section_ctx ctx = {.col_counter = 0, .crc32 = 0};
-  cs_base64_init(&ctx.b64_ctx, emit_char, &ctx);
-  sprintf(buf, ",\r\n\"%s\": {\"addr\": %u, \"data\": \"\r\n", name,
-          (unsigned int) p);
-  mgos_cd_puts(buf);
+  cs_base64_init(&ctx.b64_ctx, write_char, &ctx);
+  mgos_cd_printf(",\r\n\"%s\": {\"addr\": %u, \"data\": \"\r\n", name,
+                 (unsigned int) p);
 
   const uint32_t *dp = (const uint32_t *) p;
   const uint32_t *end = dp + (len / sizeof(uint32_t));
@@ -81,11 +82,10 @@ NOINSTR void mgos_cd_emit_section(const char *name, const void *p, size_t len) {
     cs_base64_update(&ctx.b64_ctx, (char *) &tmp, sizeof(tmp));
   }
   cs_base64_finish(&ctx.b64_ctx);
-  sprintf(buf, "\", \"crc32\": %u}", (unsigned int) ctx.crc32);
-  mgos_cd_puts(buf);
+  mgos_cd_printf("\", \"crc32\": %u}", (unsigned int) ctx.crc32);
 }
 
-void mgos_cd_emit_header(void) {
+NOINSTR void mgos_cd_write(void) {
   mgos_cd_puts(MGOS_CORE_DUMP_START "{");
   mgos_cd_puts("\"app\": \"" MGOS_APP "\", ");
   mgos_cd_puts("\"arch\": \"" CS_STRINGIFY_MACRO(FW_ARCHITECTURE) "\", ");
@@ -94,8 +94,28 @@ void mgos_cd_emit_header(void) {
 #ifdef MGOS_SDK_BUILD_IMAGE
   mgos_cd_printf(", \"build_image\": \"" MGOS_SDK_BUILD_IMAGE "\"");
 #endif
+// For ARM targets, add profile information.
+#if defined(__FPU_PRESENT)
+#if __FPU_PRESENT
+  mgos_cd_printf(", \"target_features\": \"arm-with-m-vfp-d16.xml\"");
+#else
+  mgos_cd_printf(", \"target_features\": \"arm-with-m.xml\"");
+#endif
+#endif
+
+  for (int i = 0; i < (int) ARRAY_SIZE(s_section_writers); i++) {
+    if (s_section_writers[i] == NULL) break;
+    s_section_writers[i]();
+  }
+
+  mgos_cd_puts("}" MGOS_CORE_DUMP_END);
 }
 
-NOINSTR void mgos_cd_emit_footer(void) {
-  mgos_cd_puts("}" MGOS_CORE_DUMP_END);
+void mgos_cd_register_section_writer(mgos_cd_section_writer_f writer) {
+  for (int i = 0; i < (int) ARRAY_SIZE(s_section_writers); i++) {
+    if (s_section_writers[i] == NULL) {
+      s_section_writers[i] = writer;
+      break;
+    }
+  }
 }

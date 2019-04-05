@@ -25,6 +25,8 @@
 #include "lwip/tcpip.h"
 #endif
 
+#include "arm_exc.h"
+#include "mgos_core_dump.h"
 #include "mgos_freertos.h"
 #include "mgos_gpio.h"
 #include "mgos_system.h"
@@ -130,6 +132,17 @@ void stm32_set_int_handler(int irqn, void (*handler)(void)) {
   stm32_int_vectors[irqn + 16] = handler;
 }
 
+static void stm32_dump_sram(void) {
+  mgos_cd_write_section("SRAM", (void *) STM32_SRAM_BASE_ADDR, STM32_SRAM_SIZE);
+}
+
+#if STM32_SRAM2_SIZE > 0
+static void stm32_dump_sram2(void) {
+  mgos_cd_write_section("SRAM2", (void *) STM32_SRAM2_BASE_ADDR,
+                        STM32_SRAM2_SIZE);
+}
+#endif
+
 int main(void) {
   /* Move int vectors to RAM. */
   for (int i = 0; i < (int) ARRAY_SIZE(stm32_int_vectors); i++) {
@@ -143,6 +156,12 @@ int main(void) {
   __libc_init_array();
   stm32_clock_config();
   SystemCoreClockUpdate();
+
+  mgos_cd_register_section_writer(arm_exc_dump_regs);
+  mgos_cd_register_section_writer(stm32_dump_sram);
+#if STM32_SRAM2_SIZE > 0
+  mgos_cd_register_section_writer(stm32_dump_sram2);
+#endif
 
   HAL_NVIC_SetPriorityGrouping(NVIC_PRIORITYGROUP_4);
   HAL_NVIC_SetPriority(MemoryManagement_IRQn, 0, 0);

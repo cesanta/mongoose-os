@@ -30,7 +30,9 @@
 #include "common/cs_dbg.h"
 #include "common/platform.h"
 
+#include "arm_exc.h"
 #include "mgos_app.h"
+#include "mgos_core_dump.h"
 #include "mgos_debug_internal.h"
 #include "mgos_features.h"
 #include "mgos_hal.h"
@@ -131,6 +133,10 @@ void umm_oom_cb(size_t size, unsigned short int blocks_cnt) {
   abort();
 }
 
+static void cc32xx_dump_sram(void) {
+  mgos_cd_write_section("SRAM", (void *) SRAM_BASE_ADDR, SRAM_SIZE);
+}
+
 uint32_t mgos_bitbang_n100_cal = 0;
 extern void mgos_nsleep100_cal(void);
 
@@ -147,6 +153,9 @@ void cc32xx_main(void) {
     MAP_PRCMRTCInUseSet();
     MAP_PRCMRTCSet(0, 0);
   }
+
+  mgos_cd_register_section_writer(arm_exc_dump_regs);
+  mgos_cd_register_section_writer(cc32xx_dump_sram);
 
   cc32xx_hash_module_init();
   cc32xx_sl_spawn_init();

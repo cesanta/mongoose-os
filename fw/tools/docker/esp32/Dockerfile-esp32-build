@@ -40,7 +40,10 @@ ENV IDF_PATH=/opt/Espressif/esp-idf
 RUN cd $IDF_PATH/examples/get-started/blink && make defconfig
 
 ADD rom.bin rom.elf /opt/Espressif/rom/
-ADD fw_meta.py serve_core.py mklfs mkspiffs mkspiffs8 /usr/local/bin/
+
+ADD fw_meta.py mklfs mkspiffs mkspiffs8 /usr/local/bin/
+ADD serve_core/ /opt/serve_core/
+RUN ln -s /opt/serve_core/serve_core.py /usr/local/bin/serve_core.py
 
 ARG DOCKER_TAG
 ENV MGOS_TARGET_GDB /opt/Espressif/xtensa-esp32-elf/bin/xtensa-esp32-elf-gdb

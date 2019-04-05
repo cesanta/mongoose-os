@@ -11,6 +11,6 @@ mklfs
 mkspiffs
 mkspiffs8
 ota_*.ucf*
-serve_core.py
+serve_core
 vfs-fs-lfs/
 vfs-fs-spiffs/

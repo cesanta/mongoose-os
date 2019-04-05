@@ -5,6 +5,8 @@ DOCKER_FLAGS = --build-arg=TI_COMPILER_DIR=$(TI_COMPILER_DIR) \
                --build-arg=SDK_DIR=$(SDK_DIR) \
                --build-arg=DOCKER_TAG=$(DOCKER_TAG)
 
+DISTR_PATH = ../distr
+
 # SDK cannot be downloaded directly (requires registering on the TI site).
 # Furthermore, it is distributed as a Windows binary only (boo). So:
 # 1) Go to http://www.ti.com/tool/CC3200SDK and download the SDK exe file.
@@ -28,8 +30,16 @@ $(TI_COMPILER_DIR) $(SDK_DIR) $(NWP_SP_FILE) $(NWP_SP_FILE).sign:
 	@echo ERROR: You must have $@ in the current directory to build this image
 	@exit 1
 
-docker-pre-build-cc3200-build: $(TI_COMPILER_DIR) $(SDK_DIR) $(NWP_SP_FILE) $(NWP_SP_FILE).sign \
-                               fw_meta.py serve_core.py mklfs mkspiffs mkspiffs8
+docker-pre-build-cc3200-build: $(DISTR_PATH)/$(TI_COMPILER_DIR) $(DISTR_PATH)/$(SDK_DIR) \
+                               $(DISTR_PATH)/$(NWP_SP_FILE) $(DISTR_PATH)/$(NWP_SP_FILE).sign \
+                               fw_meta.py serve_core mklfs mkspiffs mkspiffs8
+	rm -rf tmp && mkdir tmp
+	rsync -a $(DISTR_PATH)/$(TI_COMPILER_DIR)/ tmp/$(TI_COMPILER_DIR)/
+	cd tmp/$(TI_COMPILER_DIR)/lib && patch -b -p 0 < ../../../ti_libc.patch
+	rsync -a $(DISTR_PATH)/$(SDK_DIR)/ tmp/$(SDK_DIR)/
+	cd tmp/$(SDK_DIR) && patch -b -p 0 < ../../sdk.patch
+	rsync -a user.h tmp/$(SDK_DIR)/cc3200-sdk/simplelink/user.h
+	rsync -a $(DISTR_PATH)/$(NWP_SP_FILE)* tmp/
 
-clean:
-	rm -rf fw_meta.py serve_core.py mklfs mkspiffs mkspiffs8
+clean: clean-tools
+	rm -rf tmp

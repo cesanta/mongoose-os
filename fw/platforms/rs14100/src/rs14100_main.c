@@ -21,6 +21,7 @@
 #include "FreeRTOS.h"
 #include "task.h"
 
+#include "arm_exc.h"
 #include "mgos_core_dump.h"
 #include "mgos_freertos.h"
 #include "mgos_gpio.h"
@@ -80,7 +81,7 @@ enum mgos_init_result mgos_freertos_pre_init(void) {
     return MGOS_INIT_NET_INIT_FAILED;
   }
 
-  xTaskCreateStatic((TaskFunction_t) rsi_wireless_driver_task, "RSIWireless",
+  xTaskCreateStatic((TaskFunction_t) rsi_wireless_driver_task, "RSI Drv",
                     sizeof(rsi_driver_task_stack) / sizeof(StackType_t), NULL,
                     6, rsi_driver_task_stack, &rsi_driver_task_tcb);
 
@@ -204,6 +205,10 @@ void SystemCoreClockUpdate(void) {
   SystemCoreClockMHZ = SystemCoreClock / 1000000;
 }
 
+void rs14100_dump_sram(void) {
+  mgos_cd_write_section("SRAM", (void *) SRAM_BASE_ADDR, SRAM_SIZE);
+}
+
 int main(void) {
   /* Move int vectors to RAM. */
   for (int i = 0; i < (int) ARRAY_SIZE(int_vectors); i++) {
@@ -234,6 +239,9 @@ int main(void) {
   // We run in privileged mode all the time so PRIVDEFENA acts as
   // "allow everything else".
   MPU->CTRL = MPU_CTRL_ENABLE_Msk | MPU_CTRL_PRIVDEFENA_Msk;
+
+  mgos_cd_register_section_writer(arm_exc_dump_regs);
+  mgos_cd_register_section_writer(rs14100_dump_sram);
 
   NVIC_SetPriorityGrouping(3 /* NVIC_PRIORITYGROUP_4 */);
   NVIC_SetPriority(MemoryManagement_IRQn, 0);

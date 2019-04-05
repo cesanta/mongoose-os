@@ -12,7 +12,7 @@ DISTR_PATH = ../distr
 RS14100_SDK_ZIP = $(DISTR_PATH)/$(RS14100_SDK).zip
 
 docker-pre-build-rs14100-build-private: $(RS14100_SDK_ZIP) \
-                                        fw_meta.py serve_core.py \
+                                        fw_meta.py serve_core \
                                         mklfs mkspiffs mkspiffs8
 	rm -rf tmp && mkdir tmp
 	unzip -q -d tmp $(RS14100_SDK_ZIP)
@@ -22,5 +22,5 @@ $(RS14100_SDK_ZIP):
 	@echo "Get $(notdir $@) from Redpine OpenKM and put in $(DISTR_PATH)"
 	@exit 1
 
-clean:
-	rm -rf fw_meta.py mklfs mkspiffs mkspiffs8 tmp
+clean: clean-tools
+	rm -rf tmp

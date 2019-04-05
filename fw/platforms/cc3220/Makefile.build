@@ -85,7 +85,7 @@ MGOS_INCLUDE_PATH ?= $(MGOS_PATH)/fw/include
 VPATH = $(MGOS_VPATH) $(APP_SOURCE_DIRS) $(MGOS_CC32XX_PATH)/src $(MGOS_CC3220_PATH)/src \
         $(COMMON_PATH) $(COMMON_PATH)/platforms/arm \
         $(GEN_DIR)
-IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
+IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) $(COMMON_PATH)/platforms/arm \
         $(MGOS_CC32XX_PATH)/include $(MGOS_CC32XX_PATH)/include/spiffs \
         $(MGOS_CC32XX_PATH)/src $(MGOS_CC3220_PATH)/src $(GEN_DIR)
 

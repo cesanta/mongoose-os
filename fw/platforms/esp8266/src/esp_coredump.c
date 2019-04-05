@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+#include "esp_coredump.h"
+
 #include <stdint.h>
 #include <string.h>
 
@@ -25,24 +27,35 @@
 #include "common/cs_crc32.h"
 #include "common/platforms/esp8266/esp_missing_includes.h"
 
-#include "esp_exc.h"
-
 #include "mgos_core_dump.h"
 
 inline void mgos_cd_putc(int c) {
   esp_exc_putc(c);
 }
 
-NOINSTR void esp_dump_core(uint32_t cause, struct regfile *regs) {
+static struct regfile *s_regs;
+
+void esp_dump_core(uint32_t cause, struct regfile *regs) {
+  s_regs = regs;
+  mgos_cd_write();
   (void) cause;
-  mgos_cd_emit_header();
-  mgos_cd_emit_section(MGOS_CORE_DUMP_SECTION_REGS, regs, sizeof(*regs));
-  mgos_cd_emit_section("DRAM", (void *) 0x3FFE8000, 0x18000);
+}
+
+static void esp_dump_regs(void) {
+  mgos_cd_write_section(MGOS_CORE_DUMP_SECTION_REGS, s_regs, sizeof(*s_regs));
+}
+
+static void esp_dump_dram(void) {
+  mgos_cd_write_section("DRAM", (void *) 0x3FFE8000, 0x18000);
+}
+
+void esp_core_dump_init(void) {
+  mgos_cd_register_section_writer(esp_dump_regs);
+  mgos_cd_register_section_writer(esp_dump_dram);
   /*
    * IRAM and IROM can be obtained from the firmware/ dir.
    * We need the ELF binary anyway to do symbolic debugging anyway
    * so we can avoid sending here huge amount of data that's available
    * on the host where we run GDB.
    */
-  mgos_cd_emit_footer();
 }

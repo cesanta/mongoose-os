@@ -15,17 +15,18 @@
  * limitations under the License.
  */
 
-#ifndef CS_FW_PLATFORMS_ESP8266_SRC_ESP_COREDUMP_H_
-#define CS_FW_PLATFORMS_ESP8266_SRC_ESP_COREDUMP_H_
+#pragma once
+
+#include "esp_exc.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 
-void esp_dump_core(int cause, struct regfile *);
+void esp_dump_core(uint32_t cause, struct regfile *);
+
+void esp_core_dump_init(void);
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* CS_FW_PLATFORMS_ESP8266_SRC_ESP_COREDUMP_H_ */
