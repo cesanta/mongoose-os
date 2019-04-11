@@ -37,6 +37,7 @@ extern const char *build_version, *build_id;
 
 static mgos_cd_section_writer_f s_section_writers[8];
 
+#ifndef MGOS_BOOT_BUILD
 void mgos_cd_puts(const char *s) {
   while (*s != '\0') mgos_cd_putc(*s++);
 }
@@ -49,6 +50,7 @@ void mgos_cd_printf(const char *fmt, ...) {
   va_end(ap);
   mgos_cd_puts(buf);
 }
+#endif  // MGOS_BOOT_BUILD
 
 struct section_ctx {
   struct cs_base64_ctx b64_ctx;
