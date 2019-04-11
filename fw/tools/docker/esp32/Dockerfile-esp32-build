@@ -37,7 +37,7 @@ RUN cd /opt/Espressif/esp-idf && git tag v$DOCKER_TAG
 ENV IDF_PATH=/opt/Espressif/esp-idf
 
 # Pre-build configuration tools
-RUN cd $IDF_PATH/examples/get-started/blink && make defconfig
+RUN cd $IDF_PATH/tools/kconfig && make conf-idf mconf-idf
 
 ADD rom.bin rom.elf /opt/Espressif/rom/
 
