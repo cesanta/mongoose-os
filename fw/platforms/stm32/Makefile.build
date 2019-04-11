@@ -35,7 +35,6 @@ MGOS_BL_BIN ?=
 MGOS_UPDATE_BOOT_LOADER ?= false
 
 MGOS_MG_NET_IF ?= MG_NET_IF_NULL
-MGOS_ENABLE_LWIP ?= 0
 
 BUILD_LIB_NAME ?= lib.a
 
@@ -44,8 +43,6 @@ APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
 APP_FS_DIRS = $(sort $(dir $(APP_FS_FILES)))
 
 APP_PATH := $(CURDIR)
-# We always use LwIP from F4, it's the same everywhere anyway.
-LWIP_PATH ?= $(STM32CUBE_F4_PATH)/Middlewares/Third_Party/LwIP
 MGOS_PLATFORM_PATH ?= $(MGOS_PATH)/fw/platforms/stm32
 
 # Value of the external high-speed crystal in Hz, if present.
@@ -182,30 +179,6 @@ MGOS_SRCS += $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
              error_codes.cpp status.cpp
 
 STM32_IPATH += $(STM32CUBE_PATH)/Drivers/CMSIS/Include
-
-ifeq "$(MGOS_ENABLE_LWIP)" "1"
-  MGOS_IPATH += $(LWIP_PATH)/src/include $(LWIP_PATH)/system
-
-  MGOS_VPATH += $(LWIP_PATH)/src/api \
-                $(LWIP_PATH)/src/core \
-                $(LWIP_PATH)/src/core/ipv4 \
-                $(LWIP_PATH)/src/core/ipv6 \
-                $(LWIP_PATH)/src/netif \
-                $(LWIP_PATH)/src/netif/ppp \
-                $(LWIP_PATH)/system/OS
-
-  MGOS_SRCS += $(notdir \
-                 $(wildcard $(LWIP_PATH)/src/core/*.c) tcpip.c sys_arch.c \
-                 $(wildcard $(LWIP_PATH)/src/core/ipv4/*.c) \
-                 $(wildcard $(LWIP_PATH)/src/core/ipv6/*.c) \
-                 $(wildcard $(LWIP_PATH)/src/netif/ppp/*.c) \
-                 $(LWIP_PATH)/src/netif/ethernet.c)
-
-  MGOS_CFLAGS += -DMG_LWIP=1 -DLWIP_TIMEVAL_PRIVATE=0 \
-                 -DLWIP_POSIX_SOCKETS_IO_NAMES=0 \
-                 -DLWIP_TCP_KEEPALIVE=1
-  MGOS_MG_NET_IF = MG_NET_IF_LWIP_LOW_LEVEL
-endif
 
 STM32_CFLAGS += -DSTM32_SRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -DSTM32_SRAM_SIZE=$(SRAM_SIZE) \
                 -DSTM32_SRAM2_BASE_ADDR=$(SRAM2_BASE_ADDR) -DSTM32_SRAM2_SIZE=$(SRAM2_SIZE) \
