@@ -21,10 +21,6 @@
 
 #include "common/cs_dbg.h"
 
-#if MG_LWIP
-#include "lwip/tcpip.h"
-#endif
-
 #include "arm_exc.h"
 #include "mgos_core_dump.h"
 #include "mgos_freertos.h"
@@ -39,19 +35,6 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority) {
   (void) TickPriority;
   return 0;
 }
-
-#if MG_LWIP
-static void tcpip_init_done(void *arg) {
-  *((bool *) arg) = true;
-}
-
-static void stm32_init_lwip(void) {
-  volatile bool lwip_inited = false;
-  tcpip_init(tcpip_init_done, (void *) &lwip_inited);
-  while (!lwip_inited)
-    ;
-}
-#endif /* MG_LWIP */
 
 static void stm32_set_nocache(void) {
   extern uint8_t __nocache_start__, __nocache_end__; /* Linker symbols */
@@ -102,9 +85,6 @@ static void stm32_set_nocache(void) {
 
 enum mgos_init_result mgos_freertos_pre_init() {
   stm32_set_nocache();
-#if MG_LWIP
-  stm32_init_lwip();
-#endif
   return MGOS_INIT_OK;
 }
 
