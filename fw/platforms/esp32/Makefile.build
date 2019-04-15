@@ -151,7 +151,8 @@ CXXFLAGS += -pipe $(APP_CXXFLAGS) $(addprefix -I ,$(APP_INCLUDES))
 PROJECT_NAME = $(APP)
 BUILD_DIR_BASE = $(BUILD_DIR)
 
-COMPONENT_DIRS = $(COMMON_PATH) \
+COMPONENT_DIRS = $(APP_PATH)/components \
+                 $(COMMON_PATH) \
                  $(IDF_PATH)/components \
                  $(MGOS_ESP_PATH) \
                  $(MGOS_PATH)/third_party \
