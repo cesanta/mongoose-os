@@ -1,5 +1,5 @@
 --- ./Common/chip/inc/base_types.h.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Common/chip/inc/base_types.h	2019-04-03 17:04:48.649523155 +0100
++++ ./Common/chip/inc/base_types.h	2019-04-16 18:45:15.377157059 +0100
 @@ -46,15 +46,23 @@
  #endif  
  
@@ -27,7 +27,7 @@
  typedef enum en{
  	Enable = 1,
 --- ./Common/chip/src/system_RS1xxxx.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Common/chip/src/system_RS1xxxx.c	2019-04-03 17:01:19.417707130 +0100
++++ ./Common/chip/src/system_RS1xxxx.c	2019-04-16 18:45:15.377157059 +0100
 @@ -233,7 +233,7 @@
   *         retrieved from cpu registers.
   * @return none
@@ -56,7 +56,7 @@
  
  	/*IPMU dummy read to make IPMU block out of RESET*/
 --- ./Peripheral_Library/driver/inc/rsi_adc.h.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Peripheral_Library/driver/inc/rsi_adc.h	2019-04-03 17:01:19.417707130 +0100
++++ ./Peripheral_Library/driver/inc/rsi_adc.h	2019-04-16 18:45:15.377157059 +0100
 @@ -131,18 +131,18 @@
  \brief ADC channel Configuration structure
  */
@@ -88,7 +88,7 @@
   
  typedef struct
 --- ./Peripheral_Library/driver/inc/rsi_ct.h.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Peripheral_Library/driver/inc/rsi_ct.h	2019-04-03 17:01:19.417707130 +0100
++++ ./Peripheral_Library/driver/inc/rsi_ct.h	2019-04-16 18:45:15.377157059 +0100
 @@ -912,6 +912,8 @@
  STATIC INLINE void RSI_CT_EdgeLevelEventControl(RSI_CT_T *pCT,uint32_t value)
  {
@@ -99,7 +99,7 @@
  
  /**
 --- ./Peripheral_Library/driver/inc/rsi_cts.h.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Peripheral_Library/driver/inc/rsi_cts.h	2019-04-03 17:01:19.417707130 +0100
++++ ./Peripheral_Library/driver/inc/rsi_cts.h	2019-04-16 18:45:15.377157059 +0100
 @@ -55,7 +55,7 @@
   */
  STATIC INLINE void RSI_CTS_BypassPRS(CTS_Type *cts,boolean_t enable)
@@ -110,7 +110,7 @@
  
  
 --- ./Peripheral_Library/driver/inc/rsi_ethernet.h.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Peripheral_Library/driver/inc/rsi_ethernet.h	2019-04-03 17:05:07.826236836 +0100
++++ ./Peripheral_Library/driver/inc/rsi_ethernet.h	2019-04-16 18:45:15.377157059 +0100
 @@ -41,7 +41,7 @@
  /*******************************************************************************/
  /************************** Call Back Macros**************************************/
@@ -121,7 +121,7 @@
  #define GMAC_INTERRUPT 0x0000 /*!< GMAC interrupt*/
  #define DMA_INTERRUPT  0x0001 /*!< DMA interrupt*/
 --- ./Peripheral_Library/driver/inc/rsi_sdioh.h.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Peripheral_Library/driver/inc/rsi_sdioh.h	2019-04-03 17:01:19.417707130 +0100
++++ ./Peripheral_Library/driver/inc/rsi_sdioh.h	2019-04-16 18:45:15.377157059 +0100
 @@ -542,7 +542,10 @@
  {
  	SDIOH_CARD_TYPE_T       cardType;          
@@ -135,7 +135,7 @@
  	uint8_t                 csd[16];               
  	uint16_t                rca;                      
 --- ./Peripheral_Library/driver/inc/rsi_sio.h.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Peripheral_Library/driver/inc/rsi_sio.h	2019-04-03 17:01:19.417707130 +0100
++++ ./Peripheral_Library/driver/inc/rsi_sio.h	2019-04-16 18:45:15.377157059 +0100
 @@ -284,7 +284,6 @@
   *  @{
   *
@@ -145,7 +145,7 @@
  error_t RSI_SIO_Init(volatile SIO_Type *pstcSio);
  error_t RSI_SIO_InitSpi(volatile SIO_Type *pstcSio , stc_sio_spi_cfg_t  *pstcSpiConfig);
 --- ./Peripheral_Library/driver/src/rsi_adc.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Peripheral_Library/driver/src/rsi_adc.c	2019-04-03 17:01:19.417707130 +0100
++++ ./Peripheral_Library/driver/src/rsi_adc.c	2019-04-16 18:45:15.377157059 +0100
 @@ -56,9 +56,7 @@
  {
  	if(( channel > MAX_CHNL_NO)|| 
@@ -226,7 +226,7 @@
  		if(AUX_ADC_DAC_COMP->AUX_LDO_b.BYPASS_LDO==1)
  		{
 --- ./Peripheral_Library/driver/src/rsi_cts.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Peripheral_Library/driver/src/rsi_cts.c	2019-04-03 17:01:19.417707130 +0100
++++ ./Peripheral_Library/driver/src/rsi_cts.c	2019-04-16 18:45:15.377157059 +0100
 @@ -201,6 +201,6 @@
   */
  void RSI_CTS_IntrClear(CTS_Type *cts)
@@ -237,7 +237,7 @@
 +	cts->CTS_CONFIG_REG_1_1_b.WAKE_UP_ACK =0;
  }
 --- ./Peripheral_Library/driver/src/rsi_ethernet.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Peripheral_Library/driver/src/rsi_ethernet.c	2019-04-03 17:01:19.417707130 +0100
++++ ./Peripheral_Library/driver/src/rsi_ethernet.c	2019-04-16 18:45:15.377157059 +0100
 @@ -752,6 +752,7 @@
  	 pDesc->RXDESC2 = (uint32_t)rcvcfg->dst;
  	
@@ -255,7 +255,7 @@
    return RSI_OK;
  
 --- ./Peripheral_Library/driver/src/rsi_gpdma.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Peripheral_Library/driver/src/rsi_gpdma.c	2019-04-03 17:01:19.417707130 +0100
++++ ./Peripheral_Library/driver/src/rsi_gpdma.c	2019-04-16 18:45:15.377157059 +0100
 @@ -241,8 +241,8 @@
  {
  	GPDMA_DATACONTEXT_T *pDrv = (GPDMA_DATACONTEXT_T *) pHandle;
@@ -277,7 +277,7 @@
  }  
  
 --- ./Peripheral_Library/driver/src/rsi_qei.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Peripheral_Library/driver/src/rsi_qei.c	2019-04-03 17:01:19.417707130 +0100
++++ ./Peripheral_Library/driver/src/rsi_qei.c	2019-04-16 18:45:15.377157059 +0100
 @@ -34,6 +34,7 @@
  {
  	/* QEI clock enable routine here */
@@ -295,7 +295,7 @@
  }
  
 --- ./Peripheral_Library/driver/src/rsi_qspi.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Peripheral_Library/driver/src/rsi_qspi.c	2019-04-03 17:01:19.417707130 +0100
++++ ./Peripheral_Library/driver/src/rsi_qspi.c	2019-04-16 18:45:15.377157059 +0100
 @@ -177,6 +177,8 @@
  	qspi_switch_qspi2(qspi_reg, qspi_operational_mode, cs_no);
  	DEASSERT_CSN;
@@ -360,7 +360,7 @@
  void qspi_qspiload_nonce(qspi_reg_t *qspi_reg, uint32_t *nonce)
  {
 --- ./Peripheral_Library/driver/src/rsi_sdioh.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Peripheral_Library/driver/src/rsi_sdioh.c	2019-04-03 17:01:19.417707130 +0100
++++ ./Peripheral_Library/driver/src/rsi_sdioh.c	2019-04-16 18:45:15.377157059 +0100
 @@ -856,7 +856,7 @@
  	status_t     Stat   = RSI_SDIOH_ERROR;
  
@@ -532,7 +532,7 @@
  	return RSI_SDIOH_OK;
  }
 --- ./Peripheral_Library/driver/src/rsi_sio.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Peripheral_Library/driver/src/rsi_sio.c	2019-04-03 17:01:19.417707130 +0100
++++ ./Peripheral_Library/driver/src/rsi_sio.c	2019-04-16 18:45:15.377157059 +0100
 @@ -67,6 +67,7 @@
  {
  	/*SIO CLock enable */
@@ -594,7 +594,7 @@
  }
  
 --- ./Peripheral_Library/driver/src/rsi_udma.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Peripheral_Library/driver/src/rsi_udma.c	2019-04-03 17:01:19.421707280 +0100
++++ ./Peripheral_Library/driver/src/rsi_udma.c	2019-04-16 18:45:15.377157059 +0100
 @@ -393,6 +393,7 @@
      /* the number of items remaining to transfer */
      return (transferSize + 1);	
@@ -612,7 +612,7 @@
  
  /* This API is used to configures required parameters for a channel */
 --- ./Peripheral_Library/driver/src/rsi_wurx.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Peripheral_Library/driver/src/rsi_wurx.c	2019-04-03 17:01:19.421707280 +0100
++++ ./Peripheral_Library/driver/src/rsi_wurx.c	2019-04-16 18:45:15.377157059 +0100
 @@ -270,13 +270,13 @@
     {
  		 /* get 64 bit tail data */
@@ -656,7 +656,7 @@
       RSI_WURX_ReadPattern2Even(tail_data);
     }		
 --- ./Peripheral_Library/systemlevel/src/rsi_bod.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Peripheral_Library/systemlevel/src/rsi_bod.c	2019-04-03 17:01:19.421707280 +0100
++++ ./Peripheral_Library/systemlevel/src/rsi_bod.c	2019-04-16 18:45:15.377157059 +0100
 @@ -20,7 +20,6 @@
   * Includes
   */
@@ -736,7 +736,7 @@
  	buton_value =(((ULP_SPI_MEM_MAP(BOD_VBATT_STATUS_REG)) &(READ_BUTTON_VALUE_BITS)) >> 16) ;
  	if(buton_value == BUTTON_THREE_VALUE)
 --- ./Peripheral_Library/systemlevel/src/rsi_ipmu.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Peripheral_Library/systemlevel/src/rsi_ipmu.c	2019-04-03 17:01:19.421707280 +0100
++++ ./Peripheral_Library/systemlevel/src/rsi_ipmu.c	2019-04-16 18:45:15.377157059 +0100
 @@ -388,7 +388,7 @@
  	while(i--);
  	do {
@@ -756,7 +756,7 @@
  	volatile uint32_t reg_write_data=0,reg_read_data=0 , write_mask=0 , write_bit_pos=0;
  	volatile uint8_t  msb=0 , lsb=0 ;
 --- ./Peripheral_Library/systemlevel/src/rsi_pll.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Peripheral_Library/systemlevel/src/rsi_pll.c	2019-04-03 17:01:19.421707280 +0100
++++ ./Peripheral_Library/systemlevel/src/rsi_pll.c	2019-04-16 18:45:15.381157174 +0100
 @@ -25,7 +25,7 @@
   */
  #include<math.h> 
@@ -767,7 +767,7 @@
  /*clock sources preset */
  typedef enum CLK_PRESENT
 --- ./Peripheral_Library/systemlevel/src/rsi_time_period.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Peripheral_Library/systemlevel/src/rsi_time_period.c	2019-04-03 17:01:19.421707280 +0100
++++ ./Peripheral_Library/systemlevel/src/rsi_time_period.c	2019-04-16 18:45:15.381157174 +0100
 @@ -204,7 +204,7 @@
  		/*Update at which temperature calibration has to happen*/
  		pstcTimePeriod->MCU_CAL_TEMP_PROG_REG_b.MAX_TEMP_CHANGE = u8TemperatureVal;
@@ -778,7 +778,7 @@
  }
  
 --- ./Peripheral_Library/systemlevel/src/rsi_wwdt.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Peripheral_Library/systemlevel/src/rsi_wwdt.c	2019-04-03 17:01:19.421707280 +0100
++++ ./Peripheral_Library/systemlevel/src/rsi_wwdt.c	2019-04-16 18:45:15.381157174 +0100
 @@ -29,6 +29,7 @@
  {
    RSI_PS_NpssPeriPowerUp(SLPSS_PWRGATE_ULP_MCUWDT |	SLPSS_PWRGATE_ULP_TIMEPERIOD);
@@ -788,7 +788,7 @@
  
  /**
 --- ./Wireless_Library/common/rsi_common_apis.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Wireless_Library/common/rsi_common_apis.c	2019-04-05 18:09:28.812296264 +0100
++++ ./Wireless_Library/common/rsi_common_apis.c	2019-04-16 18:45:15.381157174 +0100
 @@ -35,6 +35,8 @@
  #include "rsi_wlan_non_rom.h"
  extern rsi_socket_info_non_rom_t *rsi_socket_pool_non_rom;
@@ -827,8 +827,24 @@
  
  #endif
    //! Get common cb pointer
+@@ -867,6 +871,7 @@
+  * This Function is used to select the socket comfiguration
+  *
+  */
++#if RSI_NUMBER_OF_SOCKETS > 0
+ int32_t rsi_socket_config()
+ {
+ 
+@@ -937,6 +942,7 @@
+   return status;
+ 
+ }
++#endif // RSI_NUMBER_OF_SOCKETS > 0
+ 
+ /*==============================================*/
+ /**
 --- ./Wireless_Library/common/rsi_device_init_apis.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Wireless_Library/common/rsi_device_init_apis.c	2019-04-05 11:52:43.318799919 +0100
++++ ./Wireless_Library/common/rsi_device_init_apis.c	2019-04-16 18:45:15.381157174 +0100
 @@ -21,21 +21,21 @@
  /**
   * Includes
@@ -873,7 +889,7 @@
  }
  
 --- ./Wireless_Library/driver/rsi_common.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Wireless_Library/driver/rsi_common.c	2019-04-05 18:12:35.547503540 +0100
++++ ./Wireless_Library/driver/rsi_common.c	2019-04-16 18:45:15.381157174 +0100
 @@ -987,6 +987,7 @@
      rsi_semaphore_post(&rsi_driver_cb->common_cb->common_sem);
  
@@ -883,7 +899,7 @@
  
  
 --- ./Wireless_Library/driver/rsi_driver_event_handlers.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Wireless_Library/driver/rsi_driver_event_handlers.c	2019-04-05 18:13:17.301099354 +0100
++++ ./Wireless_Library/driver/rsi_driver_event_handlers.c	2019-04-16 18:45:15.381157174 +0100
 @@ -134,7 +134,7 @@
    rsi_req_wakeup();
  #endif
@@ -893,8 +909,55 @@
        rsi_ulp_wakeup_init();
  #endif
  #endif
+--- ./Wireless_Library/driver/rsi_nwk.c.orig	2018-10-24 19:33:26.000000000 +0100
++++ ./Wireless_Library/driver/rsi_nwk.c	2019-04-16 18:45:15.381157174 +0100
+@@ -91,7 +91,7 @@
+ uint16_t rsi_nwk_register_callbacks(rsi_nwk_callback_id_t callback_id, void (*callback_handler_ptr)(uint8_t command_type , uint32_t status, const uint8_t *buffer, const uint32_t length))
+ {
+ 
+-  if(callback_id > RSI_MAX_NUM_CALLBACKS)
++  if(callback_id >= RSI_NWK_MAX_NUM_CALLBACKS)
+   {
+     /*
+      *Return , if the callback number exceeds the RSI_MAX_NUM_CALLBACKS ,or
+@@ -125,7 +125,7 @@
+ 
+ uint16_t rsi_wlan_nwk_register_json_update_cb(uint32_t callback_id, void (*callback_handler_ptr)(uint8_t *filename, uint8_t *json_object, uint32_t length, uint32_t status))
+ {
+-  if(callback_id > RSI_MAX_NUM_CALLBACKS)
++  if(callback_id >= RSI_NWK_MAX_NUM_CALLBACKS)
+   {
+     /*
+      *Return , if the callback number exceeds the RSI_MAX_NUM_CALLBACKS ,or
+@@ -144,7 +144,7 @@
+ 
+ uint16_t rsi_wlan_nwk_register_json_event_cb(uint32_t callback_id, void (*callback_handler_ptr)(uint32_t status, uint8_t *json_object, uint32_t length))
+ {
+-  if(callback_id > RSI_MAX_NUM_CALLBACKS)
++  if(callback_id >= RSI_NWK_MAX_NUM_CALLBACKS)
+   {
+     /*
+      *Return , if the callback number exceeds the RSI_MAX_NUM_CALLBACKS ,or
+@@ -161,7 +161,7 @@
+ 
+ uint16_t rsi_wlan_nwk_register_webpage_req_cb(uint32_t callback_id, void (*callback_handler_ptr)(uint8_t type, uint8_t *url_name, uint8_t *post_content_buffer, uint32_t post_content_length, uint32_t status))
+ {
+-  if(callback_id > RSI_MAX_NUM_CALLBACKS)
++  if(callback_id >= RSI_NWK_MAX_NUM_CALLBACKS)
+   {
+     /*
+      *Return , if the callback number exceeds the RSI_MAX_NUM_CALLBACKS ,or
+@@ -178,7 +178,7 @@
+ 
+ uint16_t rsi_wlan_nwk_register_wireless_fw_upgrade_cb(uint32_t callback_id, void (*callback_handler_ptr)(uint8_t type, uint32_t status))
+ {
+-  if(callback_id > RSI_MAX_NUM_CALLBACKS)
++  if(callback_id >= RSI_NWK_MAX_NUM_CALLBACKS)
+   {
+     /*
+      *Return , if the callback number exceeds the RSI_MAX_NUM_CALLBACKS ,or
 --- ./Wireless_Library/driver/rsi_utils.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Wireless_Library/driver/rsi_utils.c	2019-04-03 17:11:44.960948495 +0100
++++ ./Wireless_Library/driver/rsi_utils.c	2019-04-16 18:45:15.381157174 +0100
 @@ -367,7 +367,7 @@
   */
  void string2array(uint8_t *dst, uint8_t *src, uint32_t length)
@@ -905,8 +968,17 @@
    {
      if(src[i] && src[i + 1])
 --- ./Wireless_Library/driver/rsi_wlan.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Wireless_Library/driver/rsi_wlan.c	2019-04-05 18:14:28.263800733 +0100
-@@ -432,7 +432,7 @@
++++ ./Wireless_Library/driver/rsi_wlan.c	2019-04-16 18:45:15.381157174 +0100
+@@ -100,6 +100,8 @@
+   //! Get host descriptor pointer
+   uint8_t *host_desc = (pkt->desc);
+ 
++  LOG(LL_DEBUG, ("WLAN CMD: 0x%x", cmd));
++
+   switch(cmd)
+   {
+     case RSI_WLAN_REQ_BAND:
+@@ -432,7 +434,7 @@
        }
        break;
  
@@ -915,7 +987,7 @@
      case RSI_WLAN_REQ_SOCKET_CREATE:
        {
          //! Socket Parameters
-@@ -479,6 +479,7 @@
+@@ -479,6 +481,7 @@
          payload_size = sizeof(rsi_req_socket_read_t);
        }
        break;
@@ -923,7 +995,22 @@
      case RSI_WLAN_REQ_SET_CERTIFICATE:
        {
          rsi_req_set_certificate_t *set_certificate = (rsi_req_set_certificate_t *)pkt->data;
-@@ -746,6 +747,7 @@
+@@ -725,12 +728,14 @@
+         payload_size = sizeof(rsi_auto_config_enable_t);
+       }
+       break;
++#if RSI_NUMBER_OF_SOCKETS > 0
+     case RSI_WLAN_REQ_SOCKET_CONFIG:
+       {
+         //! fill payload size
+         payload_size = sizeof(rsi_socket_config_t);
+       }
+       break;
++#endif
+ #ifdef RSI_WAC_MFI_ENABLE
+     case RSI_WLAN_REQ_ADD_MFI_IE:
+       {
+@@ -746,6 +751,7 @@
          payload_size = sizeof(rsi_req_wlan_filter_bcast_t);
  
        }
@@ -931,7 +1018,25 @@
      case  RSI_WLAN_REQ_SNTP_CLIENT:
        {
           //! fill payload size
-@@ -891,7 +893,6 @@
+@@ -864,6 +870,17 @@
+     return &json[i+1];
+ }
+ 
++void rsi_wlan_connect_async_mgos(void *arg) {
++  rsi_wlan_async_connect_ctx_t *ctx = (rsi_wlan_async_connect_ctx_t *) arg;
++  rsi_wlan_connect_async(ctx->ssid, ctx->sec_type, ctx->secret_key, ctx->join_response_handler);
++  rsi_driver_wlan_free_async_connect_ctx(ctx);
++}
++
++void rsi_driver_wlan_free_async_connect_ctx(rsi_wlan_async_connect_ctx_t *ctx) {
++  memset(ctx, 0, sizeof(*ctx));
++  free(ctx);
++}
++
+ /*==============================================*/
+ /**
+  * @fn          int32_t rsi_driver_process_wlan_recv_cmd(rsi_pkt_t *pkt)
+@@ -891,7 +908,6 @@
    uint16_t length;
    uint8_t  buffers_freed;
    int8_t wlan_pkt_pending = 0;
@@ -939,7 +1044,57 @@
    //! Get wlan cb struct pointer
    rsi_wlan_cb_t *rsi_wlan_cb = rsi_driver_cb->wlan_cb;
    
-@@ -1262,8 +1263,10 @@
+@@ -926,6 +942,9 @@
+ 
+   //! check for packet pending in wlan queue
+   wlan_pkt_pending = rsi_check_queue_status(&rsi_driver_cb->wlan_tx_q);
++
++  LOG(LL_DEBUG, ("WLAN RSP: 0x%x STATUS: 0x%x", cmd_type, (unsigned int) status));
++
+   
+   switch(cmd_type)
+   {
+@@ -1175,6 +1194,31 @@
+     case RSI_WLAN_RSP_SCAN:
+       {
+ 
++        if(rsi_wlan_cb->opermode != RSI_WLAN_ACCESS_POINT_MODE &&
++           rsi_wlan_cb->async_connect_ctx != NULL)
++        {
++          //! This scan is part of async join.
++          rsi_wlan_cb->expected_response = RSI_WLAN_RSP_CLEAR;
++
++          rsi_wlan_async_connect_ctx_t *ctx = rsi_wlan_cb->async_connect_ctx;
++
++          rsi_wlan_cb->async_connect_ctx = NULL;
++
++          if(status == RSI_SUCCESS)
++          {
++            rsi_wlan_cb->state = RSI_WLAN_STATE_SCAN_DONE; 
++            // We need to bounce off another task to be able to invoke the API.
++            // This is mos-specific and proper solution would be different.
++            mgos_invoke_cb(rsi_wlan_connect_async_mgos, ctx, false /* from_isr */);
++          }
++          else
++          {
++            ctx->join_response_handler(status, payload, payload_length);
++            rsi_driver_wlan_free_async_connect_ctx(ctx);
++          }
++          return RSI_SUCCESS;
++        }
++
+         //! update state  wlan_cb state to scan done
+         if(status == RSI_SUCCESS)
+         {
+@@ -1182,6 +1226,7 @@
+           if(rsi_wlan_cb->opermode != RSI_WLAN_ACCESS_POINT_MODE)
+           {
+             rsi_wlan_cb->state = RSI_WLAN_STATE_SCAN_DONE; 
++
+           }
+ 
+           if(rsi_driver_cb->wlan_cb->callback_list.wlan_scan_response_handler != NULL)
+@@ -1262,8 +1307,10 @@
                  rsi_wlan_cb->callback_list.join_fail_handler(status, payload, payload_length);
                }
  
@@ -950,7 +1105,16 @@
  
                if((rsi_wlan_check_waiting_socket_cmd() || rsi_wlan_check_waiting_wlan_cmd()) && (wlan_pkt_pending == 0))
                {
-@@ -1337,8 +1340,10 @@
+@@ -1284,6 +1331,8 @@
+           //! Call asynchronous response handler to indicate to host
+           rsi_wlan_cb->callback_list.wlan_join_response_handler(status, payload, payload_length);
+ 
++          rsi_wlan_cb->callback_list.wlan_join_response_handler = NULL;
++
+           //! Clear expected response
+           rsi_wlan_cb->expected_response = RSI_WLAN_RSP_CLEAR;
+ 
+@@ -1337,8 +1386,10 @@
                rsi_wlan_cb->callback_list.ip_renewal_fail_handler(status, payload, payload_length); 
              }
  
@@ -961,22 +1125,18 @@
  
              if(rsi_wlan_check_waiting_socket_cmd()  && (wlan_pkt_pending == 0))
              {
-@@ -1391,6 +1396,7 @@
-         }
-       }
-       break;
+@@ -1404,8 +1455,10 @@
+           //! Reset module state as Disconnect received
+           common_cb->power_save.module_state = 0;
+ 
 +#if RSI_NUMBER_OF_SOCKETS > 0
-     case RSI_WLAN_RSP_DISCONNECT:
-       {
-         //! if success, update state  wlan_cb state to band done
-@@ -1409,13 +1415,14 @@
+           //! Clear all sockets
+           rsi_clear_sockets(RSI_CLEAR_ALL_SOCKETS);
++#endif
          }
        }
        break;
-+#endif // RSI_NUMBER_OF_SOCKETS > 0
-     case RSI_WLAN_RSP_DYNAMIC_POOL:
-       {
-         //! check status
+@@ -1415,7 +1468,7 @@
          status  = rsi_bytes2R_to_uint16(host_desc + RSI_STATUS_OFFSET);
        }
        break;
@@ -985,7 +1145,7 @@
      case RSI_WLAN_RSP_SOCKET_CREATE:
        {
          if(status == RSI_SUCCESS)
-@@ -1531,7 +1538,7 @@
+@@ -1531,7 +1584,7 @@
          }
        }
        break;
@@ -994,7 +1154,7 @@
      case RSI_WLAN_RSP_IPV4_CHANGE:
        {
          if(rsi_wlan_cb->callback_list.ip_change_notify_handler != NULL)
-@@ -1540,8 +1547,10 @@
+@@ -1540,8 +1593,10 @@
            rsi_wlan_cb->callback_list.ip_change_notify_handler(status, payload, payload_length); 
          }
  
@@ -1005,7 +1165,7 @@
  
          if(rsi_wlan_check_waiting_socket_cmd() && (wlan_pkt_pending == 0))
          {
-@@ -1615,7 +1624,7 @@
+@@ -1615,7 +1670,7 @@
            if(status == RSI_SUCCESS)
            {
              //! Call asynchronous response handler to indicate to host
@@ -1014,7 +1174,7 @@
            }
  
          }
-@@ -1673,6 +1682,7 @@
+@@ -1673,6 +1728,7 @@
        break;
  
  
@@ -1022,7 +1182,7 @@
      case RSI_WLAN_RSP_TCP_ACK_INDICATION:
        {
          rsi_rsp_tcp_ack_t *tcp_ack = (rsi_rsp_tcp_ack_t *)payload; 
-@@ -1709,6 +1719,7 @@
+@@ -1709,6 +1765,7 @@
  
        }
        break;
@@ -1030,7 +1190,7 @@
      case RSI_WLAN_RSP_WIRELESS_FWUP_OK:
      case RSI_WLAN_RSP_WIRELESS_FWUP_DONE:
        {
-@@ -1839,7 +1850,7 @@
+@@ -1839,7 +1896,7 @@
            return RSI_SUCCESS;
          }
        }
@@ -1039,7 +1199,21 @@
      case RSI_WLAN_RSP_UART_DATA_ACK:
        {
          //! check wlan_cb for any task is waiting for response
-@@ -1909,6 +1920,12 @@
+@@ -1896,6 +1953,13 @@
+ 	      }
+       }
+       break;
++      case RSI_WLAN_RSP_STATE_NOTIFICATION:
++      {
++        if (rsi_driver_cb->wlan_cb->callback_list.wlan_state_notification_handler != NULL) {
++          rsi_driver_cb->wlan_cb->callback_list.wlan_state_notification_handler(status, payload, payload_length);
++        }
++      }
++      break;
+     default:
+       break;
+   }
+@@ -1909,6 +1973,12 @@
      rsi_semaphore_post(&rsi_wlan_cb->wlan_sem);
    }
  
@@ -1052,7 +1226,7 @@
    return RSI_SUCCESS;
  }
  
-@@ -1996,6 +2013,7 @@
+@@ -1996,6 +2066,7 @@
            return status;
          }
        }
@@ -1060,7 +1234,16 @@
      case RSI_WLAN_STATE_BAND_DONE:
        {
  
-@@ -2329,6 +2347,7 @@
+@@ -2295,7 +2366,7 @@
+   if(rsi_wlan_cb->callback_list.wlan_data_receive_handler != NULL)
+   {
+     //! Call asynchronous data receive handler to indicate to host
+-    rsi_wlan_cb->callback_list.wlan_data_receive_handler( 0, payload, payload_length);
++    rsi_wlan_cb->callback_list.wlan_data_receive_handler( status, payload, payload_length);
+   }
+ 
+ }
+@@ -2329,6 +2400,7 @@
      rsi_semaphore_post(&rsi_driver_cb->wlan_cb->wlan_sem);
  
    }
@@ -1068,7 +1251,7 @@
  }
  
  
-@@ -2360,6 +2379,7 @@
+@@ -2360,6 +2432,7 @@
      rsi_semaphore_post(&rsi_driver_cb->wlan_cb->wlan_sem);
  
    }
@@ -1076,14 +1259,14 @@
  }
  
  /*==============================================*/
-@@ -2390,4 +2410,5 @@
+@@ -2390,4 +2463,5 @@
      rsi_semaphore_post(&rsi_driver_cb->wlan_cb->wlan_sem);
  
    }
 +  (void) pkt;
  }
 --- ./Wireless_Library/hal_WiSeMcu/inc/rsi_api.h.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Wireless_Library/hal_WiSeMcu/inc/rsi_api.h	2019-04-03 18:15:13.105079193 +0100
++++ ./Wireless_Library/hal_WiSeMcu/inc/rsi_api.h	2019-04-16 18:45:15.381157174 +0100
 @@ -106,7 +106,7 @@
  #define RSI_SUCCESS                        0
  #define RSI_BUSY                           -1
@@ -1094,7 +1277,7 @@
  
  
 --- ./Wireless_Library/hal_WiSeMcu/inc/rsi_m4.h.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Wireless_Library/hal_WiSeMcu/inc/rsi_m4.h	2019-04-05 15:24:34.085660410 +0100
++++ ./Wireless_Library/hal_WiSeMcu/inc/rsi_m4.h	2019-04-16 18:45:15.381157174 +0100
 @@ -196,7 +196,9 @@
  void ROM_WL_mask_ta_interrupt(uint32_t interrupt_no);
  void ROM_WL_unmask_ta_interrupt(uint32_t interrupt_no);
@@ -1107,7 +1290,7 @@
  #endif
  #endif
 --- ./Wireless_Library/hal_WiSeMcu/src/rsi_bootup_config.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Wireless_Library/hal_WiSeMcu/src/rsi_bootup_config.c	2019-04-03 18:41:00.816319484 +0100
++++ ./Wireless_Library/hal_WiSeMcu/src/rsi_bootup_config.c	2019-04-16 18:45:15.381157174 +0100
 @@ -44,8 +44,7 @@
   */
  int16_t rsi_mem_wr(uint32_t addr, uint16_t len, uint8_t *dBuf)
@@ -1148,7 +1331,7 @@
    boot_cmd = HOST_INTERACT_REG_VALID | cmd;
    if(cmd == RSI_CHECK_CRC)
 --- ./Wireless_Library/hal_WiSeMcu/src/rsi_hal_mcu_m4.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Wireless_Library/hal_WiSeMcu/src/rsi_hal_mcu_m4.c	2019-04-05 18:09:36.180583163 +0100
++++ ./Wireless_Library/hal_WiSeMcu/src/rsi_hal_mcu_m4.c	2019-04-16 18:45:15.381157174 +0100
 @@ -21,9 +21,6 @@
  #ifdef RSI_M4_INTERFACE
  #include "rsi_driver.h"
@@ -1177,8 +1360,19 @@
  }
  
  
+@@ -241,8 +238,8 @@
+   //! Wait for TA to wakeup and should be in bootloader
+   while(!(P2P_STATUS_REG & TA_is_active));
+   //! UPdate M4 TX and RX dma descriptors
+-  M4_TX_DMA_DESC_REG = (uint32_t)&tx_desc;
+-  M4_RX_DMA_DESC_REG = (uint32_t)&rx_desc;
++  M4_TX_DMA_DESC_REG = ((uint32_t) &tx_desc) & ~M4_MEMORY_OFFSET_ADDRESS;
++  M4_RX_DMA_DESC_REG = ((uint32_t) &rx_desc) & ~M4_MEMORY_OFFSET_ADDRESS;
+ }
+ 
+ 
 --- ./Wireless_Library/include/rsi_common_apis.h.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Wireless_Library/include/rsi_common_apis.h	2019-04-03 18:21:04.069570751 +0100
++++ ./Wireless_Library/include/rsi_common_apis.h	2019-04-16 18:45:15.381157174 +0100
 @@ -41,8 +41,12 @@
  #define RSI_LOAD_IMAGE_I_FW                  '1'
  #define RSI_LOAD_IMAGE_I_ACTIVE_LOW_FW       0x71
@@ -1195,7 +1389,7 @@
  
  //! Upgrade images
 --- ./Wireless_Library/include/rsi_common.h.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Wireless_Library/include/rsi_common.h	2019-04-05 14:57:15.674712355 +0100
++++ ./Wireless_Library/include/rsi_common.h	2019-04-16 18:45:15.381157174 +0100
 @@ -266,7 +266,7 @@
  typedef struct rsi_common_cb_s
  {
@@ -1205,9 +1399,32 @@
  
    //! driver common block status
    volatile int32_t status;
+--- ./Wireless_Library/include/rsi_nwk.h.orig	2018-10-24 19:33:26.000000000 +0100
++++ ./Wireless_Library/include/rsi_nwk.h	2019-04-16 18:45:15.381157174 +0100
+@@ -132,7 +132,8 @@
+   RSI_WLAN_NWK_URL_REQ_CB                    =   1,
+   RSI_WLAN_NWK_JSON_UPDATE_CB                =   2,
+   RSI_WLAN_NWK_FW_UPGRADE_CB                 =   3,
+-  RSI_WLAN_NWK_JSON_EVENT_CB                 =   4
++  RSI_WLAN_NWK_JSON_EVENT_CB                 =   4,
++  RSI_NWK_MAX_NUM_CALLBACKS,
+ }rsi_nwk_callback_id_t;
+ 
+ 
 --- ./Wireless_Library/include/rsi_socket.h.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Wireless_Library/include/rsi_socket.h	2019-04-03 17:03:05.117662881 +0100
-@@ -109,13 +109,15 @@
++++ ./Wireless_Library/include/rsi_socket.h	2019-04-16 18:45:15.381157174 +0100
+@@ -20,6 +20,10 @@
+  */
+ #ifndef RSI__SOCKET_H
+ #define RSI__SOCKET_H
++
++#include <rsi_user.h>
++
++#if RSI_NUMBER_OF_SOCKETS > 0
+ /******************************************************
+  * *                      Macros
+  * ******************************************************/
+@@ -109,13 +113,14 @@
  
  #define F_GETFL                             3                       /* Get file descriptors                                                 */
  #define F_SETFL                             4                       /* Set a subset of file descriptors (e.g. O_NONBlOCK                    */
@@ -1220,20 +1437,18 @@
  #endif
  
 -
-+#if 0
  /* Define additional BSD socket errors. */
  
  /* From errno-base.h in /usr/include/asm-generic;  */
-@@ -255,7 +257,7 @@
- #define EOWNERDEAD      130 /* Owner died - for robust mutexes*/
+@@ -256,7 +261,6 @@
  #define ENOTRECOVERABLE 131 /* State not recoverable */
  #define ERFKILL         132 /* Operation not possible due to RF-kill */
--
-+#endif
  
+-
  /* List of BSD sock options from socket.h in /usr/include/asm/socket.h and asm-generic/socket.h.
     The first set of socket options take the socket level (category) SOL_SOCKET. */
-@@ -410,8 +412,12 @@
+ 
+@@ -410,8 +414,12 @@
    } _S6_un;
  };
  
@@ -1246,8 +1461,95 @@
  
  struct rsi_sockaddr_in6 
  {
+@@ -640,4 +648,32 @@
+                      void(*data_transfer_complete_handler)(uint8_t sockId, const uint16_t length));
+ int rsi_setsockopt(int socket, int level, int option_name,const void *option_value, rsi_socklen_t option_len);
+ 
++#else
++
++// RSI sockets are disabled, provide just the bare minimum defs.
++
++struct rsi_sockaddr;
++typedef int rsi_socket_info_t;
++#define RSI_TCP_LISTEN_MIN_BACKLOG 0
++#define RSI_IPV4_ADDRESS_LENGTH    4
++#define RSI_IPV6_ADDRESS_LENGTH    16
++
++typedef enum rsi_ip_config_mode_e
++{
++  RSI_STATIC = 0,
++  RSI_DHCP,
++  RSI_DHCP_HOSTNAME,
++  RSI_DHCP_RESERVED,
++  RSI_DHCP_OPTION81,
++  RSI_DHCP_OPTION77
++}rsi_ip_config_mode_t;
++
++typedef enum rsi_ip_version_e
++{
++  RSI_IP_VERSION_4=4,
++  RSI_IP_VERSION_6=6
++}rsi_ip_version_t;
++
++#endif // RSI_NUMBER_OF_SOCKETS > 0
++
+ #endif
+--- ./Wireless_Library/include/rsi_wlan_apis.h.orig	2018-10-24 19:33:26.000000000 +0100
++++ ./Wireless_Library/include/rsi_wlan_apis.h	2019-04-16 18:48:01.306090062 +0100
+@@ -61,9 +61,6 @@
+ //! MAC address length
+ #define RSI_MAC_ADDR_LEN                  6
+ 
+-//! max no of call backs
+-#define RSI_MAX_NUM_CALLBACKS            12
+-
+ //! Maximum wifi direct device count
+ #define RSI_MAX_WFD_DEVICE_COUNT          10    
+ 
+@@ -592,7 +589,9 @@
+   RSI_WLAN_WFD_CONNECTION_REQUEST_NOTIFY_CB  =   9,
+   RSI_WLAN_SCAN_RESPONSE_HANDLER             =   10,
+   RSI_WLAN_JOIN_RESPONSE_HANDLER             =   11,
+-  RSI_WLAN_RAW_DATA_RECEIVE_HANDLER          =   12
++  RSI_WLAN_RAW_DATA_RECEIVE_HANDLER          =   12,
++  RSI_WLAN_STATE_NOTIFICATION_HANDLER        =   13,
++  RSI_WLAN_MAX_NUM_CALLBACKS,
+ }rsi_callback_id_t;
+ 
+ //! enumerations for encryption types 
+@@ -1015,6 +1014,15 @@
+ } rsi_rsp_scan_t;
+ 
+ 
++//! Async connection statue responses
++typedef struct rsi_state_notification_s {
++  uint8_t timestamp[4];
++  uint8_t state_code;
++  uint8_t reason_code;
++  uint8_t channel;
++  uint8_t rssi_val;
++  uint8_t bssid[6];
++} rsi_state_notificaton_t;
+ 
+ 
+ //! Response structure for Query firmware version command
+@@ -1187,10 +1195,10 @@
+ /******************************************************
+  * *               Function Declarations
+  * ******************************************************/
+-extern int32_t rsi_wlan_scan(int8_t *ssid, uint8_t chno,rsi_rsp_scan_t *result,uint32_t length);
+-extern int32_t rsi_wlan_scan_async(int8_t *ssid, uint8_t chno, void(*callback)(uint16_t status, const uint8_t *buffer, const uint16_t length));
+-extern int32_t rsi_wlan_connect(int8_t *ssid, rsi_security_mode_t sec_type, void *secret_key);
+-extern int32_t rsi_wlan_connect_async(int8_t *ssid, rsi_security_mode_t sec_type, void *secret_key, void(*scan_response_handler)(uint16_t status, const uint8_t *buffer, const uint16_t length));
++extern int32_t rsi_wlan_scan(const char *ssid, uint8_t chno,rsi_rsp_scan_t *result,uint32_t length);
++extern int32_t rsi_wlan_scan_async(const char *ssid, uint8_t chno, void(*callback)(uint16_t status, const uint8_t *buffer, const uint16_t length));
++extern int32_t rsi_wlan_connect(const char *ssid, rsi_security_mode_t sec_type, const char *secret_key);
++extern int32_t rsi_wlan_connect_async(const char *ssid, rsi_security_mode_t sec_type, const char *secret_key, void(*scan_response_handler)(uint16_t status, const uint8_t *buffer, const uint16_t length));
+ extern int32_t rsi_wlan_ap_start(int8_t *ssid, uint8_t channel, rsi_security_mode_t security_type,rsi_encryption_mode_t encryption_mode, uint8_t *password, uint16_t beacon_interval, uint8_t dtim_period);
+ extern int32_t rsi_wlan_execute_post_connect_cmds(void);
+ extern int32_t rsi_wlan_disconnect(void);
 --- ./Wireless_Library/include/rsi_wlan_defines.h.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Wireless_Library/include/rsi_wlan_defines.h	2019-04-03 17:03:58.783665456 +0100
++++ ./Wireless_Library/include/rsi_wlan_defines.h	2019-04-16 18:45:15.381157174 +0100
 @@ -21,8 +21,9 @@
  #ifndef RSI_WLAN_DEFINES_H
  #define RSI_WLAN_DEFINES_H
@@ -1259,8 +1561,60 @@
  
  
  
+--- ./Wireless_Library/include/rsi_wlan.h.orig	2018-10-24 19:33:26.000000000 +0100
++++ ./Wireless_Library/include/rsi_wlan.h	2019-04-16 18:45:15.381157174 +0100
+@@ -209,8 +209,9 @@
+   RSI_WLAN_RSP_POP3_CLIENT            = 0xE7,
+   RSI_WLAN_RSP_POP3_CLIENT_TERMINATE  = 0xE8,
+   RSI_WLAN_RSP_DHCP_USER_CLASS        = 0xEC,
+-  RSI_WLAN_RSP_TIMEOUT				  = 0xEA,
+-  RSI_WLAN_RSP_URL_request		  	  =	0x64
++  RSI_WLAN_RSP_TIMEOUT                = 0xEA,
++  RSI_WLAN_RSP_URL_request            = 0x64,
++  RSI_WLAN_RSP_STATE_NOTIFICATION     = 0x70,
+ 
+ }rsi_wlan_cmd_response_t;
+ 
+@@ -364,8 +365,18 @@
+   void   (*raw_data_receive_handler)(uint16_t status, uint8_t *buffer, const uint32_t length);
+     void   (*auto_config_rsp_handler)(uint16_t status, uint8_t state);
+ 
++  //!wlan connection state notification handler
++  void   (*wlan_state_notification_handler)(uint16_t status, uint8_t *buffer, const uint32_t length);
++
+ }rsi_callback_cb_t;
+ 
++typedef struct rsi_wlan_async_connect_ctx_s
++{
++  char ssid[RSI_SSID_LEN];
++  char secret_key[RSI_PSK_LEN];
++  rsi_security_mode_t sec_type;
++  void (*join_response_handler)(uint16_t status, const uint8_t *buffer, const uint16_t length);
++} rsi_wlan_async_connect_ctx_t;
+ 
+ //! driver WLAN control block
+ typedef struct rsi_wlan_cb_s
+@@ -414,9 +425,10 @@
+   
+   //! opermode 
+   uint16_t opermode;
+-}rsi_wlan_cb_t;
+-
+ 
++  //! Parameters saved during async connect while scanning.
++  rsi_wlan_async_connect_ctx_t *async_connect_ctx;
++}rsi_wlan_cb_t;
+ 
+ //! Band command request structure
+ typedef struct rsi_req_band_s 
+@@ -1499,4 +1511,5 @@
+ int32_t rsi_wlan_check_waiting_socket_cmd(void);
+ int32_t rsi_wlan_check_waiting_wlan_cmd(void);
+ void rsi_wlan_process_raw_data(rsi_pkt_t *pkt);
++void rsi_driver_wlan_free_async_connect_ctx(rsi_wlan_async_connect_ctx_t *ctx);
+ #endif
 --- ./Wireless_Library/os/free_rtos/rsi_os_wrapper.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Wireless_Library/os/free_rtos/rsi_os_wrapper.c	2019-04-05 12:12:16.526026677 +0100
++++ ./Wireless_Library/os/free_rtos/rsi_os_wrapper.c	2019-04-16 18:45:15.381157174 +0100
 @@ -80,7 +80,7 @@
  {
  	//! restore interrupts while exiting critical section
@@ -1311,7 +1665,7 @@
  
  
 --- ./Wireless_Library/rom/rsi_apis_non_rom.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Wireless_Library/rom/rsi_apis_non_rom.c	2019-04-04 18:09:56.209661829 +0100
++++ ./Wireless_Library/rom/rsi_apis_non_rom.c	2019-04-16 18:45:15.381157174 +0100
 @@ -11,6 +11,7 @@
  #ifndef ROM_WIRELESS
  const struct ROM_WL_API_S api_wl_s={
@@ -1347,7 +1701,19 @@
  
    //! Scheduler
    &ROM_WL_rsi_scheduler_init,  
-@@ -92,7 +113,9 @@
+@@ -50,7 +71,11 @@
+   &ROM_WL_rsi_unblock_queue,  
+ 
+ 
++#if RSI_NUMBER_OF_SOCKETS > 0
+   &ROM_WL_rsi_driver_send_data,  
++#else
++  NULL,
++#endif
+   &ROM_WL_rsi_driver_process_recv_data, 
+ 
+   //! Events
+@@ -92,7 +117,9 @@
    global_cb_p             = &global_cb;
  
    global_cb_p->rsi_driver_cb   = rsi_driver_cb;
@@ -1358,7 +1724,7 @@
    global_cb_p->no_of_sockets   = RSI_NUMBER_OF_SOCKETS;
  #ifdef RSI_LITTLE_ENDIAN
 --- ./Wireless_Library/rom/rsi_apis_rom.h.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Wireless_Library/rom/rsi_apis_rom.h	2019-04-03 17:01:19.421707280 +0100
++++ ./Wireless_Library/rom/rsi_apis_rom.h	2019-04-16 18:45:15.381157174 +0100
 @@ -133,7 +133,7 @@
  #endif
  
@@ -1380,7 +1746,7 @@
  
  extern ROM_WL_API_T *api_wl;
 --- ./Wireless_Library/rom/rsi_hal_mcu_m4_rom.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Wireless_Library/rom/rsi_hal_mcu_m4_rom.c	2019-04-05 15:45:14.038292776 +0100
++++ ./Wireless_Library/rom/rsi_hal_mcu_m4_rom.c	2019-04-16 18:45:15.381157174 +0100
 @@ -118,7 +118,7 @@
  	 
      //!raise interrupt to TA 
@@ -1432,8 +1798,35 @@
  		//! Fill source address in the TX descriptors
  	tx_desc[1].length = (size_param);
 --- ./Wireless_Library/rom/rsi_nwk_rom.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Wireless_Library/rom/rsi_nwk_rom.c	2019-04-04 18:21:25.286525072 +0100
-@@ -233,6 +233,7 @@
++++ ./Wireless_Library/rom/rsi_nwk_rom.c	2019-04-16 18:45:15.381157174 +0100
+@@ -43,6 +43,7 @@
+  *
+  */
+ 
++#if RSI_NUMBER_OF_SOCKETS > 0
+ int32_t ROM_WL_rsi_driver_send_data(global_cb_t *global_cb_p, uint32_t sockID, uint8_t* buffer, uint32_t length, struct rsi_sockaddr *destAddr)
+ {
+   int32_t  status = RSI_SUCCESS;
+@@ -176,7 +177,7 @@
+   return status;
+ 
+ }
+-
++#endif // RSI_NUMBER_OF_SOCKETS > 0
+ 
+ /*==============================================*/
+ /**
+@@ -207,7 +208,9 @@
+   int32_t status = RSI_SUCCESS;
+   
+   rsi_driver_cb_t   *rsi_driver_cb   = global_cb_p->rsi_driver_cb;
++#if RSI_NUMBER_OF_SOCKETS > 0
+   rsi_socket_info_t *rsi_socket_pool = global_cb_p->rsi_socket_pool;
++#endif
+ 
+   //! Get payload pointer
+   recv = (rsi_rsp_socket_recv_t *)pkt->data;
+@@ -233,6 +236,7 @@
    }
    else
    {
@@ -1441,7 +1834,7 @@
    //! Get socket descriptor
    sockID = ROM_WL_rsi_get_application_socket_descriptor(global_cb_p, recv->socket_id[0]);
  
-@@ -318,6 +319,15 @@
+@@ -318,6 +322,15 @@
        memcpy(sock_info->destination_ip_addr.ipv6, recv->dest_ip_addr.ipv6_address, RSI_IPV6_ADDRESS_LENGTH);
      }
    }
@@ -1458,7 +1851,7 @@
    //! Post semaphore for data read request
    if(rsi_driver_cb->wlan_cb->expected_response  == RSI_WLAN_RSP_SOCKET_READ_DATA)
 --- ./Wireless_Library/rom/rsi_pkt_mgmt_rom.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Wireless_Library/rom/rsi_pkt_mgmt_rom.c	2019-04-04 18:03:50.024422457 +0100
++++ ./Wireless_Library/rom/rsi_pkt_mgmt_rom.c	2019-04-16 18:45:15.381157174 +0100
 @@ -96,6 +96,8 @@
      total_size -= pkt_size;
    }
@@ -1496,7 +1889,7 @@
    return available_count;
  
 --- ./Wireless_Library/rom/rsi_queue_rom.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Wireless_Library/rom/rsi_queue_rom.c	2019-04-04 18:06:10.597466126 +0100
++++ ./Wireless_Library/rom/rsi_queue_rom.c	2019-04-16 18:45:15.381157174 +0100
 @@ -56,6 +56,7 @@
    //! Mutex for  queues 
    RSI_MUTEX_CREATE(&queue->queue_mutex);
@@ -1547,7 +1940,7 @@
  }
  #endif
 --- ./Wireless_Library/rom/rsi_scheduler_rom.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Wireless_Library/rom/rsi_scheduler_rom.c	2019-04-05 18:15:05.033195602 +0100
++++ ./Wireless_Library/rom/rsi_scheduler_rom.c	2019-04-16 18:45:15.381157174 +0100
 @@ -70,7 +70,9 @@
    
    //! Enable all the interrupts
@@ -1559,8 +1952,35 @@
    return active_int_event_map;
    
  }
+@@ -119,7 +121,7 @@
+   
+   if(global_cb_p->os_enabled == 1)
+   {
+-    RSI_SEMAPHORE_WAIT(&scheduler_cb->scheduler_sem, 0);
++    RSI_SEMAPHORE_WAIT(&scheduler_cb->scheduler_sem, 1);
+   }
+ }
+ #endif
 --- ./Wireless_Library/wlan/rsi_wlan_apis.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Wireless_Library/wlan/rsi_wlan_apis.c	2019-04-03 17:12:11.057911829 +0100
++++ ./Wireless_Library/wlan/rsi_wlan_apis.c	2019-04-16 18:45:15.385157288 +0100
+@@ -37,7 +37,7 @@
+  * application. Application should call this api to get the scan results.
+  *
+  */
+-int32_t rsi_wlan_scan(int8_t *ssid, uint8_t chno, rsi_rsp_scan_t *result,uint32_t length)
++int32_t rsi_wlan_scan(const char *ssid, uint8_t chno, rsi_rsp_scan_t *result,uint32_t length)
+ {
+   int8_t          status = RSI_SUCCESS;
+ 
+@@ -93,7 +93,7 @@
+  *
+  */
+ 
+-int32_t rsi_wlan_scan_async(int8_t *ssid, uint8_t chno, void (*scan_response_handler)(uint16_t status, const uint8_t *buffer, const uint16_t length))
++int32_t rsi_wlan_scan_async(const char *ssid, uint8_t chno, void (*scan_response_handler)(uint16_t status, const uint8_t *buffer, const uint16_t length))
+ 
+ {
+   rsi_pkt_t       *pkt;
 @@ -180,6 +180,7 @@
            return status;
          }
@@ -1577,7 +1997,26 @@
      case RSI_WLAN_STATE_SCAN_DONE:
      case RSI_WLAN_STATE_INIT_DONE:
      case RSI_WLAN_STATE_CONNECTED:
-@@ -477,6 +479,7 @@
+@@ -315,7 +317,7 @@
+  *
+  */
+ 
+-int32_t rsi_wlan_connect(int8_t *ssid, rsi_security_mode_t sec_type, void *secret_key)
++int32_t rsi_wlan_connect(const char *ssid, rsi_security_mode_t sec_type, const char *secret_key)
+ {
+ 
+   int8_t          status = RSI_SUCCESS;
+@@ -373,7 +375,8 @@
+  *
+  */
+ 
+-int32_t rsi_wlan_connect_async(int8_t *ssid, rsi_security_mode_t sec_type, void *secret_key, void (*join_response_handler)(uint16_t status, const uint8_t *buffer, const uint16_t length))
++int32_t rsi_wlan_connect_async(const char *ssid, rsi_security_mode_t sec_type, const char *secret_key,
++                               void (*join_response_handler)(uint16_t status, const uint8_t *buffer, const uint16_t length))
+ {
+   rsi_eap_credentials_t *credentials;
+   rsi_req_wps_method_t *wps_method;
+@@ -477,6 +480,7 @@
            return status;
          }
        }
@@ -1585,7 +2024,7 @@
      case RSI_WLAN_STATE_BAND_DONE:
        {
  
-@@ -546,6 +549,7 @@
+@@ -546,6 +550,7 @@
  
        
        }
@@ -1593,15 +2032,88 @@
      case RSI_WLAN_STATE_INIT_DONE:
        {
  #if RSI_WMM_PS_ENABLE 
-@@ -643,6 +647,7 @@
+@@ -625,6 +630,37 @@
+           rsi_strcpy(scan->ssid, ssid);
+         }
+ 
++        if(join_response_handler != NULL )
++        {
++          rsi_wlan_async_connect_ctx_t *ctx = (rsi_wlan_async_connect_ctx_t *) calloc(1, sizeof(*ctx));
++
++          if(ctx == NULL)
++          {
++            rsi_pkt_free(&wlan_cb->wlan_tx_pool, pkt);
++
++            return RSI_ERROR_INSUFFICIENT_BUFFER;
++          }
++
++          ctx->sec_type = sec_type;
++
++          if(ssid != NULL)
++          {
++            strncpy(ctx->ssid, ssid, sizeof(ctx->ssid) - 1);
++          }
++
++          if(secret_key != NULL)
++          {
++            strncpy(ctx->secret_key, secret_key, sizeof(ctx->secret_key) - 1);
++          }
++
++          ctx->join_response_handler = join_response_handler;
++
++          //! Magic number to set asyncronous response
++          wlan_cb->expected_response = RSI_WLAN_RSP_ASYNCHRONOUS ;
++
++          wlan_cb->async_connect_ctx = ctx;
++        }
++
+         //! send scan command 
+         status = rsi_driver_wlan_send_cmd(RSI_WLAN_REQ_SCAN, pkt);
+ 
+@@ -633,6 +669,13 @@
+           //! free the packet
+           rsi_pkt_free(&wlan_cb->wlan_tx_pool, pkt);
+ 
++          if(wlan_cb->async_connect_ctx != NULL)
++          {
++            rsi_wlan_async_connect_ctx_t *ctx = wlan_cb->async_connect_ctx;
++            wlan_cb->async_connect_ctx = NULL;
++            rsi_driver_wlan_free_async_connect_ctx(ctx);
++          }
++
+           if(join_response_handler != NULL)
+           {
+             //! unlock mutex
+@@ -642,7 +685,13 @@
+           //! Return the status if error in sending command occurs
            return status;
          }
++        if(join_response_handler != NULL)
++        {
++          // Scan will take place and we'll re-enter this function.
++          break;
++        }
        }
 +      // fall through
      case RSI_WLAN_STATE_SCAN_DONE:
        {
  #if RSI_WMM_PS_ENABLE 
-@@ -2093,6 +2098,8 @@
+@@ -835,12 +884,12 @@
+           rsi_strcpy(join->ssid, ssid);
+         }
+ 
+-        //! Magic number to set asyncronous reswponse
++        //! Magic number to set asyncronous response
+         wlan_cb->expected_response = RSI_WLAN_RSP_ASYNCHRONOUS ;
+ 
+         if(join_response_handler != NULL )
+         {
+-          //! Register scan response handler
++          //! Register join response handler
+           wlan_cb->callback_list.wlan_join_response_handler = join_response_handler;
+         }
+ 
+@@ -2093,6 +2142,8 @@
    //! unlock mutex
    rsi_mutex_unlock(&wlan_cb->wlan_mutex);
  
@@ -1610,7 +2122,7 @@
    //! Return the status
    return status;
  
-@@ -2266,6 +2273,7 @@
+@@ -2266,6 +2317,7 @@
            return status;
          }
        }
@@ -1618,7 +2130,7 @@
      case RSI_WLAN_STATE_BAND_DONE:
        {
          //! send init command 
-@@ -2304,6 +2312,7 @@
+@@ -2304,6 +2356,7 @@
  #endif       
  
        }
@@ -1626,7 +2138,7 @@
      case RSI_WLAN_STATE_IP_CONFIG_DONE:
      case RSI_WLAN_STATE_IPV6_CONFIG_DONE:
      case RSI_WLAN_STATE_INIT_DONE:
-@@ -3984,10 +3993,10 @@
+@@ -3984,10 +4037,10 @@
    psk_ptr->type = type;
  
    //! copy PSK given by user into structure member
@@ -1639,3 +2151,25 @@
  
    //! send psk command 
    status = rsi_driver_wlan_send_cmd(RSI_WLAN_REQ_HOST_PSK, pkt);
+@@ -4018,7 +4071,7 @@
+  */
+ uint16_t rsi_wlan_register_callbacks(uint32_t callback_id, void (*callback_handler_ptr)(uint16_t status, uint8_t *buffer, const uint32_t length))
+ {
+-  if(callback_id > RSI_MAX_NUM_CALLBACKS)
++  if(callback_id >= RSI_WLAN_MAX_NUM_CALLBACKS)
+   {
+     /*
+      *Return , if the callback number exceeds the RSI_MAX_NUM_CALLBACKS ,or
+@@ -4080,7 +4133,11 @@
+   {
+     //! Register raw data receive notify call back handler
+     rsi_driver_cb->wlan_cb->callback_list.raw_data_receive_handler = callback_handler_ptr;
+-    
++  }
++  else if(callback_id == RSI_WLAN_STATE_NOTIFICATION_HANDLER)
++  {
++    //! Register async connection status notification handler
++    rsi_driver_cb->wlan_cb->callback_list.wlan_state_notification_handler = callback_handler_ptr;
+   }
+   return 0;
+ }

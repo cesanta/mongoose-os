@@ -34,10 +34,12 @@
 #define RSI_TCP_IP_FEATURE_BIT_MAP (TCP_IP_FEAT_BYPASS)
 
 //! To set custom feature select bit map
-#define RSI_CUSTOM_FEATURE_BIT_MAP 0
+#define RSI_CUSTOM_FEATURE_BIT_MAP                                         \
+  (CUSTOM_FEAT_DFS_CHANNEL_SUPPORT | CUSTOM_FEAT_ASYNC_CONNECTION_STATUS | \
+   FEAT_CUSTOM_FEAT_EXTENTION_VALID)
 
 //! To set Extended custom feature select bit map
-#define RSI_EXT_CUSTOM_FEATURE_BIT_MAP 0
+#define RSI_EXT_CUSTOM_FEATURE_BIT_MAP EXT_FEAT_DISABLE_DEBUG_PRINTS
 
 #define RSI_EXT_TCPIP_FEATURE_BITMAP 0
 
@@ -56,8 +58,9 @@
 //! Band command paramters
 /*=======================================================================*/
 
+extern uint8_t rs14100_wifi_get_band(void);
 //! RSI_BAND_2P4GHZ(2.4GHz) or RSI_BAND_5GHZ(5GHz) or RSI_DUAL_BAND
-#define RSI_BAND RSI_BAND_2P4GHZ
+#define RSI_BAND rs14100_wifi_get_band()
 
 /*=======================================================================*/
 
@@ -66,14 +69,14 @@
 
 //! RSI_ENABLE or RSI_DISABLE Set region support
 #define RSI_SET_REGION_SUPPORT \
-  RSI_DISABLE  //@ RSI_ENABLE or RSI_DISABLE set region
+  RSI_ENABLE  //@ RSI_ENABLE or RSI_DISABLE set region
 
 //! If 1:region configurations taken from user ;0:region configurations taken
 // from beacon
-#define RSI_SET_REGION_FROM_USER_OR_BEACON 1
+#define RSI_SET_REGION_FROM_USER_OR_BEACON 0
 
 //! 0-Default Region domain ,1-US, 2-EUROPE, 3-JAPAN
-#define RSI_REGION_CODE 1
+#define RSI_REGION_CODE 2
 
 //! 0- Without On Board Antenna , 1- With On Board Antenna
 #define RSI_MODULE_TYPE 1
@@ -119,7 +122,7 @@
 /*=======================================================================*/
 
 //! RSI_ENABLE or RSI_DISABLE BG Scan support
-#define RSI_BG_SCAN_SUPPORT RSI_DISABLE
+#define RSI_BG_SCAN_SUPPORT RSI_ENABLE
 
 //! RSI_ENABLE or RSI_DISABLE BG scan
 #define RSI_BG_SCAN_ENABLE RSI_ENABLE
@@ -439,7 +442,7 @@
 //! To configure listen interval
 #define RSI_CONFIG_CLIENT_LISTEN_INTERVAL 0
 //! To configure SSID
-#define RSI_CONFIG_CLIENT_SSID "OMGWTFBBQ"
+#define RSI_CONFIG_CLIENT_SSID "dummy"
 //! RSI_BAND_2P4GHZ(2.4GHz) or RSI_BAND_5GHZ(5GHz) or RSI_DUAL_BAND
 #define RSI_CONFIG_CLIENT_BAND RSI_DUAL_BAND
 //! To configure channel number
@@ -449,7 +452,7 @@
 //! To configure encryption type
 #define RSI_CONFIG_CLIENT_ENCRYPTION_TYPE 0
 //! To configure PSK
-#define RSI_CONFIG_CLIENT_PSK "OMGWTFBBQ"
+#define RSI_CONFIG_CLIENT_PSK "dummydummy"
 //! To configure PMK
 #define RSI_CONFIG_CLIENT_PMK ""
 //! Client Network parameters

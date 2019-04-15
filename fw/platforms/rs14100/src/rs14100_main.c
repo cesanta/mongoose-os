@@ -83,13 +83,13 @@ enum mgos_init_result mgos_freertos_pre_init(void) {
 
   xTaskCreateStatic((TaskFunction_t) rsi_wireless_driver_task, "RSI Drv",
                     sizeof(rsi_driver_task_stack) / sizeof(StackType_t), NULL,
-                    6, rsi_driver_task_stack, &rsi_driver_task_tcb);
+                    15, rsi_driver_task_stack, &rsi_driver_task_tcb);
 
-  uint8_t fw_version[16] = {0};
-  while (rsi_wlan_get(RSI_FW_VERSION, fw_version, sizeof(fw_version)) ==
+  rsi_rsp_fw_version_t rsp;
+  while (rsi_wlan_get(RSI_FW_VERSION, (uint8_t *) &rsp, sizeof(rsp)) ==
          RSI_ERROR_COMMAND_GIVEN_IN_WRONG_STATE) {
   }
-  LOG(LL_INFO, ("NWP fw version %s", fw_version));
+  LOG(LL_INFO, ("NWP version %s", rsp.firmwre_version));
 
   // Perform enough init to be able to get MAC address.
   // The rest will be done by the libraries.
@@ -97,11 +97,9 @@ enum mgos_init_result mgos_freertos_pre_init(void) {
     LOG(LL_ERROR, ("RSI %s init failed: %ld", "wireless", status));
     return MGOS_INIT_NET_INIT_FAILED;
   }
-
   if ((status = rsi_wlan_radio_init()) != RSI_SUCCESS) {
     LOG(LL_ERROR, ("RSI %s init failed: %ld", "radio", status));
   }
-
   return MGOS_INIT_OK;
 }
 

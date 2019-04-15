@@ -15,9 +15,22 @@
  * limitations under the License.
  */
 
+#pragma once
+
 #include "Common/chip/inc/rsi_error.h"
 #include "Wireless_Library/include/rsi_error.h"
 
 #include "common/cs_dbg.h"
 
-// no_extern_c_check
+#include "mgos_gpio.h"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+
+// Embedded WLAN Software Programming Reference Manual (PRM), ch. 12.1
+#define RSI_ERROR_WLAN_NO_AP_FOUND 0x0003
+
+#ifdef __cplusplus
+}
+#endif
