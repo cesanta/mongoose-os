@@ -968,7 +968,7 @@
    {
      if(src[i] && src[i + 1])
 --- ./Wireless_Library/driver/rsi_wlan.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Wireless_Library/driver/rsi_wlan.c	2019-04-16 18:45:15.381157174 +0100
++++ ./Wireless_Library/driver/rsi_wlan.c	2019-04-17 12:13:10.354195828 +0100
 @@ -100,6 +100,8 @@
    //! Get host descriptor pointer
    uint8_t *host_desc = (pkt->desc);
@@ -1094,7 +1094,21 @@
            }
  
            if(rsi_driver_cb->wlan_cb->callback_list.wlan_scan_response_handler != NULL)
-@@ -1262,8 +1307,10 @@
+@@ -1203,6 +1248,13 @@
+             }
+           }
+         }
++        else
++        {
++          if(rsi_driver_cb->wlan_cb->callback_list.wlan_scan_response_handler != NULL)
++          {
++            rsi_wlan_cb->callback_list.wlan_scan_response_handler(status, payload, payload_length);
++          }
++        }
+       }
+       break;
+     case RSI_WLAN_RSP_BG_SCAN:
+@@ -1262,8 +1314,10 @@
                  rsi_wlan_cb->callback_list.join_fail_handler(status, payload, payload_length);
                }
  
@@ -1105,7 +1119,7 @@
  
                if((rsi_wlan_check_waiting_socket_cmd() || rsi_wlan_check_waiting_wlan_cmd()) && (wlan_pkt_pending == 0))
                {
-@@ -1284,6 +1331,8 @@
+@@ -1284,6 +1338,8 @@
            //! Call asynchronous response handler to indicate to host
            rsi_wlan_cb->callback_list.wlan_join_response_handler(status, payload, payload_length);
  
@@ -1114,7 +1128,7 @@
            //! Clear expected response
            rsi_wlan_cb->expected_response = RSI_WLAN_RSP_CLEAR;
  
-@@ -1337,8 +1386,10 @@
+@@ -1337,8 +1393,10 @@
                rsi_wlan_cb->callback_list.ip_renewal_fail_handler(status, payload, payload_length); 
              }
  
@@ -1125,7 +1139,7 @@
  
              if(rsi_wlan_check_waiting_socket_cmd()  && (wlan_pkt_pending == 0))
              {
-@@ -1404,8 +1455,10 @@
+@@ -1404,8 +1462,10 @@
            //! Reset module state as Disconnect received
            common_cb->power_save.module_state = 0;
  
@@ -1136,7 +1150,7 @@
          }
        }
        break;
-@@ -1415,7 +1468,7 @@
+@@ -1415,7 +1475,7 @@
          status  = rsi_bytes2R_to_uint16(host_desc + RSI_STATUS_OFFSET);
        }
        break;
@@ -1145,7 +1159,7 @@
      case RSI_WLAN_RSP_SOCKET_CREATE:
        {
          if(status == RSI_SUCCESS)
-@@ -1531,7 +1584,7 @@
+@@ -1531,7 +1591,7 @@
          }
        }
        break;
@@ -1154,7 +1168,7 @@
      case RSI_WLAN_RSP_IPV4_CHANGE:
        {
          if(rsi_wlan_cb->callback_list.ip_change_notify_handler != NULL)
-@@ -1540,8 +1593,10 @@
+@@ -1540,8 +1600,10 @@
            rsi_wlan_cb->callback_list.ip_change_notify_handler(status, payload, payload_length); 
          }
  
@@ -1165,7 +1179,7 @@
  
          if(rsi_wlan_check_waiting_socket_cmd() && (wlan_pkt_pending == 0))
          {
-@@ -1615,7 +1670,7 @@
+@@ -1615,7 +1677,7 @@
            if(status == RSI_SUCCESS)
            {
              //! Call asynchronous response handler to indicate to host
@@ -1174,7 +1188,7 @@
            }
  
          }
-@@ -1673,6 +1728,7 @@
+@@ -1673,6 +1735,7 @@
        break;
  
  
@@ -1182,7 +1196,7 @@
      case RSI_WLAN_RSP_TCP_ACK_INDICATION:
        {
          rsi_rsp_tcp_ack_t *tcp_ack = (rsi_rsp_tcp_ack_t *)payload; 
-@@ -1709,6 +1765,7 @@
+@@ -1709,6 +1772,7 @@
  
        }
        break;
@@ -1190,7 +1204,7 @@
      case RSI_WLAN_RSP_WIRELESS_FWUP_OK:
      case RSI_WLAN_RSP_WIRELESS_FWUP_DONE:
        {
-@@ -1839,7 +1896,7 @@
+@@ -1839,7 +1903,7 @@
            return RSI_SUCCESS;
          }
        }
@@ -1199,7 +1213,7 @@
      case RSI_WLAN_RSP_UART_DATA_ACK:
        {
          //! check wlan_cb for any task is waiting for response
-@@ -1896,6 +1953,13 @@
+@@ -1896,6 +1960,13 @@
  	      }
        }
        break;
@@ -1213,7 +1227,7 @@
      default:
        break;
    }
-@@ -1909,6 +1973,12 @@
+@@ -1909,6 +1980,12 @@
      rsi_semaphore_post(&rsi_wlan_cb->wlan_sem);
    }
  
@@ -1226,7 +1240,7 @@
    return RSI_SUCCESS;
  }
  
-@@ -1996,6 +2066,7 @@
+@@ -1996,6 +2073,7 @@
            return status;
          }
        }
@@ -1234,7 +1248,7 @@
      case RSI_WLAN_STATE_BAND_DONE:
        {
  
-@@ -2295,7 +2366,7 @@
+@@ -2295,7 +2373,7 @@
    if(rsi_wlan_cb->callback_list.wlan_data_receive_handler != NULL)
    {
      //! Call asynchronous data receive handler to indicate to host
@@ -1243,7 +1257,7 @@
    }
  
  }
-@@ -2329,6 +2400,7 @@
+@@ -2329,6 +2407,7 @@
      rsi_semaphore_post(&rsi_driver_cb->wlan_cb->wlan_sem);
  
    }
@@ -1251,7 +1265,7 @@
  }
  
  
-@@ -2360,6 +2432,7 @@
+@@ -2360,6 +2439,7 @@
      rsi_semaphore_post(&rsi_driver_cb->wlan_cb->wlan_sem);
  
    }
@@ -1259,7 +1273,7 @@
  }
  
  /*==============================================*/
-@@ -2390,4 +2463,5 @@
+@@ -2390,4 +2470,5 @@
      rsi_semaphore_post(&rsi_driver_cb->wlan_cb->wlan_sem);
  
    }
