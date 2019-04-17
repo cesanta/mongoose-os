@@ -121,46 +121,43 @@ extern uint8_t rs14100_wifi_get_band(void);
 //!BG scan command parameters
 /*=======================================================================*/
 
-//! RSI_ENABLE or RSI_DISABLE BG Scan support
+struct rs14100_bg_scan_params {
+  const int *enable;
+  int scan_now;
+  const int *period;
+  const int *rssi_threshold;
+  const int *rssi_tolerance;
+  const int *active_duration_ms;
+  const int *passive_duration_ms;
+};
+extern struct rs14100_bg_scan_params g_wifi_sta_bg_scan_params;
+
 #define RSI_BG_SCAN_SUPPORT RSI_ENABLE
-
-//! RSI_ENABLE or RSI_DISABLE BG scan
-#define RSI_BG_SCAN_ENABLE RSI_ENABLE
-
-//! RSI_ENABLE or RSI_DISABLE instant BG scan
+#define RSI_BG_SCAN_ENABLE *g_wifi_sta_bg_scan_params.enable
 #define RSI_INSTANT_BG RSI_DISABLE
-
-//! BG scan threshold value
-#define RSI_BG_SCAN_THRESHOLD 10
-
-//! RSSI tolerance Threshold
-#define RSI_RSSI_TOLERANCE_THRESHOLD 4
-
-//! BG scan periodicity
-#define RSI_BG_SCAN_PERIODICITY 10
-
-//! Active scan duration
-#define RSI_ACTIVE_SCAN_DURATION 15
-
-//! Passive scan duration
-#define RSI_PASSIVE_SCAN_DURATION 20
-
-//! Multi probe
-#define RSI_MULTIPROBE RSI_DISABLE
+#define RSI_BG_SCAN_THRESHOLD -(*g_wifi_sta_bg_scan_params.rssi_threshold)
+#define RSI_RSSI_TOLERANCE_THRESHOLD *g_wifi_sta_bg_scan_params.rssi_tolerance
+#define RSI_BG_SCAN_PERIODICITY *g_wifi_sta_bg_scan_params.period
+#define RSI_ACTIVE_SCAN_DURATION *g_wifi_sta_bg_scan_params.active_duration_ms
+#define RSI_PASSIVE_SCAN_DURATION *g_wifi_sta_bg_scan_params.passive_duration_ms
+#define RSI_MULTIPROBE RSI_ENABLE
 
 /*=======================================================================*/
 
 //!Roaming parameters
 /*=======================================================================*/
 
-//! RSI_ENABLE or RSI_DISABLE Roaming support
+struct rs14100_roaming_params {
+  const int *enable;
+  const int *rssi_threshold;
+  const int *rssi_hysteresis;
+};
+extern struct rs14100_roaming_params g_wifi_sta_roaming_params;
+
 #define RSI_ROAMING_SUPPORT RSI_ENABLE
-
-//! roaming threshold value
-#define RSI_ROAMING_THRESHOLD 10
-
-//! roaming hysterisis value
-#define RSI_ROAMING_HYSTERISIS 4
+#define RSI_ROAMING_ENABLE *g_wifi_sta_roaming_params.enable
+#define RSI_ROAMING_THRESHOLD -(*g_wifi_sta_roaming_params.rssi_threshold)
+#define RSI_ROAMING_HYSTERISIS *g_wifi_sta_roaming_params.rssi_hysteresis
 
 /*=======================================================================*/
 
