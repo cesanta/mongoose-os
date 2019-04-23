@@ -175,6 +175,9 @@ void mgos_dev_system_restart(void) {
    */
   s_rebooting = true;
   system_restart();
+  // Not reached
+  while (1) {
+  }
 }
 
 void esp_print_reset_info(void) {

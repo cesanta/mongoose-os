@@ -37,6 +37,9 @@
 
 void mgos_dev_system_restart(void) {
   HAL_NVIC_SystemReset();
+  // Not reached.
+  while (1) {
+  }
 }
 
 void device_get_mac_address(uint8_t mac[6]) {

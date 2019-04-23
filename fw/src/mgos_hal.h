@@ -25,7 +25,7 @@ extern "C" {
 #endif /* __cplusplus */
 
 /* Restart system */
-void mgos_dev_system_restart(void);
+void mgos_dev_system_restart(void) __attribute__((noreturn));
 
 void mgos_lock(void);
 void mgos_unlock(void);

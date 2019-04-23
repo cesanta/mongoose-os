@@ -30,6 +30,9 @@
 void mgos_dev_system_restart(void) {
   sl_DeviceDisable(); /* Turn off NWP */
   MAP_PRCMMCUReset(true /* bIncludeSubsystem */);
+  // Not reached.
+  while (1) {
+  }
 }
 
 void SimpleLinkFatalErrorEventHandler(SlDeviceFatal_t *e) {

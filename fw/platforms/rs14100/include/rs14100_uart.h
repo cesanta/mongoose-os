@@ -29,6 +29,8 @@ struct mgos_uart_dev_config {
   struct rs14100_uart_pins pins;
 };
 
+void rs14100_uart_putc(int uart_no, char c);
+
 #ifdef __cplusplus
 }
 #endif

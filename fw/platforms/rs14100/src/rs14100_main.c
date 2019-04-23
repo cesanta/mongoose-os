@@ -26,6 +26,7 @@
 #include "mgos_freertos.h"
 #include "mgos_gpio.h"
 #include "mgos_system.h"
+#include "mgos_sys_config.h"
 #include "mgos_uart.h"
 
 #include "rs14100_sdk.h"
@@ -207,6 +208,14 @@ void rs14100_dump_sram(void) {
   mgos_cd_write_section("SRAM", (void *) SRAM_BASE_ADDR, SRAM_SIZE);
 }
 
+uint8_t rs14100_wifi_get_band(void) {
+#ifdef MGOS_HAVE_WIFI
+  return mgos_sys_config_get_wifi_sta_band();
+#endif
+  return 0;
+}
+
+#ifndef MGOS_BOOT_BUILD
 int main(void) {
   /* Move int vectors to RAM. */
   for (int i = 0; i < (int) ARRAY_SIZE(int_vectors); i++) {
@@ -253,3 +262,4 @@ int main(void) {
   /* not reached */
   abort();
 }
+#endif  // MGOS_BOOT_BUILD

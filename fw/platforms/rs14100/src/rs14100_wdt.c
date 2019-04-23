@@ -33,7 +33,7 @@ static void rs14100_wdt_int_handler(void) {
     return;
   }
   mgos_cd_puts("\r\nWDT timeout\r\n");
-  abort();
+  __builtin_trap();  // Executes an illegal instruction.
 }
 
 void mgos_wdt_enable(void) {

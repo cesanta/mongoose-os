@@ -27,6 +27,14 @@ APP_FS_FILES ?=
 APP_BIN_LIBS ?=
 # Extra parts to include in firmware
 APP_EXTRA_FW_PARTS ?=
+# Bootloader path
+MGOS_BL_BIN ?= $(MGOS_PLATFORM_PATH)/bin/bootloader.bin
+# Normally boot loader is not updated during OTA update.
+# The firmware built with this flag set to true will, when used for OTA,
+# will reflash the boot loader as well.
+MGOS_UPDATE_BOOT_LOADER ?= false
+# If enabled, produced image will also become the factory reset firmware.
+MGOS_UPDATE_FACTORY_RESET_FW ?= false
 
 MGOS_MG_NET_IF ?= MG_NET_IF_NULL
 
@@ -77,14 +85,28 @@ override GEN_DIR := $(abspath $(GEN_DIR))
 override BUILD_DIR := $(abspath $(BUILD_DIR))
 override MGOS_BL_BIN := $(abspath $(MGOS_BL_BIN))
 
-APP0_ELF = $(BUILD_DIR)/$(APP).elf
-APP0_BIN = $(BUILD_DIR)/$(APP).bin
+APP0_ELF = $(BUILD_DIR)/$(APP).0.elf
+APP0_BIN = $(BUILD_DIR)/$(APP).0.bin
+APP1_ELF = $(BUILD_DIR)/$(APP).1.elf
+APP1_BIN = $(BUILD_DIR)/$(APP).1.bin
 SRAM_BASE = 0x200000
 SRAM_SIZE ?= 0x20000
 FLASH_BASE = 0x8000000
 FLASH_SIZE = 0x400000
+FLASH_SYS_RSV = 0x12000
+APP_SLOT_SIZE ?= 0x100000
+ifneq "$(MGOS_BL_BIN)" ""
+FLASH_APP0_ADDR = 0x100000
+FLASH_FS0_ADDR = 0x40000
+FLASH_APP1_ADDR = 0x200000
+FLASH_FS1_ADDR = 0x80000
+FLASH_APPF_ADDR = 0x300000
+FLASH_FSF_ADDR = 0xc0000
+MGOS_CFLAGS += -DMGOS_BL_ENABLE
+else
 FLASH_APP0_ADDR = 0x12000
 FLASH_FS0_ADDR = 0x300000
+endif
 
 MGOS_ROOT_DEVTAB ?= qspi0 rsi1x_flash {"cs": 0} | \
                     fs0   part        {"dev": "qspi0", "offset": $(FLASH_FS0_ADDR), "size": $(MGOS_ROOT_FS_SIZE)}
@@ -227,14 +249,36 @@ CXXFLAGS = -std=gnu++11 -fno-exceptions $(C_CXX_FLAGS) $(APP_CXXFLAGS)
 
 LDFLAGS += -Wl,--defsym=SRAM_BASE=$(SRAM_BASE) -Wl,--defsym=SRAM_SIZE=$(SRAM_SIZE) \
            -Wl,--defsym=FLASH_BASE=$(FLASH_BASE) -Wl,--defsym=FLASH_SIZE=$(FLASH_SIZE) \
-           -Wl,--defsym=FLASH_APP0_ADDR=$(FLASH_APP0_ADDR)
+           -Wl,--defsym=FLASH_APP_SIZE=$(APP_SLOT_SIZE)
 LDFLAGS += -Wl,--gc-sections
 
-LD_SCRIPT = $(MGOS_PLATFORM_PATH)/ld/rs14100.ld
+FW_PARTS =
 
-FW_PARTS = app0:type=app,src=$(APP0_BIN),addr=$(FLASH_APP0_ADDR) \
-           fs0:type=fs,src=$(FS_IMG),addr=$(FLASH_FS0_ADDR)
+ifneq "$(MGOS_BL_BIN)" ""
+FW_PARTS += boot:type=boot,src=$(MGOS_BL_BIN),addr=0x12000,update=$(MGOS_UPDATE_BOOT_LOADER) \
+            bcfg0:type=bootcfg,addr=0x1e000,size=0x1000,fill=0xff \
+            bcfg1:type=bootcfg,addr=0x1f000,size=0x1000,fill=0xff
+endif
+
+FW_PARTS += app0:type=app,src=$(APP0_BIN),addr=$(FLASH_APP0_ADDR)
+ifneq "$(MGOS_ROOT_FS_SIZE)" "0"
+FW_PARTS += fs:type=fs,src=$(FS_IMG),addr=$(FLASH_FS0_ADDR)
+endif
+
+ifneq "$(MGOS_BL_BIN)" ""
+FW_PARTS += app1:type=app,src=$(APP1_BIN),addr=$(FLASH_APP1_ADDR),flash=false
+endif
+
+ifeq "$(MGOS_UPDATE_FACTORY_RESET_FW)" "true"
+FW_PARTS += appF:type=app,src=$(APP0_BIN),addr=$(FLASH_APPF_ADDR),update=true
+ifneq "$(MGOS_ROOT_FS_SIZE)" "0"
+FW_PARTS += fsF:type=fs,src=$(FS_IMG),addr=$(FLASH_FSF_ADDR),update=true
+endif
+endif
+
 FW_PARTS += $(APP_EXTRA_FW_PARTS)
+
+LD_SCRIPT ?= $(MGOS_PLATFORM_PATH)/ld/rs14100.ld
 
 MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o))
 RS14100_OBJS = $(addprefix $(BUILD_DIR)/,$(RS14100_SRCS:=.o))
@@ -251,7 +295,13 @@ OC = arm-none-eabi-objcopy
 
 all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(APP0_BIN) $(FW_ZIP)
 
-$(FW_MANIFEST): $(APP0_BIN) $(MGOS_CONFIG_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C) $(FS_IMG)
+$(FW_MANIFEST): $(APP0_BIN) $(MGOS_CONFIG_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C)
+ifneq "$(MGOS_ROOT_FS_SIZE)" "0"
+$(FW_MANIFEST): $(FS_IMG)
+endif
+ifneq "$(MGOS_BL_BIN)" ""
+$(FW_MANIFEST): $(APP1_BIN)
+endif
 
 $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR):
 	$(vecho) "MKDIR $@"
@@ -283,17 +333,34 @@ $(GENFILES_FLAG): $(GENFILES_LIST)
 
 BIN_PARTS = $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(RS14100_OBJS) $(APP_BIN_LIB_FILES)
 
-$(APP0_ELF): $(BIN_PARTS) $(LD_SCRIPT)
-	$(vecho) "LD    $@ (BL=$(notdir $(MGOS_BL_BIN)) LDS=$(notdir $(LD_SCRIPT)))"
+# link objs,script,offset
+define link
+	$(vecho) "LD    $@ ($3)"
 	$(Q) $(CC) $(CFLAGS) $(LDFLAGS) \
-	  -Wl,-Map=$@.map -Wl,--start-group $(BIN_PARTS) $(RS14100_LIBC) -lgcc -lnosys -Wl,--end-group \
-	  -T$(LD_SCRIPT) -o $@
+	  -Wl,--defsym=FLASH_APP_OFFSET=$3 \
+	  -Wl,-Map=$@.map -Wl,--start-group $1 $(RS14100_LIBC) -lgcc -lnosys -Wl,--end-group \
+	  -T$2 -o $@
+endef
 
-$(APP0_BIN): $(APP0_ELF)
+$(APP0_ELF): $(BIN_PARTS) $(LD_SCRIPT)
+	$(call link,$(BIN_PARTS),$(LD_SCRIPT),$(FLASH_APP0_ADDR))
+
+$(APP1_ELF): $(BIN_PARTS) $(LD_SCRIPT)
+	$(call link,$(BIN_PARTS),$(LD_SCRIPT),$(FLASH_APP1_ADDR))
+
+define objcopy
 	$(vecho) "BIN   $@"
 	$(Q) $(OC) -Obinary -R .boot_state $^ $@
-	$(vecho) "  Code: $$($(OC) -Obinary -j .text $^ /dev/fd/1 | wc -c)"
-	$(vecho) "  Data: $$($(OC) -Obinary -j .rodata $^ /dev/fd/1 | wc -c) + $$($(OC) -Obinary -j .data $^ /dev/fd/1 | wc -c)"
+endef
+
+$(APP0_BIN): $(APP0_ELF)
+	$(call objcopy)
+	$(vecho) "  Size: $$(ls -l -1 $@ | cut -d ' ' -f 5)"
+	$(vecho) "    Code: $$($(OC) -Obinary -j .text $^ /dev/fd/1 | wc -c)"
+	$(vecho) "    Data: $$($(OC) -Obinary -j .rodata $^ /dev/fd/1 | wc -c) + $$($(OC) -Obinary -j .data $^ /dev/fd/1 | wc -c)"
+
+$(APP1_BIN): $(APP1_ELF)
+	$(call objcopy)
 
 include $(MGOS_PATH)/common/scripts/build_info.mk
 include $(MGOS_PATH)/common/scripts/ffi_exports.mk
@@ -309,10 +376,6 @@ $(MGOS_CONFIG_C): $(MGOS_CONF_SCHEMA) $(MANIFEST_FINAL)
 
 $(FS_IMG): $(APP_FS_DIRS) $(FS_FILES) $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(MKFS)
 	$(call mkfs,$(MGOS_ROOT_FS_SIZE),$(MGOS_ROOT_FS_OPTS))
-
-$(BL_BIN_C): $(MGOS_BL_BIN)
-	$(vecho) "GEN   $@"
-	$(Q) $(FW_META_CMD) xxd --var_name bl_bin --const --section .bl_bin $(MGOS_BL_BIN) > $@
 
 $(FFI_EXPORTS_C): $(FS_FILES)
 	$(call gen_ffi_exports,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))

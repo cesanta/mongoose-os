@@ -202,6 +202,7 @@ void mgos_uart_hal_dispatch_bottom(struct mgos_uart_state *us) {
 void mgos_uart_hal_flush_fifo(struct mgos_uart_state *us) {
   struct rs14100_uart_state *uds = (struct rs14100_uart_state *) us->dev_data;
   struct cs_rbuf *itxb = &uds->itx_buf;
+  uds->regs->IER_b.ETBEI = uds->regs->IER_b.PTIME = false;
   while (itxb->used > 0) {
     rs14100_uart_tx_byte_from_buf(us);
   }
@@ -377,6 +378,7 @@ bool mgos_uart_hal_init(struct mgos_uart_state *us) {
   NVIC_EnableIRQ(irqn);
   us->dev_data = uds;
   s_us[us->uart_no] = us;
+  (void) int_handler;
   return true;
 }
 

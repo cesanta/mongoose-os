@@ -46,6 +46,9 @@ void mgos_dev_system_restart(void) {
   MAP_PRCMHibernateIntervalSet(328 /* 32KHz ticks, 100 ms */);
   MAP_PRCMHibernateWakeupSourceEnable(PRCM_HIB_SLOW_CLK_CTR);
   MAP_PRCMHibernateEnter();
+  // Not reached.
+  while (1) {
+  }
 }
 
 /* There is no true random source on CC3200. */

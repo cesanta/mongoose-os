@@ -10,8 +10,8 @@ _stack = SRAM_BASE + SRAM_SIZE;
 _stack_size = 0x400;
 
 MEMORY {
-  FLASH (rx)  : ORIGIN = FLASH_BASE + FLASH_APP0_ADDR, LENGTH = FLASH_SIZE - FLASH_APP0_ADDR
-  SRAM  (rwx) : ORIGIN = SRAM_BASE,  LENGTH = SRAM_SIZE
+  FLASH (rx)  : ORIGIN = FLASH_BASE + FLASH_APP_OFFSET, LENGTH = FLASH_APP_SIZE
+  SRAM  (rwx) : ORIGIN = SRAM_BASE, LENGTH = SRAM_SIZE
 }
 
 /* Define output sections */
@@ -20,14 +20,17 @@ SECTIONS {
     KEEP(*(.flash_int_vectors))
   } > FLASH
 
+  /* Small area at the top of RAM for communicating between loader and app. */
+  .boot_state : {
+    *(.boot_state)
+  } > SRAM
+
   .data : {
     _data_start = .;
-    . = ALIGN(256);  /* Vectors must be aligned to 0x100 */
     KEEP(*(.ram_int_vectors))
     *(.data SORT(.data.*))
     *(SORT(.rodata.IRAM.*))
     *(SORT(.text.IRAM.*))
-    *(.igot.plt)
     _data_end = .;
   } > SRAM AT > FLASH
   _data_flash_start = LOADADDR(.data);
@@ -82,11 +85,15 @@ SECTIONS {
   } > SRAM
 
   .heap : {
-    . = ALIGN(8);
     _heap_start = .;
-    . = . + (LENGTH(SRAM) - SIZEOF(.data) - SIZEOF(.bss) - _stack_size);
-    . = ALIGN(8);
+    . = . + (LENGTH(SRAM) - SIZEOF(.data) - SIZEOF(.bss) - _stack_size - 1024);
     _heap_end = .;
+  } > SRAM
+
+  .stack : {
+    . = ALIGN(4);
+    . = . + _stack_size;
+    _stack = .;
   } > SRAM
 
   /* Remove information from the standard libraries */

@@ -155,7 +155,7 @@ int main(void) {
   /* not reached */
   abort();
 }
-#endif
+#endif  // MGOS_BOOT_BUILD
 
 void assert_failed(uint8_t *file, uint32_t line) {
   fprintf(stderr, "assert_failed @ %s:%d\r\n", file, (int) line);

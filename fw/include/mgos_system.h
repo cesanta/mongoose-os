@@ -70,7 +70,7 @@ void mgos_wdt_enable(void);
 void mgos_wdt_disable(void);
 
 /* Restart system */
-void mgos_system_restart(void);
+void mgos_system_restart(void) __attribute__((noreturn));
 
 /* Delay given number of milliseconds */
 void mgos_msleep(uint32_t msecs);
