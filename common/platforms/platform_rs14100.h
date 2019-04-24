@@ -15,7 +15,9 @@
  * limitations under the License.
  */
 
-#pragma once
+#ifndef CS_COMMON_PLATFORMS_PLATFORM_RS14100_H_
+#define CS_COMMON_PLATFORMS_PLATFORM_RS14100_H_
+#if CS_PLATFORM == CS_P_RS14100
 
 #include <ctype.h>
 #include <errno.h>
@@ -54,3 +56,6 @@ typedef struct stat cs_stat_t;
 #ifdef __cplusplus
 }
 #endif
+
+#endif /* CS_PLATFORM == CS_P_RS14100 */
+#endif /* CS_COMMON_PLATFORMS_PLATFORM_RS14100_H_ */

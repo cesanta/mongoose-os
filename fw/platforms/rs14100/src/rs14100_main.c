@@ -255,7 +255,7 @@ int main(void) {
   mgos_cd_register_section_writer(arm_exc_dump_regs);
   mgos_cd_register_section_writer(rs14100_dump_sram);
 
-  NVIC_SetPriorityGrouping(3 /* NVIC_PRIORITYGROUP_4 */);
+  NVIC_SetPriorityGrouping(0);
   NVIC_SetPriority(MemoryManagement_IRQn, 0);
   NVIC_SetPriority(BusFault_IRQn, 0);
   NVIC_SetPriority(UsageFault_IRQn, 0);
