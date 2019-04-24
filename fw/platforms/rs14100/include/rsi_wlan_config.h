@@ -102,10 +102,10 @@ extern uint8_t rs14100_wifi_get_band(void);
 /*=======================================================================*/
 
 //! RSI_ENABLE or RSI_DISABLE rejoin params
-#define RSI_REJOIN_PARAMS_SUPPORT RSI_DISABLE
+#define RSI_REJOIN_PARAMS_SUPPORT RSI_ENABLE
 
 //! Rejoin retry count. If 0 retries infinity times
-#define RSI_REJOIN_MAX_RETRY 0
+#define RSI_REJOIN_MAX_RETRY 4
 
 //! Periodicity of rejoin attempt
 #define RSI_REJOIN_SCAN_INTERVAL 4
