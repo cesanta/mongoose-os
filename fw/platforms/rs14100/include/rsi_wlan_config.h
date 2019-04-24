@@ -175,11 +175,11 @@ extern struct rs14100_roaming_params g_wifi_sta_roaming_params;
 //! Scan command parameters
 /*=======================================================================*/
 
-//! scan channel bit map in 2.4GHz band,valid if given channel to scan is 0
-#define RSI_SCAN_CHANNEL_BIT_MAP_2_4 0
-
-//! scan channle bit map in 5GHz band ,valid if given channel to scan is 0
-#define RSI_SCAN_CHANNEL_BIT_MAP_5 0
+// We explicitly enable all channels as a workaround for 5GHz DFS channels
+// not being enabled in dual-band mode (RP case 00005162).
+// Note also that if any of the bitmaps is non-zero, both are applied.
+#define RSI_SCAN_CHANNEL_BIT_MAP_2_4 0x3fff
+#define RSI_SCAN_CHANNEL_BIT_MAP_5 0x7fffff
 
 //! scan_feature_bitmap ,valid only if specific channel to scan and ssid are
 // given
