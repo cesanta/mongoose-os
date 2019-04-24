@@ -27,8 +27,36 @@
  typedef enum en{
  	Enable = 1,
 --- ./Common/chip/src/system_RS1xxxx.c.orig	2018-10-24 19:33:26.000000000 +0100
-+++ ./Common/chip/src/system_RS1xxxx.c	2019-04-17 14:51:12.426116851 +0100
-@@ -233,7 +233,7 @@
++++ ./Common/chip/src/system_RS1xxxx.c	2019-04-18 16:17:48.571318396 +0100
+@@ -45,7 +45,26 @@
+  *----------------------------------------------------------------------------*/
+ uint32_t SystemCoreClock = __SYSTEM_CLOCK;/*!< System Clock Frequency (Core Clock)*/
+ 
+-SYSTEM_CLOCK_SOURCE_FREQUENCIES_T system_clocks; /*!< System Clock sources Frequencies */
++/*!< System Clock sources Frequencies */
++SYSTEM_CLOCK_SOURCE_FREQUENCIES_T system_clocks = {
++  .m4ss_ref_clk     = DEFAULT_32MHZ_RC_CLOCK,
++  .ulpss_ref_clk    = DEFAULT_32MHZ_RC_CLOCK,
++  .soc_pll_clock    = DEFAULT_SOC_PLL_CLOCK,
++  .modem_pll_clock  = DEFAULT_MODEM_PLL_CLOCK,
++  .modem_pll_clock2 = DEFAULT_MODEM_PLL_CLOCK,
++  .intf_pll_clock   = DEFAULT_INTF_PLL_CLOCK,
++  .soc_clock        = DEFAULT_32MHZ_RC_CLOCK,
++  .rc_32khz_clock   = DEFAULT_32KHZ_RC_CLOCK,
++  .rc_32mhz_clock   = DEFAULT_32MHZ_RC_CLOCK,
++  .ro_20mhz_clock   = DEFAULT_20MHZ_RO_CLOCK,
++  .ro_32khz_clock   = DEFAULT_32KHZ_RO_CLOCK,
++  .xtal_32khz_clock = DEFAULT_32KHZ_XTAL_CLOCK,
++  .doubler_clock    = DEFAULT_DOUBLER_CLOCK,
++  .rf_ref_clock     = DEFAULT_RF_REF_CLOCK,
++  .mems_ref_clock   = DEFAULT_MEMS_REF_CLOCK,
++  .byp_rc_ref_clock = DEFAULT_32MHZ_RC_CLOCK,
++  .i2s_pll_clock    = DEFAULT_I2S_PLL_CLOCK,
++};
+ 
+ uint32_t npssIntrState =0;
+ uint32_t __sp;
+@@ -233,7 +252,7 @@
   *         retrieved from cpu registers.
   * @return none
   */
@@ -37,6 +65,32 @@
  {
    /*Updated the default SOC clock frequency*/
  	SystemCoreClock = DEFAULT_32MHZ_RC_CLOCK;
+@@ -339,25 +358,6 @@
+ 	/* Configuring RC-32MHz Clock for HF-FSM */
+ 	RSI_PS_FsmHfClkSel(FSM_32MHZ_RC);
+   
+-  /*Update the system clock sources with source generating frequency*/  
+-	system_clocks.m4ss_ref_clk 			= DEFAULT_32MHZ_RC_CLOCK;
+-  system_clocks.ulpss_ref_clk			= DEFAULT_32MHZ_RC_CLOCK;
+-	system_clocks.soc_pll_clock 		= DEFAULT_SOC_PLL_CLOCK;
+-	system_clocks.modem_pll_clock 	= DEFAULT_MODEM_PLL_CLOCK;
+-	system_clocks.modem_pll_clock2  = DEFAULT_MODEM_PLL_CLOCK;
+-	system_clocks.intf_pll_clock 	  = DEFAULT_INTF_PLL_CLOCK;
+-	system_clocks.soc_clock 				= DEFAULT_32MHZ_RC_CLOCK;
+-	system_clocks.rc_32khz_clock 	  = DEFAULT_32KHZ_RC_CLOCK;
+-	system_clocks.rc_32mhz_clock 	  = DEFAULT_32MHZ_RC_CLOCK;
+-	system_clocks.ro_20mhz_clock 	  = DEFAULT_20MHZ_RO_CLOCK;
+-	system_clocks.ro_32khz_clock 	  = DEFAULT_32KHZ_RO_CLOCK;
+-	system_clocks.xtal_32khz_clock  = DEFAULT_32KHZ_XTAL_CLOCK;
+-	system_clocks.doubler_clock 		= DEFAULT_DOUBLER_CLOCK;
+-  system_clocks.rf_ref_clock  		= DEFAULT_RF_REF_CLOCK;
+-  system_clocks.mems_ref_clock  	= DEFAULT_MEMS_REF_CLOCK;
+-  system_clocks.byp_rc_ref_clock  = DEFAULT_32MHZ_RC_CLOCK;
+-  system_clocks.i2s_pll_clock     = DEFAULT_I2S_PLL_CLOCK;
+-  
+ 	/* Change the power state from PS4 to PS3 */		
+ 	RSI_PS_PowerStateChangePs4toPs3();
+ 	/* Configure DCDC to give lower output voltage.*/
 @@ -383,7 +383,7 @@
  error_t RSI_PS_EnterDeepSleep(SLEEP_TYPE_T sleepType , uint8_t lf_clk_mode)
  {
