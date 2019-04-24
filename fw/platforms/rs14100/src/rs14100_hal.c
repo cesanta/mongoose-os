@@ -25,6 +25,8 @@
 struct rs14100_bg_scan_params g_wifi_sta_bg_scan_params;
 struct rs14100_roaming_params g_wifi_sta_roaming_params;
 
+uint32_t mgos_bitbang_n100_cal = 0;
+
 void device_get_mac_address(uint8_t mac[6]) {
   if (rsi_wlan_get(RSI_MAC_ADDRESS, mac, 6) != RSI_SUCCESS) {
     memset(mac, 0xaa, 6);

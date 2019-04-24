@@ -199,9 +199,14 @@ void rs14100_clock_config(uint32_t cpu_freq) {
   SystemCoreClockUpdate();
 }
 
+extern void mgos_nsleep100_cal(void);
+
 void SystemCoreClockUpdate(void) {
   SystemCoreClock = system_clocks.soc_clock;
   SystemCoreClockMHZ = SystemCoreClock / 1000000;
+#ifndef MGOS_BOOT_BUILD
+  mgos_nsleep100_cal();
+#endif
 }
 
 void rs14100_dump_sram(void) {

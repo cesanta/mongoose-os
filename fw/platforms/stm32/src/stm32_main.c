@@ -90,7 +90,7 @@ enum mgos_init_result mgos_freertos_pre_init() {
 
 uint32_t SystemCoreClockMHZ = 0;
 uint32_t mgos_bitbang_n100_cal = 0;
-extern void mgos_nsleep100_cal();
+extern void mgos_nsleep100_cal(void);
 
 void SystemCoreClockUpdate(void) {
   uint32_t presc =
