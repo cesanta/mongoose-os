@@ -86,7 +86,7 @@ SECTIONS {
 
   .heap : {
     _heap_start = .;
-    . = . + (LENGTH(SRAM) - SIZEOF(.data) - SIZEOF(.bss) - _stack_size - 1024);
+    . = . + (LENGTH(SRAM) - SIZEOF(.data) - SIZEOF(.bss) - _stack_size - 1024 - 8);
     _heap_end = .;
   } > SRAM
 
