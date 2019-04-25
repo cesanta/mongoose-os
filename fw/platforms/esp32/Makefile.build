@@ -208,7 +208,14 @@ $(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
 	$(vecho) "MKDIR $@"
 	$(Q) mkdir -p $@
 
-$(FW_MANIFEST): $(APP_BIN) $(BOOTLOADER_BIN) $(PARTITION_TABLE_BIN) $(FS_IMG) $(MKFS)
+app-bin-check: $(APP_BIN)
+	$(eval _appsize := $(shell ls -1 -l $(APP_BIN) | awk '{print $$5}'))
+	$(eval _appslotsize := $(shell echo $$(($(APP_SLOT_SIZE)))))
+	$(eval _appsizepct := $(shell echo $$(($(_appsize) * 100 / $(_appslotsize)))))
+	$(vecho) "  App size: $(_appsize) of $(_appslotsize) ($(_appsizepct)%)"
+	[ $(_appsize) -lt $(_appslotsize) ] || { echo App is too big && exit 1; }
+
+$(FW_MANIFEST): app-bin-check $(BOOTLOADER_BIN) $(PARTITION_TABLE_BIN) $(FS_IMG) $(MKFS)
 
 # mgos_config is generated during binary build
 $(GEN_DIR)/mgos_config_schema.json $(GEN_DIR)/mgos_ro_vars_schema.json: all_binaries
