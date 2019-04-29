@@ -112,9 +112,18 @@ void esp_umm_init(void) {
   /* Nothing to do, see header for details */
 }
 
+static esp_umm_malloc_OutOfMemoryCallback_t outOfMemoryCallback = NULL;
+
+void esp_umm_oom_register_OutOfMemoryCallback(esp_umm_malloc_OutOfMemoryCallback_t callback) {
+  outOfMemoryCallback = callback;
+}
+
 void esp_umm_oom_cb(size_t size, size_t blocks_cnt) {
   fprintf(stderr, "E:M %u (%u blocks)\n", (unsigned int) size,
           (unsigned int) blocks_cnt);
+  if( outOfMemoryCallback != NULL ) {
+    outOfMemoryCallback(size, blocks_cnt);
+  }
 }
 
 #endif /* ESP_UMM_ENABLE */
