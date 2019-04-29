@@ -50,7 +50,7 @@ MGOS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_sys_config.yaml
 VPATH += $(MGOS_ESP_SRC_PATH) $(MGOS_PATH)/common \
          $(MGOS_PATH)/common/platforms/esp/src
 
-MGOS_SRCS += cs_crc32.c cs_dbg.c cs_file.c cs_rbuf.c json_utils.c
+MGOS_SRCS += cs_crc32.c cs_file.c cs_rbuf.c json_utils.c
 
 VPATH += $(MGOS_VPATH)
 
@@ -76,9 +76,6 @@ C_CXX_CFLAGS += -DMGOS_APP=\"$(APP)\" -DFW_ARCHITECTURE=$(APP_PLATFORM) \
                 -DMG_ENABLE_DIRECTORY_LISTING \
                 -DCS_DISABLE_MD5 -DMG_EXT_MD5 \
                 -DCS_DISABLE_SHA1 -DMG_EXT_SHA1
-
-                # TODO(dfrank): add support for encryption in mmap, and uncomment
-                #-DCS_MMAP -DSPIFFS_ON_PAGE_MOVE_HOOK=mgos_vfs_mmap_spiffs_on_page_move_hook
 
 CFLAGS += $(C_CXX_CFLAGS)
 CXXFLAGS += $(C_CXX_CFLAGS)
@@ -121,5 +118,5 @@ $(FFI_EXPORTS_C): $(APP_FS_FILES)
 	  -c $< -o $@
 
 COMPONENT_EXTRA_INCLUDES = $(MGOS_ESP_SRC_PATH) $(MGOS_ESP_PATH)/include $(MGOS_ESP_PATH)/include/spiffs \
-                           $(SPIFFS_PATH) $(GEN_DIR) $(sort $(APP_SOURCE_DIRS)) $(MGOS_IPATH) \
+                           $(GEN_DIR) $(sort $(APP_SOURCE_DIRS)) $(MGOS_IPATH) \
                            $(IDF_PATH)/components/freertos/include/freertos

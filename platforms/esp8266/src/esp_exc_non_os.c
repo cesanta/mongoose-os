@@ -26,7 +26,7 @@
 
 #include "mgos_mmap_esp_internal.h"
 
-#include "common/platforms/esp8266/esp_missing_includes.h"
+#include "esp_missing_includes.h"
 #include "esp_exc.h"
 #include "esp_hw.h"
 

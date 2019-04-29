@@ -18,8 +18,8 @@
 #include <stdint.h>
 
 #include <c_types.h>
-#include "common/platforms/esp8266/esp_missing_includes.h"
-#include "common/platforms/esp8266/rboot/rboot/appcode/rboot-api.h"
+#include "esp_missing_includes.h"
+#include "platforms/esp8266/rboot/rboot/appcode/rboot-api.h"
 
 IRAM NOINSTR void Cache_Read_Enable_New(void) {
   static uint8_t m1 = 0xff, m2 = 0xff;

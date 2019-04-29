@@ -99,7 +99,7 @@
 */
 
 #include <ets_sys.h>
-#include "common/platforms/esp8266/esp_missing_includes.h"
+#include "esp_missing_includes.h"
 
 #include <osapi.h>
 #include <os_type.h>

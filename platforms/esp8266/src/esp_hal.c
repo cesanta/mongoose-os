@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-#include "common/platforms/esp8266/esp_missing_includes.h"
+#include "esp_missing_includes.h"
 
 #ifdef RTOS_SDK
 #include "esp_misc.h"

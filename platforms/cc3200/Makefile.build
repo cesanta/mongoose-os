@@ -48,8 +48,6 @@ APP_PATH := $(CURDIR)
 SDK_PATH ?= /cc3200-sdk
 MGOS_CC3200_PATH ?= $(MGOS_PATH)/platforms/cc3200
 MGOS_CC32XX_PATH ?= $(MGOS_PATH)/platforms/cc32xx
-COMMON_CC3200_PATH ?= $(MGOS_PATH)/common/platforms/cc3200
-SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 BOOT_PATH ?= $(MGOS_CC3200_PATH)/boot
 
 BUILD_DIR ?= $(CURDIR)/.build
@@ -87,10 +85,8 @@ CC3200_SAFE_CODE_UPDATE ?= 1
 FS_STAGING_DIR = $(BUILD_DIR)/fs
 
 VPATH = $(MGOS_VPATH) $(APP_SOURCE_DIRS) $(MGOS_SRC_PATH) $(MGOS_CC32XX_PATH)/src $(MGOS_CC3200_PATH)/src \
-        $(COMMON_PATH)/platforms/arm \
         $(BOOT_PATH)/lib
 IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
-        $(COMMON_PATH)/platforms/arm \
         $(MGOS_CC32XX_PATH)/include $(MGOS_CC32XX_PATH)/include/spiffs \
         $(MGOS_CC32XX_PATH)/src $(MGOS_CC3200_PATH)/src \
         $(BOOT_PATH)/lib $(GEN_DIR)
@@ -154,12 +150,7 @@ MGOS_SRCS += mgos_event.c \
 
 ifneq "$(TOOLCHAIN)" "gcc"
   MGOS_SRCS += umm_malloc.c
-  VPATH += $(COMMON_PATH)/umm_malloc
 endif
-
-IPATH += $(SPIFFS_PATH)
-VPATH += $(SPIFFS_PATH)
-MGOS_SRCS += $(notdir $(wildcard $(SPIFFS_PATH)/*.c))
 
 DRIVER_SRCS = cpu.c flash.c i2c.c interrupt.c pin.c prcm.c spi.c timer.c uart.c udma.c utils.c
 SL_SRCS = socket.c wlan.c driver.c device.c netapp.c netcfg.c network_common.c \
@@ -260,7 +251,7 @@ OBJCOPY = arm-none-eabi-objcopy
 
 ifeq "$(TOOLCHAIN)" "gcc"
 
-include $(COMMON_CC3200_PATH)/gcc.mk
+include $(MGOS_CC3200_PATH)/gcc.mk
 APP_LD_SCRIPT ?= $(COMMON_CC3200_PATH)/cc3200.ld
 APP_LDFLAGS += --defsym=ORG=$(CC3200_APP_ORG) --defsym=RAM_SIZE=$(CC3200_SRAM_SIZE) --entry=_c_int00
 MGOS_OBJS += $(BUILD_DIR)/startup_gcc.c.o
@@ -268,7 +259,7 @@ VPATH += $(MGOS_CC3200_PATH)/tools
 
 else
 
-include $(COMMON_CC3200_PATH)/ti.mk
+include $(MGOS_CC3200_PATH)/ti.mk
 APP_LD_SCRIPT ?= $(MGOS_CC3200_PATH)/ld/cc3200.cmd
 APP_LDFLAGS += --ram_model --cinit_compression=off --copy_compression=off \
                --heap_size=0 --stack_size=0x100 \

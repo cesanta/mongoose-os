@@ -17,7 +17,7 @@
 
 #include "mongoose.h"
 
-#include "common/platforms/esp8266/esp_missing_includes.h"
+#include "esp_missing_includes.h"
 
 #ifdef RTOS_SDK
 #include <esp_common.h>
@@ -30,7 +30,6 @@
 #endif
 
 #include "common/cs_dbg.h"
-#include "common/platforms/esp8266/esp_umm_malloc.h"
 #include "mgos_app.h"
 #include "mgos_core_dump.h"
 #include "mgos_debug_internal.h"
@@ -53,6 +52,7 @@
 #include "esp_features.h"
 #include "esp_periph.h"
 #include "esp_rboot.h"
+#include "esp_umm_malloc.h"
 #include "esp_vfs_dev_sysflash.h"
 
 #ifdef RTOS_SDK

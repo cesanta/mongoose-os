@@ -79,19 +79,10 @@
 #define MG_SSL_IF_SIMPLELINK 3
 
 #include "common/platforms/platform_unix.h"
-#include "common/platforms/platform_windows.h"
 #include "common/platforms/platform_esp32.h"
 #include "common/platforms/platform_esp8266.h"
-#include "common/platforms/platform_cc3100.h"
 #include "common/platforms/platform_cc3200.h"
 #include "common/platforms/platform_cc3220.h"
-#include "common/platforms/platform_mbed.h"
-#include "common/platforms/platform_nrf51.h"
-#include "common/platforms/platform_nrf52.h"
-#include "common/platforms/platform_wince.h"
-#include "common/platforms/platform_nxp_lpc.h"
-#include "common/platforms/platform_nxp_kinetis.h"
-#include "common/platforms/platform_pic32.h"
 #include "common/platforms/platform_rs14100.h"
 #include "common/platforms/platform_stm32.h"
 #if CS_PLATFORM == CS_P_CUSTOM

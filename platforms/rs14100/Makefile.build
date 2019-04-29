@@ -150,7 +150,7 @@ MGOS_SRCS += $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
              mgos_hw_timers.c mgos_sys_config.c \
              mgos_time.c mgos_timers.c cs_crc32.c cs_file.c \
              json_utils.c frozen.c mgos_uart.c cs_rbuf.c mgos_init.c \
-             cs_dbg.c mgos_dlsym.c mgos_file_utils.c mgos_system.c mgos_utils.c \
+             mgos_dlsym.c mgos_file_utils.c mgos_system.c mgos_utils.c \
              arm_exc_top.S arm_exc.c arm_nsleep100.c arm_nsleep100_m4.S \
              error_codes.cpp status.cpp
 # Driver/Peripheral_Library/driver/src/*.c

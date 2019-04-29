@@ -58,7 +58,6 @@ MGOS_PATH ?= ../..
 include $(MGOS_PATH)/tools/mk/mgos_common.mk
 
 APP_PATH := $(CURDIR)
-SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 MGOS_ESP_PATH ?= $(MGOS_PATH)/platforms/esp32
 MGOS_ESP_SRC_PATH ?= $(MGOS_PATH)/platforms/esp32/src
 
@@ -118,7 +117,6 @@ export MGOS_INCLUDE_PATH
 export MGOS_ESP_PATH
 export MGOS_ESP_SRC_PATH
 export _MGOS_PATH
-export SPIFFS_PATH
 
 export BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
 
@@ -133,10 +131,9 @@ export MGOS_FEATURES
 export MGOS_CONF_SCHEMA
 export MGOS_IPATH
 
-# Flags for other component builds, including SPIFFS, go here.
+# Flags for other component builds go here.
 CFLAGS += -Wall -Werror -pipe -mtext-section-literals \
           -I$(MGOS_PATH) -I$(MGOS_SRC_PATH) -I$(MGOS_INCLUDE_PATH) \
-          -I$(MGOS_PATH)/platforms/esp32/include/spiffs \
           $(APP_CFLAGS) $(addprefix -I ,$(APP_INCLUDES)) \
           -DMGOS_ROOT_DEVTAB='$(MGOS_ROOT_DEVTAB)' \
           -DMGOS_ROOT_FS_TYPE='$(MGOS_ROOT_FS_TYPE)' \
@@ -152,7 +149,6 @@ PROJECT_NAME = $(APP)
 BUILD_DIR_BASE = $(BUILD_DIR)
 
 COMPONENT_DIRS = $(APP_PATH)/components \
-                 $(COMMON_PATH) \
                  $(IDF_PATH)/components \
                  $(MGOS_ESP_PATH) \
                  $(MGOS_PATH)/third_party \

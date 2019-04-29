@@ -30,7 +30,7 @@
 
 #include "common/cs_base64.h"
 #include "common/cs_dbg.h"
-#include "common/platforms/esp8266/esp_missing_includes.h"
+#include "esp_missing_includes.h"
 
 #include "mgos_core_dump.h"
 #include "mgos_debug.h"
@@ -169,12 +169,7 @@ IRAM NOINSTR void abort(void) {
 }
 
 void mgos_dev_system_restart(void) {
-  /*
-   * system_restart sometimes thorws an exception.
-   * Since we are rebooting anyway, we don't want to dump core.
-   */
-  s_rebooting = true;
-  system_restart();
+  esp_system_restart_low_level();
   // Not reached
   while (1) {
   }
