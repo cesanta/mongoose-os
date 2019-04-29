@@ -6,7 +6,7 @@
 # docker-build-$(i): builds the image from Dockerfile-$(i)
 # docker-push-$(i): pushes the image as $(REGISTRY)/$(i)
 
-REPO_PATH ?= $(realpath ../../../..)
+REPO_PATH ?= $(realpath ../../..)
 REGISTRY ?= docker.io/mgos
 DOCKER_TAG ?= latest
 DOCKER_FLAGS ?=
@@ -27,7 +27,7 @@ docker-build-%: docker-pre-build-%
 docker-push-%:
 	docker push $(REGISTRY)/$*:$(DOCKER_TAG)
 
-mgos_fw_meta.py: $(REPO_PATH)/tools/fw_meta.py
+mgos_fw_meta.py: $(REPO_PATH)/tools/mgos_fw_meta.py
 	cp -v $< .
 
 serve_core: $(wildcard $(REPO_PATH)/fw/tools/serve_core/*.py)
