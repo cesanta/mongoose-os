@@ -33,7 +33,7 @@ MGOS_DEBUG_UART = 0
 APP_PATH := $(CURDIR)
 
 MGOS_PATH ?= ../..
-include $(MGOS_PATH)/fw/common.mk
+include $(MGOS_PATH)/tools/mk/mgos_common.mk
 
 COMMON_ESP_PATH ?= $(COMMON_PATH)/platforms/esp/src
 COMMON_ESP8266_PATH ?= $(COMMON_PATH)/platforms/esp8266
@@ -127,8 +127,7 @@ APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
 
 MGOS_FEATURES ?=
 
-VPATH = $(MGOS_VPATH) $(APP_SOURCE_DIRS) $(MGOS_SRC_PATH) $(MONGOOSE_PATH) \
-        $(FROZEN_PATH) $(UMM_MALLOC_PATH) \
+VPATH = $(MGOS_VPATH) $(APP_SOURCE_DIRS) $(MGOS_SRC_PATH) \
         $(BOOTLOADER_PATH)/rboot/appcode $(COMMON_PATH) $(COMMON_PATH)/mg_rpc \
         $(MGOS_ESP_SRC_PATH) $(SPIFFS_PATH) $(COMMON_ESP8266_PATH) \
         $(COMMON_ESP_PATH)
@@ -140,7 +139,7 @@ IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
         $(MGOS_ESP_SRC_PATH) $(COMMON_PATH)/mg_rpc
 LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip
 
-include $(MGOS_PATH)/fw/src/mgos_features.mk
+include $(MGOS_PATH)/tools/mk/mgos_features.mk
 
 # libraries used in this project, mainly provided by the SDK
 SDK_LIBS = c crypto espnow gcc main net80211 pp phy stdc++ wpa wpa2
@@ -369,7 +368,7 @@ FW_PARTS = boot:addr=$(BOOT_LOADER_ADDR),src=$(BOOT_LOADER_BIN),update=$(MGOS_UP
            sys_params:type=sys_params,src=$(SDK_INIT_DATA_PATH)/bin/esp_init_data_default_v08.bin,addr=$(SYS_PARAMS_ADDR) \
            $(APP_EXTRA_FW_PARTS)
 
-include $(MGOS_PATH)/common/scripts/fw_meta.mk
+include $(MGOS_PATH)/tools/mk/mgos_fw_meta.mk
 
 all: $(FW_DIR) $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(FW_ZIP)
 
@@ -436,10 +435,10 @@ $(LD_SCRIPT): $(LD_SCRIPT_TEMPL)
 	$(Q) mkdir -p $(GEN_DIR)
 	$(Q) sed -e 's/_IROM0ADDR/$(_IROM0ADDR)/; s/_IROM0SIZE/$(_IROM0SIZE)/' $^ > $@
 
-include $(MGOS_PATH)/common/scripts/build_info.mk
-include $(MGOS_PATH)/common/scripts/ffi_exports.mk
-include $(MGOS_PATH)/fw/src/mgos_config.mk
-include $(MGOS_PATH)/fw/src/mkfs.mk
+include $(MGOS_PATH)/tools/mk/mgos_build_info.mk
+include $(MGOS_PATH)/tools/mk/mgos_ffi_exports.mk
+include $(MGOS_PATH)/tools/mk/mgos_config.mk
+include $(MGOS_PATH)/tools/mk/mgos_mkfs.mk
 
 $(MGOS_CONFIG_C): $(MANIFEST_FINAL)
 

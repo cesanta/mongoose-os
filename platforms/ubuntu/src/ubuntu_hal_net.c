@@ -23,16 +23,6 @@
 #include "ubuntu.h"
 #include "ubuntu_ipc.h"
 
-/* in mongoose-os/fw/src/mgos_net.c
- * void mgos_net_dev_event_cb(enum mgos_net_if_type if_type, int if_instance,
- * enum mgos_net_event ev) {
- * return;
- * (void) if_type;
- * (void) if_instance;
- * (void) ev;
- * }
- */
-
 static bool mgos_eth_dev_get_default_gateway(char *dev, size_t devlen,
                                              struct sockaddr_in *gw) {
   int fd;

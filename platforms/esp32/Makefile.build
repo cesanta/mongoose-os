@@ -55,7 +55,7 @@ export MGOS_ROOT_FS_SIZE
 APP_FS_DIRS = $(sort $(dir $(APP_FS_FILES)))
 
 MGOS_PATH ?= ../..
-include $(MGOS_PATH)/fw/common.mk
+include $(MGOS_PATH)/tools/mk/mgos_common.mk
 
 APP_PATH := $(CURDIR)
 SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
@@ -126,7 +126,7 @@ MGOS_FEATURES =
 MGOS_CONF_SCHEMA =
 FS_FILES =
 
-include $(MGOS_PATH)/fw/src/mgos_features.mk
+include $(MGOS_PATH)/tools/mk/mgos_features.mk
 
 export MGOS_SRCS
 export MGOS_FEATURES
@@ -197,8 +197,8 @@ FW_PARTS = boot:type=boot,addr=0x1000,src=$(BOOTLOADER_BIN),encrypt=true,update=
            fs:src=$(FS_IMG),type=fs,ptn=fs_0,fs_size=$(MGOS_ROOT_FS_SIZE) \
            $(APP_EXTRA_FW_PARTS)
 
-include $(MGOS_PATH)/common/scripts/fw_meta.mk
-include $(MGOS_PATH)/fw/src/mkfs.mk
+include $(MGOS_PATH)/tools/mk/mgos_fw_meta.mk
+include $(MGOS_PATH)/tools/mk/mgos_mkfs.mk
 
 all: $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(FW_ZIP)
 

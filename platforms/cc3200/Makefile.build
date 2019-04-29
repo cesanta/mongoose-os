@@ -27,7 +27,7 @@ APP_EXTRA_FW_PARTS ?=
 BUILD_LIB_NAME ?= lib.a
 
 MGOS_PATH ?= ../..
-include $(MGOS_PATH)/fw/common.mk
+include $(MGOS_PATH)/tools/mk/mgos_common.mk
 
 # Get list of dirs which contain sources and filesystem files
 APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
@@ -88,8 +88,7 @@ FS_STAGING_DIR = $(BUILD_DIR)/fs
 
 VPATH = $(MGOS_VPATH) $(APP_SOURCE_DIRS) $(MGOS_SRC_PATH) $(MGOS_CC32XX_PATH)/src $(MGOS_CC3200_PATH)/src \
         $(COMMON_PATH)/platforms/arm \
-        $(BOOT_PATH)/lib \
-        $(MONGOOSE_PATH) $(FROZEN_PATH)
+        $(BOOT_PATH)/lib
 IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
         $(COMMON_PATH)/platforms/arm \
         $(MGOS_CC32XX_PATH)/include $(MGOS_CC32XX_PATH)/include/spiffs \
@@ -188,8 +187,8 @@ MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" -DCS_PLATFORM=CS_P_CC3200 \
               $(SDK_CFLAGS) \
               -DC_DISABLE_BUILTIN_SNPRINTF
 
-include $(MGOS_PATH)/fw/src/mgos_features.mk
-include $(MGOS_PATH)/fw/src/mkfs.mk
+include $(MGOS_PATH)/tools/mk/mgos_features.mk
+include $(MGOS_PATH)/tools/mk/mgos_mkfs.mk
 
 clean:
 	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)
@@ -233,15 +232,15 @@ endif
 FW_PARTS += $(foreach f,$(SLFS_FILES), $(notdir $(f)):type=slfile,src=$(f))
 FW_PARTS += $(APP_EXTRA_FW_PARTS)
 
-include $(MGOS_PATH)/common/scripts/fw_meta.mk
+include $(MGOS_PATH)/tools/mk/mgos_fw_meta.mk
 
 SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(SDK_SRCS:=.o))
 MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o))
 APP_OBJS = $(addprefix $(BUILD_DIR)/,$(APP_SRCS:=.o))
 
-include $(MGOS_PATH)/common/scripts/build_info.mk
-include $(MGOS_PATH)/common/scripts/ffi_exports.mk
-include $(MGOS_PATH)/fw/src/mgos_config.mk
+include $(MGOS_PATH)/tools/mk/mgos_build_info.mk
+include $(MGOS_PATH)/tools/mk/mgos_ffi_exports.mk
+include $(MGOS_PATH)/tools/mk/mgos_config.mk
 
 MGOS_CONF_SCHEMA += $(MGOS_CC3200_PATH)/src/cc3200_sys_config.yaml
 

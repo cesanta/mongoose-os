@@ -26,7 +26,7 @@
 #include "task.h"
 
 #include "common/cs_dbg.h"
-#include "common/umm_malloc/umm_malloc.h"
+#include "umm_malloc.h"
 
 #include "mgos_hal.h"
 #include "mgos_mongoose.h"

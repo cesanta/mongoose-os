@@ -14,7 +14,7 @@ override FW_DIR := $(_FW_DIR)
 override GEN_DIR := $(_GEN_DIR)
 override MGOS_PATH = $(_MGOS_PATH)
 
-include $(MGOS_PATH)/fw/common.mk
+include $(MGOS_PATH)/tools/mk/mgos_common.mk
 
 # Get list of dirs which contain sources (used for IPATH and VPATH)
 APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
@@ -41,11 +41,9 @@ MGOS_SRCS += mgos_config_util.c mgos_core_dump.c mgos_dlsym.c mgos_event.c \
              esp32_main.c esp32_uart.c \
              error_codes.cpp status.cpp
 
-include $(MGOS_PATH)/common/scripts/ffi_exports.mk
-
-include $(MGOS_PATH)/common/scripts/build_info.mk
-
-include $(MGOS_PATH)/fw/src/mgos_config.mk
+include $(MGOS_PATH)/tools/mk/mgos_build_info.mk
+include $(MGOS_PATH)/tools/mk/mgos_config.mk
+include $(MGOS_PATH)/tools/mk/mgos_ffi_exports.mk
 
 MGOS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_sys_config.yaml
 
