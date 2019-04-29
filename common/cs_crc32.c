@@ -22,7 +22,7 @@
  * See "A compact CCITT crc16 and crc32 C implementation that balances processor
  * cache usage against speed".
  */
-IRAM uint32_t cs_crc32(uint32_t crc32, const void *data, uint32_t len) {
+uint32_t cs_crc32(uint32_t crc32, const void *data, uint32_t len) {
   /* Note: volatile non-const to ensure placing in RAM instead of flash.
    * This table is accessed a lot and flash access can be expensive. */
   static volatile uint32_t cs_crc32_table[16] = {

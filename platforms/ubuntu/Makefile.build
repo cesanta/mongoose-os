@@ -1,0 +1,161 @@
+# -*- mode: makefile -*-
+#
+# Mongoose OS for Ubuntu
+
+MAKEFLAGS += --warn-undefined-variables
+.DEFAULT_GOAL := all
+
+MGOS_PATH ?= ../..
+VPATH = $(MGOS_VPATH) $(SRC_PATH) $(PLATFORM_VPATH)
+
+APP ?= mongoose-os
+APP_PLATFORM ?= ubuntu
+APP_PATH := $(CURDIR)
+SRC_PATH ?= ../../src
+PLATFORM_VPATH ?= $(MGOS_PATH)/platforms/$(APP_PLATFORM)/src
+BUILD_DIR ?= ./build
+BIN_DIR = build/bin
+GEN_DIR = $(BUILD_DIR)/gen
+FW_STAGING_DIR ?= $(BUILD_DIR)/fw_temp
+FW_DIR ?= $(CURDIR)/fw
+# Extra parts to include in firmware
+APP_EXTRA_FW_PARTS ?=
+
+ASAN ?= 0
+
+# Explicitly disable updater, it's not supported on POSIX build yet.
+MGOS_ENABLE_DEBUG_UDP = 0
+MGOS_ENABLE_BITBANG = 0
+MGOS_ENABLE_SYS_SERVICE = 0
+
+MGOS_POSIX_FEATURES ?= -DMGOS_PROMPT_DISABLE_ECHO -DMGOS_MAX_NUM_UARTS=2 \
+                       -DMGOS_HAVE_ETHERNET \
+                       -DMGOS_NUM_HW_TIMERS=0
+
+MONGOOSE_FEATURES = \
+  -DMG_USE_READ_WRITE -DMG_ENABLE_THREADS -DMG_ENABLE_THREADS \
+  -DMG_ENABLE_HTTP_STREAMING_MULTIPART -DMG_DISABLE_DAV \
+  -DMG_ENABLE_DIRECTORY_LISTING \
+  -DMG_MODULE_LINES
+
+
+GEN_INCLUDES ?= $(GEN_DIR)
+INCLUDES = $(MGOS_IPATH) $(SRC_PATH) $(BUILD_DIR) $(APP_INCLUDES) $(GEN_INCLUDES) $(PLATFORM_VPATH)
+MGOS_SRCS = $(notdir $(wildcard *.c)) mgos_init.c  \
+            frozen.c mgos_event.c \
+            mgos_system.c mgos_time.c mgos_timers.c \
+            mgos_config_util.c mgos_sys_config.c \
+            json_utils.c cs_rbuf.c mgos_uart.c \
+            mgos_utils.c cs_file.c cs_crc32.c
+
+PLATFORM_SRCS = $(wildcard $(PLATFORM_VPATH)/*.c)
+
+C_CXX_FLAGS = -ggdb -MD -Wall -Wextra -Werror -pipe \
+              -ffunction-sections -fdata-sections \
+              -DMGOS_APP=\"$(APP)\" \
+              -DFW_ARCHITECTURE=$(APP_PLATFORM) \
+              $(MGOS_FEATURES) $(MGOS_POSIX_FEATURES) \
+              $(MONGOOSE_FEATURES)
+ifeq "$(ASAN)" "1"
+C_CXX_FLAGS += -fsanitize=address -fno-omit-frame-pointer
+LDFLAGS += -fsanitize=address
+else
+LDFLAGS += -static
+endif
+
+CFLAGS = -std=gnu99 $(C_CXX_FLAGS) $(APP_CFLAGS)
+CXXFLAGS = -std=gnu++11 -fno-exceptions $(C_CXX_FLAGS) $(APP_CXXFLAGS)
+
+INCDIRS = $(addprefix -I,$(INCLUDES))
+AR ?= ar
+LDFLAGS ?=
+APP_BIN_LIBS ?=
+LIBS  ?= pthread cap
+LDLIBS = $(addprefix -l,$(LIBS))
+BUILD_LIB_NAME ?= lib.a
+APP_BIN = $(BIN_DIR)/$(APP)
+# Expected by mos.
+APP_ELF = $(BUILD_DIR)/$(APP).elf
+
+# Generated artifacts
+BUILD_INFO_C = $(GEN_DIR)/build_info.c
+BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
+MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
+MGOS_CONFIG_C = $(GEN_DIR)/mgos_config.c
+MGOS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/conf0.json
+MGOS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/mgos_config_schema.json
+MGOS_RO_VARS_C = $(GEN_DIR)/mgos_ro_vars.c
+MGOS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/mgos_ro_vars_schema.json
+GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C)
+GENFILES_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(GENFILES_LIST))
+
+MGOS_CONF_SCHEMA += $(PLATFORM_VPATH)/ubuntu_sys_config.yaml
+
+PLATFORM_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(PLATFORM_SRCS))
+MGOS_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(MGOS_SRCS))
+APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SOURCES))
+OBJS = $(MGOS_OBJS) $(APP_OBJS) $(PLATFORM_OBJS) $(GENFILES_OBJS)
+
+# Files
+FS_STAGING_DIR ?= $(BUILD_DIR)/fs
+
+FW_PARTS = app:type=app,src=$(APP_BIN)
+FW_PARTS += $(APP_EXTRA_FW_PARTS)
+
+.PHONY: all clean
+
+include $(MGOS_PATH)/fw/common.mk
+include $(MGOS_PATH)/common/scripts/build_info.mk
+include $(MGOS_PATH)/common/scripts/fw_meta.mk
+include $(MGOS_PATH)/fw/src/mgos_config.mk
+include $(MGOS_PATH)/fw/src/mgos_features.mk
+include $(MGOS_PATH)/fw/src/mkfs.mk
+
+all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GENFILES_LIST) $(OBJS) $(FS_STAGING_DIR) $(FW_ZIP) $(APP_ELF)
+
+# Directories
+$(BIN_DIR) $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR):
+	$(vecho) MKDIR $@
+	$(Q) mkdir -p $@
+
+# Generated files
+$(BUILD_INFO_C) $(BUILD_INFO_JSON):
+	$(call gen_build_info,$@,$(APP_PATH),$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
+
+$(MG_BUILD_INFO_C):
+	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
+
+# Output filesystem directory
+$(FS_STAGING_DIR): $(FS_FILES)
+	$(vecho) "MKDIR $@"
+	$(Q) rm -rf $(@) && mkdir -p $@
+	$(Q) $(foreach f,$(shell echo $(FS_FILES) | tr ' ' '\n' | sort | uniq), \
+		echo "  CP    $(f) -> $(FS_STAGING_DIR)"; \
+		cp $(f) $(FS_STAGING_DIR);)
+
+# Objects of all sorts
+-include $(wildcard $(BUILD_DIR)/*.d)
+$(OBJS): $(BUILD_DIR)/%.o : %.c $(GENFILES_LIST)
+	$(vecho) "CC    $<"
+	$(Q) mkdir -p $(dir $@)
+	$(Q) $(CC) $(CFLAGS) $(INCDIRS) -c $< -o $@
+
+# lib.a, used during lib release build
+$(BUILD_DIR)/$(BUILD_LIB_NAME): $(BUILD_DIR) $(GENFILES_LIST) $(APP_OBJS)
+	$(vecho) "AR    $@"
+	$(Q) $(AR) cr $@ $(APP_OBJS)
+
+# Application target.
+$(APP_BIN): $(BIN_DIR) $(OBJS)
+	$(vecho) "LD    $@"
+	$(Q) $(CC) -Wl,--gc-sections -Wl,-Map=$@.map \
+	  -Wl,--start-group $(OBJS) $(APP_BIN_LIBS) $(LDLIBS) -Wl,--end-group \
+	  $(LDFLAGS) -o $(BIN_DIR)/$(APP)
+
+$(APP_ELF): $(APP_BIN)
+	$(Q) cp -v $(APP_BIN) $@
+
+$(FW_MANIFEST): $(APP_BIN)
+
+clean:
+	$(Q) rm -rf $(BIN_DIR) $(BUILD_DIR)
