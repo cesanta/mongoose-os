@@ -27,7 +27,7 @@ APP_EXTRA_FW_PARTS ?=
 BUILD_LIB_NAME ?= lib.a
 
 MGOS_PATH ?= ../..
-include $(MGOS_PATH)/fw/common.mk
+include $(MGOS_PATH)/tools/mk/mgos_common.mk
 
 # Get list of dirs which contain sources and filesystem files
 APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
@@ -79,7 +79,7 @@ FS_BLOCK_SIZE ?= 4096
 FS_PAGE_SIZE ?= 256
 FS_ERASE_SIZE ?= 2048
 
-MGOS_SRC_PATH ?= $(MGOS_PATH)/fw/src
+MGOS_SRC_PATH ?= $(MGOS_PATH)/src
 MGOS_INCLUDE_PATH ?= $(MGOS_PATH)/fw/include
 
 VPATH = $(MGOS_VPATH) $(APP_SOURCE_DIRS) $(MGOS_CC32XX_PATH)/src $(MGOS_CC3220_PATH)/src \
@@ -205,8 +205,8 @@ MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" \
               $(SDK_CFLAGS) \
               -DC_DISABLE_BUILTIN_SNPRINTF
 
-include $(MGOS_PATH)/fw/src/mgos_features.mk
-include $(MGOS_PATH)/fw/src/mkfs.mk
+include $(MGOS_PATH)/tools/mk/mgos_features.mk
+include $(MGOS_PATH)/tools/mk/mgos_mkfs.mk
 
 clean:
 	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)
@@ -237,7 +237,7 @@ ifneq "$(CC3220_SP_FILE)" ""
   FW_PARTS += sp.bin:type=service_pack,src=$(CC3220_SP_FILE)
 endif
 
-include $(MGOS_PATH)/common/scripts/fw_meta.mk
+include $(MGOS_PATH)/tools/mk/mgos_fw_meta.mk
 
 SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(SDK_SRCS:=.o))
 MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o))
@@ -245,9 +245,9 @@ APP_OBJS = $(addprefix $(BUILD_DIR)/,$(APP_SRCS:=.o))
 
 MGOS_OBJS += $(BUILD_DIR)/portasm.asm.o
 
-include $(MGOS_PATH)/common/scripts/build_info.mk
-include $(MGOS_PATH)/common/scripts/ffi_exports.mk
-include $(MGOS_PATH)/fw/src/mgos_config.mk
+include $(MGOS_PATH)/tools/mk/mgos_build_info.mk
+include $(MGOS_PATH)/tools/mk/mgos_ffi_exports.mk
+include $(MGOS_PATH)/tools/mk/mgos_config.mk
 
 MGOS_CONF_SCHEMA += $(MGOS_CC3220_PATH)/src/cc3220_sys_config.yaml
 

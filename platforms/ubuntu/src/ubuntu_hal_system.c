@@ -148,12 +148,6 @@ void ubuntu_wdt_set_timeout(int secs) {
   return;
 }
 
-/* in mongoose-os/fw/src/mgos_system.c
- * void mgos_system_restart(void) {
- * return;
- * }
- */
-
 void mgos_msleep(uint32_t msecs) {
   usleep(msecs * 1000);
   return;

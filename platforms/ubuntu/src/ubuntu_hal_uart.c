@@ -23,13 +23,6 @@
 #include "mgos_uart_hal.h"
 #include "ubuntu.h"
 
-/* in mongoose-os/fw/src/mgos_uart.c
- * struct mgos_uart_state *mgos_uart_hal_get_state(int uart_no) {
- * return NULL;
- * (void) uart_no;
- * }
- */
-
 bool mgos_uart_hal_init(struct mgos_uart_state *us) {
   LOG(LL_INFO, ("Not implemented yet"));
   return true;

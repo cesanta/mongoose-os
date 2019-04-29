@@ -1,0 +1,16 @@
+CC3200SDK_*/
+cryptoauthlib/
+cs_mbedtls/
+mbedtls/
+simplelink_cc32xx_sdk_*/
+ti-cgt-arm_*/
+
+distr/
+mgos_fw_meta.py
+mklfs
+mkspiffs
+mkspiffs8
+ota_*.ucf*
+serve_core
+vfs-fs-lfs/
+vfs-fs-spiffs/

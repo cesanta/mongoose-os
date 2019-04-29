@@ -68,9 +68,8 @@ MGOS_CFLAGS += -DMGOS_VFS_DEFINE_LIBC_REENT_API \
 
 MGOS_DEBUG_UART ?= 1
 
-include $(MGOS_PATH)/fw/common.mk
-
-include $(MGOS_PATH)/fw/src/mgos_features.mk
+include $(MGOS_PATH)/tools/mk/mgos_common.mk
+include $(MGOS_PATH)/tools/mk/mgos_features.mk
 
 BUILD_DIR ?= $(CURDIR)/.build
 FW_STAGING_DIR ?= $(BUILD_DIR)/fw_temp
@@ -128,7 +127,7 @@ FS_ZIP = $(FW_STAGING_DIR)/fs.zip
 
 FS_ZIP_C = $(GEN_DIR)/fs_zip.c
 
-include $(MGOS_PATH)/fw/src/mkfs.mk
+include $(MGOS_PATH)/tools/mk/mgos_mkfs.mk
 
 MGOS_LIB = $(BUILD_DIR)/mongoose-os.a
 BUILD_INFO_C = $(GEN_DIR)/build_info.c
@@ -285,7 +284,7 @@ RS14100_OBJS = $(addprefix $(BUILD_DIR)/,$(RS14100_SRCS:=.o))
 APP_OBJS = $(addprefix $(BUILD_DIR)/,$(APP_SRCS:=.o))
 FFI_EXPORTS_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FFI_EXPORTS_C:=.o)))
 
-include $(MGOS_PATH)/common/scripts/fw_meta.mk
+include $(MGOS_PATH)/tools/mk/mgos_fw_meta.mk
 
 AR = arm-none-eabi-ar
 CC = arm-none-eabi-gcc
@@ -362,9 +361,9 @@ $(APP0_BIN): $(APP0_ELF)
 $(APP1_BIN): $(APP1_ELF)
 	$(call objcopy)
 
-include $(MGOS_PATH)/common/scripts/build_info.mk
-include $(MGOS_PATH)/common/scripts/ffi_exports.mk
-include $(MGOS_PATH)/fw/src/mgos_config.mk
+include $(MGOS_PATH)/tools/mk/mgos_build_info.mk
+include $(MGOS_PATH)/tools/mk/mgos_ffi_exports.mk
+include $(MGOS_PATH)/tools/mk/mgos_config.mk
 
 $(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MGOS_OBJS) $(FFI_EXPORTS_O)
 	$(call gen_build_info,$@,$(APP_PATH),$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))

@@ -104,12 +104,12 @@ FW_PARTS += $(APP_EXTRA_FW_PARTS)
 
 .PHONY: all clean
 
-include $(MGOS_PATH)/fw/common.mk
-include $(MGOS_PATH)/common/scripts/build_info.mk
-include $(MGOS_PATH)/common/scripts/fw_meta.mk
-include $(MGOS_PATH)/fw/src/mgos_config.mk
-include $(MGOS_PATH)/fw/src/mgos_features.mk
-include $(MGOS_PATH)/fw/src/mkfs.mk
+include $(MGOS_PATH)/tools/mk/mgos_common.mk
+include $(MGOS_PATH)/tools/mk/mgos_build_info.mk
+include $(MGOS_PATH)/tools/mk/mgos_fw_meta.mk
+include $(MGOS_PATH)/tools/mk/mgos_config.mk
+include $(MGOS_PATH)/tools/mk/mgos_features.mk
+include $(MGOS_PATH)/tools/mk/mgos_mkfs.mk
 
 all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GENFILES_LIST) $(OBJS) $(FS_STAGING_DIR) $(FW_ZIP) $(APP_ELF)
 

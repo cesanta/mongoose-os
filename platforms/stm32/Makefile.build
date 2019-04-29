@@ -79,9 +79,8 @@ MGOS_CFLAGS += -DMGOS_VFS_DEFINE_LIBC_REENT_API \
 
 MGOS_DEBUG_UART ?= 1
 
-include $(MGOS_PATH)/fw/common.mk
-
-include $(MGOS_PATH)/fw/src/mgos_features.mk
+include $(MGOS_PATH)/tools/mk/mgos_common.mk
+include $(MGOS_PATH)/tools/mk/mgos_features.mk
 
 BUILD_DIR ?= $(CURDIR)/.build
 FW_STAGING_DIR ?= $(BUILD_DIR)/fw_temp
@@ -147,7 +146,7 @@ else
   FLASH_FS_SIZE = 0
 endif
 
-include $(MGOS_PATH)/fw/src/mkfs.mk
+include $(MGOS_PATH)/tools/mk/mgos_mkfs.mk
 
 MGOS_LIB = $(BUILD_DIR)/mongoose-os.a
 BUILD_INFO_C = $(GEN_DIR)/build_info.c
@@ -240,7 +239,7 @@ FS_IMG_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FS_IMG_C:=.o)))
 FS_ZIP_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FS_ZIP_C:=.o)))
 FFI_EXPORTS_O = $(addprefix $(BUILD_DIR)/,$(notdir $(FFI_EXPORTS_C:=.o)))
 
-include $(MGOS_PATH)/common/scripts/fw_meta.mk
+include $(MGOS_PATH)/tools/mk/mgos_fw_meta.mk
 
 AR = arm-none-eabi-ar
 CC = arm-none-eabi-gcc
@@ -302,9 +301,9 @@ $(APP0_BIN): $(APP0_ELF)
 	$(vecho) "  Code: $$($(OC) -Obinary -j .text $^ /dev/fd/1 | wc -c)"
 	$(vecho) "  Data: $$($(OC) -Obinary -j .rodata $^ /dev/fd/1 | wc -c) + $$($(OC) -Obinary -j .data $^ /dev/fd/1 | wc -c)"
 
-include $(MGOS_PATH)/common/scripts/build_info.mk
-include $(MGOS_PATH)/common/scripts/ffi_exports.mk
-include $(MGOS_PATH)/fw/src/mgos_config.mk
+include $(MGOS_PATH)/tools/mk/mgos_build_info.mk
+include $(MGOS_PATH)/tools/mk/mgos_ffi_exports.mk
+include $(MGOS_PATH)/tools/mk/mgos_config.mk
 
 MGOS_CONF_SCHEMA += $(MGOS_PLATFORM_PATH)/stm32_sys_config.yaml
 
