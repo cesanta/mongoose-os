@@ -35,12 +35,8 @@ APP_PATH := $(CURDIR)
 MGOS_PATH ?= ../..
 include $(MGOS_PATH)/tools/mk/mgos_common.mk
 
-COMMON_ESP_PATH ?= $(COMMON_PATH)/platforms/esp/src
-COMMON_ESP8266_PATH ?= $(COMMON_PATH)/platforms/esp8266
 MGOS_ESP8266_PATH ?= $(MGOS_PATH)/platforms/esp8266
-SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
-UMM_MALLOC_PATH ?= $(COMMON_PATH)/umm_malloc
-BOOTLOADER_PATH ?= $(COMMON_ESP8266_PATH)/rboot
+BOOTLOADER_PATH ?= $(MGOS_ESP8266_PATH)/rboot
 ESPTOOL2 = $(BUILD_DIR)/esptool2
 # Enable heap allocation logging - every malloc/free is logged.
 MGOS_ENABLE_HEAP_LOG ?= 0
@@ -80,7 +76,7 @@ FS_STAGING_DIR = $(BUILD_DIR)/fs
 FW_SECTS = .text .data .rodata
 FW_USER_ARGS = -quiet -bin -boot2
 
-include $(COMMON_ESP8266_PATH)/common.mk
+include $(MGOS_ESP8266_PATH)/common.mk
 
 MGOS_ESP_SRC_PATH = $(MGOS_ESP8266_PATH)/src
 
@@ -108,6 +104,7 @@ MGOS_SRCS += cs_file.c cs_rbuf.c \
 
 MGOS_SRCS += esp_config.c \
              esp_coredump.c \
+             esp_crypto.c \
              esp_debug.c \
              esp_exc.c \
              esp_gpio.c \
@@ -119,24 +116,22 @@ MGOS_SRCS += esp_config.c \
              esp_main.c \
              esp_periph.c \
              esp_uart.c \
+             esp_umm_malloc.c \
              error_codes.cpp status.cpp
 
-MGOS_SRCS += $(notdir $(foreach m,$(SPIFFS_PATH) $(COMMON_ESP8266_PATH),$(wildcard $(m)/*.c)))
 APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
 
 MGOS_FEATURES ?=
 
 VPATH = $(MGOS_VPATH) $(APP_SOURCE_DIRS) $(MGOS_SRC_PATH) \
-        $(BOOTLOADER_PATH)/rboot/appcode $(COMMON_PATH) $(COMMON_PATH)/mg_rpc \
-        $(MGOS_ESP_SRC_PATH) $(SPIFFS_PATH) $(COMMON_ESP8266_PATH) \
-        $(COMMON_ESP_PATH)
+        $(BOOTLOADER_PATH)/rboot/appcode \
+        $(MGOS_ESP_SRC_PATH)
 IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
-        $(SPIFFS_PATH) $(MGOS_ESP8266_PATH)/include $(MGOS_ESP8266_PATH)/include/spiffs \
+        $(MGOS_ESP8266_PATH)/include $(MGOS_ESP8266_PATH)/include/spiffs \
         $(BOOTLOADER_PATH)/rboot $(SDK_PATH)/include/lwip \
         $(SDK_PATH) $(SDK_PATH)/include \
-        $(COMMON_ESP8266_PATH) $(COMMON_ESP_PATH) \
-        $(MGOS_ESP_SRC_PATH) $(COMMON_PATH)/mg_rpc
+        $(MGOS_ESP_SRC_PATH)
 LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip
 
 include $(MGOS_PATH)/tools/mk/mgos_features.mk
@@ -226,9 +221,9 @@ else
 $(LWIP_LIB): $(LWIP_PATH)
 	$(Q) mkdir -p $(abspath $(LWIP_BUILD_DIR))
 	$(Q) $(MAKE) -C $(LWIP_PATH) -j3 all \
-		APP=liblwip_cs BUILD_DIR=$(abspath $(LWIP_BUILD_DIR)) \
-		COMMON_ESP8266_PATH=$(COMMON_ESP8266_PATH) \
-		CFLAGS_EXTRA="$(HEAP_LOG_FLAGS)"
+	  APP=liblwip_cs BUILD_DIR=$(abspath $(LWIP_BUILD_DIR)) \
+	  COMMON_ESP8266_PATH=$(MGOS_ESP8266_PATH)
+	  CFLAGS_EXTRA="$(HEAP_LOG_FLAGS)"
 endif
 
 MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o)) \

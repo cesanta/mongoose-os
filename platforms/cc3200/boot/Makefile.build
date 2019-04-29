@@ -13,12 +13,11 @@ SDK_PATH ?= /cc3200-sdk
 MGOS_PATH ?= ../../../..
 BUILD_DIR ?= $(CURDIR)/.build
 FW_DIR ?= $(CURDIR)/firmware
-COMMON_CC3200_PATH ?= $(MGOS_PATH)/common/platforms/cc3200
 
 include $(MGOS_PATH)/tools/mk/mgos_common.mk
 
 VPATH = $(APP_MODULES) $(BUILD_DIR)
-IPATH = $(APP_MODULES) $(BUILD_DIR) $(MGOS_PATH) $(MGOS_PATH)/platforms/cc3200/src
+IPATH = $(APP_MODULES) $(BUILD_DIR) $(MGOS_PATH) $(MGOS_PATH)/include $(MGOS_PATH)/platforms/cc3200/src
 
 SDK_FLAGS = -DTARGET_IS_CC3200
 
@@ -68,7 +67,7 @@ SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(patsubst %.c,%.o,$(SDK_SRCS)))
 
 OBJCOPY = arm-none-eabi-objcopy
 
-include $(COMMON_CC3200_PATH)/gcc.mk
+include $(MGOS_PATH)/platforms/cc3200/gcc.mk
 
 CFLAGS += $(patsubst %,-I%,$(subst :, ,$(IPATH)))
 CFLAGS += -DNDEBUG -DCS_NDEBUG -DCS_PLATFORM=CS_P_CC3200 \

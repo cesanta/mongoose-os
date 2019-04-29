@@ -44,10 +44,8 @@ APP_IMAGE_MAX_SIZE ?= 262144
 
 APP_PATH := $(CURDIR)
 SDK_PATH ?=
-COMMON_CC3200_PATH ?= $(MGOS_PATH)/common/platforms/cc3200
 MGOS_CC3220_PATH ?= $(MGOS_PATH)/platforms/cc3220
 MGOS_CC32XX_PATH ?= $(MGOS_PATH)/platforms/cc32xx
-SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
 MKSPIFFS ?= /usr/local/bin/mkspiffs8
 
 # Binary images must be signed. By default, we sign with dummy "playground" keys from the SDK.
@@ -83,9 +81,8 @@ MGOS_SRC_PATH ?= $(MGOS_PATH)/src
 MGOS_INCLUDE_PATH ?= $(MGOS_PATH)/fw/include
 
 VPATH = $(MGOS_VPATH) $(APP_SOURCE_DIRS) $(MGOS_CC32XX_PATH)/src $(MGOS_CC3220_PATH)/src \
-        $(COMMON_PATH) $(COMMON_PATH)/platforms/arm \
         $(GEN_DIR)
-IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) $(COMMON_PATH)/platforms/arm \
+IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
         $(MGOS_CC32XX_PATH)/include $(MGOS_CC32XX_PATH)/include/spiffs \
         $(MGOS_CC32XX_PATH)/src $(MGOS_CC3220_PATH)/src $(GEN_DIR)
 
@@ -138,7 +135,6 @@ GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
 .PHONY: all clean
 
 MGOS_SRCS += umm_malloc.c
-VPATH += $(COMMON_PATH)/umm_malloc
 
 FREERTOS_SRCS = ClockP_freertos.c HwiPCC32XX_freertos.c MutexP_freertos.c PowerCC32XX_freertos.c SemaphoreP_freertos.c SystemP_freertos.c
 DRIVER_SRCS = GPIOCC32XX.c ListUtils.c PowerCC32XX.c SPI.c SPICC32XXDMA.c UDMACC32XX.c
@@ -180,7 +176,7 @@ VPATH += $(SDK_PATH)/source/ti/devices/cc32xx/driverlib \
 SDK_CFLAGS = -DTARGET_IS_CC3220 -DUSE_CC3220_ROM_DRV_API -DUSE_FREERTOS
 
 MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3220_PATH)/src/*.c)) \
-             cs_crc32.c cs_dbg.c cs_file.c cs_rbuf.c mbuf.c \
+             cs_crc32.c cs_file.c cs_rbuf.c \
              frozen.c json_utils.c \
              mgos_config_util.c mgos_core_dump.c mgos_debug.c mgos_dlsym.c mgos_event.c mgos_gpio.c \
              mgos_file_utils.c mgos_init.c \
@@ -190,10 +186,6 @@ MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3220_PATH)/src/*.c)) \
              cc32xx_gpio.c \
              cc32xx_hal.c cc32xx_hw_timers.c cc32xx_libc.c cc32xx_main.c cc32xx_sl_spawn.c cc32xx_uart.c \
              $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C))
-
-IPATH += $(SPIFFS_PATH)
-VPATH += $(SPIFFS_PATH)
-MGOS_SRCS += $(notdir $(wildcard $(SPIFFS_PATH)/*.c))
 
 APP_SRCS = $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
@@ -258,7 +250,7 @@ $(FS_IMG): $(APP_FS_DIRS) $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(FS_FILES) $(MKSPI
 
 OBJCOPY = arm-none-eabi-objcopy
 
-include $(COMMON_CC3200_PATH)/ti.mk
+include $(MGOS_PATH)/platforms/cc3200/ti.mk
 
 APP_LD_SCRIPT ?= $(MGOS_CC3220_PATH)/ld/CC3220SF_LAUNCHXL_FREERTOS.cmd
 APP_LDFLAGS += --rom_model --heap_size=0 --stack_size=0x1000 \

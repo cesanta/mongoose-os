@@ -25,7 +25,7 @@
 
 #include "common/cs_base64.h"
 #include "common/cs_crc32.h"
-#include "common/platforms/esp8266/esp_missing_includes.h"
+#include "esp_missing_includes.h"
 
 #include "mgos_core_dump.h"
 

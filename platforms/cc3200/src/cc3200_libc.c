@@ -15,10 +15,11 @@
  * limitations under the License.
  */
 
-#if CS_PLATFORM == CS_P_CC3200
+#if 0 //CS_PLATFORM == CS_P_CC3200
 
 #include "common/mg_mem.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #ifndef __TI_COMPILER_VERSION__

@@ -20,7 +20,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/time.h>
-#include "common/platforms/esp8266/esp_missing_includes.h"
+#include "esp_missing_includes.h"
 #include "umm_malloc.h"
 
 #ifdef RTOS_SDK

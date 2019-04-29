@@ -33,7 +33,7 @@ struct mgos_uart_dev_config {
   bool swap_rxcts_txrts;
 };
 
-#include "common/platforms/esp8266/uart_register.h"
+#include "esp_uart_register.h"
 
 void esp_uart_tx_byte(int uart_no, uint8_t byte);
 int esp_uart_rx_fifo_len(int uart_no);

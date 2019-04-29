@@ -25,8 +25,8 @@
 #include <user_interface.h>
 #endif
 
-#include "common/platforms/esp8266/esp_hw_wdt_register.h"
-#include "common/platforms/esp8266/esp_missing_includes.h"
+#include "esp_hw_wdt_register.h"
+#include "esp_missing_includes.h"
 
 extern void esp_hw_wdt_isr(void *arg);
 

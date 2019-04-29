@@ -29,9 +29,11 @@
 
 #include "common/cs_dbg.h"
 #include "common/cs_rbuf.h"
-#include "common/platforms/esp8266/esp_missing_includes.h"
-#include "common/platforms/esp8266/uart_register.h"
+
 #include "mgos_utils.h"
+
+#include "esp_missing_includes.h"
+#include "esp_uart_register.h"
 
 struct esp8266_uart_state {
   size_t isr_tx_bytes;
