@@ -1,0 +1,383 @@
+MAKEFLAGS += --warn-undefined-variables
+.DEFAULT_GOAL := all
+
+ifdef MGOS_VARS_FILE
+include $(MGOS_VARS_FILE)
+endif
+
+APP ?= mongoose-os
+APP_PLATFORM = cc3200
+APP_CFLAGS ?=
+APP_CXXFLAGS ?=
+APP_LDFLAGS ?=
+APP_SLFS_PATH ?=
+APP_EXTRA_SRCS ?=
+FFI_SYMBOLS ?=
+# List of app source files, globs are supported
+APP_SOURCES ?=
+# List of include dirs, in addition to dirs from APP_SOURCES
+APP_INCLUDES ?=
+# List of app files to put into the device's filesystem, globs are supported
+APP_FS_FILES ?=
+# List of static libs (.a) which are parts of the app
+APP_BIN_LIBS ?=
+# Extra parts to include in firmware
+APP_EXTRA_FW_PARTS ?=
+
+BUILD_LIB_NAME ?= lib.a
+
+MGOS_PATH ?= ../..
+include $(MGOS_PATH)/fw/common.mk
+
+# Get list of dirs which contain sources and filesystem files
+APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
+APP_FS_DIRS = $(sort $(dir $(APP_FS_FILES)))
+
+MGOS_ENABLE_DEBUG_UDP = 0
+MGOS_DEBUG_UART = 0
+
+TOOLCHAIN ?= $(TI_COMPILER_PATH)
+CC3200_SRAM_BASE_ADDR = 0x20000000
+CC3200_SRAM_SIZE = 0x40000
+BOOT_LOADER_SIZE = 0x4000
+# SLFS being what it is, we always produce code image of maximum size
+# to ensure OTA works when code size increases.
+CC3200_PADDED_IMAGE_SIZE ?= $(shell echo $$(($(CC3200_SRAM_SIZE) - $(BOOT_LOADER_SIZE) - 0x1000)))
+
+APP_PATH := $(CURDIR)
+SDK_PATH ?= /cc3200-sdk
+MGOS_CC3200_PATH ?= $(MGOS_PATH)/platforms/cc3200
+MGOS_CC32XX_PATH ?= $(MGOS_PATH)/platforms/cc32xx
+COMMON_CC3200_PATH ?= $(MGOS_PATH)/common/platforms/cc3200
+SPIFFS_PATH ?= $(COMMON_PATH)/spiffs
+BOOT_PATH ?= $(MGOS_CC3200_PATH)/boot
+
+BUILD_DIR ?= $(CURDIR)/.build
+FW_STAGING_DIR ?= $(BUILD_DIR)/fw_temp
+FW_DIR ?= $(CURDIR)/firmware
+GEN_DIR ?= $(BUILD_DIR)/gen
+
+# Absolutize all paths which can be given by the caller
+override BUILD_DIR := $(abspath $(BUILD_DIR))
+override FW_STAGING_DIR := $(abspath $(FW_STAGING_DIR))
+override FW_DIR := $(abspath $(FW_DIR))
+override GEN_DIR := $(abspath $(GEN_DIR))
+
+BOOT_BUILD_DIR = $(BUILD_DIR)/boot
+BOOT_FW_DIR = $(BOOT_BUILD_DIR)/fw
+# When sizing filesystem consider that SFLASH should have enough space for:
+#  + boot loader
+#  + 2 boot loader configs
+#  + 2 app images
+#  + 4 fs containers
+#  + NWP service pack
+# 96K is the practical maximum for 8Mbit flash chips (installed on CC3200MOD).
+FS_SIZE ?= 98304
+FS_BLOCK_SIZE ?= 4096
+FS_PAGE_SIZE ?= 256
+FS_ERASE_SIZE ?= 4096
+FS_META_SIZE = 64
+FS_IMAGE_SIZE = $(shell echo $$(($(FS_SIZE) + $(FS_META_SIZE))))
+MKSPIFFS ?= /usr/local/bin/mkspiffs
+
+# With safe code update, new code image is written to a different file on update
+# making it possible to safely revert the update.
+CC3200_SAFE_CODE_UPDATE ?= 1
+
+FS_STAGING_DIR = $(BUILD_DIR)/fs
+
+VPATH = $(MGOS_VPATH) $(APP_SOURCE_DIRS) $(MGOS_SRC_PATH) $(MGOS_CC32XX_PATH)/src $(MGOS_CC3200_PATH)/src \
+        $(COMMON_PATH)/platforms/arm \
+        $(BOOT_PATH)/lib \
+        $(MONGOOSE_PATH) $(FROZEN_PATH)
+IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
+        $(COMMON_PATH)/platforms/arm \
+        $(MGOS_CC32XX_PATH)/include $(MGOS_CC32XX_PATH)/include/spiffs \
+        $(MGOS_CC32XX_PATH)/src $(MGOS_CC3200_PATH)/src \
+        $(BOOT_PATH)/lib $(GEN_DIR)
+
+# Note: CC3200 has only 32 GPIO but our port uses pin-based numbering
+# and those go from 1 to 64.
+MGOS_CC3200_FEATURES ?= '-DUMM_ONFREE(ptr, size)=memset(ptr, 0xff, size)'
+
+MG_FEATURES ?= $(MG_FEATURES_TINY) \
+               -DMG_LOCALS -DMG_ENABLE_SSL \
+               -DMG_FS_SLFS -DMG_FS_NO_VFS \
+               -DMG_SIMPLELINK_NO_OSI \
+               -DMG_ENABLE_FILESYSTEM \
+               -DMG_ENABLE_DIRECTORY_LISTING \
+               -DCS_DISABLE_MD5 -DMG_EXT_MD5 \
+               -DCS_DISABLE_SHA1 -DMG_EXT_SHA1 \
+               -DFS_MAX_OPEN_FILES=5
+
+MGOS_FEATURES ?= -DMGOS_VFS_DECLARE_LIBC_DIR_API \
+                 -DMGOS_VFS_DEFINE_LIBC_DIR_API \
+                 -DMGOS_VFS_DEFINE_DIRENT
+
+APP_BIN = $(BUILD_DIR)/$(APP).bin
+BOOT_BIN = $(BOOT_FW_DIR)/mg-boot.bin
+APP_ELF = $(BUILD_DIR)/$(APP).elf
+MGOS_LIB = $(BUILD_DIR)/mongoose-os.a
+MK_BOOT_CFG_BIN = $(BOOT_BUILD_DIR)/mkcfg
+FS_IMG = $(BUILD_DIR)/spiffs.img
+FS_EMPTY_IMG = $(BUILD_DIR)/fs_empty.img
+MGOS_CONFIG_C = $(GEN_DIR)/mgos_config.c
+MGOS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/conf0.json
+MGOS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/mgos_config_schema.json
+MGOS_RO_VARS_C = $(GEN_DIR)/mgos_ro_vars.c
+MGOS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/mgos_ro_vars_schema.json
+BUILD_INFO_C = $(GEN_DIR)/build_info.c
+BUILD_INFO_O = $(BUILD_DIR)/build_info.c.o
+BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
+MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
+MG_BUILD_INFO_O = $(BUILD_DIR)/mg_build_info.c.o
+FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
+FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.c.o
+BOOT_CFG_0 = $(BUILD_DIR)/mg-boot.cfg.0
+BOOT_CFG_1 = $(BUILD_DIR)/mg-boot.cfg.1
+MK_FS_META_BIN = $(BUILD_DIR)/mkfsmeta
+
+GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
+
+.PHONY: all clean
+
+MGOS_SRCS += mgos_event.c \
+             mgos_gpio.c \
+             mgos_init.c \
+             mgos_time.c mgos_hw_timers.c mgos_timers.c \
+             mgos_config_util.c mgos_sys_config.c \
+             mgos_dlsym.c mgos_system.c \
+             $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
+             cs_crc32.c cs_file.c \
+             cs_frbuf.c mgos_file_utils.c mgos_utils.c \
+             cs_rbuf.c mgos_core_dump.c mgos_uart.c \
+             boot.c frozen.c json_utils.c
+
+ifneq "$(TOOLCHAIN)" "gcc"
+  MGOS_SRCS += umm_malloc.c
+  VPATH += $(COMMON_PATH)/umm_malloc
+endif
+
+IPATH += $(SPIFFS_PATH)
+VPATH += $(SPIFFS_PATH)
+MGOS_SRCS += $(notdir $(wildcard $(SPIFFS_PATH)/*.c))
+
+DRIVER_SRCS = cpu.c flash.c i2c.c interrupt.c pin.c prcm.c spi.c timer.c uart.c udma.c utils.c
+SL_SRCS = socket.c wlan.c driver.c device.c netapp.c netcfg.c network_common.c \
+          cc_pal.c fs.c
+SDK_SRCS = $(DRIVER_SRCS) $(FREERTOS_SRCS) $(SL_SRCS)
+IPATH += $(SDK_PATH) $(SDK_PATH)/inc $(SDK_PATH)/driverlib \
+         $(SDK_PATH)/simplelink $(SDK_PATH)/simplelink/include \
+         $(SDK_PATH)/simplelink_extlib/provisioninglib
+VPATH += $(SDK_PATH)/driverlib $(SDK_PATH)/oslib $(SDK_PATH)/simplelink \
+         $(SDK_PATH)/simplelink/source
+SDK_CFLAGS = -DTARGET_IS_CC3200 -DUSE_FREERTOS
+
+MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3200_PATH)/src/*.c)) \
+             cc32xx_exc.c arm_exc.c arm_exc_top.S arm_nsleep100.c arm_nsleep100_m4.S \
+             cc32xx_fs.c cc32xx_gpio.c cc32xx_hal.c cc32xx_hw_timers.c \
+             cc32xx_libc.c cc32xx_main.c cc32xx_sl_spawn.c cc32xx_uart.c
+APP_SRCS = $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
+APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
+
+MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" -DCS_PLATFORM=CS_P_CC3200 \
+              -DMGOS_MAX_NUM_UARTS=2 -DMGOS_DEBUG_UART=$(MGOS_DEBUG_UART) \
+              -DSYS_CLK=80000000 -D__SF_DEBUG__ \
+              -DMG_ENABLE_SSL \
+              -DMG_SSL_IF_SIMPLELINK_SLFS_PREFIX=\"/slfs/\" \
+              $(SDK_CFLAGS) \
+              -DC_DISABLE_BUILTIN_SNPRINTF
+
+include $(MGOS_PATH)/fw/src/mgos_features.mk
+include $(MGOS_PATH)/fw/src/mkfs.mk
+
+clean:
+	$(Q) rm -rf $(BUILD_DIR) $(FW_DIR)
+
+$(BUILD_DIR) $(FW_DIR) $(FS_STAGING_DIR) $(APP_SLFS_PATH) $(FW_STAGING_DIR) $(GEN_DIR):
+	$(vecho) "MKDIR $@"
+	$(Q) mkdir -p $@
+
+ifneq "$(APP_SLFS_PATH)" ""
+  SLFS_FILES = $(wildcard $(APP_SLFS_PATH)/*)
+else
+  SLFS_FILES =
+endif
+
+CREATE_RAW_FS ?= 0
+
+FW_PARTS =
+ifneq "$(CC3200_SP_FILE)" ""
+  FW_PARTS += /sys/servicepack.ucf:type=slfile,src=$(CC3200_SP_FILE),falloc=49152,sig=$(notdir $(CC3200_SP_FILE)).sign \
+              $(notdir $(CC3200_SP_FILE)).sign:type=sig,src=$(CC3200_SP_FILE).sign
+endif
+ifdef MGOS_HAVE_OTA_COMMON
+  CC3200_APP_ORG = 0x20000000
+  FW_PARTS += /sys/mcuimg.bin:type=boot,src=$(BOOT_BIN),falloc=14336 \
+           $(notdir $(BOOT_CFG_0)):type=boot_cfg,src=$(BOOT_CFG_0) \
+           $(notdir $(BOOT_CFG_1)):type=boot_cfg,src=$(BOOT_CFG_1) \
+           $(notdir $(APP_BIN)).0:type=app,src=$(APP_BIN),falloc=$(CC3200_PADDED_IMAGE_SIZE),load_addr=$(CC3200_APP_ORG) \
+           spiffs.img.0.0:type=fs,src=$(FS_IMG),fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE) \
+           spiffs.img.0.1:type=slfile,falloc=$(FS_IMAGE_SIZE) \
+           spiffs.img.1.0:type=slfile,falloc=$(FS_IMAGE_SIZE)
+ifeq "$(CC3200_SAFE_CODE_UPDATE)" "1"
+    FW_PARTS += $(notdir $(APP_BIN)).1:type=slfile,falloc=$(CC3200_PADDED_IMAGE_SIZE)
+    MGOS_CFLAGS += -DCC3200_SAFE_CODE_UPDATE=1
+endif
+else
+  CC3200_APP_ORG = 0x20004000
+  FW_PARTS += /sys/mcuimg.bin:type=app,src=$(APP_BIN) \
+              spiffs.img.0.0:type=fs,src=$(FS_IMG),fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE) \
+              spiffs.img.0.1:type=slfile,falloc=$(FS_IMAGE_SIZE)
+endif
+FW_PARTS += $(foreach f,$(SLFS_FILES), $(notdir $(f)):type=slfile,src=$(f))
+FW_PARTS += $(APP_EXTRA_FW_PARTS)
+
+include $(MGOS_PATH)/common/scripts/fw_meta.mk
+
+SDK_OBJS = $(addprefix $(BUILD_DIR)/,$(SDK_SRCS:=.o))
+MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o))
+APP_OBJS = $(addprefix $(BUILD_DIR)/,$(APP_SRCS:=.o))
+
+include $(MGOS_PATH)/common/scripts/build_info.mk
+include $(MGOS_PATH)/common/scripts/ffi_exports.mk
+include $(MGOS_PATH)/fw/src/mgos_config.mk
+
+MGOS_CONF_SCHEMA += $(MGOS_CC3200_PATH)/src/cc3200_sys_config.yaml
+
+$(BUILD_DIR)/miniz.o: CFLAGS += -DMINIZ_NO_STDIO
+
+$(FS_IMG): $(APP_FS_DIRS) $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(FS_FILES) $(MK_FS_META_BIN) $(MKSPIFFS)
+	$(call mkspiffs,$(FS_SIZE),$(FS_BLOCK_SIZE),$(FS_PAGE_SIZE),$(FS_ERASE_SIZE))
+	$(Q) $(MK_FS_META_BIN) $(FS_SIZE) $(FS_BLOCK_SIZE) $(FS_PAGE_SIZE) $(FS_ERASE_SIZE) >> $@
+
+$(FS_EMPTY_IMG): $(MK_FS_META_BIN)
+	$(vecho) "GEN   $@"
+	$(Q) dd if=/dev/zero of=$@ bs=$(FS_BLOCK_SIZE) \
+	        count=$(shell echo $$(($(FS_SIZE) / $(FS_BLOCK_SIZE)))) > $@ 2>/dev/null
+	$(Q) $(MK_FS_META_BIN) 0 0 0 0 0 >> $@
+
+OBJCOPY = arm-none-eabi-objcopy
+
+ifeq "$(TOOLCHAIN)" "gcc"
+
+include $(COMMON_CC3200_PATH)/gcc.mk
+APP_LD_SCRIPT ?= $(COMMON_CC3200_PATH)/cc3200.ld
+APP_LDFLAGS += --defsym=ORG=$(CC3200_APP_ORG) --defsym=RAM_SIZE=$(CC3200_SRAM_SIZE) --entry=_c_int00
+MGOS_OBJS += $(BUILD_DIR)/startup_gcc.c.o
+VPATH += $(MGOS_CC3200_PATH)/tools
+
+else
+
+include $(COMMON_CC3200_PATH)/ti.mk
+APP_LD_SCRIPT ?= $(MGOS_CC3200_PATH)/ld/cc3200.cmd
+APP_LDFLAGS += --ram_model --cinit_compression=off --copy_compression=off \
+               --heap_size=0 --stack_size=0x100 \
+               --disable_auto_rts -l rtsv7M4_T_le_eabi_cesanta.lib \
+               --define APP_ORG=$(CC3200_APP_ORG) \
+               --define SRAM_BASE_ADDR=$(CC3200_SRAM_BASE_ADDR) \
+               --define SRAM_SIZE=$(CC3200_SRAM_SIZE)
+
+MGOS_CFLAGS += -DMG_TI_NO_HOST_INTERFACE=1
+MGOS_OBJS += $(BUILD_DIR)/portasm.asm.o \
+             $(BUILD_DIR)/startup_ccs.c.o
+VPATH += $(MGOS_CC3200_PATH)/src/ti
+
+# Selectively inhibit warnings in external code.
+$(BUILD_DIR)/spiffs_gc.c.o: CFLAGS += --diag_suppress=1944
+$(BUILD_DIR)/spiffs_hydrogen.c.o: CFLAGS += --diag_suppress=770,1944
+$(BUILD_DIR)/port.c.o: CFLAGS += --diag_suppress=193,225
+$(BUILD_DIR)/tasks.c.o: CFLAGS += --diag_suppress=225
+endif
+
+C_CXX_FLAGS += -DNDEBUG -DCS_NDEBUG -D__FPU_PRESENT=0 -D__MPU_PRESENT=0 \
+               -DFW_ARCHITECTURE=$(APP_PLATFORM) -DIRAM= \
+               -DSRAM_BASE_ADDR=$(CC3200_SRAM_BASE_ADDR) \
+               -DSRAM_SIZE=$(CC3200_SRAM_SIZE) \
+               $(patsubst %,-I%,$(subst :, ,$(IPATH))) \
+               $(MG_FEATURES) $(MGOS_FEATURES) $(MGOS_CC3200_FEATURES) \
+               $(MGOS_CFLAGS)
+
+CFLAGS += $(APP_CFLAGS)
+CXXFLAGS += $(APP_CXXFLAGS)
+
+all: $(BUILD_DIR) $(GEN_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(FS_STAGING_DIR) $(FW_ZIP)
+
+$(FW_MANIFEST): $(BOOT_BIN) $(BOOT_CFG_0) $(BOOT_CFG_1) \
+                $(APP_BIN) $(FS_IMG) $(FS_EMPTY_IMG) \
+                $(APP_SLFS_PATH) $(SLFS_FILES) $(FS_FILES)
+
+$(BOOT_BIN) $(MK_BOOT_CFG_BIN): $(wildcard $(BOOT_PATH)/src/*) \
+                                $(wildcard $(BOOT_PATH)/tools/mkcfg.c)
+	$(vecho) "MAKE  $@"
+	$(Q) mkdir -p $(BOOT_BUILD_DIR)
+	$(Q) $(MAKE) -C $(BOOT_PATH) -f Makefile.build \
+	             MGOS_PATH=$(realpath $(MGOS_PATH)) \
+	             APP=mg-boot TOOLCHAIN=gcc \
+	             SDK_PATH=$(SDK_PATH) PYTHON=$(PYTHON) \
+	             BUILD_DIR=$(abspath $(BOOT_BUILD_DIR)) \
+	             FW_DIR=$(abspath $(BOOT_FW_DIR)) \
+	             MGOS_DEBUG_UART=$(MGOS_DEBUG_UART) \
+	             MGOS_DEBUG_UART_BAUD_RATE=$(MGOS_DEBUG_UART_BAUD_RATE) \
+	             CREATE_ZIP=0 dirs $(abspath $@)
+
+$(BOOT_CFG_0): $(MK_BOOT_CFG_BIN)
+	$(vecho) "MKCFG $@"
+	$(Q) $(MK_BOOT_CFG_BIN) $(notdir $(APP_BIN)).0 $(CC3200_APP_ORG) spiffs.img.0 > $@
+
+$(BOOT_CFG_1): $(MK_BOOT_CFG_BIN)
+	$(vecho) "MKCFG $@"
+	$(Q) $(MK_BOOT_CFG_BIN) "" 0 "" 0 > $@
+
+$(APP_BIN): $(APP_ELF)
+	$(vecho) "BIN   $< -> $@"
+	$(Q) $(OBJCOPY) -O binary $< $@
+	$(Q) echo "     Code size: $$(ls -l $@ | awk '{print $$5}')"
+
+$(APP_ELF): $(APP_OBJS) $(MGOS_LIB) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES) $(APP_LD_SCRIPT)
+	$(call link,$(APP_LD_SCRIPT),$(APP_LDFLAGS),$(APP_OBJS) $(MGOS_LIB) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(APP_BIN_LIB_FILES))
+
+$(MGOS_LIB): $(MGOS_OBJS) $(SDK_OBJS)
+	$(call ar,$^)
+
+$(BUILD_DIR)/%.c.o: %.c $(GENFILES_LIST)
+	$(call cc,$(CFLAGS),$<)
+
+$(BUILD_DIR)/%.cpp.o: %.cpp $(GENFILES_LIST)
+	$(call cxx,$(CXXFLAGS),$<)
+
+$(BUILD_DIR)/%.c.o: $(GEN_DIR)/%.c $(GENFILES_LIST)
+	$(call cc,$(CFLAGS),$<)
+
+$(BUILD_DIR)/%.asm.o: %.asm $(GENFILES_LIST)
+	$(call asm,$(CFLAGS),$<)
+
+$(BUILD_DIR)/%.S.o: %.S $(GENFILES_LIST)
+	$(vecho) "GCCAS $@"
+	$(Q) arm-none-eabi-gcc -mthumb -mcpu=cortex-m4 $(C_CXX_FLAGS) -Wundef -c -ggdb -x assembler-with-cpp $< -o $@
+
+$(FFI_EXPORTS_C): $(APP_FS_FILES)
+	$(call gen_ffi_exports,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))
+
+# In ffi exports file we use fake signatures: void func(void), and it conflicts
+# with the builtin functions like fopen, etc.
+$(FFI_EXPORTS_O): CFLAGS += -fno-builtin
+
+# Regenerate build info if there are changes in objects.
+$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(APP_OBJS) $(MGOS_OBJS)
+	$(call gen_build_info,$@,$(APP_PATH),$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
+
+$(MG_BUILD_INFO_C): $(MGOS_OBJS)
+	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
+
+$(MK_FS_META_BIN): $(MGOS_CC3200_PATH)/tools/mkfsmeta.c
+	$(vecho) "GCC   $<"
+	$(Q) gcc -Wall -Werror -I$(MGOS_CC3200_PATH)/src -o $@ $^
+
+# Build lib.a
+
+$(BUILD_DIR)/$(BUILD_LIB_NAME): $(BUILD_DIR) $(APP_OBJS)
+	$(call ar,$(APP_OBJS))
+
+# Pull in auto-generated .c dependencies (if any).
+-include $(wildcard $(BUILD_DIR)/*.d)
