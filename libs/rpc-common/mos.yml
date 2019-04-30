@@ -1,0 +1,38 @@
+author: mongoose-os
+description: Implements Mongoose OS RPC
+type: lib
+version: 1.0
+
+sources:
+  - src
+
+includes:
+  - include
+
+config_schema:
+  - ["rpc", "o", {title: "RPC settings"}]
+  - ["rpc.enable", "b", true, {title: "Enable RPC"}]
+  - ["rpc.max_frame_size", "i", 4096, {title: "Max Frame Size"}]
+  - ["rpc.max_queue_length", "i", 25, {title: "Max Queue Length"}]
+  - ["rpc.default_out_channel_idle_close_timeout", "i", 10, {title: "Default idle close timeout for outbound channels"}]
+  - ["rpc.acl_file", "s", {title: "File with RPC ACL JSON"}]
+  - ["rpc.auth_domain", "s", {title: "Realm to use for digest authentication"}]
+  - ["rpc.auth_file", "s", {title: "File with user credentials in the htdigest format"}]
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/mongoose
+
+# If we have HTTP or WS RPC, server needs to be initialized already.
+init_after:
+  - http-server
+
+cdefs:
+  MGOS_ENABLE_RPC_CHANNEL_HTTP: 1
+  MGOS_ENABLE_SYS_SERVICE: 1
+
+tags:
+  - rpc
+  - c
+  - docs:rpc:RPC core
+
+manifest_version: 2017-09-29

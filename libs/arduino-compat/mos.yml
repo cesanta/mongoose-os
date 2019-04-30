@@ -1,0 +1,28 @@
+author: mongoose-os
+description: Arduino compatibility
+type: lib
+version: 1.0
+
+# cc3200 c++ compiler doesn't understand nullptr, so we disable cc3200 builds.
+# TODO(rojer): look into updating TI c++ compiler.
+platforms: [ esp32, esp8266 ]
+
+sources:
+  - src
+includes:
+  - include
+
+cdefs:
+  ARDUINO: 150
+
+tags:
+  - arduino
+  - c
+  - core
+  - docs:arduino:Arduino compatibility
+
+manifest_version: 2017-09-29
+
+# Temporary, while root manifest change propagates (2018/03/29).
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/core

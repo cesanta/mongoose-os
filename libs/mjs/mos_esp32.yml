@@ -1,0 +1,5 @@
+sources:
+  - esp32/src
+
+filesystem:
+  - esp32/fs

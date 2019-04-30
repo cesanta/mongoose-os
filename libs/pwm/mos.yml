@@ -1,0 +1,25 @@
+author: mongoose-os
+type: lib
+description: PWM support
+version: 1.0
+
+platforms: [ esp32, esp8266 ]
+
+sources:
+  - src
+  - src/${arch}
+includes:
+  - include
+
+tags:
+  - c
+  - js
+  - pwm
+  - core
+  - docs:core:PWM
+
+manifest_version: 2017-09-29
+
+# Temporary, while root manifest change propagates (2018/03/29).
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/core

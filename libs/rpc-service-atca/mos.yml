@@ -1,0 +1,15 @@
+author: mongoose-os
+description: RPC ATCA Service support
+type: lib
+version: 1.0
+manifest_version: 2017-09-29
+sources:
+  - src
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/atca
+  - origin: https://github.com/cesanta/mongoose-os/libs/rpc-common
+tags:
+  - rpc
+  - atca
+  - c
+  - docs:rpc:Service - ATCA

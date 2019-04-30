@@ -1,0 +1,26 @@
+author: mongoose-os
+description: RPC over Bluetooth GATT (server)
+type: lib
+version: 1.0
+
+sources:
+  - src
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/bt-common
+  - origin: https://github.com/cesanta/mongoose-os/libs/rpc-common
+
+config_schema:
+  - ["rpc.gatts", "o", {title: "Bluetooth settings"}]
+  - ["rpc.gatts.enable", "b", true, {title: "Enable RPC GATTS service"}]
+  - ["rpc.gatts.sec_level", "i", 0, {title: "Minimum required security level"}]
+  - ["rpc.gatts.max_frame_size", "i", 4096, {title: "Maximum allowed frame size"}]
+
+tags:
+  - bt
+  - bluetooth
+  - c
+  - rpc
+  - docs:rpc:RPC over BLE GATT
+
+manifest_version: 2017-09-29

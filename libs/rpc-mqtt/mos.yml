@@ -1,0 +1,35 @@
+author: mongoose-os
+description: Implements Mongoose OS RPC over MQTT protocol
+type: lib
+version: 1.0
+
+sources:
+  - src
+includes:
+  - include
+config_schema:
+  - ["rpc.mqtt", "o", {title: "RPC over MQTT settings"}]
+  - ["rpc.mqtt.enable", "b", true, {title: "Enable RPC over MQTT"}]
+  - ["rpc.mqtt.pub_topic", "s", "%.*s/rpc", {title: "Topic to post outgoing frames to. Argument to the format string is the frame's destination."}]
+  - ["rpc.mqtt.sub_topic", "s", "%.*s/rpc", {title: "Topic to accept incoming frames on. Argument to the format string is device.id"}]
+  - ["rpc.mqtt.sub_wc", "b", true, {title: "Also subscribe to wildcard topic"}]
+  - ["rpc.mqtt.qos", "i", 1, {title: "QoS for pub and sub"}]
+
+init_after:
+  - aws
+  - azure
+  - gcp
+  - watson
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/mqtt
+  - origin: https://github.com/cesanta/mongoose-os/libs/rpc-common
+
+tags:
+  - rpc
+  - mqtt
+  - c
+  - js
+  - docs:rpc:RPC over MQTT
+
+manifest_version: 2017-09-29

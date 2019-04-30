@@ -1,0 +1,19 @@
+author: mongoose-os
+type: lib
+description: ADC support
+version: 1.0
+
+platforms: [ esp32, esp8266 ]
+
+includes:
+  - include
+
+libs:
+
+tags:
+  - c
+  - js
+  - core
+  - docs:core:ADC
+
+manifest_version: 2017-09-29

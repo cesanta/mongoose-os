@@ -1,0 +1,17 @@
+author: mongoose-os
+description: RPC GATT Client Service
+type: lib
+version: 1.0
+sources:
+  - src
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/bt-common
+  - origin: https://github.com/cesanta/mongoose-os/libs/rpc-common
+tags:
+  - bt
+  - c
+  - gattc
+  - rpc
+  - docs:rpc:Service - GATT client
+
+manifest_version: 2017-09-29

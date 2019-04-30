@@ -1,0 +1,38 @@
+author: mongoose-os
+type: lib
+description: Azure IoT Hub integration
+version: 1.0
+
+sources:
+  - src
+includes:
+  - include
+
+config_schema:
+  - ["azure", "o", {title: "Azure IoT Hub settings"}]
+  - ["azure.enable", "b", false, {title: "Enable Azure IoT Hub connection"}]
+  # SAS auth parameters
+  - ["azure.cs", "s", "", {title: "Connection string, for SAS auth"}]
+  - ["azure.token_ttl", "i", 3600, {title: "Life time of the SAS token"}]
+  # X.509 auth parameters
+  - ["azure.host_name", "s", "", {title: "IoT hub host name"}]
+  - ["azure.device_id", "s", "", {title: "Device ID"}]
+  - ["azure.cert", "s", "", {title: "X.509 certificate"}]
+  - ["azure.key", "s", "", {title: "X.509 private key"}]
+  - ["azure.enable_cm", "b", true, {title: "Subscribe to the cloud messages topic"}]
+  - ["azure.enable_dm", "b", true, {title: "Subscribe to the direct method invocation topic"}]
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/ca-bundle
+  - origin: https://github.com/cesanta/mongoose-os/libs/mqtt
+  - origin: https://github.com/cesanta/mongoose-os/libs/shadow
+  # Azure requires valid time to sign tickets.
+  - origin: https://github.com/cesanta/mongoose-os/libs/sntp
+
+tags:
+  - c
+  - cloud
+  - azure
+  - docs:cloud:Miscrosoft Azure IoT
+
+manifest_version: 2017-09-29

@@ -1,0 +1,27 @@
+build_vars:
+  MGOS_ENABLE_SPI_GPIO: 0
+
+conds:
+  - when: build_vars.MGOS_ENABLE_SPI_GPIO != "1"
+    apply:
+      sources:
+        - src/esp32
+
+      config_schema:
+        - ["spi.unit_no", "i", 3, {title: "Which SPI unit to use, 2 or 3"}]
+        - ["spi.miso_gpio", "i", 19, {title: "GPIO to use for MISO"}]
+        - ["spi.mosi_gpio", "i", 23, {title: "GPIO to use for MOSI"}]
+        - ["spi.sclk_gpio", "i", 18, {title: "GPIO to use for SCLK"}]
+        - ["spi.cs0_gpio", "i", 5, {title: "GPIO to use for CS0"}]
+        - ["spi.cs1_gpio", "i", -1, {title: "GPIO to use for CS1"}]
+        - ["spi.cs2_gpio", "i", -1, {title: "GPIO to use for CS2"}]
+
+  - when: build_vars.MGOS_ENABLE_SPI_GPIO == "1"
+    apply:
+      config_schema:
+        - ["spi.miso_gpio", 19]
+        - ["spi.mosi_gpio", 23]
+        - ["spi.sclk_gpio", 18]
+        - ["spi.cs0_gpio", 5]
+
+manifest_version: 2017-09-29

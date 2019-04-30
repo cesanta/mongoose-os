@@ -1,0 +1,87 @@
+/*
+ * Copyright (c) 2014-2018 Cesanta Software Limited
+ * All rights reserved
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+#include "mbedtls/aes.h"
+
+#ifdef RTOS_SDK
+#include "esp_libc.h"
+#else
+#include "osapi.h"
+#endif
+
+#define AES_PRIV_NR_POS (4 * 15)
+
+/*
+ * Crypto functions in ROM/SDK.
+ * They come from wpa_supplicant, you can find them here https://w1.fi/cgit/
+ *
+ * Note that ROM version of the key setup function is older, does not take the
+ * number of bits argument and only supports AES-128. This prototype doesn't
+ * suit it, but since the difference is in the last aegument, it doesn't matter.
+ */
+
+extern void rijndaelKeySetupDec(void *ctx, const uint8_t *key, int bits);
+extern int rijndaelKeySetupEnc(void *ctx, const uint8_t *key, int bits);
+void aes_encrypt(void *ctx, const uint8_t *plain, uint8_t *crypt);
+void aes_decrypt(void *ctx, const uint8_t *crypt, uint8_t *plain);
+
+/*
+ * AES that comes with wpa_supplicant allocates its own AES context in
+ * aes_{encrypt,decrypt}_init. Ideally, we'd take that pointer and store it in
+ * our mbedtls_aes_context, but then a lot of space would be wasted.
+ * We do not call _init and go directly to key setup functions and poke number
+ * of rounds into the right place too. This is a bit hacky, but works fine.
+ * There is also a difference between older function in ROM and the one coming
+ * with SDK which is newer: the older one actually takes two arguments, not 3.
+ * But it doesn't matter, extra argument doesn't hurt and this works with both.
+ */
+int mbedtls_aes_setkey_enc(mbedtls_aes_context *ctx, const unsigned char *key,
+                           unsigned int keybits) {
+  if (keybits != 128) return MBEDTLS_ERR_AES_INVALID_KEY_LENGTH;
+  ((uint32_t *) ctx)[AES_PRIV_NR_POS] = 10;
+  rijndaelKeySetupEnc(ctx, key, 128);
+  return 0;
+}
+
+int mbedtls_aes_setkey_dec(mbedtls_aes_context *ctx, const unsigned char *key,
+                           unsigned int keybits) {
+  if (keybits != 128) return MBEDTLS_ERR_AES_INVALID_KEY_LENGTH;
+  ((uint32_t *) ctx)[AES_PRIV_NR_POS] = 10;
+  rijndaelKeySetupDec(ctx, key, 128);
+  return 0;
+}
+
+int mbedtls_internal_aes_encrypt(mbedtls_aes_context *ctx,
+                                 const unsigned char input[16],
+                                 unsigned char output[16]) {
+  aes_encrypt(ctx, input, output);
+  return 0;
+}
+
+int mbedtls_internal_aes_decrypt(mbedtls_aes_context *ctx,
+                                 const unsigned char input[16],
+                                 unsigned char output[16]) {
+  aes_decrypt(ctx, input, output);
+  return 0;
+}
+
+/* os_get_random uses hardware RNG, so it's cool. */
+int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {
+  os_get_random(buf, len);
+  (void) ctx;
+  return 0;
+}

@@ -1,0 +1,30 @@
+author: mongoose-os
+type: lib
+description: Support library for the device management dashboard
+version: 1.0
+
+sources:
+  - src
+includes:
+  - include
+
+config_schema:
+  - ["dash.enable", "b", false, {"title": "Enable"}]
+  - ["dash.token", "s", "", {"title": "Access token"}]
+  - ["dash.server", "s", "wss://dash.mongoose-os.com/api/v2/rpc", {"title": "Server address"}]
+  - ["dash.ssl_cert", "s", "", {title: "Client certificate to present to the server"}]
+  - ["dash.ssl_key", "s", "", {title: "Private key corresponding to the certificate"}]
+  - ["dash.ssl_ca_cert", "s", "ca.pem", {"title": "Verify server certificate using this CA bundle"}]
+  - ["dash.send_logs", "b", false, {"title": "Send logs"}]
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/core
+  - origin: https://github.com/cesanta/mongoose-os/libs/rpc-ws
+  - origin: https://github.com/cesanta/mongoose-os/libs/shadow
+
+tags:
+  - c
+  - rpc
+  - docs:cloud:mDash dashboard
+
+manifest_version: 2017-09-29

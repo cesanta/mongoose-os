@@ -1,0 +1,5 @@
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/miniz
+
+init_after:
+  - miniz

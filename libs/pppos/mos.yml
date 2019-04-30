@@ -1,0 +1,63 @@
+author: mongoose-os
+description: PPPoS support
+type: lib
+version: 1.0
+includes: [ include ]
+sources: [ src ]
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/core
+  - origin: https://github.com/cesanta/mongoose-os/libs/lwip
+
+config_schema:
+  - ["pppos.enable", "b", false, {title: "Enable PPPoS"}]
+  - ["pppos.uart_no", "i", 1, {title: "Which UART to use"}]
+  - ["pppos.baud_rate", "i", 115200, {title: "Baud rate to use for data transfer"}]
+  - ["pppos.start_baud_rate", "i", 115200, {title: "Starting baud rate, used for initial configuration"}]
+  - ["pppos.fc_enable", "b", false, {title: "Enable hardware CTS/RTS flow control"}]
+  - ["pppos.start_fc_enable", "b", false, {title: "Enable hardware CTS/RTS flow control for initial configuration"}]
+  - ["pppos.rx_gpio", "i", -1, {title: "RX pin; -1 = use default"}]
+  - ["pppos.tx_gpio", "i", -1, {title: "TX pin; -1 = use default"}]
+  - ["pppos.cts_gpio", "i", -1, {title: "CTS pin; -1 = use default"}]
+  - ["pppos.rts_gpio", "i", -1, {title: "RTS pin; -1 = use default"}]
+  - ["pppos.dtr_gpio", "i", -1, {title: "DTR pin; -1 - do not use, if set will be driven to active state"}]
+  - ["pppos.dtr_act", "i", 0, {title: "Active state for the DTR pin"}]
+  # These depend on the operator and are usually well known.
+  - ["pppos.apn", "s", "", {title: "APN name"}]
+  - ["pppos.user", "s", "", {title: "User name"}]
+  - ["pppos.pass", "s", "", {title: "Password"}]
+  - ["pppos.connect_on_startup", "b", true, {title: "Connect immediately on startup"}]
+  # Reset settings. If not set, driver will not perform reset and app should manage modem power on its own.
+  - ["pppos.rst_gpio", "i", -1, {title: "Reset pin; -1 = no reset"}]
+  - ["pppos.rst_act", "i", 0, {title: "Active level, 0 or 1"}]
+  - ["pppos.rst_hold_ms", "i", 100, {title: "Time to hold reset pin in active state"}]
+  - ["pppos.rst_wait_ms", "i", 5000, {title: "Time to wait after reset before initializing"}]
+  - ["pppos.rst_mode", "i", 0, {title: "Reset mode: 0 - on first connect only, 1 - on every connect"}]
+  # Misc settings.
+  - ["pppos.echo_interval", "i", 10, {title: "LCP Echo interval, seconds"}]
+  - ["pppos.echo_fails", "i", 3, {title: "Number of failed echos before connection is declared dead and retried"}]
+  - ["pppos.hexdump_enable", "b", false, {title: "Dump all the data sent over UART to stderr"}]
+conds:
+  # ESP32 sets LwIP options via sdkconfig, for other platforms use cdefs directly.
+  - when: mos.platform == "esp32"
+    apply:
+      build_vars:
+        ESP_IDF_SDKCONFIG_OPTS: >
+          ${build_vars.ESP_IDF_SDKCONFIG_OPTS}
+          CONFIG_PPP_SUPPORT=y
+          CONFIG_PPP_PAP_SUPPORT=y
+          CONFIG_PPP_CHAP_SUPPORT=y
+          CONFIG_PPP_MSCHAP_SUPPORT=y
+  - when: mos.platform != "esp32"
+    apply:
+      cdefs:
+        PPP_SUPPORT: 1
+        PAP_SUPPORT: 1
+        CHAP_SUPPORT: 1
+        MSCHAP_SUPPORT: 1
+tags:
+  - hw
+  - net
+  - docs:net:PPPoS
+
+manifest_version: 2017-09-29

@@ -1,0 +1,56 @@
+author: mongoose-os
+description: LwIP TCP/IP stack
+type: lib
+version: 2.1.2
+
+conds:
+  # For esp8266 and esp32, SDK provides LwIP and this is basically an no-op library.
+  #
+  # TODO(rojer): When mos supports more elaborate conds, this can be deduped.
+  - when: mos.platform == "stm32"
+    apply:
+      libs:
+        - origin: https://github.com/cesanta/mongoose-os/libs/freertos
+        - origin: https://github.com/cesanta/mongoose-os/libs/mbedtls
+      sources:
+        - src
+        - src/freertos
+        - lwip/src/api
+        - lwip/src/core
+        - lwip/src/core/ipv4
+        - lwip/src/core/ipv6
+        - lwip/src/netif
+        - lwip/src/netif/ppp
+      includes:
+        - include
+        - lwip/src/include
+
+  - when: mos.platform == "rs14100"
+    apply:
+      libs:
+        - origin: https://github.com/cesanta/mongoose-os/libs/freertos
+        - origin: https://github.com/cesanta/mongoose-os/libs/mbedtls
+      sources:
+        - src
+        - src/freertos
+        - lwip/src/api
+        - lwip/src/core
+        - lwip/src/core/ipv4
+        - lwip/src/core/ipv6
+        - lwip/src/netif
+        - lwip/src/netif/ppp
+      includes:
+        - include
+        - lwip/src/include
+
+cdefs:
+  MG_LWIP: 1
+
+build_vars:
+  MGOS_MG_NET_IF: MG_NET_IF_LWIP_LOW_LEVEL
+
+no_implicit_init_deps: true
+init_after:
+  - freertos
+
+manifest_version: 2018-06-12

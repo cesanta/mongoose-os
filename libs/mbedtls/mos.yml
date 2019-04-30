@@ -1,0 +1,53 @@
+author: mongoose-os
+description: Implements SPI API on Mongoose OS
+type: lib
+version: 2.16.0-cesanta3
+
+sources:
+  - src
+  - src/${platform}
+  - mbedtls/library
+
+includes:
+  - include
+  - include/${platform}
+  - mbedtls/include
+
+cdefs:
+  MBEDTLS_X509_CA_CHAIN_ON_DISK: 1
+  MBEDTLS_USER_CONFIG_FILE: '\"mbedtls_platform_config.h\"'
+
+config_schema:
+  - ["debug.mbedtls_level", "i", 1, {title: "mbedTLS debug level"}]
+
+conds:
+  # On CC3200 we use SimpleLink for SSL due to lack of space.
+  # mbedTLS is still used for crypto primitives (e.g. GCP auth).
+  - when: mos.platform != "cc3200"
+    apply:
+      cdefs:
+        MG_ENABLE_SSL: 1
+        MG_SSL_IF: MG_SSL_IF_MBEDTLS
+        MBEDTLS_ECP_ATCA: 1
+      libs:
+        - origin: https://github.com/cesanta/mongoose-os/libs/atca
+
+  - when: mos.platform == "cc3200"
+    apply:
+      sources:
+        - src/cc32xx
+      includes:
+        - include/cc32xx
+  - when: mos.platform == "cc3220"
+    apply:
+      sources:
+        - src/cc32xx
+      includes:
+        - include/cc32xx
+
+tags:
+  - c
+  - security
+
+manifest_version: 2018-06-20
+no_implicit_init_deps: true

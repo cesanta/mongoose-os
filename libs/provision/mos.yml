@@ -1,0 +1,28 @@
+author: mongoose-os
+type: lib
+description: A device provisioning library
+version: 1.0
+
+includes:
+  - include
+
+sources:
+  - src
+
+tags:
+  - c
+  - docs:misc:Device Provisioning
+
+config_schema:
+  - ["provision", "o", {title: "Provision library settings"}]
+  - ["provision.btn", "o", {title: "Reset button settings"}]
+  - ["provision.btn.pin", "i", -1, {title: "Reset button GPIO pin"}]
+  - ["provision.btn.pull_up", "b", false, {title: "True if button is pulled up when inactive"}]
+  - ["provision.btn.hold_ms", "i", 0, {title: "Hold interval in milliseconds. -1 to disable, 0 to reset if held on boot, > 0 to reset if held at runtime for this long."}]
+  - ["provision.led.pin", "i", -1, {title: "LED GPIO pin. If >= 0, LED blinking will indicate current state."}]
+  - ["provision.led.active_high", "b", true, {title: "True if LED is on when output is high (1)"}]
+  - ["provision.stable_state", "i", 3, {title: "A stable state, beyond which reset will not happen. Se to 0 to disable reset."}]
+  - ["provision.timeout", "i", 300, {title: "Maximum time since boot allowed to reach stable state"}]
+  - ["provision.max_state", "i", 0, {title: "Maximum state reached so far"}]
+
+manifest_version: 2017-09-29

@@ -1,0 +1,21 @@
+author: mongoose-os
+type: lib
+description: Location library
+version: 1.0
+
+sources:
+  - src
+includes:
+  - include
+config_schema:
+  - ["device.location", "o", {title: "Device location"}]
+  - ["device.location.lat", "d", 999.0, {title: "Latitude"}]
+  - ["device.location.lon", "d", 999.0, {title: "Longtitude"}]
+libs:
+
+tags:
+  - c
+  - core
+  - docs:misc:Device location (lat/lon)
+
+manifest_version: 2017-09-29

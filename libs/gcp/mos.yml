@@ -1,0 +1,37 @@
+author: mongoose-os
+type: lib
+description: Google IoT Core integration
+version: 1.0
+
+sources:
+  - src
+
+includes:
+  - include
+
+config_schema:
+  - ["gcp", "o", {title: "GCP IOT settings"}]
+  - ["gcp.enable", "b", false, {title: "Enable GCP IOT"}]
+  - ["gcp.server", "s", "mqtt.googleapis.com", {title: "Server address"}]
+  - ["gcp.project", "s", "", {title: "Project ID"}]
+  - ["gcp.region", "s", "", {title: "Region name"}]
+  - ["gcp.registry", "s", "", {title: "Device registry name"}]
+  - ["gcp.device", "s", "", {title: "Device name"}]
+  - ["gcp.key", "s", "", {title: "Private key to use for token signing"}]
+  - ["gcp.token_ttl", "i", 3600, {title: "Life time of the token"}]
+  - ["gcp.enable_config", "b", false, {title: "Subscribe to the configuration topic"}]
+  - ["gcp.enable_commands", "b", true, {title: "Subscribe to the command topic"}]
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/ca-bundle
+  - origin: https://github.com/cesanta/mongoose-os/libs/mqtt
+  # GCP requires valid time to sign tickets.
+  - origin: https://github.com/cesanta/mongoose-os/libs/sntp
+
+tags:
+  - c
+  - cloud
+  - google
+  - docs:cloud:Google IoT Core
+
+manifest_version: 2017-09-29

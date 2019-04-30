@@ -1,0 +1,20 @@
+author: mongoose-os
+type: lib
+description: JSON Store
+version: 1.0
+
+sources:
+  - src
+includes:
+  - include
+
+tags:
+  - c
+  - core
+  - docs:misc:JSON store
+
+manifest_version: 2017-09-29
+
+# Temporary, while root manifest change propagates (2018/03/29).
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/core

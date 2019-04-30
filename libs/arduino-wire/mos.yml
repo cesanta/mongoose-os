@@ -1,0 +1,20 @@
+author: mongoose-os
+description: Arduino Wire library
+type: lib
+version: 1.0
+
+sources:
+  - src
+includes:
+  - include
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/i2c
+  - origin: https://github.com/cesanta/mongoose-os/libs/arduino-compat
+
+tags:
+  - arduino
+  - c
+  - core
+  - docs:arduino:Wire
+
+manifest_version: 2017-09-29

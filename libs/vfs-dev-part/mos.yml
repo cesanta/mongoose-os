@@ -1,0 +1,23 @@
+author: mongoose-os
+description: A VFS device that exposes a part of another device
+type: lib
+version: 1.0
+
+sources:
+  - src
+includes:
+  - include
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/vfs-common
+
+no_implicit_init_deps: true
+init_after:
+  - vfs-common
+
+tags:
+  - c
+  - vfs
+  - docs:drivers:VFS (another device)
+
+manifest_version: 2018-06-20

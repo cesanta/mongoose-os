@@ -1,0 +1,14 @@
+build_vars:
+  # No HW SPI support on ESP8266, for now.
+  MGOS_ENABLE_SPI_GPIO: 1
+
+conds:
+  - when: build_vars.MGOS_ENABLE_SPI_GPIO == "1"
+    apply:
+      config_schema:
+        - ["spi.miso_gpio", 12]
+        - ["spi.mosi_gpio", 13]
+        - ["spi.sclk_gpio", 14]
+        - ["spi.cs0_gpio", 15]
+
+manifest_version: 2017-06-16

@@ -1,0 +1,73 @@
+author: mongoose-os
+description: Configures storage devices according to devtab and fstab
+type: lib
+version: 1.0
+
+sources:
+  - src
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/core
+  - origin: https://github.com/cesanta/mongoose-os/libs/vfs-common
+
+# Init after peripheral libraries likely to be used for external storage.
+init_after:
+  - i2c
+  - spi
+  - vfs-dev-*
+  - vfs-fs-*
+
+config_schema:
+  - ["devtab", "o", {title: "Devices to initialize"}]
+  - ["devtab.dev0", "o", {title: "Device table entry 0"}]
+  - ["devtab.dev0.name", "s", "", {title: "Device name"}]
+  - ["devtab.dev0.type", "s", "", {title: "Device type"}]
+  - ["devtab.dev0.opts", "s", "", {title: "Device options"}]
+  - ["devtab.dev1", "o", {title: "Device table entry 1"}]
+  - ["devtab.dev1.name", "s", "", {title: "Device name"}]
+  - ["devtab.dev1.type", "s", "", {title: "Device type"}]
+  - ["devtab.dev1.opts", "s", "", {title: "Device options"}]
+  - ["devtab.dev2", "o", {title: "Device table entry 2"}]
+  - ["devtab.dev2.name", "s", "", {title: "Device name"}]
+  - ["devtab.dev2.type", "s", "", {title: "Device type"}]
+  - ["devtab.dev2.opts", "s", "", {title: "Device options"}]
+  - ["devtab.dev3", "o", {title: "Device table entry 3"}]
+  - ["devtab.dev3.name", "s", "", {title: "Device name"}]
+  - ["devtab.dev3.type", "s", "", {title: "Device type"}]
+  - ["devtab.dev3.opts", "s", "", {title: "Device options"}]
+  - ["devtab.dev4", "o", {title: "Device table entry 4"}]
+  - ["devtab.dev4.name", "s", "", {title: "Device name"}]
+  - ["devtab.dev4.type", "s", "", {title: "Device type"}]
+  - ["devtab.dev4.opts", "s", "", {title: "Device options"}]
+  - ["fstab", "o", {title: "Filesystems to create and mount"}]
+  - ["fstab.fs0", "o", {title: "FS table entry 0"}]
+  - ["fstab.fs0.dev", "s", "", {title: "Device name"}]
+  - ["fstab.fs0.type", "s", "", {title: "FS type"}]
+  - ["fstab.fs0.opts", "s", "", {title: "FS options"}]
+  - ["fstab.fs0.path", "s", "", {title: "Mount point"}]
+  - ["fstab.fs0.create", "b", false, {title: "Create on first boot"}]
+  - ["fstab.fs0.optional", "b", false, {title: "Failure to create/mount is not fatal"}]
+  - ["fstab.fs0.created", "b", false, {title: "This flag is set after creation"}]
+  - ["fstab.fs1", "o", {title: "FS table entry 1"}]
+  - ["fstab.fs1.dev", "s", "", {title: "Device name"}]
+  - ["fstab.fs1.type", "s", "", {title: "FS type"}]
+  - ["fstab.fs1.opts", "s", "", {title: "FS options"}]
+  - ["fstab.fs1.path", "s", "", {title: "Mount point"}]
+  - ["fstab.fs1.create", "b", false, {title: "Create on first boot"}]
+  - ["fstab.fs1.optional", "b", false, {title: "Failure to create/mount is not fatal"}]
+  - ["fstab.fs1.created", "b", false, {title: "This flag is set after creation"}]
+  - ["fstab.fs2", "o", {title: "FS table entry 2"}]
+  - ["fstab.fs2.dev", "s", "", {title: "Device name"}]
+  - ["fstab.fs2.type", "s", "", {title: "FS type"}]
+  - ["fstab.fs2.opts", "s", "", {title: "FS options"}]
+  - ["fstab.fs2.path", "s", "", {title: "Mount point"}]
+  - ["fstab.fs2.create", "b", false, {title: "Create on first boot"}]
+  - ["fstab.fs2.optional", "b", false, {title: "Failure to create/mount is not fatal"}]
+  - ["fstab.fs2.created", "b", false, {title: "This flag is set after creation"}]
+
+tags:
+  - c
+  - fs
+  - docs:misc:Devtab/Fstab
+
+manifest_version: 2017-09-29

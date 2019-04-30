@@ -1,0 +1,25 @@
+author: mongoose-os
+description: VFS device driver for SPI NOR flash
+type: lib
+version: 1.0
+
+sources:
+  - src
+includes:
+  - include
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/spi
+  - origin: https://github.com/cesanta/mongoose-os/libs/vfs-common
+
+no_implicit_init_deps: true
+init_after:
+  - vfs-common
+
+tags:
+  - c
+  - spi
+  - vfs
+  - docs:drivers:VFS (SPI NOR Flash)
+
+manifest_version: 2018-06-20

@@ -1,0 +1,27 @@
+author: mongoose-os
+description: Blynk mobile app integration
+type: lib
+version: 1.0
+
+sources:
+  - src
+includes:
+  - include
+config_schema:
+  - ["blynk", "o", {"title": "Blynk settings"}]
+  - ["blynk.enable", "b", true, {"title": "Enable Blynk"}]
+  - ["blynk.server", "s", "blynk-cloud.com:8442", {"title": "Server address"}]
+  - ["blynk.auth", "s", "", {"title": "Auth token"}]
+
+tags:
+  - js
+  - c
+  - mobile
+  - cloud
+  - docs:cloud:Blynk
+
+manifest_version: 2017-09-29
+
+# Temporary, while root manifest change propagates (2018/03/29).
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/core

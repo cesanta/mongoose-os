@@ -1,0 +1,25 @@
+author: mongoose-os
+description: RPC support for Azure cloud
+type: lib
+version: 1.0
+
+sources:
+  - src
+
+config_schema:
+  - ["rpc.azure", "o", {title: "RPC over Azure settings"}]
+  - ["rpc.azure.enable_dm", "b", true, {title: "Enable RPC over Azure Direct Method calls"}]
+  # TODO(rojer)
+  # - ["rpc.azure.enable_cm", "b", true, {title: "Enable RPC over Azure Cloud Messageing"}]
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/azure
+  - origin: https://github.com/cesanta/mongoose-os/libs/rpc-common
+
+tags:
+  - c
+  - net
+  - rpc
+  - docs:cloud:Microsoft Azure RPC
+
+manifest_version: 2017-09-29

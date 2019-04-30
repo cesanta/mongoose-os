@@ -1,0 +1,118 @@
+author: mongoose-os
+description: WiFi support
+type: lib
+version: 1.0
+
+sources:
+  - src
+  - src/${mos.platform}
+
+includes:
+  - include
+  - include/${mos.platform}
+
+config_schema:
+  - ["wifi", "o", {hide: true}]
+
+  - ["wifi.ap", "o", {title: "WiFi Access Point Config"}]
+  - ["wifi.ap.enable", "b", true, {title: "Enable"}]
+  - ["wifi.ap.ssid", "s", "Mongoose_??????", {title: "SSID"}]
+  - ["wifi.ap.pass", "s", "Mongoose", {title: "Password", type: "password"}]
+  - ["wifi.ap.hidden", "b", false, {title: "Hide SSID"}]
+  - ["wifi.ap.channel", "i", 6, {title: "Channel"}]
+  - ["wifi.ap.max_connections", "i", 10, {title: "Max connections"}]
+  - ["wifi.ap.ip", "s", "192.168.4.1", {title: "IP address"}]
+  - ["wifi.ap.netmask", "s", "255.255.255.0", {title: "Network Mask"}]
+  - ["wifi.ap.gw", "s", "192.168.4.1", {title: "Default Gateway"}]
+  - ["wifi.ap.dhcp_start", "s", "192.168.4.2", {title: "DHCP Start Address"}]
+  - ["wifi.ap.dhcp_end", "s", "192.168.4.100", {title: "DHCP End Address"}]
+  - ["wifi.ap.trigger_on_gpio", "i", -1, {title: "Trigger AP on low GPIO"}]
+  - ["wifi.ap.disable_after", "i", 0, {title: "If > 0, will disable itself after the specified number of seconds"}]
+  - ["wifi.ap.hostname", "s", "", {title: "If not empty, DNS server will resolve given host name to the IP address of AP"}]
+
+  - ["wifi.sta", "o", {title: "WiFi Station Config"}]
+  - ["wifi.sta.enable", "b", {title: "Connect to existing WiFi"}]
+  - ["wifi.sta.ssid", "s", {title: "SSID"}]
+  - ["wifi.sta.pass", "s", {title: "Password", type: "password"}]
+  - ["wifi.sta.user", "s", {title: "Username for WPA-PEAP mode"}]
+  - ["wifi.sta.anon_identity", "s", {title: "Anonymous identity for WPA mode"}]
+  - ["wifi.sta.cert", "s", {title: "Client certificate for WPA-TTLS mode"}]
+  - ["wifi.sta.key", "s", {title: "Client key for WPA-TTLS mode"}]
+  - ["wifi.sta.ca_cert", "s", {title: "CA certificate for WPA-enterprise mode"}]
+  - ["wifi.sta.ip", "s", {title: "Static IP Address"}]
+  - ["wifi.sta.netmask", "s", {title: "Static Netmask"}]
+  - ["wifi.sta.gw", "s", {title: "Static Default Gateway"}]
+  - ["wifi.sta.nameserver", "s", {title: "DNS Server"}]
+  - ["wifi.sta.dhcp_hostname", "s", {title: "Host name to include in DHCP requests"}]
+  # sta1 and sta2 are exact copies of the above section and are used to support multiple station configurations.
+  - ["wifi.sta1", "wifi.sta", {title: "WiFi Station Config 1"}]
+  - ["wifi.sta1.enable", false]
+  - ["wifi.sta2", "wifi.sta", {title: "WiFi Station Config 2"}]
+  - ["wifi.sta2.enable", false]
+  # Station configurations will be tried starting from sta_cfg_idx and each one that is enabled
+  # will be given sta_connect_timeout seconds to connect. Successfully connected station's index
+  # will be saved in sta_cfg_idx so next boot will start with previously used configuration.
+  # Setting sta_connect_timeout to 0 will disable this logic.
+  - ["wifi.sta_cfg_idx", "i", 0, {title: "WiFi station config index to use, 0, 1 or 2"}]
+  - ["wifi.sta_connect_timeout", "i", 30, {title: "Timeout for connection, seconds"}]
+
+build_vars:
+  MGOS_WIFI_ENABLE_AP_STA: 0
+
+conds:
+  - when: mos.platform == "cc3200"
+    apply:
+      sources:
+        - src/cc32xx
+
+  - when: mos.platform == "cc3220"
+    apply:
+      sources:
+        - src/cc32xx
+      config_schema:
+        - ["wifi.sta.eap_method", "s", "", {title: "Valid values: TLS, TTLS_TLS, TTLS_MSCHAPv2, TTLS_PSK, PEAP0_TLS, PEAP0_MSCHAPv2, PEAP0_PSK, PEAP1_TLS, PEAP1_PSK, FAST_AUTH_PROVISIONING, FAST_UNAUTH_PROVISIONING, FAST_NO_PROVISIONING. If not specified, will try to guess based on parameters provided."}]
+        - ["wifi.sta.eap_cert_validation_disable", "b", false, {title: "Disable server cert validation"}]
+
+  - when: mos.platform == "esp8266"
+    apply:
+      config_schema:
+        - ["wifi.ap.keep_enabled", "b", true, {title: "Keep AP enabled when station is on"}]
+      cdefs:
+        MGOS_WIFI_ENABLE_AP_STA: 1
+
+  - when: mos.platform == "esp32"
+    apply:
+      config_schema:
+        - ["wifi.ap.keep_enabled", "b", true, {title: "Keep AP enabled when station is on"}]
+      cdefs:
+        MGOS_WIFI_ENABLE_AP_STA: 1
+
+  - when: mos.platform == "rs14100"
+    apply:
+      libs:
+        - origin: https://github.com/cesanta/mongoose-os/libs/lwip
+      config_schema:
+        - ["wifi.sta.band", "i", 2, {title: "Frequency band for station: 0 - 2.4 GHz, 1 - 5 GHz, 2 - both"}]
+        - ["wifi.sta_params", "o", {title: "Common station params"}]
+        - ["wifi.sta_params.bg_scan", "o", {title: "BG scan params"}]
+        - ["wifi.sta_params.bg_scan.enable", "b", true, {title: "Enable BG scan when connected"}]
+        - ["wifi.sta_params.bg_scan.period", "i", 10, {title: "Perform BG periodically"}]
+        - ["wifi.sta_params.bg_scan.rssi_threshold", "i", -70, {title: "Perform BG scan if RSSI falls below this value"}]
+        - ["wifi.sta_params.bg_scan.rssi_tolerance", "i", 4, {title: "Perform BG scan if RSSI changes by this amount between probes"}]
+        - ["wifi.sta_params.bg_scan.active_duration_ms", "i", 15, {title: "Active scan duration, ms per channel"}]
+        - ["wifi.sta_params.bg_scan.passive_duration_ms", "i", 20, {title: "Passive scan duration, ms per channel (for DFS channels)"}]
+        - ["wifi.sta_params.roaming", "o", {title: "Roaming params"}]
+        - ["wifi.sta_params.roaming.enable", "b", true, {title: "Enable roaming"}]
+        - ["wifi.sta_params.roaming.rssi_threshold", "i", -70, {title: "Find better AP if RSSI falls below this value"}]
+        - ["wifi.sta_params.roaming.rssi_hysteresis", "i", 5, {title: "Move to new AP if its RSSI is better than current by this number"}]
+
+cdefs:
+  MG_ENABLE_DNS_SERVER: 1
+
+tags:
+  - c
+  - net
+  - wifi
+  - docs:net:WiFi
+
+manifest_version: 2017-09-29

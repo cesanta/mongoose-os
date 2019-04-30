@@ -1,0 +1,20 @@
+author: mongoose-os
+description: Arduino SPI library
+type: lib
+version: 1.0
+
+sources:
+  - src
+includes:
+  - include
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/arduino-compat
+  - origin: https://github.com/cesanta/mongoose-os/libs/spi
+
+tags:
+  - arduino
+  - c
+  - core
+  - docs:arduino:SPI
+
+manifest_version: 2017-09-29

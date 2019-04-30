@@ -1,0 +1,34 @@
+author: mongoose-os
+description: JavaScript engine
+type: lib
+version: 1.0
+
+sources:
+  - src
+  - ${mos.modules.mjs_module.path}/mjs.c
+includes:
+  - include
+filesystem:
+  - fs
+  - ${mos.modules.mjs_module.path}/mjs/lib/api_*.js
+  - ${mos.modules.mongoose_os.path}/fw/mjs_api/api_*.js
+  - ${mos.modules.mongoose_os.path}/platforms/${arch}/mjs_api/api_*.js
+  - "@all_libs/mjs_fs"
+config_schema:
+  - ["mjs", "o", {title: "mJS settings"}]
+  - ["mjs.generate_jsc", "b", true, {title: "Generate .jsc file when executing any .js file"}]
+modules:
+  - origin: https://github.com/cesanta/mjs
+    name: mjs_module
+
+tags:
+  - js      # Supports JavaScript
+  - c
+  - core
+  - docs:misc:MJS JavaScript engine
+
+manifest_version: 2017-09-29
+
+# Temporary, while root manifest change propagates (2018/03/29).
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/core

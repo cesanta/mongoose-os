@@ -1,0 +1,14 @@
+sources:
+  - esp8266/src
+
+filesystem:
+  - esp8266/fs
+
+# Exclude api_dataview.js when flash size is small; otherwise fs doesn't fit
+conds:
+  # TODO: when complex expressions are supported, check if FLASH_SIZE is
+  # 1048576 or 2097152
+  - when: defined(build_vars.FLASH_SIZE)
+    apply:
+      filesystem:
+        - -${mos.modules.mjs_module.path}/mjs/lib/api_dataview.js

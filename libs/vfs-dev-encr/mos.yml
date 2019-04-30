@@ -1,0 +1,29 @@
+author: mongoose-os
+description: A VFS device that encrypts reads and writes
+  Reads and writes must be AES block aligned (16 bytes) and size must be a multiple of 16 bytes as well.
+  Encryption key is not stored in memory. Instead, it is stored on an external device and read every time.
+  This device can be any VFS device and only has to support 16-byte reads (for AES-128) or 32-byte reads (for AES-256).
+  Offset is always 0.
+
+type: lib
+version: 1.0
+
+sources:
+  - src
+includes:
+  - include
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/mbedtls
+  - origin: https://github.com/cesanta/mongoose-os/libs/vfs-common
+
+no_implicit_init_deps: true
+init_after:
+  - vfs-common
+
+tags:
+  - c
+  - vfs
+  - docs:drivers:VFS (encryption)
+
+manifest_version: 2018-06-20

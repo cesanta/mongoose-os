@@ -1,0 +1,23 @@
+author: mongoose-os
+description: VFS common bits
+type: lib
+version: 1.0
+
+sources:
+  - src
+  - src/${platform}
+
+includes:
+  - include
+  - include/${platform}
+
+no_implicit_init_deps: true
+init_deps: []
+
+tags:
+  - c
+  - core
+  - fs
+  - docs:drivers:VFS
+
+manifest_version: 2018-06-20

@@ -1,0 +1,27 @@
+author: mongoose-os
+type: lib
+description: OTA firmware update via the AWS IoT device shadow
+version: 1.0
+
+sources:
+  - src
+
+filesystem:
+  - fs
+
+config_schema:
+  - ["shadow.ota_enable", "b", true, {title: "Enable OTA via shadow"}]
+  - ["shadow.autocommit", "b", false, {title: "Autocommit OTA if the shadow connection is successful"}]
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/ota-common
+  - origin: https://github.com/cesanta/mongoose-os/libs/ota-http-client
+  - origin: https://github.com/cesanta/mongoose-os/libs/shadow
+
+tags:
+  - c
+  - cloud
+  - rpc
+  - docs:net:OTA via device shadow
+
+manifest_version: 2017-09-29

@@ -1,0 +1,20 @@
+author: mongoose-os
+type: lib
+description: A Cron lib
+version: 1.0
+
+sources:
+  - src
+includes:
+  - include
+config_schema:
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/location
+  - origin: https://github.com/cesanta/mongoose-os/libs/sntp
+
+tags:
+  - c
+  - core
+  - docs:misc:Cron
+
+manifest_version: 2017-09-29

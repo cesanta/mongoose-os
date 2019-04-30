@@ -1,0 +1,20 @@
+author: mongoose-os
+description: A library for interacting with the mgos boot loader
+type: lib
+version: 1.0
+
+sources:
+  - src
+includes:
+  - include
+
+no_implicit_init_deps: true
+init_after: []
+
+tags:
+  - c
+  - boot
+  - core
+  - docs:core:Boot Loader
+
+manifest_version: 2018-06-20

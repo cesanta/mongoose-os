@@ -1,0 +1,27 @@
+author: mongoose-os
+type: lib
+description: File logger library
+version: 1.0
+
+sources:
+  - src
+
+config_schema:
+  - ["file_logger", "o", {"title": "File logger settings"}]
+  - ["file_logger.enable", "b", false, {"title": "Enable"}]
+  - ["file_logger.dir", "s", "/", {"title": "Directory to store log files into"}]
+  - ["file_logger.prefix", "s", "log_", {"title": "Prefix for the log files"}]
+  - ["file_logger.max_file_size", "i", 5000, {"title": "Max size of each log file"}]
+  - ["file_logger.max_num_files", "i", 10, {"title": "Max number of files"}]
+
+tags:
+  - c
+  - docs:misc:File logger
+
+manifest_version: 2017-09-29
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/core
+
+init_after:
+  - fstab

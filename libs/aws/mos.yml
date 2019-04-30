@@ -1,0 +1,40 @@
+author: mongoose-os
+type: lib
+description: Amazon AWS IoT integration
+version: 1.0
+
+sources:
+  - src
+includes:
+  - include
+
+config_schema:
+  - ["aws", "o", {title: "AWS settings"}]
+  - ["aws.thing_name", "s", "", {title: "Set thing name. If not specified, device.id is used"}]
+  - ["aws.greengrass", "o", {title: "AWS Greengrass settings"}]
+  - ["aws.greengrass.enable", "b", false, {title: "Enable AWS Greengrass service"}]
+  - ["aws.greengrass.reconnect_timeout_min", "i", 2, {title: "Starting reconnect timeout"}]
+  - ["aws.greengrass.reconnect_timeout_max", "i", 60, {title: "Maximum reconnect timeout"}]
+
+# Device shadow max size is 8k. Adjust MQTT buffer size on larger platforms.
+conds:
+  - when: mos.platform == "esp32"
+    apply:
+      config_schema:
+        - ["mqtt.recv_mbuf_limit", 8192]
+  - when: mos.platform == "cc3220"
+    apply:
+      config_schema:
+        - ["mqtt.recv_mbuf_limit", 8192]
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/ca-bundle
+  - origin: https://github.com/cesanta/mongoose-os/libs/mqtt
+  - origin: https://github.com/cesanta/mongoose-os/libs/shadow
+
+tags:
+  - c
+  - cloud
+  - docs:cloud:Amazon IoT
+
+manifest_version: 2017-09-29

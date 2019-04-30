@@ -1,0 +1,31 @@
+author: mongoose-os
+type: lib
+description: IBM Watson IoT Platform support
+version: 1.0
+
+sources:
+  - src
+includes:
+  - include
+
+config_schema:
+  - ["watson", "o", {title: "IBM Watson IoT Platform settings"}]
+  - ["watson.enable", "b", false, {title: "Enable IBM Watson IoT Platform connection"}]
+  - ["watson.host_name", "s", "", {title: "Host name"}]
+  - ["watson.client_id", "s", "", {title: "ID string, including device type and org"}]
+  - ["watson.token", "s", "", {title: "Auth token"}]
+  - ["watson.cert", "s", "", {title: "X.509 certificate"}]
+  - ["watson.key", "s", "", {title: "X.509 private key"}]
+  - ["watson.ca_cert", "s", "", {title: "X.509 certificate"}]
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/ca-bundle
+  - origin: https://github.com/cesanta/mongoose-os/libs/mqtt
+
+tags:
+  - c
+  - cloud
+  - ibm
+  - docs:cloud:IBM Watson
+
+manifest_version: 2017-09-29

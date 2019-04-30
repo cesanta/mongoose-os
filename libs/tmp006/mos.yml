@@ -1,0 +1,17 @@
+author: mongoose-os
+type: lib
+description: A Texas Instruments TMP006 temperature sensor
+version: 1.0
+sources:
+  - src
+includes:
+  - include
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/i2c
+tags:
+  - c
+  - js
+  - hw
+  - docs:drivers:TI TMP006 temp sensor
+
+manifest_version: 2017-09-29

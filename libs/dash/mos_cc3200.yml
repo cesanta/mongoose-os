@@ -1,0 +1,2 @@
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/ota-shadow

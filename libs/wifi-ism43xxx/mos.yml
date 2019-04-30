@@ -1,0 +1,42 @@
+type: lib
+
+author: mongoose-os
+
+version: 1.0
+
+description: >
+  Driver for the Inventek eS-WiFi ISM43xxx module series (ISM4319-M3-xxx, ISM43362-M3G-xxx).
+  Only SPI version for now.
+
+sources:
+  - src
+
+includes:
+  - include
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/core
+  - origin: https://github.com/cesanta/mongoose-os/libs/spi
+  - origin: https://github.com/cesanta/mongoose-os/libs/wifi
+
+config_schema:
+  - ["wifi.ism43xxx", "o", {title: "ISM43xxx-specific settings"}]
+  - ["wifi.ism43xxx.spi", "s", "", {title: "SPI config"}] # Empty - use default, or JSON config to create an instance.
+  - ["wifi.ism43xxx.spi_freq", "i", 20000000, {title: "SPI frequency"}]
+  - ["wifi.ism43xxx.cs_gpio", "i", -1, {title: "Chip Select pin"}]
+  - ["wifi.ism43xxx.drdy_gpio", "i", -1, {title: "Data Ready pin"}]
+  - ["wifi.ism43xxx.rst_gpio", "i", -1, {title: "Reset pin (optional)"}]
+  - ["wifi.ism43xxx.boot0_gpio", "i", -1, {title: "Boot0 pin (optional)"}]
+  - ["wifi.ism43xxx.wakeup_gpio", "i", -1, {title: "Wakeup pin (optional)"}]
+
+build_vars:
+  # This smells, but will do for now.
+  MGOS_MG_NET_IF: -1
+
+tags:
+  - c
+  - hw
+  - wifi
+  - docs:drivers:Inventek ISM43xxx WiFi
+
+manifest_version: 2018-08-29

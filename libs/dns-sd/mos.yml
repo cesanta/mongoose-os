@@ -1,0 +1,38 @@
+author: mongoose-os
+description: Implements DNS-SD protocol
+type: lib
+version: 1.0
+
+platforms: ["esp32", "esp8266"]
+
+sources:
+  - src
+
+includes:
+  - include
+
+config_schema:
+  - ["dns_sd", "o", {title: "DNS-SD service discovery"}]
+  - ["dns_sd.enable", "b", false, {title: "Enable service discovery"}]
+  - ["dns_sd.host_name", "s", "mOS-??????", {title: "DNS-SD host name. '?' chars will be expanded with MAC address hex digits"}]
+  - ["dns_sd.txt", "s", "", {title: "Extra comma-separated key=value pairs to put into the TXT service record"}]
+  - ["dns_sd.ttl", "i", 120, {title: "Time-to-live in seconds"}]
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/http-server
+
+init_after:
+  - ethernet
+  - wifi
+
+cdefs:
+  MG_ENABLE_DNS: 1
+  MG_ENABLE_DNS_SERVER: 1
+  MGOS_DNS_SD_HIDE_ADDITIONAL_INFO: 0
+
+tags:
+  - c
+  - net
+  - docs:net:DNS-SD
+
+manifest_version: 2017-09-29

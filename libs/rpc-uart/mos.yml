@@ -1,0 +1,26 @@
+author: mongoose-os
+description: Implements Mongoose OS RPC over UART
+type: lib
+version: 1.0
+
+sources:
+  - src
+includes:
+  - include
+config_schema:
+  - ["rpc.uart", "o", {title: "RPC-over-UART settings"}]
+  - ["rpc.uart.uart_no", "i", 0, {title: "UART number (-1 to disable)"}]
+  - ["rpc.uart.baud_rate", "i", 115200, {title: "Baud rate"}]
+  - ["rpc.uart.fc_type", "i", 2, {title: "Flow control: 0 - none, 1 - CTS/RTS, 2 - XON/XOFF"}]
+  - ["rpc.uart.dst", "s", "", {title: "Destination reachable via this channel"}]
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/rpc-common
+
+tags:
+  - c
+  - rpc
+  - uart
+  - docs:rpc:RPC over UART
+
+manifest_version: 2017-09-29

@@ -1,0 +1,11 @@
+sources:
+  - src/stm32
+
+config_schema:
+  # OUI = 12:34:56 happens to be a valid Locally Administered Address prefix. Win!
+  - ["eth.mac", "s", "12:34:56:??:??:??", {title: "MAC address. ?? are replaced with bits from chip's unique ID."}]
+  - ["eth.speed", "s", "auto", {title: "Speed and duplex selection: auto, 10HD, 10FD, 100HD, 100FD."}]
+  - ["eth.mtu", "i", 1460, {title: "Interface MTU"}]
+
+build_vars:
+  MGOS_ENABLE_LWIP: 1

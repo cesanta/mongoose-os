@@ -1,0 +1,22 @@
+author: mongoose-os
+description: Arduino Adafruit BME280 and BMP280 library
+type: lib
+version: 1.0
+
+sources:
+  - src
+includes:
+  - include
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/arduino-compat
+  - origin: https://github.com/cesanta/mongoose-os/libs/arduino-wire
+  - origin: https://github.com/cesanta/mongoose-os/libs/arduino-spi
+
+tags:
+  - arduino
+  - c
+  - js
+  - hw
+  - docs:arduino:BME280
+
+manifest_version: 2017-09-29

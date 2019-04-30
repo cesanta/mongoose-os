@@ -35,24 +35,20 @@ serve_core: $(wildcard $(REPO_PATH)/fw/tools/serve_core/*.py)
 
 mklfs:
 	rm -rf vfs-fs-lfs
-	git clone --depth=1 https://github.com/mongoose-os-libs/vfs-fs-lfs
 	docker run --rm -it \
 	  -v $(REPO_PATH):/mongoose-os \
-	  -v $(CURDIR)/vfs-fs-lfs:/vfs-fs-lfs \
 	  docker.io/mgos/gcc \
-	  bash -c 'make -C /vfs-fs-lfs/tools mklfs \
+	  bash -c 'make -C /mongoose-os/libs/vfs-fs-lfs/tools mklfs \
 	    FROZEN_PATH=/mongoose-os/src/frozen \
 	    SPIFFS_CONFIG_PATH=$(SPIFFS_CONFIG_PATH)'
 	cp -v vfs-fs-lfs/tools/$@ $@
 
 mkspiffs mkspiffs8:
 	rm -rf vfs-fs-spiffs
-	git clone --depth=1 https://github.com/mongoose-os-libs/vfs-fs-spiffs
 	docker run --rm -it \
 	  -v $(REPO_PATH):/mongoose-os \
-	  -v $(CURDIR)/vfs-fs-spiffs:/vfs-fs-spiffs \
 	  docker.io/mgos/gcc \
-	  bash -c 'make -C /vfs-fs-spiffs/tools mkspiffs mkspiffs8 \
+	  bash -c 'make -C /mongoose-os/libs/vfs-fs-spiffs/tools mkspiffs mkspiffs8 \
 	    FROZEN_PATH=/mongoose-os/src/frozen \
 	    SPIFFS_CONFIG_PATH=$(SPIFFS_CONFIG_PATH)'
 	cp -v vfs-fs-spiffs/tools/$@ $@

@@ -1,0 +1,23 @@
+author: mongoose-os
+description: RPC support for Google Cloud Platform
+type: lib
+version: 1.0
+
+sources:
+  - src
+
+config_schema:
+  - ["rpc.gcp", "o", {title: "RPC over GCP settings"}]
+  - ["rpc.gcp.enable", "b", true, {title: "Enable RPC over GCP"}]
+  - ["rpc.gcp.subfolder", "s", "rpc", {title: "Only consider commands with this subfolder"}]
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/gcp
+  - origin: https://github.com/cesanta/mongoose-os/libs/rpc-common
+
+tags:
+  - c
+  - net
+  - rpc
+
+manifest_version: 2017-09-29

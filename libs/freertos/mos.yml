@@ -1,0 +1,36 @@
+author: mongoose-os
+description: FreeRTOS Kernel
+type: lib
+version: 10.2.0
+
+# Note: build_vars.FREERTOS_PORT must be provided externally,
+# usually by core or by boards lib.
+
+sources:
+  - src
+  - src/${platform}
+
+includes:
+  - include
+  - include/${platform}
+
+conds:
+  # On ESP32 FreeRTOS itself is provided by IDF and is heavily modified.
+  - when: mos.platform != "esp32"
+    apply:
+      sources:
+        - FreeRTOS/Source/list.c
+        - FreeRTOS/Source/queue.c
+        - FreeRTOS/Source/tasks.c
+        - FreeRTOS/Source/timers.c
+        - FreeRTOS/Source/portable/MemMang/heap_3.c
+        - FreeRTOS/Source/portable/${build_vars.FREERTOS_PORT}/port.c
+        - src/cmsis
+      includes:
+        - FreeRTOS/Source/include
+        - FreeRTOS/Source/portable/${build_vars.FREERTOS_PORT}
+        - include/cmsis
+
+no_implicit_init_deps: true
+
+manifest_version: 2018-06-12

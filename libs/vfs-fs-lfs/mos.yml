@@ -1,0 +1,31 @@
+author: mongoose-os
+description: Implements the mos VFS interface for little FS (https://github.com/ARMmbed/littlefs)
+type: lib
+version: 1.0
+
+sources:
+  - src
+  # Note: it is a copy of https://github.com/ARMmbed/littlefs @ c5e2b335d618a78656a867c7874835db141fbad1
+  - src/littlefs
+
+includes:
+  - include
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/vfs-common
+
+no_implicit_init_deps: true
+init_after:
+  - vfs-common
+
+cdefs:
+  LFS_NO_DEBUG: 1
+
+tags:
+  - c
+  - fs
+  - vfs
+  - core
+  - docs:drivers:VFS (LittleFS)
+
+manifest_version: 2018-06-20

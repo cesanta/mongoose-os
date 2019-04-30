@@ -1,0 +1,50 @@
+author: mongoose-os
+description: MQTT protocol support
+type: lib
+version: 1.0
+manifest_version: 2017-09-29
+sources:
+  - src
+includes:
+  - include
+config_schema:
+  # NB: mqtt and mqtt1 must be identical.
+  - ["mqtt", "o", {title: "MQTT settings"}]
+  - ["mqtt.enable", "b", false, {title: "Enable MQTT"}]
+  - ["mqtt.server", "s", "iot.eclipse.org:1883", {title: "MQTT server"}]
+  - ["mqtt.client_id", "s", "", {title: "ClientID t send to the broker. Defaults to device.id."}]
+  - ["mqtt.user", "s", "", {title: "User name"}]
+  - ["mqtt.pass", "s", "", {title: "Password"}]
+  - ["mqtt.reconnect_timeout_min", "d", 2.0, {title: "Starting reconnect timeout"}]
+  - ["mqtt.reconnect_timeout_max", "d", 60.0, {title: "Maximum reconnect timeout"}]
+  - ["mqtt.ssl_cert", "s", "", {title: "Client certificate to present to the server"}]
+  - ["mqtt.ssl_key", "s", "", {title: "Private key corresponding to the certificate"}]
+  - ["mqtt.ssl_ca_cert", "s", "", {title: "Verify server certificate using this CA bundle"}]
+  - ["mqtt.ssl_cipher_suites", "s", "", {title: "Cipher suites to offer to the server"}]
+  - ["mqtt.ssl_psk_identity", "s", "", {title: "PSK identity (must specify PSK cipher suites)"}]
+  - ["mqtt.ssl_psk_key", "s", "", {title: "PSK key"}]
+  - ["mqtt.clean_session", "b", true, {title: "Clean Session"}]
+  - ["mqtt.keep_alive", "i", 60, {title: "Keep alive interval"}]
+  - ["mqtt.will_topic", "s", "", {title: "Will topic"}]
+  - ["mqtt.will_message", "s", "", {title: "Will message"}]
+  - ["mqtt.max_qos", "i", 2, {title: "Limit QoS of outgoing messages to at most this"}]
+  - ["mqtt.recv_mbuf_limit", "i", 3072, {title: "Limit recv buffer size"}]
+  - ["mqtt.require_time", "b", false, {title: "Only connect if (when) wall time is set"}]
+  - ["mqtt.cloud_events", "b", true, {title: "Trigger cloud events when connected / disconnected"}]
+  # Alternative MQTT configuration. If enabled, client will alternate between mqtt and mqtt1
+  # when unable to connect.
+  - ["mqtt1", "mqtt", {title: "Backup MQTT settings"}]
+  - ["debug.stdout_topic", "s", "", {title: "MQTT topic to publish STDOUT to"}]
+  - ["debug.stderr_topic", "s", "", {title: "MQTT topic to publish STDERR to"}]
+cdefs:
+  MG_ENABLE_MQTT: 1
+tags:
+  - mqtt
+  - c
+  - js
+  - net
+  - docs:net:MQTT
+
+# Temporary, while root manifest change propagates (2018/03/29).
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/core

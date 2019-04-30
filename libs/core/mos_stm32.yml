@@ -1,0 +1,12 @@
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/bootloader
+  - origin: https://github.com/cesanta/mongoose-os/libs/vfs-dev-encr
+  - origin: https://github.com/cesanta/mongoose-os/libs/vfs-dev-part
+  - origin: https://github.com/cesanta/mongoose-os/libs/vfs-dev-ram
+  - origin: https://github.com/cesanta/mongoose-os/libs/vfs-dev-spi-flash
+  - origin: https://github.com/cesanta/mongoose-os/libs/vfs-fs-lfs
+  - origin: https://github.com/cesanta/mongoose-os/libs/vfs-fs-spiffs
+
+cdefs:
+  # Miniz is hungry for stack.
+  MGOS_TASK_STACK_SIZE_BYTES: 16384

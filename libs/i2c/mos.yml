@@ -1,0 +1,122 @@
+author: mongoose-os
+description: I2C support for Mongoose OS
+type: lib
+version: 1.0
+
+platforms: [ cc3200, cc3220, esp32, esp8266, rs14100, stm32, ubuntu ]
+
+sources:
+  - src
+includes:
+  - include
+
+conds:
+  - when: mos.platform == "cc3200"
+    apply:
+      sources:
+        - src/cc32xx
+      config_schema:
+        - ["i2c", "o", {title: "I2C settings"}]
+        - ["i2c.enable", "b", false, {title: "Enable I2C"}]
+        - ["i2c.freq", "i", 100000, {title: "Clock frequency"}]
+        - ["i2c.debug", "b", false, {title: "Debug I2C bus activity"}]
+        - ["i2c.sda_pin", "i", 2, {title: "Pin to use for SDA"}]
+        - ["i2c.scl_pin", "i", 1, {title: "Pin to use for SCL"}]
+
+  - when: mos.platform == "cc3220"
+    apply:
+      sources:
+        - src/cc32xx
+      config_schema:
+        - ["i2c", "o", {title: "I2C settings"}]
+        - ["i2c.enable", "b", false, {title: "Enable I2C"}]
+        - ["i2c.freq", "i", 100000, {title: "Clock frequency"}]
+        - ["i2c.debug", "b", false, {title: "Debug I2C bus activity"}]
+        - ["i2c.sda_pin", "i", 2, {title: "Pin to use for SDA"}]
+        - ["i2c.scl_pin", "i", 1, {title: "Pin to use for SCL"}]
+
+  - when: mos.platform == "esp32"
+    apply:
+      sources:
+        - src/esp32
+      config_schema:
+        - ["i2c", "o", {title: "I2C settings"}]
+        - ["i2c.unit_no", "i", 0, {title: "Which hardware unit to use, 0 or 1"}]
+        - ["i2c.enable", "b", false, {title: "Enable I2C"}]
+        - ["i2c.freq", "i", 100000, {title: "Clock frequency"}]
+        - ["i2c.debug", "b", false, {title: "Debug I2C bus activity"}]
+        - ["i2c.sda_gpio", "i", 32, {title: "GPIO to use for SDA"}]
+        - ["i2c.scl_gpio", "i", 33, {title: "GPIO to use for SCL"}]
+        - ["i2c1", "i2c", {title: "I2C settings"}]
+        - ["i2c1.unit_no", 1]
+        - ["i2c1.enable", false]
+        - ["i2c1.sda_gpio", 22]
+        - ["i2c1.scl_gpio", 23]
+
+  - when: mos.platform == "esp8266"
+    apply:
+      sources:
+        - src/gpio
+      config_schema:
+        - ["i2c", "o", {title: "I2C settings"}]
+        - ["i2c.enable", "b", false, {title: "Enable I2C"}]
+        - ["i2c.freq", "i", 100000, {title: "Clock frequency"}]
+        - ["i2c.debug", "b", false, {title: "Debug I2C bus activity"}]
+        - ["i2c.sda_gpio", "i", 12, {title: "GPIO to use for SDA"}]
+        - ["i2c.scl_gpio", "i", 14, {title: "GPIO to use for SCL"}]
+
+  - when: mos.platform == "rs14100"
+    apply:
+      sources:
+        - src/gpio
+      config_schema:
+        - ["i2c", "o", {title: "I2C settings"}]
+        - ["i2c.enable", "b", false, {title: "Enable I2C"}]
+        - ["i2c.unit_no", "i", 1, {title: "Which hardware unit to use, 1, 2 or 3 (ULP)"}]
+        - ["i2c.freq", "i", 100000, {title: "Clock frequency"}]
+        - ["i2c.debug", "b", false, {title: "Debug I2C bus activity"}]
+        - ["i2c.sda_gpio", "i", 51, {title: "GPIO to use for SDA"}]
+        - ["i2c.scl_gpio", "i", 50, {title: "GPIO to use for SCL"}]
+        - ["i2c1", "i2c", {title: "I2C settings"}]
+        - ["i2c1.enable", false]
+        - ["i2c1.unit_no", 2]
+        - ["i2c1.sda_gpio", 41]
+        - ["i2c1.scl_gpio", 40]
+
+  - when: mos.platform == "stm32"
+    apply:
+      sources:
+        - src/gpio
+      config_schema:
+        - ["i2c", "o", {title: "I2C settings"}]
+        - ["i2c.enable", "b", false, {title: "Enable I2C"}]
+        - ["i2c.freq", "i", 100000, {title: "Clock frequency"}]
+        - ["i2c.debug", "b", false, {title: "Debug I2C bus activity"}]
+        - ["i2c.sda_gpio", "i", -1, {title: "GPIO to use for SDA"}]
+        - ["i2c.scl_gpio", "i", -1, {title: "GPIO to use for SCL"}]
+        - ["i2c1", "i2c", {title: "I2C settings"}]
+        - ["i2c1.enable", false]
+
+  - when: mos.platform == "ubuntu"
+    apply:
+      sources:
+        - src/ubuntu
+      config_schema:
+        - ["i2c", "o", {title: "I2C settings"}]
+        - ["i2c.enable", "b", false, {title: "Enable I2C"}]
+        - ["i2c.unit_no", "i", 0, {title: "Which /dev/i2c-? to use"}]
+        - ["i2c.debug", "b", false, {title: "Debug I2C bus activity"}]
+        - ["i2c1", "i2c", {title: "I2C settings"}]
+        - ["i2c1.unit_no", 1]
+        - ["i2c1.enable", false]
+
+tags:
+  - c
+  - hw
+  - i2c
+  - docs:core:I2C
+
+manifest_version: 2018-06-20
+no_implicit_init_deps: true
+init_after:
+  - core

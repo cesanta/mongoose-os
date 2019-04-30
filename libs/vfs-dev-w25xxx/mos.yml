@@ -1,0 +1,26 @@
+author: mongoose-os
+description: >
+  VFS device driver for Winbond W25XXX SPI NAND flash.
+  http://www.winbond.com/hq/product/code-storage-flash-memory/serial-nand-flash/
+  W25N01 and W25M02 (2Gb multi-die version) are supported.
+type: lib
+version: 1.0
+
+includes: [ include ]
+sources: [ src ]
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/spi
+  - origin: https://github.com/cesanta/mongoose-os/libs/vfs-common
+
+no_implicit_init_deps: true
+init_after:
+  - vfs-common
+
+tags:
+  - c
+  - spi
+  - vfs
+  - docs:drivers:VFS (Winbond W25XXX)
+
+manifest_version: 2018-06-20

@@ -1,0 +1,21 @@
+author: mongoose-os
+description: ESP32 touch sensor support
+type: lib
+version: 1.0
+
+platforms: [ esp32 ]
+
+sources:
+  - src
+
+tags:
+  - hw
+  - js
+  - touch
+  - docs:drivers:ESP32 touch sensor
+
+manifest_version: 2017-09-29
+
+# Temporary, while root manifest change propagates (2018/03/29).
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/core

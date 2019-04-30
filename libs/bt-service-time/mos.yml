@@ -1,0 +1,21 @@
+author: mongoose-os
+description: Bluetooth Current Time Service implementation
+type: lib
+version: 1.0
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/bt-common
+
+sources:
+  - src
+
+config_schema:
+  - ["bt.time_svc_enable", "b", true, {title: "Enable the time service"}]
+
+tags:
+  - bt
+  - bluetooth
+  - c
+  - docs:net:BLE Current Time Service
+
+manifest_version: 2017-09-29

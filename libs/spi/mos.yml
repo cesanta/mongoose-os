@@ -1,0 +1,48 @@
+author: mongoose-os
+description: Implements SPI API on Mongoose OS
+type: lib
+version: 1.0
+
+platforms: [ cc3200, cc3220, esp32, esp8266, stm32 ]
+
+sources:
+  - src
+includes:
+  - include
+
+build_vars:
+  # Default implementation is a bit-banging one, using GPIO. It's slow but
+  # should work on all platforms. Platforms that have hardware implementations
+  # will override it in their arch-specific configs.
+  MGOS_ENABLE_SPI_GPIO: 1
+
+config_schema:
+  - ["spi", "o", {title: "SPI settings"}]
+  - ["spi.enable", "b", false, {title: "Enable SPI"}]
+  - ["spi.debug", "b", false, {title: "Debug SPI bus activity"}]
+
+conds:
+  - when: build_vars.MGOS_ENABLE_SPI_GPIO == "1"
+    apply:
+      sources:
+        - src/common_gpio
+
+      config_schema:
+        - ["spi.miso_gpio", "i", -1, {title: "GPIO to use for MISO"}]
+        - ["spi.mosi_gpio", "i", -1, {title: "GPIO to use for MOSI"}]
+        - ["spi.sclk_gpio", "i", -1, {title: "GPIO to use for SCLK"}]
+        - ["spi.cs0_gpio", "i", -1, {title: "GPIO to use for CS0"}]
+        - ["spi.cs1_gpio", "i", -1, {title: "GPIO to use for CS1"}]
+        - ["spi.cs2_gpio", "i", -1, {title: "GPIO to use for CS2"}]
+
+tags:
+  - c
+  - js
+  - spi
+  - core
+  - docs:core:SPI
+
+manifest_version: 2018-06-20
+no_implicit_init_deps: true
+init_after:
+  - core

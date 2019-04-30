@@ -1,0 +1,10 @@
+{"items":[
+["0", {"at": "@sunrise", "action": "slide.stub_sunrise", "payload": {"foo": 123}}],
+["1", {"at": "@sunset", "action": "slide.stub_sunset"}],
+["2", ["foo", "bar", 123, true, {"qqq": []}]],
+["3", "new third item"],
+["4", 123],
+["6", "sdf"],
+["custom_id", "new data 1"],
+["hey_id_4", "new data 4, updated"]
+]}

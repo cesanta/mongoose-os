@@ -1,0 +1,34 @@
+author: mongoose-os
+description: WebSocket channel support for mgRPC
+type: lib
+version: 1.0
+
+sources:
+  - src
+
+includes:
+  - include
+
+config_schema:
+  - ["rpc.ws", "o", {title: "RPC over WebSocket settings"}]
+  - ["rpc.ws.enable", "b", true, {title: "Enable RPC over WebSocket"}]
+  - ["rpc.ws.server_address", "s", "", {title: "Cloud server address"}]
+  - ["rpc.ws.reconnect_interval_min", "i", 1, {title: "Minimal reconnect interval"}]
+  - ["rpc.ws.reconnect_interval_max", "i", 60, {title: "Maximal reconnect interval"}]
+  - ["rpc.ws.ssl_server_name", "s", {title : "TLS Server Name"}]
+  - ["rpc.ws.ssl_cert", "s", {title: "TLS client cert file"}]
+  - ["rpc.ws.ssl_key", "s", {title: "TLS client key file"}]
+  - ["rpc.ws.ssl_ca_cert", "s", {title : "TLS CA file"}]
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/rpc-common
+
+init_after:
+  - http-server
+
+tags:
+  - rpc
+  - c
+  - docs:rpc:RPC core
+
+manifest_version: 2017-09-29

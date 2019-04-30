@@ -1,0 +1,42 @@
+author: mongoose-os
+description: Bluetooth support
+type: lib
+version: 1.0
+
+platforms: [ esp32 ]
+
+sources:
+  - src
+  - src/${arch}
+
+includes:
+  - include
+  - include/${arch}
+
+config_schema:
+  - ["bt", "o", {title: "Bluetooth settings"}]
+  - ["bt.enable", "b", true, {title: "Enable BT"}]
+  - ["bt.dev_name", "s", "", {title: "Device name; defaults to device.id"}]
+  - ["bt.adv_enable", "b", true, {title: "Advertise services"}]
+  - ["bt.scan_rsp_data_hex", "s", "", {title: "Scan response data, hex-encoded"}]
+  - ["bt.keep_enabled", "b", false, {title: "By default, BT will be disabled once WiFi is configured and connects. Set this to true to keep BT enabled."}]
+  - ["bt.allow_pairing", "b", true, {title: "Allow pairing/bonding with other devices"}]
+  - ["bt.max_paired_devices", "i", -1, {title: "Max number of paired devices; -1 - no limit"}]
+  - ["bt.random_address", "b", true, {title: "Use random BT address"}]
+  - ["bt.gatt_mtu", "i", 500, {title: "Local MTU setting, used when negotiating with clients"}]
+  - ["bt.gatts", "o", {title: "GATTS settings"}]
+  - ["bt.gatts.min_sec_level", "i", 0, {title: "0 - no auth required, 1 - encryption reqd, 2 - encryption + MITM reqd"}]
+  - ["bt.gatts.require_pairing", "b", false, {title: "Require device to be paired before accessing services"}]
+
+tags:
+  - bt
+  - bluetooth
+  - c
+  - net
+  - docs:net:BLE
+
+manifest_version: 2017-09-29
+
+# Temporary, while root manifest change propagates (2018/03/29).
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/core

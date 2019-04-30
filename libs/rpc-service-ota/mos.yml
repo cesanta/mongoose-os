@@ -1,0 +1,17 @@
+author: mongoose-os
+description: Support for Over-The-Air update via RPC
+type: lib
+version: 1.0
+manifest_version: 2017-09-29
+sources:
+  - src
+includes:
+  - include
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/ota-http-client
+  - origin: https://github.com/cesanta/mongoose-os/libs/rpc-common
+tags:
+  - c
+  - ota
+  - rpc
+  - docs:rpc:Service - OTA

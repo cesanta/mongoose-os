@@ -1,0 +1,21 @@
+author: mongoose-os
+type: lib
+description: Neopixel driver
+version: 1.0
+
+sources:
+  - src
+includes:
+  - include
+
+tags:
+  - js
+  - hw
+  - neopixel
+  - docs:drivers:Neopixel
+
+manifest_version: 2017-09-29
+
+# Temporary, while root manifest change propagates (2018/03/29).
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/core

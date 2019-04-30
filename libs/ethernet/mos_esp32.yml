@@ -1,0 +1,22 @@
+sources:
+  - src/esp32
+
+cdefs:
+  # Select the PHY model. Only one at a time, not both.
+  MGOS_ETH_PHY_LAN87x0: 1
+  # MGOS_ETH_PHY_TLK110: 1
+
+config_schema:
+  - ["eth.clk_mode", "i", 0, {title: "50 MHz clock source: 0 in <- GPIO0, 1 out -> GPIO0, 2 out -> GPIO16, 3 out -> GPIO17 (inverted)"}]
+  - ["eth.mdc_gpio", "i", 23, {title: "GPIO to use for RMII MDC signal"}]
+  - ["eth.mdio_gpio", "i", 18, {title: "GPIO to use for RMII MDIO signal"}]
+  - ["eth.phy_pwr_gpio", "i", -1, {title: "GPIO to use for PHY PWR control signal"}]
+
+build_vars:
+  ESP_IDF_SDKCONFIG_OPTS: >
+    ${build_vars.ESP_IDF_SDKCONFIG_OPTS}
+    CONFIG_PPP_SUPPORT=y
+    CONFIG_PPP_PAP_SUPPORT=y
+    CONFIG_PPP_CHAP_SUPPORT=y
+    CONFIG_PPP_MSCHAP_SUPPORT=y
+    CONFIG_PPP_MPPE_SUPPORT=y

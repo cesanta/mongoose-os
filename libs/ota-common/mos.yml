@@ -1,0 +1,46 @@
+author: mongoose-os
+description: OTA common bits
+type: lib
+version: 1.0
+
+platforms: [ cc3200, esp32, esp8266, rs14100, stm32 ]
+
+sources:
+  - src
+  - src/${platform}
+
+includes:
+  - src
+  - include
+  - include/${platform}
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/mongoose
+
+no_implicit_init_deps: true
+init_deps:
+  - mongoose
+
+config_schema:
+  - ["update", "o", {title: "Firmware updater"}]
+  - ["update.timeout", "i", 600, {title : "Update will be aborted if it does not finish within this time"}]
+  - ["update.commit_timeout", "i", {title : "After applying update, wait for commit up to this long"}]
+
+conds:
+  - when: mos.platform == "rs14100"
+    apply:
+      libs:
+        - origin: https://github.com/cesanta/mongoose-os/libs/bootloader
+
+  - when: mos.platform == "stm32"
+    apply:
+      libs:
+        - origin: https://github.com/cesanta/mongoose-os/libs/bootloader
+
+tags:
+  - c
+  - core
+  - ota
+  - docs:net:OTA
+
+manifest_version: 2018-06-20

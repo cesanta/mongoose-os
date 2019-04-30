@@ -1,0 +1,16 @@
+author: mongoose-os
+type: lib
+description: STMicro STLM75 temperature sensor driver
+version: 1.0
+sources:
+  - src
+includes:
+  - include
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/i2c
+tags:
+  - c
+  - hw
+  - docs:drivers:STLM75
+
+manifest_version: 2017-09-29

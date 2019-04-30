@@ -1,0 +1,12 @@
+build_vars:
+  # No HW SPI support on CC3220, for now.
+  MGOS_ENABLE_SPI_GPIO: 1
+
+conds:
+  - when: build_vars.MGOS_ENABLE_SPI_GPIO == "1"
+    apply:
+      config_schema:
+        - ["spi.miso_gpio", 6]
+        - ["spi.mosi_gpio", 7]
+        - ["spi.sclk_gpio", 5]
+        - ["spi.cs0_gpio", 8]

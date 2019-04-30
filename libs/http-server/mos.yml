@@ -1,0 +1,40 @@
+author: mongoose-os
+description: HTTP server for Mongoose OS
+type: lib
+version: 1.0
+manifest_version: 2017-09-29
+sources:
+  - src
+includes:
+  - include
+config_schema:
+  - ["http", "o", {title: "HTTP Server"}]
+  - ["http.enable", "b", true, {title: "Enable HTTP Server"}]
+  - ["http.listen_addr", "s", "80", {title: "Listening port / address"}]
+  - ["http.document_root", "s", "/", {title: "Root for serving files. Setting to empty disables file serving."}]
+  - ["http.ssl_cert", "s", {title: "Turn on SSL on the listener, use this cert"}]
+  - ["http.ssl_key", "s", {title: "SSL key to use"}]
+  - ["http.ssl_ca_cert", "s", {title: "Verify clients this CA bundle"}]
+  - ["http.upload_acl", "s", "*", {title: "Upload file ACL"}]
+  - ["http.hidden_files", "s", {title: "Hidden file pattern"}]
+  - ["http.auth_domain", "s", {title: "Enable authentication of all HTTP requests"}]
+  - ["http.auth_file", "s", {title: "Password file to use for auth"}]
+
+cdefs:
+  MGOS_ENABLE_WEB_CONFIG: 0
+  MGOS_ENABLE_FILE_UPLOAD: 1
+
+init_after:
+  - atca
+  - ethernet
+  - wifi
+
+tags:
+  - http
+  - c
+  - net
+  - docs:net:HTTP server
+
+# Temporary, while root manifest change propagates (2018/03/29).
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/core

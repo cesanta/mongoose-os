@@ -1,0 +1,28 @@
+author: mongoose-os
+description: Ethernet support
+type: lib
+version: 1.0
+
+platforms: [ esp32, stm32 ]
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/core
+  - origin: https://github.com/cesanta/mongoose-os/libs/lwip
+
+sources:
+  - src
+
+config_schema:
+  - ["eth", "o", {title: "Ethernet settings"}]
+  - ["eth.enable", "b", false, {title: "Enable Ethernet interface"}]
+  - ["eth.phy_addr", "i", 0, {title: "(R)MII PHY address"}]
+  - ["eth.ip", "s", {title: "Static IP Address"}]
+  - ["eth.netmask", "s", {title: "Static Netmask"}]
+  - ["eth.gw", "s", {title: "Static Default Gateway"}]
+
+tags:
+  - c
+  - net
+  - docs:net:Ethernet
+
+manifest_version: 2017-09-29

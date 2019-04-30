@@ -1,0 +1,30 @@
+author: mongoose-os
+description: Mongoose Embedded Web Server Library
+type: lib
+version: 6.13
+
+sources:  [ src ]
+includes: [ include ]
+
+tags:
+  - net
+  - docs:net:Mongoose network lib
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/mbedtls
+  - origin: https://github.com/cesanta/mongoose-os/libs/vfs-common
+
+no_implicit_init_deps: true
+init_after:
+  - lwip
+
+cdefs:
+  MG_ENABLE_DNS: 1
+  MG_ENABLE_DNS_SERVER: 1
+  MG_ENABLE_MQTT: 1
+  MG_ENABLE_SNTP: 1
+  MG_SSL_IF_MBEDTLS_FREE_CERTS: 1
+  # Disabled for now because of fragmented handshake issue.
+  # MG_SSL_IF_MBEDTLS_MAX_FRAG_LEN: 1024
+
+manifest_version: 2018-06-20

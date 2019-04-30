@@ -1,0 +1,171 @@
+author: mongoose-os
+type: lib
+description: Collection of libraries for demos
+version: 1.0
+
+sources:
+  - src
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/aws
+  - origin: https://github.com/cesanta/mongoose-os/libs/ca-bundle
+  - origin: https://github.com/cesanta/mongoose-os/libs/core
+  - origin: https://github.com/cesanta/mongoose-os/libs/dash
+  - origin: https://github.com/cesanta/mongoose-os/libs/http-server
+  - origin: https://github.com/cesanta/mongoose-os/libs/neopixel
+  - origin: https://github.com/cesanta/mongoose-os/libs/provision
+  - origin: https://github.com/cesanta/mongoose-os/libs/rpc-service-config
+  - origin: https://github.com/cesanta/mongoose-os/libs/rpc-service-fs
+  - origin: https://github.com/cesanta/mongoose-os/libs/rpc-service-gpio
+  - origin: https://github.com/cesanta/mongoose-os/libs/rpc-uart
+  - origin: https://github.com/cesanta/mongoose-os/libs/rpc-ws
+  - origin: https://github.com/cesanta/mongoose-os/libs/shadow
+  - origin: https://github.com/cesanta/mongoose-os/libs/sntp
+
+conds:
+  - when: mos.platform == "cc3200"
+    apply:
+      libs:
+        - origin: https://github.com/cesanta/mongoose-os/libs/ota-http-client
+        - origin: https://github.com/cesanta/mongoose-os/libs/ota-http-server
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-service-ota
+        - origin: https://github.com/cesanta/mongoose-os/libs/wifi
+
+  - when: mos.platform == "cc3220"
+    apply:
+      libs:
+        - origin: https://github.com/cesanta/mongoose-os/libs/azure
+        - origin: https://github.com/cesanta/mongoose-os/libs/bm222
+        - origin: https://github.com/cesanta/mongoose-os/libs/dht
+        - origin: https://github.com/cesanta/mongoose-os/libs/i2c
+        - origin: https://github.com/cesanta/mongoose-os/libs/gcp
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-azure
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-gcp
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-loopback
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-mqtt
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-service-gpio
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-service-i2c
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-service-wifi
+        - origin: https://github.com/cesanta/mongoose-os/libs/tmp006
+        - origin: https://github.com/cesanta/mongoose-os/libs/spi
+        - origin: https://github.com/cesanta/mongoose-os/libs/vfs-dev-spi-flash
+        - origin: https://github.com/cesanta/mongoose-os/libs/watson
+        - origin: https://github.com/cesanta/mongoose-os/libs/wifi
+
+  - when: mos.platform == "esp32"
+    apply:
+      libs:
+        - origin: https://github.com/cesanta/mongoose-os/libs/adc
+        - origin: https://github.com/cesanta/mongoose-os/libs/atca
+        - origin: https://github.com/cesanta/mongoose-os/libs/azure
+        - origin: https://github.com/cesanta/mongoose-os/libs/bt-service-config
+        - origin: https://github.com/cesanta/mongoose-os/libs/bt-service-debug
+        - origin: https://github.com/cesanta/mongoose-os/libs/dht
+        - origin: https://github.com/cesanta/mongoose-os/libs/dns-sd
+        - origin: https://github.com/cesanta/mongoose-os/libs/esp32-touchpad
+        - origin: https://github.com/cesanta/mongoose-os/libs/ethernet
+        - origin: https://github.com/cesanta/mongoose-os/libs/gcp
+        - origin: https://github.com/cesanta/mongoose-os/libs/i2c
+        - origin: https://github.com/cesanta/mongoose-os/libs/ota-shadow
+        - origin: https://github.com/cesanta/mongoose-os/libs/ota-http-client
+        - origin: https://github.com/cesanta/mongoose-os/libs/ota-http-server
+        - origin: https://github.com/cesanta/mongoose-os/libs/pppos
+        - origin: https://github.com/cesanta/mongoose-os/libs/pwm
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-azure
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-gatts
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-gcp
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-loopback
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-mqtt
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-service-atca
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-service-i2c
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-service-ota
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-service-wifi
+        - origin: https://github.com/cesanta/mongoose-os/libs/spi
+        - origin: https://github.com/cesanta/mongoose-os/libs/vfs-dev-spi-flash
+        - origin: https://github.com/cesanta/mongoose-os/libs/watson
+        - origin: https://github.com/cesanta/mongoose-os/libs/wifi
+
+  - when: mos.platform == "esp8266"
+    apply:
+      libs:
+        - origin: https://github.com/cesanta/mongoose-os/libs/adc
+        - origin: https://github.com/cesanta/mongoose-os/libs/atca
+        - origin: https://github.com/cesanta/mongoose-os/libs/azure
+        - origin: https://github.com/cesanta/mongoose-os/libs/dht
+        - origin: https://github.com/cesanta/mongoose-os/libs/dns-sd
+        - origin: https://github.com/cesanta/mongoose-os/libs/gcp
+        - origin: https://github.com/cesanta/mongoose-os/libs/i2c
+        - origin: https://github.com/cesanta/mongoose-os/libs/ota-shadow
+        - origin: https://github.com/cesanta/mongoose-os/libs/ota-http-client
+        - origin: https://github.com/cesanta/mongoose-os/libs/ota-http-server
+        - origin: https://github.com/cesanta/mongoose-os/libs/pwm
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-azure
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-gcp
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-loopback
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-mqtt
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-service-atca
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-service-gpio
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-service-i2c
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-service-ota
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-service-wifi
+        - origin: https://github.com/cesanta/mongoose-os/libs/spi
+        - origin: https://github.com/cesanta/mongoose-os/libs/vfs-dev-spi-flash
+        - origin: https://github.com/cesanta/mongoose-os/libs/watson
+        - origin: https://github.com/cesanta/mongoose-os/libs/wifi
+
+  - when: mos.platform == "rs14100"
+    apply:
+      libs:
+        - origin: https://github.com/cesanta/mongoose-os/libs/atca
+        - origin: https://github.com/cesanta/mongoose-os/libs/azure
+        - origin: https://github.com/cesanta/mongoose-os/libs/gcp
+        - origin: https://github.com/cesanta/mongoose-os/libs/i2c
+        - origin: https://github.com/cesanta/mongoose-os/libs/ota-shadow
+        - origin: https://github.com/cesanta/mongoose-os/libs/ota-http-client
+        - origin: https://github.com/cesanta/mongoose-os/libs/ota-http-server
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-azure
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-gcp
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-loopback
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-mqtt
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-service-atca
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-service-gpio
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-service-i2c
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-service-ota
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-service-wifi
+        - origin: https://github.com/cesanta/mongoose-os/libs/watson
+        - origin: https://github.com/cesanta/mongoose-os/libs/wifi
+
+  - when: mos.platform == "stm32"
+    apply:
+      libs:
+        - origin: https://github.com/cesanta/mongoose-os/libs/azure
+        - origin: https://github.com/cesanta/mongoose-os/libs/gcp
+        - origin: https://github.com/cesanta/mongoose-os/libs/ota-shadow
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-azure
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-gcp
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-mqtt
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-service-ota
+        - origin: https://github.com/cesanta/mongoose-os/libs/watson
+
+  - when: build_vars.BOARD == "B-L475E-IOT01A"
+    apply:
+      libs:
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-service-i2c
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-service-wifi
+
+  - when: mos.platform == "ubuntu"
+    apply:
+      libs:
+        - origin: https://github.com/cesanta/mongoose-os/libs/azure
+        - origin: https://github.com/cesanta/mongoose-os/libs/gcp
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-azure
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-gcp
+        - origin: https://github.com/cesanta/mongoose-os/libs/rpc-mqtt
+        - origin: https://github.com/cesanta/mongoose-os/libs/watson
+
+tags:
+  - c
+  - demo
+  - docs:misc:Demo bundle
+
+manifest_version: 2018-08-29

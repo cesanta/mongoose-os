@@ -1,0 +1,38 @@
+author: mongoose-os
+description: ATCA support
+type: lib
+version: 1.0
+manifest_version: 2017-09-29
+
+sources:
+  - src
+  - cryptoauthlib/lib
+  - cryptoauthlib/lib/basic
+  - cryptoauthlib/lib/crypto
+  - cryptoauthlib/lib/hal
+  - cryptoauthlib/lib/host
+
+includes:
+  - include
+  - cryptoauthlib/lib
+
+config_schema:
+  - ["sys.atca", "o", {title: "CryptoAuthLib configuration"}]
+  - ["sys.atca.enable", "b", false, {title: "Enable the chip"}]
+  - ["sys.atca.i2c_bus", "i", 0, {title: "Which I2C bus to use"}]
+  - ["sys.atca.i2c_addr", "i", 0x60, {title: "I2C address of the chip"}]
+    # By default designate slots 2 and 3 for ECDH.
+  - ["sys.atca.ecdh_slots_mask", "i", 0x0c, {title: "Which slots can be used for ECDH (bitmask)"}]
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/i2c
+
+tags:
+  - c
+  - security
+  - docs:drivers:ATCA
+
+manifest_version: 2018-06-20
+no_implicit_init_deps: true
+init_after:
+  - i2c

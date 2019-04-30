@@ -1,0 +1,17 @@
+author: mongoose-os
+type: lib
+description: Collection of libraries for JavaScript demos
+version: 1.0
+
+sources:
+  - src
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/demo-bundle
+  - origin: https://github.com/cesanta/mongoose-os/libs/mjs
+
+tags:
+  - js
+  - docs:misc:JS demo bundle
+
+manifest_version: 2017-09-29

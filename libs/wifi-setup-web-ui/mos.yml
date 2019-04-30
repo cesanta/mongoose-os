@@ -1,0 +1,9 @@
+author: mongoose-os
+type: lib
+description: Web UI for WiFi setup
+version: 1.0
+filesystem:
+  - fs
+tags:
+  - docs:misc:WebUI
+manifest_version: 2017-09-29

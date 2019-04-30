@@ -1,0 +1,20 @@
+author: mongoose-os
+type: lib
+description: Crontab
+version: 1.0
+
+sources:
+  - src
+includes:
+  - include
+
+tags:
+  - c
+  - core
+  - docs:misc:Crontab
+
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/cron
+  - origin: https://github.com/cesanta/mongoose-os/libs/jstore
+
+manifest_version: 2017-09-29

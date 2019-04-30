@@ -1,0 +1,21 @@
+author: mongoose-os
+type: lib
+description: A cross-cloud device shadow API
+version: 1.0
+sources:
+  - src
+includes:
+  - include
+tags:
+  - c
+  - cloud
+  - docs:net:Device Shadow
+config_schema:
+  - ["shadow", "o", {title: "Device shadow settings"}]
+  - ["shadow.enable", "b", true, {title: "Enable device shadow functionality"}]
+  - ["shadow.lib", "s", "", {title: "Preferred shadow lib, e.g. aws, dash, gcp"}]
+manifest_version: 2017-09-29
+
+# Temporary, while root manifest change propagates (2018/03/29).
+libs:
+  - origin: https://github.com/cesanta/mongoose-os/libs/core

@@ -1,0 +1,35 @@
+build_vars:
+  MGOS_ENABLE_SPI_GPIO: 0
+
+conds:
+  - when: build_vars.MGOS_ENABLE_SPI_GPIO != "1"
+    apply:
+      sources:
+        - src/stm32
+
+      config_schema:
+        # Note: This driver supports normal SPI units (1 - 6) and also supports QSPI in
+        # "dumb SPI" mode (unit 128, pins correspond to block 1).
+        # When QSPI is used, only half-duplex single line communication is supported and
+        # modes are limited to 0 and 3. io0 is MOSI, io1 is MISO.
+        # If io2 and io3 pins are set, they will be configured but will be fixed at 0 and 1
+        # respectively and not otherwise used (this may be useful when flash chip is attached
+        # directly and needs to have HOLD and WP pins in definite state).
+        - ["spi.unit_no", "i", 1, {title: "Which SPI unit to use, 1 - 5 or 128 for QSPI"}]
+        - ["spi.miso_gpio", "i", 0x50006, {title: "Pin to use for MISO"}]  # PA6, AF5
+        - ["spi.mosi_gpio", "i", 0x50007, {title: "Pin to use for MOSI"}]  # PA7, AF5
+        - ["spi.sclk_gpio", "i", 0x50005, {title: "Pin to use for SCLK"}]  # PA5, AF5
+        # Note: Do not use alternate functions for CS pins, they are "soft" controlled.
+        - ["spi.cs0_gpio", "i", 4, {title: "Pin to use for CS0"}]          # PA4
+        - ["spi.cs1_gpio", "i", -1, {title: "Pin to use for CS1"}]
+        - ["spi.cs2_gpio", "i", -1, {title: "Pin to use for CS2"}]
+        - ["spi.qspi_io2", "i", 589890, {title: "Pin to use for IO2 in QSPI mode"}]  # PE2, AF9
+        - ["spi.qspi_io3", "i", 589885, {title: "Pin to use for IO3 in QSPI mode"}]  # PD13, AF9
+
+  - when: build_vars.MGOS_ENABLE_SPI_GPIO == "1"
+    apply:
+      config_schema:
+        - ["spi.miso_gpio", 6]  # PA6
+        - ["spi.mosi_gpio", 7]  # PA7
+        - ["spi.sclk_gpio", 5]  # PA5
+        - ["spi.cs0_gpio", 4]   # PA4

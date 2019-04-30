@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+  <script src="axios.min.js"></script>
+  <style>
+    html, body { height: 100vh; padding: 0; margin: 0;}
+    * { outline: none !important; }
+    body { color: #454955; font: 15px/1.5 Verdana, Helvetica, Arial, sans-serif; }
+    h1, h2, h3, h4, h5, h6, b, th, strong, .nav-link { color: #777; }
+    input, button, div, pre, p { font: inherit; }
+    button {
+      color: white; padding: 0.4em 1em; border-radius: 0.3em;
+      border: none; cursor: pointer;
+    }
+    input[type=text] {
+      padding: 0.2em 0.7em; position: relative;
+      border: 1px solid #cdcdcd; border-color: rgba(0, 0, 0, .15);
+      background-color: white; font-size: 16px;
+    }
+    h1 { margin: 0; padding-top: 0.5em; text-align: center; }
+    .container { padding: 0 1em; margin: 1em auto; max-width: 480px; background: #fafafa; }
+    .form-control { margin: 0.5em 0; }
+    .form-control input, .form-control button { min-width: 15em; }
+    .form label { min-width: 8em; display: inline-block; }
+    .form { padding: 1em 0; }
+    .btn { background: #2079b0; }
+    .spin {
+      display: inline-block; width: 0.9em; height: 0.9em;
+      margin-bottom: -0.2em; 
+      border: 0.15em solid rgba(255,255,255,.5);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 1s linear infinite;
+      -webkit-animation: spin 1s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @-webkit-keyframes spin { to { -webkit-transform: rotate(360deg); } }
+  </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1 class="">WiFi setup</h1>
+      <div class="form">
+        <div class="">
+          <div class="form-control">
+            <label>WiFi network:</label>
+            <input type="text" id="ssid">
+          </div>
+          <div class="form-control">
+            <label>WiFi password:</label>
+            <input type="text" id="pass">
+          </div>
+          <div class="form-control">
+            <label></label>
+            <button class="btn" id="save">
+              <span id="spinner"></span>
+              Save WiFi settings
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  <script>
+    var saveButton = document.getElementById('save');
+    var spinnerSpan = document.getElementById('spinner');
+    saveButton.onclick = function() {
+      spinnerSpan.className = 'spin';
+      var ssid = document.getElementById('ssid').value || '';
+      var pass = document.getElementById('pass').value || '';
+      var data = {
+        config: {
+          wifi: {
+            sta: { enable: true, ssid: ssid, pass: pass},
+            ap: { enable: false }
+          }
+        }
+      };
+      axios.post('/rpc/Config.Set', data).then(function(res) {
+        return axios.post('/rpc/Config.Save', {reboot: true});
+      }).catch(function(err) {
+        alert(err);
+      }).then(function() {
+        spinnerSpan.className = '';
+      });
+    };
+  </script>
+
+  </body>
+</html>

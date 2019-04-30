@@ -1,0 +1,374 @@
+type: lib
+author: mongoose-os
+description: Board configuration defs
+
+config_schema:
+  - ["board", "o", {title: "Board layout configuration"}]
+  - ["board.led1.pin", "i", -1, {title: "LED GPIO pin"}]
+  - ["board.led1.active_high", "b", true, {title: "True if LED is on when output is high (1)"}]
+  - ["board.led2.pin", "i", -1, {title: "LED GPIO pin"}]
+  - ["board.led2.active_high", "b", true, {title: "True if LED is on when output is high (1)"}]
+  - ["board.led3.pin", "i", -1, {title: "LED GPIO pin"}]
+  - ["board.led3.active_high", "b", true, {title: "True if LED is on when output is high (1)"}]
+  - ["board.btn1.pin", "i", -1, {title: "Button GPIO pin"}]
+  - ["board.btn1.pull_up", "b", false, {title: "True if button is pulled up when inactive"}]
+  - ["board.btn2.pin", "i", -1, {title: "Button GPIO pin"}]
+  - ["board.btn2.pull_up", "b", false, {title: "True if button is pulled up when inactive"}]
+  - ["board.btn3.pin", "i", -1, {title: "Button GPIO pin"}]
+  - ["board.btn3.pull_up", "b", false, {title: "True if button is pulled up when inactive"}]
+
+conds:
+  - when: mos.platform == "esp32"
+    apply:
+      libs:
+        - origin: https://github.com/cesanta/mongoose-os/libs/wifi
+      config_schema:
+        - ["board.led1.pin", 13]
+        - ["board.btn1.pin", 0]
+        - ["board.btn1.pull_up", true]
+        - ["provision.btn.pin", 0]
+        - ["provision.btn.pull_up", true]
+
+  # https://www.olimex.com/Products/IoT/ESP32/ESP32-EVB/open-source-hardware
+  - when: build_vars.BOARD == "ESP32-EVB"
+    apply:
+      libs:
+        - origin: https://github.com/cesanta/mongoose-os/libs/ethernet
+      config_schema:
+        - ["eth.enable", true]
+        - ["board.led1.pin", 32]  # REL1
+        - ["board.led2.pin", 33]  # REL2
+        - ["board.btn1.pin", 34]  # BUT1
+        - ["board.btn1.pull_up", true]
+        - ["provision.btn.pin", 34]
+        - ["provision.btn.pull_up", true]
+
+  - when: mos.platform == "esp8266"
+    apply:
+      libs:
+        - origin: https://github.com/cesanta/mongoose-os/libs/wifi
+      config_schema:
+        - ["board.led1.pin", 2]
+        - ["board.led1.active_high", false]
+        - ["board.btn1.pin", 0]
+        - ["board.btn1.pull_up", true]
+        - ["provision.btn.pin", 0]
+        - ["provision.btn.pull_up", true]
+        - ["provision.led.pin", 2]
+        - ["provision.led.active_high", false]
+
+  - when: build_vars.BOARD == "esp8266-1M"
+    apply:
+      build_vars:
+        FLASH_SIZE: 1048576
+      config_schema:
+        - ["mjs.generate_jsc", false]
+
+  - when: build_vars.BOARD == "esp8266-2M"
+    apply:
+      build_vars:
+        FLASH_SIZE: 2097152
+      config_schema:
+        - ["mjs.generate_jsc", false]
+
+  - when: mos.platform == "cc3200"  # CC3200-LAUNCHXL
+    apply:
+      libs:
+        - origin: https://github.com/cesanta/mongoose-os/libs/wifi
+      config_schema:
+        - ["board.led1.pin", 64]    # D7 (red)
+        - ["board.led2.pin", 1]     # D6 (yellow)
+        - ["board.led3.pin", 2]     # D5 (green)
+        - ["board.btn1.pin", 15]    # SW2
+        - ["board.btn2.pin", 4]     # SW3
+        - ["provision.btn.pin", 4]  # SW3
+        - ["provision.led.pin", 2]  # D5 (green)
+
+  - when: mos.platform == "cc3220"  # CC3220F-LAUNCHXL
+    apply:
+      libs:
+        - origin: https://github.com/cesanta/mongoose-os/libs/wifi
+      config_schema:
+        - ["board.led1.pin", 64]    # D7 (red)
+        - ["board.led2.pin", 1]     # D6 (yellow)
+        - ["board.led3.pin", 2]     # D5 (green)
+        - ["board.btn1.pin", 15]    # SW2
+        - ["board.btn2.pin", 4]     # SW3
+        - ["provision.btn.pin", 4]  # SW3
+        - ["provision.led.pin", 2]  # D5 (green)
+
+  - when: mos.platform == "rs14100"
+    apply:
+      libs:
+        - origin: https://github.com/cesanta/mongoose-os/libs/wifi
+      build_vars:
+        FREERTOS_PORT: GCC/ARM_CM4F
+        MGOS_ROOT_DEVTAB: >
+          qspi0  rsi1x_flash {"cs": 0} |
+          boot   part {"dev": "qspi0", "offset":  0x12000, "size":  0xc000} |
+          bcfg0  part {"dev": "qspi0", "offset":  0x1e000, "size":  0x1000} |
+          bcfg1  part {"dev": "qspi0", "offset":  0x1f000, "size":  0x1000} |
+          # Reserved: 0x20000 |
+          fs0    part {"dev": "qspi0", "offset":  0x40000, "size":  0x40000} |
+          fs1    part {"dev": "qspi0", "offset":  0x80000, "size":  0x40000} |
+          fsF    part {"dev": "qspi0", "offset":  0xc0000, "size":  0x40000} |
+          app0   part {"dev": "qspi0", "offset": 0x100000, "size": 0x100000} |
+          app1   part {"dev": "qspi0", "offset": 0x200000, "size": 0x100000} |
+          appF   part {"dev": "qspi0", "offset": 0x300000, "size": 0x100000}
+        MGOS_BL_BIN: "$(MGOS_PLATFORM_PATH)/bin/bootloader.bin"
+        MGOS_ROOT_FS_TYPE: LFS
+        MGOS_ROOT_FS_SIZE: 0x40000
+        # 128K SRAM is the baseline present in all variants of the chip.
+        # There may be much more but there's no way to tell upfront.
+        # Override this if you know your chip has more SRAM.
+        RS14100_SRAM_SIZE: 131072
+
+  - when: build_vars.BOARD == "EVK1.3"
+    apply:
+      config_schema:
+        - ["board.led1.pin", 0x100]             # ULP0 (TRI LED, green)
+        - ["board.led1.active_high", false]
+        - ["board.led2.pin", 0x102]             # ULP2 (TRI LED, blue)
+        - ["board.led2.active_high", false]
+        - ["provision.led.pin", 0x102]          # ULP2 (TRI LED, blue)
+        - ["provision.led.active_high", false]
+
+  - when: build_vars.BOARD == "B-L475E-IOT01A"
+    apply:
+      libs:
+        - origin: https://github.com/cesanta/mongoose-os/libs/freertos
+        - origin: https://github.com/cesanta/mongoose-os/libs/wifi-ism43xxx
+      config_schema:
+        - ["board.led1.pin", 0x05]     # PA5 (LD1, green)
+        - ["board.led2.pin", 0x1e]     # PB14 (LD2, green)
+        - ["board.led3.pin", 0x29]     # PC9 (1 = LD3 (yellow), 0 = LD4 (blue))
+        - ["board.btn1.pin", 0x2d]     # PC13
+        - ["provision.btn.pin", 0x2d]  # PC13
+        - ["provision.btn.pull_up", true]
+        - ["provision.led.pin", 0x1e]  # PC13 (LD2, green)
+        - ["debug.stdout_uart", 1]
+        - ["debug.stderr_uart", 1]
+        - ["i2c.sda_gpio", 0x1b]       # PB11 (internal I2C bus, where the sensors are)
+        - ["i2c.scl_gpio", 0x1a]       # PB10
+        - ["i2c1.sda_gpio", 0x19]      # PB9 (external I2C bus, exposed on the Arduino connector)
+        - ["i2c1.scl_gpio", 0x18]      # PB8
+        - ["rpc.uart.uart_no", 1]
+        #                                                    PC11.6                PC12.6                PC10.6
+        - ["wifi.ism43xxx.spi", '{"unit_no": 3, "miso_gpio": 0x6002b, "mosi_gpio": 0x6002c, "sclk_gpio": 0x6002a}']
+        - ["wifi.ism43xxx.cs_gpio", 0x40]      # CS = PE0
+        - ["wifi.ism43xxx.drdy_gpio", 0x41]    # DRDY = PE1
+        - ["wifi.ism43xxx.rst_gpio", 0x48]     # RST = PE8
+        - ["wifi.ism43xxx.boot0_gpio", 0x1c]   # BOOT0 = PB12
+        - ["wifi.ism43xxx.wakeup_gpio", 0x1d]  # WAKEUP = PB13
+      build_vars:
+        DEVICE: stm32l475vg
+        HSE_VALUE: 0
+        LSE_VALUE: 32768
+        MGOS_DEBUG_UART: 1
+        MGOS_BL_BIN: "$(MGOS_PLATFORM_PATH)/bin/bootloader-B-L475E-IOT01A.bin"
+        FLASH_BL_SIZE: 0x10000
+        FLASH_BL_CFG_SIZE: 0
+        FREERTOS_PORT: GCC/ARM_CM4F
+        MGOS_ROOT_DEVTAB: >
+          sysf0   stm32flash {} |
+          extf0   spi_flash  {"cs": 0, "freq": 20000000,
+                              "spi": {"unit_no": 0x81,
+                                      "mosi_gpio": 0xa004c, "miso_gpio": 0xa004d, "sclk_gpio": 0xa004a,
+                                      "cs0_gpio": 0x4b, "qspi_io2": 0xa004e, "qspi_io3": 0xa004f}} |
+          app0   part {"dev": "sysf0", "offset":  0x10000, "size": 0xf0000} |
+          bcfg0  part {"dev": "extf0", "offset":        0, "size":  0x1000} |
+          bcfg1  part {"dev": "extf0", "offset":   0x1000, "size":  0x1000} |
+          # Reserved: 56K |
+          app1   part {"dev": "extf0", "offset":  0x10000, "size": 0x100000} |
+          appT   part {"dev": "extf0", "offset": 0x110000, "size": 0x100000} |
+          appF   part {"dev": "extf0", "offset": 0x210000, "size": 0x100000} |
+          fs0    part {"dev": "extf0", "offset": 0x310000, "size": 0x40000} |
+          fs1    part {"dev": "extf0", "offset": 0x350000, "size": 0x40000} |
+          fsF    part {"dev": "extf0", "offset": 0x390000, "size": 0x40000} |
+          data   part {"dev": "extf0", "offset": 0x3d0000}
+        MGOS_ROOT_FS_TYPE: LFS
+        MGOS_ROOT_FS_SIZE: 0x40000
+        MGOS_ROOT_FS_EXTRACT: 1
+        MGOS_ROOT_FS_ON_SYS_FLASH: 0
+      cdefs:
+        MGOS_BOOT_APP0_OFFSET: 0x10000
+
+  - when: build_vars.BOARD == "DISCO-F746NG"
+    apply:
+      libs:
+        - origin: https://github.com/cesanta/mongoose-os/libs/ethernet
+        - origin: https://github.com/cesanta/mongoose-os/libs/freertos
+      config_schema:
+        - ["board.led1.pin", 0x81]     # PI1 (green)
+        - ["board.btn1.pin", 0x8b]     # PI11
+        - ["provision.btn.pin", 0x8b]  # PI11
+        - ["provision.led.pin", 0x81]  # PI1
+        - ["debug.stdout_uart", 1]
+        - ["debug.stderr_uart", 1]
+        - ["rpc.uart.uart_no", 1]
+        - ["eth.enable", true]
+      build_vars:
+        DEVICE: stm32f746ng
+        HSE_VALUE: 0
+        LSE_VALUE: 32768
+        MGOS_DEBUG_UART: 1
+        MGOS_BL_BIN: "$(MGOS_PLATFORM_PATH)/bin/bootloader-DISCO-F746NG.bin"
+        FLASH_BL_SIZE: 0x10000
+        FLASH_BL_CFG_SIZE: 0
+        FREERTOS_PORT: GCC/ARM_CM7/r0p1
+        MGOS_ROOT_DEVTAB: >
+          sysf0  stm32flash {} |
+          extf0  spi_flash  {"cs": 0, "freq": 20000000,
+                             "spi": {"unit_no": 0x81,
+                                     "mosi_gpio": 0x9003b, "miso_gpio": 0x9003c, "sclk_gpio": 0x90012,
+                                     "cs0_gpio": 0x16, "qspi_io2": 0x90042, "qspi_io3": 0x9003d}} |
+          app0   part {"dev": "sysf0", "offset":  0x10000, "size": 0xf0000} |
+          bcfg0  part {"dev": "extf0", "offset":        0, "size":  0x1000} |
+          bcfg1  part {"dev": "extf0", "offset":   0x1000, "size":  0x1000} |
+          # Reserved: 56K |
+          app1   part {"dev": "extf0", "offset":  0x10000, "size": 0x100000} |
+          appT   part {"dev": "extf0", "offset": 0x110000, "size": 0x100000} |
+          appF   part {"dev": "extf0", "offset": 0x210000, "size": 0x100000} |
+          fs0    part {"dev": "extf0", "offset": 0x310000, "size": 0x40000} |
+          fs1    part {"dev": "extf0", "offset": 0x350000, "size": 0x40000} |
+          fsF    part {"dev": "extf0", "offset": 0x390000, "size": 0x40000} |
+          data   part {"dev": "extf0", "offset": 0x3d0000}
+        MGOS_ROOT_FS_TYPE: LFS
+        MGOS_ROOT_FS_SIZE: 0x40000
+        MGOS_ROOT_FS_EXTRACT: 1
+        MGOS_ROOT_FS_ON_SYS_FLASH: 0
+      cdefs:
+        MGOS_BOOT_APP0_OFFSET: 0x10000
+        STM32_ETH_PHY: STM32_ETH_PHY_LAN8742A
+        STM32_ETH_MAC_PIN_REF_CLK: 'STM32_PIN\(STM32_GPIO_PORT_A,1,11\)'
+        STM32_ETH_MAC_PIN_MDC:     'STM32_PIN\(STM32_GPIO_PORT_C,1,11\)'
+        STM32_ETH_MAC_PIN_MDIO:    'STM32_PIN\(STM32_GPIO_PORT_A,2,11\)'
+        STM32_ETH_MAC_PIN_CRS_DV:  'STM32_PIN\(STM32_GPIO_PORT_A,7,11\)'
+        STM32_ETH_MAC_PIN_RXD0:    'STM32_PIN\(STM32_GPIO_PORT_C,4,11\)'
+        STM32_ETH_MAC_PIN_RXD1:    'STM32_PIN\(STM32_GPIO_PORT_C,5,11\)'
+        STM32_ETH_MAC_PIN_TXD0:    'STM32_PIN\(STM32_GPIO_PORT_G,13,11\)'  # !
+        STM32_ETH_MAC_PIN_TXD1:    'STM32_PIN\(STM32_GPIO_PORT_G,14,11\)'
+        STM32_ETH_MAC_PIN_TXD_EN:  'STM32_PIN\(STM32_GPIO_PORT_G,11,11\)'
+
+  - when: build_vars.BOARD == "NUCLEO-F746ZG"
+    apply:
+      libs:
+        - origin: https://github.com/cesanta/mongoose-os/libs/ethernet
+        - origin: https://github.com/cesanta/mongoose-os/libs/freertos
+      config_schema:
+        - ["board.led1.pin", 0x1e]     # PB14 (LD3, red)
+        - ["board.led2.pin", 0x17]     # PB7 (LD2, blue)
+        - ["board.led3.pin", 0x10]     # PB0 (LD1, green)
+        - ["board.btn1.pin", 0x2d]     # PC13
+        - ["provision.btn.pin", 0x2d]  # PC13
+        - ["provision.led.pin", 0x17]  # PB7 (LD2, blue)
+        - ["debug.stdout_uart", 3]
+        - ["debug.stderr_uart", 3]
+        - ["rpc.uart.uart_no", 3]
+        - ["eth.enable", true]
+      build_vars:
+        DEVICE: stm32f746zg
+        HSE_VALUE: 8000000
+        LSE_VALUE: 32768
+        MGOS_DEBUG_UART: 3
+        FLASH_BL_SIZE: 0
+        FLASH_BL_CFG_SIZE: 0
+        FREERTOS_PORT: GCC/ARM_CM7/r0p1
+        MGOS_ROOT_DEVTAB: >
+          fs0 stm32flash {"offset": 0x8000, "size": 0x10000, "ese": true}
+        MGOS_ROOT_FS_TYPE: SPIFFS
+        MGOS_ROOT_FS_SIZE: 0x10000
+        MGOS_ROOT_FS_OPTS: '{"bs": 4096, "is": 128}'
+        MGOS_ROOT_FS_EXTRACT: 0
+        MGOS_ROOT_FS_ON_SYS_FLASH: 1
+      cdefs:
+        STM32_ETH_PHY: STM32_ETH_PHY_LAN8742A
+        STM32_ETH_MAC_PIN_REF_CLK: 'STM32_PIN\(STM32_GPIO_PORT_A,1,11\)'
+        STM32_ETH_MAC_PIN_MDC:     'STM32_PIN\(STM32_GPIO_PORT_C,1,11\)'
+        STM32_ETH_MAC_PIN_MDIO:    'STM32_PIN\(STM32_GPIO_PORT_A,2,11\)'
+        STM32_ETH_MAC_PIN_CRS_DV:  'STM32_PIN\(STM32_GPIO_PORT_A,7,11\)'
+        STM32_ETH_MAC_PIN_RXD0:    'STM32_PIN\(STM32_GPIO_PORT_C,4,11\)'
+        STM32_ETH_MAC_PIN_RXD1:    'STM32_PIN\(STM32_GPIO_PORT_C,5,11\)'
+        STM32_ETH_MAC_PIN_TXD0:    'STM32_PIN\(STM32_GPIO_PORT_G,13,11\)'
+        STM32_ETH_MAC_PIN_TXD1:    'STM32_PIN\(STM32_GPIO_PORT_B,13,11\)'  # !
+        STM32_ETH_MAC_PIN_TXD_EN:  'STM32_PIN\(STM32_GPIO_PORT_G,11,11\)'
+
+  - when: build_vars.BOARD == "Electron"
+    apply:
+      libs:
+        - origin: https://github.com/cesanta/mongoose-os/libs/freertos
+        - origin: https://github.com/cesanta/mongoose-os/libs/pppos
+      config_schema:
+        - ["board.led1.pin", 0x01]     # PA1 (RGB, red)
+        - ["board.led1.active_high", false]
+        - ["board.led2.pin", 0x02]     # PA2 (RGB, green)
+        - ["board.led2.active_high", false]
+        - ["board.led3.pin", 0x03]     # PA3 (RGB, blue)
+        - ["board.led3.active_high", false]
+        - ["board.btn1.pin", 0x27]     # PC7
+        - ["provision.btn.pin", 0x27]  # PC7
+        - ["provision.btn.pull_up", true]
+        - ["provision.led.pin", 0x03]  # PA3 (RGB, blue)
+        - ["provision.led.active_high", false]
+        - ["debug.stdout_uart", 1]
+        - ["debug.stderr_uart", 1]
+        - ["i2c.sda_gpio", 0x16]       # PB6
+        - ["i2c.scl_gpio", 0x17]       # PB7
+        - ["i2c1.sda_gpio", 0x18]      # PB8
+        - ["i2c1.scl_gpio", 0x19]      # PB9
+        # Modem is u-blox SARA-U2x0
+        - ["pppos.enable", true]
+        - ["pppos.uart_no", 3]
+        - ["pppos.rx_gpio", 0x7001b]   # PB11
+        - ["pppos.tx_gpio", 0x7001a]   # PB10
+        - ["pppos.cts_gpio", 0x7001d]  # PB13
+        - ["pppos.rts_gpio", 0x7001e]  # PB14
+        - ["pppos.baud_rate", 460800]
+        - ["pppos.fc_enable", true]
+        - ["pppos.dtr_gpio", 0x1f]     # PB15
+        - ["pppos.rst_gpio", 0x24]     # PC4
+        - ["pppos.rst_act", 0]
+        - ["pppos.rst_hold_ms", 100]
+        - ["pppos.rst_wait_ms", 4000]
+        # Sometimes modem just doesn't come back after reset.
+        # Works fine on subsequent attempts.
+        - ["pppos.rst_mode", 1]
+
+        - ["rpc.uart.uart_no", 1]
+      build_vars:
+        DEVICE: stm32f205rg
+        HSE_VALUE: 26000000
+        LSE_VALUE: 32768
+        MGOS_DEBUG_UART: 1
+        MGOS_ENABLE_LWIP: 1
+        MGOS_BL_BIN: "$(MGOS_PLATFORM_PATH)/bin/bootloader-Electron.bin"
+        FLASH_BL_SIZE: 0x10000
+        FLASH_BL_CFG_SIZE: 0
+        FREERTOS_PORT: GCC/ARM_CM3
+        MGOS_ROOT_DEVTAB: >
+          sysf0   stm32flash {} |
+          extf0   spi_flash  {"cs": 0, "freq": 20000000,
+                              "spi": {"unit_no": 1, "mosi_gpio": 0x50007, "miso_gpio": 0x50006,
+                                      "sclk_gpio": 0x50005, "cs0_gpio": 0x22}} |
+          app0   part {"dev": "sysf0", "offset":  0x10000, "size": 0xf0000} |
+          bcfg0  part {"dev": "extf0", "offset":        0, "size":  0x1000} |
+          bcfg1  part {"dev": "extf0", "offset":   0x1000, "size":  0x1000} |
+          # Reserved: 56K |
+          app1   part {"dev": "extf0", "offset":  0x10000, "size": 0x100000} |
+          appT   part {"dev": "extf0", "offset": 0x110000, "size": 0x100000} |
+          appF   part {"dev": "extf0", "offset": 0x210000, "size": 0x100000} |
+          fs0    part {"dev": "extf0", "offset": 0x310000, "size": 0x40000} |
+          fs1    part {"dev": "extf0", "offset": 0x350000, "size": 0x40000} |
+          fsF    part {"dev": "extf0", "offset": 0x390000, "size": 0x40000} |
+          data   part {"dev": "extf0", "offset": 0x3d0000}
+        MGOS_ROOT_FS_TYPE: LFS
+        MGOS_ROOT_FS_SIZE: 0x40000
+        MGOS_ROOT_FS_EXTRACT: 1
+        MGOS_ROOT_FS_ON_SYS_FLASH: 0
+      cdefs:
+        MGOS_BOOT_APP0_OFFSET: 0x10000
+
+
+# There is a special hack in mos to make overrides work properly.
+manifest_version: 2018-09-24
+no_implicit_init_deps: true
