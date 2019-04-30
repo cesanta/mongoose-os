@@ -111,7 +111,7 @@ Here's a list as of 2019/04/30:
 | [rpc-service-wifi](https://github.com/mongoose-os-libs/rpc-service-wifi) |  |
 | [rpc-uart](https://github.com/mongoose-os-libs/rpc-uart) |  |
 | [rpc-ws](https://github.com/mongoose-os-libs/rpc-ws) | WebSocket channel support for mgRPC |
-| [sensor-utils](https://github.com/mongoose-os-libs/sensor-utils) | For Mongoose OS - A collection of C-functions with JS wrappers that make it convenient to calculate derived quantities (e.g. dew point temperature), convert between different units of measure, and perform simple statistics on arrays of (double precision) values. |
+| [sensor-utils](https://github.com/mongoose-os-libs/sensor-utils) | For Mongoose OS - A collection of C-functions with JS wrappers that make it convenient to calculate ... |
 | [shadow](https://github.com/mongoose-os-libs/shadow) |  |
 | [sht31-i2c](https://github.com/mongoose-os-libs/sht31-i2c) | Mongoose OS library implementing an I2C driver for SHT31 |
 | [si7005](https://github.com/mongoose-os-libs/si7005) | Si7005 Temperature and Humidity Sensor Driver for Mongoose OS |
