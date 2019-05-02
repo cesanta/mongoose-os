@@ -1,0 +1,166 @@
+# Remember: libs first, then apps (since the latter may use the former).
+
+# Build private version of closed source libs and publish to public repos.
+- locations:
+    - git@github.com:cesanta/mos-libs.git/cron
+    - git@github.com:cesanta/mos-libs.git/crontab
+    - git@github.com:cesanta/mos-libs.git/dash
+  out:
+    - github:
+        repo: mongoose-os-libs/%(name)s
+  common:
+    cflags: -DMGOS_FREE_BUILD
+    cxxflags: -DMGOS_FREE_BUILD
+    mos_args: ['--lib-extra=origin: "https://github.com/mongoose-os-libs/boards"']
+  variants:
+    - name: cc3200
+      platform: cc3200
+    - name: cc3220
+      platform: cc3220
+    - name: esp8266
+      platform: esp8266
+    - name: esp32
+      platform: esp32
+    - name: rs14100
+      platform: rs14100
+    - name: stm32-B-L475E-IOT01A
+      platform: stm32
+      build_vars:
+        BOARD: B-L475E-IOT01A
+    - name: stm32-DISCO-F746NG
+      platform: stm32
+      build_vars:
+        BOARD: DISCO-F746NG
+    - name: stm32-Electron
+      platform: stm32
+      build_vars:
+        BOARD: Electron
+    - name: stm32-NUCLEO-F746ZG
+      platform: stm32
+      build_vars:
+        BOARD: NUCLEO-F746ZG
+    - name: ubuntu
+      platform: ubuntu
+
+- location: git@github.com:cesanta/mos-libs.git/mongoose
+  out:
+    - github:
+        repo: mongoose-os-libs/mongoose
+  common:
+    cflags: -DMGOS_FREE_BUILD
+    cxxflags: -DMGOS_FREE_BUILD
+    mos_args: ['--lib-extra=origin: "https://github.com/mongoose-os-libs/boards"']
+  variants:
+    - name: cc3200
+      platform: cc3200
+    - name: cc3220
+      platform: cc3220
+    - name: esp8266
+      platform: esp8266
+    - name: esp32
+      platform: esp32
+    - name: rs14100
+      platform: rs14100
+    - name: stm32-B-L475E-IOT01A
+      platform: stm32
+      build_vars:
+        BOARD: B-L475E-IOT01A
+        # This board does not use LwIP and uses ISM43XXX net_if instead.
+        MGOS_MG_NET_IF: -1
+        MGOS_ENABLE_LWIP: 0
+    - name: stm32-DISCO-F746NG
+      platform: stm32
+      build_vars:
+        BOARD: DISCO-F746NG
+        MGOS_ENABLE_LWIP: 1
+    - name: stm32-Electron
+      platform: stm32
+      build_vars:
+        BOARD: Electron
+    - name: stm32-NUCLEO-F746ZG
+      platform: stm32
+      build_vars:
+        BOARD: NUCLEO-F746ZG
+        MGOS_ENABLE_LWIP: 1
+    - name: ubuntu
+      platform: ubuntu
+
+# Bootloader
+- location: https://github.com/mongoose-os-apps/bootloader
+  variants:
+    - name: rs14100
+      platform: rs14100
+    - name: stm32-B-L475E-IOT01A
+      platform: stm32
+      build_vars:
+        BOARD: B-L475E-IOT01A
+    - name: stm32-DISCO-F746NG
+      platform: stm32
+      build_vars:
+        BOARD: DISCO-F746NG
+    - name: stm32-Electron
+      platform: stm32
+      build_vars:
+        BOARD: Electron
+
+# Demo apps
+- location: https://github.com/mongoose-os-apps/demo-c
+  variants:
+    - name: cc3200
+      platform: cc3200
+    - name: cc3220
+      platform: cc3220
+    - name: esp8266
+      platform: esp8266
+    - name: esp8266-1M
+      platform: esp8266
+      build_vars:
+        BOARD: esp8266-1M
+    - name: esp8266-2M
+      platform: esp8266
+      build_vars:
+        BOARD: esp8266-2M
+    - name: esp32
+      platform: esp32
+    - name: rs14100
+      platform: rs14100
+    - name: stm32-B-L475E-IOT01A
+      platform: stm32
+      build_vars:
+        BOARD: B-L475E-IOT01A
+    - name: stm32-DISCO-F746NG
+      platform: stm32
+      build_vars:
+        BOARD: DISCO-F746NG
+    - name: stm32-Electron
+      platform: stm32
+      build_vars:
+        BOARD: Electron
+    - name: stm32-NUCLEO-F746ZG
+      platform: stm32
+      build_vars:
+        BOARD: NUCLEO-F746ZG
+
+- location: https://github.com/mongoose-os-apps/demo-js
+  variants:
+    - name: cc3220
+      platform: cc3220
+    - name: esp8266
+      platform: esp8266
+    - name: esp32
+      platform: esp32
+    - name: rs14100
+      platform: rs14100
+    - name: stm32-B-L475E-IOT01A
+      platform: stm32
+      build_vars:
+        BOARD: B-L475E-IOT01A
+    - name: stm32-DISCO-F746NG
+      platform: stm32
+      build_vars:
+        BOARD: DISCO-F746NG
+
+- location: https://github.com/mongoose-os-apps/example-m5stack-js
+  variants:
+    - name: esp32
+      platform: esp32
