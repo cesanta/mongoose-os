@@ -224,11 +224,9 @@ RS14100_CFLAGS += -DSRAM_BASE=$(SRAM_BASE) -DSRAM_BASE_ADDR=$(SRAM_BASE) -DSRAM_
                   -DRSI_WITH_OS -DBOOTLOADER_VERSION_CHECK=0
 
 IPATH = $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
-        $(COMMON_PATH)/platforms/arm \
         $(MGOS_PLATFORM_PATH)/include $(MGOS_IPATH) $(GEN_DIR) $(RS14100_IPATH)
 
 VPATH = $(MGOS_VPATH) $(MGOS_PLATFORM_PATH)/src \
-        $(COMMON_PATH)/platforms/arm \
         $(GEN_DIR) $(APP_SOURCE_DIRS) $(RS14100_VPATH)
 
 APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
