@@ -1,11 +1,24 @@
-/* clang-format off */
-/*
- *  Copyright (c) 2010 - 2011 Espressif System
- *
- */
+// Copyright 2018-2025 Espressif Systems (Shanghai) PTE LTD
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-#ifndef CS_COMMON_PLATFORMS_ESP8266_UART_REGISTER_H_
-#define CS_COMMON_PLATFORMS_ESP8266_UART_REGISTER_H_
+// clang-format: off
+
+#pragma once
+
+#ifdef __cplusplus
+extern "C" {
+#endif
 
 #define REG_UART_BASE(i)                (0x60000000 + (i)*0xf00)
 //version value:32'h062000
@@ -58,6 +71,36 @@
 #define UART_TXFIFO_EMPTY_INT_CLR           (BIT(1))
 #define UART_RXFIFO_FULL_INT_CLR            (BIT(0))
 
+#define UART_RXFIFO_FULL_INT_ENA            (BIT(0))
+#define UART_RXFIFO_FULL_INT_ENA_M          (BIT(0))
+#define UART_RXFIFO_FULL_INT_ST_M           (BIT(0))
+#define UART_RXFIFO_FULL_INT_CLR_M          (BIT(0))
+
+#define UART_TXFIFO_EMPTY_INT_ENA           (BIT(1))
+#define UART_TXFIFO_EMPTY_INT_ENA_M         (BIT(1))
+#define UART_TXFIFO_EMPTY_INT_ST_M          (BIT(1))
+#define UART_TXFIFO_EMPTY_INT_CLR_M         (BIT(1))
+
+#define UART_PARITY_ERR_INT_ENA             (BIT(2))
+#define UART_PARITY_ERR_INT_ENA_M           (BIT(2))
+#define UART_PARITY_ERR_INT_ST_M            (BIT(2))
+#define UART_PARITY_ERR_INT_CLR_M           (BIT(2))
+
+#define UART_FRM_ERR_INT_ENA                (BIT(3))
+#define UART_FRM_ERR_INT_ENA_M              (BIT(3))
+#define UART_FRM_ERR_INT_ST_M               (BIT(3))
+#define UART_FRM_ERR_INT_CLR_M              (BIT(3))
+
+#define UART_RXFIFO_OVF_INT_ENA             (BIT(4))
+#define UART_RXFIFO_OVF_INT_ENA_M           (BIT(4))
+#define UART_RXFIFO_OVF_INT_ST_M            (BIT(4))
+#define UART_RXFIFO_OVF_INT_CLR_M           (BIT(4))
+
+#define UART_RXFIFO_TOUT_INT_ENA            (BIT(8))
+#define UART_RXFIFO_TOUT_INT_ENA_M          (BIT(8))
+#define UART_RXFIFO_TOUT_INT_ST_M           (BIT(8))
+#define UART_RXFIFO_TOUT_INT_CLR_M          (BIT(8))
+
 #define UART_CLKDIV(i)                  (REG_UART_BASE(i) + 0x14)
 #define UART_CLKDIV_CNT                     0x000FFFFF
 #define UART_CLKDIV_S                       0
@@ -104,7 +147,11 @@
 #define UART_BIT_NUM                        0x00000003
 #define UART_BIT_NUM_S                      2
 #define UART_PARITY_EN                      (BIT(1))
+#define UART_PARITY_EN_M                0x00000001
+#define UART_PARITY_EN_S                 1
 #define UART_PARITY                         (BIT(0))
+#define UART_PARITY_M                       0x00000001
+#define UART_PARITY_S                        0
 
 #define UART_CONF1(i)                   (REG_UART_BASE(i) + 0x24)
 #define UART_RX_TOUT_EN                     (BIT(31))
@@ -133,4 +180,8 @@
 #define UART_DATE(i)                    (REG_UART_BASE(i) + 0x78)
 #define UART_ID(i)                      (REG_UART_BASE(i) + 0x7C)
 
-#endif /* CS_COMMON_PLATFORMS_ESP8266_UART_REGISTER_H_ */
+#define UART_SWAP_REG                       0x3FF00028
+
+#ifdef __cplusplus
+}
+#endif  /* end of __cplusplus */
