@@ -41,8 +41,7 @@ mklfs:
 	  -v $(CURDIR)/vfs-fs-lfs:/vfs-fs-lfs \
 	  docker.io/mgos/gcc \
 	  bash -c 'make -C /vfs-fs-lfs/tools mklfs \
-	    FROZEN_PATH=/mongoose-os/src/frozen \
-	    SPIFFS_CONFIG_PATH=$(SPIFFS_CONFIG_PATH)'
+	    FROZEN_PATH=/mongoose-os/src/frozen'
 	cp -v vfs-fs-lfs/tools/$@ $@
 
 mkspiffs mkspiffs8:
