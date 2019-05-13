@@ -18,12 +18,12 @@ RUN DEBIAN_FRONTEND=noninteractive add-apt-repository -y -u ppa:team-gcc-arm-emb
     DEBIAN_FRONTEND=noninteractive apt-get install -y -q gcc-arm-embedded && \
     apt-get clean
 
+ARG RS14100_SDK
+ADD tmp/$RS14100_SDK /opt/$RS14100_SDK
+
 ADD mgos_fw_meta.py mklfs mkspiffs mkspiffs8 /usr/local/bin/
 ADD serve_core/ /opt/serve_core/
 RUN ln -s /opt/serve_core/serve_core.py /usr/local/bin/serve_core.py
-
-ARG RS14100_SDK
-ADD tmp/$RS14100_SDK /opt/$RS14100_SDK
 
 ARG DOCKER_TAG
 ENV MGOS_TARGET_GDB /usr/bin/arm-none-eabi-gdb
