@@ -14,3 +14,4 @@ fs_0,     data, spiffs,  ,                   $MGOS_ROOT_FS_SIZE
 app_1,    app,  ota_1,   ,                   $APP_SLOT_SIZE
 fs_1,     data, spiffs,  ,                   $MGOS_ROOT_FS_SIZE
 $ESP_IDF_EXTRA_PARTITION
+$ESP_IDF_EXTRA_PARTITION_2

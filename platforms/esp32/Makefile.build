@@ -33,6 +33,7 @@ ESP_IDF_EXTRA_COMPONENTS ?=
 # ESP_IDF_EXTRA_PARTITION="fs_ext,data,spiffs,,256K"
 # Partition will be placed after all other mOS partitions.
 ESP_IDF_EXTRA_PARTITION ?=
+ESP_IDF_EXTRA_PARTITION_2 ?=
 
 MGOS_UPDATE_BOOT_LOADER ?= false
 
@@ -70,6 +71,7 @@ GEN_DIR ?= $(BUILD_DIR)/gen
 export APP_SLOT_SIZE ?= 0x180000
 FS_IMG = $(FW_STAGING_DIR)/fs.img
 export ESP_IDF_EXTRA_PARTITION
+export ESP_IDF_EXTRA_PARTITION_2
 export NVS_ADDR ?= 0x9000
 export NVS_SIZE ?= 0x4000
 export APP_OFFSET ?= 0x10000
