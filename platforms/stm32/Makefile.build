@@ -191,11 +191,9 @@ STM32_CFLAGS += -DSTM32_SRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -DSTM32_SRAM_SIZE=$(SRA
                 -DMG_LOCALS
 
 IPATH = $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
-        $(COMMON_PATH)/platforms/arm \
         $(MGOS_PLATFORM_PATH)/include $(MGOS_IPATH) $(GEN_DIR) $(STM32_IPATH)
 
 VPATH = $(MGOS_VPATH) $(MGOS_PLATFORM_PATH)/src \
-        $(COMMON_PATH)/platforms/arm \
         $(GEN_DIR) $(APP_SOURCE_DIRS) $(STM32_VPATH)
 
 APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
