@@ -67,6 +67,10 @@ void device_get_mac_address(uint8_t mac[6]) {
   memcpy(mac, s_dev_mac, 6);
 }
 
+void device_set_mac_address(uint8_t mac[6]) {
+  // TODO set mac address
+}
+
 void HAL_Delay(__IO uint32_t ms) {
   mgos_msleep(ms);
 }

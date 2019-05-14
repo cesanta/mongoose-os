@@ -337,11 +337,33 @@ enum mgos_init_result mgos_sys_config_init(void) {
   mgos_ro_vars_set_fw_timestamp(&mgos_sys_ro_vars, build_timestamp);
   mgos_ro_vars_set_fw_version(&mgos_sys_ro_vars, build_version);
 
+  if (!mgos_conf_str_empty(mgos_sys_config_get_device_mac())) {
+    unsigned int scan_mac[6];
+    if (sscanf(mgos_sys_config_get_device_mac(),
+               "%02x:%02x:%02x:%02x:%02x:%02x", &scan_mac[0], &scan_mac[1],
+               &scan_mac[2], &scan_mac[3], &scan_mac[4], &scan_mac[5]) == 6) {
+      uint8_t custom_mac[6];
+
+      custom_mac[0] = (uint8_t) scan_mac[0];
+      custom_mac[1] = (uint8_t) scan_mac[1];
+      custom_mac[2] = (uint8_t) scan_mac[2];
+      custom_mac[3] = (uint8_t) scan_mac[3];
+      custom_mac[4] = (uint8_t) scan_mac[4];
+      custom_mac[5] = (uint8_t) scan_mac[5];
+
+      LOG(LL_INFO, ("Overriding default mac with %02x:%02x:%02x:%02x:%02x:%02x",
+                    custom_mac[0], custom_mac[1], custom_mac[2], custom_mac[3],
+                    custom_mac[4], custom_mac[5]));
+
+      device_set_mac_address(custom_mac);
+    }
+  }
+
   /* Init mac address readonly var - users may use it as device ID */
   uint8_t mac[6];
   device_get_mac_address(mac);
   if (mg_asprintf((char **) &mgos_sys_ro_vars.mac_address, 0,
-                  "%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3],
+                  "%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3],
                   mac[4], mac[5]) < 0) {
     return MGOS_INIT_OUT_OF_MEMORY;
   }

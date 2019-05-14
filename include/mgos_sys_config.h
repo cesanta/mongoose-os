@@ -106,6 +106,8 @@ bool mgos_config_validate(const struct mgos_config *cfg, char **msg);
 
 void device_get_mac_address(uint8_t mac[6]);
 
+void device_set_mac_address(uint8_t mac[6]);
+
 /* Expands question marks in "str" with digits from the MAC address. */
 void mgos_expand_mac_address_placeholders(char *str);
 

@@ -54,6 +54,10 @@ void device_get_mac_address(uint8_t mac[6]) {
   esp_base_mac_addr_get(mac);
 }
 
+void device_set_mac_address(uint8_t mac[6]) {
+  esp_base_mac_addr_set(mac);
+}
+
 void mgos_wdt_feed(void) {
   esp_task_wdt_reset();
 }
