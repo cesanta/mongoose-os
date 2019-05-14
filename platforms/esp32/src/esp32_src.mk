@@ -22,10 +22,7 @@ APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
 BUILD_INFO_C = $(GEN_DIR)/build_info.c
 MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
 MGOS_CONFIG_C = $(GEN_DIR)/mgos_config.c
-MGOS_CONFIG_DEFAULTS_JSON = $(GEN_DIR)/conf0.json
-MGOS_CONFIG_SCHEMA_JSON = $(GEN_DIR)/mgos_config_schema.json
 MGOS_RO_VARS_C = $(GEN_DIR)/mgos_ro_vars.c
-MGOS_RO_VARS_SCHEMA_JSON = $(GEN_DIR)/mgos_ro_vars_schema.json
 
 FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
 FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.o

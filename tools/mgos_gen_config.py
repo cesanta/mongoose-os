@@ -171,6 +171,20 @@ class SchemaEntry(object):
             self.vtype == SchemaEntry.V_STRING and not isinstance(self.default, str)):
             raise TypeError("%s: Invalid default value type (%s)" % (self.path, type(self.default)))
 
+    def GetIdentifierName(self):
+        return self.path.replace(".", "_")
+
+    def GetCType(self, struct_prefix):
+        if self.vtype in (SchemaEntry.V_BOOL, SchemaEntry.V_INT):
+            return "int"
+        elif self.vtype == SchemaEntry.V_DOUBLE:
+            return "double"
+        elif self.vtype == SchemaEntry.V_STRING:
+            return "const char *"
+        elif self.vtype == SchemaEntry.V_OBJECT:
+            p = (self.orig_path if self.orig_path else self.path).replace(".", "_")
+            return "struct %s_%s" % (struct_prefix, p)
+
     @property
     def key(self):
         return self.path.split(".")[-1]
@@ -283,38 +297,6 @@ class PathRewriter(object):
         self._writer.ObjectEnd(self._RewritePath(e))
 
 
-# Writes a JSON object with defaults.
-class DefaultsJSONWriter(object):
-    def __init__(self):
-        self._defaults = collections.OrderedDict()
-        self._path = [self._defaults]
-
-    def ObjectStart(self, e):
-        d = collections.OrderedDict()
-        self._path[-1][e.key] = d
-        self._path.append(d)
-
-    def Value(self, e):
-        # Avoid emitting zero value defaults to reduce the size of the file.
-        if (e.vtype == SchemaEntry.V_INT and e.default == 0 or
-            e.vtype == SchemaEntry.V_BOOL and e.default == False or
-            e.vtype == SchemaEntry.V_DOUBLE and e.default == 0.0 or
-            e.vtype == SchemaEntry.V_STRING and e.default == ""):
-            return
-        self._path[-1][e.key] = e.default
-
-    def ObjectEnd(self, e):
-        d = self._path.pop()
-        if len(d) == 0:
-            del self._path[-1][e.key]
-
-    def __str__(self):
-        s = json.dumps(self._defaults, indent=1)
-        # Python adds trailing spaces to object keys, strip them.
-        s = s.replace(" \n", "\n")
-        return s
-
-
 # Writes a JSON version of the schema.
 class JSONSchemaWriter(object):
     def __init__(self):
@@ -334,18 +316,6 @@ class JSONSchemaWriter(object):
         return "[\n%s\n]\n" % ",\n".join(
             "  %s" % json.dumps(e, sort_keys=True) for e in self._schema)
 
-def get_ctype(vtype):
-    if vtype in (SchemaEntry.V_BOOL, SchemaEntry.V_INT):
-        ctype_api = "int         "
-        ctype_field = "int "
-    elif vtype == SchemaEntry.V_DOUBLE:
-        ctype_api = "double      "
-        ctype_field = "double "
-    elif vtype == SchemaEntry.V_STRING:
-        ctype_api = "const char *"
-        ctype_field = "char *"
-    return (ctype_api, ctype_field)
-
 # Generates struct definitions.
 # TODO(dfrank): add support for public/private structs, and then have two
 # methods instead of a single GetLines() : we need some structs to be
@@ -359,16 +329,13 @@ class StructDefGen(object):
         self._stack = []
 
     def ObjectStart(self, e):
-        p = e.orig_path if e.orig_path else e.path
-        new_obj_type = "struct %s_%s" % (self._struct_name, p.replace(".", "_"))
+        new_obj_type = e.GetCType(self._struct_name)
         self._fields.append("%s %s" % (new_obj_type, e.key))
         self._stack.append((self._obj_type, self._fields))
         self._obj_type, self._fields = new_obj_type, []
 
     def Value(self, e):
-        key = e.key
-        _, ctype_field = get_ctype(e.vtype)
-        self._fields.append("%s%s" % (ctype_field, key))
+        self._fields.append("%s %s" % (e.GetCType(self._struct_name), e.key))
 
     def ObjectEnd(self, e):
         if not e.orig_path:
@@ -394,62 +361,66 @@ class AccessorsGen(object):
     def __init__(self, struct_name, c_global_name):
         self._struct_name = struct_name
         self._c_global_name = c_global_name
+        self._entries = []
         self._getters = []
         self._setters = []
 
     def ObjectStart(self, e):
-        self._cur_acc_prefix = e.path
-        p = e.orig_path if e.orig_path else e.path
-        self._getters.append(("const struct %s_%s *" % (self._struct_name, p.replace(".", "_")), "", e.path))
+        self._entries.append(e)
 
     def Value(self, e):
-        ctype_api, ctype_field = get_ctype(e.vtype)
-        self._getters.append((ctype_api, ctype_field, e.path))
-        self._setters.append((ctype_api, ctype_field, e.path))
+        self._entries.append(e)
 
     def ObjectEnd(self, e):
         pass
 
-    def GetGetterSignature(self, path, ctype):
-        name = path.replace(".", "_")
-        return "%s%s_get_%s(struct %s *cfg)" % (ctype, self._struct_name, name, self._struct_name)
+    def _GetGetterSignature(self, e, ctype, const):
+        return "%s%s %s_get_%s(struct %s *cfg)" % (
+                const, ctype, self._struct_name, e.GetIdentifierName(), self._struct_name)
 
-    def GetSetterSignature(self, path, ctype):
-        name = path.replace(".", "_")
-        return "void %s_set_%s(struct %s *cfg, %sval)" % (self._struct_name, name, self._struct_name, ctype)
+    def _GetSetterSignature(self, e, ctype, const):
+        return "void %s_set_%s(struct %s *cfg, %s%s v)" % (
+                self._struct_name, e.GetIdentifierName(), self._struct_name, const, ctype)
 
     # Returns array of lines to be pasted to the header.
     def GetHeaderLines(self):
         lines = []
 
-        lines.append("/* Parametrized accessor prototypes {{{ */")
-        for ctype_api, ctype_field, path in self._getters:
-            name = path.replace(".", "_")
-            lines.append("#define %s_HAVE_%s" % (self._struct_name.upper(), name.upper()))
-            lines.append("%s;" % self.GetGetterSignature(path, ctype_api))
-        lines.append("")
-
-        for ctype_api, ctype_field, path in self._setters:
-            lines.append("%s;" % self.GetSetterSignature(path, ctype_api))
-        lines.append("/* }}} */")
-        lines.append("")
-
-        if self._c_global_name != None:
+        if self._c_global_name:
             lines.append("extern struct %s %s;" % (self._struct_name, self._c_global_name))
+            lines.append("extern const struct %s %s_defaults;" % (self._struct_name, self._struct_name))
+
+        for e in self._entries:
+            iname = e.GetIdentifierName()
             lines.append("")
-            lines.append("static inline bool %s_get(const struct mg_str key, struct mg_str *value) { return mgos_config_get(key, value, &%s, %s_schema()); }" % (self._c_global_name, self._c_global_name, self._struct_name))
-            lines.append("static inline bool %s_set(const struct mg_str key, const struct mg_str value, bool free_strings) { return mgos_config_set(key, value, &%s, %s_schema(), free_strings); }" % (self._c_global_name, self._c_global_name, self._struct_name))
+            lines.append("/* %s */" % e.path)
+            lines.append("#define %s_HAVE_%s" % (self._struct_name.upper(), iname.upper()))
+            if self._c_global_name:
+                lines.append("#define %s_HAVE_%s" % (self._c_global_name.upper(), iname.upper()))
+            ctype = e.GetCType(self._struct_name)
+            if e.vtype == SchemaEntry.V_OBJECT:
+                getter, setter, copy, free, const = True, False, True, True, "const "
+                ctype += " *"
+            elif e.vtype == SchemaEntry.V_STRING:
+                getter, setter, copy, free, const = True, True, False, False, ""
+            else:
+                getter, setter, copy, free, const = True, True, False, False, ""
+
+            if getter:
+                lines.append("%s;" % self._GetGetterSignature(e, ctype, const))
+                if self._c_global_name:
+                    lines.append("static inline %s%s %s_get_%s(void) { return %s_get_%s(&%s); }" % (
+                        const, ctype, self._c_global_name, iname, self._struct_name, iname, self._c_global_name))
+            if setter:
+                lines.append("%s;" % self._GetSetterSignature(e, ctype, const))
+                if self._c_global_name:
+                    lines.append("static inline void %s_set_%s(%s%s v) { %s_set_%s(&%s, v); }" % (
+                        self._c_global_name, iname, const, ctype, self._struct_name, iname, self._c_global_name))
+
+        if self._c_global_name:
             lines.append("")
-            for ctype_api, ctype_field, path in self._getters:
-                name = path.replace(".", "_")
-                lines.append("#define %s_HAVE_%s" % (self._c_global_name.upper(), name.upper()))
-                lines.append("static inline %s%s_get_%s(void) { return %s_get_%s(&%s); }" % (
-                    ctype_api, self._c_global_name, name, self._struct_name, name, self._c_global_name))
-            lines.append("")
-            for ctype_api, ctype_field, path in self._setters:
-                name = path.replace(".", "_")
-                lines.append("static inline void %s_set_%s(%sval) { %s_set_%s(&%s, val); }" % (
-                    self._c_global_name, name, ctype_api, self._struct_name, name, self._c_global_name))
+            lines.append("bool %s_get(const struct mg_str key, struct mg_str *value);" % self._c_global_name)
+            lines.append("bool %s_set(const struct mg_str key, const struct mg_str value, bool free_strings);" % self._c_global_name)
 
         return lines
 
@@ -457,35 +428,62 @@ class AccessorsGen(object):
     def GetSourceLines(self):
         lines = []
 
-        if self._c_global_name != None:
+        if self._c_global_name:
             lines.append("/* Global instance */")
             lines.append("struct %s %s;" % (self._struct_name, self._c_global_name))
+            lines.append("const struct %s %s_defaults = {" % (self._struct_name, self._struct_name))
+            for e in self._entries:
+                if e.vtype == SchemaEntry.V_OBJECT:
+                    pass
+                elif e.vtype == SchemaEntry.V_STRING:
+                    if e.default:
+                        # JSON encoder will provide escaping.
+                        lines.append("  .%s = %s," % (e.path, json.dumps(e.default)))
+                    else:
+                        lines.append("  .%s = NULL," % e.path)
+                elif e.vtype == SchemaEntry.V_BOOL:
+                    lines.append("  .%s = %d," % (e.path, (e.default and 1 or 0)))
+                else:
+                    lines.append("  .%s = %s," % (e.path, e.default))
+            lines.append("};")
+
+        for e in self._entries:
+            iname = e.GetIdentifierName()
             lines.append("")
-
-        lines.append("/* Getters {{{ */")
-        for ctype_api, ctype_field, path in self._getters:
-            # If we're going to return a struct, then we need to take an
-            # address of the value being returned; otherwise return the value
-            # itself
-            ampersand = ""
-            if "struct" in ctype_api:
-                ampersand = "&"
-
-            lines.append("%s {" % self.GetGetterSignature(path, ctype_api))
-            lines.append("  return %scfg->%s;" % (ampersand, path))
-            lines.append("}")
-        lines.append("/* }}} */")
-        lines.append("")
-
-        lines.append("/* Setters {{{ */")
-        for ctype_api, ctype_field, path in self._setters:
-            lines.append("%s {" % self.GetSetterSignature(path, ctype_api))
-            if "char" in ctype_api:
-                lines.append("  mgos_conf_set_str(&cfg->%s, val);" % path)
+            lines.append("/* %s */" % e.path)
+            lines.append("#define %s_HAVE_%s" % (self._struct_name.upper(), iname.upper()))
+            if self._c_global_name:
+                lines.append("#define %s_HAVE_%s" % (self._c_global_name.upper(), iname.upper()))
+            ctype = e.GetCType(self._struct_name)
+            amp = ""
+            if e.vtype == SchemaEntry.V_OBJECT:
+                getter, setter, copy, free, const = True, False, True, True, "const "
+                ctype += " *"
+                amp = "&"
+            elif e.vtype == SchemaEntry.V_STRING:
+                getter, setter, copy, free, const = True, True, False, False, ""
             else:
-                lines.append("  cfg->%s = val;" % path)
+                getter, setter, copy, free, const = True, True, False, False, ""
+
+            if getter:
+                lines.append("%s {" % self._GetGetterSignature(e, ctype, const))
+                lines.append("  return %scfg->%s;" % (amp, e.path))
+                lines.append("}")
+            if setter:
+                lines.append("%s {" % self._GetSetterSignature(e, ctype, const))
+                if e.vtype == SchemaEntry.V_STRING:
+                    lines.append("  mgos_conf_set_str(&cfg->%s, v);" % e.path)
+                else:
+                    lines.append("  %scfg->%s = v;" % (amp, e.path))
+                lines.append("}")
+
+        if self._c_global_name:
+            lines.append("bool %s_get(const struct mg_str key, struct mg_str *value) {" % self._c_global_name)
+            lines.append("  return mgos_config_get(key, value, &%s, %s_schema());" % (self._c_global_name, self._struct_name))
             lines.append("}")
-        lines.append("/* }}} */")
+            lines.append("bool %s_set(const struct mg_str key, const struct mg_str value, bool free_strings) {" % self._c_global_name,)
+            lines.append("  return mgos_config_set(key, value, &%s, %s_schema(), free_strings);" % (self._c_global_name, self._struct_name))
+            lines.append("}")
 
         return lines
 
@@ -519,7 +517,8 @@ class HWriter(object):
 
 #pragma once
 
-#include "mgos_config_util.h"
+#include <stdbool.h>
+#include "common/mg_str.h"
 
 #ifdef __cplusplus
 extern "C" {{
@@ -582,8 +581,11 @@ class CWriter(object):
  * Command: {cmd}
  */
 
-#include <stddef.h>
 #include "{name}.h"
+
+#include <stddef.h>
+
+#include "mgos_config_util.h"
 
 const struct mgos_conf_entry {name}_schema_[{num_entries}] = {{
   {{.type = CONF_TYPE_OBJECT, .key = "", .offset = 0, .num_desc = {num_desc}}},
@@ -637,12 +639,6 @@ if __name__ == "__main__":
             except (TypeError, ValueError, KeyError) as e:
                 print("While parsing %s: %s" % (schema_file, e), file=sys.stderr)
                 sys.exit(1)
-
-    dw = DefaultsJSONWriter()
-    schema.Walk(dw)
-    dfn = os.path.join(args.dest_dir, "%s_defaults.json" % args.c_name)
-    with open_with_temp(dfn) as df:
-        df.write(str(dw))
 
     jsw = JSONSchemaWriter()
     schema.Walk(jsw)

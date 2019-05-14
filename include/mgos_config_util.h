@@ -19,14 +19,15 @@
  * Low-level interface to the configuration infrastructure.
  */
 
-#ifndef CS_FW_INCLUDE_MGOS_CONFIG_UTIL_H_
-#define CS_FW_INCLUDE_MGOS_CONFIG_UTIL_H_
+#pragma once
 
 #include <stdbool.h>
 #include <stdint.h>
 
 #include "common/mbuf.h"
 #include "common/mg_str.h"
+
+#include "mgos_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -155,10 +156,16 @@ bool mgos_config_set(const struct mg_str key, const struct mg_str value,
                      bool free_strings);
 
 /* Set string configuration entry. Frees current entry. */
-void mgos_conf_set_str(char **vp, const char *v);
+void mgos_conf_set_str(const char **vp, const char *v);
 
 /* Returns true if the string is NULL or empty. */
 bool mgos_conf_str_empty(const char *s);
+
+/* Copies a string if necessary. */
+bool mgos_conf_copy_str(const char *s, const char **copy);
+
+/* Frees a string if necessary. */
+void mgos_conf_free_str(const char **sp);
 
 /*
  * Returns a type of the value (this function is primarily for FFI)
@@ -196,5 +203,3 @@ void mgos_expand_placeholders(const struct mg_str src, struct mg_str *str);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-
-#endif /* CS_FW_INCLUDE_MGOS_CONFIG_UTIL_H_ */

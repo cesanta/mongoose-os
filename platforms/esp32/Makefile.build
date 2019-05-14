@@ -215,11 +215,11 @@ app-bin-check: $(APP_BIN)
 
 $(FW_MANIFEST): app-bin-check $(BOOTLOADER_BIN) $(PARTITION_TABLE_BIN) $(FS_IMG) $(MKFS)
 
-# mgos_config is generated during binary build
-$(GEN_DIR)/mgos_config_schema.json $(GEN_DIR)/mgos_ro_vars_schema.json: all_binaries
-
+# Deprecated since 2019/05/14.
+# This can be deleted eventually. For now we keep the file so during OTA previous one gets overwritten
+# and some space is freed.
 $(GEN_DIR)/conf0.json: all_binaries
-	$(Q) rsync -mt $(GEN_DIR)/mgos_config_defaults.json $(GEN_DIR)/conf0.json
+	$(Q) echo '{}' > $@
 
 $(FS_IMG): $(MKFS) $(APP_FS_DIRS) $(FS_FILES)
 	$(call mkfs,$(MGOS_ROOT_FS_SIZE),$(MGOS_ROOT_FS_OPTS))

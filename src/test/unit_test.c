@@ -11,28 +11,25 @@
 #include "mgos_config_util.h"
 #include "mgos_event.h"
 
-#include "sys_conf.h"
+#include "mgos_config.h"
 #include "test_main.h"
 #include "test_util.h"
 
 static const char *test_config(void) {
   size_t size;
-  char *json1 = cs_read_file(".build/sys_conf_defaults.json", &size);
   char *json2 = cs_read_file("data/overrides.json", &size);
-  const struct mgos_conf_entry *schema = sys_conf_schema();
-  struct sys_conf conf;
+  const struct mgos_conf_entry *schema = mgos_config_schema();
+  struct mgos_config conf;
 
-  memset(&conf, 0, sizeof(conf));
-  ASSERT(json1 != NULL);
   ASSERT(json2 != NULL);
   cs_log_set_level(LL_NONE);
 
   /* Load defaults */
-  ASSERT_EQ(mgos_conf_parse(mg_mk_str(json1), "*", schema, &conf), true);
+  memcpy(&conf, &mgos_config_defaults, sizeof(conf));
   ASSERT_EQ(conf.wifi.ap.channel, 6);
-  ASSERT_STREQ(conf.wifi.ap.pass, "Elduderino");
+  ASSERT_STREQ(conf.wifi.ap.pass, "маловато будет");
   ASSERT(conf.wifi.sta.ssid == NULL);
-  ASSERT(conf.wifi.sta.pass == NULL);
+  ASSERT_STREQ(conf.wifi.sta.pass, "so\nmany\nlines\n");
   ASSERT(conf.debug.level == 2);
   ASSERT_EQ(conf.http.port, 80);  /* integer */
   ASSERT_EQ(conf.http.enable, 1); /* boolean */
@@ -46,7 +43,11 @@ static const char *test_config(void) {
   ASSERT(conf.wifi.ap.pass == NULL); /* Reset string - set to NULL */
   ASSERT_EQ(conf.http.enable, 0);    /* Override boolean */
 
-  free(json1);
+  /* Test global accessors */
+  ASSERT_EQ(mgos_config_get_wifi_ap_channel(&conf), 6);
+
+  mgos_conf_free(schema, &conf);
+
   free(json2);
 
   return NULL;

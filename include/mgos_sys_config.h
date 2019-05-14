@@ -25,8 +25,7 @@
  * the programmatic API for the device configuration.
  */
 
-#ifndef CS_FW_INCLUDE_MGOS_SYS_CONFIG_H_
-#define CS_FW_INCLUDE_MGOS_SYS_CONFIG_H_
+#pragma once
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -34,6 +33,7 @@
 #include "common/mg_str.h"
 
 #include "mgos_config.h"
+#include "mgos_config_util.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -132,5 +132,3 @@ bool mgos_sys_config_parse_sub(const struct mg_str json, const char *section,
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-
-#endif /* CS_FW_INCLUDE_MGOS_SYS_CONFIG_H_ */

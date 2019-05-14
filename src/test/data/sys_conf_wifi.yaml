@@ -1,15 +1,20 @@
-[
-  ["wifi", "o", {hide: true}],
+- ["wifi", "o", {hide: true}]
 
-  # wifi.sta will be created implicitly
-  ["wifi.sta.ssid", "s", {title: "SSID"}],
-  ["wifi.sta.pass", "s", {title: "Password", type: "password"}],
+# wifi.sta will be created implicitly
+- ["wifi.sta.ssid", "s", {title: "SSID"}]
 
-  ["wifi.ap", "o", {title: "WiFi Access Point"}],
-  ["wifi.ap.ssid", "s", "FW_XXXXXX", {title: "SSID"}],
-  ["wifi.ap.pass", "s", "Elduderino", {title: "Password", type: "password"}],
-  ["wifi.ap.channel", "i", 6, {title: "Channel"}],
-  ["wifi.ap.dhcp_end", "s", "192.168.4.200", {title: "DHCP End Address"}],
+- - "wifi.sta.pass"
+  - "s"
+  - |
+    so
+    many
+    lines
+  - {title: "Password", type: "password"}
 
-  ["foo", "i", 123, {}]
-]
+- ["wifi.ap", "o", {title: "WiFi Access Point"}]
+- ["wifi.ap.ssid", "s", 'Quote " me \\ please', {title: "SSID"}]
+- ["wifi.ap.pass", "s", "маловато будет", {title: "Password", type: "password"}]
+- ["wifi.ap.channel", "i", 6, {title: "Channel"}]
+- ["wifi.ap.dhcp_end", "s", "192.168.4.200", {title: "DHCP End Address"}]
+
+- ["foo", "i", 123, {}]
