@@ -26,8 +26,6 @@
 #include "common/mg_str.h"
 #include "common/str_util.h"
 
-//#include "mongoose.h"
-
 bool mgos_conf_check_access(const struct mg_str key, const char *acl) {
   return mgos_conf_check_access_n(key, mg_mk_str(acl));
 }
@@ -167,9 +165,9 @@ void mgos_conf_parse_cb(void *data, const char *name, size_t name_len,
         ctx->result = false;
         return;
       }
-      char **sp = (char **) vp;
+      const char **sp = (const char **) vp;
       char *s = NULL;
-      if (*sp != NULL) free(*sp);
+      mgos_conf_free_str(sp);
       if (tok->len > 0) {
         s = (char *) malloc(tok->len + 1);
         if (s == NULL) {
@@ -397,24 +395,49 @@ void mgos_conf_free(const struct mgos_conf_entry *schema, void *cfg) {
   for (i = 1; i <= schema->num_desc; i++) {
     const struct mgos_conf_entry *e = schema + i;
     if (e->type == CONF_TYPE_STRING) {
-      char **sp = ((char **) (((char *) cfg) + e->offset));
-      free(*sp);
-      *sp = NULL;
+      const char **sp = ((const char **) (((char *) cfg) + e->offset));
+      mgos_conf_free_str(sp);
     }
   }
 }
 
-void mgos_conf_set_str(char **vp, const char *v) {
-  free(*vp);
-  if (v != NULL && *v != '\0') {
-    *vp = strdup(v);
-  } else {
-    *vp = NULL;
-  }
+void mgos_conf_set_str(const char **vp, const char *v) {
+  mgos_conf_free_str(vp);
+  mgos_conf_copy_str(v, vp);
 }
 
 bool mgos_conf_str_empty(const char *s) {
   return (s == NULL || s[0] == '\0');
+}
+
+/* Search the defaults struct and see if the pointer occurs there. */
+static bool mgos_conf_str_is_default(const char *s) {
+  size_t step = sizeof(const char *);
+  for (size_t i = 0; i < step; i++) {
+    const char *p = ((const char *) &mgos_config_defaults) + i;
+    const char *end = ((const char *) &mgos_config_defaults) + sizeof(mgos_config_defaults) - step + 1;
+    for (; p < end; p += step) {
+      if (memcmp(&s, p, step) == 0) return true;
+    }
+  }
+  return false;
+}
+
+bool mgos_conf_copy_str(const char *s, const char **copy) {
+  mgos_conf_free_str(copy);
+  if (s == NULL || mgos_conf_str_is_default(s)) {
+    *copy = (char *) s;
+    return true;
+  }
+  *copy = strdup(s);
+  return (*copy != NULL);
+}
+
+void mgos_conf_free_str(const char **sp) {
+  if (*sp != NULL && !mgos_conf_str_is_default(*sp)) {
+    free((char *) *sp);
+  }
+  *sp = NULL;
 }
 
 enum mgos_conf_type mgos_conf_value_type(struct mgos_conf_entry *e) {

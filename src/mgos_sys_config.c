@@ -103,8 +103,10 @@ static bool mgos_sys_config_load_level_internal(struct mgos_config *cfg,
   memset(cfg, 0, sizeof(*cfg));
   if (level > MGOS_CONFIG_LEVEL_USER) return false;
   memcpy(fname, CONF_USER_FILE, sizeof(CONF_USER_FILE));
+  // Start with compiled-in defaults.
+  memcpy(cfg, &mgos_config_defaults, sizeof(*cfg));
   const char *acl = "*";
-  for (i = 0; i <= (int) level; i++) {
+  for (i = 1; i <= (int) level; i++) {
     fname[CONF_USER_FILE_NUM_IDX] = '0' + i;
     /* Backward compat: load conf_vendor.json at level 5.5 */
     if (i == 6) {
@@ -112,8 +114,7 @@ static bool mgos_sys_config_load_level_internal(struct mgos_config *cfg,
       acl = cfg->conf_acl;
     }
     if (!load_config_file(fname, acl, check_try, delete_try, cfg)) {
-      /* conf0 must exist, everything else is optional. */
-      if (i == 0) return false;
+      // Nothing to do, all the overlays are optional.
     }
     acl = cfg->conf_acl;
   }
