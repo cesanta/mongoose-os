@@ -63,10 +63,17 @@ void rsi_delay_ms(uint32_t delay_ms) {
 extern void IRQ074_Handler(void);
 
 enum mgos_init_result mgos_freertos_pre_init(void) {
+  return MGOS_INIT_OK;
+}
+
+void rs14100_driver_init(void) {
   int32_t status = 0;
   static uint8_t buf[4096];
+  static bool s_inited = false;
   static StaticTask_t rsi_driver_task_tcb;
   static StackType_t rsi_driver_task_stack[8192 / sizeof(StackType_t)];
+
+  if (s_inited) return;
 
   rs14100_set_int_handler(M4_ISR_IRQ, IRQ074_Handler);
   NVIC_SetPriority(M4_ISR_IRQ, 12);
@@ -74,12 +81,12 @@ enum mgos_init_result mgos_freertos_pre_init(void) {
 
   if ((status = rsi_driver_init(buf, sizeof(buf))) != RSI_SUCCESS) {
     LOG(LL_ERROR, ("RSI %s init failed: %ld", "driver", status));
-    return MGOS_INIT_NET_INIT_FAILED;
+    return;
   }
 
   if ((status = rsi_device_init(RSI_LOAD_IMAGE_I_FW)) != RSI_SUCCESS) {
     LOG(LL_ERROR, ("RSI %s init failed: %ld", "device", status));
-    return MGOS_INIT_NET_INIT_FAILED;
+    return;
   }
 
   xTaskCreateStatic((TaskFunction_t) rsi_wireless_driver_task, "RSI Drv",
@@ -92,17 +99,46 @@ enum mgos_init_result mgos_freertos_pre_init(void) {
   }
   LOG(LL_INFO, ("NWP version %s", rsp.firmwre_version));
 
+  s_inited = true;
+}
+
+void rs14100_wireless_init(void) {
+  int32_t status = 0;
+  static bool s_inited = false;
+
+  if (s_inited) return;
   // Perform enough init to be able to get MAC address.
   // The rest will be done by the libraries.
   if ((status = rsi_wireless_init(RSI_WLAN_CLIENT_MODE, 0)) != RSI_SUCCESS) {
     LOG(LL_ERROR, ("RSI %s init failed: %ld", "wireless", status));
-    return MGOS_INIT_NET_INIT_FAILED;
+    return;
   }
   if ((status = rsi_wlan_radio_init()) != RSI_SUCCESS) {
     LOG(LL_ERROR, ("RSI %s init failed: %ld", "radio", status));
   }
-  return MGOS_INIT_OK;
+  s_inited = true;
 }
+
+void device_get_mac_address(uint8_t mac[6]) {
+  rs14100_driver_init();
+  rs14100_wireless_init();
+  if (rsi_wlan_get(RSI_MAC_ADDRESS, mac, 6) != RSI_SUCCESS) {
+    memset(mac, 0xaa, 6);
+  }
+}
+
+void device_set_mac_address(uint8_t mac[6]) {
+  rs14100_driver_init();
+  rsi_wlan_set(RSI_SET_MAC_ADDRESS, mac, 6);
+}
+
+void mgos_dev_system_restart(void) {
+  SCB->AIRCR =
+      ((0x5FA << SCB_AIRCR_VECTKEY_Pos) | (1 << SCB_AIRCR_SYSRESETREQ_Pos));
+  while (1) {
+  }
+}
+
 
 IRAM void rs14100_qspi_clock_config(void) {
   // If CPU clock is less than 100 Mhz, make QSPI run in sync with it.
