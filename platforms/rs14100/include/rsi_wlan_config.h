@@ -73,10 +73,12 @@ extern uint8_t rs14100_wifi_get_band(void);
 
 //! If 1:region configurations taken from user ;0:region configurations taken
 // from beacon
-#define RSI_SET_REGION_FROM_USER_OR_BEACON 0
+#define RSI_SET_REGION_FROM_USER_OR_BEACON 1
 
 //! 0-Default Region domain ,1-US, 2-EUROPE, 3-JAPAN
+#ifndef RSI_REGION_CODE
 #define RSI_REGION_CODE 2
+#endif
 
 //! 0- Without On Board Antenna , 1- With On Board Antenna
 #define RSI_MODULE_TYPE 1
