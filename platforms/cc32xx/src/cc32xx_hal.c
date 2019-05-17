@@ -63,6 +63,7 @@ void device_get_mac_address(uint8_t mac[6]) {
 
 void device_set_mac_address(uint8_t mac[6]) {
   // TODO set mac address
+  (void) mac;
 }
 
 #ifdef __TI_COMPILER_VERSION__
