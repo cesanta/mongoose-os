@@ -145,8 +145,8 @@ bool mgos_sys_config_save_level(const struct mgos_config *cfg,
                                 enum mgos_config_level level, bool try_once,
                                 char **msg) {
   bool result = false;
-  char fname[sizeof(CONF_USER_FILE) + 10],
-      try_fname[sizeof(CONF_USER_FILE) + 10];
+  char fname[sizeof(CONF_USER_FILE) + 10];
+  char try_fname[sizeof(CONF_USER_FILE) + 10];
   struct mgos_config *defaults = calloc(1, sizeof(*defaults));
   char *ptr = NULL;
   if (defaults == NULL) goto clean;
@@ -350,11 +350,6 @@ enum mgos_init_result mgos_sys_config_init(void) {
       custom_mac[3] = (uint8_t) scan_mac[3];
       custom_mac[4] = (uint8_t) scan_mac[4];
       custom_mac[5] = (uint8_t) scan_mac[5];
-
-      LOG(LL_INFO, ("Overriding default mac with %02x:%02x:%02x:%02x:%02x:%02x",
-                    custom_mac[0], custom_mac[1], custom_mac[2], custom_mac[3],
-                    custom_mac[4], custom_mac[5]));
-
       device_set_mac_address(custom_mac);
     }
   }
@@ -363,11 +358,14 @@ enum mgos_init_result mgos_sys_config_init(void) {
   uint8_t mac[6];
   device_get_mac_address(mac);
   if (mg_asprintf((char **) &mgos_sys_ro_vars.mac_address, 0,
-                  "%02x:%02x:%02x:%02x:%02x:%02x", mac[0], mac[1], mac[2], mac[3],
+                  "%02X%02X%02X%02X%02X%02X", mac[0], mac[1], mac[2], mac[3],
                   mac[4], mac[5]) < 0) {
     return MGOS_INIT_OUT_OF_MEMORY;
   }
-  LOG(LL_INFO, ("MAC: %s", mgos_sys_ro_vars.mac_address));
+  char mac_str[20] = {0};
+  snprintf(mac_str, sizeof(mac_str), "%02x:%02x:%02x:%02x:%02x:%02x",
+      mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  LOG(LL_INFO, ("MAC: %s", mac_str));
   if (mgos_sys_config_get_device_id() != NULL) {
     char *device_id = strdup(mgos_sys_config_get_device_id());
     mgos_expand_mac_address_placeholders(device_id);
