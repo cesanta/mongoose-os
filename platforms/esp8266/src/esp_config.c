@@ -26,3 +26,9 @@
 void device_get_mac_address(uint8_t mac[6]) {
   wifi_get_macaddr(SOFTAP_IF, mac);
 }
+
+void device_set_mac_address(uint8_t mac[6]) {
+  wifi_set_macaddr(SOFTAP_IF, mac);
+  mac[5] -= 2;
+  wifi_set_macaddr(STATION_IF, mac);
+}

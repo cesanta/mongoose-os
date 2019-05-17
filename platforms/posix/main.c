@@ -66,6 +66,10 @@ void device_get_mac_address(uint8_t mac[6]) {
   }
 }
 
+void device_set_mac_address(uint8_t mac[6]) {
+  // TODO set mac address
+}
+
 void mgos_uart_hal_set_defaults(struct mgos_uart_config *cfg) {
   (void) cfg;
 }

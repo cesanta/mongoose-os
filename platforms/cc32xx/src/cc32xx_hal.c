@@ -61,6 +61,10 @@ void device_get_mac_address(uint8_t mac[6]) {
   sl_NetCfgGet(SL_NETCFG_MAC_ADDRESS_GET, NULL, &mac_len, mac);
 }
 
+void device_set_mac_address(uint8_t mac[6]) {
+  // TODO set mac address
+}
+
 #ifdef __TI_COMPILER_VERSION__
 
 size_t mgos_get_heap_size(void) {
