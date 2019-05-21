@@ -75,6 +75,8 @@ class Core(object):
         if "freertos" in self._dump:
             print("Dump contains FreeRTOS task info")
             self.tasks = dict((t["h"], FreeRTOSTask(t)) for t in self._dump["freertos"]["tasks"])
+        else:
+            self.tasks = {}
         self.target_features = self._dump.get("target_features")
 
     def get_cur_task(self):
