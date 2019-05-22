@@ -19,6 +19,7 @@ config_schema:
   - ["device.password", "test"]
   - ["i2c.enable", true]
 libs:
+  - origin: https://github.com/mongoose-os-libs/aws
   - origin: https://github.com/mongoose-os-libs/ca-bundle
   - origin: https://github.com/mongoose-os-libs/http-server
   - origin: https://github.com/mongoose-os-libs/ota-http-server
