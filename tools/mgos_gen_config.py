@@ -621,7 +621,8 @@ def open_with_temp(name):
         f.close()
         if sys.platform == "win32":
             # This is no longer atomic, but Win does not support atomic renames.
-            os.remove(name)
+            if os.path.exists(name):
+                os.remove(name)
         os.rename(tmpname, name)
     except Exception as e:
         os.remove(tmpname)
