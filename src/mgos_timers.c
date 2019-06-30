@@ -26,7 +26,11 @@
 #include "mgos_system.h"
 #include "mgos_time.h"
 
+#ifdef __LP64__
+#define MGOS_SW_TIMER_MASK 0xffff000000000000
+#else
 #define MGOS_SW_TIMER_MASK 0xffff0000
+#endif
 
 #ifndef IRAM
 #define IRAM
