@@ -79,20 +79,22 @@ bool mgos_eth_dev_get_ip_info(int if_instance,
   char gw_dev[64];
   struct sockaddr_in gw;
 
-  if (!ip_info) {
-    return false;
-  }
+  if (ip_info == NULL) return false;
+
+  memset(ip_info, 0, sizeof(*ip_info));
 
   if (!mgos_eth_dev_get_default_gateway(gw_dev, sizeof(gw_dev), &gw)) {
-    LOG(LL_ERROR, ("Cannot get default gateway"));
-    return false;
+    memcpy(gw_dev, "lo", 3);
   }
+
+  LOG(LL_INFO, ("External interface: %s", gw_dev));
 
   if (getifaddrs(&ifaddr) == -1) {
     LOG(LL_ERROR, ("Cannot get interfaces"));
     return false;
   }
 
+  bool found = false;
   for (ifa = ifaddr; ifa && ifa->ifa_addr; ifa = ifa->ifa_next) {
     char host[NI_MAXHOST], netmask[NI_MAXHOST], gateway[NI_MAXHOST];
     if (0 != strcmp(gw_dev, ifa->ifa_name)) {
@@ -106,21 +108,25 @@ bool mgos_eth_dev_get_ip_info(int if_instance,
                          NI_MAXHOST, NULL, 0, NI_NUMERICHOST)) {
       continue;
     }
-    if (0 != getnameinfo((const struct sockaddr *) &gw,
-                         sizeof(struct sockaddr_in), gateway, NI_MAXHOST, NULL,
-                         0, NI_NUMERICHOST)) {
-      continue;
-    }
     memcpy((void *) &ip_info->ip, (void *) ifa->ifa_addr,
            sizeof(struct sockaddr_in));
     memcpy((void *) &ip_info->netmask, (void *) ifa->ifa_netmask,
            sizeof(struct sockaddr_in));
-    memcpy((void *) &ip_info->gw, (void *) &gw, sizeof(struct sockaddr_in));
+    if (getnameinfo((const struct sockaddr *) &gw, sizeof(gw), gateway,
+                    NI_MAXHOST, NULL, 0, NI_NUMERICHOST) == 0) {
+      memcpy((void *) &ip_info->gw, (void *) &gw, sizeof(gw));
+    }
+    found = true;
+    break;
   }
 
   freeifaddrs(ifaddr);
 
-  return true;
+  if (!found) {
+    LOG(LL_ERROR, ("Failed to get interface configuration"));
+  }
+
+  return found;
 
   (void) if_instance;
 }
