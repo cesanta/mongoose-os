@@ -424,6 +424,17 @@ class AccessorsGen(object):
 
         return lines
 
+    @staticmethod
+    def EscapeCString(s):
+        # JSON encoder will provide acceptable escaping.
+        s = json.dumps(s)
+        # Get rid of trigraph sequences.
+        for a, b in ((r"??(", r"?\?("), (r"??)", r"?\?)"), (r"??<", r"?\?<"), (r"??>", r"?\?>"),
+                     (r"??=", r"?\?="), (r"??/", r"?\?/"), (r"??'", r"?\?'"), (r"??!", r"?\?-")):
+            if a in s:
+                s = s.replace(a, b)
+        return s
+
     # Returns array of lines to be pasted to the C source file.
     def GetSourceLines(self):
         lines = []
@@ -437,8 +448,7 @@ class AccessorsGen(object):
                     pass
                 elif e.vtype == SchemaEntry.V_STRING:
                     if e.default:
-                        # JSON encoder will provide escaping.
-                        lines.append("  .%s = %s," % (e.path, json.dumps(e.default)))
+                        lines.append("  .%s = %s," % (e.path, self.EscapeCString(e.default)))
                     else:
                         lines.append("  .%s = NULL," % e.path)
                 elif e.vtype == SchemaEntry.V_BOOL:
