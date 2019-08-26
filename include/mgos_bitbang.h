@@ -56,6 +56,10 @@ enum mgos_delay_unit {
   MGOS_DELAY_100NSEC = 2,
 };
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+  
 /*
  * Bit bang GPIO pin `gpio`. `len` bytes from `data` are sent to the specified
  * pin bit by bit. Sending each bit consists of a "high" and "low" phases,
@@ -87,10 +91,6 @@ void mgos_bitbang_write_bits_js(int gpio, enum mgos_delay_unit delay_unit,
                                 uint32_t t, const uint8_t *data, size_t len);
 
 extern uint32_t mgos_bitbang_n100_cal;
-
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
 
 #ifdef __cplusplus
 }
