@@ -86,7 +86,7 @@ $(MG_BUILD_INFO_C): $(MGOS_OBJS)
 $(FFI_EXPORTS_O): CFLAGS += -fno-builtin
 
 $(FFI_EXPORTS_O): $(FFI_EXPORTS_C)
-	$(summary) "CC $@ $(MGOS_SRCS)"
+	$(summary) "CC $@"
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
 $(FFI_EXPORTS_C): $(APP_FS_FILES)
