@@ -27,7 +27,11 @@ MGOS_RO_VARS_C = $(GEN_DIR)/mgos_ro_vars.c
 FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
 FFI_EXPORTS_O = $(BUILD_DIR)/ffi_exports.o
 
-NM = xtensa-esp32-elf-nm
+include $(MGOS_PATH)/tools/mk/mgos_build_info.mk
+include $(MGOS_PATH)/tools/mk/mgos_config.mk
+include $(MGOS_PATH)/tools/mk/mgos_ffi_exports.mk
+
+MGOS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_sys_config.yaml
 
 MGOS_SRCS += mgos_config_util.c mgos_core_dump.c mgos_dlsym.c mgos_event.c \
              mgos_gpio.c mgos_init.c mgos_mmap_esp.c \
@@ -37,12 +41,6 @@ MGOS_SRCS += mgos_config_util.c mgos_core_dump.c mgos_dlsym.c mgos_event.c \
              esp32_gpio.c esp32_hal.c esp32_hw_timers.c \
              esp32_main.c esp32_uart.c \
              error_codes.cpp status.cpp
-
-include $(MGOS_PATH)/tools/mk/mgos_build_info.mk
-include $(MGOS_PATH)/tools/mk/mgos_config.mk
-include $(MGOS_PATH)/tools/mk/mgos_ffi_exports.mk
-
-MGOS_CONF_SCHEMA += $(MGOS_ESP_SRC_PATH)/esp32_sys_config.yaml
 
 VPATH += $(MGOS_ESP_SRC_PATH) $(MGOS_PATH)/common \
          $(MGOS_PATH)/common/platforms/esp/src
@@ -83,32 +81,30 @@ $(BUILD_INFO_C): $(MGOS_OBJS) $(APP_OBJS)
 $(MG_BUILD_INFO_C): $(MGOS_OBJS)
 	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
 
-libsrc.a: $(GEN_DIR)/mgos_config.o
-
 # In ffi exports file we use fake signatures: void func(void), and it conflicts
 # with the builtin functions like fopen, etc.
 $(FFI_EXPORTS_O): CFLAGS += -fno-builtin
 
 $(FFI_EXPORTS_O): $(FFI_EXPORTS_C)
-	$(summary) "CC $@"
+	$(summary) "CC $@ $(MGOS_SRCS)"
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
 $(FFI_EXPORTS_C): $(APP_FS_FILES)
 	$(call gen_ffi_exports,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))
 
 ./%.o: %.S
-	$(summary) "CC $@"
+	$(summary) "AS $@"
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
 ./%.o: %.c $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
-	$(summary) "  CC $@"
+	$(summary) "CC $@"
 	$(CC) $(CFLAGS) $(CPPFLAGS) \
 	  $(addprefix -I ,$(COMPONENT_INCLUDES)) \
 	  $(addprefix -I ,$(COMPONENT_EXTRA_INCLUDES)) \
 	  -c $< -o $@
 
 ./%.o: %.cpp $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
-	$(summary) "  CXX $@"
+	$(summary) "CXX $@"
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) \
 	  $(addprefix -I ,$(COMPONENT_INCLUDES)) \
 	  $(addprefix -I ,$(COMPONENT_EXTRA_INCLUDES)) \

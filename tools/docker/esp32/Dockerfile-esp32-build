@@ -1,4 +1,4 @@
-FROM ubuntu:bionic
+FROM ubuntu:bionic-20190807
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y -q \
@@ -15,9 +15,11 @@ RUN cd /tmp && \
     rm -rf /tmp/fsync-stub
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y -q \
+      python-click python3-click \
       python-cryptography python3-cryptography \
       python-future python3-future \
       python-pkg-resources python3-pkg-resources \
+      python-pyparsing python3-pyparsing \
       python-setuptools python3-setuptools \
       rsync && \
     apt-get clean
@@ -32,7 +34,7 @@ ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/Espre
 ADD ct_path.sh /etc/profile.d
 
 ARG DOCKER_TAG
-RUN git clone --recursive --branch $DOCKER_TAG https://github.com/cesanta/esp-idf /opt/Espressif/esp-idf
+RUN git clone --recursive --branch $DOCKER_TAG https://github.com/mongoose-os/esp-idf /opt/Espressif/esp-idf
 RUN cd /opt/Espressif/esp-idf && git tag v$DOCKER_TAG
 ENV IDF_PATH=/opt/Espressif/esp-idf
 

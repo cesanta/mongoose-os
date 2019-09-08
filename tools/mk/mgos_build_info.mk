@@ -1,4 +1,4 @@
-PYTHON ?= python3
+PYTHON3 ?= python3
 BUILD_DIR ?= ./.build
 BUILD_INFO_C ?= $(BUILD_DIR)/build_info.c
 BUILD_INFO_JSON ?= $(BUILD_DIR)/build_info.json
@@ -10,7 +10,7 @@ APP_BUILD_ID ?=
 
 define gen_build_info
 	$(vecho) "GEN   $1"
-	$(Q) $(PYTHON) $(FW_META_CMD) gen_build_info \
+	$(Q) $(PYTHON3) $(FW_META_CMD) gen_build_info \
 	  --repo_path=$2 \
 	  --id=$3 \
 	  --version=$4 \
