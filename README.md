@@ -4,7 +4,7 @@
 
 - Over-The-Air firmware updates and remote management - reliable updates with rollback on failures, remote device access infrastructure
 - Security - 	built in flash encryption, crypto chip support, ARM mbedTLS optimized for small memory footprint
-- [Device management dashboard service](https://mongoose-os.com/docs/mdash/intro.md) - with on-prem private installation option
+- [Device management dashboard service](https://mdash.net)
 - Supported microcontrollers: CC3220, CC3200, ESP32, ESP8266, STM32F4, STM32L4, STM32F7
 - Recommended dev kits: [ESP32-DevKitC for AWS IoT](https://mongoose-os.com/aws-iot-starter-kit/), [ESP32 Kit for Google IoT Core](https://mongoose-os.com/gcp/)
 - Built-in integration for AWS IoT, Google IoT Core, Microsoft Azure, Samsung Artik, Adafruit IO, generic MQTT servers
