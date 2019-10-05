@@ -78,13 +78,13 @@
 #define MG_SSL_IF_MBEDTLS 2
 #define MG_SSL_IF_SIMPLELINK 3
 
-#include "common/platforms/platform_unix.h"
-#include "common/platforms/platform_esp32.h"
-#include "common/platforms/platform_esp8266.h"
 #include "common/platforms/platform_cc3200.h"
 #include "common/platforms/platform_cc3220.h"
+#include "common/platforms/platform_esp32.h"
+#include "common/platforms/platform_esp8266.h"
 #include "common/platforms/platform_rs14100.h"
 #include "common/platforms/platform_stm32.h"
+#include "common/platforms/platform_unix.h"
 #if CS_PLATFORM == CS_P_CUSTOM
 #include <platform_custom.h>
 #endif

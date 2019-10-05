@@ -74,7 +74,8 @@ static void mgos_net_on_change_cb(void *arg) {
   struct net_ev_info *ei = (struct net_ev_info *) arg;
   const char *if_name = get_if_name(ei->if_type, ei->if_instance);
   struct mgos_net_event_data evd = {
-      .if_type = ei->if_type, .if_instance = ei->if_instance,
+      .if_type = ei->if_type,
+      .if_instance = ei->if_instance,
   };
   switch (ei->ev) {
     case MGOS_NET_EV_DISCONNECTED: {

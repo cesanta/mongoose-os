@@ -17,8 +17,8 @@
 
 #include <string.h>
 
-#include "stm32_sdk_hal.h"
 #include "mgos_gpio.h"
+#include "stm32_sdk_hal.h"
 #include "stm32_system.h"
 
 #include <stm32l4xx_ll_rcc.h>
@@ -81,7 +81,7 @@ void stm32_clock_config(void) {
   oc.MSIClockRange = RCC_MSIRANGE_7; /* 8 MHz */
   oc.PLL.PLLSource = RCC_PLLSOURCE_MSI;
   oc.PLL.PLLM = 2;
-#elif(HSE_VALUE <= 32000000) && (HSE_VALUE % 4000000 == 0)
+#elif (HSE_VALUE <= 32000000) && (HSE_VALUE % 4000000 == 0)
   oc.OscillatorType |= RCC_OSCILLATORTYPE_HSE;
   oc.HSEState = RCC_HSE_ON;
   oc.PLL.PLLSource = RCC_PLLSOURCE_HSE;

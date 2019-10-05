@@ -24,8 +24,8 @@
 #include "esp_task_wdt.h"
 
 #include "soc/rtc.h"
-#include "soc/timer_group_struct.h"
 #include "soc/timer_group_reg.h"
+#include "soc/timer_group_struct.h"
 
 #include "mgos_debug.h"
 #include "mgos_hal.h"

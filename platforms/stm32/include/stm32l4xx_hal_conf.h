@@ -1,46 +1,46 @@
 /**
-  ******************************************************************************
-  * @file    stm32l4xx_hal_conf.h
-  * @author  MCD Application Team
-  * @brief   HAL configuration template file.
-  *          This file should be copied to the application folder and renamed
-  *          to stm32l4xx_hal_conf.h.
-  ******************************************************************************
-  * @attention
-  *
-  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
-  *
-  * Redistribution and use in source and binary forms, with or without
-  *modification,
-  * are permitted provided that the following conditions are met:
-  *   1. Redistributions of source code must retain the above copyright notice,
-  *      this list of conditions and the following disclaimer.
-  *   2. Redistributions in binary form must reproduce the above copyright
-  *notice,
-  *      this list of conditions and the following disclaimer in the
-  *documentation
-  *      and/or other materials provided with the distribution.
-  *   3. Neither the name of STMicroelectronics nor the names of its
-  *contributors
-  *      may be used to endorse or promote products derived from this software
-  *      without specific prior written permission.
-  *
-  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-  *ARE
-  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
-  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
-  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
-  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
-  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
-  *LIABILITY,
-  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
-  *USE
-  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-  *
-  ******************************************************************************
-  */
+ ******************************************************************************
+ * @file    stm32l4xx_hal_conf.h
+ * @author  MCD Application Team
+ * @brief   HAL configuration template file.
+ *          This file should be copied to the application folder and renamed
+ *          to stm32l4xx_hal_conf.h.
+ ******************************************************************************
+ * @attention
+ *
+ * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
+ *
+ * Redistribution and use in source and binary forms, with or without
+ *modification,
+ * are permitted provided that the following conditions are met:
+ *   1. Redistributions of source code must retain the above copyright notice,
+ *      this list of conditions and the following disclaimer.
+ *   2. Redistributions in binary form must reproduce the above copyright
+ *notice,
+ *      this list of conditions and the following disclaimer in the
+ *documentation
+ *      and/or other materials provided with the distribution.
+ *   3. Neither the name of STMicroelectronics nor the names of its
+ *contributors
+ *      may be used to endorse or promote products derived from this software
+ *      without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ *ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+ * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+ * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ *LIABILITY,
+ * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE
+ *USE
+ * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ *
+ ******************************************************************************
+ */
 
 #include <assert.h>
 
@@ -55,8 +55,8 @@ extern "C" {
 
 /* ########################## Module Selection ############################## */
 /**
-  * @brief This is the list of modules to be used in the HAL driver
-  */
+ * @brief This is the list of modules to be used in the HAL driver
+ */
 #define HAL_MODULE_ENABLED
 #define HAL_ADC_MODULE_ENABLED
 #define HAL_CAN_MODULE_ENABLED
@@ -109,13 +109,13 @@ extern "C" {
 /* ########################## Oscillator Values adaptation
  * ####################*/
 /**
-  * @brief Adjust the value of External High Speed oscillator (HSE) used in your
+ * @brief Adjust the value of External High Speed oscillator (HSE) used in your
  * application.
-  *        This value is used by the RCC HAL module to compute the system
+ *        This value is used by the RCC HAL module to compute the system
  * frequency
-  *        (when HSE is used as system clock source, directly or through the
+ *        (when HSE is used as system clock source, directly or through the
  * PLL).
-  */
+ */
 #if !defined(HSE_VALUE)
 //  #define HSE_VALUE    8000000U /*!< Value of the External oscillator in Hz */
 #endif /* HSE_VALUE */
@@ -125,35 +125,35 @@ extern "C" {
 #endif                           /* HSE_STARTUP_TIMEOUT */
 
 /**
-  * @brief Internal Multiple Speed oscillator (MSI) default value.
-  *        This value is the default MSI range value after Reset.
-  */
+ * @brief Internal Multiple Speed oscillator (MSI) default value.
+ *        This value is the default MSI range value after Reset.
+ */
 #if !defined(MSI_VALUE)
 #define MSI_VALUE 4000000U /*!< Value of the Internal oscillator in Hz*/
 #endif                     /* MSI_VALUE */
 
 /**
-  * @brief Internal High Speed oscillator (HSI) value.
-  *        This value is used by the RCC HAL module to compute the system
+ * @brief Internal High Speed oscillator (HSI) value.
+ *        This value is used by the RCC HAL module to compute the system
  * frequency
-  *        (when HSI is used as system clock source, directly or through the
+ *        (when HSI is used as system clock source, directly or through the
  * PLL).
-  */
+ */
 #if !defined(HSI_VALUE)
 #define HSI_VALUE 16000000U /*!< Value of the Internal oscillator in Hz*/
 #endif                      /* HSI_VALUE */
 
 /**
-  * @brief Internal High Speed oscillator (HSI48) value for USB FS, SDMMC and
+ * @brief Internal High Speed oscillator (HSI48) value for USB FS, SDMMC and
  * RNG.
-  *        This internal oscillator is mainly dedicated to provide a high
+ *        This internal oscillator is mainly dedicated to provide a high
  * precision clock to
-  *        the USB peripheral by means of a special Clock Recovery System (CRS)
+ *        the USB peripheral by means of a special Clock Recovery System (CRS)
  * circuitry.
-  *        When the CRS is not used, the HSI48 RC oscillator runs on it default
+ *        When the CRS is not used, the HSI48 RC oscillator runs on it default
  * frequency
-  *        which is subject to manufacturing process variations.
-  */
+ *        which is subject to manufacturing process variations.
+ */
 #if !defined(HSI48_VALUE)
 #define HSI48_VALUE                                                    \
   48000000U /*!< Value of the Internal High Speed oscillator for USB   \
@@ -163,18 +163,18 @@ extern "C" {
 #endif      /* HSI48_VALUE */
 
 /**
-  * @brief Internal Low Speed oscillator (LSI) value.
-  */
+ * @brief Internal Low Speed oscillator (LSI) value.
+ */
 #if !defined(LSI_VALUE)
 #define LSI_VALUE 32000U /*!< LSI Typical Value in Hz*/
 #endif /* LSI_VALUE */   /*!< Value of the Internal Low Speed oscillator in Hz \
                            The real value may vary depending on the variations \
                            in voltage and temperature.*/
 /**
-  * @brief External Low Speed oscillator (LSE) value.
-  *        This value is used by the UART, RTC HAL module to compute the system
+ * @brief External Low Speed oscillator (LSE) value.
+ *        This value is used by the UART, RTC HAL module to compute the system
  * frequency
-  */
+ */
 #if !defined(LSE_VALUE)
 #define LSE_VALUE 0
 #endif
@@ -184,22 +184,22 @@ extern "C" {
 #endif                            /* HSE_STARTUP_TIMEOUT */
 
 /**
-  * @brief External clock source for SAI1 peripheral
-  *        This value is used by the RCC HAL module to compute the SAI1 & SAI2
+ * @brief External clock source for SAI1 peripheral
+ *        This value is used by the RCC HAL module to compute the SAI1 & SAI2
  * clock source
-  *        frequency.
-  */
+ *        frequency.
+ */
 #if !defined(EXTERNAL_SAI1_CLOCK_VALUE)
 #define EXTERNAL_SAI1_CLOCK_VALUE \
   48000U /*!< Value of the SAI1 External clock source in Hz*/
 #endif   /* EXTERNAL_SAI1_CLOCK_VALUE */
 
 /**
-  * @brief External clock source for SAI2 peripheral
-  *        This value is used by the RCC HAL module to compute the SAI1 & SAI2
+ * @brief External clock source for SAI2 peripheral
+ *        This value is used by the RCC HAL module to compute the SAI1 & SAI2
  * clock source
-  *        frequency.
-  */
+ *        frequency.
+ */
 #if !defined(EXTERNAL_SAI2_CLOCK_VALUE)
 #define EXTERNAL_SAI2_CLOCK_VALUE \
   48000U /*!< Value of the SAI2 External clock source in Hz*/
@@ -210,8 +210,8 @@ extern "C" {
 
 /* ########################### System Configuration ######################### */
 /**
-  * @brief This is the HAL system configuration section
-  */
+ * @brief This is the HAL system configuration section
+ */
 #define VDD_VALUE 3300U         /*!< Value of VDD in mv */
 #define TICK_INT_PRIORITY 0x0FU /*!< tick interrupt priority */
 #define USE_RTOS 0U
@@ -221,24 +221,24 @@ extern "C" {
 
 /* ########################## Assert Selection ############################## */
 /**
-  * @brief Uncomment the line below to expanse the "assert_param" macro in the
-  *        HAL drivers code
-  */
+ * @brief Uncomment the line below to expanse the "assert_param" macro in the
+ *        HAL drivers code
+ */
 /* #define USE_FULL_ASSERT               1U */
 
 /* ################## Register callback feature configuration ############### */
 /**
-  * @brief Set below the peripheral configuration  to "1U" to add the support
-  *        of HAL callback registration/deregistration feature for the HAL
-  *        driver(s). This allows user application to provide specific callback
-  *        functions thanks to HAL_PPP_RegisterCallback() rather than
+ * @brief Set below the peripheral configuration  to "1U" to add the support
+ *        of HAL callback registration/deregistration feature for the HAL
+ *        driver(s). This allows user application to provide specific callback
+ *        functions thanks to HAL_PPP_RegisterCallback() rather than
  * overwriting
-  *        the default weak callback functions (see each stm32l4xx_hal_ppp.h
+ *        the default weak callback functions (see each stm32l4xx_hal_ppp.h
  * file
-  *        for possible callback identifiers defined in
+ *        for possible callback identifiers defined in
  * HAL_PPP_CallbackIDTypeDef
-  *        for each PPP peripheral).
-  */
+ *        for each PPP peripheral).
+ */
 #define USE_HAL_ADC_REGISTER_CALLBACKS 0U
 #define USE_HAL_CAN_REGISTER_CALLBACKS 0U
 #define USE_HAL_COMP_REGISTER_CALLBACKS 0U
@@ -284,8 +284,8 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 /**
-  * @brief Include module's header file
-  */
+ * @brief Include module's header file
+ */
 
 #ifdef HAL_RCC_MODULE_ENABLED
 #include "stm32l4xx_hal_rcc.h"

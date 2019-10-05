@@ -15,16 +15,16 @@
  * limitations under the License.
  */
 
-#include <stdio.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
 
-#include "esp_attr.h"
-#include "esp_intr_alloc.h"
 #include "driver/periph_ctrl.h"
 #include "driver/uart.h"
+#include "esp_attr.h"
+#include "esp_intr_alloc.h"
 #include "rom/uart.h"
 #include "soc/uart_reg.h"
 
@@ -356,7 +356,7 @@ bool mgos_uart_hal_init(struct mgos_uart_state *us) {
   WRITE_PERI_REG(UART_INT_ENA_REG(us->uart_no), 0);
   esp_err_t r =
       esp_intr_alloc(int_src, ESP_INTR_FLAG_SHARED | ESP_INTR_FLAG_IRAM,
-                     (void (*) (void *)) esp32_handle_uart_int, us, &uds->ih);
+                     (void (*)(void *)) esp32_handle_uart_int, us, &uds->ih);
   if (r != ESP_OK) {
     LOG(LL_ERROR, ("Error allocating int for UART%d: %d", us->uart_no, r));
     return false;

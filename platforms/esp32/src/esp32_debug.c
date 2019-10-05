@@ -69,7 +69,9 @@ static ssize_t debug_write(int fd, const void *data, size_t size) {
 
 enum mgos_init_result esp32_debug_init() {
   esp_vfs_t vfs = {
-      .open = &debug_open, .read = &debug_read, .write = &debug_write,
+      .open = &debug_open,
+      .read = &debug_read,
+      .write = &debug_write,
   };
   if (esp_vfs_register("/__mgos_debug", &vfs, NULL) != ESP_OK) {
     return MGOS_INIT_CONSOLE_INIT_FAILED;

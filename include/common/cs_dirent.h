@@ -27,7 +27,9 @@ extern "C" {
 #endif /* __cplusplus */
 
 #ifdef CS_DEFINE_DIRENT
-typedef struct { int dummy; } DIR;
+typedef struct {
+  int dummy;
+} DIR;
 
 struct dirent {
   int d_ino;

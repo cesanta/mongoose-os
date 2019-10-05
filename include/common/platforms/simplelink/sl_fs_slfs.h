@@ -22,8 +22,8 @@
 
 #include <stdio.h>
 #ifndef __TI_COMPILER_VERSION__
-#include <unistd.h>
 #include <sys/stat.h>
+#include <unistd.h>
 #endif
 
 #define MAX_OPEN_SLFS_FILES 8

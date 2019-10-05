@@ -6,8 +6,8 @@
 #ifndef CS_FW_SRC_MGOS_UART_HAL_H_
 #define CS_FW_SRC_MGOS_UART_HAL_H_
 
-#include "mgos_uart.h"
 #include "mgos_system.h"
+#include "mgos_uart.h"
 
 #ifdef __cplusplus
 extern "C" {

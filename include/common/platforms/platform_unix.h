@@ -33,7 +33,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <inttypes.h>
-#include <stdint.h>
 #include <limits.h>
 #include <math.h>
 #include <netdb.h>
@@ -42,12 +41,13 @@
 #include <signal.h>
 #include <stdarg.h>
 #include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
-#include <sys/socket.h>
 #include <sys/select.h>
+#include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/time.h>
 #include <sys/types.h>

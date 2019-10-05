@@ -18,8 +18,8 @@
 #include "stm32_uart_internal.h"
 
 #include <math.h>
-#include <stdio.h>
 #include <stdarg.h>
+#include <stdio.h>
 
 #include "common/cs_dbg.h"
 #include "common/cs_rbuf.h"
@@ -30,8 +30,8 @@
 #include "mgos_uart_hal.h"
 #include "mgos_utils.h"
 
-#include "stm32_sdk_hal.h"
 #include "stm32_gpio.h"
+#include "stm32_sdk_hal.h"
 #include "stm32_system.h"
 
 struct stm32_uart_state {

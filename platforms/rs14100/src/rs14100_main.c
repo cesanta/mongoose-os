@@ -25,8 +25,8 @@
 #include "mgos_core_dump.h"
 #include "mgos_freertos.h"
 #include "mgos_gpio.h"
-#include "mgos_system.h"
 #include "mgos_sys_config.h"
+#include "mgos_system.h"
 #include "mgos_uart.h"
 
 #include "rs14100_sdk.h"
@@ -138,7 +138,6 @@ void mgos_dev_system_restart(void) {
   while (1) {
   }
 }
-
 
 IRAM void rs14100_qspi_clock_config(void) {
   // If CPU clock is less than 100 Mhz, make QSPI run in sync with it.

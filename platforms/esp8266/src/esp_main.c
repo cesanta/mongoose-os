@@ -22,9 +22,9 @@
 #ifdef RTOS_SDK
 #include <esp_common.h>
 #include <freertos/FreeRTOS.h>
-#include <freertos/task.h>
 #include <freertos/queue.h>
 #include <freertos/semphr.h>
+#include <freertos/task.h>
 #else
 #include <user_interface.h>
 #endif
@@ -46,10 +46,10 @@
 #endif
 #include "esp_coredump.h"
 #include "esp_exc.h"
+#include "esp_features.h"
 #include "esp_fs.h"
 #include "esp_hw.h"
 #include "esp_hw_wdt.h"
-#include "esp_features.h"
 #include "esp_periph.h"
 #include "esp_rboot.h"
 #include "esp_umm_malloc.h"
@@ -294,7 +294,7 @@ void user_init(void) {
   mgos_debug_init();
   srand(system_get_time() ^ system_get_rtc_time());
   os_timer_disarm(&s_mg_poll_tmr);
-  os_timer_setfn(&s_mg_poll_tmr, (void (*) (void *)) mongoose_schedule_poll,
+  os_timer_setfn(&s_mg_poll_tmr, (void (*)(void *)) mongoose_schedule_poll,
                  /* RTOS callbacks are executed in ISR context; for non-OS it
                     doesn't matter. */
                  (void *) true);

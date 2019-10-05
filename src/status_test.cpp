@@ -11,7 +11,7 @@ namespace util {
 
 using util::Status;
 
-void VerifyOk(const Status* s) {
+void VerifyOk(const Status *s) {
   EXPECT_TRUE(s->ok());
   EXPECT_EQ(error::OK, s->error_code());
   EXPECT_EQ("", s->error_message());

@@ -52,9 +52,8 @@ IRAM bool mgos_hw_timers_dev_set(struct mgos_hw_timer_info *ti, int usecs,
    * the timers but esp_intr_set_in_iram does not work with shared ints yet.
    */
   if (dd->inth == NULL &&
-      timer_isr_register(dd->tgn, dd->tn,
-                         (void (*) (void *)) mgos_hw_timers_isr, ti, 0,
-                         &dd->inth) != ESP_OK) {
+      timer_isr_register(dd->tgn, dd->tn, (void (*)(void *)) mgos_hw_timers_isr,
+                         ti, 0, &dd->inth) != ESP_OK) {
     LOG(LL_ERROR, ("Couldn't allocate into for HW timer"));
     return false;
   }

@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-#include <stdint.h>
 #include <freertos/xtensa_api.h>
+#include <stdint.h>
 #include <xtensa/corebits.h>
 
 #include "mgos_mmap_esp_internal.h"

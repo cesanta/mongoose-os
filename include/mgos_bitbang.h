@@ -59,7 +59,7 @@ enum mgos_delay_unit {
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
-  
+
 /*
  * Bit bang GPIO pin `gpio`. `len` bytes from `data` are sent to the specified
  * pin bit by bit. Sending each bit consists of a "high" and "low" phases,

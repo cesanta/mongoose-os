@@ -14,19 +14,22 @@ namespace util {
 
 class MoveOnlyInt {
  public:
-  MoveOnlyInt(int i) : i_(i) {}
-  MoveOnlyInt(const MoveOnlyInt& other) = delete;
-  MoveOnlyInt(MoveOnlyInt&& other) : i_(other.i_) {
+  MoveOnlyInt(int i) : i_(i) {
+  }
+  MoveOnlyInt(const MoveOnlyInt &other) = delete;
+  MoveOnlyInt(MoveOnlyInt &&other) : i_(other.i_) {
     other.i_ = -1;
   }
-  const MoveOnlyInt& operator=(const MoveOnlyInt& other) = delete;
-  MoveOnlyInt& operator=(MoveOnlyInt&& other) {
+  const MoveOnlyInt &operator=(const MoveOnlyInt &other) = delete;
+  MoveOnlyInt &operator=(MoveOnlyInt &&other) {
     i_ = other.i_;
     other.i_ = -1;
     return *this;
   }
 
-  int i() const { return i_; }
+  int i() const {
+    return i_;
+  }
 
  private:
   int i_;
@@ -42,7 +45,7 @@ TEST(StatsOrTest, ConstructionFromStatus) {
   const StatusOr<bool> s(Status(error::NOT_FOUND, "Missing"));
   EXPECT_FALSE(s.ok());
   EXPECT_EQ(Status(error::NOT_FOUND, "Missing"), s.status());
-  EXPECT_DEATH({s.ValueOrDie();}, "ok()");
+  EXPECT_DEATH({ s.ValueOrDie(); }, "ok()");
 }
 
 TEST(StatsOrTest, ConstructionFromStatusOkDisallowedCausesDeath) {
@@ -58,7 +61,7 @@ TEST(StatsOrTest, CopyConstructionFromValue) {
 
 TEST(StatsOrTest, MoveConstructionFromValue) {
   unique_ptr<string> sp(new string("OHAI"));
-  const string* spv = sp.get();
+  const string *spv = sp.get();
   StatusOr<unique_ptr<string>> s(std::move(sp));
   EXPECT_TRUE(sp.get() == nullptr);
   ASSERT_TRUE(s.ok());
@@ -81,7 +84,7 @@ TEST(StatsOrTest, CopyConstruction) {
 
 TEST(StatsOrTest, MoveConstruction) {
   unique_ptr<string> sp(new string("OHAI"));
-  const string* spv = sp.get();
+  const string *spv = sp.get();
   StatusOr<unique_ptr<string>> s1(std::move(sp));
   EXPECT_EQ(Status::OK, s1.status());
   EXPECT_EQ("OHAI", *s1.ValueOrDie());
@@ -92,7 +95,7 @@ TEST(StatsOrTest, MoveConstruction) {
 }
 
 TEST(StatsOrTest, ConversionCopyConstruction) {
-  const StatusOr<const char*> s1("OHAI");
+  const StatusOr<const char *> s1("OHAI");
   const StatusOr<string> s2(s1);
   EXPECT_EQ(s1.status(), s2.status());
   EXPECT_STREQ("OHAI", s1.ValueOrDie());
@@ -105,7 +108,7 @@ TEST(StatsOrTest, ConversionMoveConstruction) {
   ASSERT_EQ(123, s1.ValueOrDie());
   StatusOr<MoveOnlyInt> s2(std::move(s1));
   ASSERT_TRUE(s2.ok());
-  const MoveOnlyInt& s2v = s2.ValueOrDie();
+  const MoveOnlyInt &s2v = s2.ValueOrDie();
   EXPECT_EQ(123, s2v.i());
   EXPECT_EQ(Status::UNKNOWN, s1.status());
   StatusOr<MoveOnlyInt> s3(std::move(s2));
@@ -126,7 +129,7 @@ TEST(StatsOrTest, CopyAssignment) {
 
 TEST(StatsOrTest, MoveAssignment) {
   unique_ptr<string> sp(new string("OHAI"));
-  const string* spv = sp.get();
+  const string *spv = sp.get();
   StatusOr<unique_ptr<string>> s1(std::move(sp));
   EXPECT_EQ(Status::OK, s1.status());
   StatusOr<unique_ptr<string>> s2;
@@ -137,7 +140,7 @@ TEST(StatsOrTest, MoveAssignment) {
 }
 
 TEST(StatsOrTest, ConversionCopyAssignment) {
-  const StatusOr<const char*> s1("OHAI");
+  const StatusOr<const char *> s1("OHAI");
   StatusOr<string> s2;
   s2 = s1;
   EXPECT_EQ(s1.status(), s2.status());

@@ -120,7 +120,7 @@ extern uint8_t rs14100_wifi_get_band(void);
 
 /*=======================================================================*/
 
-//!BG scan command parameters
+//! BG scan command parameters
 /*=======================================================================*/
 
 struct rs14100_bg_scan_params {
@@ -146,7 +146,7 @@ extern struct rs14100_bg_scan_params g_wifi_sta_bg_scan_params;
 
 /*=======================================================================*/
 
-//!Roaming parameters
+//! Roaming parameters
 /*=======================================================================*/
 
 struct rs14100_roaming_params {
@@ -297,7 +297,7 @@ extern struct rs14100_roaming_params g_wifi_sta_roaming_params;
 //! default is 50 ms, and this parameter is valid for FAST PSP only
 #define RSI_MONITOR_INTERVAL 50
 
-//!WMM PS parameters
+//! WMM PS parameters
 //! set wmm enable or disable
 #define RSI_WMM_PS_ENABLE RSI_DISABLE
 
@@ -344,7 +344,7 @@ extern struct rs14100_roaming_params g_wifi_sta_roaming_params;
 //! Timeout for join or scan
 /*=======================================================================*/
 
-//!RSI_ENABLE or RSI_DISABLE Timeout support
+//! RSI_ENABLE or RSI_DISABLE Timeout support
 #define RSI_TIMEOUT_SUPPORT RSI_ENABLE
 
 //! roaming threshold value
@@ -356,7 +356,7 @@ extern struct rs14100_roaming_params g_wifi_sta_roaming_params;
 //! Timeout for ping request
 /*=======================================================================*/
 
-//!Timeout for PING_REQUEST
+//! Timeout for PING_REQUEST
 #define RSI_PING_REQ_TIMEOUT 1
 
 //! Store Config Profile parameters

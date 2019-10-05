@@ -18,8 +18,8 @@
 #ifndef CS_COMMON_TEST_UTIL_H_
 #define CS_COMMON_TEST_UTIL_H_
 
-#include <string.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "common/cs_time.h"
 
@@ -83,7 +83,7 @@ void _strfail(const char *a, const char *e, int len);
 #else
 #define LONG_TYPE long long
 #endif
-#define AS_DOUBLE(d) (double)(d)
+#define AS_DOUBLE(d) (double) (d)
 
 #define RANGE_CHECK(x) (fabs(x) > 4503599627370496.0 /* 2 << 51 */)
 
@@ -211,15 +211,15 @@ void _strfail(const char *a, const char *e, int len);
     }                                                                \
   } while (0)
 
-#define ASSERT_MG_STREQ(actual, expected)                            \
-  do {                                                               \
-    g_num_checks++;                                                  \
-    if ((actual).len != strlen(expected) ||                          \
-        memcmp((actual).p, expected, (actual).len) != 0) {           \
-      printf("'%.*s' (%d) != '%s'\n", (int)(actual).len, (actual).p, \
-             (int)(actual).len, expected);                           \
-      FAIL("ASSERT_MG_STREQ(" #actual ", " #expected ")", __LINE__); \
-    }                                                                \
+#define ASSERT_MG_STREQ(actual, expected)                             \
+  do {                                                                \
+    g_num_checks++;                                                   \
+    if ((actual).len != strlen(expected) ||                           \
+        memcmp((actual).p, expected, (actual).len) != 0) {            \
+      printf("'%.*s' (%d) != '%s'\n", (int) (actual).len, (actual).p, \
+             (int) (actual).len, expected);                           \
+      FAIL("ASSERT_MG_STREQ(" #actual ", " #expected ")", __LINE__);  \
+    }                                                                 \
   } while (0)
 
 #define CHECK_CALL(call)                                                  \

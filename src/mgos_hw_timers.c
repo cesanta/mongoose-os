@@ -41,8 +41,8 @@ IRAM void mgos_hw_timers_isr(struct mgos_hw_timer_info *ti) {
   mgos_hw_timers_dev_isr_bottom(ti);
 }
 
-IRAM mgos_timer_id
-mgos_set_hw_timer(int usecs, int flags, timer_callback cb, void *cb_arg) {
+IRAM mgos_timer_id mgos_set_hw_timer(int usecs, int flags, timer_callback cb,
+                                     void *cb_arg) {
   mgos_timer_id id;
   struct mgos_hw_timer_info *ti = NULL;
   mgos_ints_disable();

@@ -24,8 +24,8 @@
 #include "freertos/semphr.h"
 #include "freertos/task.h"
 #else
-#include <osapi.h>
 #include <os_type.h>
+#include <osapi.h>
 #include <user_interface.h>
 #endif
 

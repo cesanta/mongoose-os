@@ -18,8 +18,8 @@
 #include "esp_gpio.h"
 
 #ifdef RTOS_SDK
-#include <esp_common.h>
 #include <driver_lib/include/gpio.h>
+#include <esp_common.h>
 #else
 #include <user_interface.h>
 #endif
@@ -28,8 +28,8 @@
 #include "mgos_gpio.h"
 #include "mgos_gpio_hal.h"
 
-#include "esp_missing_includes.h"
 #include "common/cs_dbg.h"
+#include "esp_missing_includes.h"
 #include "esp_periph.h"
 
 #define GPIO_PIN_COUNT 16

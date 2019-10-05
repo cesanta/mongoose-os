@@ -17,8 +17,8 @@
 
 #include "esp_periph.h"
 
-#include <stdlib.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 #ifdef RTOS_SDK
 #include <esp8266/pin_mux_register.h>
@@ -27,11 +27,11 @@
 #endif
 
 /*
-* Map gpio -> { mux reg, func }
-* SDK doesn't provide information
-* about several gpio
-* TODO(alashkin): find missed info
-*/
+ * Map gpio -> { mux reg, func }
+ * SDK doesn't provide information
+ * about several gpio
+ * TODO(alashkin): find missed info
+ */
 
 const struct gpio_info gpio_map[] = {
     {0, PERIPHS_IO_MUX_GPIO0_U, FUNC_GPIO0},

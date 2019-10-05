@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-#include "common/cs_dbg.h"
 #include "test_main.h"
+#include "common/cs_dbg.h"
 #include "test_util.h"
 
 #if defined(_MSC_VER) && _MSC_VER >= 1900

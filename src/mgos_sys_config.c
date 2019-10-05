@@ -363,8 +363,8 @@ enum mgos_init_result mgos_sys_config_init(void) {
     return MGOS_INIT_OUT_OF_MEMORY;
   }
   char mac_str[20] = {0};
-  snprintf(mac_str, sizeof(mac_str), "%02x:%02x:%02x:%02x:%02x:%02x",
-      mac[0], mac[1], mac[2], mac[3], mac[4], mac[5]);
+  snprintf(mac_str, sizeof(mac_str), "%02x:%02x:%02x:%02x:%02x:%02x", mac[0],
+           mac[1], mac[2], mac[3], mac[4], mac[5]);
   LOG(LL_INFO, ("MAC: %s", mac_str));
   if (mgos_sys_config_get_device_id() != NULL) {
     char *device_id = strdup(mgos_sys_config_get_device_id());

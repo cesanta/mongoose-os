@@ -17,9 +17,9 @@
 
 #include <string.h>
 
+#include "mgos_gpio.h"
 #include "stm32_sdk_hal.h"
 #include "stm32_system.h"
-#include "mgos_gpio.h"
 
 #include <stm32f2xx_ll_rcc.h>
 

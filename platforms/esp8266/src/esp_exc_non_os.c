@@ -26,9 +26,9 @@
 
 #include "mgos_mmap_esp_internal.h"
 
-#include "esp_missing_includes.h"
 #include "esp_exc.h"
 #include "esp_hw.h"
+#include "esp_missing_includes.h"
 
 /*
  * xtos low level exception handler (in rom)

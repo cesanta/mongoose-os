@@ -29,9 +29,9 @@
 #include "user_interface.h"
 #endif
 
+#include "esp_features.h"
 #include "mgos_hal.h"
 #include "mgos_time.h"
-#include "esp_features.h"
 
 #if MGOS_ENABLE_HEAP_LOG
 int cs_heap_shim = 0;

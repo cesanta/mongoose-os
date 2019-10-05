@@ -28,8 +28,8 @@
 #include "mongoose.h"
 
 #include "mgos_hal.h"
-#include "mgos_sys_config.h"
 #include "mgos_mongoose.h"
+#include "mgos_sys_config.h"
 #include "mgos_timers.h"
 #include "mgos_utils.h"
 
@@ -110,10 +110,10 @@ IWDG_HandleTypeDef hiwdg = {
     .Instance = IWDG,
     .Init =
         {
-         .Prescaler = IWDG_PRESCALER_256,
-         .Reload = 5 * IWDG_1_SECOND,
+            .Prescaler = IWDG_PRESCALER_256,
+            .Reload = 5 * IWDG_1_SECOND,
 #ifdef IWDG_WINDOW_DISABLE
-         .Window = IWDG_WINDOW_DISABLE,
+            .Window = IWDG_WINDOW_DISABLE,
 #endif
         },
 };

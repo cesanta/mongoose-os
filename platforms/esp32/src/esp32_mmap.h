@@ -62,7 +62,7 @@ extern "C" {
   ((struct mgos_vfs_spiffs_data *) (vfs)->fs_data)
 #define ESP32PART_DATA_FROM_VFS(vfs) ((esp_partition_t *) (vfs)->dev->dev_data)
 #define FLASH_BASE(fs) \
-  ESP32PART_DATA_FROM_VFS((struct mgos_vfs_fs *)(fs)->user_data)->address
+  ESP32PART_DATA_FROM_VFS((struct mgos_vfs_fs *) (fs)->user_data)->address
 
 #ifdef __cplusplus
 }

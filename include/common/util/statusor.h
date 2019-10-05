@@ -81,24 +81,20 @@ class StatusOr {
 // Implementation.
 
 template <typename T>
-inline StatusOr<T>::StatusOr()
-    : status_(STATUS_UNKNOWN, "") {
+inline StatusOr<T>::StatusOr() : status_(STATUS_UNKNOWN, "") {
 }
 
 template <typename T>
-inline StatusOr<T>::StatusOr(const Status &status)
-    : status_(status) {
+inline StatusOr<T>::StatusOr(const Status &status) : status_(status) {
   if (status.ok()) abort();
 }
 
 template <typename T>
-inline StatusOr<T>::StatusOr(const T &value)
-    : value_(value) {
+inline StatusOr<T>::StatusOr(const T &value) : value_(value) {
 }
 
 template <typename T>
-inline StatusOr<T>::StatusOr(T &&value)
-    : value_(std::move(value)) {
+inline StatusOr<T>::StatusOr(T &&value) : value_(std::move(value)) {
 }
 
 template <typename T>

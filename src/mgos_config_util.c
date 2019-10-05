@@ -415,7 +415,8 @@ static bool mgos_conf_str_is_default(const char *s) {
   size_t step = sizeof(const char *);
   for (size_t i = 0; i < step; i++) {
     const char *p = ((const char *) &mgos_config_defaults) + i;
-    const char *end = ((const char *) &mgos_config_defaults) + sizeof(mgos_config_defaults) - step + 1;
+    const char *end = ((const char *) &mgos_config_defaults) +
+                      sizeof(mgos_config_defaults) - step + 1;
     for (; p < end; p += step) {
       if (memcmp(&s, p, step) == 0) return true;
     }

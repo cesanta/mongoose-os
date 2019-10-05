@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-#include <string.h>
 #include <stdio.h>
+#include <string.h>
 
 #include "umm_malloc.h"
 

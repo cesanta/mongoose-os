@@ -82,4 +82,4 @@ class LogMessageAndDie : public LogMessage {
   ~LogMessageAndDie() override;
 };
 
-}  // namespace util
+}  // namespace mgos

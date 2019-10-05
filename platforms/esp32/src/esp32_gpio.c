@@ -27,8 +27,8 @@
 #include "mgos_gpio_hal.h"
 #include "mgos_hal.h"
 
-#include "soc/gpio_struct.h"
 #include "driver/gpio.h"
+#include "soc/gpio_struct.h"
 
 #include "common/cs_dbg.h"
 
