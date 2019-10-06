@@ -78,6 +78,9 @@ enum mgos_gpio_pull_type;
 bool stm32_gpio_set_sleep_pull(int pin, enum mgos_gpio_pull_type pull);
 #endif
 
+/* Set analog mode for the pin. adc = true - connect ro ADC input. */
+bool stm32_gpio_set_mode_analog(int pin, bool adc);
+
 #ifdef __cplusplus
 }
 #endif

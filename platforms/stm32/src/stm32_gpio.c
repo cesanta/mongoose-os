@@ -227,6 +227,21 @@ bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
   return true;
 }
 
+bool stm32_gpio_set_mode_analog(int pin, bool adc) {
+  GPIO_TypeDef *regs = stm32_gpio_port_base(pin);
+  if (regs == NULL) return false;
+  if (!stm32_gpio_port_en(pin)) return false;
+  const uint32_t pin_num = STM32_PIN_NUM(pin);
+  uint32_t moder_msk = (3 << (pin_num * 2));
+  MODIFY_REG(regs->MODER, moder_msk, moder_msk);  // Pin mode 3 (analog).
+#ifdef GPIO_ASCR_ASC0
+  MODIFY_REG(regs->ASCR, (1 << pin_num), (((uint32_t) adc) << pin_num));
+#else
+  (void) adc;
+#endif
+  return true;
+}
+
 bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
   GPIO_TypeDef *regs = stm32_gpio_port_base(pin);
   if (regs == NULL) return false;
