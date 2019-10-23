@@ -286,6 +286,9 @@ bool stm32_gpio_set_sleep_pull(int pin, enum mgos_gpio_pull_type pull) {
   } else {
     CLEAR_BIT(*pd_reg, pin_mask);
   }
+  if (pull != MGOS_GPIO_PULL_NONE) {
+    HAL_PWREx_EnablePullUpPullDownConfig();
+  }
   return true;
 }
 #endif
