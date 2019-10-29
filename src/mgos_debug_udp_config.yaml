@@ -1,3 +1,2 @@
-[
-  ["debug.udp_log_addr", "s", {title: "Send logs to this ip:port (UDP)"}],
-]
+ - ["debug.udp_log_addr", "s", "", {title: "Send logs to this ip:port (UDP)"}]
+ - ["debug.udp_log_level", "i", 3, {title: "Log at most this level messages to UDP"}]
