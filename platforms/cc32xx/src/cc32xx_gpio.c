@@ -172,10 +172,9 @@ static void gpio_common_int_handler(uint32_t port_base, uint8_t offset) {
     if (pin < 0) continue;
     mgos_gpio_hal_int_cb(pin);
   }
-  HWREG(port_base + GPIO_O_GPIO_ICR) = ints; /* Clear all ints. */
 }
 
-void mgos_gpio_clear_int(int pin) {
+void mgos_gpio_hal_clear_int(int pin) {
   int gpio_no = pin_to_gpio_no(pin);
   uint32_t port_base = gpio_no_to_port_base(gpio_no);
   uint32_t port_bit_no = (gpio_no % 8);
@@ -249,7 +248,7 @@ bool mgos_gpio_hal_set_int_mode(int pin, enum mgos_gpio_int_mode mode) {
   return true;
 }
 
-bool mgos_gpio_enable_int(int pin) {
+bool mgos_gpio_hal_enable_int(int pin) {
   int gpio_no = pin_to_gpio_no(pin);
   if (gpio_no < 0) return false;
   uint32_t port_base = gpio_no_to_port_base(gpio_no);
@@ -259,7 +258,7 @@ bool mgos_gpio_enable_int(int pin) {
   return true;
 }
 
-bool mgos_gpio_disable_int(int pin) {
+bool mgos_gpio_hal_disable_int(int pin) {
   int gpio_no = pin_to_gpio_no(pin);
   if (gpio_no < 0) return false;
   uint32_t port_base = gpio_no_to_port_base(gpio_no);

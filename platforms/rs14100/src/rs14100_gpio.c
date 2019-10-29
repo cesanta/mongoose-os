@@ -308,7 +308,7 @@ bool mgos_gpio_setup_output(int pin, bool level) {
   return mgos_gpio_set_mode(pin, MGOS_GPIO_MODE_OUTPUT);
 }
 
-void mgos_gpio_clear_int(int pin) {
+void mgos_gpio_hal_clear_int(int pin) {
   // TODO(rojer)
   (void) pin;
 }
@@ -320,13 +320,13 @@ bool mgos_gpio_hal_set_int_mode(int pin, enum mgos_gpio_int_mode mode) {
   return false;
 }
 
-bool mgos_gpio_enable_int(int pin) {
+bool mgos_gpio_hal_enable_int(int pin) {
   // TODO(rojer)
   (void) pin;
   return false;
 }
 
-bool mgos_gpio_disable_int(int pin) {
+bool mgos_gpio_hal_disable_int(int pin) {
   // TODO(rojer)
   (void) pin;
   return false;

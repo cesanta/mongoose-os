@@ -27,8 +27,6 @@ void mgos_gpio_write(int pin, bool level);
  * Output buffer register should be used for reading, not input.
  */
 bool mgos_gpio_toggle(int pin);
-bool mgos_gpio_enable_int(int pin);
-bool mgos_gpio_disable_int(int pin);
 
 /*
  * Configure interrupt mode for the pin. Note that this should not implicitly
@@ -36,8 +34,15 @@ bool mgos_gpio_disable_int(int pin);
  */
 bool mgos_gpio_hal_set_int_mode(int pin, enum mgos_gpio_int_mode mode);
 
+bool mgos_gpio_hal_enable_int(int pin);
+
+bool mgos_gpio_hal_disable_int(int pin);
+
+/* Clear the device-specific pending int flag. */
+void mgos_gpio_hal_clear_int(int pin);
+
 /*
- * MGOS expect the device to handle and demultiplex interrupts for each pin
+ * MGOS expects the device to handle and demultiplex interrupts for each pin
  * and invoke mgos_gpio_hal_int_cb with the pin number.
  */
 void mgos_gpio_hal_int_cb(int pin);

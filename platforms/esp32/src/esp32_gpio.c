@@ -42,16 +42,14 @@ IRAM static void esp32_gpio_isr(void *arg) {
     if ((int_st & mask) == 0 || !GPIO.pin[i].int_ena) continue;
     mgos_gpio_hal_int_cb(i);
   }
-  GPIO.status_w1tc = int_st;
   int_st = GPIO.status1.intr_st;
   for (uint32_t i = 32, mask = 1; i < GPIO_PIN_COUNT; i++, mask <<= 1) {
     if ((int_st & mask) == 0 || !GPIO.pin[i].int_ena) continue;
     mgos_gpio_hal_int_cb(i);
   }
-  GPIO.status1_w1tc.val = int_st;
 }
 
-IRAM void mgos_gpio_clear_int(int pin) {
+IRAM void mgos_gpio_hal_clear_int(int pin) {
   uint32_t reg = GPIO_STATUS_W1TC_REG;
   if (pin >= 32) {
     pin -= 32;
@@ -174,7 +172,7 @@ bool mgos_gpio_hal_set_int_mode(int pin, enum mgos_gpio_int_mode mode) {
   return (gpio_set_intr_type(pin, it) == ESP_OK);
 }
 
-IRAM bool mgos_gpio_enable_int(int pin) {
+IRAM bool mgos_gpio_hal_enable_int(int pin) {
   esp_intr_disable(s_int_handle);
   esp_err_t r = gpio_intr_enable(pin);
   if (r == ESP_OK) {
@@ -184,7 +182,7 @@ IRAM bool mgos_gpio_enable_int(int pin) {
   return (r == ESP_OK);
 }
 
-IRAM bool mgos_gpio_disable_int(int pin) {
+IRAM bool mgos_gpio_hal_disable_int(int pin) {
   if (gpio_intr_disable(pin) != ESP_OK) return false;
   s_int_ena[pin] = 0;
   return true;

@@ -79,6 +79,7 @@ static struct mgos_gpio_state *mgos_gpio_get_or_create_state(int pin) {
 /* In ISR context */
 IRAM void mgos_gpio_hal_int_cb(int pin) {
   struct mgos_gpio_state *s = mgos_gpio_get_state(pin);
+  mgos_gpio_hal_clear_int(pin);
   if (s == NULL || s->cb == NULL) return;
   if (s->isr) {
     s->cb(pin, s->cb_arg);
@@ -104,7 +105,7 @@ static void mgos_gpio_int_cb(void *arg) {
   int pin = (intptr_t) arg;
   mgos_rlock(s_lock);
   struct mgos_gpio_state *s = mgos_gpio_get_state(pin);
-  if (s == NULL || !s->cnt || s->cb == NULL) goto out;
+  if (s == NULL || s->cnt == 0 || s->cb == NULL) goto out;
   if (s->button.debounce_ms == 0) {
     while (s->cnt > 0) {
       mgos_runlock(s_lock);
@@ -174,6 +175,21 @@ bool mgos_gpio_set_int_handler(int pin, enum mgos_gpio_int_mode mode,
 bool mgos_gpio_set_int_handler_isr(int pin, enum mgos_gpio_int_mode mode,
                                    mgos_gpio_int_handler_f cb, void *arg) {
   return gpio_set_int_handler_common(pin, mode, cb, arg, true /* isr */);
+}
+
+IRAM bool mgos_gpio_enable_int(int pin) {
+  return mgos_gpio_hal_enable_int(pin);
+}
+
+IRAM bool mgos_gpio_disable_int(int pin) {
+  return mgos_gpio_hal_disable_int(pin);
+}
+
+IRAM void mgos_gpio_clear_int(int pin) {
+  struct mgos_gpio_state *s = mgos_gpio_get_state(pin);
+  if (s == NULL) return;
+  mgos_gpio_hal_clear_int(pin);
+  s->cnt = 0;
 }
 
 void mgos_gpio_remove_int_handler(int pin, mgos_gpio_int_handler_f *old_cb,
