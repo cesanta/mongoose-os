@@ -350,7 +350,7 @@ static void stm32_gpio_exti2_int_handler(void) {
   stm32_gpio_ext_int_handler(2, 2);
 }
 static void stm32_gpio_exti3_int_handler(void) {
-  stm32_gpio_ext_int_handler(4, 4);
+  stm32_gpio_ext_int_handler(3, 3);
 }
 static void stm32_gpio_exti4_int_handler(void) {
   stm32_gpio_ext_int_handler(4, 4);
