@@ -96,7 +96,10 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
 #endif /* MGOS_ENABLE_DEBUG_UDP */
   /* Invoke all registered debug_write hooks */
   /* Only send LL_INFO messages and below, to avoid loops. */
-  if (cs_log_cur_msg_level <= LL_INFO) {
+#if CS_ENABLE_STDIO
+  if (cs_log_cur_msg_level <= LL_INFO)
+#endif
+  {
     struct mgos_debug_hook_arg arg = {
         .buf = buf,
         .fd = fd,
