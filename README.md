@@ -7,7 +7,7 @@
 - [Device management dashboard service](https://mdash.net)
 - Supported microcontrollers: CC3220, CC3200, ESP32, ESP8266, STM32F4, STM32L4, STM32F7
 - Recommended dev kits: [ESP32-DevKitC for AWS IoT](https://mongoose-os.com/aws-iot-starter-kit/), [ESP32 Kit for Google IoT Core](https://mongoose-os.com/gcp/)
-- Built-in integration for AWS IoT, Google IoT Core, Microsoft Azure, Samsung Artik, Adafruit IO, generic MQTT servers
+- Built-in integration for AWS IoT, Google IoT Core, Microsoft Azure, Adafruit IO, generic MQTT servers
 - Code in C or JavaScript
 - Ready to go Apps and Libraries
 - [Embedded JavaScript engine - mJS](https://github.com/cesanta/mjs)
