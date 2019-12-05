@@ -10,9 +10,10 @@
 
 #include "common/platform.h"
 
+#ifdef CS_MMAP
+
 #include "spiffs.h"
 
-#ifdef CS_MMAP
 #if CS_PLATFORM == CS_P_ESP32 || CS_PLATFORM == CS_P_ESP8266
 
 /*

@@ -41,15 +41,6 @@ MGOS_DEBUG_UART ?= 0
 MGOS_ROOT_DEVTAB ?=
 MGOS_ROOT_FS_TYPE ?= SPIFFS
 MGOS_ROOT_FS_SIZE ?= 262144
-ifeq "$(MGOS_ROOT_FS_TYPE)" "SPIFFS"
-  MKFS ?= /usr/local/bin/mkspiffs8
-  MGOS_ROOT_FS_OPTS ?= {"bs": 4096, "ps": 256, "es": 4096}
-else
-ifeq "$(MGOS_ROOT_FS_TYPE)" "LFS"
-  MKFS ?= /usr/local/bin/mklfs
-  MGOS_ROOT_FS_OPTS ?= {"bs": 4096, "is": 128}
-endif
-endif
 
 export MGOS_ROOT_FS_SIZE
 

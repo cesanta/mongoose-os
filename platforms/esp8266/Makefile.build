@@ -51,9 +51,6 @@ MGOS_ESP8266_RTOS ?= 0
 MGOS_UPDATE_BOOT_LOADER ?= false
 
 FLASH_SIZE ?= 4194304
-FS_BLOCK_SIZE = 4096
-FS_PAGE_SIZE = 256
-FS_ERASE_SIZE = 4096
 
 RF_CAL_DATA_SIZE = 0x1000
 SYS_PARAMS_SIZE = 0x4000
@@ -166,7 +163,9 @@ MEMORY_FLAGS = -DFS_MAX_OPEN_FILES=5
 
 MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" \
               -DMGOS_MAX_NUM_UARTS=2 \
-              -DC_DISABLE_BUILTIN_SNPRINTF
+              -DC_DISABLE_BUILTIN_SNPRINTF \
+              -DMGOS_ROOT_FS_TYPE='$(MGOS_ROOT_FS_TYPE)' \
+              -DMGOS_ROOT_FS_OPTS='$(MGOS_ROOT_FS_OPTS)'
 
 MGOS_LIB = $(BUILD_DIR)/mongoose-os.a
 MGOS_CONFIG_C = $(GEN_DIR)/mgos_config.c
@@ -253,7 +252,7 @@ BOOT_CONFIG_WRITE_ADDR ?= $(BOOT_CONFIG_ADDR)
 SYS_PARAMS_ADDR = $(shell printf "0x%05x" "$$(($(FLASH_SIZE) - $(SYS_PARAMS_SIZE)))")
 # RF calibration data sector location is configurable, but we also keep it at the end, just above sys params.
 FW_RF_CAL_DATA_ADDR = $(shell printf "0x%05x" "$$(($(FLASH_SIZE) - $(SYS_PARAMS_SIZE) - $(RF_CAL_DATA_SIZE)))")
-MKSPIFFS ?= /usr/local/bin/mkspiffs8
+MGOS_ROOT_FS_TYPE ?= SPIFFS
 
 ifeq ("$(FLASH_SIZE)", "1048576")
 #
@@ -351,7 +350,7 @@ CFLAGS += -DMGOS_ADC_MODE_VDD=$(MGOS_ADC_MODE_VDD)
 FW_PARTS = boot:addr=$(BOOT_LOADER_ADDR),src=$(BOOT_LOADER_BIN),update=$(MGOS_UPDATE_BOOT_LOADER) \
            boot_cfg:addr=$(BOOT_CONFIG_WRITE_ADDR),size=0x1000,fill=0xff \
            fw:addr=$(APP0_ADDR),src=$(APP_BIN) \
-           fs:src=$(FS_IMG),type=fs,addr=$(FS0_ADDR),fs_size=$(FS_SIZE),fs_block_size=$(FS_BLOCK_SIZE),fs_page_size=$(FS_PAGE_SIZE),fs_erase_size=$(FS_ERASE_SIZE) \
+           fs:src=$(FS_IMG),type=fs,addr=$(FS0_ADDR),fs_size=$(FS_SIZE) \
            rf_cal_data:addr=$(FW_RF_CAL_DATA_ADDR),size=$(RF_CAL_DATA_SIZE),fill=0xff \
            sys_params:type=sys_params,src=$(SDK_INIT_DATA_PATH)/bin/esp_init_data_default_v08.bin,addr=$(SYS_PARAMS_ADDR) \
            $(APP_EXTRA_FW_PARTS)
@@ -449,8 +448,8 @@ $(MG_BUILD_INFO_C): $(MGOS_OBJS)
 
 # -- Filesystem.
 
-$(FS_IMG): $(APP_FS_DIRS) $(FS_FILES) $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(MKSPIFFS)
-	$(call mkspiffs,$(FS_SIZE),$(FS_BLOCK_SIZE),$(FS_PAGE_SIZE),$(FS_ERASE_SIZE))
+$(FS_IMG): $(MKFS) $(APP_FS_DIRS) $(FS_FILES)
+	$(call mkfs,$(FS_SIZE),$(MGOS_ROOT_FS_OPTS))
 
 #
 # Auxiliary targets.

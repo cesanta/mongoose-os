@@ -111,15 +111,6 @@ MGOS_ROOT_DEVTAB ?= qspi0 rsi1x_flash {"cs": 0} | \
                     fs0   part        {"dev": "qspi0", "offset": $(FLASH_FS0_ADDR), "size": $(MGOS_ROOT_FS_SIZE)}
 MGOS_ROOT_FS_TYPE ?= SPIFFS
 MGOS_ROOT_FS_SIZE ?= 262144
-ifeq "$(MGOS_ROOT_FS_TYPE)" "SPIFFS"
-  MKFS ?= /usr/local/bin/mkspiffs8
-  MGOS_ROOT_FS_OPTS ?= {"bs": 4096, "ps": 128, "es": 4096}
-else
-ifeq "$(MGOS_ROOT_FS_TYPE)" "LFS"
-  MKFS ?= /usr/local/bin/mklfs
-  MGOS_ROOT_FS_OPTS ?= {"bs": 4096, "is": 128}
-endif
-endif
 FS_STAGING_DIR = $(BUILD_DIR)/fs
 
 FS_IMG = $(FW_STAGING_DIR)/fs.bin

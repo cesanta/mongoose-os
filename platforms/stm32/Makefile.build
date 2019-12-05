@@ -121,17 +121,6 @@ MGOS_ROOT_FS_SIZE ?= 0
 MGOS_ROOT_FS_ON_SYS_FLASH ?= 1
 # When FS is not on sys flash, we definitely need to extract.
 MGOS_ROOT_FS_EXTRACT ?= 1-$(MGOS_ROOT_FS_ON_SYS_FLASH)
-# Note: FS options do not correspond to the characteristics of on-board flash,
-# we fake small erases by performing an RMW which is unsafe but works.
-ifeq "$(MGOS_ROOT_FS_TYPE)" "SPIFFS"
-  MKFS ?= /usr/local/bin/mkspiffs8
-  MGOS_ROOT_FS_OPTS ?= {"bs": 4096, "ps": 128, "es": 4096}
-else
-ifeq "$(MGOS_ROOT_FS_TYPE)" "LFS"
-  MKFS ?= /usr/local/bin/mklfs
-  MGOS_ROOT_FS_OPTS ?= {"bs": 4096, "is": 128}
-endif
-endif
 FS_STAGING_DIR = $(BUILD_DIR)/fs
 
 FS_IMG = $(FW_STAGING_DIR)/fs.bin

@@ -5,6 +5,16 @@ ifneq "$(APP_FS_FILES)" ""
   FS_FILES += $(foreach m,$(APP_FS_FILES),$(wildcard $(m)))
 endif
 
+ifeq "$(MGOS_ROOT_FS_TYPE)" "SPIFFS"
+  MKFS ?= /usr/local/bin/mkspiffs8
+  MGOS_ROOT_FS_OPTS ?= $(MGOS_ROOT_FS_OPTS_SPIFFS)
+else
+ifeq "$(MGOS_ROOT_FS_TYPE)" "LFS"
+  MKFS ?= /usr/local/bin/mklfs
+  MGOS_ROOT_FS_OPTS ?= $(MGOS_ROOT_FS_OPTS_LFS)
+endif
+endif
+
 # Args: fs_size, block_size, page_size, erase_size.
 define mkspiffs
 	$(Q) rm -rf $(FS_STAGING_DIR) && mkdir -p $(FS_STAGING_DIR) $(dir $@)

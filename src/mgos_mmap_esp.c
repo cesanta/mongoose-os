@@ -15,6 +15,8 @@
  * limitations under the License.
  */
 
+#ifdef CS_MMAP
+
 #include <stdlib.h>
 #include <sys/mman.h>
 #include <unistd.h>
@@ -31,8 +33,6 @@
 #if CS_PLATFORM != CS_P_ESP32 && CS_PLATFORM != CS_P_ESP8266
 #error only esp32 and esp8266 are supported
 #endif
-
-#ifdef CS_MMAP
 
 /*
  * Reads unaligned byte, handles mmapped addresses properly.

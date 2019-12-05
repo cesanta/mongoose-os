@@ -47,6 +47,7 @@ SDK_PATH ?=
 MGOS_CC3220_PATH ?= $(MGOS_PATH)/platforms/cc3220
 MGOS_CC32XX_PATH ?= $(MGOS_PATH)/platforms/cc32xx
 MKSPIFFS ?= /usr/local/bin/mkspiffs8
+MGOS_ROOT_FS_TYPE = SPIFFS
 
 # Binary images must be signed. By default, we sign with dummy "playground" keys from the SDK.
 SIG_CERT ?= $(SDK_PATH)/tools/cc32xx_tools/certificate-playground/dummy-root-ca-cert
