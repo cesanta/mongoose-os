@@ -40,7 +40,9 @@ MONGOOSE_FEATURES = \
 
 
 GEN_INCLUDES ?= $(GEN_DIR)
-INCLUDES = $(MGOS_IPATH) $(SRC_PATH) $(BUILD_DIR) $(APP_INCLUDES) $(GEN_INCLUDES) $(PLATFORM_VPATH)
+
+APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
+INCLUDES = $(MGOS_IPATH) $(SRC_PATH) $(BUILD_DIR) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) $(GEN_INCLUDES) $(PLATFORM_VPATH)
 MGOS_SRCS = $(notdir $(wildcard *.c)) mgos_init.c  \
             frozen.c mgos_event.c \
             mgos_system.c mgos_time.c mgos_timers.c \
