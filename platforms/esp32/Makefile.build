@@ -124,6 +124,8 @@ export MGOS_FEATURES
 export MGOS_CONF_SCHEMA
 export MGOS_IPATH
 
+include $(MGOS_PATH)/tools/mk/mgos_mkfs.mk
+
 # Flags for other component builds go here.
 CFLAGS += -Wall -Werror -pipe -mtext-section-literals \
           -I$(MGOS_PATH) -I$(MGOS_SRC_PATH) -I$(MGOS_INCLUDE_PATH) \
@@ -187,7 +189,6 @@ FW_PARTS = boot:type=boot,addr=0x1000,src=$(BOOTLOADER_BIN),encrypt=true,update=
            $(APP_EXTRA_FW_PARTS)
 
 include $(MGOS_PATH)/tools/mk/mgos_fw_meta.mk
-include $(MGOS_PATH)/tools/mk/mgos_mkfs.mk
 
 all: $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(FW_ZIP)
 
