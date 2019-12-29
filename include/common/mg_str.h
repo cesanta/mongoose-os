@@ -86,6 +86,11 @@ int mg_strcmp(const struct mg_str str1, const struct mg_str str2);
 int mg_strncmp(const struct mg_str str1, const struct mg_str str2, size_t n);
 
 /*
+ * Compare two `mg_str`s ignoreing case; return value is the same as `strcmp`.
+ */
+int mg_strcasecmp(const struct mg_str str1, const struct mg_str str2);
+
+/*
  * Free the string (assuming it was heap allocated).
  */
 void mg_strfree(struct mg_str *s);
