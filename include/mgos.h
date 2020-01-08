@@ -24,6 +24,7 @@
 
 #include "common/cs_dbg.h"
 #include "common/cs_file.h"
+#include "common/cs_hex.h"
 #include "common/json_utils.h"
 #include "common/mbuf.h"
 #include "common/str_util.h"

@@ -5,6 +5,7 @@
 
 #include "common/cs_dbg.h"
 #include "common/cs_file.h"
+#include "common/cs_hex.h"
 
 #include "frozen.h"
 
@@ -202,6 +203,39 @@ static const char *test_events(void) {
   return NULL;
 }
 
+static const char *test_cs_hex(void) {
+  unsigned char dst[32];
+  int dst_len = 0;
+  ASSERT_EQ(cs_hex_decode(NULL, 0, NULL, &dst_len), 0);
+  {
+    const char *s = "11";
+    ASSERT_EQ(cs_hex_decode(s, strlen(s), dst, &dst_len), strlen(s));
+    ASSERT_EQ(dst_len, 1);
+    ASSERT_EQ(dst[0], 0x11);
+  }
+  {
+    const char *s = "A1b200";
+    ASSERT_EQ(cs_hex_decode(s, strlen(s), dst, &dst_len), strlen(s));
+    ASSERT_EQ(dst_len, 3);
+    ASSERT_EQ(dst[0], 0xa1);
+    ASSERT_EQ(dst[1], 0xb2);
+    ASSERT_EQ(dst[2], 0x00);
+  }
+  {
+    const char *s = "A1b";
+    ASSERT_EQ(cs_hex_decode(s, strlen(s), dst, &dst_len), 2);
+    ASSERT_EQ(dst_len, 1);
+    ASSERT_EQ(dst[0], 0xa1);
+  }
+  {
+    const char *s = "A1x200";
+    ASSERT_EQ(cs_hex_decode(s, strlen(s), dst, &dst_len), 2);
+    ASSERT_EQ(dst_len, 1);
+    ASSERT_EQ(dst[0], 0xa1);
+  }
+  return NULL;
+}
+
 void tests_setup(void) {
 }
 
@@ -209,6 +243,7 @@ const char *tests_run(const char *filter) {
   RUN_TEST(test_config);
   RUN_TEST(test_json_scanf);
   RUN_TEST(test_events);
+  RUN_TEST(test_cs_hex);
   return NULL;
 }
 

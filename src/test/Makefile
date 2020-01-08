@@ -17,6 +17,7 @@ SOURCES = unit_test.c \
           $(REPO_ROOT)/src/mgos_event.c \
           $(REPO_ROOT)/src/common/json_utils.c \
           $(REPO_ROOT)/src/common/cs_file.c \
+          $(REPO_ROOT)/src/common/cs_hex.c \
           $(MONGOOSE_PATH)/mongoose.c \
           test_main.c \
           test_util.c

@@ -77,7 +77,7 @@ include $(MGOS_ESP8266_PATH)/common.mk
 
 MGOS_ESP_SRC_PATH = $(MGOS_ESP8266_PATH)/src
 
-MGOS_SRCS += cs_file.c cs_rbuf.c \
+MGOS_SRCS += cs_file.c cs_hex.c cs_rbuf.c \
              mgos_config_util.c \
              mgos_core_dump.c \
              mgos_dlsym.c \

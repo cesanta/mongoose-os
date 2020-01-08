@@ -48,7 +48,7 @@ MGOS_SRCS = $(notdir $(wildcard *.c)) mgos_init.c  \
             mgos_system.c mgos_time.c mgos_timers.c \
             mgos_config_util.c mgos_sys_config.c \
             json_utils.c cs_rbuf.c mgos_uart.c \
-            mgos_utils.c cs_file.c cs_crc32.c
+            mgos_utils.c cs_file.c cs_hex.c cs_crc32.c
 
 PLATFORM_SRCS = $(wildcard $(PLATFORM_VPATH)/*.c)
 

@@ -45,7 +45,7 @@ MGOS_SRCS += mgos_config_util.c mgos_core_dump.c mgos_dlsym.c mgos_event.c \
 VPATH += $(MGOS_ESP_SRC_PATH) $(MGOS_PATH)/common \
          $(MGOS_PATH)/common/platforms/esp/src
 
-MGOS_SRCS += cs_crc32.c cs_file.c cs_rbuf.c json_utils.c
+MGOS_SRCS += cs_crc32.c cs_file.c cs_hex.c cs_rbuf.c json_utils.c
 
 VPATH += $(MGOS_VPATH)
 
