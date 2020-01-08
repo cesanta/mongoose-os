@@ -150,7 +150,7 @@ def cmd_gen_build_info(args):
         # 20ab9a031-dirty
         git_describe_out = subprocess.check_output(
                 ["git", "-C", repo_path, "describe", "--dirty", "--tags", "--always"],
-                universal_newlines=True).strip()
+                universal_newlines=True, stderr=subprocess.PIPE).strip()
         # branch name (if any)
         git_revparse_out = subprocess.check_output(
                 ["git", "-C", repo_path, "rev-parse", "--abbrev-ref", "HEAD"],
