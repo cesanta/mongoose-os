@@ -111,7 +111,7 @@ static void mgos_gpio_int_cb(void *arg) {
       mgos_runlock(s_lock);
       s->cb(pin, s->cb_arg);
       mgos_rlock(s_lock);
-	  if(s->cnt > 0)
+      if(s->cnt > 0)
         s->cnt--;
     }
   } else {
