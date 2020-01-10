@@ -124,6 +124,8 @@ void mgos_conf_parse_cb(void *data, const char *name, size_t name_len,
 /* fall through */
 #endif
     case CONF_TYPE_INT:
+      /* fall through */
+    case CONF_TYPE_UNSIGNED_INT:
       if (tok->type != JSON_TYPE_NUMBER) {
         LOG(LL_ERROR, ("[%s] is not a number", path));
         ctx->result = false;
@@ -133,6 +135,9 @@ void mgos_conf_parse_cb(void *data, const char *name, size_t name_len,
         case CONF_TYPE_INT:
           /* NB: Using base 0 to accept hex numbers. */
           *((int *) vp) = strtol(tok->ptr, &endptr, 0);
+          break;
+        case CONF_TYPE_UNSIGNED_INT:
+          *((unsigned int *) vp) = strtoul(tok->ptr, &endptr, 0);
           break;
 #ifndef MGOS_BOOT_BUILD
         case CONF_TYPE_DOUBLE:
@@ -239,7 +244,10 @@ static bool mgos_conf_value_eq(const void *cfg, const void *base,
   char *bvp = (((char *) base) + e->offset);
   switch (e->type) {
     case CONF_TYPE_INT:
+      /* fall through */
     case CONF_TYPE_BOOL:
+      /* fall through */
+    case CONF_TYPE_UNSIGNED_INT:
       return *((int *) vp) == *((int *) bvp);
     case CONF_TYPE_DOUBLE:
       return *((double *) vp) == *((double *) bvp);
@@ -273,8 +281,9 @@ static void mgos_conf_emit_entry(struct emit_ctx *ctx,
   char buf[40];
   int len;
   switch (e->type) {
-    case CONF_TYPE_INT: {
-      len = snprintf(buf, sizeof(buf), "%d",
+    case CONF_TYPE_INT:
+    case CONF_TYPE_UNSIGNED_INT: {
+      len = snprintf(buf, sizeof(buf), (e->type == CONF_TYPE_INT ? "%d" : "%u"),
                      *((int *) (((char *) ctx->cfg) + e->offset)));
       mbuf_append(ctx->out, buf, len);
       break;
@@ -465,7 +474,8 @@ const char *mgos_conf_value_string_nonnull(const void *cfg,
 
 int mgos_conf_value_int(const void *cfg, const struct mgos_conf_entry *e) {
   char *vp = (((char *) cfg) + e->offset);
-  if (e->type == CONF_TYPE_INT || e->type == CONF_TYPE_BOOL) {
+  if (e->type == CONF_TYPE_INT || e->type == CONF_TYPE_UNSIGNED_INT ||
+      e->type == CONF_TYPE_BOOL) {
     return *((int *) vp);
   }
   return 0;
@@ -490,7 +500,10 @@ bool mgos_config_get(const struct mg_str key, struct mg_str *value,
   cp = (char **) &value->p;
   switch (e->type) {
     case CONF_TYPE_INT:
-      value->len = mg_asprintf(cp, 0, "%d", mgos_conf_value_int(cfg, e));
+      /* fall through */
+    case CONF_TYPE_UNSIGNED_INT:
+      value->len = mg_asprintf(cp, 0, (e->type == CONF_TYPE_INT ? "%d" : "%u"),
+                               mgos_conf_value_int(cfg, e));
       break;
     case CONF_TYPE_BOOL:
       value->len = mg_asprintf(
@@ -534,6 +547,15 @@ bool mgos_config_set(const struct mg_str key, const struct mg_str value,
       char *endptr;
       value_nul = mg_strdup_nul(value);
       *vp = strtol(value_nul.p, &endptr, 10);
+      if (endptr != value_nul.p + value_nul.len) goto out;
+      ret = true;
+      break;
+    }
+    case CONF_TYPE_UNSIGNED_INT: {
+      unsigned int *vp = (unsigned int *) (((char *) cfg) + e->offset);
+      char *endptr;
+      value_nul = mg_strdup_nul(value);
+      *vp = strtoul(value_nul.p, &endptr, 10);
       if (endptr != value_nul.p + value_nul.len) goto out;
       ret = true;
       break;

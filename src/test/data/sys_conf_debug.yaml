@@ -15,6 +15,7 @@
   ["debug.dest", "s", "uart1", {title: "Where to send debug"}],
   ["debug.test_d1", "d", 0.123, {title: "Test doubles 1"}],
   ["debug.test_d2", "d", 0, {}],
+  ["debug.test_ui", "ui", 4294967295, {}],
   ["test.bar", "o", {}],
   ["test.bar.enable", "b", {}],
   ["test.bar.param1", "i", 111, {}],

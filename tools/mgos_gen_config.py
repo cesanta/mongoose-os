@@ -104,6 +104,7 @@ RESERVED_WORDS = set(
 
 class SchemaEntry(object):
     V_INT = "i"
+    V_UNSIGNED_INT = "ui"
     V_BOOL = "b"
     V_DOUBLE = "d"
     V_STRING = "s"
@@ -123,6 +124,8 @@ class SchemaEntry(object):
             if self.vtype == SchemaEntry.V_BOOL:
                 self.default = False
             elif self.vtype == SchemaEntry.V_INT:
+                self.default = 0
+            elif self.vtype == SchemaEntry.V_UNSIGNED_INT:
                 self.default = 0
             elif self.vtype == SchemaEntry.V_DOUBLE:
                 self.default = 0.0
@@ -157,7 +160,9 @@ class SchemaEntry(object):
             raise TypeError("%s: Invalid params" % self.path)
 
     def IsPrimitiveType(self):
-        return self.vtype in (self.V_OBJECT, self.V_BOOL, self.V_INT, self.V_DOUBLE, self.V_STRING)
+        return self.vtype in (
+            self.V_OBJECT, self.V_BOOL, self.V_INT, self.V_UNSIGNED_INT,
+            self.V_DOUBLE, self.V_STRING)
 
 
     def ValidateDefault(self):
@@ -165,11 +170,14 @@ class SchemaEntry(object):
             self.default = float(self.default)
         if (self.vtype == SchemaEntry.V_BOOL and not isinstance(self.default, bool) or
             self.vtype == SchemaEntry.V_INT and not isinstance(self.default, int) or
+            self.vtype == SchemaEntry.V_UNSIGNED_INT and not isinstance(self.default, int) or
             # In Python, boolvalue is an instance of int, but we don't want that.
             self.vtype == SchemaEntry.V_INT and isinstance(self.default, bool) or
             self.vtype == SchemaEntry.V_DOUBLE and not isinstance(self.default, float) or
             self.vtype == SchemaEntry.V_STRING and not isinstance(self.default, str)):
             raise TypeError("%s: Invalid default value type (%s)" % (self.path, type(self.default)))
+        if self.vtype == SchemaEntry.V_UNSIGNED_INT and self.default < 0:
+            raise TypeError("%s: Invalid default unsigned value (%d)" % (self.path, self.default))
 
     def GetIdentifierName(self):
         return self.path.replace(".", "_")
@@ -177,6 +185,8 @@ class SchemaEntry(object):
     def GetCType(self, struct_prefix):
         if self.vtype in (SchemaEntry.V_BOOL, SchemaEntry.V_INT):
             return "int"
+        elif self.vtype == SchemaEntry.V_UNSIGNED_INT:
+            return "unsigned int"
         elif self.vtype == SchemaEntry.V_DOUBLE:
             return "double"
         elif self.vtype == SchemaEntry.V_STRING:
@@ -553,6 +563,7 @@ const struct mgos_conf_entry *{name}_schema();
 class CWriter(object):
     _CONF_TYPES = {
         SchemaEntry.V_INT: "CONF_TYPE_INT",
+        SchemaEntry.V_UNSIGNED_INT: "CONF_TYPE_UNSIGNED_INT",
         SchemaEntry.V_BOOL: "CONF_TYPE_BOOL",
         SchemaEntry.V_DOUBLE: "CONF_TYPE_DOUBLE",
         SchemaEntry.V_STRING: "CONF_TYPE_STRING",

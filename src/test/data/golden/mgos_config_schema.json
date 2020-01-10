@@ -17,6 +17,7 @@
   ["debug.dest", "s", {"title": "Where to send debug"}],
   ["debug.test_d1", "d", {"title": "Test doubles 1"}],
   ["debug.test_d2", "d", {}],
+  ["debug.test_ui", "ui", {}],
   ["test", "o", {}],
   ["test.bar", "o", {}],
   ["test.bar.enable", "b", {}],

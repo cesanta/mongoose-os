@@ -40,6 +40,7 @@ struct mgos_config_debug {
   const char * dest;
   double test_d1;
   double test_d2;
+  unsigned int test_ui;
 };
 
 struct mgos_config_test_bar {
@@ -199,6 +200,14 @@ double mgos_config_get_debug_test_d2(struct mgos_config *cfg);
 static inline double mgos_sys_config_get_debug_test_d2(void) { return mgos_config_get_debug_test_d2(&mgos_sys_config); }
 void mgos_config_set_debug_test_d2(struct mgos_config *cfg, double v);
 static inline void mgos_sys_config_set_debug_test_d2(double v) { mgos_config_set_debug_test_d2(&mgos_sys_config, v); }
+
+/* debug.test_ui */
+#define MGOS_CONFIG_HAVE_DEBUG_TEST_UI
+#define MGOS_SYS_CONFIG_HAVE_DEBUG_TEST_UI
+unsigned int mgos_config_get_debug_test_ui(struct mgos_config *cfg);
+static inline unsigned int mgos_sys_config_get_debug_test_ui(void) { return mgos_config_get_debug_test_ui(&mgos_sys_config); }
+void mgos_config_set_debug_test_ui(struct mgos_config *cfg, unsigned int v);
+static inline void mgos_sys_config_set_debug_test_ui(unsigned int v) { mgos_config_set_debug_test_ui(&mgos_sys_config, v); }
 
 /* test */
 #define MGOS_CONFIG_HAVE_TEST

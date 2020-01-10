@@ -44,8 +44,14 @@ static const char *test_config(void) {
   ASSERT(conf.wifi.ap.pass == NULL); /* Reset string - set to NULL */
   ASSERT_EQ(conf.http.enable, 0);    /* Override boolean */
 
-  /* Test global accessors */
+  /* Test accessors */
   ASSERT_EQ(mgos_config_get_wifi_ap_channel(&conf), 6);
+  ASSERT_EQ(mgos_config_get_debug_test_ui(&conf), 4294967295);
+
+  /* Test global accessors */
+  ASSERT_EQ(mgos_sys_config_get_wifi_ap_channel(), 0);
+  mgos_sys_config_set_wifi_ap_channel(123);
+  ASSERT_EQ(mgos_sys_config_get_wifi_ap_channel(), 123);
 
   mgos_conf_free(schema, &conf);
 
@@ -53,6 +59,10 @@ static const char *test_config(void) {
 
   return NULL;
 }
+
+#ifndef MGOS_CONFIG_HAVE_DEBUG_LEVEL
+#error MGOS_CONFIG_HAVE_xxx must be defined
+#endif
 
 static const char *test_json_scanf(void) {
   int a = 0;

@@ -65,6 +65,7 @@ enum mgos_conf_type {
   CONF_TYPE_DOUBLE = 2,
   CONF_TYPE_STRING = 3,
   CONF_TYPE_OBJECT = 4,
+  CONF_TYPE_UNSIGNED_INT = 5,
 };
 
 /* Configuration entry */
