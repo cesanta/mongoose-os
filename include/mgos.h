@@ -15,8 +15,8 @@
  * limitations under the License.
  */
 
-#ifndef CS_FW_INCLUDE_MGOS_H_
-#define CS_FW_INCLUDE_MGOS_H_
+#pragma once
+/* no_extern_c_check */
 
 #include <stdbool.h>
 
@@ -46,6 +46,7 @@
 #include "mgos_init.h"
 #include "mgos_mongoose.h"
 #include "mgos_net.h"
+#include "mgos_ro_vars.h"
 #include "mgos_sys_config.h"
 #include "mgos_system.h"
 #include "mgos_time.h"
@@ -55,6 +56,3 @@
 #ifdef MGOS_HAVE_WIFI
 #include "mgos_wifi.h"
 #endif
-
-/* no_extern_c_check */
-#endif /* CS_FW_INCLUDE_MGOS_H_ */
