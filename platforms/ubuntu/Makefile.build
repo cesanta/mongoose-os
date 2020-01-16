@@ -48,7 +48,8 @@ MGOS_SRCS = $(notdir $(wildcard *.c)) mgos_init.c  \
             mgos_system.c mgos_time.c mgos_timers.c \
             mgos_config_util.c mgos_sys_config.c \
             json_utils.c cs_rbuf.c mgos_uart.c \
-            mgos_utils.c cs_file.c cs_hex.c cs_crc32.c
+            mgos_utils.c cs_file.c cs_hex.c cs_crc32.c \
+            error_codes.cpp status.cpp
 
 PLATFORM_SRCS = $(wildcard $(PLATFORM_VPATH)/*.c)
 
@@ -58,6 +59,8 @@ C_CXX_FLAGS = -ggdb -MD -Wall -Wextra -Werror -pipe \
               -DFW_ARCHITECTURE=$(APP_PLATFORM) \
               $(MGOS_FEATURES) $(MGOS_POSIX_FEATURES) \
               $(MONGOOSE_FEATURES)
+LDFLAGS ?=
+
 ifeq "$(ASAN)" "1"
 C_CXX_FLAGS += -fsanitize=address -fno-omit-frame-pointer
 LDFLAGS += -fsanitize=address
@@ -67,10 +70,10 @@ endif
 
 CFLAGS = -std=gnu99 $(C_CXX_FLAGS) $(APP_CFLAGS)
 CXXFLAGS = -std=gnu++11 -fno-exceptions $(C_CXX_FLAGS) $(APP_CXXFLAGS)
+LDFLAGS += -lstdc++
 
 INCDIRS = $(addprefix -I,$(INCLUDES))
 AR ?= ar
-LDFLAGS ?=
 APP_BIN_LIBS ?=
 LIBS  ?= pthread cap
 LDLIBS = $(addprefix -l,$(LIBS))
@@ -86,13 +89,15 @@ MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
 MGOS_CONFIG_C = $(GEN_DIR)/mgos_config.c
 MGOS_RO_VARS_C = $(GEN_DIR)/mgos_ro_vars.c
 GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C)
-GENFILES_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(GENFILES_LIST))
+GENFILES_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.c.o,$(GENFILES_LIST))
 
 MGOS_CONF_SCHEMA += $(PLATFORM_VPATH)/ubuntu_sys_config.yaml
 
-PLATFORM_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(PLATFORM_SRCS))
-MGOS_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(MGOS_SRCS))
-APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.o,$(APP_SOURCES))
+PLATFORM_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.c.o,$(PLATFORM_SRCS))
+MGOS_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.c.o,$(filter %.c,$(MGOS_SRCS))) \
+            $(patsubst %.cpp,$(BUILD_DIR)/%.cpp.o,$(filter %.cpp,$(MGOS_SRCS)))
+APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.c.o,$(filter %.c,$(APP_SOURCES))) \
+           $(patsubst %.cpp,$(BUILD_DIR)/%.cpp.o,$(filter %.cpp,$(APP_SOURCES)))
 OBJS = $(MGOS_OBJS) $(APP_OBJS) $(PLATFORM_OBJS) $(GENFILES_OBJS)
 
 # Files
@@ -133,11 +138,15 @@ $(FS_STAGING_DIR): $(FS_FILES)
 		cp $(f) $(FS_STAGING_DIR);)
 
 # Objects of all sorts
--include $(wildcard $(BUILD_DIR)/*.d)
-$(OBJS): $(BUILD_DIR)/%.o : %.c $(GENFILES_LIST)
+$(BUILD_DIR)/%.c.o : %.c $(GENFILES_LIST)
 	$(vecho) "CC    $<"
 	$(Q) mkdir -p $(dir $@)
 	$(Q) $(CC) $(CFLAGS) $(INCDIRS) -c $< -o $@
+
+$(BUILD_DIR)/%.cpp.o : %.cpp
+	$(vecho) "CXX   $<"
+	$(Q) mkdir -p $(dir $@)
+	$(Q) $(CXX) $(CXXFLAGS) $(INCDIRS) -c $< -o $@
 
 # lib.a, used during lib release build
 $(BUILD_DIR)/$(BUILD_LIB_NAME): $(BUILD_DIR) $(GENFILES_LIST) $(APP_OBJS)
@@ -158,3 +167,6 @@ $(FW_MANIFEST): $(APP_BIN)
 
 clean:
 	$(Q) rm -rf $(BIN_DIR) $(BUILD_DIR)
+
+# Slurp in auto-generated header dependencies.
+-include $(patsubst %.o,%.d,$(OBJS))
