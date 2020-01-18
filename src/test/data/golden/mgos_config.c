@@ -366,18 +366,6 @@ void mgos_config_set_test_bar_param1(struct mgos_config *cfg, int v) {
 const struct mgos_config_test_bar * mgos_config_get_test_bar1(struct mgos_config *cfg) {
   return &cfg->test.bar1;
 }
-const struct mgos_conf_entry *mgos_config_schema_test_bar1(void) {
-  return mgos_conf_find_schema_entry("test.bar1", mgos_config_schema());
-}
-bool mgos_config_parse_test_bar1(struct mg_str json, struct mgos_config_test_bar *cfg) {
-  return mgos_conf_parse_sub(json, mgos_config_schema(), cfg);
-}
-bool mgos_config_copy_test_bar1(const struct mgos_config_test_bar *src, struct mgos_config_test_bar *dst) {
-  return mgos_conf_copy(mgos_config_schema_test_bar1(), src, dst);
-}
-void mgos_config_free_test_bar1(struct mgos_config_test_bar *cfg) {
-  return mgos_conf_free(mgos_config_schema_test_bar1(), cfg);
-}
 
 /* test.bar1.enable */
 #define MGOS_CONFIG_HAVE_TEST_BAR1_ENABLE

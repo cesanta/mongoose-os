@@ -270,10 +270,6 @@ static inline void mgos_sys_config_set_test_bar_param1(int v) { mgos_config_set_
 #define MGOS_SYS_CONFIG_HAVE_TEST_BAR1
 const struct mgos_config_test_bar * mgos_config_get_test_bar1(struct mgos_config *cfg);
 static inline const struct mgos_config_test_bar * mgos_sys_config_get_test_bar1(void) { return mgos_config_get_test_bar1(&mgos_sys_config); }
-const struct mgos_conf_entry *mgos_config_schema_test_bar1(void);
-bool mgos_config_parse_test_bar1(struct mg_str json, struct mgos_config_test_bar *cfg);
-bool mgos_config_copy_test_bar1(const struct mgos_config_test_bar *src, struct mgos_config_test_bar *dst);
-void mgos_config_free_test_bar1(struct mgos_config_test_bar *cfg);
 
 /* test.bar1.enable */
 #define MGOS_CONFIG_HAVE_TEST_BAR1_ENABLE

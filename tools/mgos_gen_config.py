@@ -444,7 +444,7 @@ class AccessorsGen(object):
                     lines.append("static inline void %s_set_%s(%s%s v) { %s_set_%s(&%s, v); }" % (
                         self._c_global_name, iname, const, ctype, self._struct_name, iname, self._c_global_name))
 
-            if e.vtype == SchemaEntry.V_OBJECT:
+            if e.vtype == SchemaEntry.V_OBJECT and not e.orig_path:
                 lines.append("%s;" % self._SchemaSignature(e))
                 lines.append("%s;" % self._ParseSignature(e, ctype))
                 lines.append("%s;" % self._CopySignature(e, ctype))
@@ -520,7 +520,7 @@ class AccessorsGen(object):
                     lines.append("  %scfg->%s = v;" % (amp, e.path))
                 lines.append("}")
 
-            if e.vtype == SchemaEntry.V_OBJECT:
+            if e.vtype == SchemaEntry.V_OBJECT and not e.orig_path:
                 lines.append("%s {" % self._SchemaSignature(e))
                 lines.append('  return mgos_conf_find_schema_entry("%s", %s_schema());' % (e.path, self._struct_name))
                 lines.append("}")
