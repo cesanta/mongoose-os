@@ -384,13 +384,30 @@ class AccessorsGen(object):
     def ObjectEnd(self, e):
         pass
 
-    def _GetGetterSignature(self, e, ctype, const):
+    def _GetterSignature(self, e, ctype, const):
         return "%s%s %s_get_%s(struct %s *cfg)" % (
                 const, ctype, self._struct_name, e.GetIdentifierName(), self._struct_name)
 
-    def _GetSetterSignature(self, e, ctype, const):
+    def _SetterSignature(self, e, ctype, const):
         return "void %s_set_%s(struct %s *cfg, %s%s v)" % (
                 self._struct_name, e.GetIdentifierName(), self._struct_name, const, ctype)
+
+    def _GetCopierSignature(self, e, ctype):
+        return "bool %s_copy_%s(const %ssrc, %sdst)" % (
+                self._struct_name, e.GetIdentifierName(), ctype, ctype)
+
+    def _CopySignature(self, e, ctype):
+        return "bool %s_copy_%s(const %ssrc, %sdst)" % (
+                self._struct_name, e.GetIdentifierName(), ctype, ctype)
+
+    def _FreeSignature(self, e, ctype):
+        return "void %s_free_%s(%scfg)" % (self._struct_name, e.GetIdentifierName(), ctype)
+
+    def _SchemaSignature(self, e):
+        return "const struct mgos_conf_entry *%s_schema_%s(void)" % (self._struct_name, e.GetIdentifierName())
+
+    def _ParseSignature(self, e, ctype):
+        return "bool %s_parse_%s(struct mg_str json, %scfg)" % (self._struct_name, e.GetIdentifierName(), ctype)
 
     # Returns array of lines to be pasted to the header.
     def GetHeaderLines(self):
@@ -417,15 +434,21 @@ class AccessorsGen(object):
                 getter, setter, copy, free, const = True, True, False, False, ""
 
             if getter:
-                lines.append("%s;" % self._GetGetterSignature(e, ctype, const))
+                lines.append("%s;" % self._GetterSignature(e, ctype, const))
                 if self._c_global_name:
                     lines.append("static inline %s%s %s_get_%s(void) { return %s_get_%s(&%s); }" % (
                         const, ctype, self._c_global_name, iname, self._struct_name, iname, self._c_global_name))
             if setter:
-                lines.append("%s;" % self._GetSetterSignature(e, ctype, const))
+                lines.append("%s;" % self._SetterSignature(e, ctype, const))
                 if self._c_global_name:
                     lines.append("static inline void %s_set_%s(%s%s v) { %s_set_%s(&%s, v); }" % (
                         self._c_global_name, iname, const, ctype, self._struct_name, iname, self._c_global_name))
+
+            if e.vtype == SchemaEntry.V_OBJECT:
+                lines.append("%s;" % self._SchemaSignature(e))
+                lines.append("%s;" % self._ParseSignature(e, ctype))
+                lines.append("%s;" % self._CopySignature(e, ctype))
+                lines.append("%s;" % self._FreeSignature(e, ctype))
 
         if self._c_global_name:
             lines.append("")
@@ -486,15 +509,29 @@ class AccessorsGen(object):
                 getter, setter, copy, free, const = True, True, False, False, ""
 
             if getter:
-                lines.append("%s {" % self._GetGetterSignature(e, ctype, const))
+                lines.append("%s {" % self._GetterSignature(e, ctype, const))
                 lines.append("  return %scfg->%s;" % (amp, e.path))
                 lines.append("}")
             if setter:
-                lines.append("%s {" % self._GetSetterSignature(e, ctype, const))
+                lines.append("%s {" % self._SetterSignature(e, ctype, const))
                 if e.vtype == SchemaEntry.V_STRING:
                     lines.append("  mgos_conf_set_str(&cfg->%s, v);" % e.path)
                 else:
                     lines.append("  %scfg->%s = v;" % (amp, e.path))
+                lines.append("}")
+
+            if e.vtype == SchemaEntry.V_OBJECT:
+                lines.append("%s {" % self._SchemaSignature(e))
+                lines.append('  return mgos_conf_find_schema_entry("%s", %s_schema());' % (e.path, self._struct_name))
+                lines.append("}")
+                lines.append("%s {" % self._ParseSignature(e, ctype))
+                lines.append('  return mgos_conf_parse_sub(json, %s_schema(), cfg);' % (self._struct_name))
+                lines.append("}")
+                lines.append("%s {" % self._CopySignature(e, ctype))
+                lines.append("  return mgos_conf_copy(%s_schema_%s(), src, dst);" % (self._struct_name, e.GetIdentifierName()))
+                lines.append("}")
+                lines.append("%s {" % self._FreeSignature(e, ctype))
+                lines.append("  return mgos_conf_free(%s_schema_%s(), cfg);" % (self._struct_name, e.GetIdentifierName()))
                 lines.append("}")
 
         if self._c_global_name:
