@@ -72,7 +72,8 @@ endif
 
 CFLAGS = -std=gnu99 $(C_CXX_FLAGS) $(APP_CFLAGS)
 CXXFLAGS = -std=gnu++11 -fno-exceptions $(C_CXX_FLAGS) $(APP_CXXFLAGS)
-LDFLAGS += -lstdc++
+# TODO: Extra libs such as Avahi should be provided via external var.
+LDFLAGS += -lavahi-client -lavahi-common -lstdc++
 
 INCDIRS = $(addprefix -I,$(INCLUDES))
 AR ?= ar
