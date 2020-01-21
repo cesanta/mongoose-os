@@ -66,14 +66,17 @@ CC = clang
 CXX = clang++
 C_CXX_FLAGS += -fsanitize=address -fno-omit-frame-pointer
 LDFLAGS += -fsanitize=address
+endif
+
+ifdef MGOS_HAVE_DNS_SD
+LDFLAGS += -lavahi-client -lavahi-common -lstdc++
 else
 LDFLAGS += -static
 endif
 
 CFLAGS = -std=gnu99 $(C_CXX_FLAGS) $(APP_CFLAGS)
 CXXFLAGS = -std=gnu++11 -fno-exceptions $(C_CXX_FLAGS) $(APP_CXXFLAGS)
-# TODO: Extra libs such as Avahi should be provided via external var.
-LDFLAGS += -lavahi-client -lavahi-common -lstdc++
+LDFLAGS += -lstdc++
 
 INCDIRS = $(addprefix -I,$(INCLUDES))
 AR ?= ar
