@@ -38,6 +38,7 @@ struct mgos_config_http {
 struct mgos_config_debug {
   int level;
   const char * dest;
+  const char * file_level;
   double test_d1;
   double test_d2;
   unsigned int test_ui;
@@ -204,6 +205,14 @@ const char * mgos_config_get_debug_dest(struct mgos_config *cfg);
 static inline const char * mgos_sys_config_get_debug_dest(void) { return mgos_config_get_debug_dest(&mgos_sys_config); }
 void mgos_config_set_debug_dest(struct mgos_config *cfg, const char * v);
 static inline void mgos_sys_config_set_debug_dest(const char * v) { mgos_config_set_debug_dest(&mgos_sys_config, v); }
+
+/* debug.file_level */
+#define MGOS_CONFIG_HAVE_DEBUG_FILE_LEVEL
+#define MGOS_SYS_CONFIG_HAVE_DEBUG_FILE_LEVEL
+const char * mgos_config_get_debug_file_level(struct mgos_config *cfg);
+static inline const char * mgos_sys_config_get_debug_file_level(void) { return mgos_config_get_debug_file_level(&mgos_sys_config); }
+void mgos_config_set_debug_file_level(struct mgos_config *cfg, const char * v);
+static inline void mgos_sys_config_set_debug_file_level(const char * v) { mgos_config_set_debug_file_level(&mgos_sys_config, v); }
 
 /* debug.test_d1 */
 #define MGOS_CONFIG_HAVE_DEBUG_TEST_D1

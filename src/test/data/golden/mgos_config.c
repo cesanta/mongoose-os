@@ -10,8 +10,8 @@
 
 #include "mgos_config_util.h"
 
-const struct mgos_conf_entry mgos_config_schema_[27] = {
-  {.type = CONF_TYPE_OBJECT, .key = "", .offset = 0, .num_desc = 26},
+const struct mgos_conf_entry mgos_config_schema_[28] = {
+  {.type = CONF_TYPE_OBJECT, .key = "", .offset = 0, .num_desc = 27},
   {.type = CONF_TYPE_OBJECT, .key = "wifi", .offset = offsetof(struct mgos_config, wifi), .num_desc = 8},
   {.type = CONF_TYPE_OBJECT, .key = "sta", .offset = offsetof(struct mgos_config, wifi.sta), .num_desc = 2},
   {.type = CONF_TYPE_STRING, .key = "ssid", .offset = offsetof(struct mgos_config, wifi.sta.ssid)},
@@ -25,9 +25,10 @@ const struct mgos_conf_entry mgos_config_schema_[27] = {
   {.type = CONF_TYPE_OBJECT, .key = "http", .offset = offsetof(struct mgos_config, http), .num_desc = 2},
   {.type = CONF_TYPE_BOOL, .key = "enable", .offset = offsetof(struct mgos_config, http.enable)},
   {.type = CONF_TYPE_INT, .key = "port", .offset = offsetof(struct mgos_config, http.port)},
-  {.type = CONF_TYPE_OBJECT, .key = "debug", .offset = offsetof(struct mgos_config, debug), .num_desc = 5},
+  {.type = CONF_TYPE_OBJECT, .key = "debug", .offset = offsetof(struct mgos_config, debug), .num_desc = 6},
   {.type = CONF_TYPE_INT, .key = "level", .offset = offsetof(struct mgos_config, debug.level)},
   {.type = CONF_TYPE_STRING, .key = "dest", .offset = offsetof(struct mgos_config, debug.dest)},
+  {.type = CONF_TYPE_STRING, .key = "file_level", .offset = offsetof(struct mgos_config, debug.file_level)},
   {.type = CONF_TYPE_DOUBLE, .key = "test_d1", .offset = offsetof(struct mgos_config, debug.test_d1)},
   {.type = CONF_TYPE_DOUBLE, .key = "test_d2", .offset = offsetof(struct mgos_config, debug.test_d2)},
   {.type = CONF_TYPE_UNSIGNED_INT, .key = "test_ui", .offset = offsetof(struct mgos_config, debug.test_ui)},
@@ -58,6 +59,7 @@ const struct mgos_config mgos_config_defaults = {
   .http.port = 80,
   .debug.level = 2,
   .debug.dest = "uart1",
+  .debug.file_level = "mg_foo.c=4",
   .debug.test_d1 = 2.0,
   .debug.test_d2 = 0.0,
   .debug.test_ui = 4294967295,
@@ -270,6 +272,16 @@ const char * mgos_config_get_debug_dest(struct mgos_config *cfg) {
 }
 void mgos_config_set_debug_dest(struct mgos_config *cfg, const char * v) {
   mgos_conf_set_str(&cfg->debug.dest, v);
+}
+
+/* debug.file_level */
+#define MGOS_CONFIG_HAVE_DEBUG_FILE_LEVEL
+#define MGOS_SYS_CONFIG_HAVE_DEBUG_FILE_LEVEL
+const char * mgos_config_get_debug_file_level(struct mgos_config *cfg) {
+  return cfg->debug.file_level;
+}
+void mgos_config_set_debug_file_level(struct mgos_config *cfg, const char * v) {
+  mgos_conf_set_str(&cfg->debug.file_level, v);
 }
 
 /* debug.test_d1 */

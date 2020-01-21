@@ -15,6 +15,7 @@
   ["debug", "o", {"title": "Debug Settings"}],
   ["debug.level", "i", {"title": "Level", "type": "select", "values": [{"title": "NONE", "value": -1}, {"title": "ERROR", "value": 0}, {"title": "WARN", "value": 1}, {"title": "INFO", "value": 2}, {"title": "DEBUG", "value": 3}, {"title": "VERBOSE_DEBUG", "value": 4}]}],
   ["debug.dest", "s", {"title": "Where to send debug"}],
+  ["debug.file_level", "s", {"title": "File level"}],
   ["debug.test_d1", "d", {"title": "Test doubles 1"}],
   ["debug.test_d2", "d", {}],
   ["debug.test_ui", "ui", {}],

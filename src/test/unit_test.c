@@ -21,7 +21,7 @@ static const char *test_config(void) {
   char *json2 = cs_read_file("data/overrides.json", &size);
   const struct mgos_conf_entry *schema = mgos_config_schema();
   struct mgos_config conf;
-  struct mgos_config_wifi conf_wifi2;
+  struct mgos_config_debug conf_debug;
 
   ASSERT(json2 != NULL);
   cs_log_set_level(LL_NONE);
@@ -55,15 +55,16 @@ static const char *test_config(void) {
   ASSERT_EQ(mgos_sys_config_get_wifi_ap_channel(), 123);
 
   /* Test copying */
-  mgos_config_copy_wifi(&conf.wifi, &conf_wifi2);
-  ASSERT_PTREQ(conf.wifi.ap.ssid,
-               conf_wifi2.ap.ssid);  // Shared const pointers.
-  ASSERT_PTRNE(conf.wifi.sta.pass,
-               conf_wifi2.sta.pass);  // Duplicated heap values.
-  ASSERT_STREQ(conf.wifi.sta.pass, conf_wifi2.sta.pass);
-  ASSERT_EQ(conf.wifi.ap.channel, conf_wifi2.ap.channel);
+  mgos_config_copy_debug(&conf.debug, &conf_debug);
+  ASSERT_PTREQ(conf.debug.dest,
+               conf_debug.dest);  // Shared const pointers.
+  ASSERT_PTRNE(conf.debug.file_level,
+               conf_debug.file_level);  // Duplicated heap values.
+  ASSERT_STREQ(conf.debug.file_level, conf_debug.file_level);
+  ASSERT_EQ(conf.debug.level, conf_debug.level);
+  ASSERT_EQ(conf.debug.test_d1, conf_debug.test_d1);
 
-  mgos_config_free_wifi(&conf_wifi2);
+  mgos_config_free_debug(&conf_debug);
 
   mgos_conf_free(schema, &conf);
 

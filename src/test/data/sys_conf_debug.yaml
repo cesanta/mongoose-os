@@ -13,6 +13,7 @@
     ]
   }],
   ["debug.dest", "s", "uart1", {title: "Where to send debug"}],
+  ["debug.file_level", "s", "mg_foo.c=4", {title: "File level"}],
   ["debug.test_d1", "d", 0.123, {title: "Test doubles 1"}],
   ["debug.test_d2", "d", 0, {}],
   ["debug.test_ui", "ui", 4294967295, {}],

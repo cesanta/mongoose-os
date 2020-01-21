@@ -405,8 +405,9 @@ bool mgos_conf_copy(const struct mgos_conf_entry *schema, const void *src,
   if (schema->type != CONF_TYPE_OBJECT) return false;
   for (int i = 1; i <= schema->num_desc; i++) {
     const struct mgos_conf_entry *e = schema + i;
-    const void *svp = (((const char *) src) + e->offset);
-    void *dvp = (((char *) dst) + e->offset);
+    const void *svp = (((const char *) src) + (e->offset - schema->offset));
+    void *dvp = (((char *) dst) + (e->offset - schema->offset));
+    LOG(LL_INFO, ("copying %s", e->key));
     switch (e->type) {
       case CONF_TYPE_INT:
       case CONF_TYPE_BOOL:
@@ -436,7 +437,8 @@ void mgos_conf_free(const struct mgos_conf_entry *schema, void *cfg) {
   for (int i = 1; i <= schema->num_desc; i++) {
     const struct mgos_conf_entry *e = schema + i;
     if (e->type == CONF_TYPE_STRING) {
-      const char **sp = ((const char **) (((char *) cfg) + e->offset));
+      const char **sp =
+          ((const char **) (((char *) cfg) + (e->offset - schema->offset)));
       mgos_conf_free_str(sp);
     }
   }
