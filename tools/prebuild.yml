@@ -85,6 +85,50 @@
     - name: ubuntu
       platform: ubuntu
 
+- location: git@github.com:cesanta/mos-libs.git/mongoose
+  out:
+    - github:
+        repo: mongoose-os-libs/mongoose
+        update: true
+  common:
+    cflags: -DMGOS_FREE_BUILD
+    cxxflags: -DMGOS_FREE_BUILD
+    mos_args: ['--lib-extra=origin: "https://github.com/mongoose-os-libs/boards"', '--cdef=MG_ENABLE_SSL=0']
+  variants:
+    - name: cc3200-nossl
+      platform: cc3200
+    - name: cc3220-nossl
+      platform: cc3220
+    - name: esp8266-nossl
+      platform: esp8266
+    - name: esp32-nossl
+      platform: esp32
+    - name: rs14100-nossl
+      platform: rs14100
+    - name: stm32-B-L475E-IOT01A-nossl
+      platform: stm32
+      build_vars:
+        BOARD: B-L475E-IOT01A
+        # This board does not use LwIP and uses ISM43XXX net_if instead.
+        MGOS_MG_NET_IF: -1
+        MGOS_ENABLE_LWIP: 0
+    - name: stm32-DISCO-F746NG-nossl
+      platform: stm32
+      build_vars:
+        BOARD: DISCO-F746NG
+        MGOS_ENABLE_LWIP: 1
+    - name: stm32-Electron-nossl
+      platform: stm32
+      build_vars:
+        BOARD: Electron
+    - name: stm32-NUCLEO-F746ZG-nossl
+      platform: stm32
+      build_vars:
+        BOARD: NUCLEO-F746ZG
+        MGOS_ENABLE_LWIP: 1
+    - name: ubuntu-nossl
+      platform: ubuntu
+
 # Bootloader
 - location: https://github.com/mongoose-os-apps/bootloader
   variants:
