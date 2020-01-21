@@ -70,7 +70,7 @@ endif
 
 ifdef MGOS_HAVE_DNS_SD
 LDFLAGS += -lavahi-client -lavahi-common -lstdc++
-else
+else ifneq "$(ASAN)" "1"
 LDFLAGS += -static
 endif
 
