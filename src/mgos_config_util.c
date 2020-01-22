@@ -407,7 +407,6 @@ bool mgos_conf_copy(const struct mgos_conf_entry *schema, const void *src,
     const struct mgos_conf_entry *e = schema + i;
     const void *svp = (((const char *) src) + (e->offset - schema->offset));
     void *dvp = (((char *) dst) + (e->offset - schema->offset));
-    LOG(LL_INFO, ("copying %s", e->key));
     switch (e->type) {
       case CONF_TYPE_INT:
       case CONF_TYPE_BOOL:
