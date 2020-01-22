@@ -22,6 +22,7 @@ FW_DIR ?= $(CURDIR)/fw
 APP_EXTRA_FW_PARTS ?=
 
 ASAN ?= 0
+PROF ?= 0
 
 # Explicitly disable updater, it's not supported on POSIX build yet.
 MGOS_ENABLE_DEBUG_UDP = 0
@@ -45,7 +46,7 @@ APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
 INCLUDES = $(MGOS_IPATH) $(SRC_PATH) $(BUILD_DIR) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) $(GEN_INCLUDES) $(PLATFORM_VPATH)
 MGOS_SRCS = $(notdir $(wildcard *.c)) mgos_init.c  \
             frozen.c mgos_event.c \
-            mgos_system.c mgos_time.c mgos_timers.c \
+            mgos_core_dump.c mgos_system.c mgos_time.c mgos_timers.c \
             mgos_config_util.c mgos_sys_config.c \
             json_utils.c cs_rbuf.c mgos_uart.c \
             mgos_utils.c cs_file.c cs_hex.c cs_crc32.c \
@@ -66,6 +67,12 @@ CC = clang
 CXX = clang++
 C_CXX_FLAGS += -fsanitize=address -fno-omit-frame-pointer
 LDFLAGS += -fsanitize=address
+endif
+ifeq "$(PROF)" "1"
+CC = clang
+CXX = clang++
+C_CXX_FLAGS += -fprofile-instr-generate -fcoverage-mapping
+LDFLAGS += -fprofile-instr-generate
 endif
 
 ifdef MGOS_HAVE_DNS_SD
