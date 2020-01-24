@@ -34,6 +34,10 @@ double mgos_uptime(void) {
   return mgos_uptime_micros() / 1000000.0;
 }
 
+int64_t mgos_time_micros(void) {
+  return mg_time() * 1000000.0;
+}
+
 int mgos_strftime(char *s, int size, char *fmt, int time) {
   time_t t = (time_t) time;
   struct tm *tmp = localtime(&t);
