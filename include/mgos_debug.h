@@ -38,7 +38,7 @@ extern "C" {
 struct mgos_debug_hook_arg {
   int fd;
   enum cs_log_level level;
-  const void *data;
+  const char *data;
   size_t len;
 
   /*

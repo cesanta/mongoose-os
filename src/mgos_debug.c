@@ -57,6 +57,7 @@ extern enum cs_log_level cs_log_cur_msg_level;
 
 void mgos_debug_write(int fd, const void *data, size_t len) {
   char buf[MGOS_DEBUG_TMP_BUF_SIZE];
+  enum cs_log_level old_level;
   int uart_no = -1;
   debug_lock();
   if (s_in_debug) {
@@ -64,6 +65,8 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
     return;
   }
   s_in_debug = true;
+  old_level = cs_log_level;
+  cs_log_level = LL_NONE;
   if (s_uart_suspended <= 0) {
     if (fd == 1) {
       uart_no = s_stdout_uart;
@@ -72,7 +75,7 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
     }
   }
   if (uart_no >= 0) {
-    len = mgos_uart_write(uart_no, data, len);
+    mgos_uart_write(uart_no, data, len);
     mgos_uart_flush(uart_no);
   }
   if (!mgos_sys_config_is_initialized()) {
@@ -97,13 +100,15 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
   /* Invoke all registered debug_write hooks */
   /* Only send LL_INFO messages and below, to avoid loops. */
 #if CS_ENABLE_STDIO
-  if (cs_log_cur_msg_level <= LL_INFO)
+  if (cs_log_cur_msg_level <= mgos_sys_config_get_debug_event_level())
 #endif
   {
     struct mgos_debug_hook_arg arg = {
         .buf = buf,
         .fd = fd,
+#if CS_ENABLE_STDIO
         .level = cs_log_cur_msg_level,
+#endif
         .data = data,
         .len = len,
     };
@@ -111,6 +116,7 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
   }
 
 out_unlock:
+  cs_log_level = old_level;
   s_in_debug = false;
   debug_unlock();
 }
