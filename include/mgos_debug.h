@@ -15,17 +15,16 @@
  * limitations under the License.
  */
 
-#ifndef CS_FW_INCLUDE_MGOS_DEBUG_H_
-#define CS_FW_INCLUDE_MGOS_DEBUG_H_
+#pragma once
 
 #include <stdbool.h>
 #include <stdlib.h>
 
-#include "mgos_init.h"
+#include "common/cs_dbg.h"
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* __cplusplus */
+#endif
 
 #ifndef MGOS_DEBUG_UART_BAUD_RATE
 #define MGOS_DEBUG_UART_BAUD_RATE 115200
@@ -38,6 +37,7 @@ extern "C" {
  */
 struct mgos_debug_hook_arg {
   int fd;
+  enum cs_log_level level;
   const void *data;
   size_t len;
 
@@ -97,5 +97,3 @@ bool mgos_debug_uart_custom_cfg(int uart_no, struct mgos_uart_config *cfg);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-
-#endif /* CS_FW_INCLUDE_MGOS_DEBUG_H_ */

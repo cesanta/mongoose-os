@@ -103,6 +103,7 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
     struct mgos_debug_hook_arg arg = {
         .buf = buf,
         .fd = fd,
+        .level = cs_log_cur_msg_level,
         .data = data,
         .len = len,
     };
