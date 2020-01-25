@@ -293,8 +293,7 @@ enum mgos_init_result mgos_sys_config_init(void) {
 
   s_initialized = true;
 
-  if (mgos_set_stdout_uart(mgos_sys_config_get_debug_stdout_uart()) !=
-      MGOS_INIT_OK) {
+  if (!mgos_set_stdout_uart(mgos_sys_config_get_debug_stdout_uart())) {
     return MGOS_INIT_CONFIG_INVALID_STDOUT_UART;
   }
 #ifdef MGOS_DEBUG_UART
@@ -308,8 +307,7 @@ enum mgos_init_result mgos_sys_config_init(void) {
         ("Switching debug to UART%d", mgos_sys_config_get_debug_stderr_uart()));
   }
 #endif
-  if (mgos_set_stderr_uart(mgos_sys_config_get_debug_stderr_uart()) !=
-      MGOS_INIT_OK) {
+  if (!mgos_set_stderr_uart(mgos_sys_config_get_debug_stderr_uart())) {
     return MGOS_INIT_CONFIG_INVALID_STDERR_UART;
   }
 #if MGOS_ENABLE_DEBUG_UDP

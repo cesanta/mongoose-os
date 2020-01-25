@@ -150,33 +150,33 @@ void __assert_func(const char *file, int line, const char *func,
 }
 #endif
 
-static enum mgos_init_result mgos_init_debug_uart(int uart_no) {
-  if (uart_no < 0) return MGOS_INIT_OK;
+static bool mgos_init_debug_uart(int uart_no) {
+  if (uart_no < 0) return true;
   /* If already initialized, don't touch. */
-  if (mgos_uart_write_avail(uart_no) > 0) return MGOS_INIT_OK;
+  if (mgos_uart_write_avail(uart_no) > 0) return true;
   struct mgos_uart_config ucfg;
   mgos_uart_config_set_defaults(uart_no, &ucfg);
   ucfg.baud_rate = MGOS_DEBUG_UART_BAUD_RATE;
   if (!mgos_debug_uart_custom_cfg(uart_no, &ucfg)) {
-    return MGOS_INIT_UART_FAILED;
+    return false;
   }
   if (!mgos_uart_configure(uart_no, &ucfg)) {
-    return MGOS_INIT_UART_FAILED;
+    return false;
   }
-  return MGOS_INIT_OK;
+  return true;
 }
 
-enum mgos_init_result mgos_set_stdout_uart(int uart_no) {
-  enum mgos_init_result r = mgos_init_debug_uart(uart_no);
-  if (r == MGOS_INIT_OK) {
+bool mgos_set_stdout_uart(int uart_no) {
+  bool r = mgos_init_debug_uart(uart_no);
+  if (r) {
     s_stdout_uart = uart_no;
   }
   return r;
 }
 
-enum mgos_init_result mgos_set_stderr_uart(int uart_no) {
-  enum mgos_init_result r = mgos_init_debug_uart(uart_no);
-  if (r == MGOS_INIT_OK) {
+bool mgos_set_stderr_uart(int uart_no) {
+  bool r = mgos_init_debug_uart(uart_no);
+  if (r) {
     s_stderr_uart = uart_no;
   }
   return r;
@@ -208,12 +208,12 @@ enum mgos_init_result mgos_debug_init(void) {
 }
 
 enum mgos_init_result mgos_debug_uart_init(void) {
-  enum mgos_init_result res = mgos_init_debug_uart(MGOS_DEBUG_UART);
-  if (res == MGOS_INIT_OK) {
+  bool res = mgos_init_debug_uart(MGOS_DEBUG_UART);
+  if (res) {
     s_stdout_uart = MGOS_DEBUG_UART;
     s_stderr_uart = MGOS_DEBUG_UART;
   }
-  return res;
+  return (res ? MGOS_INIT_OK : MGOS_INIT_UART_FAILED);
 }
 
 /* For FFI */

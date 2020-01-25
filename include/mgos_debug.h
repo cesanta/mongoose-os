@@ -59,10 +59,10 @@ void mgos_debug_write(int fd, const void *buf, size_t len);
 void mgos_debug_flush(void);
 
 /* Set UART for stdout. Negative value disables stdout. */
-enum mgos_init_result mgos_set_stdout_uart(int uart_no);
+bool mgos_set_stdout_uart(int uart_no);
 
 /* Set UART for stderr. Negative value disables stderr. */
-enum mgos_init_result mgos_set_stderr_uart(int uart_no);
+bool mgos_set_stderr_uart(int uart_no);
 
 /* Get stdout UART number; -1 indicates that stdout is disabled. */
 int mgos_get_stdout_uart(void);

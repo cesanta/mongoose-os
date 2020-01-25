@@ -17,7 +17,7 @@
 
 #include "mgos_core_dump.h"
 
-#include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "common/cs_base64.h"
@@ -73,8 +73,8 @@ NOINSTR void mgos_cd_write_section(const char *name, const void *p,
                                    size_t len) {
   struct section_ctx ctx = {.col_counter = 0, .crc32 = 0};
   cs_base64_init(&ctx.b64_ctx, write_char, &ctx);
-  mgos_cd_printf(",\r\n\"%s\": {\"addr\": %u, \"data\": \"\r\n", name,
-                 (unsigned int) p);
+  mgos_cd_printf(",\r\n\"%s\": {\"addr\": %lu, \"data\": \"\r\n", name,
+                 (unsigned long) p);
 
   const uint32_t *dp = (const uint32_t *) p;
   const uint32_t *end = dp + (len / sizeof(uint32_t));
