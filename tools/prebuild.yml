@@ -2,8 +2,6 @@
 
 # Build private version of closed source libs and publish to public repos.
 - locations:
-    - git@github.com:cesanta/mos-libs.git/cron
-    - git@github.com:cesanta/mos-libs.git/crontab
     - git@github.com:cesanta/mos-libs.git/dash
   out:
     - github:
