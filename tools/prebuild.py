@@ -295,7 +295,7 @@ def ProcessLoc(e, loc, args):
                     break
                 except (Exception, KeyboardInterrupt) as e:
                     logging.exception("Exception (attempt %d): %s", i, e)
-                    if not isinstance(e, KeyboardInterrupt) and i < 3:
+                    if not isinstance(e, KeyboardInterrupt) and i < 5:
                         time.sleep(1)
                         i += 1
                     else:
