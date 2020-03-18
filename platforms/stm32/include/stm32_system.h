@@ -30,6 +30,8 @@ void stm32_set_int_handler(int irqn, void (*handler)(void));
 
 extern uint32_t SystemCoreClockMHZ;
 
+void stm32_setup_int_vectors(void);
+
 #ifdef __cplusplus
 }
 #endif

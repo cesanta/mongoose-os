@@ -27,12 +27,14 @@
 
 #include "mongoose.h"
 
+#include "mgos_core_dump.h"
 #include "mgos_hal.h"
 #include "mgos_mongoose.h"
 #include "mgos_sys_config.h"
 #include "mgos_timers.h"
 #include "mgos_utils.h"
 
+#include "stm32_system.h"
 #include "stm32_uart.h"
 
 void mgos_dev_system_restart(void) {
@@ -105,43 +107,72 @@ uint32_t HAL_GetTick(void) {
   return xTaskGetTickCount() * portTICK_PERIOD_MS;
 }
 
-#define IWDG_1_SECOND 128
-IWDG_HandleTypeDef hiwdg = {
-    .Instance = IWDG,
+WWDG_HandleTypeDef hwwdg = {
+    .Instance = WWDG,
     .Init =
         {
-            .Prescaler = IWDG_PRESCALER_256,
-            .Reload = 5 * IWDG_1_SECOND,
-#ifdef IWDG_WINDOW_DISABLE
-            .Window = IWDG_WINDOW_DISABLE,
-#endif
+            .Prescaler = WWDG_PRESCALER_8,
+            .Window = 0x7f,
+            .Counter = 0x7f,
+            .EWIMode = WWDG_EWI_ENABLE,
         },
 };
 
+#define WWDT_MAGIC_OFF 0xf001
+
+static int s_wwdt_ttl = 0;
+static int s_wwdt_reload = 50;
+
+IRAM static void stm32_wwdg_int_handler(void) {
+  if (s_wwdt_ttl != WWDT_MAGIC_OFF) {
+    s_wwdt_ttl--;
+    if ((s_wwdt_ttl & 0xffff0000) == 0) {
+      HAL_WWDG_Refresh(&hwwdg);
+    } else {
+      // TTL expired or has been smashed, explode.
+      // Refresh one last time to get the message out.
+      HAL_WWDG_Refresh(&hwwdg);
+      mgos_cd_printf("!! WDT\n");
+      // TODO(rojer): Trigger core dump.
+      // Do not refresh anymore, WDT will reset the device soon.
+      while (1) {
+      }
+    }
+  } else {
+    HAL_WWDG_Refresh(&hwwdg);
+  }
+  __HAL_WWDG_CLEAR_FLAG(&hwwdg, WWDG_FLAG_EWIF);
+}
+
 void mgos_wdt_enable(void) {
-  HAL_IWDG_Init(&hiwdg);
+  __HAL_RCC_WWDG_CLK_ENABLE();
+  stm32_set_int_handler(WWDG_IRQn, stm32_wwdg_int_handler);
+  HAL_NVIC_SetPriority(WWDG_IRQn, 0, 0);  // Highest possible prio.
+  HAL_NVIC_EnableIRQ(WWDG_IRQn);
+  HAL_WWDG_Init(&hwwdg);
 }
 
 void mgos_wdt_feed(void) {
-  HAL_IWDG_Refresh(&hiwdg);
+  s_wwdt_ttl = s_wwdt_reload;
+  HAL_WWDG_Refresh(&hwwdg);
+  /*
+   * For backward compatibility with older bootloaders we have to feed IWDG.
+   * We only do it if we detect the calue BL sets (10 seconds).
+   */
+  if (IWDG->RLR == 10 * 128) {
+    IWDG->KR = IWDG_KEY_RELOAD;
+  }
 }
 
 void mgos_wdt_set_timeout(int secs) {
-  uint32_t new_reload = (secs * IWDG_1_SECOND);
-  if (!IS_IWDG_RELOAD(new_reload)) {
-    LOG(LL_ERROR, ("Invalid WDT reload value %lu", new_reload));
-    return;
-  }
-  hiwdg.Init.Reload = new_reload;
-  HAL_IWDG_Init(&hiwdg);
+  uint32_t f_wwdt = HAL_RCC_GetPCLK1Freq();  // Valid for F2, F4, F7 and L4.
+  uint32_t ints_per_sec = f_wwdt / 4096 / 8 / (0x7f - 0x41);
+  s_wwdt_reload = ints_per_sec * secs;
+  mgos_wdt_feed();
 }
 
 void mgos_wdt_disable(void) {
-  static bool printed = false;
-  if (!printed) {
-    printed = true;
-    LOG(LL_ERROR, ("Once enabled, WDT cannot be disabled!"));
-  }
+  s_wwdt_ttl = WWDT_MAGIC_OFF;
 }
 
 uint32_t mgos_get_cpu_freq(void) {

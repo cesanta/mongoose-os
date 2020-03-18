@@ -101,17 +101,6 @@ void SystemCoreClockUpdate(void) {
 }
 
 #ifndef MGOS_BOOT_BUILD
-void (*stm32_int_vectors[256])(void)
-    __attribute__((section(".ram_int_vectors")));
-extern const void *stm32_flash_int_vectors[2];
-
-extern void arm_exc_handler_top(void);
-extern void __libc_init_array(void);
-
-void stm32_set_int_handler(int irqn, void (*handler)(void)) {
-  stm32_int_vectors[irqn + 16] = handler;
-}
-
 static void stm32_dump_sram(void) {
   mgos_cd_write_section("SRAM", (void *) STM32_SRAM_BASE_ADDR, STM32_SRAM_SIZE);
 }
@@ -123,19 +112,25 @@ static void stm32_dump_sram2(void) {
 }
 #endif
 
-int main(void) {
-  /* Move int vectors to RAM. */
-  for (int i = 0; i < (int) ARRAY_SIZE(stm32_int_vectors); i++) {
-    stm32_int_vectors[i] = arm_exc_handler_top;
-  }
-  memcpy(stm32_int_vectors, stm32_flash_int_vectors,
-         sizeof(stm32_flash_int_vectors));
-  SCB->VTOR = (uint32_t) &stm32_int_vectors[0];
+extern void __libc_init_array(void);
 
+int main(void) {
+  stm32_setup_int_vectors();
+  if ((WWDG->CR & WWDG_CR_WDGA) != 0) {
+    // WWDG was started by boot loader and is already ticking,
+    // we have to reconfigure the int handler *now*.
+    mgos_wdt_enable();
+    mgos_wdt_set_timeout(10 /* seconds */);
+  }
   stm32_system_init();
   __libc_init_array();
   stm32_clock_config();
   SystemCoreClockUpdate();
+
+  if ((WWDG->CR & WWDG_CR_WDGA) != 0) {
+    // APB clock has most likely changed, recalculate the WDT timings.
+    mgos_wdt_set_timeout(10 /* seconds */);
+  }
 
   mgos_cd_register_section_writer(arm_exc_dump_regs);
   mgos_cd_register_section_writer(stm32_dump_sram);
