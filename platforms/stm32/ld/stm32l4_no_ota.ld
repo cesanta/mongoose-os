@@ -29,12 +29,13 @@ SECTIONS {
     KEEP(*(.fs_img))
   } > FLASH_FS
 
+  /* Note: Needs to precede .text section to ensure correct placement of IRAM sections. */
   .data : {
     _data_start = .;
-    . = ALIGN(256);  /* Vectors must be aligned to 0x100 */
-    KEEP(*(.ram_int_vectors))
+    . = ALIGN(4);
     *(.RamFunc)
     *(SORT(.text.IRAM.*))
+    *(SORT(.rodata.IRAM.*))
     *(.data SORT(.data.*))
     _data_end = .;
   } > SRAM2 AT > FLASH_CS
@@ -83,6 +84,8 @@ SECTIONS {
 
   .bss : {
     _bss_start = .;
+    . = ALIGN(256);  /* Vectors must be aligned to 0x100 */
+    KEEP(*(.bss.ram_int_vectors))
     *(.bss SORT(.bss.*))
     *(COMMON)
     . = ALIGN(4);

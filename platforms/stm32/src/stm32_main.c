@@ -37,6 +37,7 @@ HAL_StatusTypeDef HAL_InitTick(uint32_t TickPriority) {
 }
 
 static void stm32_set_nocache(void) {
+#if STM32_NOCACHE_SIZE > 0
   extern uint8_t __nocache_start__, __nocache_end__; /* Linker symbols */
 
   int num_regions = (MPU->TYPE & MPU_TYPE_DREGION_Msk) >> MPU_TYPE_DREGION_Pos;
@@ -46,13 +47,13 @@ static void stm32_set_nocache(void) {
     LOG(LL_ERROR, ("Memory protection is requested but not available"));
     return;
   }
-  if (prot_size > NOCACHE_SIZE) {
-    LOG(LL_ERROR, ("Max size of protected region is %d", NOCACHE_SIZE));
+  if (prot_size > STM32_NOCACHE_SIZE) {
+    LOG(LL_ERROR, ("Max size of protected region is %d", STM32_NOCACHE_SIZE));
     return;
   }
   /* Protected regions must be size-aligned. */
-  if ((((uintptr_t) &__nocache_start__) & (NOCACHE_SIZE - 1)) != 0) {
-    LOG(LL_ERROR, ("Protected region must be %d-aligned", NOCACHE_SIZE));
+  if ((((uintptr_t) &__nocache_start__) & (STM32_NOCACHE_SIZE - 1)) != 0) {
+    LOG(LL_ERROR, ("Protected region must be %d-aligned", STM32_NOCACHE_SIZE));
     return;
   }
 
@@ -62,8 +63,9 @@ static void stm32_set_nocache(void) {
 
   MPU_InitStruct.Enable = MPU_REGION_ENABLE;
   MPU_InitStruct.BaseAddress = (uintptr_t) &__nocache_start__;
-#if NOCACHE_SIZE != 0x400
-#error NOCACHE_SIZE must be 1K
+// TODO: other sizes?
+#if STM32_NOCACHE_SIZE != 0x400
+#error STM32_NOCACHE_SIZE must be 1K
 #endif
   MPU_InitStruct.Size = MPU_REGION_SIZE_1KB;
   MPU_InitStruct.AccessPermission = MPU_REGION_FULL_ACCESS;
@@ -81,6 +83,7 @@ static void stm32_set_nocache(void) {
 
   LOG(LL_DEBUG,
       ("Marked [%p, %p) as no-cache", &__nocache_start__, &__nocache_end__));
+#endif // STM32_NOCACHE_SIZE > 0
 }
 
 enum mgos_init_result mgos_freertos_pre_init() {

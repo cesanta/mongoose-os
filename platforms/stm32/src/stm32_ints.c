@@ -23,7 +23,7 @@
 #include "stm32_system.h"
 
 void (*stm32_int_vectors[256])(void)
-    __attribute__((section(".ram_int_vectors")));
+    __attribute__((section(".bss.ram_int_vectors")));
 extern const void *stm32_flash_int_vectors[2];
 
 extern void arm_exc_handler_top(void);

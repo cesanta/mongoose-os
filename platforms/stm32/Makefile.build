@@ -36,6 +36,8 @@ MGOS_UPDATE_BOOT_LOADER ?= false
 
 MGOS_MG_NET_IF ?= MG_NET_IF_NULL
 
+STM32_NOCACHE_SIZE ?= 0x400
+
 BUILD_LIB_NAME ?= lib.a
 
 # Get list of dirs which contain sources and filesystem files
@@ -173,7 +175,7 @@ STM32_CFLAGS += -DSTM32_SRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -DSTM32_SRAM_SIZE=$(SRA
                 -DMGOS_ROOT_FS_TYPE='$(MGOS_ROOT_FS_TYPE)' \
                 -DMGOS_ROOT_FS_OPTS='$(MGOS_ROOT_FS_OPTS)' \
                 -DMGOS_ROOT_FS_EXTRACT='$(MGOS_ROOT_FS_EXTRACT)' \
-                -DNOCACHE_SIZE=0x400 \
+                -DSTM32_NOCACHE_SIZE=$(STM32_NOCACHE_SIZE) \
                 -DMG_LOCALS
 
 IPATH = $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
@@ -205,7 +207,7 @@ LDFLAGS += -Wl,--defsym=SRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -Wl,--defsym=SRAM_SIZE=
            -Wl,--defsym=FLASH_BL_SIZE=$(FLASH_BL_SIZE) \
            -Wl,--defsym=FLASH_BL_CFG_SIZE=$(FLASH_BL_CFG_SIZE) \
            -Wl,--defsym=FLASH_FS_SIZE=$(FLASH_FS_SIZE) \
-           -Wl,--defsym=NOCACHE_SIZE=0x400
+           -Wl,--defsym=NOCACHE_SIZE=$(STM32_NOCACHE_SIZE)
 
 LDFLAGS += -Wl,--gc-sections
 
