@@ -127,11 +127,11 @@ IRAM static void stm32_wwdg_int_handler(void) {
   if (s_wwdt_ttl != WWDT_MAGIC_OFF) {
     s_wwdt_ttl--;
     if ((s_wwdt_ttl & 0xffff0000) == 0) {
-      HAL_WWDG_Refresh(&hwwdg);
+      WRITE_REG(hwwdg.Instance->CR, hwwdg.Init.Counter);
     } else {
       // TTL expired or has been smashed, explode.
       // Refresh one last time to get the message out.
-      HAL_WWDG_Refresh(&hwwdg);
+      WRITE_REG(hwwdg.Instance->CR, hwwdg.Init.Counter);
       mgos_cd_printf("!! WDT\n");
       // TODO(rojer): Trigger core dump.
       // Do not refresh anymore, WDT will reset the device soon.
@@ -139,7 +139,7 @@ IRAM static void stm32_wwdg_int_handler(void) {
       }
     }
   } else {
-    HAL_WWDG_Refresh(&hwwdg);
+    WRITE_REG(hwwdg.Instance->CR, hwwdg.Init.Counter);
   }
   __HAL_WWDG_CLEAR_FLAG(&hwwdg, WWDG_FLAG_EWIF);
 }
@@ -154,7 +154,7 @@ void mgos_wdt_enable(void) {
 
 void mgos_wdt_feed(void) {
   s_wwdt_ttl = s_wwdt_reload;
-  HAL_WWDG_Refresh(&hwwdg);
+  WRITE_REG(hwwdg.Instance->CR, hwwdg.Init.Counter);
   /*
    * For backward compatibility with older bootloaders we have to feed IWDG.
    * We only do it if we detect the calue BL sets (10 seconds).
