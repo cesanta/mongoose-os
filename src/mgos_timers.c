@@ -26,10 +26,15 @@
 #include "mgos_system.h"
 #include "mgos_time.h"
 
+#if MGOS_NUM_HW_TIMERS > 0
 #ifdef __LP64__
 #define MGOS_SW_TIMER_MASK 0xffff000000000000
 #else
 #define MGOS_SW_TIMER_MASK 0xffff0000
+#endif
+#else
+/* All timers are soft timers. */
+#define MGOS_SW_TIMER_MASK ((uintptr_t) -1)
 #endif
 
 #ifndef IRAM
