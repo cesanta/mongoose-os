@@ -230,7 +230,7 @@ enum mgos_init_result mongoose_init(void) {
   cpu_freq = (int) (mgos_get_cpu_freq() / 1000000);
   heap_size = mgos_get_heap_size();
   free_heap_size = mgos_get_free_heap_size();
-  LOG(LL_INFO, ("CPU: %d MHz, heap: %lu total, %lu free", cpu_freq, heap_size,
+  LOG(LL_INFO, ("CPU: %d MHz, heap: %u total, %zu free", cpu_freq, heap_size,
                 free_heap_size));
 
   mgos_invoke_cb(ubuntu_net_up, NULL, false /* from_isr */);
