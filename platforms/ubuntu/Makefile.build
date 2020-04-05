@@ -23,6 +23,7 @@ APP_EXTRA_FW_PARTS ?=
 
 ASAN ?= 0
 PROF ?= 0
+ARMHF ?= 1
 
 # Explicitly disable updater, it's not supported on POSIX build yet.
 MGOS_ENABLE_DEBUG_UDP = 0
@@ -73,6 +74,12 @@ CC = clang
 CXX = clang++
 C_CXX_FLAGS += -fprofile-instr-generate -fcoverage-mapping
 LDFLAGS += -fprofile-instr-generate
+endif
+ifeq "$(ARMHF)" "1"
+CC = arm-linux-gnueabihf-gcc
+CXX = arm-linux-gnueabihf-g++
+AR = arm-linux-gnueabihf-ar
+LD = arm-linux-gnueabihf-ld
 endif
 
 ifdef MGOS_HAVE_DNS_SD
