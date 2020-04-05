@@ -23,7 +23,12 @@ APP_EXTRA_FW_PARTS ?=
 
 ASAN ?= 0
 PROF ?= 0
-ARMHF ?= 1
+# COMPILER_TOOLKIT, valid options:
+#   aarch64-linux-gnu
+#   arm-linux-gnueabi
+#   arm-linux-gnueabihf
+#   x86_64-linux-gnu (the default)
+COMPILER_TOOLKIT ?= x86_64-linux-gnu
 
 # Explicitly disable updater, it's not supported on POSIX build yet.
 MGOS_ENABLE_DEBUG_UDP = 0
@@ -63,6 +68,12 @@ C_CXX_FLAGS = -ggdb -MD -Wall -Wextra -Werror -pipe \
               $(MONGOOSE_FEATURES)
 LDFLAGS ?=
 
+# Select compiler toolkit
+CC = $(COMPILER_TOOLKIT)-gcc
+CXX = $(COMPILER_TOOLKIT)-g++
+AR = $(COMPILER_TOOLKIT)-ar
+LD = $(COMPILER_TOOLKIT)-ld
+
 ifeq "$(ASAN)" "1"
 CC = clang
 CXX = clang++
@@ -74,12 +85,6 @@ CC = clang
 CXX = clang++
 C_CXX_FLAGS += -fprofile-instr-generate -fcoverage-mapping
 LDFLAGS += -fprofile-instr-generate
-endif
-ifeq "$(ARMHF)" "1"
-CC = arm-linux-gnueabihf-gcc
-CXX = arm-linux-gnueabihf-g++
-AR = arm-linux-gnueabihf-ar
-LD = arm-linux-gnueabihf-ld
 endif
 
 ifdef MGOS_HAVE_DNS_SD
@@ -93,7 +98,6 @@ CXXFLAGS = -std=gnu++11 -fno-exceptions $(C_CXX_FLAGS) $(APP_CXXFLAGS)
 LDFLAGS += -lstdc++
 
 INCDIRS = $(addprefix -I,$(INCLUDES))
-AR ?= ar
 APP_BIN_LIBS ?=
 LIBS  ?= pthread cap
 LDLIBS = $(addprefix -l,$(LIBS))
