@@ -22,10 +22,13 @@
  * so that unused functions can be GC'd.
  */
 
+#ifndef __ASSEMBLER__
 #define _IRAM_STR_LIT(a) #a
 #define _IRAM_STR(a) _IRAM_STR_LIT(a)
 
-#define IRAM \
-  __attribute__((section(".text.IRAM." __FILE__ "." _IRAM_STR(__LINE__))))
+#define IRAM     \
+  __attribute__( \
+      (section(".text.IRAM." _IRAM_STR(__LINE__) "." _IRAM_STR(__COUNTER__))))
 
 #define NOINLINE __attribute__((noinline))
+#endif  // __ASSEMBLER__
