@@ -52,19 +52,22 @@ IRAM bool esp32_uart_cts(int uart_no) {
   return (DPORT_READ_PERI_REG(UART_STATUS_REG(uart_no)) & UART_CTSN) ? 1 : 0;
 }
 
+IRAM void get_rx_addrs(int uart_no, uint32_t *rd, uint32_t *wr) {
+  uint32_t mrxs = DPORT_READ_PERI_REG(UART_MEM_RX_STATUS_REG(uart_no));
+  if (rd) *rd = ((mrxs & UART_MEM_RX_RD_ADDR_M) >> UART_MEM_RX_RD_ADDR_S);
+  if (wr) *wr = ((mrxs & UART_MEM_RX_WR_ADDR_M) >> UART_MEM_RX_WR_ADDR_S);
+}
+
+/* Note: we are not using UART_RX_MEM_CNT/UART_RXFIFO_CNT due to
+ * https://github.com/espressif/esp-idf/issues/5101 */
 IRAM int esp32_uart_rx_fifo_len(int uart_no) {
-  uint32_t base = REG_UART_BASE(uart_no);
-  uint32_t status_reg = base + 0x1c;
-  uint32_t mem_cnt_status_reg = base + 0x64;
-  uint32_t n1, n2;
-  // Ensure consistent reading.
-  do {
-    n1 = ((DPORT_REG_GET_FIELD(mem_cnt_status_reg, UART_RX_MEM_CNT) << 8) |
-          DPORT_REG_GET_FIELD(status_reg, UART_RXFIFO_CNT));
-    n2 = ((DPORT_REG_GET_FIELD(mem_cnt_status_reg, UART_RX_MEM_CNT) << 8) |
-          DPORT_REG_GET_FIELD(status_reg, UART_RXFIFO_CNT));
-  } while (n1 != n2);
-  return n1;
+  uint32_t rd_addr, wr_addr;
+  get_rx_addrs(uart_no, &rd_addr, &wr_addr);
+  if (rd_addr <= wr_addr) {
+    return wr_addr - rd_addr;
+  }
+  uint32_t fifo_size = (uart_no == 2 ? 384 : 128);
+  return (fifo_size + wr_addr - rd_addr);
 }
 
 IRAM static int rx_byte(int uart_no) {
@@ -78,7 +81,14 @@ IRAM static int rx_byte(int uart_no) {
    * Also, errata says to use AHB addresses:
    *https://espressif.com/sites/default/files/documentation/eco_and_workarounds_for_bugs_in_esp32_en.pdf
    */
-  return REG_GET_FIELD(UART_FIFO_AHB_REG(uart_no), UART_RXFIFO_RD_BYTE);
+  uint8_t byte;
+  uint32_t rx_before = 0, rx_after = 0;
+  get_rx_addrs(uart_no, &rx_before, NULL);
+  do {
+    byte = (uint8_t)(*((volatile uint32_t *) UART_FIFO_AHB_REG(uart_no)));
+    get_rx_addrs(uart_no, &rx_after, NULL);
+  } while (rx_after == rx_before);
+  return byte;
 }
 
 IRAM int esp32_uart_tx_fifo_len(int uart_no) {
@@ -126,18 +136,14 @@ static IRAM size_t fill_tx_fifo(struct mgos_uart_state *us) {
   return len;
 }
 
-IRAM NOINSTR static void empty_rx_fifo(int uart_no) {
+IRAM static void empty_rx_fifo(struct mgos_uart_state *us) {
   /*
    * ESP32 has a bug where UART2 FIFO reset requires also resetting UART1.
    * https://github.com/espressif/esp-idf/commit/4052803e161ba06d1cae8d36bc66dde15b3fc8c7
    * So, like ESP-IDF, we avoid using FIFO_RST and empty RX FIFO by reading it.
    */
-  while ((esp32_uart_rx_fifo_len(uart_no) > 0) ||
-         (DPORT_REG_GET_FIELD(UART_MEM_RX_STATUS_REG(uart_no),
-                              UART_MEM_RX_RD_ADDR) !=
-          DPORT_REG_GET_FIELD(UART_MEM_RX_STATUS_REG(uart_no),
-                              UART_MEM_RX_WR_ADDR))) {
-    (void) rx_byte(uart_no);
+  while ((esp32_uart_rx_fifo_len(us->uart_no) > 0)) {
+    (void) rx_byte(us->uart_no);
   }
 }
 
@@ -154,7 +160,7 @@ IRAM NOINSTR static void esp32_handle_uart_int(struct mgos_uart_state *us) {
   us->stats.ints++;
   if (int_st & UART_RXFIFO_OVF_INT_ST) {
     us->stats.rx_overflows++;
-    empty_rx_fifo(uart_no);
+    empty_rx_fifo(us);
   }
   if (int_st & UART_CTS_CHG_INT_ST) {
     if (esp32_uart_cts(uart_no) != 0 && esp32_uart_tx_fifo_len(uart_no) > 0) {
@@ -165,7 +171,7 @@ IRAM NOINSTR static void esp32_handle_uart_int(struct mgos_uart_state *us) {
     /* Switch to RX mode and flush the FIFO (depending on the wiring,
      * it may contain transmitted data or garbage received during TX). */
     mgos_gpio_write(uds->tx_en_gpio, !uds->tx_en_gpio_val);
-    empty_rx_fifo(uart_no);
+    empty_rx_fifo(us);
     DPORT_CLEAR_PERI_REG_MASK(UART_INT_ENA_REG(uart_no), UART_TX_DONE_INT_ENA);
   }
   if (int_st & UART_RX_INTS) {
@@ -368,13 +374,13 @@ bool mgos_uart_hal_init(struct mgos_uart_state *us) {
     DPORT_WRITE_PERI_REG(UART_MEM_CONF_REG(uart_no), 0x88);
   } else {
     /*
-     * UART2 is special: there are 256 unused bytes after the end of its RX FIFO
+     * UART2 is special: there are 384 unused bytes after the end of its RX FIFO
      * NB: TRM 13.3.3 fig.81 is wrong: UART0/1/2/ Rx_FIFOs start at 384/512/640,
      * i.e. there is no gap at 384-512 as the figure suggests.
      */
     DPORT_WRITE_PERI_REG(UART_MEM_CONF_REG(uart_no), 0x98);
   }
-  empty_rx_fifo(uart_no);
+  empty_rx_fifo(us);
   return true;
 }
 
