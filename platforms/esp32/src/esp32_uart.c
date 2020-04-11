@@ -136,14 +136,14 @@ static IRAM size_t fill_tx_fifo(struct mgos_uart_state *us) {
   return len;
 }
 
-IRAM static void empty_rx_fifo(struct mgos_uart_state *us) {
+IRAM static void empty_rx_fifo(int uart_no) {
   /*
    * ESP32 has a bug where UART2 FIFO reset requires also resetting UART1.
    * https://github.com/espressif/esp-idf/commit/4052803e161ba06d1cae8d36bc66dde15b3fc8c7
    * So, like ESP-IDF, we avoid using FIFO_RST and empty RX FIFO by reading it.
    */
-  while ((esp32_uart_rx_fifo_len(us->uart_no) > 0)) {
-    (void) rx_byte(us->uart_no);
+  while ((esp32_uart_rx_fifo_len(uart_no) > 0)) {
+    (void) rx_byte(uart_no);
   }
 }
 
@@ -160,7 +160,7 @@ IRAM NOINSTR static void esp32_handle_uart_int(struct mgos_uart_state *us) {
   us->stats.ints++;
   if (int_st & UART_RXFIFO_OVF_INT_ST) {
     us->stats.rx_overflows++;
-    empty_rx_fifo(us);
+    empty_rx_fifo(uart_no);
   }
   if (int_st & UART_CTS_CHG_INT_ST) {
     if (esp32_uart_cts(uart_no) != 0 && esp32_uart_tx_fifo_len(uart_no) > 0) {
@@ -171,7 +171,7 @@ IRAM NOINSTR static void esp32_handle_uart_int(struct mgos_uart_state *us) {
     /* Switch to RX mode and flush the FIFO (depending on the wiring,
      * it may contain transmitted data or garbage received during TX). */
     mgos_gpio_write(uds->tx_en_gpio, !uds->tx_en_gpio_val);
-    empty_rx_fifo(us);
+    empty_rx_fifo(uart_no);
     DPORT_CLEAR_PERI_REG_MASK(UART_INT_ENA_REG(uart_no), UART_TX_DONE_INT_ENA);
   }
   if (int_st & UART_RX_INTS) {
@@ -380,7 +380,7 @@ bool mgos_uart_hal_init(struct mgos_uart_state *us) {
      */
     DPORT_WRITE_PERI_REG(UART_MEM_CONF_REG(uart_no), 0x98);
   }
-  empty_rx_fifo(us);
+  empty_rx_fifo(uart_no);
   return true;
 }
 
