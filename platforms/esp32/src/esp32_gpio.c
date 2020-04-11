@@ -28,6 +28,7 @@
 #include "mgos_hal.h"
 
 #include "driver/gpio.h"
+#include "soc/dport_access.h"
 #include "soc/gpio_struct.h"
 
 #include "common/cs_dbg.h"
@@ -55,7 +56,7 @@ IRAM void mgos_gpio_hal_clear_int(int pin) {
     pin -= 32;
     reg += 12; /* GPIO_STATUS_W1TC -> GPIO_STATUS1_W1TC */
   }
-  WRITE_PERI_REG(reg, (1 << pin));
+  DPORT_WRITE_PERI_REG(reg, (1 << pin));
 }
 
 IRAM bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
@@ -132,7 +133,7 @@ IRAM void mgos_gpio_write(int pin, bool level) {
     pin -= 32;
     reg += 12; /* GPIO_OUT -> GPIO_OUT1 */
   }
-  WRITE_PERI_REG(reg, (1 << pin));
+  DPORT_WRITE_PERI_REG(reg, (1 << pin));
 }
 
 IRAM bool mgos_gpio_read_out(int pin) {
