@@ -27,14 +27,13 @@
  * JavaScript based apps do - they do not contain C code at all.
  */
 
-#ifndef CS_FW_INCLUDE_MGOS_APP_H_
-#define CS_FW_INCLUDE_MGOS_APP_H_
+#pragma once
 
 #include "mgos_features.h"
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* __cplusplus */
+#endif
 
 enum mgos_app_init_result {
   MGOS_APP_INIT_SUCCESS = 0,
@@ -71,8 +70,17 @@ enum mgos_app_init_result mgos_app_init(void);
  */
 void mgos_app_preinit(void);
 
+/*
+ * Information about libraries used by the firmware.
+ */
+struct mgos_lib_info {
+  const char *name;
+  const char *version;
+  bool (*init)(void);
+};
+extern const struct mgos_lib_info mgos_libs_info[];
+#define MGOS_LIB_INFO_VERSION 1
+
 #ifdef __cplusplus
 }
-#endif /* __cplusplus */
-
-#endif /* CS_FW_INCLUDE_MGOS_APP_H_ */
+#endif
