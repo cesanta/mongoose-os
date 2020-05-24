@@ -211,6 +211,9 @@ void (*mgos_nsleep100)(uint32_t n);
 uint32_t mgos_bitbang_n100_cal;
 
 enum mgos_init_result mgos_gpio_hal_init(void) {
+  for (int i = 0; i < 16; i++) {
+    mgos_gpio_hal_disable_int(i);
+  }
 #ifdef RTOS_SDK
   _xt_isr_attach(ETS_GPIO_INUM, (void *) esp8266_gpio_isr, NULL);
   _xt_isr_unmask(1 << ETS_GPIO_INUM);
