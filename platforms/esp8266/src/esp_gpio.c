@@ -191,8 +191,12 @@ IRAM bool mgos_gpio_read_out(int pin) {
 IRAM static void esp8266_gpio_isr(void *arg) {
   uint32_t int_st = GPIO_REG_READ(GPIO_STATUS_ADDRESS);
   for (uint32_t i = 0, mask = 1; i < 16; i++, mask <<= 1) {
-    if (!(s_int_config[i] & INT_ENA) || !(int_st & mask)) continue;
-    mgos_gpio_hal_int_cb(i);
+    if (!(int_st & mask)) continue;
+    if (s_int_config[i] & INT_ENA) {
+      mgos_gpio_hal_int_cb(i);
+    } else {
+      mgos_gpio_hal_clear_int(i);
+    }
   }
   (void) arg;
 }
