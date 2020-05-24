@@ -248,8 +248,12 @@ bool mgos_gpio_hal_set_int_mode(int pin, enum mgos_gpio_int_mode mode) {
     default:
       return false;
   }
-  s_int_config[pin] = it;
-  gpio_pin_intr_state_set(GPIO_ID_PIN(pin), it);
+  if (s_int_config[pin] & INT_ENA) {
+    s_int_config[pin] = (INT_ENA | it);
+    gpio_pin_intr_state_set(GPIO_ID_PIN(pin), it);
+  } else {
+    s_int_config[pin] = it;
+  }
   return true;
 }
 
