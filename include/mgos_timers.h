@@ -130,9 +130,6 @@ mgos_timer_id mgos_set_hw_timer(int usecs, int flags, timer_callback cb,
  */
 void mgos_clear_timer(mgos_timer_id id);
 
-/* Get number of seconds since last reboot */
-double mgos_uptime(void);
-
 /*
  * Format `time` according to a `strftime()`-conformant format.
  * Write the result into the `s,size` buffer. Return resulting string length.
