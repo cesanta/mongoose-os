@@ -52,6 +52,21 @@ IRAM bool esp32_uart_cts(int uart_no) {
   return (DPORT_READ_PERI_REG(UART_STATUS_REG(uart_no)) & UART_CTSN) ? 1 : 0;
 }
 
+IRAM static int esp32_uart_rx_fifo_cnt(int uart_no) {
+  uint32_t base = REG_UART_BASE(uart_no);
+  uint32_t status_reg = base + 0x1c;
+  uint32_t mem_cnt_status_reg = base + 0x64;
+  uint32_t n1, n2;
+  // Ensure consistent reading.
+  do {
+    n1 = ((DPORT_REG_GET_FIELD(mem_cnt_status_reg, UART_RX_MEM_CNT) << 8) |
+          DPORT_REG_GET_FIELD(status_reg, UART_RXFIFO_CNT));
+    n2 = ((DPORT_REG_GET_FIELD(mem_cnt_status_reg, UART_RX_MEM_CNT) << 8) |
+          DPORT_REG_GET_FIELD(status_reg, UART_RXFIFO_CNT));
+  } while (n1 != n2);
+  return n1;
+}
+
 IRAM void get_rx_addrs(int uart_no, uint32_t *rd, uint32_t *wr) {
   uint32_t mrxs = DPORT_READ_PERI_REG(UART_MEM_RX_STATUS_REG(uart_no));
   if (rd) *rd = ((mrxs & UART_MEM_RX_RD_ADDR_M) >> UART_MEM_RX_RD_ADDR_S);
@@ -63,11 +78,16 @@ IRAM void get_rx_addrs(int uart_no, uint32_t *rd, uint32_t *wr) {
 IRAM int esp32_uart_rx_fifo_len(int uart_no) {
   uint32_t rd_addr, wr_addr;
   get_rx_addrs(uart_no, &rd_addr, &wr_addr);
-  if (rd_addr <= wr_addr) {
+  if (rd_addr < wr_addr) {
     return wr_addr - rd_addr;
   }
   uint32_t fifo_size = (uart_no == 2 ? 384 : 128);
-  return (fifo_size + wr_addr - rd_addr);
+  if (rd_addr > wr_addr) {
+    return (fifo_size + wr_addr - rd_addr);
+  }
+  /* rd_addr == wr_addr means either FIFO is empty or completely full.
+   * Here we consult fifo_cnt to determine which is it. */
+  return esp32_uart_rx_fifo_cnt(uart_no);
 }
 
 IRAM static int rx_byte(int uart_no) {
@@ -142,21 +162,15 @@ IRAM static void empty_rx_fifo(int uart_no) {
    * https://github.com/espressif/esp-idf/commit/4052803e161ba06d1cae8d36bc66dde15b3fc8c7
    * So, like ESP-IDF, we avoid using FIFO_RST and empty RX FIFO by reading it.
    */
-  while ((esp32_uart_rx_fifo_len(uart_no) > 0)) {
+  while (esp32_uart_rx_fifo_len(uart_no) > 0) {
     (void) rx_byte(uart_no);
   }
 }
 
 IRAM NOINSTR static void esp32_handle_uart_int(struct mgos_uart_state *us) {
   const int uart_no = us->uart_no;
-  /*
-   * Since both UARTs use the same int, we need to apply the mask manually.
-   * TODO(rojer): This was for ESP8266, may no longer be needed for ESP32.
-   */
-  const unsigned int int_st = DPORT_READ_PERI_REG(UART_INT_ST_REG(uart_no)) &
-                              DPORT_READ_PERI_REG(UART_INT_ENA_REG(uart_no));
   struct esp32_uart_state *uds = (struct esp32_uart_state *) us->dev_data;
-  if (int_st == 0) return;
+  const unsigned int int_st = DPORT_READ_PERI_REG(UART_INT_ST_REG(uart_no));
   us->stats.ints++;
   if (int_st & UART_RXFIFO_OVF_INT_ST) {
     us->stats.rx_overflows++;
