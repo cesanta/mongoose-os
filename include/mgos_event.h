@@ -101,6 +101,7 @@ enum mgos_event_sys {
    */
   MGOS_EVENT_CLOUD_CONNECTED,
   MGOS_EVENT_CLOUD_DISCONNECTED,
+  MGOS_EVENT_CLOUD_CONNECTING,
 };
 
 /* Parameter for the MGOS_EVENT_CLOUD_* events */
