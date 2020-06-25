@@ -26,12 +26,14 @@ extern void arm_exc_handler_top(void);
 extern uint32_t _stack;
 extern uint32_t _bss_start, _bss_end;
 extern uint32_t _data_start, _data_end, _data_flash_start;
+extern uint32_t _heap_start, _heap_end;
 
 /* The main entry point of the program */
 void stm32_entry(void) {
   memset(&_bss_start, 0, ((char *) &_bss_end - (char *) &_bss_start));
   memcpy(&_data_start, &_data_flash_start,
          ((char *) &_data_end - (char *) &_data_start));
+  memset(&_heap_start, 0, ((char *) &_heap_end - (char *) &_heap_start));
   main();
   while (1) {
   }

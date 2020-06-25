@@ -163,6 +163,7 @@ MGOS_SRCS += $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
              stm32_hal.c stm32_ints.c stm32_hw_timers.c \
              stm32_libc.c \
              stm32_main.c stm32_uart.c \
+             umm_malloc.c \
              error_codes.cpp status.cpp
 
 STM32_IPATH += $(STM32CUBE_PATH)/Drivers/CMSIS/Include
