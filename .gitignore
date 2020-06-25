@@ -1,0 +1,6 @@
+.vscode
+.idea
+build
+build/***
+core-*
+
