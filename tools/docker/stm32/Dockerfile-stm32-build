@@ -46,6 +46,6 @@ ADD serve_core/ /opt/serve_core/
 RUN ln -s /opt/serve_core/serve_core.py /usr/local/bin/serve_core.py
 
 ARG DOCKER_TAG
-ENV MGOS_TARGET_GDB /usr/bin/arm-none-eabi-gdb
+ENV MGOS_TARGET_GDB /usr/bin/gdb-multiarch
 ENV MGOS_SDK_REVISION $DOCKER_TAG
 ENV MGOS_SDK_BUILD_IMAGE docker.io/mgos/stm32-build:$DOCKER_TAG

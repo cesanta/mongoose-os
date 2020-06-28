@@ -75,7 +75,7 @@ NOINSTR void mgos_cd_write_section(const char *name, const void *p,
   cs_base64_init(&ctx.b64_ctx, write_char, &ctx);
   mgos_cd_printf(",\r\n\"%s\": {\"addr\": %lu, \"data\": \"\r\n", name,
                  (unsigned long) p);
-
+  mgos_wdt_feed();
   const uint32_t *dp = (const uint32_t *) p;
   const uint32_t *end = dp + (len / sizeof(uint32_t));
   while (dp < end) {

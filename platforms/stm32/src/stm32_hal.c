@@ -133,10 +133,9 @@ IRAM static void stm32_wwdg_int_handler(void) {
       // Refresh one last time to get the message out.
       WRITE_REG(hwwdg.Instance->CR, hwwdg.Init.Counter);
       mgos_cd_printf("!! WDT\n");
-      // TODO(rojer): Trigger core dump.
-      // Do not refresh anymore, WDT will reset the device soon.
-      while (1) {
-      }
+      // Trigger core dump.
+      abort();
+      // Not reached.
     }
   } else {
     WRITE_REG(hwwdg.Instance->CR, hwwdg.Init.Counter);
