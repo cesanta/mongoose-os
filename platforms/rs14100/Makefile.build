@@ -230,7 +230,7 @@ C_CXX_FLAGS = -Os -ggdb -MD -Wall -Wextra -Werror -Wundef -pipe \
               $(RS14100_CFLAGS)
 
 CFLAGS = -std=gnu99 $(C_CXX_FLAGS) $(APP_CFLAGS)
-CXXFLAGS = -std=gnu++11 -fno-exceptions $(C_CXX_FLAGS) $(APP_CXXFLAGS)
+CXXFLAGS = -std=gnu++11 -fno-exceptions -fno-rtti $(C_CXX_FLAGS) $(APP_CXXFLAGS)
 
 LDFLAGS += -Wl,--defsym=SRAM_BASE=$(SRAM_BASE) -Wl,--defsym=SRAM_SIZE=$(RS14100_SRAM_SIZE) \
            -Wl,--defsym=FLASH_BASE=$(FLASH_BASE) -Wl,--defsym=FLASH_SIZE=$(FLASH_SIZE) \

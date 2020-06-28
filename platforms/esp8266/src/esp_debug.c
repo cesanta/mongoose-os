@@ -36,7 +36,7 @@
 static struct udp_pcb *s_upcb = NULL;
 static ip_addr_t s_dst;
 static uint16_t s_port;
-static bool s_cb_pending;
+static int s_cb_pending;
 static struct mbuf s_to_send;
 
 enum mgos_init_result mgos_debug_udp_init(const char *dst) {

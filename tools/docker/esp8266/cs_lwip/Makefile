@@ -34,8 +34,8 @@ INCDIRS = $(addprefix -I,$(IPATH))
 # Lowering TCP_MSL avoids long TIME_WAIT and LAST_ACK states.
 
 CFLAGS += -w -DLWIP_OPEN_SRC -DPBUF_RSV_FOR_WLAN -DEBUF_LWIP \
-          -DLWIP_RANDOMIZE_INITIAL_LOCAL_PORTS -DLWIP_RAND=os_random \
-          -DTCP_MSL=3000 $(CFLAGS_EXTRA)
+          -DLWIP_RAND=os_random \
+          $(CFLAGS_EXTRA)
 
 all: $(BUILD_DIR) $(APP_AR)
 
