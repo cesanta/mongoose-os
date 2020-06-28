@@ -1,4 +1,6 @@
 MKSPIFFS ?= /usr/local/bin/mkspiffs
+MGOS_ROOT_FS_OPTS_SPIFFS ?=
+MGOS_ROOT_FS_OPTS_LFS ?=
 
 FS_FILES ?=
 ifneq "$(APP_FS_FILES)" ""

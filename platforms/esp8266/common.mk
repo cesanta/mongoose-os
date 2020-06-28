@@ -40,6 +40,7 @@ endef
 C_CXX_FLAGS  = -W -Wall -Werror -Wundef -Wno-array-bounds \
                -Wno-error=unused-const-variable \
                -Wno-address-of-packed-member \
+               -Wno-error=format-truncation \
                -pipe -Os -g3 \
                -D_XOPEN_SOURCE=500 \
                -nostdlib -mlongcalls -mtext-section-literals -D__ets__ \
