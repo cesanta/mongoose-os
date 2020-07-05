@@ -11,20 +11,27 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
 
 RUN useradd -d /opt/Espressif -m -s /bin/bash user && chown -R user /opt
 
-ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/Espressif/esp-open-sdk/xtensa-lx106-elf/bin
+ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/Espressif/xtensa-lx106-elf/bin
 ADD ct_path.sh /etc/profile.d
 
 USER user
 
+ARG TOOLCHAIN_TAG
+RUN git clone -b $TOOLCHAIN_TAG --depth 1 --recursive --shallow-submodules \
+      https://github.com/mongoose-os/esp-open-sdk /opt/Espressif/esp-open-sdk && \
+    nice make -C /opt/Espressif/esp-open-sdk toolchain fullclean
+
 ARG DOCKER_TAG
-RUN git clone -b $DOCKER_TAG --depth 1 https://github.com/mongoose-os/esp-open-sdk /opt/Espressif/esp-open-sdk && \
-    cd /opt/Espressif/esp-open-sdk && \
+RUN cd /opt/Espressif/esp-open-sdk && \
+    git fetch origin $DOCKER_TAG && \
+    git checkout FETCH_HEAD && \
     git submodule update --init && \
-    nice make && rm -rf crosstool-ng
+    make -C /opt/Espressif/esp-open-sdk sdk libs BUILD_TOOLCHAIN=n && \
+    ln -s /opt/Espressif/esp-open-sdk/sdk /opt/Espressif/ESP8266_NONOS_SDK && \
+    make -C /opt/Espressif/esp-open-sdk lwip2 lwip2-clean \
+      LWIP14_INCLUDE_DIR=/opt/Espressif/esp-open-sdk/sdk/third_party/include
 
 USER root
-
-RUN ln -s /opt/Espressif/esp-open-sdk/sdk /opt/Espressif/ESP8266_NONOS_SDK
 
 RUN cd /opt/Espressif/ESP8266_NONOS_SDK/lib && \
     xtensa-lx106-elf-ar -x libmain.a && \
@@ -41,14 +48,13 @@ RUN mv /opt/Espressif/ESP8266_NONOS_SDK/lib/libc.a /opt/Espressif/ESP8266_NONOS_
     mv /opt/Espressif/ESP8266_NONOS_SDK/lib/libgcc.a /opt/Espressif/ESP8266_NONOS_SDK/lib/libgcc_sdk.a && \
     mv /opt/Espressif/ESP8266_NONOS_SDK/lib/libhal.a /opt/Espressif/ESP8266_NONOS_SDK/lib/libhal_sdk.a
 
-ADD cs_lwip /opt/Espressif/cs_lwip
 ADD rom.bin rom.elf /opt/Espressif/rom/
 
 ADD mgos_fw_meta.py mklfs mkspiffs mkspiffs8 /usr/local/bin/
 ADD serve_core/ /opt/serve_core/
 RUN ln -s /opt/serve_core/serve_core.py /usr/local/bin/serve_core.py
 
-ENV MGOS_TARGET_GDB=/opt/Espressif/esp-open-sdk/xtensa-lx106-elf/bin/xtensa-lx106-elf-gdb
+ENV MGOS_TARGET_GDB=/opt/Espressif/xtensa-lx106-elf/bin/xtensa-lx106-elf-gdb
 ARG DOCKER_TAG
 ENV MGOS_SDK_REVISION $DOCKER_TAG
 ENV MGOS_SDK_BUILD_IMAGE docker.io/mgos/esp8266-build:$DOCKER_TAG

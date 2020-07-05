@@ -13,6 +13,8 @@ typedef unsigned char uint8;
 
 #include "rboot.h"
 
+#include <stdint.h>
+
 #ifndef NOINLINE
 #define NOINLINE __attribute__((noinline))
 #endif
@@ -34,7 +36,7 @@ typedef unsigned char uint8;
 
 // esp8266 built in rom functions
 extern void ets_printf(const char*, ...);
-extern uint32 SPIRead(uint32 addr, void *outptr, uint32 len);
+extern uint32_t SPIRead(uint32_t addr, void *outptr, uint32_t len);
 extern uint32 SPIEraseSector(int);
 extern uint32 SPIWrite(uint32 addr, void *inptr, uint32 len);
 
@@ -74,5 +76,5 @@ typedef struct {
 
 void *ets_memcpy(void *dest, const void *src, unsigned int nbyte);
 void *ets_memset(void *dest, int val, unsigned int nbyte);
-void ets_delay_us(uint32 us);
+void ets_delay_us(uint32_t us);
 void uart_div_modify(uint8 uart_no, uint32 DivLatchValue);

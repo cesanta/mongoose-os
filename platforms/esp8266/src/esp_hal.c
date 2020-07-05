@@ -35,6 +35,7 @@
 #include "mgos_debug.h"
 #include "mgos_hal.h"
 #include "mgos_mongoose.h"
+#include "mgos_time.h"
 #include "mgos_timers.h"
 
 #include "esp_hw_wdt.h"
@@ -135,4 +136,9 @@ IRAM void mgos_rlock_destroy(struct mgos_rlock_type *l) {
 
 uint32_t mgos_get_cpu_freq(void) {
   return system_get_cpu_freq() * 1000000;
+}
+
+// For LwIP
+uint32_t sys_now(void) {
+  return mgos_uptime_micros() / 1000;
 }

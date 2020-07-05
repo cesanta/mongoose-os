@@ -134,7 +134,7 @@ LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip
 include $(MGOS_PATH)/tools/mk/mgos_features.mk
 
 # libraries used in this project, mainly provided by the SDK
-SDK_LIBS = c crypto espnow gcc main net80211 pp phy stdc++ wpa wpa2
+SDK_LIBS = c crypto espnow gcc m main net80211 pp phy stdc++ wpa wpa2
 LIBS = $(addprefix -l,$(SDK_LIBS))
 
 SHIMS = -DNDEBUG
@@ -161,8 +161,11 @@ MEMORY_FLAGS = -DFS_MAX_OPEN_FILES=5
 
 .PHONY: all clean
 
-LWIP_CFLAGS = -DTCP_MSS=536 -DTCP_MSL=3000 -DLWIP_RANDOMIZE_INITIAL_LOCAL_PORTS \
+# NB: These setting must match ones used during build of the LwIP library during Docker image build.
+LWIP_CFLAGS = -DTCP_MSS=536 -DTCP_MSL=5000 -DLWIP_FEATURES=1 -DLWIP_IPV6=0 -DLWIP_COMPAT_SOCKETS=0 \
               -I$(MGOS_PATH)/include
+LIBS += -llwip2-536-feat
+IPATH += /opt/Espressif/xtensa-lx106-elf/xtensa-lx106-elf/sysroot/usr/include/lwip2
 
 MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" \
               -DMGOS_MAX_NUM_UARTS=2 \
@@ -188,40 +191,11 @@ IMAGE_HEADER_SIZE = 0
 MAP_FILE = $(BUILD_DIR)/$(APP).elf.map
 FS_IMG = $(FW_STAGING_DIR)/fs.bin
 
-ifeq "$(MGOS_ESP8266_RTOS)" "1"
-  SDK_PATH = /opt/Espressif/ESP8266_RTOS_SDK
-  MGOS_SRCS += esp_exc_rtos.c
-  MGOS_CFLAGS += -DRTOS_SDK
-  LWIP_LIB =
-  LWIP_PATH = $(SDK_PATH)/lwip
-  SDK_LIBS += freertos lwip mirom
-  IPATH += $(SDK_PATH)/include/espressif \
-           $(SDK_PATH)/extra_include \
-           $(SDK_PATH)/include/lwip/ipv4 \
-           $(SDK_PATH)/include/lwip/ipv6
-  LD_SCRIPT_TEMPL = $(MGOS_ESP8266_PATH)/ld/rtos.ld
-  LDFLAGS += -Wl,--wrap=user_fatal_exception_handler \
-             -Wl,--wrap=ShowCritical
-else
-  SDK_PATH = /opt/Espressif/ESP8266_NONOS_SDK
-  MGOS_SRCS += esp_exc_non_os.c
-  MGOS_CFLAGS += -DLWIP_OPEN_SRC \
-                 -DCS_MMAP -DSPIFFS_ON_PAGE_MOVE_HOOK=mgos_vfs_mmap_spiffs_on_page_move_hook
-  LWIP_LIB = $(LWIP_BUILD_DIR)/liblwip_cs.a
-  LWIP_PATH = /opt/Espressif/cs_lwip
-  SDK_LIBS += m
-  IPATH += $(LWIP_PATH)/src/include \
-           $(LWIP_PATH)/src/include/ipv4 \
-           $(LWIP_PATH)/espressif/include
-  LD_SCRIPT_TEMPL = $(MGOS_ESP8266_PATH)/ld/non_os.ld
-
-$(LWIP_LIB): $(LWIP_PATH)
-	$(Q) mkdir -p $(abspath $(LWIP_BUILD_DIR))
-	$(Q) $(MAKE) -C $(LWIP_PATH) -j3 all \
-	  APP=liblwip_cs BUILD_DIR=$(abspath $(LWIP_BUILD_DIR)) \
-	  COMMON_ESP8266_PATH=$(MGOS_ESP8266_PATH) \
-	  CFLAGS_EXTRA="$(LWIP_CFLAGS) $(HEAP_LOG_FLAGS)"
-endif
+SDK_PATH = /opt/Espressif/ESP8266_NONOS_SDK
+MGOS_SRCS += esp_exc_non_os.c
+MGOS_CFLAGS += -DLWIP_OPEN_SRC \
+               -DCS_MMAP -DSPIFFS_ON_PAGE_MOVE_HOOK=mgos_vfs_mmap_spiffs_on_page_move_hook
+LD_SCRIPT_TEMPL = $(MGOS_ESP8266_PATH)/ld/non_os.ld
 
 MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o)) \
             $(BUILD_DIR)/esp_exc_vectors.S.o \
@@ -375,7 +349,7 @@ $(APP_BIN): $(APP_ELF) $(BUILD_DIR)/esptool2
 # -- Linking.
 
 # Link the main ELF output file.
-BIN_PARTS = $(BUILD_DIR)/esp_cache.c.o $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(LWIP_LIB) $(APP_BIN_LIB_FILES)
+BIN_PARTS = $(BUILD_DIR)/esp_cache.c.o $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(APP_BIN_LIB_FILES)
 $(APP_ELF): $(BIN_PARTS) $(LD_SCRIPT)
 ifeq "$(MGOS_ESP8266_RTOS)" "1"
 	$(OBJCOPY) --weaken-symbol printf --weaken-symbol puts /opt/Espressif/esp-open-sdk/xtensa-lx106-elf/xtensa-lx106-elf/lib/libc.a

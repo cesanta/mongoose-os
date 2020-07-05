@@ -1,6 +1,6 @@
 CFLAGS_EXTRA ?=
 
-XTENSA_TOOLS_ROOT ?= /opt/Espressif/esp-open-sdk/xtensa-lx106-elf/bin
+XTENSA_TOOLS_ROOT ?= /opt/Espressif/xtensa-lx106-elf/bin
 SDK_PATH ?= /opt/Espressif/ESP8266_SDK
 ESPTOOL ?= esptool.py
 ESPPORT ?= /dev/ttyACM0
@@ -37,7 +37,7 @@ define compile_cxx
 $(call compile_params,$<,$@, $(CXX), $(CXXFLAGS),"CXX")
 endef
 
-C_CXX_FLAGS  = -W -Wall -Werror -Wundef -Wno-array-bounds \
+C_CXX_FLAGS  = -Wall -Werror -Wundef -Wno-array-bounds \
                -Wno-error=unused-const-variable \
                -Wno-address-of-packed-member \
                -Wno-error=format-truncation \
@@ -47,6 +47,7 @@ C_CXX_FLAGS  = -W -Wall -Werror -Wundef -Wno-array-bounds \
                -include mgos_iram.h \
                -DICACHE_RAM_ATTR=IRAM \
                -DNOINSTR='__attribute__((no_instrument_function))' \
+               -I/opt/Espressif/xtensa-lx106-elf/xtensa-lx106-elf/sysroot/usr/include \
                -DCS_PLATFORM=CS_P_ESP8266 \
                -ffunction-sections -fdata-sections
 

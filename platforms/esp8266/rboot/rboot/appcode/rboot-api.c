@@ -57,7 +57,7 @@ bool ICACHE_FLASH_ATTR rboot_set_config(rboot_config *conf) {
 	memset(buffer, 0xff, sizeof(buffer));
 	memcpy(buffer, conf, sizeof(*conf));
 	if (spi_flash_erase_sector(BOOT_CONFIG_SECTOR) != SPI_FLASH_RESULT_OK ||
-		spi_flash_write(BOOT_CONFIG_SECTOR * SECTOR_SIZE, buffer, sizeof(buffer)) != SPI_FLASH_RESULT_OK) {
+		spi_flash_write(BOOT_CONFIG_SECTOR * SECTOR_SIZE, (uint32 *) buffer, sizeof(buffer)) != SPI_FLASH_RESULT_OK) {
 		return false;
 	}
 	return true;

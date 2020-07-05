@@ -56,12 +56,6 @@ void _xtos_l1int_handler(void);
 void _xtos_set_exception_handler();
 void xthal_set_intenable(unsigned);
 
-/* These are present in mem.h but are commented out. */
-void *pvPortMalloc(size_t xWantedSize, const char *file, int line);
-void vPortFree(void *pv, const char *file, int line);
-void *pvPortZalloc(size_t size, const char *file, int line);
-void *pvPortRealloc(void *pv, size_t size, const char *file, int line);
-
 #else /* !RTOS_SDK */
 
 #define BIT(nr) (1UL << (nr))

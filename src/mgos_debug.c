@@ -90,7 +90,7 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
         buf, sizeof(buf), "%s %u %.3lf %d|",
         (mgos_sys_config_get_device_id() ? mgos_sys_config_get_device_id()
                                          : "-"),
-        s_seq, mg_time(), fd);
+        (unsigned int) s_seq, mg_time(), fd);
     if (n > 0) {
       mgos_debug_udp_send(mg_mk_str_n(buf, n), mg_mk_str_n(data, len));
     }
