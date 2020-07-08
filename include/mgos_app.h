@@ -29,6 +29,8 @@
 
 #pragma once
 
+#include <stdbool.h>
+
 #include "mgos_features.h"
 
 #ifdef __cplusplus
