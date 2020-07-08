@@ -2,16 +2,18 @@
 
 Mongoose OS libraries are maintained as separate repositores under the [mongoose-os-libs](https://github.com/mongoose-os-libs) organization.
 
-Here's a list as of 2019/04/30:
+Here's a list as of 2019/07/08:
 
 | Name | Description |
 | ---- | ----------- |
 | [adc](https://github.com/mongoose-os-libs/adc) | ADC support |
+| [ade7953](https://github.com/mongoose-os-libs/ade7953) | I2C Driver for ADE7953 Power Measurement IC |
 | [ads1x1x-i2c](https://github.com/mongoose-os-libs/ads1x1x-i2c) | ADS101X and ADS111X I2C drivers |
 | [ads7843-spi](https://github.com/mongoose-os-libs/ads7843-spi) |  |
 | [apds9960-i2c](https://github.com/mongoose-os-libs/apds9960-i2c) | Mongoose OS library for APDS-9960 |
 | [arduino-adafruit-ads1x15](https://github.com/mongoose-os-libs/arduino-adafruit-ads1x15) | Arduino Adafruit ADS1015 library for Mongoose OS |
 | [arduino-adafruit-bme280](https://github.com/mongoose-os-libs/arduino-adafruit-bme280) |  |
+| [arduino-adafruit-epd](https://github.com/mongoose-os-libs/arduino-adafruit-epd) | Adafruit E-Paper / E-Ink Library for Mongoose OS |
 | [arduino-adafruit-gfx](https://github.com/mongoose-os-libs/arduino-adafruit-gfx) |  |
 | [arduino-adafruit-htu21df](https://github.com/mongoose-os-libs/arduino-adafruit-htu21df) |  |
 | [arduino-adafruit-pwm-servo](https://github.com/mongoose-os-libs/arduino-adafruit-pwm-servo) | Arduino Adafruit PWM servo library |
@@ -25,6 +27,7 @@ Here's a list as of 2019/04/30:
 | [arduino-pololu-vl53l0x](https://github.com/mongoose-os-libs/arduino-pololu-vl53l0x) |  |
 | [arduino-spi](https://github.com/mongoose-os-libs/arduino-spi) |  |
 | [arduino-wire](https://github.com/mongoose-os-libs/arduino-wire) |  |
+| [as7262](https://github.com/mongoose-os-libs/as7262) | Mongoose OS library implementing an I2C driver for AS7262 |
 | [atca](https://github.com/mongoose-os-libs/atca) |  |
 | [aws](https://github.com/mongoose-os-libs/aws) | Amazon AWS IoT integration with Mongoose OS |
 | [azure](https://github.com/mongoose-os-libs/azure) | Azure IoT Hub support library for Mongoose OS |
@@ -34,8 +37,11 @@ Here's a list as of 2019/04/30:
 | [blynk](https://github.com/mongoose-os-libs/blynk) | Blynk integration library for Mongoose OS |
 | [bm222](https://github.com/mongoose-os-libs/bm222) | A Bosch BM222 accelerometer library |
 | [bme280](https://github.com/mongoose-os-libs/bme280) |  |
+| [bme680](https://github.com/mongoose-os-libs/bme680) | Bosch BME680 driver for Mongoose OS + BSEC library |
+| [bmp-loader](https://github.com/mongoose-os-libs/bmp-loader) | A wrapper for the libbmpread library by Charles Lindsay |
 | [boards](https://github.com/mongoose-os-libs/boards) | Board configuration defs |
 | [bootloader](https://github.com/mongoose-os-libs/bootloader) | Boot loader support library |
+| [bq27421](https://github.com/mongoose-os-libs/bq27421) | Mongoose OS Driver for TI BQ27421 Fuel Gauge |
 | [bt-common](https://github.com/mongoose-os-libs/bt-common) | Common bits of Bluetooth support |
 | [bt-service-config](https://github.com/mongoose-os-libs/bt-service-config) | System Configuration over Bluetooth GATT Service |
 | [bt-service-debug](https://github.com/mongoose-os-libs/bt-service-debug) | Debug over Bluetooth GATT Service |
@@ -49,15 +55,20 @@ Here's a list as of 2019/04/30:
 | [dash](https://github.com/mongoose-os-libs/dash) |  |
 | [demo-bundle](https://github.com/mongoose-os-libs/demo-bundle) |  |
 | [dht](https://github.com/mongoose-os-libs/dht) |  |
-| [dns-sd](https://github.com/mongoose-os-libs/dns-sd) |  |
+| [dns-sd](https://github.com/mongoose-os-libs/dns-sd) | DNS-SD/Bonjour protocol support library |
+| [ds18b20](https://github.com/mongoose-os-libs/ds18b20) | DS18B20 Library for the ESP32 |
 | [ds3231](https://github.com/mongoose-os-libs/ds3231) |  |
 | [empty](https://github.com/mongoose-os-libs/empty) | A blank Mongoose OS library |
 | [esp32-touchpad](https://github.com/mongoose-os-libs/esp32-touchpad) | JS bindings for ESP32 touch pad sensor |
 | [ethernet](https://github.com/mongoose-os-libs/ethernet) | Ethernet support |
 | [file-logger](https://github.com/mongoose-os-libs/file-logger) |  |
+| [fingerprint](https://github.com/mongoose-os-libs/fingerprint) | Popular UART based fingerprint driver |
 | [freertos](https://github.com/mongoose-os-libs/freertos) | FreeRTOS Kernel |
 | [fstab](https://github.com/mongoose-os-libs/fstab) | Storage device and filesystem init table |
 | [gcp](https://github.com/mongoose-os-libs/gcp) | Google IoT Core integration for Mongoose OS |
+| [hd44780](https://github.com/mongoose-os-libs/hd44780) | A library used to control a HD44780 LCD display without an I2C module that is commonly attached to it |
+| [homeassistant](https://github.com/mongoose-os-libs/homeassistant) | Home Assistant integration using MQTT |
+| [homekit-adk](https://github.com/mongoose-os-libs/homekit-adk) | Port of Apple's HomeKit ADK to Mongoose OS |
 | [http-server](https://github.com/mongoose-os-libs/http-server) |  |
 | [htu21df-i2c](https://github.com/mongoose-os-libs/htu21df-i2c) | Mongoose OS library implementing an I2C driver for HTU21D(F) |
 | [i2c](https://github.com/mongoose-os-libs/i2c) |  |
@@ -70,12 +81,15 @@ Here's a list as of 2019/04/30:
 | [js-demo-bundle](https://github.com/mongoose-os-libs/js-demo-bundle) |  |
 | [jstore](https://github.com/mongoose-os-libs/jstore) |  |
 | [location](https://github.com/mongoose-os-libs/location) |  |
+| [log-store](https://github.com/mongoose-os-libs/log-store) | A library for efficiently storing log-like data |
+| [lolin-button](https://github.com/mongoose-os-libs/lolin-button) | Mongoose OS driver for the I2C button found on WEMOS/LOLIN OLED shield |
 | [lwip](https://github.com/mongoose-os-libs/lwip) | LwIP TCP/IP stack |
 | [max7219-spi](https://github.com/mongoose-os-libs/max7219-spi) | MAX7219/MAX7221 SPI based LED display driver. |
 | [mbedtls](https://github.com/mongoose-os-libs/mbedtls) | Optimized version of mbedTLS |
 | [mcp23xxx](https://github.com/mongoose-os-libs/mcp23xxx) | Mongoose OS Library for MCP23x08/MCP23x17: an 8/16-port GPIO expander w/ interrupt support |
 | [mcp9808-i2c](https://github.com/mongoose-os-libs/mcp9808-i2c) | Mongoose OS library implementing an I2C driver for MCP9808 |
 | [md-max72xx](https://github.com/mongoose-os-libs/md-max72xx) |  |
+| [mdash-api](https://github.com/mongoose-os-libs/mdash-api) | Use mDash API to set a device label and create the UI |
 | [miniz](https://github.com/mongoose-os-libs/miniz) | Miniz compression library |
 | [mjs](https://github.com/mongoose-os-libs/mjs) | Embedded JavaScript engine for Mongoose OS |
 | [mongoose](https://github.com/mongoose-os-libs/mongoose) | Mongoose Embedded Web Server Library |
@@ -88,7 +102,8 @@ Here's a list as of 2019/04/30:
 | [ota-http-client](https://github.com/mongoose-os-libs/ota-http-client) |  |
 | [ota-http-server](https://github.com/mongoose-os-libs/ota-http-server) |  |
 | [ota-shadow](https://github.com/mongoose-os-libs/ota-shadow) |  |
-| [pcf857x-i2c](https://github.com/mongoose-os-libs/pcf857x-i2c) | Mongoose OS Library for PCF8574: an 8-port GPIO expander w/ interrupt support |
+| [pca9685](https://github.com/mongoose-os-libs/pca9685) | I2C driver for PCA9685, 16 channel 12 bit PWM controller |
+| [pcf857x-i2c](https://github.com/mongoose-os-libs/pcf857x-i2c) | Mongoose OS Library for PCF857x: an 8- and 16-port GPIO expander w/ interrupt support |
 | [pppos](https://github.com/mongoose-os-libs/pppos) | PPPoS / cellullar modem support |
 | [prometheus-metrics](https://github.com/mongoose-os-libs/prometheus-metrics) |  |
 | [prometheus-sensors](https://github.com/mongoose-os-libs/prometheus-sensors) | A library that takes measurements of popular sensors on I2C/SPI and forwards them to Prometheus |
@@ -110,6 +125,7 @@ Here's a list as of 2019/04/30:
 | [rpc-service-ota](https://github.com/mongoose-os-libs/rpc-service-ota) |  |
 | [rpc-service-wifi](https://github.com/mongoose-os-libs/rpc-service-wifi) |  |
 | [rpc-uart](https://github.com/mongoose-os-libs/rpc-uart) |  |
+| [rpc-udp](https://github.com/mongoose-os-libs/rpc-udp) | Implementation of Mongoose OS RPC over UDP |
 | [rpc-ws](https://github.com/mongoose-os-libs/rpc-ws) | WebSocket channel support for mgRPC |
 | [sensor-utils](https://github.com/mongoose-os-libs/sensor-utils) | For Mongoose OS - A collection of C-functions with JS wrappers that make it convenient to calculate ... |
 | [shadow](https://github.com/mongoose-os-libs/shadow) |  |
@@ -135,3 +151,5 @@ Here's a list as of 2019/04/30:
 | [wifi](https://github.com/mongoose-os-libs/wifi) |  |
 | [wifi-ism43xxx](https://github.com/mongoose-os-libs/wifi-ism43xxx) | Inventek es-WiFi module driver for Mongoose OS |
 | [wifi-setup-web-ui](https://github.com/mongoose-os-libs/wifi-setup-web-ui) |  |
+
+Command used to generate this list: `tools/list_repos.py --org mongoose-os-libs >> libs/README.md`
