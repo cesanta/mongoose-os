@@ -7,13 +7,13 @@
 
 #pragma once
 
-typedef int int32;
-typedef unsigned int uint32;
-typedef unsigned char uint8;
+#include <stdint.h>
+
+typedef int32_t int32;
+typedef uint32_t uint32;
+typedef uint8_t uint8;
 
 #include "rboot.h"
-
-#include <stdint.h>
 
 #ifndef NOINLINE
 #define NOINLINE __attribute__((noinline))

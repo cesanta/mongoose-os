@@ -41,8 +41,6 @@ uint32_t SPIRead(uint32_t addr, void *dst, uint32_t size);
 #include <ets_sys.h>
 
 /* There are no declarations for these anywhere in the SDK (as of 1.2.0). */
-void ets_isr_mask(unsigned intr);
-void ets_isr_unmask(unsigned intr);
 void system_restart_local(void);
 int os_printf_plus(const char *format, ...);
 
