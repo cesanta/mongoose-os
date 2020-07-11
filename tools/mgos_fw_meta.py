@@ -466,7 +466,7 @@ const unsigned int %s_len = %u;\
 
 if __name__ == '__main__':
     handlers = {}
-    parser = argparse.ArgumentParser(description='FW metadata tool', prog='fw_meta')
+    parser = argparse.ArgumentParser(description='Mopngoose OS metadata tool', prog='mgos_fw_meta')
     cmd = parser.add_subparsers(dest='cmd')
     gbi_desc = "Generate build info"
     gbi_cmd = cmd.add_parser('gen_build_info', help=gbi_desc, description=gbi_desc)
