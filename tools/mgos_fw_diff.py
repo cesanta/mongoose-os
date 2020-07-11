@@ -42,7 +42,7 @@ def get_totals(d):
     return " ".join(f"{k}: {sign(v)}" for k, v in sorted(d.items(), key=lambda e: abs(e[1]), reverse=True))
 
 
-def do_diff(old_binary, new_binary, objdump_binary):
+def do_diff(old_binary, new_binary, objdump_binary, size_cutoff):
     syms1 = load_syms(old_binary, objdump_binary)
     syms2 = load_syms(new_binary, objdump_binary)
 
@@ -69,39 +69,43 @@ def do_diff(old_binary, new_binary, objdump_binary):
     print(f"Additions {len(additions)}:")
     additions_size: t.Dict[str, int] = collections.defaultdict(lambda: 0)
     for s in sorted(additions, key=lambda s: s.size, reverse=True):
-        print(f"  {s.name} {s.sect} {s.size}")
+        if s.size >= size_cutoff:
+            print(f"  {s.name} {s.sect} +{s.size}")
         additions_size[s.sect] += s.size
         overall_size_diff[s.sect] += s.size
 
     print(f" Total additions: {get_totals(additions_size)}")
-
+    print()
     print(f"Removals {len(removals)}:")
     removals_size: t.Dict[str, int] = collections.defaultdict(lambda: 0)
     for s in sorted(removals, key=lambda s: s.size, reverse=True):
-        print(f"  {s.name} {s.sect} -{s.size}")
+        if s.size >= size_cutoff:
+            print(f"  {s.name} {s.sect} -{s.size}")
         removals_size[s.sect] -= s.size
         overall_size_diff[s.sect] -= s.size
     print(f" Total removals: {get_totals(removals_size)}")
-
+    print()
     print(f"Changes {len(changes)}:")
     changes_size: t.Dict[str, int] = collections.defaultdict(lambda: 0)
     for s1, s2 in sorted(changes, key=lambda ss: abs(ss[1].size - ss[0].size), reverse=True):
         size_diff = s2.size - s1.size
         if s1.sect == s2.sect:
-            print(f"  {s1.name} {s1.sect} {sign(size_diff)}")
+            if s.size >= size_cutoff:
+                print(f"  {s1.name} {s1.sect} {sign(size_diff)}")
         else:
             print(f"  {s1.name} {s1.sect}/{s2.sect} {sign(size_diff)}")
         changes_size[s1.sect] += size_diff
         overall_size_diff[s1.sect] += size_diff
     print(f" Total changes: {get_totals(changes_size)}")
-
+    print()
     print(f"Overall changes: {get_totals(overall_size_diff)}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Firmware size difference tool", prog="mgos_fw_diff")
     parser.add_argument("--objdump-binary", default="objdump", help="objdump binary to use")
+    parser.add_argument("--breakdown-size-cutoff", type=int, default=0, help="Do not print items less than this size")
     parser.add_argument("old_binary", nargs=1, help="Old ELF binary")
     parser.add_argument("new_binary", nargs=1, help="New ELF binary")
     args = parser.parse_args()
-    do_diff(args.old_binary[0], args.new_binary[0], args.objdump_binary)
+    do_diff(args.old_binary[0], args.new_binary[0], args.objdump_binary, args.breakdown_size_cutoff)
 
