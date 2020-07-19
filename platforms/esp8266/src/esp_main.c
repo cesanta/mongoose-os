@@ -150,8 +150,14 @@ void mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr) {
 }
 
 IRAM void sdk_putc(char c) {
-  if (mgos_debug_uart_is_suspended()) return;
-  esp_exc_putc(c);
+  static char s_sdk_log_line[56];
+  static uint8_t s_sdk_log_line_len = 0;
+  if (c != '\n') s_sdk_log_line[s_sdk_log_line_len++] = c;
+  if (c == '\n' || s_sdk_log_line_len == sizeof(s_sdk_log_line) - 1) {
+    s_sdk_log_line[s_sdk_log_line_len] = '\0';
+    LOG(LL_INFO, ("SDK: %s", s_sdk_log_line));
+    s_sdk_log_line_len = 0;
+  }
 }
 
 enum mgos_init_result esp_mgos_init2(void) {
@@ -285,7 +291,7 @@ void _init(void) {
 }
 
 static void os_timer_cb(void *arg) {
-  /* RTOS callbacks are executed in ISR context; for non-OS it doesn't matter. */
+  // RTOS callbacks are executed in ISR context; for non-OS it doesn't matter.
   mongoose_schedule_poll(true /* from_isr */);
   (void) arg;
 }
