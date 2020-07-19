@@ -104,6 +104,7 @@ MGOS_SRCS += esp_config.c \
              esp_crypto.c \
              esp_debug.c \
              esp_exc.c \
+             esp_flash_writer.c \
              esp_gpio.c \
              esp_hal.c \
              esp_heap_trace.c \
