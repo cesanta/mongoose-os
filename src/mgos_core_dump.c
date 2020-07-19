@@ -22,6 +22,7 @@
 
 #include "common/cs_base64.h"
 #include "common/cs_crc32.h"
+#include "common/cs_dbg.h"
 #include "common/str_util.h"
 
 #include "mgos_system.h"
@@ -87,7 +88,10 @@ NOINSTR void mgos_cd_write_section(const char *name, const void *p,
   mgos_cd_printf("\", \"crc32\": %u}", (unsigned int) ctx.crc32);
 }
 
+extern enum cs_log_level cs_log_level;
+
 NOINSTR void mgos_cd_write(void) {
+  cs_log_level = LL_NONE;
   mgos_cd_puts(MGOS_CORE_DUMP_START "{");
   mgos_cd_puts("\"app\": \"" MGOS_APP "\", ");
   mgos_cd_puts("\"arch\": \"" CS_STRINGIFY_MACRO(FW_ARCHITECTURE) "\", ");
