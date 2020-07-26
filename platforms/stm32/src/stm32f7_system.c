@@ -153,9 +153,9 @@ IRAM void inv_dcache(void) {
       LDR r2, [r11] \n\
       AND r1, r2, #0x7 \n\
       ADD r7, r1, #0x4 \n\
-      MOV r1, #0x3ff \n\
+      MOVW r1, #0x3ff \n\
       ANDS r4, r1, r2, LSR #3 \n\
-      MOV r1, #0x7fff \n\
+      MOVW r1, #0x7fff \n\
       ANDS r2, r1, r2, LSR #13 \n\
       CLZ r6, r4 \n\
       # Select Data Cache size \n\

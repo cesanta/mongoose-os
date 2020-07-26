@@ -15,14 +15,13 @@
  * limitations under the License.
  */
 
-#ifndef CS_FW_INCLUDE_MGOS_TIME_H_
-#define CS_FW_INCLUDE_MGOS_TIME_H_
+#pragma once
 
 #include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* __cplusplus */
+#endif
 
 /*
  * Event data for the `MGOS_EVENT_TIME_CHANGED` event, see
@@ -40,6 +39,9 @@ double mgos_uptime(void);
 /* Get number of microseconds since last reboot */
 int64_t mgos_uptime_micros(void);
 
+/* Get wall time in microseconds. */
+int64_t mgos_time_micros(void);
+
 /*
  * Format `time` according to a `strftime()`-conformant format.
  * Write the result into the `s,size` buffer. Return resulting string length.
@@ -55,6 +57,4 @@ int mgos_settimeofday(double time, struct timezone *tz);
 
 #ifdef __cplusplus
 }
-#endif /* __cplusplus */
-
-#endif /* CS_FW_INCLUDE_MGOS_TIME_H_ */
+#endif

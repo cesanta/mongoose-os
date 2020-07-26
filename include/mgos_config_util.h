@@ -65,6 +65,7 @@ enum mgos_conf_type {
   CONF_TYPE_DOUBLE = 2,
   CONF_TYPE_STRING = 3,
   CONF_TYPE_OBJECT = 4,
+  CONF_TYPE_UNSIGNED_INT = 5,
 };
 
 /* Configuration entry */
@@ -80,8 +81,12 @@ struct mgos_conf_entry {
  * checking keys against `acl`.
  */
 bool mgos_conf_parse(const struct mg_str json, const char *acl,
-                     const struct mgos_conf_entry *schema, void *cfg);
+                     const struct mgos_conf_entry *schema,
+                     struct mgos_config *cfg);
 
+/*
+ * Parse a sub-section of the config.
+ */
 bool mgos_conf_parse_sub(const struct mg_str json,
                          const struct mgos_conf_entry *sub_schema, void *cfg);
 
@@ -119,6 +124,13 @@ bool mgos_conf_emit_f(const void *cfg, const void *base,
                       const char *fname);
 
 /*
+ * Copies a config struct from src to dst.
+ * The copy is independent and needs to be freed.
+ */
+bool mgos_conf_copy(const struct mgos_conf_entry *schema, const void *src,
+                    void *dst);
+
+/*
  * Frees any resources allocated in `cfg`.
  */
 void mgos_conf_free(const struct mgos_conf_entry *schema, void *cfg);
@@ -129,7 +141,7 @@ void mgos_conf_free(const struct mgos_conf_entry *schema, void *cfg);
  * returns `NULL`.
  */
 const struct mgos_conf_entry *mgos_conf_find_schema_entry(
-    const char *path, const struct mgos_conf_entry *obj);
+    const char *path, const struct mgos_conf_entry *schema);
 
 /*
  * Like `mgos_conf_find_schema_entry()`, but takes the path as a

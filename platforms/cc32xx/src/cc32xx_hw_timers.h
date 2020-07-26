@@ -15,8 +15,7 @@
  * limitations under the License.
  */
 
-#ifndef CS_FW_PLATFORMS_CC32XX_SRC_CC32XX_HW_TIMERS_H_
-#define CS_FW_PLATFORMS_CC32XX_SRC_CC32XX_HW_TIMERS_H_
+#pragma once
 
 #include <stdint.h>
 
@@ -30,7 +29,6 @@ extern "C" {
  * is enough.
  * Something to investigate in the future.
  */
-#define MGOS_NUM_HW_TIMERS 4
 
 #define MGOS_ESP32_HW_TIMER_IRAM 0x10000
 
@@ -44,5 +42,3 @@ struct mgos_hw_timer_dev_data {
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* CS_FW_PLATFORMS_CC32XX_SRC_CC32XX_HW_TIMERS_H_ */

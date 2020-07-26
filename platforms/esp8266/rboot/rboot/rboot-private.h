@@ -1,6 +1,3 @@
-#ifndef CS_COMMON_PLATFORMS_ESP8266_RBOOT_RBOOT_RBOOT_PRIVATE_H_
-#define CS_COMMON_PLATFORMS_ESP8266_RBOOT_RBOOT_RBOOT_PRIVATE_H_
-
 //////////////////////////////////////////////////
 // rBoot open source boot loader for ESP8266.
 // Copyright 2015 Richard A Burton
@@ -8,13 +5,19 @@
 // See license.txt for license terms.
 //////////////////////////////////////////////////
 
-typedef int int32;
-typedef unsigned int uint32;
-typedef unsigned char uint8;
+#pragma once
+
+#include <stdint.h>
+
+typedef int32_t int32;
+typedef uint32_t uint32;
+typedef uint8_t uint8;
 
 #include "rboot.h"
 
-#define NOINLINE __attribute__ ((noinline))
+#ifndef NOINLINE
+#define NOINLINE __attribute__((noinline))
+#endif
 
 #define ROM_MAGIC	   0xe9
 #define ROM_MAGIC_NEW1 0xea
@@ -33,7 +36,7 @@ typedef unsigned char uint8;
 
 // esp8266 built in rom functions
 extern void ets_printf(const char*, ...);
-extern uint32 SPIRead(uint32 addr, void *outptr, uint32 len);
+extern uint32_t SPIRead(uint32_t addr, void *outptr, uint32_t len);
 extern uint32 SPIEraseSector(int);
 extern uint32 SPIWrite(uint32 addr, void *inptr, uint32 len);
 
@@ -71,4 +74,7 @@ typedef struct {
 	uint32 len; // length of irom section
 } rom_header_new;
 
-#endif /* CS_COMMON_PLATFORMS_ESP8266_RBOOT_RBOOT_RBOOT_PRIVATE_H_ */
+void *ets_memcpy(void *dest, const void *src, unsigned int nbyte);
+void *ets_memset(void *dest, int val, unsigned int nbyte);
+void ets_delay_us(uint32_t us);
+void uart_div_modify(uint8 uart_no, uint32 DivLatchValue);

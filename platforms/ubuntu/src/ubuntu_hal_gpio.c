@@ -46,6 +46,12 @@ bool mgos_gpio_read(int pin) {
   (void) pin;
 }
 
+bool mgos_gpio_read_out(int pin) {
+  LOG(LL_INFO, ("Not implemented yet"));
+  return false;
+  (void) pin;
+}
+
 void mgos_gpio_write(int pin, bool level) {
   LOG(LL_INFO, ("Not implemented yet"));
   return;

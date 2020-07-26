@@ -15,17 +15,16 @@
  * limitations under the License.
  */
 
-#ifndef CS_FW_INCLUDE_MGOS_DEBUG_H_
-#define CS_FW_INCLUDE_MGOS_DEBUG_H_
+#pragma once
 
 #include <stdbool.h>
 #include <stdlib.h>
 
-#include "mgos_init.h"
+#include "common/cs_dbg.h"
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* __cplusplus */
+#endif
 
 #ifndef MGOS_DEBUG_UART_BAUD_RATE
 #define MGOS_DEBUG_UART_BAUD_RATE 115200
@@ -38,7 +37,8 @@ extern "C" {
  */
 struct mgos_debug_hook_arg {
   int fd;
-  const void *data;
+  enum cs_log_level level;
+  const char *data;
   size_t len;
 
   /*
@@ -59,10 +59,10 @@ void mgos_debug_write(int fd, const void *buf, size_t len);
 void mgos_debug_flush(void);
 
 /* Set UART for stdout. Negative value disables stdout. */
-enum mgos_init_result mgos_set_stdout_uart(int uart_no);
+bool mgos_set_stdout_uart(int uart_no);
 
 /* Set UART for stderr. Negative value disables stderr. */
-enum mgos_init_result mgos_set_stderr_uart(int uart_no);
+bool mgos_set_stderr_uart(int uart_no);
 
 /* Get stdout UART number; -1 indicates that stdout is disabled. */
 int mgos_get_stdout_uart(void);
@@ -97,5 +97,3 @@ bool mgos_debug_uart_custom_cfg(int uart_no, struct mgos_uart_config *cfg);
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
-
-#endif /* CS_FW_INCLUDE_MGOS_DEBUG_H_ */

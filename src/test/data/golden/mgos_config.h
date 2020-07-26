@@ -38,8 +38,10 @@ struct mgos_config_http {
 struct mgos_config_debug {
   int level;
   const char * dest;
+  const char * file_level;
   double test_d1;
   double test_d2;
+  unsigned int test_ui;
 };
 
 struct mgos_config_test_bar {
@@ -71,12 +73,20 @@ extern const struct mgos_config mgos_config_defaults;
 #define MGOS_SYS_CONFIG_HAVE_WIFI
 const struct mgos_config_wifi * mgos_config_get_wifi(struct mgos_config *cfg);
 static inline const struct mgos_config_wifi * mgos_sys_config_get_wifi(void) { return mgos_config_get_wifi(&mgos_sys_config); }
+const struct mgos_conf_entry *mgos_config_schema_wifi(void);
+bool mgos_config_parse_wifi(struct mg_str json, struct mgos_config_wifi *cfg);
+bool mgos_config_copy_wifi(const struct mgos_config_wifi *src, struct mgos_config_wifi *dst);
+void mgos_config_free_wifi(struct mgos_config_wifi *cfg);
 
 /* wifi.sta */
 #define MGOS_CONFIG_HAVE_WIFI_STA
 #define MGOS_SYS_CONFIG_HAVE_WIFI_STA
 const struct mgos_config_wifi_sta * mgos_config_get_wifi_sta(struct mgos_config *cfg);
 static inline const struct mgos_config_wifi_sta * mgos_sys_config_get_wifi_sta(void) { return mgos_config_get_wifi_sta(&mgos_sys_config); }
+const struct mgos_conf_entry *mgos_config_schema_wifi_sta(void);
+bool mgos_config_parse_wifi_sta(struct mg_str json, struct mgos_config_wifi_sta *cfg);
+bool mgos_config_copy_wifi_sta(const struct mgos_config_wifi_sta *src, struct mgos_config_wifi_sta *dst);
+void mgos_config_free_wifi_sta(struct mgos_config_wifi_sta *cfg);
 
 /* wifi.sta.ssid */
 #define MGOS_CONFIG_HAVE_WIFI_STA_SSID
@@ -99,6 +109,10 @@ static inline void mgos_sys_config_set_wifi_sta_pass(const char * v) { mgos_conf
 #define MGOS_SYS_CONFIG_HAVE_WIFI_AP
 const struct mgos_config_wifi_ap * mgos_config_get_wifi_ap(struct mgos_config *cfg);
 static inline const struct mgos_config_wifi_ap * mgos_sys_config_get_wifi_ap(void) { return mgos_config_get_wifi_ap(&mgos_sys_config); }
+const struct mgos_conf_entry *mgos_config_schema_wifi_ap(void);
+bool mgos_config_parse_wifi_ap(struct mg_str json, struct mgos_config_wifi_ap *cfg);
+bool mgos_config_copy_wifi_ap(const struct mgos_config_wifi_ap *src, struct mgos_config_wifi_ap *dst);
+void mgos_config_free_wifi_ap(struct mgos_config_wifi_ap *cfg);
 
 /* wifi.ap.ssid */
 #define MGOS_CONFIG_HAVE_WIFI_AP_SSID
@@ -145,6 +159,10 @@ static inline void mgos_sys_config_set_foo(int v) { mgos_config_set_foo(&mgos_sy
 #define MGOS_SYS_CONFIG_HAVE_HTTP
 const struct mgos_config_http * mgos_config_get_http(struct mgos_config *cfg);
 static inline const struct mgos_config_http * mgos_sys_config_get_http(void) { return mgos_config_get_http(&mgos_sys_config); }
+const struct mgos_conf_entry *mgos_config_schema_http(void);
+bool mgos_config_parse_http(struct mg_str json, struct mgos_config_http *cfg);
+bool mgos_config_copy_http(const struct mgos_config_http *src, struct mgos_config_http *dst);
+void mgos_config_free_http(struct mgos_config_http *cfg);
 
 /* http.enable */
 #define MGOS_CONFIG_HAVE_HTTP_ENABLE
@@ -167,6 +185,10 @@ static inline void mgos_sys_config_set_http_port(int v) { mgos_config_set_http_p
 #define MGOS_SYS_CONFIG_HAVE_DEBUG
 const struct mgos_config_debug * mgos_config_get_debug(struct mgos_config *cfg);
 static inline const struct mgos_config_debug * mgos_sys_config_get_debug(void) { return mgos_config_get_debug(&mgos_sys_config); }
+const struct mgos_conf_entry *mgos_config_schema_debug(void);
+bool mgos_config_parse_debug(struct mg_str json, struct mgos_config_debug *cfg);
+bool mgos_config_copy_debug(const struct mgos_config_debug *src, struct mgos_config_debug *dst);
+void mgos_config_free_debug(struct mgos_config_debug *cfg);
 
 /* debug.level */
 #define MGOS_CONFIG_HAVE_DEBUG_LEVEL
@@ -184,6 +206,14 @@ static inline const char * mgos_sys_config_get_debug_dest(void) { return mgos_co
 void mgos_config_set_debug_dest(struct mgos_config *cfg, const char * v);
 static inline void mgos_sys_config_set_debug_dest(const char * v) { mgos_config_set_debug_dest(&mgos_sys_config, v); }
 
+/* debug.file_level */
+#define MGOS_CONFIG_HAVE_DEBUG_FILE_LEVEL
+#define MGOS_SYS_CONFIG_HAVE_DEBUG_FILE_LEVEL
+const char * mgos_config_get_debug_file_level(struct mgos_config *cfg);
+static inline const char * mgos_sys_config_get_debug_file_level(void) { return mgos_config_get_debug_file_level(&mgos_sys_config); }
+void mgos_config_set_debug_file_level(struct mgos_config *cfg, const char * v);
+static inline void mgos_sys_config_set_debug_file_level(const char * v) { mgos_config_set_debug_file_level(&mgos_sys_config, v); }
+
 /* debug.test_d1 */
 #define MGOS_CONFIG_HAVE_DEBUG_TEST_D1
 #define MGOS_SYS_CONFIG_HAVE_DEBUG_TEST_D1
@@ -200,17 +230,33 @@ static inline double mgos_sys_config_get_debug_test_d2(void) { return mgos_confi
 void mgos_config_set_debug_test_d2(struct mgos_config *cfg, double v);
 static inline void mgos_sys_config_set_debug_test_d2(double v) { mgos_config_set_debug_test_d2(&mgos_sys_config, v); }
 
+/* debug.test_ui */
+#define MGOS_CONFIG_HAVE_DEBUG_TEST_UI
+#define MGOS_SYS_CONFIG_HAVE_DEBUG_TEST_UI
+unsigned int mgos_config_get_debug_test_ui(struct mgos_config *cfg);
+static inline unsigned int mgos_sys_config_get_debug_test_ui(void) { return mgos_config_get_debug_test_ui(&mgos_sys_config); }
+void mgos_config_set_debug_test_ui(struct mgos_config *cfg, unsigned int v);
+static inline void mgos_sys_config_set_debug_test_ui(unsigned int v) { mgos_config_set_debug_test_ui(&mgos_sys_config, v); }
+
 /* test */
 #define MGOS_CONFIG_HAVE_TEST
 #define MGOS_SYS_CONFIG_HAVE_TEST
 const struct mgos_config_test * mgos_config_get_test(struct mgos_config *cfg);
 static inline const struct mgos_config_test * mgos_sys_config_get_test(void) { return mgos_config_get_test(&mgos_sys_config); }
+const struct mgos_conf_entry *mgos_config_schema_test(void);
+bool mgos_config_parse_test(struct mg_str json, struct mgos_config_test *cfg);
+bool mgos_config_copy_test(const struct mgos_config_test *src, struct mgos_config_test *dst);
+void mgos_config_free_test(struct mgos_config_test *cfg);
 
 /* test.bar */
 #define MGOS_CONFIG_HAVE_TEST_BAR
 #define MGOS_SYS_CONFIG_HAVE_TEST_BAR
 const struct mgos_config_test_bar * mgos_config_get_test_bar(struct mgos_config *cfg);
 static inline const struct mgos_config_test_bar * mgos_sys_config_get_test_bar(void) { return mgos_config_get_test_bar(&mgos_sys_config); }
+const struct mgos_conf_entry *mgos_config_schema_test_bar(void);
+bool mgos_config_parse_test_bar(struct mg_str json, struct mgos_config_test_bar *cfg);
+bool mgos_config_copy_test_bar(const struct mgos_config_test_bar *src, struct mgos_config_test_bar *dst);
+void mgos_config_free_test_bar(struct mgos_config_test_bar *cfg);
 
 /* test.bar.enable */
 #define MGOS_CONFIG_HAVE_TEST_BAR_ENABLE

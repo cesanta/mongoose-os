@@ -104,6 +104,7 @@ RESERVED_WORDS = set(
 
 class SchemaEntry(object):
     V_INT = "i"
+    V_UNSIGNED_INT = "ui"
     V_BOOL = "b"
     V_DOUBLE = "d"
     V_STRING = "s"
@@ -123,6 +124,8 @@ class SchemaEntry(object):
             if self.vtype == SchemaEntry.V_BOOL:
                 self.default = False
             elif self.vtype == SchemaEntry.V_INT:
+                self.default = 0
+            elif self.vtype == SchemaEntry.V_UNSIGNED_INT:
                 self.default = 0
             elif self.vtype == SchemaEntry.V_DOUBLE:
                 self.default = 0.0
@@ -157,7 +160,9 @@ class SchemaEntry(object):
             raise TypeError("%s: Invalid params" % self.path)
 
     def IsPrimitiveType(self):
-        return self.vtype in (self.V_OBJECT, self.V_BOOL, self.V_INT, self.V_DOUBLE, self.V_STRING)
+        return self.vtype in (
+            self.V_OBJECT, self.V_BOOL, self.V_INT, self.V_UNSIGNED_INT,
+            self.V_DOUBLE, self.V_STRING)
 
 
     def ValidateDefault(self):
@@ -165,11 +170,14 @@ class SchemaEntry(object):
             self.default = float(self.default)
         if (self.vtype == SchemaEntry.V_BOOL and not isinstance(self.default, bool) or
             self.vtype == SchemaEntry.V_INT and not isinstance(self.default, int) or
+            self.vtype == SchemaEntry.V_UNSIGNED_INT and not isinstance(self.default, int) or
             # In Python, boolvalue is an instance of int, but we don't want that.
             self.vtype == SchemaEntry.V_INT and isinstance(self.default, bool) or
             self.vtype == SchemaEntry.V_DOUBLE and not isinstance(self.default, float) or
             self.vtype == SchemaEntry.V_STRING and not isinstance(self.default, str)):
             raise TypeError("%s: Invalid default value type (%s)" % (self.path, type(self.default)))
+        if self.vtype == SchemaEntry.V_UNSIGNED_INT and self.default < 0:
+            raise TypeError("%s: Invalid default unsigned value (%d)" % (self.path, self.default))
 
     def GetIdentifierName(self):
         return self.path.replace(".", "_")
@@ -177,6 +185,8 @@ class SchemaEntry(object):
     def GetCType(self, struct_prefix):
         if self.vtype in (SchemaEntry.V_BOOL, SchemaEntry.V_INT):
             return "int"
+        elif self.vtype == SchemaEntry.V_UNSIGNED_INT:
+            return "unsigned int"
         elif self.vtype == SchemaEntry.V_DOUBLE:
             return "double"
         elif self.vtype == SchemaEntry.V_STRING:
@@ -374,13 +384,30 @@ class AccessorsGen(object):
     def ObjectEnd(self, e):
         pass
 
-    def _GetGetterSignature(self, e, ctype, const):
+    def _GetterSignature(self, e, ctype, const):
         return "%s%s %s_get_%s(struct %s *cfg)" % (
                 const, ctype, self._struct_name, e.GetIdentifierName(), self._struct_name)
 
-    def _GetSetterSignature(self, e, ctype, const):
+    def _SetterSignature(self, e, ctype, const):
         return "void %s_set_%s(struct %s *cfg, %s%s v)" % (
                 self._struct_name, e.GetIdentifierName(), self._struct_name, const, ctype)
+
+    def _GetCopierSignature(self, e, ctype):
+        return "bool %s_copy_%s(const %ssrc, %sdst)" % (
+                self._struct_name, e.GetIdentifierName(), ctype, ctype)
+
+    def _CopySignature(self, e, ctype):
+        return "bool %s_copy_%s(const %ssrc, %sdst)" % (
+                self._struct_name, e.GetIdentifierName(), ctype, ctype)
+
+    def _FreeSignature(self, e, ctype):
+        return "void %s_free_%s(%scfg)" % (self._struct_name, e.GetIdentifierName(), ctype)
+
+    def _SchemaSignature(self, e):
+        return "const struct mgos_conf_entry *%s_schema_%s(void)" % (self._struct_name, e.GetIdentifierName())
+
+    def _ParseSignature(self, e, ctype):
+        return "bool %s_parse_%s(struct mg_str json, %scfg)" % (self._struct_name, e.GetIdentifierName(), ctype)
 
     # Returns array of lines to be pasted to the header.
     def GetHeaderLines(self):
@@ -407,15 +434,21 @@ class AccessorsGen(object):
                 getter, setter, copy, free, const = True, True, False, False, ""
 
             if getter:
-                lines.append("%s;" % self._GetGetterSignature(e, ctype, const))
+                lines.append("%s;" % self._GetterSignature(e, ctype, const))
                 if self._c_global_name:
                     lines.append("static inline %s%s %s_get_%s(void) { return %s_get_%s(&%s); }" % (
                         const, ctype, self._c_global_name, iname, self._struct_name, iname, self._c_global_name))
             if setter:
-                lines.append("%s;" % self._GetSetterSignature(e, ctype, const))
+                lines.append("%s;" % self._SetterSignature(e, ctype, const))
                 if self._c_global_name:
                     lines.append("static inline void %s_set_%s(%s%s v) { %s_set_%s(&%s, v); }" % (
                         self._c_global_name, iname, const, ctype, self._struct_name, iname, self._c_global_name))
+
+            if e.vtype == SchemaEntry.V_OBJECT and not e.orig_path:
+                lines.append("%s;" % self._SchemaSignature(e))
+                lines.append("%s;" % self._ParseSignature(e, ctype))
+                lines.append("%s;" % self._CopySignature(e, ctype))
+                lines.append("%s;" % self._FreeSignature(e, ctype))
 
         if self._c_global_name:
             lines.append("")
@@ -476,15 +509,29 @@ class AccessorsGen(object):
                 getter, setter, copy, free, const = True, True, False, False, ""
 
             if getter:
-                lines.append("%s {" % self._GetGetterSignature(e, ctype, const))
+                lines.append("%s {" % self._GetterSignature(e, ctype, const))
                 lines.append("  return %scfg->%s;" % (amp, e.path))
                 lines.append("}")
             if setter:
-                lines.append("%s {" % self._GetSetterSignature(e, ctype, const))
+                lines.append("%s {" % self._SetterSignature(e, ctype, const))
                 if e.vtype == SchemaEntry.V_STRING:
                     lines.append("  mgos_conf_set_str(&cfg->%s, v);" % e.path)
                 else:
                     lines.append("  %scfg->%s = v;" % (amp, e.path))
+                lines.append("}")
+
+            if e.vtype == SchemaEntry.V_OBJECT and not e.orig_path:
+                lines.append("%s {" % self._SchemaSignature(e))
+                lines.append('  return mgos_conf_find_schema_entry("%s", %s_schema());' % (e.path, self._struct_name))
+                lines.append("}")
+                lines.append("%s {" % self._ParseSignature(e, ctype))
+                lines.append('  return mgos_conf_parse_sub(json, %s_schema(), cfg);' % (self._struct_name))
+                lines.append("}")
+                lines.append("%s {" % self._CopySignature(e, ctype))
+                lines.append("  return mgos_conf_copy(%s_schema_%s(), src, dst);" % (self._struct_name, e.GetIdentifierName()))
+                lines.append("}")
+                lines.append("%s {" % self._FreeSignature(e, ctype))
+                lines.append("  return mgos_conf_free(%s_schema_%s(), cfg);" % (self._struct_name, e.GetIdentifierName()))
                 lines.append("}")
 
         if self._c_global_name:
@@ -553,6 +600,7 @@ const struct mgos_conf_entry *{name}_schema();
 class CWriter(object):
     _CONF_TYPES = {
         SchemaEntry.V_INT: "CONF_TYPE_INT",
+        SchemaEntry.V_UNSIGNED_INT: "CONF_TYPE_UNSIGNED_INT",
         SchemaEntry.V_BOOL: "CONF_TYPE_BOOL",
         SchemaEntry.V_DOUBLE: "CONF_TYPE_DOUBLE",
         SchemaEntry.V_STRING: "CONF_TYPE_STRING",

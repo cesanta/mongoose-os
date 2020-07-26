@@ -36,12 +36,12 @@
 static struct udp_pcb *s_upcb = NULL;
 static ip_addr_t s_dst;
 static uint16_t s_port;
-static bool s_cb_pending;
+static int s_cb_pending;
 static struct mbuf s_to_send;
 
 enum mgos_init_result mgos_debug_udp_init(const char *dst) {
   uint32_t ip1, ip2, ip3, ip4, port;
-  if (sscanf(dst, "%u.%u.%u.%u:%u", &ip1, &ip2, &ip3, &ip4, &port) != 5) {
+  if (sscanf(dst, "%lu.%lu.%lu.%lu:%lu", &ip1, &ip2, &ip3, &ip4, &port) != 5) {
     LOG(LL_ERROR, ("Invalid address"));
     return MGOS_INIT_DEBUG_INIT_FAILED;
   }

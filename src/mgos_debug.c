@@ -57,6 +57,7 @@ extern enum cs_log_level cs_log_cur_msg_level;
 
 void mgos_debug_write(int fd, const void *data, size_t len) {
   char buf[MGOS_DEBUG_TMP_BUF_SIZE];
+  enum cs_log_level old_level;
   int uart_no = -1;
   debug_lock();
   if (s_in_debug) {
@@ -64,6 +65,8 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
     return;
   }
   s_in_debug = true;
+  old_level = cs_log_level;
+  cs_log_level = LL_NONE;
   if (s_uart_suspended <= 0) {
     if (fd == 1) {
       uart_no = s_stdout_uart;
@@ -72,7 +75,7 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
     }
   }
   if (uart_no >= 0) {
-    len = mgos_uart_write(uart_no, data, len);
+    mgos_uart_write(uart_no, data, len);
     mgos_uart_flush(uart_no);
   }
   if (!mgos_sys_config_is_initialized()) {
@@ -87,7 +90,7 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
         buf, sizeof(buf), "%s %u %.3lf %d|",
         (mgos_sys_config_get_device_id() ? mgos_sys_config_get_device_id()
                                          : "-"),
-        s_seq, mg_time(), fd);
+        (unsigned int) s_seq, mg_time(), fd);
     if (n > 0) {
       mgos_debug_udp_send(mg_mk_str_n(buf, n), mg_mk_str_n(data, len));
     }
@@ -97,12 +100,15 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
   /* Invoke all registered debug_write hooks */
   /* Only send LL_INFO messages and below, to avoid loops. */
 #if CS_ENABLE_STDIO
-  if (cs_log_cur_msg_level <= LL_INFO)
+  if (cs_log_cur_msg_level <= mgos_sys_config_get_debug_event_level())
 #endif
   {
     struct mgos_debug_hook_arg arg = {
         .buf = buf,
         .fd = fd,
+#if CS_ENABLE_STDIO
+        .level = cs_log_cur_msg_level,
+#endif
         .data = data,
         .len = len,
     };
@@ -110,6 +116,7 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
   }
 
 out_unlock:
+  cs_log_level = old_level;
   s_in_debug = false;
   debug_unlock();
 }
@@ -143,33 +150,33 @@ void __assert_func(const char *file, int line, const char *func,
 }
 #endif
 
-static enum mgos_init_result mgos_init_debug_uart(int uart_no) {
-  if (uart_no < 0) return MGOS_INIT_OK;
+static bool mgos_init_debug_uart(int uart_no) {
+  if (uart_no < 0) return true;
   /* If already initialized, don't touch. */
-  if (mgos_uart_write_avail(uart_no) > 0) return MGOS_INIT_OK;
+  if (mgos_uart_write_avail(uart_no) > 0) return true;
   struct mgos_uart_config ucfg;
   mgos_uart_config_set_defaults(uart_no, &ucfg);
   ucfg.baud_rate = MGOS_DEBUG_UART_BAUD_RATE;
   if (!mgos_debug_uart_custom_cfg(uart_no, &ucfg)) {
-    return MGOS_INIT_UART_FAILED;
+    return false;
   }
   if (!mgos_uart_configure(uart_no, &ucfg)) {
-    return MGOS_INIT_UART_FAILED;
+    return false;
   }
-  return MGOS_INIT_OK;
+  return true;
 }
 
-enum mgos_init_result mgos_set_stdout_uart(int uart_no) {
-  enum mgos_init_result r = mgos_init_debug_uart(uart_no);
-  if (r == MGOS_INIT_OK) {
+bool mgos_set_stdout_uart(int uart_no) {
+  bool r = mgos_init_debug_uart(uart_no);
+  if (r) {
     s_stdout_uart = uart_no;
   }
   return r;
 }
 
-enum mgos_init_result mgos_set_stderr_uart(int uart_no) {
-  enum mgos_init_result r = mgos_init_debug_uart(uart_no);
-  if (r == MGOS_INIT_OK) {
+bool mgos_set_stderr_uart(int uart_no) {
+  bool r = mgos_init_debug_uart(uart_no);
+  if (r) {
     s_stderr_uart = uart_no;
   }
   return r;
@@ -201,12 +208,12 @@ enum mgos_init_result mgos_debug_init(void) {
 }
 
 enum mgos_init_result mgos_debug_uart_init(void) {
-  enum mgos_init_result res = mgos_init_debug_uart(MGOS_DEBUG_UART);
-  if (res == MGOS_INIT_OK) {
+  bool res = mgos_init_debug_uart(MGOS_DEBUG_UART);
+  if (res) {
     s_stdout_uart = MGOS_DEBUG_UART;
     s_stderr_uart = MGOS_DEBUG_UART;
   }
-  return res;
+  return (res ? MGOS_INIT_OK : MGOS_INIT_UART_FAILED);
 }
 
 /* For FFI */

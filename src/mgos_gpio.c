@@ -37,6 +37,8 @@ struct mgos_gpio_state {
     struct {
       unsigned int debounce_ms : 16;
       unsigned int active_state : 1;
+      unsigned int last_state : 1;
+      unsigned int any_edge : 1;
       mgos_timer_id timer_id;
     } button;
   };
@@ -125,22 +127,25 @@ out:
 
 static void mgos_gpio_dbnc_done_cb(void *arg) {
   int pin = (intptr_t) arg;
-  bool active_state;
   mgos_gpio_int_handler_f cb = NULL;
   void *cb_arg = NULL;
   {
     mgos_rlock(s_lock);
     struct mgos_gpio_state *s = mgos_gpio_get_state(pin);
     if (s != NULL) {
+      bool cur_state = mgos_gpio_read(pin);
       s->button.timer_id = MGOS_INVALID_TIMER_ID;
-      active_state = s->button.active_state;
-      cb = s->cb;
-      cb_arg = s->cb_arg;
+      if ((s->button.any_edge && cur_state != s->button.last_state) ||
+          (!s->button.any_edge && cur_state == s->button.active_state)) {
+        cb = s->cb;
+        cb_arg = s->cb_arg;
+        s->button.last_state = cur_state;
+      }
       s->cnt = 0;
     }
     mgos_runlock(s_lock);
   }
-  if (cb != NULL && mgos_gpio_read(pin) == active_state) {
+  if (cb != NULL) {
     cb(pin, cb_arg);
   }
   /* Clear any noise that happened during debounce timer. */
@@ -217,7 +222,8 @@ bool mgos_gpio_set_button_handler(int pin, enum mgos_gpio_pull_type pull_type,
                                   int debounce_ms, mgos_gpio_int_handler_f cb,
                                   void *arg) {
   if (!(int_mode == MGOS_GPIO_INT_EDGE_POS ||
-        int_mode == MGOS_GPIO_INT_EDGE_NEG) ||
+        int_mode == MGOS_GPIO_INT_EDGE_NEG ||
+        int_mode == MGOS_GPIO_INT_EDGE_ANY) ||
       !mgos_gpio_set_mode(pin, MGOS_GPIO_MODE_INPUT) ||
       !mgos_gpio_set_pull(pin, pull_type) ||
       !mgos_gpio_set_int_handler(pin, int_mode, cb, arg)) {
@@ -226,7 +232,13 @@ bool mgos_gpio_set_button_handler(int pin, enum mgos_gpio_pull_type pull_type,
   {
     mgos_rlock(s_lock);
     struct mgos_gpio_state *s = mgos_gpio_get_state(pin);
-    s->button.active_state = (int_mode == MGOS_GPIO_INT_EDGE_POS);
+    if (int_mode == MGOS_GPIO_INT_EDGE_ANY) {
+      s->button.any_edge = true;
+      s->button.last_state = mgos_gpio_read(pin);
+    } else {
+      s->button.any_edge = false;
+      s->button.active_state = (int_mode == MGOS_GPIO_INT_EDGE_POS);
+    }
     s->button.debounce_ms = debounce_ms;
     mgos_runlock(s_lock);
   }

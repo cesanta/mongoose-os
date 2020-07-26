@@ -124,6 +124,8 @@ void mgos_conf_parse_cb(void *data, const char *name, size_t name_len,
 /* fall through */
 #endif
     case CONF_TYPE_INT:
+      /* fall through */
+    case CONF_TYPE_UNSIGNED_INT:
       if (tok->type != JSON_TYPE_NUMBER) {
         LOG(LL_ERROR, ("[%s] is not a number", path));
         ctx->result = false;
@@ -133,6 +135,9 @@ void mgos_conf_parse_cb(void *data, const char *name, size_t name_len,
         case CONF_TYPE_INT:
           /* NB: Using base 0 to accept hex numbers. */
           *((int *) vp) = strtol(tok->ptr, &endptr, 0);
+          break;
+        case CONF_TYPE_UNSIGNED_INT:
+          *((unsigned int *) vp) = strtoul(tok->ptr, &endptr, 0);
           break;
 #ifndef MGOS_BOOT_BUILD
         case CONF_TYPE_DOUBLE:
@@ -208,7 +213,8 @@ static bool mgos_conf_parse_off(const struct mg_str json, const char *acl,
 }
 
 bool mgos_conf_parse(const struct mg_str json, const char *acl,
-                     const struct mgos_conf_entry *schema, void *cfg) {
+                     const struct mgos_conf_entry *schema,
+                     struct mgos_config *cfg) {
   return mgos_conf_parse_off(json, acl, schema, 0, cfg);
 }
 
@@ -239,7 +245,10 @@ static bool mgos_conf_value_eq(const void *cfg, const void *base,
   char *bvp = (((char *) base) + e->offset);
   switch (e->type) {
     case CONF_TYPE_INT:
+      /* fall through */
     case CONF_TYPE_BOOL:
+      /* fall through */
+    case CONF_TYPE_UNSIGNED_INT:
       return *((int *) vp) == *((int *) bvp);
     case CONF_TYPE_DOUBLE:
       return *((double *) vp) == *((double *) bvp);
@@ -251,8 +260,7 @@ static bool mgos_conf_value_eq(const void *cfg, const void *base,
       return (strcmp(s1, s2) == 0);
     }
     case CONF_TYPE_OBJECT: {
-      int i;
-      for (i = e->num_desc; i > 0; i--) {
+      for (int i = e->num_desc; i > 0; i--) {
         e++;
         if (e->type != CONF_TYPE_OBJECT && !mgos_conf_value_eq(cfg, base, e)) {
           return false;
@@ -273,8 +281,9 @@ static void mgos_conf_emit_entry(struct emit_ctx *ctx,
   char buf[40];
   int len;
   switch (e->type) {
-    case CONF_TYPE_INT: {
-      len = snprintf(buf, sizeof(buf), "%d",
+    case CONF_TYPE_INT:
+    case CONF_TYPE_UNSIGNED_INT: {
+      len = snprintf(buf, sizeof(buf), (e->type == CONF_TYPE_INT ? "%d" : "%u"),
                      *((int *) (((char *) ctx->cfg) + e->offset)));
       mbuf_append(ctx->out, buf, len);
       break;
@@ -390,12 +399,45 @@ bool mgos_conf_emit_f(const void *cfg, const void *base,
   return true;
 }
 
+bool mgos_conf_copy(const struct mgos_conf_entry *schema, const void *src,
+                    void *dst) {
+  bool res = true;
+  if (schema->type != CONF_TYPE_OBJECT) return false;
+  for (int i = 1; i <= schema->num_desc; i++) {
+    const struct mgos_conf_entry *e = schema + i;
+    const void *svp = (((const char *) src) + (e->offset - schema->offset));
+    void *dvp = (((char *) dst) + (e->offset - schema->offset));
+    switch (e->type) {
+      case CONF_TYPE_INT:
+      case CONF_TYPE_BOOL:
+      case CONF_TYPE_UNSIGNED_INT:
+        *((int *) dvp) = *((const int *) svp);
+        break;
+      case CONF_TYPE_DOUBLE:
+#ifndef MGOS_BOOT_BUILD
+        *((double *) dvp) = *((const double *) svp);
+#endif
+        break;
+      case CONF_TYPE_STRING:
+        *((const char **) dvp) = NULL;
+        if (!mgos_conf_copy_str(*((const char **) svp), (const char **) dvp)) {
+          res = false;
+        }
+        break;
+      case CONF_TYPE_OBJECT:
+        break;
+    }
+  }
+  return res;
+}
+
 void mgos_conf_free(const struct mgos_conf_entry *schema, void *cfg) {
-  int i;
-  for (i = 1; i <= schema->num_desc; i++) {
+  if (schema->type != CONF_TYPE_OBJECT) return;
+  for (int i = 1; i <= schema->num_desc; i++) {
     const struct mgos_conf_entry *e = schema + i;
     if (e->type == CONF_TYPE_STRING) {
-      const char **sp = ((const char **) (((char *) cfg) + e->offset));
+      const char **sp =
+          ((const char **) (((char *) cfg) + (e->offset - schema->offset)));
       mgos_conf_free_str(sp);
     }
   }
@@ -425,7 +467,9 @@ static bool mgos_conf_str_is_default(const char *s) {
 }
 
 bool mgos_conf_copy_str(const char *s, const char **copy) {
-  mgos_conf_free_str(copy);
+  if (*copy != NULL && !mgos_conf_str_is_default(*copy)) {
+    free((void *) *copy);
+  }
   if (s == NULL || mgos_conf_str_is_default(s)) {
     *copy = (char *) s;
     return true;
@@ -436,7 +480,7 @@ bool mgos_conf_copy_str(const char *s, const char **copy) {
 
 void mgos_conf_free_str(const char **sp) {
   if (*sp != NULL && !mgos_conf_str_is_default(*sp)) {
-    free((char *) *sp);
+    free((void *) *sp);
   }
   *sp = NULL;
 }
@@ -465,7 +509,8 @@ const char *mgos_conf_value_string_nonnull(const void *cfg,
 
 int mgos_conf_value_int(const void *cfg, const struct mgos_conf_entry *e) {
   char *vp = (((char *) cfg) + e->offset);
-  if (e->type == CONF_TYPE_INT || e->type == CONF_TYPE_BOOL) {
+  if (e->type == CONF_TYPE_INT || e->type == CONF_TYPE_UNSIGNED_INT ||
+      e->type == CONF_TYPE_BOOL) {
     return *((int *) vp);
   }
   return 0;
@@ -490,7 +535,10 @@ bool mgos_config_get(const struct mg_str key, struct mg_str *value,
   cp = (char **) &value->p;
   switch (e->type) {
     case CONF_TYPE_INT:
-      value->len = mg_asprintf(cp, 0, "%d", mgos_conf_value_int(cfg, e));
+      /* fall through */
+    case CONF_TYPE_UNSIGNED_INT:
+      value->len = mg_asprintf(cp, 0, (e->type == CONF_TYPE_INT ? "%d" : "%u"),
+                               mgos_conf_value_int(cfg, e));
       break;
     case CONF_TYPE_BOOL:
       value->len = mg_asprintf(
@@ -534,6 +582,15 @@ bool mgos_config_set(const struct mg_str key, const struct mg_str value,
       char *endptr;
       value_nul = mg_strdup_nul(value);
       *vp = strtol(value_nul.p, &endptr, 10);
+      if (endptr != value_nul.p + value_nul.len) goto out;
+      ret = true;
+      break;
+    }
+    case CONF_TYPE_UNSIGNED_INT: {
+      unsigned int *vp = (unsigned int *) (((char *) cfg) + e->offset);
+      char *endptr;
+      value_nul = mg_strdup_nul(value);
+      *vp = strtoul(value_nul.p, &endptr, 10);
       if (endptr != value_nul.p + value_nul.len) goto out;
       ret = true;
       break;

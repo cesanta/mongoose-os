@@ -32,7 +32,9 @@
 #include "stm32_system.h"
 #include "stm32_uart_internal.h"
 
-#include <stm32_sdk_hal.h>
+#include "umm_malloc.h"
+
+#include "stm32_sdk_hal.h"
 
 static int64_t sys_time_adj = 0;
 
@@ -65,52 +67,40 @@ void abort(void) {
   __builtin_trap();  // Executes an illegal instruction.
 }
 
-#ifdef MGOS_BOOT_BUILD
-#undef portENTER_CRITICAL
-#define portENTER_CRITICAL()
-#undef portEXIT_CRITICAL
-#define portEXIT_CRITICAL()
-#endif
+void *malloc(size_t size) {
+  return umm_malloc(size);
+}
 
-#if __NEWLIB__ >= 3
-void __malloc_lock(struct _reent *r) {
-  portENTER_CRITICAL();
+void *_malloc_r(struct _reent *r, size_t size) {
   (void) r;
+  return umm_malloc(size);
 }
 
-void __malloc_unlock(struct _reent *r) {
-  portEXIT_CRITICAL();
+void free(void *ptr) {
+  umm_free(ptr);
+}
+
+void _free_r(struct _reent *r, void *ptr) {
   (void) r;
-}
-#else
-void __malloc_lock(void) {
-  portENTER_CRITICAL();
+  return umm_free(ptr);
 }
 
-void __malloc_unlock(void) {
-  portEXIT_CRITICAL();
+void *calloc(size_t nmemb, size_t size) {
+  return umm_calloc(nmemb, size);
 }
-#endif
 
-extern uint8_t _heap_start, _heap_end; /* Provided by linker */
-void *_sbrk(intptr_t incr) {
-  static uint8_t *cur_heap_end;
-  uint8_t *ret, *new_heap_end;
+void *_calloc_r(struct _reent *r, size_t nmemb, size_t size) {
+  (void) r;
+  return umm_calloc(nmemb, size);
+}
 
-  if (cur_heap_end == NULL) {
-    memset(&_heap_start, 0, (&_heap_end - &_heap_start));
-    cur_heap_end = &_heap_start;
-  }
+void *realloc(void *ptr, size_t size) {
+  return umm_realloc(ptr, size);
+}
 
-  new_heap_end = cur_heap_end + incr;
-  if (new_heap_end <= &_heap_end) {
-    ret = cur_heap_end;
-    cur_heap_end = new_heap_end;
-  } else {
-    ret = (void *) -1;
-  }
-
-  return ret;
+void *_realloc_r(struct _reent *r, void *ptr, size_t size) {
+  (void) r;
+  return umm_realloc(ptr, size);
 }
 
 size_t mgos_get_heap_size(void) {
@@ -118,11 +108,14 @@ size_t mgos_get_heap_size(void) {
 }
 
 size_t mgos_get_free_heap_size(void) {
-  struct mallinfo mi = mallinfo();
-  return mgos_get_heap_size() - mi.uordblks;
+  return umm_free_heap_size();
 }
 
 size_t mgos_get_min_free_heap_size(void) {
-  /* TODO(alashkin): implement */
-  return 0;
+  return umm_min_free_heap_size();
+}
+
+void umm_oom_cb(size_t size, size_t blocks_cnt) {
+  fprintf(stderr, "E:M %u (%u blocks)\n", (unsigned int) size,
+          (unsigned int) blocks_cnt);
 }

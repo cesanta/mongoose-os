@@ -36,6 +36,8 @@ MGOS_UPDATE_BOOT_LOADER ?= false
 
 MGOS_MG_NET_IF ?= MG_NET_IF_NULL
 
+STM32_NOCACHE_SIZE ?= 0x400
+
 BUILD_LIB_NAME ?= lib.a
 
 # Get list of dirs which contain sources and filesystem files
@@ -158,9 +160,10 @@ MGOS_SRCS += $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
              mgos_dlsym.c mgos_file_utils.c mgos_system.c mgos_utils.c \
              arm_exc_top.S arm_exc.c arm_nsleep100.c \
              stm32_entry.c stm32_gpio.c \
-             stm32_hal.c stm32_hw_timers.c \
+             stm32_hal.c stm32_ints.c stm32_hw_timers.c \
              stm32_libc.c \
              stm32_main.c stm32_uart.c \
+             umm_malloc.c \
              error_codes.cpp status.cpp
 
 STM32_IPATH += $(STM32CUBE_PATH)/Drivers/CMSIS/Include
@@ -173,7 +176,7 @@ STM32_CFLAGS += -DSTM32_SRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -DSTM32_SRAM_SIZE=$(SRA
                 -DMGOS_ROOT_FS_TYPE='$(MGOS_ROOT_FS_TYPE)' \
                 -DMGOS_ROOT_FS_OPTS='$(MGOS_ROOT_FS_OPTS)' \
                 -DMGOS_ROOT_FS_EXTRACT='$(MGOS_ROOT_FS_EXTRACT)' \
-                -DNOCACHE_SIZE=0x400 \
+                -DSTM32_NOCACHE_SIZE=$(STM32_NOCACHE_SIZE) \
                 -DMG_LOCALS
 
 IPATH = $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
@@ -196,7 +199,7 @@ C_CXX_FLAGS = -Os -ggdb -MD -Wall -Wextra -Werror -pipe \
               $(STM32_CFLAGS)
 
 CFLAGS = -std=gnu99 $(C_CXX_FLAGS) $(APP_CFLAGS)
-CXXFLAGS = -std=gnu++11 -fno-exceptions $(C_CXX_FLAGS) $(APP_CXXFLAGS)
+CXXFLAGS = -std=gnu++11 -fno-exceptions -fno-rtti $(C_CXX_FLAGS) $(APP_CXXFLAGS)
 
 LDFLAGS += -Wl,--defsym=SRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -Wl,--defsym=SRAM_SIZE=$(SRAM_SIZE) \
            -Wl,--defsym=SRAM2_BASE_ADDR=$(SRAM2_BASE_ADDR) -Wl,--defsym=SRAM2_SIZE=$(SRAM2_SIZE) \
@@ -205,7 +208,7 @@ LDFLAGS += -Wl,--defsym=SRAM_BASE_ADDR=$(SRAM_BASE_ADDR) -Wl,--defsym=SRAM_SIZE=
            -Wl,--defsym=FLASH_BL_SIZE=$(FLASH_BL_SIZE) \
            -Wl,--defsym=FLASH_BL_CFG_SIZE=$(FLASH_BL_CFG_SIZE) \
            -Wl,--defsym=FLASH_FS_SIZE=$(FLASH_FS_SIZE) \
-           -Wl,--defsym=NOCACHE_SIZE=0x400
+           -Wl,--defsym=NOCACHE_SIZE=$(STM32_NOCACHE_SIZE)
 
 LDFLAGS += -Wl,--gc-sections
 

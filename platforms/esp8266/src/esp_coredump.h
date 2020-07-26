@@ -27,6 +27,8 @@ void esp_dump_core(uint32_t cause, struct regfile *);
 
 void esp_core_dump_init(void);
 
+void esp_core_dump_set_flash_area(uint32_t addr, uint32_t max_size);
+
 #ifdef __cplusplus
 }
 #endif

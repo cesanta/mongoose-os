@@ -30,14 +30,18 @@ static struct mgos_hw_timer_info s_timers[MGOS_NUM_HW_TIMERS];
 IRAM void mgos_hw_timers_isr(struct mgos_hw_timer_info *ti) {
   timer_callback cb = ti->cb;
   void *cb_arg = ti->cb_arg;
-  /* Release a one-shot timer before invoking the callback so it can be
-   * rescheduled from within it. */
-  if (!(ti->flags & MGOS_TIMER_REPEAT)) {
-    mgos_hw_timers_dev_clear(ti);
-    ti->cb_arg = NULL;
-    ti->cb = NULL;
+  if (cb != NULL) {
+    /* Release a one-shot timer before invoking the callback so it can be
+     * rescheduled from within it. */
+    if (!(ti->flags & MGOS_TIMER_REPEAT)) {
+      mgos_hw_timers_dev_clear(ti);
+      ti->cb_arg = NULL;
+      ti->cb = NULL;
+    }
+    cb(cb_arg);
+  } else {
+    /* Race with mgos_clear_hw_timer, bail out. */
   }
-  cb(cb_arg);
   mgos_hw_timers_dev_isr_bottom(ti);
 }
 

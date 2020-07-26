@@ -466,7 +466,7 @@ const unsigned int %s_len = %u;\
 
 if __name__ == '__main__':
     handlers = {}
-    parser = argparse.ArgumentParser(description='FW metadata tool', prog='fw_meta')
+    parser = argparse.ArgumentParser(description='Mopngoose OS metadata tool', prog='mgos_fw_meta')
     cmd = parser.add_subparsers(dest='cmd')
     gbi_desc = "Generate build info"
     gbi_cmd = cmd.add_parser('gen_build_info', help=gbi_desc, description=gbi_desc)
@@ -504,7 +504,7 @@ if __name__ == '__main__':
     cm_cmd.add_argument('--platform', '-p', required=True)
     cm_cmd.add_argument('--build_info', '-i', required=True)
     cm_cmd.add_argument('--description', '-d')
-    cm_cmd.add_argument('--checksums', default='sha1')
+    cm_cmd.add_argument('--checksums', default='sha1,sha256')
     cm_cmd.add_argument('--src_dir', default='.')
     cm_cmd.add_argument('--staging_dir')
     cm_cmd.add_argument('--output', '-o')

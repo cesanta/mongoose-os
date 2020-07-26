@@ -35,6 +35,7 @@ SECTIONS
   {
     _data_start = ABSOLUTE(.);
     */libc.a:(.data .data.*)
+    */libhal.a:(.data .data.* .rodata SORT_BY_NAME(.rodata.*))
     */ESP8266_*_SDK/lib*.a:(.data .data.*)
     */liblwip*.a:(.data .data.*)
     */libmbed*.a:(.data .data.*)
@@ -92,12 +93,14 @@ SECTIONS
     *(.UserEnter.text)
     . = ALIGN (16);
     */libc.a:(.literal .fast.literal .fast.text)
+    */libgcc.a:(.literal SORT_BY_NAME(.literal.*) .text SORT_BY_NAME(.text.*))
     */libmain.a:(SORT_BY_NAME(.literal.*) SORT_BY_NAME(.text.*))
-    */ESP8266_*_SDK/lib*.a:(.literal .fast.literal .fast.text)
+    */libpp.a:(SORT_BY_NAME(.literal.*) SORT_BY_NAME(.text.*))
+    */ESP8266_*_SDK/lib*.a:(.literal .text)
     */liblwip*.a:(.fast.literal .fast.text)
     */libmbed*.a:(.fast.literal .fast.text)
     */mongoose-os.a:(.fast.literal .fast.text)
-    *(.fast.literal .fast.text)
+    *(.fast.literal .fast.text SORT_BY_NAME(.text.IRAM.*))
     *(.fini.literal .fini)
     _text_end = ABSOLUTE(.);
     _etext = .;
@@ -127,7 +130,7 @@ SECTIONS
     . = ALIGN(4096);
     */libc.a:(SORT_BY_NAME(.literal.*) .irom.text .text SORT_BY_NAME(.text.*))
     */libstd*.a:(.literal SORT_BY_NAME(.literal.*) .irom.text .text SORT_BY_NAME(.text.*))
-    */ESP8266_*_SDK/lib*.a:(.irom0.literal .literal.* .irom.text .text SORT_BY_NAME(.text.*))
+    */ESP8266_*_SDK/lib*.a:(.irom0.literal .literal.* .irom0.text SORT_BY_NAME(.text.*))
     */liblwip*.a:(SORT_BY_NAME(.literal.*) .irom.text .text SORT_BY_NAME(.text.*))
     */libmbed*.a:(SORT_BY_NAME(.literal.*) .irom.text .text SORT_BY_NAME(.text.*))
     */lib*.a:(SORT_BY_NAME(.literal.*) .irom.text .text SORT_BY_NAME(.text.*))

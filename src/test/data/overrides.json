@@ -12,6 +12,7 @@
     "enable": false,
   },
   "debug": {
-    "level": 1
+    "level": 1,
+    "file_level": "mgos_bar=1"
   }
 }

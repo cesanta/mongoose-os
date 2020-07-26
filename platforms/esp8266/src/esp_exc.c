@@ -208,11 +208,11 @@ void esp_print_reset_info(void) {
       reason_str = "???";
       break;
   }
-  LOG(LL_INFO, ("Reset cause: %u (%s)", ri->reason, reason_str));
+  LOG(LL_INFO, ("Reset cause: %lu (%s)", ri->reason, reason_str));
   if (print_exc_info) {
     LOG(LL_INFO,
-        ("Exc info: cause=%u epc1=0x%08x epc2=0x%08x epc3=0x%08x vaddr=0x%08x "
-         "depc=0x%08x",
+        ("Exc info: cause=%lu epc1=0x%08lx epc2=0x%08lx epc3=0x%08lx "
+         "vaddr=0x%08lx depc=0x%08lx",
          ri->exccause, ri->epc1, ri->epc2, ri->epc3, ri->excvaddr, ri->depc));
   }
 }

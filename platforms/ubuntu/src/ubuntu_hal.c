@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+#include <stdlib.h>
+
 #include "mgos_hal.h"
 #include "mgos_mongoose.h"
 #include "mgos_net_hal.h"
@@ -40,4 +42,8 @@ int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {
   }
   (void) ctx;
   return 0;
+}
+
+void mgos_cd_putc(int c) {
+  fputc(c, stderr);
 }

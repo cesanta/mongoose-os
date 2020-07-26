@@ -1,39 +1,37 @@
-FROM ubuntu:bionic
+FROM ubuntu:bionic-20190807
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y -q \
-      apt-utils autoconf bison build-essential flex gawk gdb-multiarch git gperf help2man \
-      libexpat-dev libncurses5-dev libtool-bin \
+      apt-utils autoconf automake bison build-essential curl flex gawk gdb-multiarch git gperf help2man \
+      less libexpat-dev libncurses5-dev libtool-bin \
       python python-dev python-git python-pyelftools python-serial python-six python-yaml \
       python3 python3-dev python3-git python3-pyelftools python3-serial python3-six python3-yaml \
       software-properties-common texinfo unzip wget zip && \
     apt-get clean
 
-RUN cd /tmp && \
-    git clone https://github.com/rojer/fsync-stub && \
-    cd /tmp/fsync-stub && ./install.sh && \
-    rm -rf /tmp/fsync-stub
-
 RUN useradd -d /opt/Espressif -m -s /bin/bash user && chown -R user /opt
 
-ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/Espressif/esp-open-sdk/xtensa-lx106-elf/bin
+ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/Espressif/xtensa-lx106-elf/bin
 ADD ct_path.sh /etc/profile.d
 
 USER user
 
+ARG TOOLCHAIN_TAG
+RUN git clone -b $TOOLCHAIN_TAG --depth 1 --recursive --shallow-submodules \
+      https://github.com/mongoose-os/esp-open-sdk /opt/Espressif/esp-open-sdk && \
+    nice make -C /opt/Espressif/esp-open-sdk toolchain fullclean
+
 ARG DOCKER_TAG
-RUN git clone -b $DOCKER_TAG https://github.com/cesanta/esp-open-sdk /opt/Espressif/esp-open-sdk && \
-    cd /opt/Espressif/esp-open-sdk && \
+RUN cd /opt/Espressif/esp-open-sdk && \
+    git fetch origin $DOCKER_TAG && \
+    git checkout FETCH_HEAD && \
     git submodule update --init && \
-    nice make && rm -rf crosstool-NG
+    make -C /opt/Espressif/esp-open-sdk sdk libs BUILD_TOOLCHAIN=n && \
+    ln -s /opt/Espressif/esp-open-sdk/sdk /opt/Espressif/ESP8266_NONOS_SDK && \
+    make -C /opt/Espressif/esp-open-sdk lwip2 lwip2-clean \
+      LWIP14_INCLUDE_DIR=/opt/Espressif/esp-open-sdk/sdk/third_party/include
 
 USER root
-
-RUN mkdir -p /opt/Espressif/crosstool-NG/builds/ && \
-    ln -s /opt/Espressif/esp-open-sdk/xtensa-lx106-elf /opt/Espressif/crosstool-NG/builds
-
-# Set up non-OS SDK
-RUN ln -s /opt/Espressif/esp-open-sdk/sdk /opt/Espressif/ESP8266_NONOS_SDK
 
 RUN cd /opt/Espressif/ESP8266_NONOS_SDK/lib && \
     xtensa-lx106-elf-ar -x libmain.a && \
@@ -46,31 +44,17 @@ RUN xtensa-lx106-elf-objcopy \
       --redefine-sym system_restart_local=system_restart_local_sdk \
       /opt/Espressif/ESP8266_NONOS_SDK/lib/libmain.a
 
-RUN mv /opt/Espressif/ESP8266_NONOS_SDK/lib/libc.a /opt/Espressif/ESP8266_NONOS_SDK/lib/libc_sdk.a
+RUN mv /opt/Espressif/ESP8266_NONOS_SDK/lib/libc.a /opt/Espressif/ESP8266_NONOS_SDK/lib/libc_sdk.a && \
+    mv /opt/Espressif/ESP8266_NONOS_SDK/lib/libgcc.a /opt/Espressif/ESP8266_NONOS_SDK/lib/libgcc_sdk.a && \
+    mv /opt/Espressif/ESP8266_NONOS_SDK/lib/libhal.a /opt/Espressif/ESP8266_NONOS_SDK/lib/libhal_sdk.a
 
-# Set up RTOS SDK
-RUN git clone -b $DOCKER_TAG https://github.com/cesanta/ESP8266_RTOS_SDK.git /opt/Espressif/ESP8266_RTOS_SDK
-
-RUN for s in malloc free calloc realloc xPortGetFreeHeapSize xPortWantedSizeAlign \
-             pvPortMalloc vPortFree pvPortCalloc pvPortZalloc pvPortRealloc; do \
-        xtensa-lx106-elf-objcopy --weaken-symbol $s /opt/Espressif/ESP8266_RTOS_SDK/lib/libfreertos.a; \
-    done && \
-    mv /opt/Espressif/ESP8266_RTOS_SDK/lib/libgcc.a /opt/Espressif/ESP8266_RTOS_SDK/lib/libgcc_sdk.a && \
-    xtensa-lx106-elf-objcopy \
-      --weaken-symbol Cache_Read_Enable_New \
-      /opt/Espressif/ESP8266_RTOS_SDK/lib/libmain.a
-# Move aside mbedTLS shipped with the RTOS SDK.
-RUN mv /opt/Espressif/ESP8266_RTOS_SDK/lib/libmbedtls.a /opt/Espressif/ESP8266_RTOS_SDK/lib/libmbedtls_sdk.a && \
-    mv /opt/Espressif/ESP8266_RTOS_SDK/include/mbedtls /opt/Espressif/ESP8266_RTOS_SDK/include/mbedtls_sdk
-
-ADD cs_lwip /opt/Espressif/cs_lwip
 ADD rom.bin rom.elf /opt/Espressif/rom/
 
 ADD mgos_fw_meta.py mklfs mkspiffs mkspiffs8 /usr/local/bin/
 ADD serve_core/ /opt/serve_core/
 RUN ln -s /opt/serve_core/serve_core.py /usr/local/bin/serve_core.py
 
-ENV MGOS_TARGET_GDB=/opt/Espressif/esp-open-sdk/xtensa-lx106-elf/bin/xtensa-lx106-elf-gdb
+ENV MGOS_TARGET_GDB=/opt/Espressif/xtensa-lx106-elf/bin/xtensa-lx106-elf-gdb
 ARG DOCKER_TAG
 ENV MGOS_SDK_REVISION $DOCKER_TAG
 ENV MGOS_SDK_BUILD_IMAGE docker.io/mgos/esp8266-build:$DOCKER_TAG

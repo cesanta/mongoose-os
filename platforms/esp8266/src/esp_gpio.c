@@ -191,8 +191,12 @@ IRAM bool mgos_gpio_read_out(int pin) {
 IRAM static void esp8266_gpio_isr(void *arg) {
   uint32_t int_st = GPIO_REG_READ(GPIO_STATUS_ADDRESS);
   for (uint32_t i = 0, mask = 1; i < 16; i++, mask <<= 1) {
-    if (!(s_int_config[i] & INT_ENA) || !(int_st & mask)) continue;
-    mgos_gpio_hal_int_cb(i);
+    if (!(int_st & mask)) continue;
+    if (s_int_config[i] & INT_ENA) {
+      mgos_gpio_hal_int_cb(i);
+    } else {
+      mgos_gpio_hal_clear_int(i);
+    }
   }
   (void) arg;
 }
@@ -207,10 +211,11 @@ void (*mgos_nsleep100)(uint32_t n);
 uint32_t mgos_bitbang_n100_cal;
 
 enum mgos_init_result mgos_gpio_hal_init(void) {
-  // Interupts are not alaway cleared after soft reset (notably GPIO2)
+  // Interupts are not cleared after soft reset (notably GPIO2)
   // Probably the GPIO2 is triggered because of the second UART - U1TXD, 
   // which is transmitting data during boot. Clear everything
   for (int i = 0; i < GPIO_PIN_COUNT; i++) {
+    mgos_gpio_hal_disable_int(i);
     mgos_gpio_hal_clear_int(i);
   }
 #ifdef RTOS_SDK
@@ -250,8 +255,12 @@ bool mgos_gpio_hal_set_int_mode(int pin, enum mgos_gpio_int_mode mode) {
     default:
       return false;
   }
-  s_int_config[pin] = it;
-  gpio_pin_intr_state_set(GPIO_ID_PIN(pin), it);
+  if (s_int_config[pin] & INT_ENA) {
+    s_int_config[pin] = (INT_ENA | it);
+    gpio_pin_intr_state_set(GPIO_ID_PIN(pin), it);
+  } else {
+    s_int_config[pin] = it;
+  }
   return true;
 }
 

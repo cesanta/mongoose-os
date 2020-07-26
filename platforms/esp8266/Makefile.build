@@ -104,6 +104,7 @@ MGOS_SRCS += esp_config.c \
              esp_crypto.c \
              esp_debug.c \
              esp_exc.c \
+             esp_flash_writer.c \
              esp_gpio.c \
              esp_hal.c \
              esp_heap_trace.c \
@@ -134,7 +135,7 @@ LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip
 include $(MGOS_PATH)/tools/mk/mgos_features.mk
 
 # libraries used in this project, mainly provided by the SDK
-SDK_LIBS = c crypto espnow gcc main net80211 pp phy stdc++ wpa wpa2
+SDK_LIBS = c crypto espnow gcc m main net80211 pp phy stdc++ wpa wpa2
 LIBS = $(addprefix -l,$(SDK_LIBS))
 
 SHIMS = -DNDEBUG
@@ -161,11 +162,19 @@ MEMORY_FLAGS = -DFS_MAX_OPEN_FILES=5
 
 .PHONY: all clean
 
+# NB: These setting must match ones used during build of the LwIP library during Docker image build.
+LWIP_CFLAGS = -DTCP_MSS=536 -DTCP_MSL=5000 -DLWIP_FEATURES=1 -DLWIP_IPV6=0 -DLWIP_COMPAT_SOCKETS=0 \
+              -I$(MGOS_PATH)/include
+LIBS += -llwip2-536-feat
+IPATH += /opt/Espressif/xtensa-lx106-elf/xtensa-lx106-elf/sysroot/usr/include/lwip2
+
 MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" \
               -DMGOS_MAX_NUM_UARTS=2 \
               -DC_DISABLE_BUILTIN_SNPRINTF \
+              -DMGOS_NUM_HW_TIMERS=1 \
               -DMGOS_ROOT_FS_TYPE='$(MGOS_ROOT_FS_TYPE)' \
-              -DMGOS_ROOT_FS_OPTS='$(MGOS_ROOT_FS_OPTS)'
+              -DMGOS_ROOT_FS_OPTS='$(MGOS_ROOT_FS_OPTS)' \
+              $(LWIP_CFLAGS)
 
 MGOS_LIB = $(BUILD_DIR)/mongoose-os.a
 MGOS_CONFIG_C = $(GEN_DIR)/mgos_config.c
@@ -183,40 +192,11 @@ IMAGE_HEADER_SIZE = 0
 MAP_FILE = $(BUILD_DIR)/$(APP).elf.map
 FS_IMG = $(FW_STAGING_DIR)/fs.bin
 
-ifeq "$(MGOS_ESP8266_RTOS)" "1"
-  SDK_PATH = /opt/Espressif/ESP8266_RTOS_SDK
-  MGOS_SRCS += esp_exc_rtos.c
-  MGOS_CFLAGS += -DRTOS_SDK
-  LWIP_LIB =
-  LWIP_PATH = $(SDK_PATH)/lwip
-  SDK_LIBS += freertos lwip mirom
-  IPATH += $(SDK_PATH)/include/espressif \
-           $(SDK_PATH)/extra_include \
-           $(SDK_PATH)/include/lwip/ipv4 \
-           $(SDK_PATH)/include/lwip/ipv6
-  LD_SCRIPT_TEMPL = $(MGOS_ESP8266_PATH)/ld/rtos.ld
-  LDFLAGS += -Wl,--wrap=user_fatal_exception_handler \
-             -Wl,--wrap=ShowCritical
-else
-  SDK_PATH = /opt/Espressif/ESP8266_NONOS_SDK
-  MGOS_SRCS += esp_exc_non_os.c
-  MGOS_CFLAGS += -DLWIP_OPEN_SRC \
-                 -DCS_MMAP -DSPIFFS_ON_PAGE_MOVE_HOOK=mgos_vfs_mmap_spiffs_on_page_move_hook
-  LWIP_LIB = $(LWIP_BUILD_DIR)/liblwip_cs.a
-  LWIP_PATH = /opt/Espressif/cs_lwip
-  SDK_LIBS += m
-  IPATH += $(LWIP_PATH)/src/include \
-           $(LWIP_PATH)/src/include/ipv4 \
-           $(LWIP_PATH)/espressif/include
-  LD_SCRIPT_TEMPL = $(MGOS_ESP8266_PATH)/ld/non_os.ld
-
-$(LWIP_LIB): $(LWIP_PATH)
-	$(Q) mkdir -p $(abspath $(LWIP_BUILD_DIR))
-	$(Q) $(MAKE) -C $(LWIP_PATH) -j3 all \
-	  APP=liblwip_cs BUILD_DIR=$(abspath $(LWIP_BUILD_DIR)) \
-	  COMMON_ESP8266_PATH=$(MGOS_ESP8266_PATH)
-	  CFLAGS_EXTRA="$(HEAP_LOG_FLAGS)"
-endif
+SDK_PATH = /opt/Espressif/ESP8266_NONOS_SDK
+MGOS_SRCS += esp_exc_non_os.c
+MGOS_CFLAGS += -DLWIP_OPEN_SRC \
+               -DCS_MMAP -DSPIFFS_ON_PAGE_MOVE_HOOK=mgos_vfs_mmap_spiffs_on_page_move_hook
+LD_SCRIPT_TEMPL = $(MGOS_ESP8266_PATH)/ld/non_os.ld
 
 MGOS_OBJS = $(addprefix $(BUILD_DIR)/,$(MGOS_SRCS:=.o)) \
             $(BUILD_DIR)/esp_exc_vectors.S.o \
@@ -253,21 +233,24 @@ SYS_PARAMS_ADDR = $(shell printf "0x%05x" "$$(($(FLASH_SIZE) - $(SYS_PARAMS_SIZE
 # RF calibration data sector location is configurable, but we also keep it at the end, just above sys params.
 FW_RF_CAL_DATA_ADDR = $(shell printf "0x%05x" "$$(($(FLASH_SIZE) - $(SYS_PARAMS_SIZE) - $(RF_CAL_DATA_SIZE)))")
 MGOS_ROOT_FS_TYPE ?= SPIFFS
+ifdef FS_SIZE
+MGOS_ROOT_FS_SIZE = $(FS_SIZE) # For backward comaptibility
+endif
 
 ifeq ("$(FLASH_SIZE)", "1048576")
 #
 # 1MB (8Mb) layout:
 #
-# 0x000000 - rBoot        |
-# 0x007000 - boot cfg     |
-# 0x008000 - app (844K)   |
-# 0xdb0000 - fs (128K)    |
-# 0x0fb000 - rf cal       |
-# 0x0fc000 - sys params   |
-FS_SIZE ?= 131072
-ROM_SIZE = $(shell printf "0x%05x" "$$((0x100000 - $(APP0_ADDR) - $(FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAMS_SIZE) - $(IMAGE_HEADER_SIZE)))")
+# 0x000000 - rBoot       |
+# 0x007000 - rBoot cfg   |
+# 0x008000 - app (844K)  |
+# 0xdb0000 - fs (128K)   |
+# 0x0fb000 - rf cal      |
+# 0x0fc000 - sys params  |
+MGOS_ROOT_FS_SIZE ?= 131072
+ROM_SIZE = $(shell printf "0x%05x" "$$((0x100000 - $(APP0_ADDR) - $(MGOS_ROOT_FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAMS_SIZE) - $(IMAGE_HEADER_SIZE)))")
 APP0_ADDR = 0x8000
-FS0_ADDR  = $(shell printf "0x%05x" "$$((0x100000 - $(FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAMS_SIZE)))")
+FS0_ADDR  = $(shell printf "0x%05x" "$$((0x100000 - $(MGOS_ROOT_FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAMS_SIZE)))")
 APP1_ADDR = 0
 FS1_ADDR = 0
 else
@@ -275,33 +258,32 @@ ifeq ("$(FLASH_SIZE)", "2097152")
 #
 # 2MB (16Mb) layout
 #
-# 0x000000 - rBoot        | 0x100000 - free (32K)   |
-# 0x007000 - boot cfg     |                         |
-# 0x008000 - app0 (844K)  | 0x108000 - app1 (844K)  |
-# 0x0db000 - fs0 (128K)   | 0x1db000 - fs1 (128K)   |
-# 0x0fb000 - free (20K)   | 0x1fb000 - rf cal       |
-#                         | 0x1fc000 - sys params   |
-FS_SIZE ?= 131072
-ROM_SIZE = $(shell printf "0x%05x" "$$((0x100000 - ($(APP0_ADDR) % 0x100000) - $(FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAMS_SIZE) - $(IMAGE_HEADER_SIZE)))")
+# 0x000000 - rBoot       | 0x100000 - free (32K)   |
+# 0x007000 - rBoot cfg   |                         |
+# 0x008000 - app0 (844K) | 0x108000 - app1 (844K)  |
+# 0x0db000 - fs0 (128K)  | 0x1db000 - fs1 (128K)   |
+# 0x0fb000 - free (20K)  | 0x1fb000 - rf cal       |
+#                        | 0x1fc000 - sys params   |
+MGOS_ROOT_FS_SIZE ?= 131072
+ROM_SIZE = $(shell printf "0x%05x" "$$((0x100000 - ($(APP0_ADDR) % 0x100000) - $(MGOS_ROOT_FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAMS_SIZE) - $(IMAGE_HEADER_SIZE)))")
 APP0_ADDR = 0x8000
-FS0_ADDR  = $(shell printf "0x%05x" "$$((0x100000 - $(FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAMS_SIZE)))")
+FS0_ADDR  = $(shell printf "0x%05x" "$$((0x100000 - $(MGOS_ROOT_FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAMS_SIZE)))")
 APP1_ADDR = 0x108000
-FS1_ADDR  = $(shell printf "0x%05x" "$$((0x200000 - $(FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAMS_SIZE)))")
+FS1_ADDR  = $(shell printf "0x%05x" "$$((0x200000 - $(MGOS_ROOT_FS_SIZE) - $(RF_CAL_DATA_SIZE) - $(SYS_PARAMS_SIZE)))")
 else
 #
 # 4MB (32Mb) or larger layout
 #
-# 0x000000 - rBoot        | 0x100000 - app0 (1024K) | 0x200000 - app1 (1024K) | 0x200000 - free (1004K) |
-# 0x007000 - boot cfg     |                         |                         |                         |
-# 0x008000 - fs0 (256K)   |                         |                         |                         |
-# 0x048000 - fs1 (256K)   |                         |                         |                         |
-# 0x880000 - free (480K)  |                         |                         |                         |
-#                         |                         |                         | 0x2fb000 - rf cal       |
-#                         |                         |                         | 0x2fc000 - sys params   |
-FS_SIZE ?= 262144
+# 0x000000 - rBoot       | 0x100000 - app0 (1024K) | 0x200000 - app1 (1024K) | 0x300000 - fs1 (256K)   |
+# 0x007000 - rBoot cfg   |                         |                         | 0x340000 - free(748K)   |
+# 0x008000 - fs0 (256K)  |                         |                         |                         |
+# 0x048000 - free (736K) |                         |                         |                         |
+#                        |                         |                         | 0x3fb000 - rf cal       |
+#                        |                         |                         | 0x3fc000 - sys params   |
+MGOS_ROOT_FS_SIZE ?= 262144
 ROM_SIZE = $(shell printf "0x%05x" "$$((0x100000 - $(IMAGE_HEADER_SIZE)))")
 FS0_ADDR  = 0x8000
-FS1_ADDR = $(shell printf "0x%05x" "$$(($(FS0_ADDR) + $(FS_SIZE)))")
+FS1_ADDR = 0x300000
 APP0_ADDR = 0x100000
 APP1_ADDR = 0x200000
 endif
@@ -312,7 +294,7 @@ BOOTLOADER_FLAGS = -DFW1_ADDR=$(APP0_ADDR) \
                    -DFW2_ADDR=$(APP1_ADDR) \
                    -DFW1_FS_ADDR=$(FS0_ADDR) \
                    -DFW2_FS_ADDR=$(FS1_ADDR) \
-                   -DFS_SIZE=$(FS_SIZE) \
+                   -DFS_SIZE=$(MGOS_ROOT_FS_SIZE) \
                    -DFW_SIZE=$(ROM_SIZE) \
                    -DBOOT_CONFIG_ADDR=$(BOOT_CONFIG_ADDR)
 
@@ -349,8 +331,8 @@ CFLAGS += -DMGOS_ADC_MODE_VDD=$(MGOS_ADC_MODE_VDD)
 # Main output product: firmware files.
 FW_PARTS = boot:addr=$(BOOT_LOADER_ADDR),src=$(BOOT_LOADER_BIN),update=$(MGOS_UPDATE_BOOT_LOADER) \
            boot_cfg:addr=$(BOOT_CONFIG_WRITE_ADDR),size=0x1000,fill=0xff \
-           fw:addr=$(APP0_ADDR),src=$(APP_BIN) \
-           fs:src=$(FS_IMG),type=fs,addr=$(FS0_ADDR),fs_size=$(FS_SIZE) \
+           fw:addr=$(APP0_ADDR),addr1=$(APP1_ADDR),src=$(APP_BIN) \
+           fs:src=$(FS_IMG),type=fs,addr=$(FS0_ADDR),addr1=$(FS1_ADDR),fs_size=$(MGOS_ROOT_FS_SIZE) \
            rf_cal_data:addr=$(FW_RF_CAL_DATA_ADDR),size=$(RF_CAL_DATA_SIZE),fill=0xff \
            sys_params:type=sys_params,src=$(SDK_INIT_DATA_PATH)/bin/esp_init_data_default_v08.bin,addr=$(SYS_PARAMS_ADDR) \
            $(APP_EXTRA_FW_PARTS)
@@ -368,7 +350,7 @@ $(APP_BIN): $(APP_ELF) $(BUILD_DIR)/esptool2
 # -- Linking.
 
 # Link the main ELF output file.
-BIN_PARTS = $(BUILD_DIR)/esp_cache.c.o $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(LWIP_LIB) $(APP_BIN_LIB_FILES)
+BIN_PARTS = $(BUILD_DIR)/esp_cache.c.o $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(APP_BIN_LIB_FILES)
 $(APP_ELF): $(BIN_PARTS) $(LD_SCRIPT)
 ifeq "$(MGOS_ESP8266_RTOS)" "1"
 	$(OBJCOPY) --weaken-symbol printf --weaken-symbol puts /opt/Espressif/esp-open-sdk/xtensa-lx106-elf/xtensa-lx106-elf/lib/libc.a
@@ -449,7 +431,7 @@ $(MG_BUILD_INFO_C): $(MGOS_OBJS)
 # -- Filesystem.
 
 $(FS_IMG): $(MKFS) $(APP_FS_DIRS) $(FS_FILES)
-	$(call mkfs,$(FS_SIZE),$(MGOS_ROOT_FS_OPTS))
+	$(call mkfs,$(MGOS_ROOT_FS_SIZE),$(MGOS_ROOT_FS_OPTS))
 
 #
 # Auxiliary targets.

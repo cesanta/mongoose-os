@@ -150,8 +150,14 @@ void mg_lwip_mgr_schedule_poll(struct mg_mgr *mgr) {
 }
 
 IRAM void sdk_putc(char c) {
-  if (mgos_debug_uart_is_suspended()) return;
-  esp_exc_putc(c);
+  static char s_sdk_log_line[56];
+  static uint8_t s_sdk_log_line_len = 0;
+  if (c != '\n') s_sdk_log_line[s_sdk_log_line_len++] = c;
+  if (c == '\n' || s_sdk_log_line_len == sizeof(s_sdk_log_line) - 1) {
+    s_sdk_log_line[s_sdk_log_line_len] = '\0';
+    LOG(LL_INFO, ("SDK: %s", s_sdk_log_line));
+    s_sdk_log_line_len = 0;
+  }
 }
 
 enum mgos_init_result esp_mgos_init2(void) {
@@ -284,6 +290,12 @@ void _init(void) {
   // Called by __libc_init_array after global ctors. No further action required.
 }
 
+static void os_timer_cb(void *arg) {
+  // RTOS callbacks are executed in ISR context; for non-OS it doesn't matter.
+  mongoose_schedule_poll(true /* from_isr */);
+  (void) arg;
+}
+
 void user_init(void) {
   uart_div_modify(0, UART_CLK_FREQ / MGOS_DEBUG_UART_BAUD_RATE);
 #ifdef MGOS_HAVE_ADC
@@ -294,10 +306,7 @@ void user_init(void) {
   mgos_debug_init();
   srand(system_get_time() ^ system_get_rtc_time());
   os_timer_disarm(&s_mg_poll_tmr);
-  os_timer_setfn(&s_mg_poll_tmr, (void (*)(void *)) mongoose_schedule_poll,
-                 /* RTOS callbacks are executed in ISR context; for non-OS it
-                    doesn't matter. */
-                 (void *) true);
+  os_timer_setfn(&s_mg_poll_tmr, os_timer_cb, NULL);
   esp_hw_wdt_setup(ESP_HW_WDT_26_8_SEC, ESP_HW_WDT_26_8_SEC);
   /* Soft WDT feeds HW WDT, we don't want this. */
   system_soft_wdt_stop();

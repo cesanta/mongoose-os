@@ -41,8 +41,6 @@ uint32_t SPIRead(uint32_t addr, void *dst, uint32_t size);
 #include <ets_sys.h>
 
 /* There are no declarations for these anywhere in the SDK (as of 1.2.0). */
-void ets_isr_mask(unsigned intr);
-void ets_isr_unmask(unsigned intr);
 void system_restart_local(void);
 int os_printf_plus(const char *format, ...);
 
@@ -55,12 +53,6 @@ uint32_t ets_wdt_get_mode(void);
 void _xtos_l1int_handler(void);
 void _xtos_set_exception_handler();
 void xthal_set_intenable(unsigned);
-
-/* These are present in mem.h but are commented out. */
-void *pvPortMalloc(size_t xWantedSize, const char *file, int line);
-void vPortFree(void *pv, const char *file, int line);
-void *pvPortZalloc(size_t size, const char *file, int line);
-void *pvPortRealloc(void *pv, size_t size, const char *file, int line);
 
 #else /* !RTOS_SDK */
 

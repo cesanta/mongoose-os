@@ -17,11 +17,12 @@
 
 #include "mgos_core_dump.h"
 
-#include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "common/cs_base64.h"
 #include "common/cs_crc32.h"
+#include "common/cs_dbg.h"
 #include "common/str_util.h"
 
 #include "mgos_system.h"
@@ -73,9 +74,9 @@ NOINSTR void mgos_cd_write_section(const char *name, const void *p,
                                    size_t len) {
   struct section_ctx ctx = {.col_counter = 0, .crc32 = 0};
   cs_base64_init(&ctx.b64_ctx, write_char, &ctx);
-  mgos_cd_printf(",\r\n\"%s\": {\"addr\": %u, \"data\": \"\r\n", name,
-                 (unsigned int) p);
-
+  mgos_cd_printf(",\r\n\"%s\": {\"addr\": %lu, \"data\": \"\r\n", name,
+                 (unsigned long) p);
+  mgos_wdt_feed();
   const uint32_t *dp = (const uint32_t *) p;
   const uint32_t *end = dp + (len / sizeof(uint32_t));
   while (dp < end) {
@@ -87,7 +88,10 @@ NOINSTR void mgos_cd_write_section(const char *name, const void *p,
   mgos_cd_printf("\", \"crc32\": %u}", (unsigned int) ctx.crc32);
 }
 
+extern enum cs_log_level cs_log_level;
+
 NOINSTR void mgos_cd_write(void) {
+  cs_log_level = LL_NONE;
   mgos_cd_puts(MGOS_CORE_DUMP_START "{");
   mgos_cd_puts("\"app\": \"" MGOS_APP "\", ");
   mgos_cd_puts("\"arch\": \"" CS_STRINGIFY_MACRO(FW_ARCHITECTURE) "\", ");

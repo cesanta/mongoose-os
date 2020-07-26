@@ -30,7 +30,7 @@ INCS = -I$(REPO_ROOT)/src \
        -I. \
        $(CFLAGS_EXTRA)
 
-CFLAGS = -W -Wall -Werror -g -O0 -Wno-multichar -I$(BUILD_DIR) $(INCS)
+CFLAGS = -W -Wall -Wextra -Werror -g -O0 -Wno-multichar -I$(BUILD_DIR) $(INCS)
 
 all: $(BUILD_DIR) $(PROG)
 	./$(PROG)
