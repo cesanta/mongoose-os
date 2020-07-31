@@ -114,15 +114,19 @@ int mgos_uart_printf(int uart_no, const char *fmt, ...) {
   return len;
 }
 
-size_t mgos_uart_read(int uart_no, void *buf, size_t len) {
+size_t mgos_uart_read_advanced(int uart_no, void *buf, size_t len, int flags) {
   struct mgos_uart_state *us = s_uart_state[uart_no];
   if (us == NULL || !us->rx_enabled) return 0;
   uart_lock(us);
   mgos_uart_hal_dispatch_rx_top(us);
   size_t tr = MIN(len, us->rx_buf.len);
   if (us->cfg.tx_fc_type == MGOS_UART_FC_SW) {
-    size_t i, j;
-    for (i = 0, j = 0; i < tr; i++) {
+    size_t i = 0, j = 0, end = tr;
+    if (flags & MGOS_UART_READ_END) {
+      i = us->rx_buf.len - tr;
+      end = us->rx_buf.len;
+    }
+    for (; i < end; i++) {
       uint8_t ch = (uint8_t) us->rx_buf.buf[i];
       switch (ch) {
         case MGOS_UART_XON_CHAR:
@@ -139,9 +143,20 @@ size_t mgos_uart_read(int uart_no, void *buf, size_t len) {
   } else {
     memcpy(buf, us->rx_buf.buf, tr);
   }
-  mbuf_remove(&us->rx_buf, tr);
+  if (!(flags & MGOS_UART_READ_KEEP)) {
+    if (flags & MGOS_UART_READ_END) {
+      us->rx_buf.len -= tr;
+      mbuf_trim(&us->rx_buf);
+    } else {
+      mbuf_remove(&us->rx_buf, tr);
+    }
+  }
   uart_unlock(us);
   return tr;
+}
+
+size_t mgos_uart_read(int uart_no, void *buf, size_t len) {
+  return mgos_uart_read_advanced(uart_no, buf, len, MGOS_UART_READ_DEFAULT);
 }
 
 size_t mgos_uart_read_mbuf(int uart_no, struct mbuf *mb, size_t len) {

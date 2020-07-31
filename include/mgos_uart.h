@@ -97,6 +97,10 @@ struct mgos_uart_config {
 #define MGOS_UART_XON_CHAR 0x11
 #define MGOS_UART_XOFF_CHAR 0x13
 
+#define MGOS_UART_READ_DEFAULT 0
+#define MGOS_UART_READ_KEEP 1
+#define MGOS_UART_READ_END 2
+
 /*
  * Apply given UART configuration.
  *
@@ -164,6 +168,15 @@ int mgos_uart_printf(int uart_no, const char *fmt, ...);
  * input buffer.
  */
 size_t mgos_uart_read(int uart_no, void *buf, size_t len);
+
+/*
+ * Read data from UART input buffer, accepting advanced flags:
+ * MGOS_UART_READ_KEEP: read but not delete from input buffer
+ * MGOS_UART_READ_END: read data at the end of the input buffer
+ * MGOS_UART_READ_DEFAULT: no flags are active (= zero),
+ * same behaviour as plain old mgos_uart_read(...).
+ */
+size_t mgos_uart_read_advanced(int uart_no, void *buf, size_t len, int flags);
 
 /* Like `mgos_uart_read`, but reads into an mbuf. */
 size_t mgos_uart_read_mbuf(int uart_no, struct mbuf *mb, size_t len);
