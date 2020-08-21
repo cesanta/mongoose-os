@@ -91,6 +91,7 @@ out:
   return ret;
 }
 
+#ifdef MGOS_HAVE_MBEDTLS
 bool mgos_file_digest(const char *fname, mbedtls_md_type_t dt,
                       uint8_t *digest) {
   bool res = false;
@@ -137,3 +138,4 @@ out:
   if (!res) res = mgos_file_copy(from, to);
   return res;
 }
+#endif  // MGOS_HAVE_MBEDTLS

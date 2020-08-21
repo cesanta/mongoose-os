@@ -20,7 +20,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#ifdef MGOS_HAVE_MBEDTLS
 #include "mbedtls/md.h"
+#endif
 
 #ifdef __cplusplus
 extern "C" {
@@ -29,11 +31,13 @@ extern "C" {
 /* Copy a file */
 bool mgos_file_copy(const char *from, const char *to);
 
+#ifdef MGOS_HAVE_MBEDTLS
 /* Compute file's digest. *digest must have enough space for the digest type. */
 bool mgos_file_digest(const char *fname, mbedtls_md_type_t dt, uint8_t *digest);
 
 /* Copy the file if target does not exist or is different. */
 bool mgos_file_copy_if_different(const char *from, const char *to);
+#endif  // MGOS_HAVE_MBEDTLS
 
 #ifdef __cplusplus
 }

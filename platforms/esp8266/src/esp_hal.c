@@ -142,3 +142,11 @@ uint32_t mgos_get_cpu_freq(void) {
 uint32_t sys_now(void) {
   return mgos_uptime_micros() / 1000;
 }
+
+// os_get_random uses hardware RNG, so it's cool.
+int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) WEAK;
+int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {
+  os_get_random(buf, len);
+  (void) ctx;
+  return 0;
+}
