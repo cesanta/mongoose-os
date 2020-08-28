@@ -30,6 +30,7 @@
 #include "mgos_features.h"
 #include "mgos_sys_config.h"
 #include "mgos_system.h"
+#include "mgos_time.h"
 #include "mgos_uart.h"
 
 #ifndef IRAM
@@ -42,11 +43,12 @@ static int8_t s_stderr_uart = MGOS_DEBUG_UART;
 static int8_t s_uart_suspended = 0;
 static int8_t s_in_debug = 0;
 
-static inline void debug_lock(void) {
+/* This overrides default dummy implementations defined in cs_dbg.c */
+void cs_log_lock(void) {
   mgos_rlock(s_debug_lock);
 }
 
-static inline void debug_unlock(void) {
+void cs_log_unlock(void) {
   mgos_runlock(s_debug_lock);
 }
 
@@ -55,13 +57,12 @@ static inline void debug_unlock(void) {
 extern enum cs_log_level cs_log_cur_msg_level;
 #endif
 
+/* NB: Avoid *printf in this function, they use too much stack. */
 void mgos_debug_write(int fd, const void *data, size_t len) {
   char buf[MGOS_DEBUG_TMP_BUF_SIZE];
   enum cs_log_level old_level;
   int uart_no = -1;
-  debug_lock();
   if (s_in_debug) {
-    debug_unlock();
     return;
   }
   s_in_debug = true;
@@ -82,18 +83,31 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
     goto out_unlock;
   }
 #if MGOS_ENABLE_DEBUG_UDP
-  /* Only send STDERR to UDP. */
-  if (fd == 2 && mgos_sys_config_get_debug_udp_log_addr() != NULL &&
+  if (mgos_sys_config_get_debug_udp_log_addr() != NULL &&
       cs_log_cur_msg_level <= mgos_sys_config_get_debug_udp_log_level()) {
+    /* NB: Avoid snprintf, it uses too much stack. */
     static uint32_t s_seq = 0;
-    int n = snprintf(
-        buf, sizeof(buf), "%s %u %.3lf %d|",
-        (mgos_sys_config_get_device_id() ? mgos_sys_config_get_device_id()
-                                         : "-"),
-        (unsigned int) s_seq, mg_time(), fd);
-    if (n > 0) {
-      mgos_debug_udp_send(mg_mk_str_n(buf, n), mg_mk_str_n(data, len));
-    }
+    buf[0] = '\0';
+    const char *id = mgos_sys_config_get_device_id();
+    uint64_t ts_us = mgos_uptime_micros();
+    uint64_t ts_us_s = ts_us / 1000000;
+    unsigned int ts_ms = ((unsigned int) (ts_us - (ts_us_s * 1000000))) / 1000;
+    strncat(buf, (id ? id : "-"), sizeof(buf) - 1);
+    int n = strlen(buf);
+    buf[n++] = ' ';
+    n += mgos_utoa(s_seq, buf + n, 10);
+    buf[n++] = ' ';
+    n += mgos_utoa((unsigned int) ts_us_s, buf + n, 10);
+    buf[n++] = '.';
+    n += mgos_utoa(ts_ms, buf + n, 10);
+    buf[n++] = ' ';
+    buf[n++] = '0' + fd;
+    buf[n++] = ' ';
+    buf[n++] =
+        '0' +
+        (cs_log_cur_msg_level != LL_NONE ? (char) cs_log_cur_msg_level : 0);
+    buf[n++] = '|';
+    mgos_debug_udp_send(mg_mk_str_n(buf, n), mg_mk_str_n(data, len));
     s_seq++;
   }
 #endif /* MGOS_ENABLE_DEBUG_UDP */
@@ -104,13 +118,13 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
 #endif
   {
     struct mgos_debug_hook_arg arg = {
-        .buf = buf,
-        .fd = fd,
+      .buf = buf,
+      .fd = fd,
 #if CS_ENABLE_STDIO
-        .level = cs_log_cur_msg_level,
+      .level = cs_log_cur_msg_level,
 #endif
-        .data = data,
-        .len = len,
+      .data = data,
+      .len = len,
     };
     mgos_event_trigger(MGOS_EVENT_LOG, &arg);
   }
@@ -118,7 +132,6 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
 out_unlock:
   cs_log_level = old_level;
   s_in_debug = false;
-  debug_unlock();
 }
 
 void mgos_debug_flush(void) {
