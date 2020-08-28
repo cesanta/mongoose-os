@@ -156,12 +156,39 @@ void mgos_cd_putc(int c) {
   panicPutChar(c);
 }
 
-extern enum cs_log_level cs_log_cur_msg_level;
-static int sdk_debug_vprintf(const char *fmt, va_list ap) {
-  /* Do not log SDK messages anywhere except UART. */
-  cs_log_cur_msg_level = LL_VERBOSE_DEBUG;
-  int res = vprintf(fmt, ap);
+extern void cs_log_lock(void);
+extern void cs_log_unlock(void);
+extern FILE *cs_log_file;
+extern volatile enum cs_log_level cs_log_cur_msg_level;
+static int sdk_debug_vprintf(esp_log_level_t level, const char *fmt,
+                             va_list ap) {
+  FILE *f = (cs_log_file ? cs_log_file : stderr);
+  enum cs_log_level cs_level = LL_NONE;
+  switch (level) {
+    case ESP_LOG_NONE:
+      cs_level = LL_NONE;
+      break;
+    case ESP_LOG_ERROR:
+      cs_level = LL_ERROR;
+      break;
+    case ESP_LOG_WARN:
+      cs_level = LL_WARN;
+      break;
+    case ESP_LOG_INFO:
+      cs_level = LL_INFO;
+      break;
+    case ESP_LOG_DEBUG:
+      cs_level = LL_DEBUG;
+      break;
+    case ESP_LOG_VERBOSE:
+      cs_level = LL_VERBOSE_DEBUG;
+      break;
+  }
+  cs_log_lock();
+  cs_log_cur_msg_level = cs_level;
+  int res = vfprintf(f, fmt, ap);
   cs_log_cur_msg_level = LL_NONE;
+  cs_log_unlock();
   return res;
 }
 
