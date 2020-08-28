@@ -43,3 +43,29 @@ void mgos_system_restart(void) {
   mgos_debug_flush();
   mgos_dev_system_restart();
 }
+
+int mgos_itoa(int value, char *out, int base) {
+  if (base == 10 && value < 0) {
+    *(out++) = '-';
+    return mgos_utoa((unsigned int) (-value), out, base) + 1;
+  }
+  return mgos_utoa((unsigned int) value, out, base);
+}
+
+int mgos_utoa(unsigned int value, char *out, int base) {
+  int n = 0;
+  const char *digits = "0123456789abcdef";
+  if (base < 2 || base > 16) return 0;
+  do {
+    out[n++] = digits[value % base];
+    value /= base;
+  } while (value > 0);
+  /* Reverse output */
+  for (int i = 0, j = n; i < --j; i++) {
+    char c = out[i];
+    out[i] = out[j];
+    out[j] = c;
+  }
+  out[n] = '\0';
+  return n;
+}

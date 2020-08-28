@@ -19,8 +19,7 @@
  * HAL that needs to be implemented for each hardware platform.
  */
 
-#ifndef CS_FW_INCLUDE_MGOS_SYSTEM_H_
-#define CS_FW_INCLUDE_MGOS_SYSTEM_H_
+#pragma once
 
 #include <stdbool.h>
 #include <stdint.h>
@@ -28,7 +27,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* __cplusplus */
+#endif
 
 /* Get system memory size. */
 size_t mgos_get_heap_size(void);
@@ -113,8 +112,18 @@ void mgos_runlock(struct mgos_rlock_type *l);
 /* Destroy a recursive lock. */
 void mgos_rlock_destroy(struct mgos_rlock_type *l);
 
+/*
+ * Converts integer to string in given base (2 to 16).
+ * Returns number of characters written, excluding '\0'.
+ */
+int mgos_itoa(int value, char *out, int base);
+
+/*
+ * Converts unsigned integer to string in given base (2 to 16).
+ * Returns number of characters written, excluding '\0'.
+ */
+int mgos_utoa(unsigned int value, char *out, int base);
+
 #ifdef __cplusplus
 }
-#endif /* __cplusplus */
-
-#endif /* CS_FW_INCLUDE_MGOS_SYSTEM_H_ */
+#endif
