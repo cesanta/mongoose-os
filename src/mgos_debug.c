@@ -99,6 +99,12 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
     buf[n++] = ' ';
     n += mgos_utoa((unsigned int) ts_us_s, buf + n, 10);
     buf[n++] = '.';
+    if (ts_ms < 100) {
+      buf[n++] = '0';
+      if (ts_ms < 10) {
+        buf[n++] = '0';
+      }
+    }
     n += mgos_utoa(ts_ms, buf + n, 10);
     buf[n++] = ' ';
     buf[n++] = '0' + fd;
