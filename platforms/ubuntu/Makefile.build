@@ -47,7 +47,7 @@ INCLUDES = $(MGOS_IPATH) $(SRC_PATH) $(BUILD_DIR) $(sort $(APP_SOURCE_DIRS) $(AP
 MGOS_SRCS = $(notdir $(wildcard *.c)) mgos_init.c  \
             frozen.c mgos_event.c \
             mgos_core_dump.c mgos_system.c mgos_time.c mgos_timers.c \
-            mgos_config_util.c mgos_sys_config.c \
+            mgos_config_util.c mgos_json_utils.cpp mgos_sys_config.c \
             json_utils.c cs_rbuf.c mgos_uart.c \
             mgos_utils.c cs_file.c cs_hex.c cs_crc32.c \
             error_codes.cpp status.cpp

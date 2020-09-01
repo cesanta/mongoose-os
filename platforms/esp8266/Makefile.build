@@ -86,6 +86,7 @@ MGOS_SRCS += cs_file.c cs_hex.c cs_rbuf.c \
              mgos_gpio.c \
              mgos_hw_timers.c \
              mgos_init.c \
+             mgos_json_utils.cpp \
              mgos_time.c \
              mgos_timers.c \
              mgos_mmap_esp.c \

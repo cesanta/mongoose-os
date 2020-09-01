@@ -15,8 +15,7 @@
  * limitations under the License.
  */
 
-#ifndef CS_COMMON_JSON_UTILS_H_
-#define CS_COMMON_JSON_UTILS_H_
+#pragma once
 
 #include "common/mbuf.h"
 #include "common/mg_str.h"
@@ -25,7 +24,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* __cplusplus */
+#endif
 
 int mg_json_printer_mbuf(struct json_out *, const char *, size_t);
 
@@ -46,6 +45,15 @@ void mg_json_emit_str(struct mbuf *b, const struct mg_str s, int quote);
 
 #ifdef __cplusplus
 }
-#endif /* __cplusplus */
+#endif
 
-#endif /* CS_COMMON_JSON_UTILS_H_ */
+#ifdef __cplusplus
+
+#include <string>
+
+namespace mgos {
+
+std::string JSONPrintfString(const char *fmt, ...);
+
+}  // namespace mgos
+#endif
