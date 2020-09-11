@@ -53,7 +53,11 @@ void mg_json_emit_str(struct mbuf *b, const struct mg_str s, int quote);
 
 namespace mgos {
 
-std::string JSONPrintfString(const char *fmt, ...);
+// Renders JSON and returns a string.
+std::string JSONPrintStringf(const char *fmt, ...);
+
+// Appends JSON to and existing string.
+int JSONAppendStringf(std::string *out, const char *fmt, ...);
 
 }  // namespace mgos
 #endif

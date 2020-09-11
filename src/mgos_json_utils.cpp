@@ -19,22 +19,33 @@
 
 namespace mgos {
 
-int JSONPrinterString(struct json_out *out, const char *buf, size_t len) {
+static int JSONStringPrinter(struct json_out *out, const char *buf,
+                             size_t len) {
   std::string *res = static_cast<std::string *>(out->u.data);
   res->append(buf, len);
   return len;
 }
 
-std::string JSONPrintfString(const char *fmt, ...) {
-  std::string res;
-  struct json_out out = {};
+int JSONAppendStringf(std::string *out, const char *fmt, ...) {
+  struct json_out json_out = {};
   va_list ap;
   va_start(ap, fmt);
-  out.printer = JSONPrinterString;
-  out.u.data = reinterpret_cast<char *>(&res);
-  json_vprintf(&out, fmt, ap);
+  json_out.printer = JSONStringPrinter;
+  json_out.u.data = reinterpret_cast<char *>(out);
+  int res = json_vprintf(&json_out, fmt, ap);
   va_end(ap);
-  res.shrink_to_fit();
+  return res;
+}
+
+std::string JSONPrintStringf(const char *fmt, ...) {
+  std::string res;
+  struct json_out json_out = {};
+  va_list ap;
+  va_start(ap, fmt);
+  json_out.printer = JSONStringPrinter;
+  json_out.u.data = reinterpret_cast<char *>(&res);
+  json_vprintf(&json_out, fmt, ap);
+  va_end(ap);
   return res;
 }
 
