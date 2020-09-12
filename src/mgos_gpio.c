@@ -264,8 +264,8 @@ static void mgos_gpio_blink_timer_cb(void *arg) {
     bool cur = mgos_gpio_toggle(pin);
     if (s->blink.on_ms != s->blink.off_ms) {
       int timeout = (cur ? s->blink.on_ms : s->blink.off_ms);
-      s->blink.timer_id =
-          mgos_set_timer(timeout, 0, mgos_gpio_blink_timer_cb, (void *) pin);
+      s->blink.timer_id = mgos_set_timer(timeout, 0, mgos_gpio_blink_timer_cb,
+                                         (void *) (intptr_t) pin);
     }
   }
   mgos_runlock(s_lock);
@@ -287,7 +287,7 @@ bool mgos_gpio_blink(int pin, int on_ms, int off_ms) {
         s->blink.timer_id = mgos_set_timer(
             on_ms,
             (on_ms == off_ms ? MGOS_TIMER_REPEAT : 0) | MGOS_TIMER_RUN_NOW,
-            mgos_gpio_blink_timer_cb, (void *) pin);
+            mgos_gpio_blink_timer_cb, (void *) (intptr_t) pin);
         res = (s->blink.timer_id != MGOS_INVALID_TIMER_ID);
       }
     } else {

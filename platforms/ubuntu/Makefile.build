@@ -43,15 +43,15 @@ GEN_INCLUDES ?= $(GEN_DIR)
 
 APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
 INCLUDES = $(MGOS_IPATH) $(SRC_PATH) $(BUILD_DIR) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) $(GEN_INCLUDES) $(PLATFORM_VPATH)
-MGOS_SRCS = $(notdir $(wildcard *.c)) mgos_init.c  \
-            frozen.c mgos_event.c \
+MGOS_SRCS = mgos_init.c  \
+            frozen.c mgos_event.c mgos_gpio.c \
             mgos_core_dump.c mgos_system.c mgos_time.c mgos_timers.c \
             mgos_config_util.c mgos_json_utils.cpp mgos_sys_config.c \
             json_utils.c cs_rbuf.c mgos_uart.c \
             mgos_utils.c cs_file.c cs_hex.c cs_crc32.c \
             error_codes.cpp status.cpp
 
-PLATFORM_SRCS = $(wildcard $(PLATFORM_VPATH)/*.c)
+PLATFORM_SRCS = $(wildcard $(PLATFORM_VPATH)/*.c) $(wildcard $(PLATFORM_VPATH)/*.cpp)
 
 C_CXX_FLAGS = -ggdb -MD -Wall -Wextra -Werror -pipe \
               -ffunction-sections -fdata-sections \
@@ -103,7 +103,8 @@ GENFILES_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.c.o,$(GENFILES_LIST))
 
 MGOS_CONF_SCHEMA += $(PLATFORM_VPATH)/ubuntu_sys_config.yaml
 
-PLATFORM_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.c.o,$(PLATFORM_SRCS))
+PLATFORM_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.c.o,$(filter %.c,$(PLATFORM_SRCS))) \
+                $(patsubst %.cpp,$(BUILD_DIR)/%.cpp.o,$(filter %.cpp,$(PLATFORM_SRCS)))
 MGOS_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.c.o,$(filter %.c,$(MGOS_SRCS))) \
             $(patsubst %.cpp,$(BUILD_DIR)/%.cpp.o,$(filter %.cpp,$(MGOS_SRCS)))
 APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.c.o,$(filter %.c,$(APP_SOURCES))) \
