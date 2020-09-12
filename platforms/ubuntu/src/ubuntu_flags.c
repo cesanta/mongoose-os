@@ -139,6 +139,10 @@ bool ubuntu_flags_init(int argc, char **argv) {
 
     /* Detect the end of the options. */
     if (c == -1) {
+      if (ok && Flags.chroot == NULL) {
+        fprintf(stderr, "Invalid / missing --chroot\n");
+        ok = false;
+      }
       goto exit;
     }
 

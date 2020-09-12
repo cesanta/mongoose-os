@@ -14,7 +14,6 @@ APP_PATH := $(CURDIR)
 SRC_PATH ?= ../../src
 PLATFORM_VPATH ?= $(MGOS_PATH)/platforms/$(APP_PLATFORM)/src
 BUILD_DIR ?= ./build
-BIN_DIR = build/bin
 GEN_DIR = $(BUILD_DIR)/gen
 FW_STAGING_DIR ?= $(BUILD_DIR)/fw_temp
 FW_DIR ?= $(CURDIR)/fw
@@ -91,8 +90,6 @@ APP_BIN_LIBS ?=
 LIBS  ?= pthread cap
 LDLIBS = $(addprefix -l,$(LIBS))
 BUILD_LIB_NAME ?= lib.a
-APP_BIN = $(BIN_DIR)/$(APP)
-# Expected by mos.
 APP_ELF = $(BUILD_DIR)/$(APP).elf
 
 # Generated artifacts
@@ -116,7 +113,7 @@ OBJS = $(MGOS_OBJS) $(APP_OBJS) $(PLATFORM_OBJS) $(GENFILES_OBJS)
 # Files
 FS_STAGING_DIR ?= $(BUILD_DIR)/fs
 
-FW_PARTS = app:type=app,src=$(APP_BIN)
+FW_PARTS = app:type=app,src=$(APP_ELF)
 FW_PARTS += $(APP_EXTRA_FW_PARTS)
 
 .PHONY: all clean
@@ -167,16 +164,13 @@ $(BUILD_DIR)/$(BUILD_LIB_NAME): $(BUILD_DIR) $(GENFILES_LIST) $(APP_OBJS)
 	$(Q) $(AR) cr $@ $(APP_OBJS)
 
 # Application target.
-$(APP_BIN): $(BIN_DIR) $(OBJS)
+$(APP_ELF): $(OBJS)
 	$(vecho) "LD    $@"
 	$(Q) $(CC) -Wl,--gc-sections -Wl,-Map=$@.map \
 	  -Wl,--start-group $(OBJS) $(APP_BIN_LIBS) $(LDLIBS) -Wl,--end-group \
-	  $(LDFLAGS) -o $(BIN_DIR)/$(APP)
+	  $(LDFLAGS) -o $@
 
-$(APP_ELF): $(APP_BIN)
-	$(Q) cp -v $(APP_BIN) $@
-
-$(FW_MANIFEST): $(APP_BIN)
+$(FW_MANIFEST): $(APP_ELF)
 
 clean:
 	$(Q) rm -rf $(BIN_DIR) $(BUILD_DIR)

@@ -55,6 +55,7 @@ bool ubuntu_cap_init(void) {
     LOGM(LL_ERROR, ("Cannot change to directory %s", Flags.chroot));
     return false;
   }
+  LOGM(LL_INFO, ("Switched root to %s", Flags.chroot));
   snprintf(conf_fn, sizeof(conf_fn), "%s/conf0.json", Flags.chroot);
   if (0 != stat(conf_fn, &s)) {
     LOGM(LL_ERROR, ("Cannot stat %s", conf_fn));
