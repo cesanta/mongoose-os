@@ -70,7 +70,9 @@ static struct mgos_gpio_state *mgos_gpio_get_or_create_state(int pin) {
   /* State may be accessed from ISR. Disable ints for the time
    * we swap the buffer. */
   mgos_ints_disable();
-  memcpy(s, s_state, s_num_gpio_states * sizeof(*s));
+  if (s_state != NULL) {
+    memcpy(s, s_state, s_num_gpio_states * sizeof(*s));
+  }
   s_state = s;
   s = &s_state[s_num_gpio_states++];
   s->pin = pin;
