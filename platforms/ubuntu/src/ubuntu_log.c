@@ -61,6 +61,13 @@ int logm_print_prefix(enum cs_log_level l, const char *func, const char *file) {
   }
   strncpy(ll_func, func + offset, sizeof(ll_func) - 1);
 
-  printf("%s%-20s ", ll_color, ll_func);
+  fprintf(stderr, "%s%-20s ", ll_color, ll_func);
   return 1;
+}
+
+void logm_printf(const char *fmt, ...) {
+  va_list ap;
+  va_start(ap, fmt);
+  vfprintf(stderr, fmt, ap);
+  va_end(ap);
 }

@@ -35,13 +35,14 @@ struct ubuntu_flags {
 
 // Logging for the main process (using different colors)
 int logm_print_prefix(enum cs_log_level l, const char *func, const char *file);
+void logm_printf(const char *fmt, ...);
 
 #define LOGM(l, x)                                  \
   do {                                              \
     if (logm_print_prefix(l, __func__, __FILE__)) { \
-      printf x;                                     \
+      logm_printf x;                                \
     }                                               \
-    printf("\033[0m\r\n");                          \
+    fprintf(stderr, "\033[0m\r\n");                 \
   } while (0)
 
 // Mongoose helper initializers
