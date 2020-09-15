@@ -53,7 +53,7 @@ MGOS_SRCS = mgos_init.c  \
 
 PLATFORM_SRCS = $(wildcard $(PLATFORM_VPATH)/*.c) $(wildcard $(PLATFORM_VPATH)/*.cpp)
 
-C_CXX_FLAGS = -ggdb -MD -Wall -Wextra -Werror -pipe \
+C_CXX_FLAGS = -O0 -ggdb -MD -Wall -Wextra -Werror -pipe \
               -ffunction-sections -fdata-sections \
               -DMGOS_APP=\"$(APP)\" \
               -DFW_ARCHITECTURE=$(APP_PLATFORM) \
@@ -66,6 +66,12 @@ CC = clang
 CXX = clang++
 C_CXX_FLAGS += -fsanitize=address -fno-omit-frame-pointer
 LDFLAGS += -fsanitize=address
+endif
+ifeq "$(UBSAN)" "1"
+CC = clang
+CXX = clang++
+C_CXX_FLAGS += -fsanitize=undefined -fno-omit-frame-pointer
+LDFLAGS += -fsanitize=undefined
 endif
 ifeq "$(PROF)" "1"
 CC = clang
@@ -167,7 +173,7 @@ $(BUILD_DIR)/$(BUILD_LIB_NAME): $(BUILD_DIR) $(GENFILES_LIST) $(APP_OBJS)
 # Application target.
 $(APP_ELF): $(OBJS)
 	$(vecho) "LD    $@"
-	$(Q) $(CC) -Wl,--gc-sections -Wl,-Map=$@.map \
+	$(Q) $(CXX) -Wl,--gc-sections -Wl,-Map=$@.map \
 	  -Wl,--start-group $(OBJS) $(APP_BIN_LIBS) $(LDLIBS) -Wl,--end-group \
 	  $(LDFLAGS) -o $@
 
