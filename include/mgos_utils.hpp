@@ -27,6 +27,9 @@ class ScopedCPtr {
  public:
   explicit ScopedCPtr(void *ptr) : ptr_(ptr) {
   }
+  ScopedCPtr(ScopedCPtr &&other) : ptr_(other.ptr_) {
+    other.ptr_ = nullptr;
+  }
   ~ScopedCPtr() {
     reset(nullptr);
   }
@@ -38,6 +41,12 @@ class ScopedCPtr {
   void reset(void *ptr) {
     if (ptr_ != nullptr) free(ptr_);
     ptr_ = ptr;
+  }
+
+  void *release() {
+    void *ptr = ptr_;
+    ptr_ = nullptr;
+    return ptr;
   }
 
  private:
