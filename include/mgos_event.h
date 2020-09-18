@@ -20,14 +20,14 @@
  * happens. Each event has an associated event data passed as `void *`.
  */
 
-#ifndef CS_FW_INCLUDE_MGOS_EVENT_H_
-#define CS_FW_INCLUDE_MGOS_EVENT_H_
+#pragma once
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* __cplusplus */
+#endif
 
 /*
  * Macro to generate unique base event number.
@@ -102,6 +102,13 @@ enum mgos_event_sys {
   MGOS_EVENT_CLOUD_CONNECTED,
   MGOS_EVENT_CLOUD_DISCONNECTED,
   MGOS_EVENT_CLOUD_CONNECTING,
+
+  /*
+   * Fired when a reboot is scheduled after certain time.
+   *
+   * ev_data: struct mgos_event_reboot_after_arg
+   */
+  MGOS_EVENT_REBOOT_AFTER,
 };
 
 /* Parameter for the MGOS_EVENT_CLOUD_* events */
@@ -115,6 +122,11 @@ enum mgos_cloud_type {
 };
 struct mgos_cloud_arg {
   enum mgos_cloud_type type;
+};
+
+/* Arg for MGOS_EVENT_REBOOT_AFTER */
+struct mgos_event_reboot_after_arg {
+  int64_t reboot_at_uptime_micros;
 };
 
 /*
@@ -196,6 +208,4 @@ bool mgos_event_remove_group_handler(int evgrp, mgos_event_handler_t cb,
 
 #ifdef __cplusplus
 }
-#endif /* __cplusplus */
-
-#endif /* CS_FW_INCLUDE_MGOS_EVENT_H_ */
+#endif

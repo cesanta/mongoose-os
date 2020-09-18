@@ -26,6 +26,7 @@
 #include "mgos_event.h"
 #include "mgos_hal.h"
 #include "mgos_hw_timers_hal.h"
+#include "mgos_time.h"
 #include "mgos_vfs.h"
 #ifdef MGOS_HAVE_WIFI
 #include "mgos_wifi.h"
@@ -42,6 +43,23 @@ void mgos_system_restart(void) {
   LOG(LL_INFO, ("Restarting"));
   mgos_debug_flush();
   mgos_dev_system_restart();
+}
+
+static void reboot_timer_cb(void *param) {
+  mgos_system_restart();
+  (void) param;
+}
+
+static void trigger_ev(void *arg) {
+  mgos_event_trigger(MGOS_EVENT_REBOOT_AFTER, arg);
+}
+
+void mgos_system_restart_after(int delay_ms) {
+  LOG(LL_INFO, ("Rebooting in %d ms", delay_ms));
+  struct mgos_event_reboot_after_arg *arg = calloc(1, sizeof(*arg));
+  arg->reboot_at_uptime_micros = mgos_uptime_micros() + delay_ms * 1000;
+  mgos_invoke_cb(trigger_ev, arg, false /* from_isr */);
+  mgos_set_timer(delay_ms, 0 /*repeat*/, reboot_timer_cb, NULL);
 }
 
 int mgos_itoa(int value, char *out, int base) {
