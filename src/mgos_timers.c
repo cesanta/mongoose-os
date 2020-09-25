@@ -161,6 +161,25 @@ IRAM void mgos_clear_timer(mgos_timer_id id) {
   }
 }
 
+bool mgos_get_timer_info(mgos_timer_id id, struct mgos_timer_info *info) {
+  struct timer_info *ti = (struct timer_info *) id, *ti2;
+  mgos_rlock(s_timer_data_lock);
+  LIST_FOREACH(ti2, &s_timer_data->timers, entries) {
+    if (ti2 == ti) break;
+  }
+  if (ti2 == NULL) {
+    /* Not a valid timer */
+    mgos_runlock(s_timer_data_lock);
+    return false;
+  }
+  info->interval_ms = ti->interval_ms;
+  info->msecs_left = (ti->next_invocation - mg_time()) * 1000;
+  info->cb = ti->cb;
+  info->cb_arg = ti->cb_arg;
+  mgos_runlock(s_timer_data_lock);
+  return true;
+}
+
 static void mgos_time_change_cb(int ev, void *evd, void *arg) {
   struct timer_data *td = (struct timer_data *) arg;
   struct mgos_time_changed_arg *ev_data = (struct mgos_time_changed_arg *) evd;

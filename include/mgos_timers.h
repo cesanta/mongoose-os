@@ -51,14 +51,14 @@
  * ```
  */
 
-#ifndef CS_FW_INCLUDE_MGOS_TIMERS_H_
-#define CS_FW_INCLUDE_MGOS_TIMERS_H_
+#pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* __cplusplus */
+#endif
 
 /* HAL */
 
@@ -130,6 +130,15 @@ mgos_timer_id mgos_set_hw_timer(int usecs, int flags, timer_callback cb,
  */
 void mgos_clear_timer(mgos_timer_id id);
 
+struct mgos_timer_info {
+  int interval_ms;  // Only valid for repeated timers, 0 for one-shot.
+  int msecs_left;   // Until next invocation.
+  timer_callback cb;
+  void *cb_arg;
+};
+
+bool mgos_get_timer_info(mgos_timer_id id, struct mgos_timer_info *info);
+
 /*
  * Format `time` according to a `strftime()`-conformant format.
  * Write the result into the `s,size` buffer. Return resulting string length.
@@ -138,6 +147,4 @@ int mgos_strftime(char *s, int size, char *fmt, int time);
 
 #ifdef __cplusplus
 }
-#endif /* __cplusplus */
-
-#endif /* CS_FW_INCLUDE_MGOS_TIMERS_H_ */
+#endif
