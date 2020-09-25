@@ -45,7 +45,8 @@ APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
 INCLUDES = $(MGOS_IPATH) $(SRC_PATH) $(BUILD_DIR) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) $(GEN_INCLUDES) $(PLATFORM_VPATH)
 MGOS_SRCS = mgos_init.c  \
             frozen.c mgos_event.c mgos_gpio.c \
-            mgos_core_dump.c mgos_system.c mgos_time.c mgos_timers.c \
+            mgos_core_dump.c mgos_system.c mgos_system.cpp mgos_time.c \
+            mgos_timers.c mgos_timers.cpp \
             mgos_config_util.c mgos_json_utils.cpp mgos_sys_config.c \
             json_utils.c cs_rbuf.c mgos_uart.c \
             mgos_utils.c cs_file.c cs_hex.c cs_crc32.c \

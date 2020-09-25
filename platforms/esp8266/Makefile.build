@@ -88,17 +88,18 @@ MGOS_SRCS += cs_file.c cs_hex.c cs_rbuf.c \
              mgos_init.c \
              mgos_json_utils.cpp \
              mgos_time.c \
-             mgos_timers.c \
+             mgos_timers.c mgos_timers.cpp \
              mgos_mmap_esp.c \
              mgos_sys_config.c $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
-             mgos_system.c \
+             mgos_system.c mgos_system.cpp \
              mgos_uart.c \
              mgos_utils.c \
              cs_crc32.c \
              rboot-bigflash.c rboot-api.c \
              json_utils.c \
              umm_malloc.c \
-             frozen.c
+             frozen.c \
+             error_codes.cpp status.cpp
 
 MGOS_SRCS += esp_config.c \
              esp_coredump.c \
@@ -115,8 +116,7 @@ MGOS_SRCS += esp_config.c \
              esp_main.c \
              esp_periph.c \
              esp_uart.c \
-             esp_umm_malloc.c \
-             error_codes.cpp status.cpp
+             esp_umm_malloc.c
 
 APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))

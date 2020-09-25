@@ -42,7 +42,6 @@ C_CXX_FLAGS  = -Wall -Werror -Wundef -Wno-array-bounds \
                -Wno-error=unused-const-variable \
                -Wno-error=strict-aliasing \
                -Wno-error=format-truncation \
-               -Wno-error=format \
                -pipe -Os -g3 \
                -D_XOPEN_SOURCE=500 \
                -nostdlib -mlongcalls -mtext-section-literals -D__ets__ \
