@@ -50,11 +50,3 @@
 #ifdef MGOS_HAVE_WIFI
 #include "mgos_wifi.h"
 #endif
-
-#ifdef __cplusplus
-#ifndef __TI_COMPILER_VERSION__
-#include "common/util/status.h"
-#include "common/util/statusor.h"
-#endif
-#include "mgos_utils.hpp"
-#endif
