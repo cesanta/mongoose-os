@@ -85,6 +85,17 @@ bool mgos_conf_parse(const struct mg_str json, const char *acl,
                      struct mgos_config *cfg);
 
 /*
+ * Identical to `mgos_conf_parse()` but allows the caller to get an error
+ * message in `msg` on parse or data type errors.
+ *
+ * If `msg` is not NULL it may contain heap-allocated eror message, which
+ * is owned by the caller and has to be free()d.
+ */
+bool mgos_conf_parse_msg(const struct mg_str json, const char *acl,
+                         const struct mgos_conf_entry *schema,
+                         struct mgos_config *cfg, char **msg);
+
+/*
  * Parse a sub-section of the config.
  */
 bool mgos_conf_parse_sub(const struct mg_str json,
