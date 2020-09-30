@@ -24,6 +24,8 @@ extern "C" {
 #endif
 
 #define MGOS_CORE_DUMP_SECTION_REGS "REGS"
+#define MGOS_CORE_DUMP_BEGIN "--- BEGIN CORE DUMP ---"
+#define MGOS_CORE_DUMP_END "---- END CORE DUMP ----"
 
 typedef void (*mgos_cd_section_writer_f)(void);
 void mgos_cd_register_section_writer(mgos_cd_section_writer_f writer);

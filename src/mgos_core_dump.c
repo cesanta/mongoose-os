@@ -31,9 +31,6 @@
 #define NOINSTR
 #endif
 
-#define MGOS_CORE_DUMP_START "\r\n--- BEGIN CORE DUMP ---\r\n"
-#define MGOS_CORE_DUMP_END "\r\n---- END CORE DUMP ----\r\n"
-
 extern const char *build_version, *build_id;
 
 static mgos_cd_section_writer_f s_section_writers[8];
@@ -64,7 +61,7 @@ static NOINSTR void write_char(char c, void *user_data) {
   mgos_cd_putc(c);
   ctx->col_counter++;
   if (ctx->col_counter >= 160) {
-    mgos_cd_puts("\r\n");
+    mgos_cd_puts("\n");
     ctx->col_counter = 0;
     mgos_wdt_feed();
   }
@@ -74,7 +71,7 @@ NOINSTR void mgos_cd_write_section(const char *name, const void *p,
                                    size_t len) {
   struct section_ctx ctx = {.col_counter = 0, .crc32 = 0};
   cs_base64_init(&ctx.b64_ctx, write_char, &ctx);
-  mgos_cd_printf(",\r\n\"%s\": {\"addr\": %lu, \"data\": \"\r\n", name,
+  mgos_cd_printf(",\n\"%s\": {\"addr\": %lu, \"data\": \"\n", name,
                  (unsigned long) p);
   mgos_wdt_feed();
   const uint32_t *dp = (const uint32_t *) p;
@@ -92,7 +89,7 @@ extern enum cs_log_level cs_log_level;
 
 NOINSTR void mgos_cd_write(void) {
   cs_log_level = LL_NONE;
-  mgos_cd_puts(MGOS_CORE_DUMP_START "{");
+  mgos_cd_puts("\n" MGOS_CORE_DUMP_BEGIN "\n{");
   mgos_cd_puts("\"app\": \"" MGOS_APP "\", ");
   mgos_cd_puts("\"arch\": \"" CS_STRINGIFY_MACRO(FW_ARCHITECTURE) "\", ");
   mgos_cd_printf("\"version\": \"%s\", ", build_version);
@@ -114,7 +111,7 @@ NOINSTR void mgos_cd_write(void) {
     s_section_writers[i]();
   }
 
-  mgos_cd_puts("}" MGOS_CORE_DUMP_END);
+  mgos_cd_puts("}\n" MGOS_CORE_DUMP_END "\n");
 }
 
 void mgos_cd_register_section_writer(mgos_cd_section_writer_f writer) {
