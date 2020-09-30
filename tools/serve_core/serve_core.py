@@ -39,8 +39,8 @@ parser.add_argument('log', help='serial log containing core dump snippet')
 
 args = parser.parse_args()
 
-START_DELIM = '--- BEGIN CORE DUMP ---'
-END_DELIM =   '---- END CORE DUMP ----'
+START_DELIM = b'--- BEGIN CORE DUMP ---'
+END_DELIM =   b'---- END CORE DUMP ----'
 
 
 class FreeRTOSTask(object):
@@ -96,7 +96,7 @@ class Core(object):
             offset += 5000
 
     def _read(self, filename):
-        with open(filename) as f:
+        with open(filename, "rb") as f:
             f.seek(0, os.SEEK_END)
             size = f.tell()
             end_pos = self._search_backwards(f, f.tell(), END_DELIM)
@@ -115,7 +115,7 @@ class Core(object):
                 l = f.readline().strip()
                 if l == END_DELIM:
                     break
-                core_lines.append(l)
+                core_lines.append(l.decode("ascii"))
             core_json = ''.join(core_lines)
             stripped = re.sub(r'(?im)\s+(\[.{1,40}\])?\s*', '', core_json)
             return json.loads(stripped)
