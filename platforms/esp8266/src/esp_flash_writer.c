@@ -23,6 +23,7 @@
 #include "common/cs_dbg.h"
 #include "esp_missing_includes.h"
 #include "mgos_hal.h"
+#include "mgos_utils.h"
 
 #define FLASH_SECTOR_SIZE 0x1000
 #define FLASH_BLOCK_SIZE 0x10000
@@ -79,28 +80,59 @@ int esp_flash_write(struct esp_flash_write_ctx *wctx,
       wctx->num_erased += FLASH_SECTOR_SIZE;
     }
   }
-  /* Writes must be in chunks mod 4 from 32-bit aligned addresses. */
-  int ret;
+  /* Writes must be in chunks mod 4. */
+  int ret = 0;
+  uint32_t align_buf[16];
   uint32_t write_addr = wctx->addr + wctx->num_written;
-  uint32_t num_written = 0;
-  if (data.len >= 4) {
-    uint32_t to_write = (data.len / 4) * 4;
-    while (num_written < to_write) {
-      uint32_t tmp[16];
-      uint32_t write_size = to_write - num_written;
-      if (write_size > sizeof(tmp)) write_size = sizeof(tmp);
-      memcpy(tmp, data.p + num_written, write_size);
-      ret = spi_flash_write(write_addr + num_written, (uint32 *) tmp, write_size);
-      if (ret != 0) break;
-      num_written += write_size;
-      mgos_wdt_feed();
+  uint32_t num_written = 0, to_write = data.len;
+  const uint8_t *data_p = (const uint8_t *) data.p;
+  /* Align flash write address first. */
+  if (write_addr % 4 != 0) {
+    uint32_t align_skip = (write_addr % 4);
+    uint32_t align_write_addr = write_addr - align_skip;
+    uint32_t align_remain = 4 - align_skip;
+    uint32_t align_write_len = MIN(to_write, align_remain);
+    align_buf[0] = 0xffffffff;
+    memcpy(((uint8_t *) &align_buf[0]) + align_skip, data_p, align_write_len);
+    ret = spi_flash_write(align_write_addr, align_buf, 4);
+    if (ret == 0) {
+      data_p += align_write_len;
+      write_addr += align_write_len;
+      num_written += align_write_len;
+      to_write -= align_write_len;
+    } else {
+      to_write = 0;
     }
-  } else {
-    /* This is the last chunk, pad it to 4 bytes. */
-    uint32_t tmp = 0xffffffff;
-    memcpy(&tmp, data.p, data.len);
-    ret = spi_flash_write(write_addr, (uint32 *) &tmp, 4);
-    num_written = data.len;
+  }
+  /* Write the bulk of data. If data is in flash, need to copy it to RAM. */
+  bool need_copy = (((uintptr_t) data_p) > 0x40000000);
+  uint32_t *write_data_p = (need_copy ? align_buf : (uint32_t *) data_p);
+  while (to_write >= 4) {
+    uint32_t write_len = to_write & ~3;
+    if (need_copy) {
+      write_len = MIN(write_len, sizeof(align_buf));
+      memcpy(align_buf, data_p, write_len);
+    }
+    ret = spi_flash_write(write_addr, write_data_p, write_len);
+    if (ret == 0) {
+      data_p += write_len;
+      write_addr += write_len;
+      num_written += write_len;
+      to_write -= write_len;
+      if (!need_copy) write_data_p += write_len / 4;
+    } else {
+      to_write = 0;
+    }
+    mgos_wdt_feed();
+  }
+  /* Write the tail. */
+  if (to_write > 0) {
+    align_buf[0] = 0xffffffff;
+    memcpy(align_buf, data_p, to_write);
+    ret = spi_flash_write(write_addr, align_buf, 4);
+    if (ret == 0) {
+      num_written += to_write;
+    }
   }
   if (ret == 0) {
     wctx->num_written += num_written;

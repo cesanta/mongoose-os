@@ -41,7 +41,7 @@
 static struct regfile *s_regs;
 static struct esp_flash_write_ctx s_cd_write_ctx;
 
-inline void mgos_cd_putc(int c) {
+void mgos_cd_putc(int c) {
   esp_exc_putc(c);
   if (s_cd_write_ctx.addr != 0 &&
       (s_cd_write_ctx.addr & FLASH_ADDR_MAGIC_MASK) == 0) {
@@ -63,12 +63,10 @@ void esp_dump_core(uint32_t cause, struct regfile *regs) {
     memset(&s_cd_write_ctx, 0, sizeof(s_cd_write_ctx));
   } else {
     // Unmask the address and size to enable writes.
-    mgos_cd_printf("Core dump flash area: %lu @ %#lx\n",
-                   (s_cd_write_ctx.max_size & ~FLASH_SIZE_MAGIC_MASK),
-                   (s_cd_write_ctx.addr & ~FLASH_ADDR_MAGIC_MASK));
-    s_cd_write_ctx.addr &= ~FLASH_ADDR_MAGIC_MASK;
-    s_cd_write_ctx.max_size &= ~FLASH_SIZE_MAGIC_MASK;
-    s_cd_write_ctx.num_erased = s_cd_write_ctx.num_written = 0;
+    uint32_t cd_addr = (s_cd_write_ctx.addr & ~FLASH_ADDR_MAGIC_MASK);
+    uint32_t cd_size = (s_cd_write_ctx.max_size & ~FLASH_SIZE_MAGIC_MASK);
+    mgos_cd_printf("Core dump flash area: %lu @ %#lx\n", cd_size, cd_addr);
+    esp_init_flash_write_ctx(&s_cd_write_ctx, cd_addr, cd_size);
   }
   mgos_cd_write();
   (void) cause;
