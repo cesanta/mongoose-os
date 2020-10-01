@@ -57,6 +57,7 @@ struct parse_ctx {
   void *cfg;
   bool result;
   int offset_adj;
+  char **msg;
 };
 
 const struct mgos_conf_entry *mgos_conf_find_schema_entry_s(
@@ -96,7 +97,7 @@ void mgos_conf_parse_cb(void *data, const char *name, size_t name_len,
   if (!ctx->result) return;
   if (path[0] != '.') {
     if (path[0] == '\0') return; /* Last entry, the entire object */
-    LOG(LL_ERROR, ("Not an object"));
+    mg_asprintf(ctx->msg, 0, "Not an object");
     ctx->result = false;
     return;
   }
@@ -127,7 +128,7 @@ void mgos_conf_parse_cb(void *data, const char *name, size_t name_len,
       /* fall through */
     case CONF_TYPE_UNSIGNED_INT:
       if (tok->type != JSON_TYPE_NUMBER) {
-        LOG(LL_ERROR, ("[%s] is not a number", path));
+        mg_asprintf(ctx->msg, 0, "[%s] is not a number", path);
         ctx->result = false;
         return;
       }
@@ -149,15 +150,15 @@ void mgos_conf_parse_cb(void *data, const char *name, size_t name_len,
           break;
       }
       if (endptr != tok->ptr + tok->len) {
-        LOG(LL_ERROR,
-            ("[%s] failed to parse [%.*s]", path, (int) tok->len, tok->ptr));
+        mg_asprintf(ctx->msg, 0, "[%s] failed to parse [%.*s]", path,
+                    (int) tok->len, tok->ptr);
         ctx->result = false;
         return;
       }
       break;
     case CONF_TYPE_BOOL: {
       if (tok->type != JSON_TYPE_TRUE && tok->type != JSON_TYPE_FALSE) {
-        LOG(LL_ERROR, ("[%s] is not a boolean", path));
+        mg_asprintf(ctx->msg, 0, "[%s] is not a boolean", path);
         ctx->result = false;
         return;
       }
@@ -166,7 +167,7 @@ void mgos_conf_parse_cb(void *data, const char *name, size_t name_len,
     }
     case CONF_TYPE_STRING: {
       if (tok->type != JSON_TYPE_STRING) {
-        LOG(LL_ERROR, ("[%s] is not a string", path));
+        mg_asprintf(ctx->msg, 0, "[%s] is not a string", path);
         ctx->result = false;
         return;
       }
@@ -176,12 +177,14 @@ void mgos_conf_parse_cb(void *data, const char *name, size_t name_len,
       if (tok->len > 0) {
         s = (char *) malloc(tok->len + 1);
         if (s == NULL) {
+          mg_asprintf(ctx->msg, 0, "insufficient memory");
           ctx->result = false;
           return;
         }
         int n = json_unescape(tok->ptr, tok->len, s, tok->len);
         if (n < 0) {
           free(s);
+          mg_asprintf(ctx->msg, 0, "[%s] invalid string", path);
           ctx->result = false;
           return;
         }
@@ -202,25 +205,43 @@ void mgos_conf_parse_cb(void *data, const char *name, size_t name_len,
 
 static bool mgos_conf_parse_off(const struct mg_str json, const char *acl,
                                 const struct mgos_conf_entry *schema,
-                                int offset_adj, void *cfg) {
+                                int offset_adj, void *cfg, char **msg) {
+  char *err_msg = NULL;
   struct parse_ctx ctx = {.schema = schema,
                           .acl = acl,
                           .cfg = cfg,
                           .result = true,
-                          .offset_adj = offset_adj};
-  return (json_walk(json.p, json.len, mgos_conf_parse_cb, &ctx) >= 0 &&
-          ctx.result == true);
+                          .offset_adj = offset_adj,
+                          .msg = msg};
+  if (!msg) {
+    ctx.msg = &err_msg;
+  }
+  int ret = json_walk(json.p, json.len, mgos_conf_parse_cb, &ctx);
+  if (*ctx.msg) {
+    LOG(LL_ERROR, ("%s", *ctx.msg));
+    if (ctx.msg == &err_msg) {
+      free((void *) err_msg);
+    }
+  }
+  return ret > 0 && ctx.result == true;
 }
 
 bool mgos_conf_parse(const struct mg_str json, const char *acl,
                      const struct mgos_conf_entry *schema,
                      struct mgos_config *cfg) {
-  return mgos_conf_parse_off(json, acl, schema, 0, cfg);
+  return mgos_conf_parse_off(json, acl, schema, 0, cfg, NULL);
+}
+
+bool mgos_conf_parse_msg(const struct mg_str json, const char *acl,
+                         const struct mgos_conf_entry *schema,
+                         struct mgos_config *cfg, char **msg) {
+  return mgos_conf_parse_off(json, acl, schema, 0, cfg, msg);
 }
 
 bool mgos_conf_parse_sub(const struct mg_str json,
                          const struct mgos_conf_entry *sub_schema, void *cfg) {
-  return mgos_conf_parse_off(json, "*", sub_schema, sub_schema->offset, cfg);
+  return mgos_conf_parse_off(json, "*", sub_schema, sub_schema->offset, cfg,
+                             NULL);
 }
 
 struct emit_ctx {
