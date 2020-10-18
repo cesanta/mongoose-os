@@ -93,7 +93,7 @@ MGOS_SRCS += cs_file.c cs_hex.c cs_rbuf.c \
              mgos_sys_config.c $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
              mgos_system.c mgos_system.cpp \
              mgos_uart.c \
-             mgos_utils.c \
+             mgos_utils.c mgos_utils.cpp \
              cs_crc32.c \
              rboot-bigflash.c rboot-api.c \
              json_utils.c \

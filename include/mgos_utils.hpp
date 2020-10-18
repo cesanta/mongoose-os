@@ -18,41 +18,29 @@
 #pragma once
 
 #include <cstdlib>
+#include <string>
 
 namespace mgos {
+
+std::string SPrintf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
 
 // Like std::unique_ptr, but for pointers allocated with malloc()
 // (deleting malloced pointers is not allowed).
 class ScopedCPtr {
  public:
-  explicit ScopedCPtr(void *ptr) : ptr_(ptr) {
-  }
-  ScopedCPtr(ScopedCPtr &&other) : ptr_(other.ptr_) {
-    other.ptr_ = nullptr;
-  }
-  ~ScopedCPtr() {
-    reset(nullptr);
-  }
+  explicit ScopedCPtr(void *ptr);
+  ScopedCPtr(ScopedCPtr &&other);
+  ScopedCPtr(const ScopedCPtr &other) = delete;
+  ~ScopedCPtr();
 
-  void *get() const {
-    return ptr_;
-  }
+  void *get() const;
 
-  void reset(void *ptr) {
-    if (ptr_ != nullptr) free(ptr_);
-    ptr_ = ptr;
-  }
+  void reset(void *ptr);
 
-  void *release() {
-    void *ptr = ptr_;
-    ptr_ = nullptr;
-    return ptr;
-  }
+  void *release();
 
  private:
   void *ptr_ = nullptr;
-
-  ScopedCPtr(const ScopedCPtr &other) = delete;
 };
 
 }  // namespace mgos

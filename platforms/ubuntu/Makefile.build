@@ -49,7 +49,7 @@ MGOS_SRCS = mgos_init.c  \
             mgos_timers.c mgos_timers.cpp \
             mgos_config_util.c mgos_json_utils.cpp mgos_sys_config.c \
             json_utils.c cs_rbuf.c mgos_uart.c \
-            mgos_utils.c cs_file.c cs_hex.c cs_crc32.c \
+            mgos_utils.c mgos_utils.cpp cs_file.c cs_hex.c cs_crc32.c \
             error_codes.cpp status.cpp
 
 PLATFORM_SRCS = $(wildcard $(PLATFORM_VPATH)/*.c) $(wildcard $(PLATFORM_VPATH)/*.cpp)
