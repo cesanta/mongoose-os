@@ -15,23 +15,15 @@
  * limitations under the License.
  */
 
-#ifndef CS_FW_INCLUDE_MGOS_GPIO_H_
-#define CS_FW_INCLUDE_MGOS_GPIO_H_
+#pragma once
 
 #include <stdbool.h>
 
 #include "common/platform.h"
 
-#ifdef RS14100
-#include "rs14100_gpio.h"
-#endif
-#if CS_PLATFORM == CS_P_STM32
-#include "stm32_gpio.h"
-#endif
-
 #ifdef __cplusplus
 extern "C" {
-#endif /* __cplusplus */
+#endif
 
 enum mgos_gpio_mode {
   MGOS_GPIO_MODE_INPUT = 0,
@@ -166,6 +158,12 @@ const char *mgos_gpio_str(int pin_def, char buf[8]);
 
 #ifdef __cplusplus
 }
-#endif /* __cplusplus */
+#endif
 
-#endif /* CS_FW_INCLUDE_MGOS_GPIO_H_ */
+/* Platform-specific includes. */
+#ifdef RS14100
+#include "rs14100_gpio.h"
+#endif
+#if CS_PLATFORM == CS_P_STM32
+#include "stm32_gpio.h"
+#endif

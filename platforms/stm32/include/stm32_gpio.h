@@ -74,7 +74,6 @@ bool stm32_gpio_set_ospeed(int pin, enum stm32_gpio_ospeed ospeed);
  * Set pull up/down mode during sleep and shutdown.
  */
 #ifdef STM32L4
-enum mgos_gpio_pull_type;
 bool stm32_gpio_set_sleep_pull(int pin, enum mgos_gpio_pull_type pull);
 #endif
 
