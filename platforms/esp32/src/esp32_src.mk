@@ -59,9 +59,9 @@ VPATH += $(APP_SOURCE_DIRS)
 APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
 
-MGOS_OBJS = $(addsuffix .o,$(basename $(MGOS_SRCS))) esp32_nsleep100.o
-APP_OBJS = $(addsuffix .o,$(basename $(APP_SRCS)))
-BUILD_INFO_OBJS = $(addsuffix .o,$(basename $(notdir $(BUILD_INFO_C)) $(notdir $(MG_BUILD_INFO_C))))
+MGOS_OBJS = $(addsuffix .o,$(MGOS_SRCS)) esp32_nsleep100.S.o
+APP_OBJS = $(addsuffix .o,$(APP_SRCS))
+BUILD_INFO_OBJS = $(addsuffix .o,$(notdir $(BUILD_INFO_C)) $(notdir $(MG_BUILD_INFO_C)))
 
 C_CXX_CFLAGS += -DMGOS_APP=\"$(APP)\" -DFW_ARCHITECTURE=$(APP_PLATFORM) \
                 -DIRAM='__attribute__((section(".iram1")))' \
@@ -94,18 +94,18 @@ $(FFI_EXPORTS_O): $(FFI_EXPORTS_C)
 $(FFI_EXPORTS_C): $(APP_FS_FILES)
 	$(call gen_ffi_exports,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))
 
-./%.o: %.S
+./%.S.o: %.S
 	$(summary) "AS $@"
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
-./%.o: %.c $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
+./%.c.o: %.c $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
 	$(summary) "CC $@"
 	$(CC) $(CFLAGS) $(CPPFLAGS) \
 	  $(addprefix -I ,$(COMPONENT_INCLUDES)) \
 	  $(addprefix -I ,$(COMPONENT_EXTRA_INCLUDES)) \
 	  -c $< -o $@
 
-./%.o: %.cpp $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
+./%.cpp.o: %.cpp $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C)
 	$(summary) "CXX $@"
 	$(CC) $(CXXFLAGS) $(CPPFLAGS) \
 	  $(addprefix -I ,$(COMPONENT_INCLUDES)) \
