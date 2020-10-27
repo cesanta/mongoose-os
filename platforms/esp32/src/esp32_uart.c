@@ -398,6 +398,13 @@ bool mgos_uart_hal_init(struct mgos_uart_state *us) {
   return true;
 }
 
+static inline void calc_clkdiv(uint32_t freq, uint32_t baud_rate, uint32_t *div,
+                               uint32_t *frac) {
+  uint32_t v = ((freq << 4) / baud_rate);
+  *div = v >> 4;
+  *frac = v & 0xf;
+}
+
 bool mgos_uart_hal_configure(struct mgos_uart_state *us,
                              const struct mgos_uart_config *cfg) {
   int uart_no = us->uart_no;
@@ -410,10 +417,21 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
 
   DPORT_WRITE_PERI_REG(UART_INT_ENA_REG(uart_no), 0);
 
+  uint32_t conf0 =
+      DPORT_READ_PERI_REG(UART_CONF0_REG(uart_no)) & UART_TICK_REF_ALWAYS_ON;
+
   if (cfg->baud_rate > 0) {
-    uint32_t clk_div = (((UART_CLK_FREQ) << 4) / cfg->baud_rate);
-    uint32_t clkdiv_v = ((clk_div & UART_CLKDIV_FRAG_V) << UART_CLKDIV_FRAG_S) |
-                        (((clk_div >> 4) & UART_CLKDIV_V) << UART_CLKDIV_S);
+    /* Try to use REF_TICK if possible, fall back to APB. */
+    uint32_t div, frac;
+    calc_clkdiv(REF_CLK_FREQ, cfg->baud_rate, &div, &frac);
+    if (div >= 2) {
+      conf0 &= ~UART_TICK_REF_ALWAYS_ON;
+    } else {
+      calc_clkdiv(APB_CLK_FREQ, cfg->baud_rate, &div, &frac);
+      conf0 |= UART_TICK_REF_ALWAYS_ON;
+    }
+    uint32_t clkdiv_v = ((frac & UART_CLKDIV_FRAG_V) << UART_CLKDIV_FRAG_S) |
+                        ((div & UART_CLKDIV_V) << UART_CLKDIV_S);
     DPORT_WRITE_PERI_REG(UART_CLKDIV_REG(uart_no), clkdiv_v);
   }
 
@@ -425,8 +443,6 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
       ESP_OK) {
     return false;
   }
-
-  uint32_t conf0 = UART_TICK_REF_ALWAYS_ON;
 
   if (cfg->dev.tx_inverted) {
     conf0 |= UART_TXD_INV;
