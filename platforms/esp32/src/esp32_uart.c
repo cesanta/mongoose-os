@@ -424,7 +424,7 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
     /* Try to use REF_TICK if possible, fall back to APB. */
     uint32_t div, frac;
     calc_clkdiv(REF_CLK_FREQ, cfg->baud_rate, &div, &frac);
-    if (div >= 2) {
+    if (div >= 3) {
       conf0 &= ~UART_TICK_REF_ALWAYS_ON;
     } else {
       calc_clkdiv(APB_CLK_FREQ, cfg->baud_rate, &div, &frac);
