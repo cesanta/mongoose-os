@@ -26,7 +26,7 @@ Trusted and Recommended By:
 
 # Docs, Support
 - [Mongoose OS Documentation](https://mongoose-os.com/docs/mongoose-os/quickstart/setup.md)
-- [Support Forum - ask your technical questions here](http://forum.mongoose-os.com/)
+- [Support Forum - ask your technical questions here](https://community.mongoose-os.com/)
 - [Video tutorials](https://www.youtube.com/channel/UCZ9lQ7b-4bDbLOLpKwjpSAw/featured)
 - [Commercial licensing](https://mongoose-os.com/licensing.html) and [support available](https://mongoose-os.com/support.html)
 
