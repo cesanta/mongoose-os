@@ -14,7 +14,7 @@
 
 
 Trusted and Recommended By:
-- Amazon AWS - [Amazon AWS Technology Partner](https://aws.amazon.com/partners/find/partnerdetails/?id=0010L00001jQCb5QAG)
+- Amazon AWS - [Amazon AWS Technology Partner](https://aws.amazon.com/blogs/apn/partner-sa-roundup-may-2017/)
 - Google IoT Core - [Mongoose OS is a Google Cloud IoT Core Partner](https://cloud.google.com/iot/partners/)
 - IBM Watson IoT - [Mongoose OS is a Ready for IBM Watson IoT validated solution](https://www-356.ibm.com/partnerworld/gsd/solutiondetails.do?solution=55930&lc=en&stateCd=P&tab=1)
 - Microsoft Azure IoT - [Mongoose OS is recommended by Microsoft Azure IoT](https://azure.microsoft.com/en-us/blog/azure-iot-automatic-device-management-helps-deploying-firmware-updates-at-scale/)
