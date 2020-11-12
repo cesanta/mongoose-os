@@ -421,18 +421,33 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
       DPORT_READ_PERI_REG(UART_CONF0_REG(uart_no)) & UART_TICK_REF_ALWAYS_ON;
 
   if (cfg->baud_rate > 0) {
+    bool baud_rate_changed = false;
     /* Try to use REF_TICK if possible, fall back to APB. */
     uint32_t div, frac;
     calc_clkdiv(REF_CLK_FREQ, cfg->baud_rate, &div, &frac);
     if (div >= 3) {
-      conf0 &= ~UART_TICK_REF_ALWAYS_ON;
+      if (conf0 & UART_TICK_REF_ALWAYS_ON) {
+        conf0 &= ~UART_TICK_REF_ALWAYS_ON;
+        baud_rate_changed = true;
+      }
     } else {
       calc_clkdiv(APB_CLK_FREQ, cfg->baud_rate, &div, &frac);
-      conf0 |= UART_TICK_REF_ALWAYS_ON;
+      if (!(conf0 & UART_TICK_REF_ALWAYS_ON)) {
+        conf0 |= UART_TICK_REF_ALWAYS_ON;
+        baud_rate_changed = true;
+      }
     }
     uint32_t clkdiv_v = ((frac & UART_CLKDIV_FRAG_V) << UART_CLKDIV_FRAG_S) |
                         ((div & UART_CLKDIV_V) << UART_CLKDIV_S);
-    DPORT_WRITE_PERI_REG(UART_CLKDIV_REG(uart_no), clkdiv_v);
+    uint32_t old_clkdiv_v = DPORT_READ_PERI_REG(UART_CLKDIV_REG(uart_no));
+    if (clkdiv_v != old_clkdiv_v) {
+      baud_rate_changed = true;
+    }
+    if (baud_rate_changed) {
+      mgos_uart_hal_flush_fifo(us);
+      DPORT_WRITE_PERI_REG(UART_CLKDIV_REG(uart_no), clkdiv_v);
+      DPORT_WRITE_PERI_REG(UART_CONF0_REG(uart_no), conf0);
+    }
   }
 
   if (uart_set_pin(uart_no, cfg->dev.tx_gpio, cfg->dev.rx_gpio,
