@@ -139,12 +139,6 @@ struct mgos_timer_info {
 
 bool mgos_get_timer_info(mgos_timer_id id, struct mgos_timer_info *info);
 
-/*
- * Format `time` according to a `strftime()`-conformant format.
- * Write the result into the `s,size` buffer. Return resulting string length.
- */
-int mgos_strftime(char *s, int size, char *fmt, int time);
-
 #ifdef __cplusplus
 }
 #endif
