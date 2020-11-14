@@ -38,7 +38,7 @@ int64_t mgos_time_micros(void) {
   return mg_time() * 1000000.0;
 }
 
-int mgos_strftime(char *s, int size, char *fmt, int time) {
+int mgos_strftime(char *s, int size, const char *fmt, int time) {
   time_t t = (time_t) time;
   struct tm *tmp = localtime(&t);
   return tmp == NULL ? -1 : (int) strftime(s, size, fmt, tmp);
