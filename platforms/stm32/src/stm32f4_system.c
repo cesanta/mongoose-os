@@ -96,7 +96,7 @@ void stm32_clock_config(void) {
   /* Use system PLL for USB and RNG. */
   LL_RCC_SetCK48MClockSource(LL_RCC_CK48M_CLKSOURCE_PLL);
 
-/* Turn off the unused oscilaltor. */
+/* Turn off the unused oscillator. */
 #if HSE_VALUE == 0
   oc.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   oc.HSEState = RCC_HSE_OFF;
