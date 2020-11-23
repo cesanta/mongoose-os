@@ -88,7 +88,7 @@ void stm32_clock_config(void) {
   cc.APB2CLKDivider = RCC_HCLK_DIV2;   // 60 MHz
   HAL_RCC_ClockConfig(&cc, FLASH_LATENCY_3);
 
-/* Turn off the unused oscilaltor. */
+/* Turn off the unused oscillator. */
 #if HSE_VALUE == 0
   oc.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   oc.HSEState = RCC_HSE_OFF;
