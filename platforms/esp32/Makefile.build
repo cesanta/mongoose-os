@@ -84,7 +84,7 @@ override GEN_DIR := $(abspath $(GEN_DIR))
 override MGOS_PATH := $(abspath $(MGOS_PATH))
 override _MGOS_PATH = $(MGOS_PATH)
 # It seems to be impossible to override vars passed to submake from the
-# command line, so we pass them via a separate set of varoables, which
+# command line, so we pass them via a separate set of variables, which
 # submake then uses to override the values it received.
 export APP
 export APP_BUILD_ID
@@ -112,6 +112,8 @@ export MGOS_ESP_SRC_PATH
 export _MGOS_PATH
 
 export BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
+
+export GEN_BUILD_INFO_EXTRA ?=
 
 MGOS_FEATURES =
 MGOS_CONF_SCHEMA =
