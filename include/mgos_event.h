@@ -102,6 +102,7 @@ enum mgos_event_sys {
   MGOS_EVENT_CLOUD_CONNECTED,
   MGOS_EVENT_CLOUD_DISCONNECTED,
   MGOS_EVENT_CLOUD_CONNECTING,
+  MGOS_EVENT_CLOUD_CONNECTERROR,
 
   /*
    * Fired when a reboot is scheduled after certain time.
