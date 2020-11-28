@@ -218,6 +218,8 @@ enum mgos_init_result mgos_gpio_hal_init() {
   }
   esp_err_t r = gpio_isr_register(esp32_gpio_isr, NULL, 0, &s_int_handle);
   if (r != ESP_OK) return MGOS_INIT_GPIO_INIT_FAILED;
+  r = esp_intr_set_in_iram(s_int_handle, true);
+  if (r != ESP_OK) return MGOS_INIT_GPIO_INIT_FAILED;
   r = esp_intr_enable(s_int_handle);
   if (r != ESP_OK) return MGOS_INIT_GPIO_INIT_FAILED;
 #if CONFIG_ESP32_DEFAULT_CPU_FREQ_MHZ == 240
