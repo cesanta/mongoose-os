@@ -322,17 +322,27 @@ void user_init(void) {
 #endif
 }
 
-void user_rf_pre_init() {
-  /* Early init app hook. */
+#if !defined(FW_RF_CAL_DATA_ADDR) || !defined(FW_SYS_PARAMS_ADDR)
+#error FW_RF_CAL_DATA_ADDR or FW_SYS_PARAMS_ADDR are not defined
+#endif
+
+static const partition_item_t s_part_table[] = {
+    {SYSTEM_PARTITION_BOOTLOADER, 0x0, 0x1000},
+    {SYSTEM_PARTITION_RF_CAL, FW_RF_CAL_DATA_ADDR, 0x1000},
+    // The 4 sectors area at the end of flash that used to be called sys_params
+    // actually consists of 1 sector of PHY_DATA followed by 3 sectors of
+    // SYSTEM_PARAMTER (since SDK 3.0). Meh, whatever.
+    {SYSTEM_PARTITION_PHY_DATA, FW_SYS_PARAMS_ADDR, 0x1000},
+    {SYSTEM_PARTITION_SYSTEM_PARAMETER, FW_SYS_PARAMS_ADDR + 0x1000, 0x3000},
+    // Values don't matter for these, we don't use them anyway
+    // but they are required for system_partition_table_regist() to succeed.
+    {SYSTEM_PARTITION_OTA_1, 0x1000, 0x10000},
+    {SYSTEM_PARTITION_OTA_2, 0x81000, 0x10000},
+};
+
+void user_pre_init(void) {
   system_update_cpu_freq(SYS_CPU_160MHZ);
+  system_partition_table_regist(s_part_table, ARRAY_SIZE(partition_table), 4);
   uart_div_modify(0, UART_CLK_FREQ / MGOS_DEBUG_UART_BAUD_RATE);
   mgos_app_preinit();
-}
-
-#ifndef FW_RF_CAL_DATA_ADDR
-#error FW_RF_CAL_DATA_ADDR is not defined
-#endif
-uint32_t user_rf_cal_sector_set(void) {
-  /* Defined externally. */
-  return FW_RF_CAL_DATA_ADDR / 4096;
 }

@@ -305,6 +305,7 @@ INCDIRS = $(addprefix -I,$(IPATH)) -I$(GEN_DIR)
 LIBDIRS = $(addprefix -L,$(LPATH))
 
 C_CXX_FLAGS += $(MEMORY_FLAGS) $(SHIMS) $(FEATURES) \
+               -DFW_SYS_PARAMS_ADDR=$(SYS_PARAMS_ADDR) \
                -DFW_RF_CAL_DATA_ADDR=$(FW_RF_CAL_DATA_ADDR) \
                -DFW_ARCHITECTURE=$(APP_PLATFORM) \
                $(MGOS_CFLAGS) $(CFLAGS_EXTRA) \
