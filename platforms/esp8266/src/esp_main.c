@@ -342,7 +342,7 @@ static const partition_item_t s_part_table[] = {
 
 void user_pre_init(void) {
   system_update_cpu_freq(SYS_CPU_160MHZ);
-  system_partition_table_regist(s_part_table, ARRAY_SIZE(partition_table), 4);
+  system_partition_table_regist(s_part_table, ARRAY_SIZE(s_part_table), 4);
   uart_div_modify(0, UART_CLK_FREQ / MGOS_DEBUG_UART_BAUD_RATE);
   mgos_app_preinit();
 }
