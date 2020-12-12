@@ -340,9 +340,33 @@ static const partition_item_t s_part_table[] = {
     {SYSTEM_PARTITION_OTA_2, 0x81000, 0x10000},
 };
 
+extern SpiFlashChip *flashchip;
+
 void user_pre_init(void) {
+  // Pick flash size map according to chip size.
+  uint32_t map;
+  switch (flashchip->chip_size) {
+    case 1 * 1024 * 1024:
+      map = 2;
+      break;
+    case 2 * 1024 * 1024:
+      map = 3;
+      break;
+    case 4 * 1024 * 1024:
+      map = 4;
+      break;
+    case 8 * 1024 * 1024:
+      map = 8;
+      break;
+    case 16 * 1024 * 1024:
+      map = 9;
+      break;
+    default:
+      map = 1;
+      break;
+  }
+  system_partition_table_regist(s_part_table, ARRAY_SIZE(s_part_table), map);
   system_update_cpu_freq(SYS_CPU_160MHZ);
-  system_partition_table_regist(s_part_table, ARRAY_SIZE(s_part_table), 4);
   uart_div_modify(0, UART_CLK_FREQ / MGOS_DEBUG_UART_BAUD_RATE);
   mgos_app_preinit();
 }

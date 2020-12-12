@@ -336,7 +336,7 @@ FW_PARTS = boot:addr=$(BOOT_LOADER_ADDR),src=$(BOOT_LOADER_BIN),update=$(MGOS_UP
            fw:addr=$(APP0_ADDR),addr1=$(APP1_ADDR),src=$(APP_BIN) \
            fs:src=$(FS_IMG),type=fs,addr=$(FS0_ADDR),addr1=$(FS1_ADDR),fs_size=$(MGOS_ROOT_FS_SIZE) \
            rf_cal_data:addr=$(FW_RF_CAL_DATA_ADDR),size=$(RF_CAL_DATA_SIZE),fill=0xff \
-           sys_params:type=sys_params,src=$(SDK_INIT_DATA_PATH)/bin/esp_init_data_default_v08.bin,addr=$(SYS_PARAMS_ADDR) \
+           sys_params:type=sys_params3,src=$(SDK_INIT_DATA_PATH)/bin/esp_init_data_default_v08.bin,addr=$(SYS_PARAMS_ADDR) \
            $(APP_EXTRA_FW_PARTS)
 
 include $(MGOS_PATH)/tools/mk/mgos_fw_meta.mk
