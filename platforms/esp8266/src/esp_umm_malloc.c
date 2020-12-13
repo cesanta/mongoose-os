@@ -17,6 +17,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <user_interface.h>
 
 #include "umm_malloc.h"
 
@@ -63,11 +64,19 @@
  * will use heap implementation from SDK.
  */
 
-void *pvPortMalloc(size_t size, const char *file, unsigned line) {
+void *pvPortMalloc(size_t size, const char *file, unsigned line,
+                   unsigned iram) {
   (void) file;
   (void) line;
-
-  return umm_malloc(size);
+  // SDK 3.0 added "iram" parameter, presumably to allocate memory from IRAM.
+  // It's not documented and has only been observed to be used for DHCP stuff.
+  // We ignore it for now.
+  (void) iram;
+  void *p = umm_malloc(size);
+  if (iram) {
+    // os_printf(">>> IRAM sz %u f %s line %d p %p\n", size, file, line, p);
+  }
+  return p;
 }
 
 void *pvPortCalloc(size_t num, size_t size, const char *file, unsigned line) {

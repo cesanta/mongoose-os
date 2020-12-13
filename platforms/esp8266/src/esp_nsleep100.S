@@ -3,7 +3,7 @@
  * All rights reserved
  */
 
-        .section .fast.text, "x"
+        .section .text.IRAM.esp_nsleep100, "x"
 
         .align 4
 esp_nsleep100_80:

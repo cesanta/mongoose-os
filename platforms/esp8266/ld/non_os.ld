@@ -92,15 +92,12 @@ SECTIONS
     *(.DoubleExceptionVector.text)
     *(.UserEnter.text)
     . = ALIGN (16);
-    */libc.a:(.literal .fast.literal .fast.text)
-    */libgcc.a:(.literal SORT_BY_NAME(.literal.*) .text SORT_BY_NAME(.text.*))
+    /* Note: Could reclaim a couple K by only pinning integer operations from libgcc */
+    */libgcc.a:(.literal .text SORT_BY_NAME(.literal.*) SORT_BY_NAME(.text.*))
     */libmain.a:(SORT_BY_NAME(.literal.*) SORT_BY_NAME(.text.*))
     */libpp.a:(SORT_BY_NAME(.literal.*) SORT_BY_NAME(.text.*))
     */ESP8266_*_SDK/lib*.a:(.literal .text)
-    */liblwip*.a:(.fast.literal .fast.text)
-    */libmbed*.a:(.fast.literal .fast.text)
-    */mongoose-os.a:(.fast.literal .fast.text)
-    *(.fast.literal .fast.text SORT_BY_NAME(.text.IRAM.*))
+    *(SORT_BY_NAME(.literal.IRAM.*) SORT_BY_NAME(.text.IRAM.*))
     *(.fini.literal .fini)
     _text_end = ABSOLUTE(.);
     _etext = .;

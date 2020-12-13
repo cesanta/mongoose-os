@@ -274,10 +274,9 @@ static void mgos_lwip_task(os_event_t *e) {
   system_soft_wdt_stop();
 }
 
-void sdk_init_done_cb(void) {
+static void sdk_init_done_cb(void) {
   system_os_task(mgos_lwip_task, MGOS_TASK_PRIORITY, s_main_queue,
                  MGOS_TASK_QUEUE_LENGTH);
-  esp_core_dump_init();
   esp_mgos_init();
   mongoose_schedule_poll(false);
 }
@@ -297,7 +296,7 @@ static void os_timer_cb(void *arg) {
 }
 
 void user_init(void) {
-  uart_div_modify(0, UART_CLK_FREQ / MGOS_DEBUG_UART_BAUD_RATE);
+  system_update_cpu_freq(SYS_CPU_160MHZ);
 #ifdef MGOS_HAVE_ADC
   /* Note: it's critical to call this early to record value at boot ASAP. */
   esp_adc_init();
@@ -316,8 +315,6 @@ void user_init(void) {
               MGOS_TASK_STACK_SIZE / 4, /* specified in 32-bit words */
               NULL, MGOS_TASK_PRIORITY, NULL);
 #else
-  esp_exception_handler_init();
-  __libc_init_array(); /* C++ global contructors. */
   system_init_done_cb(sdk_init_done_cb);
 #endif
 }
@@ -366,7 +363,8 @@ void user_pre_init(void) {
       break;
   }
   system_partition_table_regist(s_part_table, ARRAY_SIZE(s_part_table), map);
-  system_update_cpu_freq(SYS_CPU_160MHZ);
-  uart_div_modify(0, UART_CLK_FREQ / MGOS_DEBUG_UART_BAUD_RATE);
+  esp_exception_handler_init();
+  esp_core_dump_init();
+  __libc_init_array(); /* C++ global contructors. */
   mgos_app_preinit();
 }
