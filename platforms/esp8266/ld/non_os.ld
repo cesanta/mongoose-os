@@ -141,3 +141,4 @@ SECTIONS
 INCLUDE "../ld/eagle.rom.addr.v6.ld"
 
 PROVIDE ( mgos_usleep = 0x40002ecc );  /* AKA ets_delay_us */
+PROVIDE ( ets_task_top_of_stack = 0x3ffff000 );  /* All tasks share a 4K stack */

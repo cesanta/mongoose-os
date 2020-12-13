@@ -19,15 +19,7 @@
 
 #include "esp_missing_includes.h"
 
-#ifdef RTOS_SDK
-#include <esp_common.h>
-#include <freertos/FreeRTOS.h>
-#include <freertos/queue.h>
-#include <freertos/semphr.h>
-#include <freertos/task.h>
-#else
 #include <user_interface.h>
-#endif
 
 #include "common/cs_dbg.h"
 #include "mgos_app.h"
@@ -55,23 +47,9 @@
 #include "esp_umm_malloc.h"
 #include "esp_vfs_dev_sysflash.h"
 
-#ifdef RTOS_SDK
-
-#ifndef MGOS_TASK_STACK_SIZE
-#define MGOS_TASK_STACK_SIZE 8192 /* in bytes */
-#endif
-
-#ifndef MGOS_TASK_PRIORITY
-#define MGOS_TASK_PRIORITY 5
-#endif
-
-#else
-
 #ifndef MGOS_TASK_PRIORITY
 #define MGOS_TASK_PRIORITY 1
 #endif
-
-#endif /* RTOS_SDK */
 
 #ifndef MGOS_TASK_QUEUE_LENGTH
 #define MGOS_TASK_QUEUE_LENGTH 32
@@ -80,6 +58,15 @@
 #ifndef MGOS_MONGOOSE_MAX_POLL_SLEEP_MS
 #define MGOS_MONGOOSE_MAX_POLL_SLEEP_MS 1000
 #endif
+
+extern uint32_t ets_task_top_of_stack;
+/*
+ * Tasks share a 4K stack. Detect overflow as soon as we can.
+ * This is a big problem because on other platforms we have 8K stack.
+ * TODO(rojer): Try relocating stack and extending it, reuse 4K region for heap.
+ */
+#define MGOS_STACK_CANARY_VAL 0xDE4D57AC
+#define MGOS_STACK_CANARY_LOC (&ets_task_top_of_stack)
 
 extern const char *build_version, *build_id;
 extern const char *mg_build_version, *mg_build_id;
@@ -90,7 +77,7 @@ static os_timer_t s_mg_poll_tmr;
 
 static uint32_t s_mg_polls_in_flight = 0;
 
-static IRAM void mgos_mg_poll_cb(void *arg) {
+static void mgos_mg_poll_cb(void *arg) {
   mgos_ints_disable();
   s_mg_polls_in_flight--;
   mgos_ints_enable();
@@ -177,7 +164,8 @@ enum mgos_init_result esp_mgos_init2(void) {
   if (strcmp(MGOS_APP, "mongoose-os") != 0) {
     LOG(LL_INFO, ("%s %s (%s)", MGOS_APP, build_version, build_id));
   }
-  LOG(LL_INFO, ("Mongoose OS %s (%s)", mg_build_version, mg_build_id));
+  LOG(LL_INFO,
+      ("Mongoose OS %s (%s) sp %p", mg_build_version, mg_build_id, &ir));
   LOG(LL_INFO, ("CPU: %s, %d MHz, RAM: %u total, %u free",
                 esp_chip_type_str(esp_get_chip_type()),
                 (int) (mgos_get_cpu_freq() / 1000000), mgos_get_heap_size(),
@@ -196,7 +184,7 @@ enum mgos_init_result esp_mgos_init2(void) {
   return MGOS_INIT_OK;
 }
 
-static void esp_mgos_init(void) {
+static void esp_mgos_init(void *arg) {
   enum mgos_init_result result = esp_mgos_init2();
   bool success = (result == MGOS_INIT_OK);
 #ifdef MGOS_HAVE_OTA_COMMON
@@ -207,55 +195,11 @@ static void esp_mgos_init(void) {
     /* Arbitrary delay to make potential reboot loop less tight. */
     mgos_usleep(500000);
     mgos_system_restart();
+    return;
   }
-}
-
-#ifdef RTOS_SDK
-static xQueueHandle s_main_queue;
-
-struct mgos_event {
-  mgos_cb_t cb;
-  void *arg;
-};
-
-xSemaphoreHandle s_mtx;
-
-IRAM bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
-  struct mgos_event e = {.cb = cb, .arg = arg};
-  if (from_isr) {
-    long int should_yield = false;
-    if (!xQueueSendToBackFromISR(s_main_queue, &e, &should_yield)) {
-      return false;
-    }
-    if (should_yield) {
-      /* Hm? */
-    }
-  } else {
-    return xQueueSendToBack(s_main_queue, &e, 10);
-  }
-  return true;
-}
-
-static void mgos_task(void *arg) {
-  struct mgos_event e;
-  s_main_queue = xQueueCreate(MGOS_TASK_QUEUE_LENGTH, sizeof(e));
-
-  esp_mgos_init();
-
-  mongoose_schedule_poll(false /* from_isr */);
-
-  while (true) {
-    /* Keep soft WDT disabled. */
-    system_soft_wdt_stop();
-    if (xQueueReceive(s_main_queue, &e, 10 /* tick */)) {
-      e.cb(e.arg);
-    }
-    taskYIELD();
-  }
+  mongoose_schedule_poll(false);
   (void) arg;
 }
-
-#else /* !RTOS_SDK */
 
 static os_event_t s_main_queue[MGOS_TASK_QUEUE_LENGTH];
 
@@ -267,21 +211,25 @@ IRAM bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
   return true;
 }
 
-static void mgos_lwip_task(os_event_t *e) {
+static void mgos_task(os_event_t *e) {
   mgos_cb_t cb = (mgos_cb_t)(e->sig);
+  *MGOS_STACK_CANARY_LOC = MGOS_STACK_CANARY_VAL;
   cb((void *) e->par);
+  /* Check for stack overflow. */
+  if (*MGOS_STACK_CANARY_LOC != MGOS_STACK_CANARY_VAL) {
+    LOG(LL_ERROR, ("Stack overflow! Last cb %p", cb));
+    /* This is not yet fatal but ptobably should be. */
+    // abort();
+  }
   /* Keep soft WDT disabled. */
   system_soft_wdt_stop();
 }
 
 static void sdk_init_done_cb(void) {
-  system_os_task(mgos_lwip_task, MGOS_TASK_PRIORITY, s_main_queue,
+  system_os_task(mgos_task, MGOS_TASK_PRIORITY, s_main_queue,
                  MGOS_TASK_QUEUE_LENGTH);
-  esp_mgos_init();
-  mongoose_schedule_poll(false);
+  mgos_invoke_cb(esp_mgos_init, NULL, false /* from_isr */);
 }
-
-#endif
 
 extern void __libc_init_array(void);
 
@@ -289,7 +237,7 @@ void _init(void) {
   // Called by __libc_init_array after global ctors. No further action required.
 }
 
-static void os_timer_cb(void *arg) {
+static void mgos_poll_timer_cb(void *arg) {
   // RTOS callbacks are executed in ISR context; for non-OS it doesn't matter.
   mongoose_schedule_poll(true /* from_isr */);
   (void) arg;
@@ -305,18 +253,11 @@ void user_init(void) {
   mgos_debug_init();
   srand(system_get_time() ^ system_get_rtc_time());
   os_timer_disarm(&s_mg_poll_tmr);
-  os_timer_setfn(&s_mg_poll_tmr, os_timer_cb, NULL);
+  os_timer_setfn(&s_mg_poll_tmr, mgos_poll_timer_cb, NULL);
   esp_hw_wdt_setup(ESP_HW_WDT_26_8_SEC, ESP_HW_WDT_26_8_SEC);
   /* Soft WDT feeds HW WDT, we don't want this. */
   system_soft_wdt_stop();
-#ifdef RTOS_SDK
-  s_mtx = xSemaphoreCreateRecursiveMutex();
-  xTaskCreate(mgos_task, (const signed char *) "mgos",
-              MGOS_TASK_STACK_SIZE / 4, /* specified in 32-bit words */
-              NULL, MGOS_TASK_PRIORITY, NULL);
-#else
   system_init_done_cb(sdk_init_done_cb);
-#endif
 }
 
 #if !defined(FW_RF_CAL_DATA_ADDR) || !defined(FW_SYS_PARAMS_ADDR)
