@@ -217,7 +217,7 @@ static void mgos_task(os_event_t *e) {
   cb((void *) e->par);
   /* Check for stack overflow. */
   if (*MGOS_STACK_CANARY_LOC != MGOS_STACK_CANARY_VAL) {
-    LOG(LL_ERROR, ("Stack overflow! Last cb %p", cb));
+    mgos_cd_printf("Stack overflow! Last cb %p\n", cb);
     /* This is not yet fatal but ptobably should be. */
     // abort();
   }
