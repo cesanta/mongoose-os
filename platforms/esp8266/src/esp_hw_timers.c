@@ -29,9 +29,8 @@
  * It is a 23-bit down counter with an optional prescaler (16 or 256).
  */
 
+#define TM_RELOAD BIT(6)
 #define TM_ENABLE BIT(7)
-#define TM_AUTO_RELOAD BIT(6)
-#define TM_INT_EDGE 0
 
 #define TIMER_FREQ 80000000
 #define TIMER_PRESCALER_1 0
@@ -46,17 +45,13 @@ IRAM void nmi_isr(void) {
   mgos_hw_timers_isr(s_ti);
 }
 
+#define NMI_INT_ENABLE_REG (PERIPHS_DPORT_BASEADDR)
+#define FRC1_INT_ENA BIT(1)
+
 IRAM bool mgos_hw_timers_dev_set(struct mgos_hw_timer_info *ti, int usecs,
                                  int flags) {
-  uint32_t ctl = TM_ENABLE | TM_INT_EDGE;
-  if (flags & MGOS_TIMER_REPEAT) ctl |= TM_AUTO_RELOAD;
-  if (flags & MGOS_ESP8266_HW_TIMER_NMI) {
-    /* There's only one timer anyway, this will do. */
-    s_ti = ti;
-    ETS_FRC_TIMER1_NMI_INTR_ATTACH(nmi_isr);
-  } else {
-    ETS_FRC_TIMER1_INTR_ATTACH((ets_isr_t) mgos_hw_timers_isr, ti);
-  }
+  uint32_t ctl = TM_ENABLE;
+  if (flags & MGOS_TIMER_REPEAT) ctl |= TM_RELOAD;
   uint32_t load = usecs * (TIMER_FREQ / 1000000);
   if (load < TIMER_MAX_LOAD && load >= TIMER_MIN_LOAD) {
     ctl |= TIMER_PRESCALER_1;
@@ -75,6 +70,15 @@ IRAM bool mgos_hw_timers_dev_set(struct mgos_hw_timer_info *ti, int usecs,
   }
   RTC_REG_WRITE(FRC1_LOAD_ADDRESS, load);
   RTC_CLR_REG_MASK(FRC1_INT_ADDRESS, FRC1_INT_CLR_MASK);
+  if (flags & MGOS_ESP8266_HW_TIMER_NMI) {
+    /* There's only one timer anyway, this will do. */
+    s_ti = ti;
+    ETS_FRC_TIMER1_NMI_INTR_ATTACH(nmi_isr);
+    SET_PERI_REG_MASK(NMI_INT_ENABLE_REG, FRC1_INT_ENA);
+  } else {
+    CLEAR_PERI_REG_MASK(NMI_INT_ENABLE_REG, FRC1_INT_ENA);
+    ETS_FRC_TIMER1_INTR_ATTACH((ets_isr_t) mgos_hw_timers_isr, ti);
+  }
   TM1_EDGE_INT_ENABLE();
   ETS_FRC1_INTR_ENABLE();
   RTC_REG_WRITE(FRC1_CTRL_ADDRESS, ctl);
