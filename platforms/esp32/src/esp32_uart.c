@@ -23,9 +23,10 @@
 
 #include "driver/periph_ctrl.h"
 #include "driver/uart.h"
+#include "esp32/rom/uart.h"
 #include "esp_attr.h"
 #include "esp_intr_alloc.h"
-#include "rom/uart.h"
+#include "soc/dport_access.h"
 #include "soc/uart_reg.h"
 
 #include "common/cs_dbg.h"

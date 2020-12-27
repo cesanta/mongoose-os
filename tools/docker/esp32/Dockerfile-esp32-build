@@ -21,25 +21,28 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get install -y -q \
       python-pkg-resources python3-pkg-resources \
       python-pyparsing python3-pyparsing \
       python-setuptools python3-setuptools \
+      python-pip python3-pip \
       rsync && \
     apt-get clean
+
+RUN pip install reedsolo bitstring ecdsa
 
 RUN useradd -d /opt/Espressif -m -s /bin/bash user && chown -R user /opt
 
 ARG TOOLCHAIN_VERSION
-RUN cd /opt/Espressif && wget -q https://dl.espressif.com/dl/xtensa-esp32-elf-linux64-$TOOLCHAIN_VERSION.tar.gz && \
-    tar xzf xtensa-esp32-elf-linux64-$TOOLCHAIN_VERSION.tar.gz && \
-    rm xtensa-esp32-elf-linux64-$TOOLCHAIN_VERSION.tar.gz
+RUN cd /opt/Espressif && wget -q https://dl.espressif.com/dl/$TOOLCHAIN_VERSION.tar.gz && \
+    tar xzf $TOOLCHAIN_VERSION.tar.gz && \
+    rm $TOOLCHAIN_VERSION.tar.gz
 ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/Espressif/xtensa-esp32-elf/bin
 ADD ct_path.sh /etc/profile.d
 
 ARG DOCKER_TAG
-RUN git clone --recursive --branch $DOCKER_TAG https://github.com/mongoose-os/esp-idf /opt/Espressif/esp-idf
+RUN git clone -j 8 --branch $DOCKER_TAG --depth 1 --recursive --shallow-submodules https://github.com/mongoose-os/esp-idf /opt/Espressif/esp-idf
 RUN cd /opt/Espressif/esp-idf && git tag v$DOCKER_TAG
 ENV IDF_PATH=/opt/Espressif/esp-idf
 
 # Pre-build configuration tools
-RUN cd $IDF_PATH/tools/kconfig && make conf-idf mconf-idf
+RUN cd $IDF_PATH/tools/kconfig && make conf-idf
 
 ADD rom.bin rom.elf /opt/Espressif/rom/
 

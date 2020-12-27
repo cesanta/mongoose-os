@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "esp_intr.h"
+#include "esp_intr_alloc.h"
 #include "sdkconfig.h"
 
 #include "mgos_bitbang.h"

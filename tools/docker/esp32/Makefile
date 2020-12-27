@@ -1,6 +1,6 @@
 DOCKERFILES = esp32-build
 SPIFFS_CONFIG_PATH = /vfs-fs-spiffs/include/esp32
-TOOLCHAIN_VERSION = 1.22.0-96-g2852398-5.2.0
+TOOLCHAIN_VERSION = xtensa-esp32-elf-gcc8_4_0-esp-2020r3-linux-amd64
 DOCKER_FLAGS = --build-arg=TOOLCHAIN_VERSION=$(TOOLCHAIN_VERSION) \
                --build-arg=DOCKER_TAG=$(DOCKER_TAG)
 

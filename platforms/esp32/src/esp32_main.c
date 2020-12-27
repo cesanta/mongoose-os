@@ -19,18 +19,17 @@
 #include <string.h>
 #include <unistd.h>
 
+#include "esp32/rom/ets_sys.h"
+#include "esp32/rom/spi_flash.h"
 #include "esp_attr.h"
+#include "esp_debug_helpers.h"
 #include "esp_event.h"
-#include "esp_event_loop.h"
 #include "esp_log.h"
 #include "esp_ota_ops.h"
-#include "esp_panic.h"
 #include "esp_spi_flash.h"
 #include "esp_system.h"
 #include "esp_task_wdt.h"
 #include "nvs_flash.h"
-#include "rom/ets_sys.h"
-#include "rom/spi_flash.h"
 #include "soc/efuse_reg.h"
 
 #include "common/cs_dbg.h"
@@ -51,56 +50,6 @@
 #include "esp32_updater.h"
 #endif
 
-esp_err_t esp32_wifi_ev(system_event_t *event);
-
-void esp32_system_event_handler_default(system_event_t *event) WEAK;
-void esp32_system_event_handler_default(system_event_t *event) {
-  (void) event;
-}
-
-esp_err_t event_handler(void *ctx, system_event_t *event) {
-  switch (event->event_id) {
-#ifdef MGOS_HAVE_WIFI
-    case SYSTEM_EVENT_STA_START:
-    case SYSTEM_EVENT_STA_STOP:
-    case SYSTEM_EVENT_STA_GOT_IP:
-    case SYSTEM_EVENT_STA_CONNECTED:
-    case SYSTEM_EVENT_STA_DISCONNECTED:
-    case SYSTEM_EVENT_AP_START:
-    case SYSTEM_EVENT_AP_STOP:
-    case SYSTEM_EVENT_AP_STACONNECTED:
-    case SYSTEM_EVENT_AP_STADISCONNECTED:
-    case SYSTEM_EVENT_SCAN_DONE:
-      return esp32_wifi_ev(event);
-      break;
-#endif
-#ifdef MGOS_HAVE_ETHERNET
-    case SYSTEM_EVENT_ETH_START:
-    case SYSTEM_EVENT_ETH_STOP:
-      break;
-    case SYSTEM_EVENT_ETH_CONNECTED: {
-      mgos_net_dev_event_cb(MGOS_NET_IF_TYPE_ETHERNET, 0,
-                            MGOS_NET_EV_CONNECTED);
-      break;
-    }
-    case SYSTEM_EVENT_ETH_DISCONNECTED: {
-      mgos_net_dev_event_cb(MGOS_NET_IF_TYPE_ETHERNET, 0,
-                            MGOS_NET_EV_DISCONNECTED);
-      break;
-    }
-    case SYSTEM_EVENT_ETH_GOT_IP: {
-      mgos_net_dev_event_cb(MGOS_NET_IF_TYPE_ETHERNET, 0,
-                            MGOS_NET_EV_IP_ACQUIRED);
-      break;
-    }
-#endif
-    default:
-      LOG(LL_INFO, ("event: %d", event->event_id));
-      esp32_system_event_handler_default(event);
-  }
-  return ESP_OK;
-}
-
 enum mgos_init_result mgos_freertos_pre_init(void) {
   enum mgos_init_result r;
 
@@ -115,7 +64,7 @@ enum mgos_init_result mgos_freertos_pre_init(void) {
 
   LOG(LL_INFO, ("ESP-IDF %s", esp_get_idf_version()));
   LOG(LL_INFO,
-      ("Boot partition: %s; flash: %uM", esp_ota_get_boot_partition()->label,
+      ("Boot partition: %s; flash: %uM", esp_ota_get_running_partition()->label,
        g_rom_flashchip.chip_size / 1048576));
 
   {
@@ -152,8 +101,10 @@ static IRAM void sdk_putc(char c) {
   ets_write_char_uart(c);
 }
 
-void mgos_cd_putc(int c) {
-  panicPutChar(c);
+extern void panic_print_char(char c);
+
+IRAM void mgos_cd_putc(int c) {
+  ets_write_char_uart(c);
 }
 
 extern void cs_log_lock(void);
@@ -194,11 +145,11 @@ static int sdk_debug_vprintf(esp_log_level_t level, const char *fmt,
 
 void app_main(void) {
   nvs_flash_init();
-  tcpip_adapter_init();
   ets_install_putc1(sdk_putc);
   ets_install_putc2(NULL);
   esp_log_set_vprintf(sdk_debug_vprintf);
-  ESP_ERROR_CHECK(esp_event_loop_init(event_handler, NULL));
+  esp_event_loop_create_default();
+  esp_netif_init();
   /* Scheduler is already running at this point */
   mgos_freertos_run_mgos_task(false /* start_scheduler */);
   /* Unlike other platforms, we return and abandon this task. */
