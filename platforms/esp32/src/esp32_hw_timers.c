@@ -51,11 +51,25 @@ IRAM bool mgos_hw_timers_dev_set(struct mgos_hw_timer_info *ti, int usecs,
    * interrupt shortage. Ideally, we'd use a single shared interrupt for all
    * the timers but esp_intr_set_in_iram does not work with shared ints yet.
    */
-  if (dd->inth == NULL &&
-      timer_isr_register(dd->tgn, dd->tn, (void (*)(void *)) mgos_hw_timers_isr,
-                         ti, 0, &dd->inth) != ESP_OK) {
-    LOG(LL_ERROR, ("Couldn't allocate into for HW timer"));
-    return false;
+  uint32_t mask = (1 << tn);
+  if (dd->inth == NULL) {
+    int intr_source = 0;
+    switch (dd->tgn) {
+      case TIMER_GROUP_0:
+      default:
+        intr_source = ETS_TG0_T0_LEVEL_INTR_SOURCE + tn;
+        break;
+      case TIMER_GROUP_1:
+        intr_source = ETS_TG1_T0_LEVEL_INTR_SOURCE + tn;
+        break;
+    }
+    uint32_t status_reg = (uint32_t) &tg->int_st_timers.val;
+    if (esp_intr_alloc_intrstatus(intr_source, 0, status_reg, mask,
+                                  (void (*)(void *)) mgos_hw_timers_isr, ti,
+                                  &dd->inth) != ESP_OK) {
+      LOG(LL_ERROR, ("Couldn't allocate into for HW timer"));
+      return false;
+    }
   }
 
   if (esp_intr_set_in_iram(dd->inth, (flags & MGOS_ESP32_HW_TIMER_IRAM) != 0) !=
@@ -63,7 +77,7 @@ IRAM bool mgos_hw_timers_dev_set(struct mgos_hw_timer_info *ti, int usecs,
     return false;
   }
 
-  tg->int_ena.val |= (1 << tn);
+  tg->int_ena.val |= mask;
 
   /* Start the timer */
   tg->hw_timer[tn].config.enable = true;
