@@ -62,7 +62,9 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
   char buf[MGOS_DEBUG_TMP_BUF_SIZE];
   enum cs_log_level old_level;
   int uart_no = -1;
+  cs_log_lock();
   if (s_in_debug) {
+    cs_log_unlock();
     return;
   }
   s_in_debug = true;
@@ -138,6 +140,7 @@ void mgos_debug_write(int fd, const void *data, size_t len) {
 out_unlock:
   cs_log_level = old_level;
   s_in_debug = false;
+  cs_log_unlock();
 }
 
 void mgos_debug_flush(void) {
