@@ -24,14 +24,15 @@
 namespace mgos {
 
 // Creates or takes ownership of an existing timer and clears it on destruction.
-class ScopedTimer {
+class Timer {
  public:
   typedef std::function<void()> Handler;
 
-  explicit ScopedTimer(const Handler &handler);
-  ScopedTimer(int msecs, int flags, const Handler &handler);
-  ScopedTimer(ScopedTimer &&other);
-  ~ScopedTimer();
+  explicit Timer(const Handler &handler);
+  Timer(int msecs, int flags, const Handler &handler);
+  Timer(Timer &&other);
+  Timer(const Timer &other) = delete;
+  ~Timer();
 
   void Clear();
 
@@ -45,8 +46,6 @@ class ScopedTimer {
   Handler handler_;
   mgos_timer_id id_ = MGOS_INVALID_TIMER_ID;
   bool one_shot_ = false;
-
-  ScopedTimer(const ScopedTimer &other) = delete;
 };
 
 }  // namespace mgos

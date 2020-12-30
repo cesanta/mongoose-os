@@ -19,45 +19,45 @@
 
 namespace mgos {
 
-ScopedTimer::ScopedTimer(const Handler &handler) : handler_(handler) {
+Timer::Timer(const Handler &handler) : handler_(handler) {
 }
 
-ScopedTimer::ScopedTimer(int msecs, int flags, const Handler &handler)
+Timer::Timer(int msecs, int flags, const Handler &handler)
     : handler_(handler) {
-  id_ = mgos_set_timer(msecs, flags, &ScopedTimer::HandlerCB, this);
+  id_ = mgos_set_timer(msecs, flags, &Timer::HandlerCB, this);
   one_shot_ = (flags & MGOS_TIMER_REPEAT) == 0;
 }
 
-ScopedTimer::ScopedTimer(ScopedTimer &&other)
+Timer::Timer(Timer &&other)
     : handler_(other.handler_), id_(other.id_) {
   other.id_ = MGOS_INVALID_TIMER_ID;
   other.handler_ = nullptr;
 }
 
-ScopedTimer::~ScopedTimer() {
+Timer::~Timer() {
   Clear();
 }
 
-void ScopedTimer::Clear() {
+void Timer::Clear() {
   if (id_ == MGOS_INVALID_TIMER_ID) return;
   mgos_clear_timer(id_);
   id_ = MGOS_INVALID_TIMER_ID;
 }
 
-bool ScopedTimer::Reset(int msecs, int flags) {
+bool Timer::Reset(int msecs, int flags) {
   Clear();
-  id_ = mgos_set_timer(msecs, flags, &ScopedTimer::HandlerCB, this);
+  id_ = mgos_set_timer(msecs, flags, &Timer::HandlerCB, this);
   one_shot_ = (flags & MGOS_TIMER_REPEAT) == 0;
   return IsValid();
 }
 
-bool ScopedTimer::IsValid() {
+bool Timer::IsValid() {
   return (id_ != MGOS_INVALID_TIMER_ID);
 }
 
 // static
-void ScopedTimer::HandlerCB(void *arg) {
-  auto *st = static_cast<ScopedTimer *>(arg);
+void Timer::HandlerCB(void *arg) {
+  auto *st = static_cast<Timer *>(arg);
   if (st->one_shot_) {
     st->id_ = MGOS_INVALID_TIMER_ID;
   }
