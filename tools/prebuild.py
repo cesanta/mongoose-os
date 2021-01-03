@@ -175,7 +175,7 @@ def MakeAsset(an, asf, tmp_dir):
     return [an, af]
 
 
-def ProcessLoc(e, loc, args):
+def ProcessLoc(e, loc, args, created_repos):
     parts = loc.split("/")
     pre, name, i, repo_loc, repo_subdir = "", "", 0, loc, ""
     for p in parts:
@@ -250,7 +250,7 @@ def ProcessLoc(e, loc, args):
         shutil.copy(os.path.join(tgt_dir, "build", "build.log"), bl)
         # Ok, what did we just build?
         with open(os.path.join(tgt_dir, "mos.yml")) as f:
-            m = yaml.load(f)
+            m = yaml.safe_load(f)
             if m.get("type", "") == "lib":
                 assets.append(MakeAsset("lib%s-%s.a" % (tgt_name, v["name"]), os.path.join(tgt_dir, "build", "lib.a"), args.tmp_dir))
             else:
@@ -283,13 +283,18 @@ def ProcessLoc(e, loc, args):
             i = 1
             while True:
                 try:
-                    if not gh_out.get("update", False):
+                    should_update = gh_out.get("update", False)
+                    # If we already (re)created this repo during this run, do not do it again.
+                    if created_repos.get(gh_out["repo"]):
+                        should_update = True
+                    if not should_update:
                         # Looks like after some number of asset deletions / uploads GH release
                         # gets into a bad state where new asset uploads are just failing.
                         # So we try once, try twice and on the third time we re-create the release
                         # even if it exists.
                         re_create = (i > 2)
                         CreateGitHubRelease(gh_out, args.gh_release_tag, token, args.tmp_dir, re_create=re_create)
+                        created_repos[gh_out["repo"]] = True
                     else:
                         UpdateGitHubRelease(gh_out, args.gh_release_tag, token, args.tmp_dir)
                     break
@@ -309,9 +314,10 @@ def ProcessLoc(e, loc, args):
 
 
 def ProcessEntry(e, args):
+    created_repos = {}
     for loc in e.get("locations", []) + [e.get("location")]:
         if loc:
-            ProcessLoc(e, loc, args)
+            ProcessLoc(e, loc, args, created_repos)
 
 
 if __name__ == "__main__":
@@ -334,7 +340,7 @@ if __name__ == "__main__":
     logging.info("Reading %s", args.config)
 
     with open(args.config) as f:
-        cfg = yaml.load(f)
+        cfg = yaml.safe_load(f)
 
     for e in cfg:
         ProcessEntry(e, args)
