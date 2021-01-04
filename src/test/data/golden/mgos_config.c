@@ -449,6 +449,10 @@ bool mgos_sys_config_set(const struct mg_str key, const struct mg_str value, boo
   return mgos_config_set(key, value, &mgos_sys_config, mgos_config_schema(), free_strings);
 }
 
+const struct mgos_conf_entry *mgos_config_schema(void) {
+  return mgos_config_get_schema();
+}
+
 /* Strings */
 static const char *mgos_config_str_table[] = {
   "192.168.4.200",

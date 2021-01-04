@@ -763,9 +763,7 @@ extern "C" {{
 {str_table_lines}
 
 /* Backward compatibility. */
-static inline const struct mgos_conf_entry *{name}_schema(void) {{
-  return {name}_get_schema();
-}}
+const struct mgos_conf_entry *{name}_schema(void);
 
 #ifdef __cplusplus
 }}
@@ -833,6 +831,10 @@ class CWriter:
 {struct_def_lines}
 
 {accessor_lines}
+
+const struct mgos_conf_entry *{name}_schema(void) {{
+  return {name}_get_schema();
+}}
 
 /* Strings */
 {str_table_lines}

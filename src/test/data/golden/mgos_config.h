@@ -814,9 +814,7 @@ bool mgos_sys_config_set(const struct mg_str key, const struct mg_str value, boo
 bool mgos_config_is_default_str(const char *s);
 
 /* Backward compatibility. */
-static inline const struct mgos_conf_entry *mgos_config_schema(void) {
-  return mgos_config_get_schema();
-}
+const struct mgos_conf_entry *mgos_config_schema(void);
 
 #ifdef __cplusplus
 }
