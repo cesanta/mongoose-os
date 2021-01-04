@@ -104,7 +104,7 @@ static bool mgos_sys_config_load_level_internal(struct mgos_config *cfg,
   if (level > MGOS_CONFIG_LEVEL_USER) return false;
   memcpy(fname, CONF_USER_FILE, sizeof(CONF_USER_FILE));
   // Start with compiled-in defaults.
-  memcpy(cfg, &mgos_config_defaults, sizeof(*cfg));
+  mgos_config_set_defaults(cfg);
   const char *acl = "*";
   for (i = 1; i <= (int) level; i++) {
     fname[CONF_USER_FILE_NUM_IDX] = '0' + i;

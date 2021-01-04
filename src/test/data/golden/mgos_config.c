@@ -6,401 +6,465 @@
 
 #include "mgos_config.h"
 
-#include <stddef.h>
+#include <stdbool.h>
 
 #include "mgos_config_util.h"
 
-const struct mgos_conf_entry mgos_config_schema_[28] = {
-  {.type = CONF_TYPE_OBJECT, .key = "", .offset = 0, .num_desc = 27},
-  {.type = CONF_TYPE_OBJECT, .key = "wifi", .offset = offsetof(struct mgos_config, wifi), .num_desc = 8},
-  {.type = CONF_TYPE_OBJECT, .key = "sta", .offset = offsetof(struct mgos_config, wifi.sta), .num_desc = 2},
-  {.type = CONF_TYPE_STRING, .key = "ssid", .offset = offsetof(struct mgos_config, wifi.sta.ssid)},
-  {.type = CONF_TYPE_STRING, .key = "pass", .offset = offsetof(struct mgos_config, wifi.sta.pass)},
-  {.type = CONF_TYPE_OBJECT, .key = "ap", .offset = offsetof(struct mgos_config, wifi.ap), .num_desc = 4},
-  {.type = CONF_TYPE_STRING, .key = "ssid", .offset = offsetof(struct mgos_config, wifi.ap.ssid)},
-  {.type = CONF_TYPE_STRING, .key = "pass", .offset = offsetof(struct mgos_config, wifi.ap.pass)},
-  {.type = CONF_TYPE_INT, .key = "channel", .offset = offsetof(struct mgos_config, wifi.ap.channel)},
-  {.type = CONF_TYPE_STRING, .key = "dhcp_end", .offset = offsetof(struct mgos_config, wifi.ap.dhcp_end)},
-  {.type = CONF_TYPE_INT, .key = "foo", .offset = offsetof(struct mgos_config, foo)},
-  {.type = CONF_TYPE_OBJECT, .key = "http", .offset = offsetof(struct mgos_config, http), .num_desc = 2},
-  {.type = CONF_TYPE_BOOL, .key = "enable", .offset = offsetof(struct mgos_config, http.enable)},
-  {.type = CONF_TYPE_INT, .key = "port", .offset = offsetof(struct mgos_config, http.port)},
-  {.type = CONF_TYPE_OBJECT, .key = "debug", .offset = offsetof(struct mgos_config, debug), .num_desc = 6},
-  {.type = CONF_TYPE_INT, .key = "level", .offset = offsetof(struct mgos_config, debug.level)},
-  {.type = CONF_TYPE_STRING, .key = "dest", .offset = offsetof(struct mgos_config, debug.dest)},
-  {.type = CONF_TYPE_STRING, .key = "file_level", .offset = offsetof(struct mgos_config, debug.file_level)},
-  {.type = CONF_TYPE_DOUBLE, .key = "test_d1", .offset = offsetof(struct mgos_config, debug.test_d1)},
-  {.type = CONF_TYPE_DOUBLE, .key = "test_d2", .offset = offsetof(struct mgos_config, debug.test_d2)},
-  {.type = CONF_TYPE_UNSIGNED_INT, .key = "test_ui", .offset = offsetof(struct mgos_config, debug.test_ui)},
-  {.type = CONF_TYPE_OBJECT, .key = "test", .offset = offsetof(struct mgos_config, test), .num_desc = 6},
-  {.type = CONF_TYPE_OBJECT, .key = "bar", .offset = offsetof(struct mgos_config, test.bar), .num_desc = 2},
-  {.type = CONF_TYPE_BOOL, .key = "enable", .offset = offsetof(struct mgos_config, test.bar.enable)},
-  {.type = CONF_TYPE_INT, .key = "param1", .offset = offsetof(struct mgos_config, test.bar.param1)},
-  {.type = CONF_TYPE_OBJECT, .key = "bar1", .offset = offsetof(struct mgos_config, test.bar1), .num_desc = 2},
-  {.type = CONF_TYPE_BOOL, .key = "enable", .offset = offsetof(struct mgos_config, test.bar1.enable)},
-  {.type = CONF_TYPE_INT, .key = "param1", .offset = offsetof(struct mgos_config, test.bar1.param1)},
+
+/* struct mgos_config */
+static const struct mgos_conf_entry mgos_config_schema_[] = {
+    {.type = CONF_TYPE_OBJECT, .key = "", .offset = 0, .num_desc = 38},
+    {.type = CONF_TYPE_OBJECT, .key = "wifi", .offset = offsetof(struct mgos_config, wifi), .num_desc = 8},
+    {.type = CONF_TYPE_OBJECT, .key = "sta", .offset = offsetof(struct mgos_config, wifi.sta), .num_desc = 2},
+    {.type = CONF_TYPE_STRING, .key = "ssid", .offset = offsetof(struct mgos_config, wifi.sta.ssid)},
+    {.type = CONF_TYPE_STRING, .key = "pass", .offset = offsetof(struct mgos_config, wifi.sta.pass)},
+    {.type = CONF_TYPE_OBJECT, .key = "ap", .offset = offsetof(struct mgos_config, wifi.ap), .num_desc = 4},
+    {.type = CONF_TYPE_STRING, .key = "ssid", .offset = offsetof(struct mgos_config, wifi.ap.ssid)},
+    {.type = CONF_TYPE_STRING, .key = "pass", .offset = offsetof(struct mgos_config, wifi.ap.pass)},
+    {.type = CONF_TYPE_INT, .key = "channel", .offset = offsetof(struct mgos_config, wifi.ap.channel)},
+    {.type = CONF_TYPE_STRING, .key = "dhcp_end", .offset = offsetof(struct mgos_config, wifi.ap.dhcp_end)},
+    {.type = CONF_TYPE_INT, .key = "foo", .offset = offsetof(struct mgos_config, foo)},
+    {.type = CONF_TYPE_OBJECT, .key = "http", .offset = offsetof(struct mgos_config, http), .num_desc = 2},
+    {.type = CONF_TYPE_BOOL, .key = "enable", .offset = offsetof(struct mgos_config, http.enable)},
+    {.type = CONF_TYPE_INT, .key = "port", .offset = offsetof(struct mgos_config, http.port)},
+    {.type = CONF_TYPE_OBJECT, .key = "debug", .offset = offsetof(struct mgos_config, debug), .num_desc = 7},
+    {.type = CONF_TYPE_INT, .key = "level", .offset = offsetof(struct mgos_config, debug.level)},
+    {.type = CONF_TYPE_STRING, .key = "dest", .offset = offsetof(struct mgos_config, debug.dest)},
+    {.type = CONF_TYPE_STRING, .key = "file_level", .offset = offsetof(struct mgos_config, debug.file_level)},
+    {.type = CONF_TYPE_DOUBLE, .key = "test_d1", .offset = offsetof(struct mgos_config, debug.test_d1)},
+    {.type = CONF_TYPE_DOUBLE, .key = "test_d2", .offset = offsetof(struct mgos_config, debug.test_d2)},
+    {.type = CONF_TYPE_UNSIGNED_INT, .key = "test_ui", .offset = offsetof(struct mgos_config, debug.test_ui)},
+    {.type = CONF_TYPE_OBJECT, .key = "empty", .offset = offsetof(struct mgos_config, debug.empty), .num_desc = 0},
+    {.type = CONF_TYPE_OBJECT, .key = "test", .offset = offsetof(struct mgos_config, test), .num_desc = 16},
+    {.type = CONF_TYPE_OBJECT, .key = "bar1", .offset = offsetof(struct mgos_config, test.bar1), .num_desc = 7},
+    {.type = CONF_TYPE_BOOL, .key = "enable", .offset = offsetof(struct mgos_config, test.bar1.enable)},
+    {.type = CONF_TYPE_INT, .key = "param1", .offset = offsetof(struct mgos_config, test.bar1.param1)},
+    {.type = CONF_TYPE_OBJECT, .key = "inner", .offset = offsetof(struct mgos_config, test.bar1.inner), .num_desc = 2},
+    {.type = CONF_TYPE_STRING, .key = "param2", .offset = offsetof(struct mgos_config, test.bar1.inner.param2)},
+    {.type = CONF_TYPE_INT, .key = "param3", .offset = offsetof(struct mgos_config, test.bar1.inner.param3)},
+    {.type = CONF_TYPE_OBJECT, .key = "baz", .offset = offsetof(struct mgos_config, test.bar1.baz), .num_desc = 1},
+    {.type = CONF_TYPE_BOOL, .key = "bazaar", .offset = offsetof(struct mgos_config, test.bar1.baz.bazaar)},
+    {.type = CONF_TYPE_OBJECT, .key = "bar2", .offset = offsetof(struct mgos_config, test.bar2), .num_desc = 7},
+    {.type = CONF_TYPE_BOOL, .key = "enable", .offset = offsetof(struct mgos_config, test.bar2.enable)},
+    {.type = CONF_TYPE_INT, .key = "param1", .offset = offsetof(struct mgos_config, test.bar2.param1)},
+    {.type = CONF_TYPE_OBJECT, .key = "inner", .offset = offsetof(struct mgos_config, test.bar2.inner), .num_desc = 2},
+    {.type = CONF_TYPE_STRING, .key = "param2", .offset = offsetof(struct mgos_config, test.bar2.inner.param2)},
+    {.type = CONF_TYPE_INT, .key = "param3", .offset = offsetof(struct mgos_config, test.bar2.inner.param3)},
+    {.type = CONF_TYPE_OBJECT, .key = "baz", .offset = offsetof(struct mgos_config, test.bar2.baz), .num_desc = 1},
+    {.type = CONF_TYPE_BOOL, .key = "bazaar", .offset = offsetof(struct mgos_config, test.bar2.baz.bazaar)},
 };
 
-const struct mgos_conf_entry *mgos_config_schema() {
-  return mgos_config_schema_;
+/* struct mgos_config_boo */
+static const struct mgos_conf_entry mgos_config_boo_schema_[] = {
+    {.type = CONF_TYPE_OBJECT, .key = "", .offset = 0, .num_desc = 4},
+    {.type = CONF_TYPE_INT, .key = "param5", .offset = offsetof(struct mgos_config_boo, param5)},
+    {.type = CONF_TYPE_STRING, .key = "param6", .offset = offsetof(struct mgos_config_boo, param6)},
+    {.type = CONF_TYPE_OBJECT, .key = "sub", .offset = offsetof(struct mgos_config_boo, sub), .num_desc = 1},
+    {.type = CONF_TYPE_INT, .key = "param7", .offset = offsetof(struct mgos_config_boo, sub.param7)},
+};
+
+/* struct mgos_config_wifi_sta */
+const struct mgos_conf_entry *mgos_config_wifi_sta_get_schema(void) {
+  return &mgos_config_schema_[2];
+}
+
+void mgos_config_wifi_sta_set_defaults(struct mgos_config_wifi_sta *cfg) {
+  cfg->ssid = NULL;
+  cfg->pass = "so\nmany\nlines\n";
+}
+
+/* struct mgos_config_wifi_ap */
+const struct mgos_conf_entry *mgos_config_wifi_ap_get_schema(void) {
+  return &mgos_config_schema_[5];
+}
+
+void mgos_config_wifi_ap_set_defaults(struct mgos_config_wifi_ap *cfg) {
+  cfg->ssid = "Quote \" me \\\\ please";
+  cfg->pass = "\u043c\u0430\u043b\u043e\u0432\u0430\u0442\u043e \u0431\u0443\u0434\u0435\u0442";
+  cfg->channel = 6;
+  cfg->dhcp_end = "192.168.4.200";
+}
+
+/* struct mgos_config_wifi */
+const struct mgos_conf_entry *mgos_config_wifi_get_schema(void) {
+  return &mgos_config_schema_[1];
+}
+
+void mgos_config_wifi_set_defaults(struct mgos_config_wifi *cfg) {
+  mgos_config_wifi_sta_set_defaults(&cfg->sta);
+  mgos_config_wifi_ap_set_defaults(&cfg->ap);
+}
+
+/* struct mgos_config_http */
+const struct mgos_conf_entry *mgos_config_http_get_schema(void) {
+  return &mgos_config_schema_[11];
+}
+
+void mgos_config_http_set_defaults(struct mgos_config_http *cfg) {
+  cfg->enable = true;
+  cfg->port = 80;
+}
+
+/* struct mgos_config_debug_empty */
+const struct mgos_conf_entry *mgos_config_debug_empty_get_schema(void) {
+  return &mgos_config_schema_[21];
+}
+
+void mgos_config_debug_empty_set_defaults(struct mgos_config_debug_empty *cfg) {
+  (void) cfg;
+}
+
+/* struct mgos_config_debug */
+const struct mgos_conf_entry *mgos_config_debug_get_schema(void) {
+  return &mgos_config_schema_[14];
+}
+
+void mgos_config_debug_set_defaults(struct mgos_config_debug *cfg) {
+  cfg->level = 2;
+  cfg->dest = "uart1";
+  cfg->file_level = "mg_foo.c=4";
+  cfg->test_d1 = 2.0;
+  cfg->test_d2 = 0.0;
+  cfg->test_ui = 4294967295;
+  mgos_config_debug_empty_set_defaults(&cfg->empty);
+}
+
+/* struct mgos_config_baz */
+const struct mgos_conf_entry *mgos_config_baz_get_schema(void) {
+  return &mgos_config_schema_[37];
+}
+
+void mgos_config_baz_set_defaults(struct mgos_config_baz *cfg) {
+  cfg->bazaar = false;
+}
+
+/* struct mgos_config_bar_inner */
+const struct mgos_conf_entry *mgos_config_bar_inner_get_schema(void) {
+  return &mgos_config_schema_[34];
+}
+
+void mgos_config_bar_inner_set_defaults(struct mgos_config_bar_inner *cfg) {
+  cfg->param2 = "p2";
+  cfg->param3 = 3333;
+}
+
+/* struct mgos_config_baz */
+const struct mgos_conf_entry *mgos_config_bar_baz_get_schema(void) {
+  return &mgos_config_schema_[37];
+}
+
+void mgos_config_bar_baz_set_defaults(struct mgos_config_baz *cfg) {
+  cfg->bazaar = false;
+}
+
+/* struct mgos_config_bar */
+const struct mgos_conf_entry *mgos_config_bar_get_schema(void) {
+  return &mgos_config_schema_[31];
+}
+
+void mgos_config_bar_set_defaults(struct mgos_config_bar *cfg) {
+  cfg->enable = false;
+  cfg->param1 = 1111;
+  mgos_config_bar_inner_set_defaults(&cfg->inner);
+  mgos_config_bar_baz_set_defaults(&cfg->baz);
+}
+
+/* struct mgos_config_bar_inner */
+const struct mgos_conf_entry *mgos_config_test_bar1_inner_get_schema(void) {
+  return &mgos_config_schema_[34];
+}
+
+void mgos_config_test_bar1_inner_set_defaults(struct mgos_config_bar_inner *cfg) {
+  cfg->param2 = "p2";
+  cfg->param3 = 3333;
+}
+
+/* struct mgos_config_baz */
+const struct mgos_conf_entry *mgos_config_test_bar1_baz_get_schema(void) {
+  return &mgos_config_schema_[37];
+}
+
+void mgos_config_test_bar1_baz_set_defaults(struct mgos_config_baz *cfg) {
+  cfg->bazaar = false;
+}
+
+/* struct mgos_config_bar */
+const struct mgos_conf_entry *mgos_config_test_bar1_get_schema(void) {
+  return &mgos_config_schema_[31];
+}
+
+void mgos_config_test_bar1_set_defaults(struct mgos_config_bar *cfg) {
+  cfg->enable = false;
+  cfg->param1 = 1111;
+  mgos_config_test_bar1_inner_set_defaults(&cfg->inner);
+  mgos_config_test_bar1_baz_set_defaults(&cfg->baz);
+}
+
+/* struct mgos_config_bar_inner */
+const struct mgos_conf_entry *mgos_config_test_bar2_inner_get_schema(void) {
+  return &mgos_config_schema_[34];
+}
+
+void mgos_config_test_bar2_inner_set_defaults(struct mgos_config_bar_inner *cfg) {
+  cfg->param2 = "p2";
+  cfg->param3 = 3333;
+}
+
+/* struct mgos_config_baz */
+const struct mgos_conf_entry *mgos_config_test_bar2_baz_get_schema(void) {
+  return &mgos_config_schema_[37];
+}
+
+void mgos_config_test_bar2_baz_set_defaults(struct mgos_config_baz *cfg) {
+  cfg->bazaar = true;
+}
+
+/* struct mgos_config_bar */
+const struct mgos_conf_entry *mgos_config_test_bar2_get_schema(void) {
+  return &mgos_config_schema_[31];
+}
+
+void mgos_config_test_bar2_set_defaults(struct mgos_config_bar *cfg) {
+  cfg->enable = false;
+  cfg->param1 = 2222;
+  mgos_config_test_bar2_inner_set_defaults(&cfg->inner);
+  mgos_config_test_bar2_baz_set_defaults(&cfg->baz);
+}
+
+/* struct mgos_config_test */
+const struct mgos_conf_entry *mgos_config_test_get_schema(void) {
+  return &mgos_config_schema_[22];
+}
+
+void mgos_config_test_set_defaults(struct mgos_config_test *cfg) {
+  mgos_config_test_bar1_set_defaults(&cfg->bar1);
+  mgos_config_test_bar2_set_defaults(&cfg->bar2);
+}
+
+/* struct mgos_config_boo_sub */
+const struct mgos_conf_entry *mgos_config_boo_sub_get_schema(void) {
+  return &mgos_config_boo_schema_[3];
+}
+
+void mgos_config_boo_sub_set_defaults(struct mgos_config_boo_sub *cfg) {
+  cfg->param7 = 444;
+}
+
+/* struct mgos_config_boo */
+const struct mgos_conf_entry *mgos_config_boo_get_schema(void) {
+  return &mgos_config_boo_schema_[0];
+}
+
+void mgos_config_boo_set_defaults(struct mgos_config_boo *cfg) {
+  cfg->param5 = 333;
+  cfg->param6 = "p6";
+  mgos_config_boo_sub_set_defaults(&cfg->sub);
+}
+
+/* struct mgos_config */
+const struct mgos_conf_entry *mgos_config_get_schema(void) {
+  return &mgos_config_schema_[0];
+}
+
+void mgos_config_set_defaults(struct mgos_config *cfg) {
+  mgos_config_wifi_set_defaults(&cfg->wifi);
+  cfg->foo = 123;
+  mgos_config_http_set_defaults(&cfg->http);
+  mgos_config_debug_set_defaults(&cfg->debug);
+  mgos_config_test_set_defaults(&cfg->test);
 }
 
 /* Global instance */
 struct mgos_config mgos_sys_config;
-const struct mgos_config mgos_config_defaults = {
-  .wifi.sta.ssid = NULL,
-  .wifi.sta.pass = "so\nmany\nlines\n",
-  .wifi.ap.ssid = "Quote \" me \\\\ please",
-  .wifi.ap.pass = "\u043c\u0430\u043b\u043e\u0432\u0430\u0442\u043e \u0431\u0443\u0434\u0435\u0442",
-  .wifi.ap.channel = 6,
-  .wifi.ap.dhcp_end = "192.168.4.200",
-  .foo = 123,
-  .http.enable = 1,
-  .http.port = 80,
-  .debug.level = 2,
-  .debug.dest = "uart1",
-  .debug.file_level = "mg_foo.c=4",
-  .debug.test_d1 = 2.0,
-  .debug.test_d2 = 0.0,
-  .debug.test_ui = 4294967295,
-  .test.bar.enable = 0,
-  .test.bar.param1 = 111,
-  .test.bar1.enable = 0,
-  .test.bar1.param1 = 222,
-};
+
+/* Accessors */
 
 /* wifi */
-#define MGOS_CONFIG_HAVE_WIFI
-#define MGOS_SYS_CONFIG_HAVE_WIFI
-const struct mgos_config_wifi * mgos_config_get_wifi(struct mgos_config *cfg) {
-  return &cfg->wifi;
-}
-const struct mgos_conf_entry *mgos_config_schema_wifi(void) {
-  return mgos_conf_find_schema_entry("wifi", mgos_config_schema());
-}
-bool mgos_config_parse_wifi(struct mg_str json, struct mgos_config_wifi *cfg) {
-  return mgos_conf_parse_sub(json, mgos_config_schema(), cfg);
-}
-bool mgos_config_copy_wifi(const struct mgos_config_wifi *src, struct mgos_config_wifi *dst) {
-  return mgos_conf_copy(mgos_config_schema_wifi(), src, dst);
-}
-void mgos_config_free_wifi(struct mgos_config_wifi *cfg) {
-  return mgos_conf_free(mgos_config_schema_wifi(), cfg);
-}
+const struct mgos_config_wifi *mgos_config_get_wifi(const struct mgos_config *cfg) { return &cfg->wifi; }
 
 /* wifi.sta */
-#define MGOS_CONFIG_HAVE_WIFI_STA
-#define MGOS_SYS_CONFIG_HAVE_WIFI_STA
-const struct mgos_config_wifi_sta * mgos_config_get_wifi_sta(struct mgos_config *cfg) {
-  return &cfg->wifi.sta;
-}
-const struct mgos_conf_entry *mgos_config_schema_wifi_sta(void) {
-  return mgos_conf_find_schema_entry("wifi.sta", mgos_config_schema());
-}
-bool mgos_config_parse_wifi_sta(struct mg_str json, struct mgos_config_wifi_sta *cfg) {
-  return mgos_conf_parse_sub(json, mgos_config_schema(), cfg);
-}
-bool mgos_config_copy_wifi_sta(const struct mgos_config_wifi_sta *src, struct mgos_config_wifi_sta *dst) {
-  return mgos_conf_copy(mgos_config_schema_wifi_sta(), src, dst);
-}
-void mgos_config_free_wifi_sta(struct mgos_config_wifi_sta *cfg) {
-  return mgos_conf_free(mgos_config_schema_wifi_sta(), cfg);
-}
+const struct mgos_config_wifi_sta *mgos_config_get_wifi_sta(const struct mgos_config *cfg) { return &cfg->wifi.sta; }
 
 /* wifi.sta.ssid */
-#define MGOS_CONFIG_HAVE_WIFI_STA_SSID
-#define MGOS_SYS_CONFIG_HAVE_WIFI_STA_SSID
-const char * mgos_config_get_wifi_sta_ssid(struct mgos_config *cfg) {
-  return cfg->wifi.sta.ssid;
-}
-void mgos_config_set_wifi_sta_ssid(struct mgos_config *cfg, const char * v) {
-  mgos_conf_set_str(&cfg->wifi.sta.ssid, v);
-}
+const char * mgos_config_get_wifi_sta_ssid(const struct mgos_config *cfg) { return cfg->wifi.sta.ssid; }
+const char * mgos_config_get_default_wifi_sta_ssid(void) { return NULL; }
+void mgos_config_set_wifi_sta_ssid(struct mgos_config *cfg, const char * v) { mgos_conf_set_str(&cfg->wifi.sta.ssid, v); }
 
 /* wifi.sta.pass */
-#define MGOS_CONFIG_HAVE_WIFI_STA_PASS
-#define MGOS_SYS_CONFIG_HAVE_WIFI_STA_PASS
-const char * mgos_config_get_wifi_sta_pass(struct mgos_config *cfg) {
-  return cfg->wifi.sta.pass;
-}
-void mgos_config_set_wifi_sta_pass(struct mgos_config *cfg, const char * v) {
-  mgos_conf_set_str(&cfg->wifi.sta.pass, v);
-}
+const char * mgos_config_get_wifi_sta_pass(const struct mgos_config *cfg) { return cfg->wifi.sta.pass; }
+const char * mgos_config_get_default_wifi_sta_pass(void) { return "so\nmany\nlines\n"; }
+void mgos_config_set_wifi_sta_pass(struct mgos_config *cfg, const char * v) { mgos_conf_set_str(&cfg->wifi.sta.pass, v); }
 
 /* wifi.ap */
-#define MGOS_CONFIG_HAVE_WIFI_AP
-#define MGOS_SYS_CONFIG_HAVE_WIFI_AP
-const struct mgos_config_wifi_ap * mgos_config_get_wifi_ap(struct mgos_config *cfg) {
-  return &cfg->wifi.ap;
-}
-const struct mgos_conf_entry *mgos_config_schema_wifi_ap(void) {
-  return mgos_conf_find_schema_entry("wifi.ap", mgos_config_schema());
-}
-bool mgos_config_parse_wifi_ap(struct mg_str json, struct mgos_config_wifi_ap *cfg) {
-  return mgos_conf_parse_sub(json, mgos_config_schema(), cfg);
-}
-bool mgos_config_copy_wifi_ap(const struct mgos_config_wifi_ap *src, struct mgos_config_wifi_ap *dst) {
-  return mgos_conf_copy(mgos_config_schema_wifi_ap(), src, dst);
-}
-void mgos_config_free_wifi_ap(struct mgos_config_wifi_ap *cfg) {
-  return mgos_conf_free(mgos_config_schema_wifi_ap(), cfg);
-}
+const struct mgos_config_wifi_ap *mgos_config_get_wifi_ap(const struct mgos_config *cfg) { return &cfg->wifi.ap; }
 
 /* wifi.ap.ssid */
-#define MGOS_CONFIG_HAVE_WIFI_AP_SSID
-#define MGOS_SYS_CONFIG_HAVE_WIFI_AP_SSID
-const char * mgos_config_get_wifi_ap_ssid(struct mgos_config *cfg) {
-  return cfg->wifi.ap.ssid;
-}
-void mgos_config_set_wifi_ap_ssid(struct mgos_config *cfg, const char * v) {
-  mgos_conf_set_str(&cfg->wifi.ap.ssid, v);
-}
+const char * mgos_config_get_wifi_ap_ssid(const struct mgos_config *cfg) { return cfg->wifi.ap.ssid; }
+const char * mgos_config_get_default_wifi_ap_ssid(void) { return "Quote \" me \\\\ please"; }
+void mgos_config_set_wifi_ap_ssid(struct mgos_config *cfg, const char * v) { mgos_conf_set_str(&cfg->wifi.ap.ssid, v); }
 
 /* wifi.ap.pass */
-#define MGOS_CONFIG_HAVE_WIFI_AP_PASS
-#define MGOS_SYS_CONFIG_HAVE_WIFI_AP_PASS
-const char * mgos_config_get_wifi_ap_pass(struct mgos_config *cfg) {
-  return cfg->wifi.ap.pass;
-}
-void mgos_config_set_wifi_ap_pass(struct mgos_config *cfg, const char * v) {
-  mgos_conf_set_str(&cfg->wifi.ap.pass, v);
-}
+const char * mgos_config_get_wifi_ap_pass(const struct mgos_config *cfg) { return cfg->wifi.ap.pass; }
+const char * mgos_config_get_default_wifi_ap_pass(void) { return "\u043c\u0430\u043b\u043e\u0432\u0430\u0442\u043e \u0431\u0443\u0434\u0435\u0442"; }
+void mgos_config_set_wifi_ap_pass(struct mgos_config *cfg, const char * v) { mgos_conf_set_str(&cfg->wifi.ap.pass, v); }
 
 /* wifi.ap.channel */
-#define MGOS_CONFIG_HAVE_WIFI_AP_CHANNEL
-#define MGOS_SYS_CONFIG_HAVE_WIFI_AP_CHANNEL
-int mgos_config_get_wifi_ap_channel(struct mgos_config *cfg) {
-  return cfg->wifi.ap.channel;
-}
-void mgos_config_set_wifi_ap_channel(struct mgos_config *cfg, int v) {
-  cfg->wifi.ap.channel = v;
-}
+int mgos_config_get_wifi_ap_channel(const struct mgos_config *cfg) { return cfg->wifi.ap.channel; }
+int mgos_config_get_default_wifi_ap_channel(void) { return 6; }
+void mgos_config_set_wifi_ap_channel(struct mgos_config *cfg, int v) { cfg->wifi.ap.channel = v; }
 
 /* wifi.ap.dhcp_end */
-#define MGOS_CONFIG_HAVE_WIFI_AP_DHCP_END
-#define MGOS_SYS_CONFIG_HAVE_WIFI_AP_DHCP_END
-const char * mgos_config_get_wifi_ap_dhcp_end(struct mgos_config *cfg) {
-  return cfg->wifi.ap.dhcp_end;
-}
-void mgos_config_set_wifi_ap_dhcp_end(struct mgos_config *cfg, const char * v) {
-  mgos_conf_set_str(&cfg->wifi.ap.dhcp_end, v);
-}
+const char * mgos_config_get_wifi_ap_dhcp_end(const struct mgos_config *cfg) { return cfg->wifi.ap.dhcp_end; }
+const char * mgos_config_get_default_wifi_ap_dhcp_end(void) { return "192.168.4.200"; }
+void mgos_config_set_wifi_ap_dhcp_end(struct mgos_config *cfg, const char * v) { mgos_conf_set_str(&cfg->wifi.ap.dhcp_end, v); }
 
 /* foo */
-#define MGOS_CONFIG_HAVE_FOO
-#define MGOS_SYS_CONFIG_HAVE_FOO
-int mgos_config_get_foo(struct mgos_config *cfg) {
-  return cfg->foo;
-}
-void mgos_config_set_foo(struct mgos_config *cfg, int v) {
-  cfg->foo = v;
-}
+int mgos_config_get_foo(const struct mgos_config *cfg) { return cfg->foo; }
+int mgos_config_get_default_foo(void) { return 123; }
+void mgos_config_set_foo(struct mgos_config *cfg, int v) { cfg->foo = v; }
 
 /* http */
-#define MGOS_CONFIG_HAVE_HTTP
-#define MGOS_SYS_CONFIG_HAVE_HTTP
-const struct mgos_config_http * mgos_config_get_http(struct mgos_config *cfg) {
-  return &cfg->http;
-}
-const struct mgos_conf_entry *mgos_config_schema_http(void) {
-  return mgos_conf_find_schema_entry("http", mgos_config_schema());
-}
-bool mgos_config_parse_http(struct mg_str json, struct mgos_config_http *cfg) {
-  return mgos_conf_parse_sub(json, mgos_config_schema(), cfg);
-}
-bool mgos_config_copy_http(const struct mgos_config_http *src, struct mgos_config_http *dst) {
-  return mgos_conf_copy(mgos_config_schema_http(), src, dst);
-}
-void mgos_config_free_http(struct mgos_config_http *cfg) {
-  return mgos_conf_free(mgos_config_schema_http(), cfg);
-}
+const struct mgos_config_http *mgos_config_get_http(const struct mgos_config *cfg) { return &cfg->http; }
 
 /* http.enable */
-#define MGOS_CONFIG_HAVE_HTTP_ENABLE
-#define MGOS_SYS_CONFIG_HAVE_HTTP_ENABLE
-int mgos_config_get_http_enable(struct mgos_config *cfg) {
-  return cfg->http.enable;
-}
-void mgos_config_set_http_enable(struct mgos_config *cfg, int v) {
-  cfg->http.enable = v;
-}
+int mgos_config_get_http_enable(const struct mgos_config *cfg) { return cfg->http.enable; }
+int mgos_config_get_default_http_enable(void) { return true; }
+void mgos_config_set_http_enable(struct mgos_config *cfg, int v) { cfg->http.enable = v; }
 
 /* http.port */
-#define MGOS_CONFIG_HAVE_HTTP_PORT
-#define MGOS_SYS_CONFIG_HAVE_HTTP_PORT
-int mgos_config_get_http_port(struct mgos_config *cfg) {
-  return cfg->http.port;
-}
-void mgos_config_set_http_port(struct mgos_config *cfg, int v) {
-  cfg->http.port = v;
-}
+int mgos_config_get_http_port(const struct mgos_config *cfg) { return cfg->http.port; }
+int mgos_config_get_default_http_port(void) { return 80; }
+void mgos_config_set_http_port(struct mgos_config *cfg, int v) { cfg->http.port = v; }
 
 /* debug */
-#define MGOS_CONFIG_HAVE_DEBUG
-#define MGOS_SYS_CONFIG_HAVE_DEBUG
-const struct mgos_config_debug * mgos_config_get_debug(struct mgos_config *cfg) {
-  return &cfg->debug;
-}
-const struct mgos_conf_entry *mgos_config_schema_debug(void) {
-  return mgos_conf_find_schema_entry("debug", mgos_config_schema());
-}
-bool mgos_config_parse_debug(struct mg_str json, struct mgos_config_debug *cfg) {
-  return mgos_conf_parse_sub(json, mgos_config_schema(), cfg);
-}
-bool mgos_config_copy_debug(const struct mgos_config_debug *src, struct mgos_config_debug *dst) {
-  return mgos_conf_copy(mgos_config_schema_debug(), src, dst);
-}
-void mgos_config_free_debug(struct mgos_config_debug *cfg) {
-  return mgos_conf_free(mgos_config_schema_debug(), cfg);
-}
+const struct mgos_config_debug *mgos_config_get_debug(const struct mgos_config *cfg) { return &cfg->debug; }
 
 /* debug.level */
-#define MGOS_CONFIG_HAVE_DEBUG_LEVEL
-#define MGOS_SYS_CONFIG_HAVE_DEBUG_LEVEL
-int mgos_config_get_debug_level(struct mgos_config *cfg) {
-  return cfg->debug.level;
-}
-void mgos_config_set_debug_level(struct mgos_config *cfg, int v) {
-  cfg->debug.level = v;
-}
+int mgos_config_get_debug_level(const struct mgos_config *cfg) { return cfg->debug.level; }
+int mgos_config_get_default_debug_level(void) { return 2; }
+void mgos_config_set_debug_level(struct mgos_config *cfg, int v) { cfg->debug.level = v; }
 
 /* debug.dest */
-#define MGOS_CONFIG_HAVE_DEBUG_DEST
-#define MGOS_SYS_CONFIG_HAVE_DEBUG_DEST
-const char * mgos_config_get_debug_dest(struct mgos_config *cfg) {
-  return cfg->debug.dest;
-}
-void mgos_config_set_debug_dest(struct mgos_config *cfg, const char * v) {
-  mgos_conf_set_str(&cfg->debug.dest, v);
-}
+const char * mgos_config_get_debug_dest(const struct mgos_config *cfg) { return cfg->debug.dest; }
+const char * mgos_config_get_default_debug_dest(void) { return "uart1"; }
+void mgos_config_set_debug_dest(struct mgos_config *cfg, const char * v) { mgos_conf_set_str(&cfg->debug.dest, v); }
 
 /* debug.file_level */
-#define MGOS_CONFIG_HAVE_DEBUG_FILE_LEVEL
-#define MGOS_SYS_CONFIG_HAVE_DEBUG_FILE_LEVEL
-const char * mgos_config_get_debug_file_level(struct mgos_config *cfg) {
-  return cfg->debug.file_level;
-}
-void mgos_config_set_debug_file_level(struct mgos_config *cfg, const char * v) {
-  mgos_conf_set_str(&cfg->debug.file_level, v);
-}
+const char * mgos_config_get_debug_file_level(const struct mgos_config *cfg) { return cfg->debug.file_level; }
+const char * mgos_config_get_default_debug_file_level(void) { return "mg_foo.c=4"; }
+void mgos_config_set_debug_file_level(struct mgos_config *cfg, const char * v) { mgos_conf_set_str(&cfg->debug.file_level, v); }
 
 /* debug.test_d1 */
-#define MGOS_CONFIG_HAVE_DEBUG_TEST_D1
-#define MGOS_SYS_CONFIG_HAVE_DEBUG_TEST_D1
-double mgos_config_get_debug_test_d1(struct mgos_config *cfg) {
-  return cfg->debug.test_d1;
-}
-void mgos_config_set_debug_test_d1(struct mgos_config *cfg, double v) {
-  cfg->debug.test_d1 = v;
-}
+double mgos_config_get_debug_test_d1(const struct mgos_config *cfg) { return cfg->debug.test_d1; }
+double mgos_config_get_default_debug_test_d1(void) { return 2.0; }
+void mgos_config_set_debug_test_d1(struct mgos_config *cfg, double v) { cfg->debug.test_d1 = v; }
 
 /* debug.test_d2 */
-#define MGOS_CONFIG_HAVE_DEBUG_TEST_D2
-#define MGOS_SYS_CONFIG_HAVE_DEBUG_TEST_D2
-double mgos_config_get_debug_test_d2(struct mgos_config *cfg) {
-  return cfg->debug.test_d2;
-}
-void mgos_config_set_debug_test_d2(struct mgos_config *cfg, double v) {
-  cfg->debug.test_d2 = v;
-}
+double mgos_config_get_debug_test_d2(const struct mgos_config *cfg) { return cfg->debug.test_d2; }
+double mgos_config_get_default_debug_test_d2(void) { return 0.0; }
+void mgos_config_set_debug_test_d2(struct mgos_config *cfg, double v) { cfg->debug.test_d2 = v; }
 
 /* debug.test_ui */
-#define MGOS_CONFIG_HAVE_DEBUG_TEST_UI
-#define MGOS_SYS_CONFIG_HAVE_DEBUG_TEST_UI
-unsigned int mgos_config_get_debug_test_ui(struct mgos_config *cfg) {
-  return cfg->debug.test_ui;
-}
-void mgos_config_set_debug_test_ui(struct mgos_config *cfg, unsigned int v) {
-  cfg->debug.test_ui = v;
-}
+unsigned int mgos_config_get_debug_test_ui(const struct mgos_config *cfg) { return cfg->debug.test_ui; }
+unsigned int mgos_config_get_default_debug_test_ui(void) { return 4294967295; }
+void mgos_config_set_debug_test_ui(struct mgos_config *cfg, unsigned int v) { cfg->debug.test_ui = v; }
+
+/* debug.empty */
+const struct mgos_config_debug_empty *mgos_config_get_debug_empty(const struct mgos_config *cfg) { return &cfg->debug.empty; }
 
 /* test */
-#define MGOS_CONFIG_HAVE_TEST
-#define MGOS_SYS_CONFIG_HAVE_TEST
-const struct mgos_config_test * mgos_config_get_test(struct mgos_config *cfg) {
-  return &cfg->test;
-}
-const struct mgos_conf_entry *mgos_config_schema_test(void) {
-  return mgos_conf_find_schema_entry("test", mgos_config_schema());
-}
-bool mgos_config_parse_test(struct mg_str json, struct mgos_config_test *cfg) {
-  return mgos_conf_parse_sub(json, mgos_config_schema(), cfg);
-}
-bool mgos_config_copy_test(const struct mgos_config_test *src, struct mgos_config_test *dst) {
-  return mgos_conf_copy(mgos_config_schema_test(), src, dst);
-}
-void mgos_config_free_test(struct mgos_config_test *cfg) {
-  return mgos_conf_free(mgos_config_schema_test(), cfg);
-}
-
-/* test.bar */
-#define MGOS_CONFIG_HAVE_TEST_BAR
-#define MGOS_SYS_CONFIG_HAVE_TEST_BAR
-const struct mgos_config_test_bar * mgos_config_get_test_bar(struct mgos_config *cfg) {
-  return &cfg->test.bar;
-}
-const struct mgos_conf_entry *mgos_config_schema_test_bar(void) {
-  return mgos_conf_find_schema_entry("test.bar", mgos_config_schema());
-}
-bool mgos_config_parse_test_bar(struct mg_str json, struct mgos_config_test_bar *cfg) {
-  return mgos_conf_parse_sub(json, mgos_config_schema(), cfg);
-}
-bool mgos_config_copy_test_bar(const struct mgos_config_test_bar *src, struct mgos_config_test_bar *dst) {
-  return mgos_conf_copy(mgos_config_schema_test_bar(), src, dst);
-}
-void mgos_config_free_test_bar(struct mgos_config_test_bar *cfg) {
-  return mgos_conf_free(mgos_config_schema_test_bar(), cfg);
-}
-
-/* test.bar.enable */
-#define MGOS_CONFIG_HAVE_TEST_BAR_ENABLE
-#define MGOS_SYS_CONFIG_HAVE_TEST_BAR_ENABLE
-int mgos_config_get_test_bar_enable(struct mgos_config *cfg) {
-  return cfg->test.bar.enable;
-}
-void mgos_config_set_test_bar_enable(struct mgos_config *cfg, int v) {
-  cfg->test.bar.enable = v;
-}
-
-/* test.bar.param1 */
-#define MGOS_CONFIG_HAVE_TEST_BAR_PARAM1
-#define MGOS_SYS_CONFIG_HAVE_TEST_BAR_PARAM1
-int mgos_config_get_test_bar_param1(struct mgos_config *cfg) {
-  return cfg->test.bar.param1;
-}
-void mgos_config_set_test_bar_param1(struct mgos_config *cfg, int v) {
-  cfg->test.bar.param1 = v;
-}
+const struct mgos_config_test *mgos_config_get_test(const struct mgos_config *cfg) { return &cfg->test; }
 
 /* test.bar1 */
-#define MGOS_CONFIG_HAVE_TEST_BAR1
-#define MGOS_SYS_CONFIG_HAVE_TEST_BAR1
-const struct mgos_config_test_bar * mgos_config_get_test_bar1(struct mgos_config *cfg) {
-  return &cfg->test.bar1;
-}
+const struct mgos_config_bar *mgos_config_get_test_bar1(const struct mgos_config *cfg) { return &cfg->test.bar1; }
 
 /* test.bar1.enable */
-#define MGOS_CONFIG_HAVE_TEST_BAR1_ENABLE
-#define MGOS_SYS_CONFIG_HAVE_TEST_BAR1_ENABLE
-int mgos_config_get_test_bar1_enable(struct mgos_config *cfg) {
-  return cfg->test.bar1.enable;
-}
-void mgos_config_set_test_bar1_enable(struct mgos_config *cfg, int v) {
-  cfg->test.bar1.enable = v;
-}
+int mgos_config_get_test_bar1_enable(const struct mgos_config *cfg) { return cfg->test.bar1.enable; }
+int mgos_config_get_default_test_bar1_enable(void) { return false; }
+void mgos_config_set_test_bar1_enable(struct mgos_config *cfg, int v) { cfg->test.bar1.enable = v; }
 
 /* test.bar1.param1 */
-#define MGOS_CONFIG_HAVE_TEST_BAR1_PARAM1
-#define MGOS_SYS_CONFIG_HAVE_TEST_BAR1_PARAM1
-int mgos_config_get_test_bar1_param1(struct mgos_config *cfg) {
-  return cfg->test.bar1.param1;
-}
-void mgos_config_set_test_bar1_param1(struct mgos_config *cfg, int v) {
-  cfg->test.bar1.param1 = v;
-}
+int mgos_config_get_test_bar1_param1(const struct mgos_config *cfg) { return cfg->test.bar1.param1; }
+int mgos_config_get_default_test_bar1_param1(void) { return 1111; }
+void mgos_config_set_test_bar1_param1(struct mgos_config *cfg, int v) { cfg->test.bar1.param1 = v; }
+
+/* test.bar1.inner */
+const struct mgos_config_bar_inner *mgos_config_get_test_bar1_inner(const struct mgos_config *cfg) { return &cfg->test.bar1.inner; }
+
+/* test.bar1.inner.param2 */
+const char * mgos_config_get_test_bar1_inner_param2(const struct mgos_config *cfg) { return cfg->test.bar1.inner.param2; }
+const char * mgos_config_get_default_test_bar1_inner_param2(void) { return "p2"; }
+void mgos_config_set_test_bar1_inner_param2(struct mgos_config *cfg, const char * v) { mgos_conf_set_str(&cfg->test.bar1.inner.param2, v); }
+
+/* test.bar1.inner.param3 */
+int mgos_config_get_test_bar1_inner_param3(const struct mgos_config *cfg) { return cfg->test.bar1.inner.param3; }
+int mgos_config_get_default_test_bar1_inner_param3(void) { return 3333; }
+void mgos_config_set_test_bar1_inner_param3(struct mgos_config *cfg, int v) { cfg->test.bar1.inner.param3 = v; }
+
+/* test.bar1.baz */
+const struct mgos_config_baz *mgos_config_get_test_bar1_baz(const struct mgos_config *cfg) { return &cfg->test.bar1.baz; }
+
+/* test.bar1.baz.bazaar */
+int mgos_config_get_test_bar1_baz_bazaar(const struct mgos_config *cfg) { return cfg->test.bar1.baz.bazaar; }
+int mgos_config_get_default_test_bar1_baz_bazaar(void) { return false; }
+void mgos_config_set_test_bar1_baz_bazaar(struct mgos_config *cfg, int v) { cfg->test.bar1.baz.bazaar = v; }
+
+/* test.bar2 */
+const struct mgos_config_bar *mgos_config_get_test_bar2(const struct mgos_config *cfg) { return &cfg->test.bar2; }
+
+/* test.bar2.enable */
+int mgos_config_get_test_bar2_enable(const struct mgos_config *cfg) { return cfg->test.bar2.enable; }
+int mgos_config_get_default_test_bar2_enable(void) { return false; }
+void mgos_config_set_test_bar2_enable(struct mgos_config *cfg, int v) { cfg->test.bar2.enable = v; }
+
+/* test.bar2.param1 */
+int mgos_config_get_test_bar2_param1(const struct mgos_config *cfg) { return cfg->test.bar2.param1; }
+int mgos_config_get_default_test_bar2_param1(void) { return 2222; }
+void mgos_config_set_test_bar2_param1(struct mgos_config *cfg, int v) { cfg->test.bar2.param1 = v; }
+
+/* test.bar2.inner */
+const struct mgos_config_bar_inner *mgos_config_get_test_bar2_inner(const struct mgos_config *cfg) { return &cfg->test.bar2.inner; }
+
+/* test.bar2.inner.param2 */
+const char * mgos_config_get_test_bar2_inner_param2(const struct mgos_config *cfg) { return cfg->test.bar2.inner.param2; }
+const char * mgos_config_get_default_test_bar2_inner_param2(void) { return "p2"; }
+void mgos_config_set_test_bar2_inner_param2(struct mgos_config *cfg, const char * v) { mgos_conf_set_str(&cfg->test.bar2.inner.param2, v); }
+
+/* test.bar2.inner.param3 */
+int mgos_config_get_test_bar2_inner_param3(const struct mgos_config *cfg) { return cfg->test.bar2.inner.param3; }
+int mgos_config_get_default_test_bar2_inner_param3(void) { return 3333; }
+void mgos_config_set_test_bar2_inner_param3(struct mgos_config *cfg, int v) { cfg->test.bar2.inner.param3 = v; }
+
+/* test.bar2.baz */
+const struct mgos_config_baz *mgos_config_get_test_bar2_baz(const struct mgos_config *cfg) { return &cfg->test.bar2.baz; }
+
+/* test.bar2.baz.bazaar */
+int mgos_config_get_test_bar2_baz_bazaar(const struct mgos_config *cfg) { return cfg->test.bar2.baz.bazaar; }
+int mgos_config_get_default_test_bar2_baz_bazaar(void) { return true; }
+void mgos_config_set_test_bar2_baz_bazaar(struct mgos_config *cfg, int v) { cfg->test.bar2.baz.bazaar = v; }
 bool mgos_sys_config_get(const struct mg_str key, struct mg_str *value) {
   return mgos_config_get(key, value, &mgos_sys_config, mgos_config_schema());
 }
 bool mgos_sys_config_set(const struct mg_str key, const struct mg_str value, bool free_strings) {
   return mgos_config_set(key, value, &mgos_sys_config, mgos_config_schema(), free_strings);
+}
+
+/* Strings */
+static const char *mgos_config_str_table[] = {
+  "192.168.4.200",
+  "Quote \" me \\\\ please",
+  "mg_foo.c=4",
+  "p2",
+  "p6",
+  "so\nmany\nlines\n",
+  "uart1",
+  "\u043c\u0430\u043b\u043e\u0432\u0430\u0442\u043e \u0431\u0443\u0434\u0435\u0442",
+};
+
+bool mgos_config_is_default_str(const char *s) {
+  int num_str = (sizeof(mgos_config_str_table) / sizeof(mgos_config_str_table[0]));
+  for (int i = 0; i < num_str; i++) {
+    if (mgos_config_str_table[i] == s) return true;
+  }
+  return false;
 }

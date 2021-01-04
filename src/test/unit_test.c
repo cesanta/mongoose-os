@@ -27,7 +27,7 @@ static const char *test_config(void) {
   cs_log_set_level(LL_NONE);
 
   /* Load defaults */
-  memcpy(&conf, &mgos_config_defaults, sizeof(conf));
+  mgos_config_set_defaults(&conf);
   ASSERT_EQ(conf.wifi.ap.channel, 6);
   ASSERT_STREQ(conf.wifi.ap.pass, "маловато будет");
   ASSERT(conf.wifi.sta.ssid == NULL);
@@ -45,9 +45,16 @@ static const char *test_config(void) {
   ASSERT(conf.wifi.ap.pass == NULL); /* Reset string - set to NULL */
   ASSERT_EQ(conf.http.enable, 0);    /* Override boolean */
 
+  ASSERT_EQ(conf.test.bar1.param1, 1111);
+  ASSERT_EQ(conf.test.bar2.param1, 2222);
+
   /* Test accessors */
   ASSERT_EQ(mgos_config_get_wifi_ap_channel(&conf), 6);
   ASSERT_EQ(mgos_config_get_debug_test_ui(&conf), 4294967295);
+  ASSERT_EQ(mgos_config_get_test_bar1_param1(&conf), 1111);
+  ASSERT_EQ(mgos_config_get_test_bar2_param1(&conf), 2222);
+  ASSERT_EQ(mgos_config_get_test_bar1_inner_param3(&conf), 3333);
+  ASSERT_EQ(mgos_config_get_test_bar2_inner_param3(&conf), 3333);
 
   /* Test global accessors */
   ASSERT_EQ(mgos_sys_config_get_wifi_ap_channel(), 0);
@@ -55,7 +62,7 @@ static const char *test_config(void) {
   ASSERT_EQ(mgos_sys_config_get_wifi_ap_channel(), 123);
 
   /* Test copying */
-  mgos_config_copy_debug(&conf.debug, &conf_debug);
+  ASSERT(mgos_config_debug_copy(&conf.debug, &conf_debug));
   ASSERT_PTREQ(conf.debug.dest,
                conf_debug.dest);  // Shared const pointers.
   ASSERT_PTRNE(conf.debug.file_level,
@@ -64,9 +71,42 @@ static const char *test_config(void) {
   ASSERT_EQ(conf.debug.level, conf_debug.level);
   ASSERT_EQ(conf.debug.test_d1, conf_debug.test_d1);
 
-  mgos_config_free_debug(&conf_debug);
+  mgos_config_debug_free(&conf_debug);
 
-  mgos_conf_free(schema, &conf);
+  // Serialize.
+  ASSERT(mgos_config_emit_f(&conf, true /* pretty */,
+                            "build/mgos_config_pretty.json"));
+
+  {  // Test parsing of a sub-struct.
+    struct mgos_config_wifi_ap wifi_ap;
+    ASSERT(mgos_config_wifi_ap_parse(
+        mg_mk_str("{\"ssid\": \"test\", \"channel\": 9}"), &wifi_ap));
+    ASSERT_STREQ(wifi_ap.ssid, "test");
+    ASSERT_EQ(wifi_ap.channel, 9);
+    ASSERT_STREQ(wifi_ap.dhcp_end, "192.168.4.200");  // Default value.
+    ASSERT_PTREQ(wifi_ap.dhcp_end,
+                 conf.wifi.ap.dhcp_end);  // Shared const pointer.
+    mgos_config_wifi_ap_free(&wifi_ap);
+  }
+
+  mgos_config_free(&conf);
+
+  {  // Test parsing of an abstract value.
+    struct mgos_config_boo boo;
+    ASSERT(mgos_config_boo_parse(
+        mg_mk_str("{\"param5\": 888, \"sub\": {\"param7\": 999}}"), &boo));
+    ASSERT_EQ(boo.param5, 888);
+    ASSERT_STREQ(boo.param6, "p6");
+    ASSERT_EQ(boo.sub.param7, 999);
+    {  // Serialize.
+      FILE *fp = fopen("build/mgos_config_boo_pretty.json", "w");
+      ASSERT_PTRNE(fp, NULL);
+      struct json_out out = JSON_OUT_FILE(fp);
+      ASSERT(mgos_config_boo_emit(&boo, true /* pretty */, &out));
+      fclose(fp);
+    }
+    mgos_config_boo_free(&boo);
+  }
 
   free(json2);
 
@@ -75,6 +115,14 @@ static const char *test_config(void) {
 
 #ifndef MGOS_CONFIG_HAVE_DEBUG_LEVEL
 #error MGOS_CONFIG_HAVE_xxx must be defined
+#endif
+
+#ifdef MGOS_CONFIG_HAVE_TEST_BAR
+#error test.bar is abstract, MGOS_CONFIG_HAVE_TEST_BAR must not be defined
+#endif
+
+#ifndef MGOS_CONFIG_HAVE_TEST_BAR1
+#error test.bar1 is not abstract, MGOS_CONFIG_HAVE_TEST_BAR1 must be defined
 #endif
 
 static const char *test_json_scanf(void) {

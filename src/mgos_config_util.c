@@ -26,6 +26,8 @@
 #include "common/mg_str.h"
 #include "common/str_util.h"
 
+#include "mgos_config.h"
+
 bool mgos_conf_check_access(const struct mg_str key, const char *acl) {
   return mgos_conf_check_access_n(key, mg_mk_str(acl));
 }
@@ -391,7 +393,7 @@ void mgos_conf_emit_cb(const void *cfg, const void *base,
   if (out == &m) mbuf_free(out);
 }
 
-void mgos_conf_emit_f_cb(struct mbuf *data, void *param) {
+static void mgos_conf_emit_f_cb(struct mbuf *data, void *param) {
   FILE **fp = (FILE **) param;
   if (*fp != NULL && fwrite(data->buf, 1, data->len, *fp) != data->len) {
     LOG(LL_ERROR, ("Error writing file\n"));
@@ -417,6 +419,20 @@ bool mgos_conf_emit_f(const void *cfg, const void *base,
     LOG(LL_ERROR, ("Error renaming file to %s\n", fname));
     return false;
   }
+  return true;
+}
+
+static void mgos_conf_emit_json_out_cb(struct mbuf *data, void *param) {
+  struct json_out *out = (struct json_out *) param;
+  out->printer(out, data->buf, data->len);
+  mbuf_remove(data, data->len);
+}
+
+bool mgos_conf_emit_json_out(const void *cfg, const void *base,
+                             const struct mgos_conf_entry *schema, bool pretty,
+                             struct json_out *out) {
+  mgos_conf_emit_cb(cfg, base, schema, pretty, NULL, mgos_conf_emit_json_out_cb,
+                    out);
   return true;
 }
 
@@ -473,25 +489,11 @@ bool mgos_conf_str_empty(const char *s) {
   return (s == NULL || s[0] == '\0');
 }
 
-/* Search the defaults struct and see if the pointer occurs there. */
-static bool mgos_conf_str_is_default(const char *s) {
-  size_t step = sizeof(const char *);
-  for (size_t i = 0; i < step; i++) {
-    const char *p = ((const char *) &mgos_config_defaults) + i;
-    const char *end = ((const char *) &mgos_config_defaults) +
-                      sizeof(mgos_config_defaults) - step + 1;
-    for (; p < end; p += step) {
-      if (memcmp(&s, p, step) == 0) return true;
-    }
-  }
-  return false;
-}
-
 bool mgos_conf_copy_str(const char *s, const char **copy) {
-  if (*copy != NULL && !mgos_conf_str_is_default(*copy)) {
+  if (*copy != NULL && !mgos_config_is_default_str(*copy)) {
     free((void *) *copy);
   }
-  if (s == NULL || mgos_conf_str_is_default(s)) {
+  if (s == NULL || mgos_config_is_default_str(s)) {
     *copy = (char *) s;
     return true;
   }
@@ -500,7 +502,7 @@ bool mgos_conf_copy_str(const char *s, const char **copy) {
 }
 
 void mgos_conf_free_str(const char **sp) {
-  if (*sp != NULL && !mgos_conf_str_is_default(*sp)) {
+  if (*sp != NULL && !mgos_config_is_default_str(*sp)) {
     free((void *) *sp);
   }
   *sp = NULL;

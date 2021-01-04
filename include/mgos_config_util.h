@@ -24,10 +24,9 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+#include "common/json_utils.h"
 #include "common/mbuf.h"
 #include "common/mg_str.h"
-
-#include "mgos_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -75,6 +74,9 @@ struct mgos_conf_entry {
   uint16_t offset;
   uint16_t num_desc;
 };
+
+/* Generated during build */
+struct mgos_config;
 
 /*
  * Parses config `json` into `cfg` according to rules defined in `schema` and
@@ -133,6 +135,14 @@ void mgos_conf_emit_cb(const void *cfg, const void *base,
 bool mgos_conf_emit_f(const void *cfg, const void *base,
                       const struct mgos_conf_entry *schema, bool pretty,
                       const char *fname);
+
+/*
+ * Like mgos_conf_emit_cb, but instead of writing the output in the provided
+ * mbuf and/or calling user-provided callback, it forwards data into a json_out.
+ */
+bool mgos_conf_emit_json_out(const void *cfg, const void *base,
+                             const struct mgos_conf_entry *schema, bool pretty,
+                             struct json_out *out);
 
 /*
  * Copies a config struct from src to dst.

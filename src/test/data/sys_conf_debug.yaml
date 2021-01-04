@@ -17,9 +17,24 @@
   ["debug.test_d1", "d", 0.123, {title: "Test doubles 1"}],
   ["debug.test_d2", "d", 0, {}],
   ["debug.test_ui", "ui", 4294967295, {}],
-  ["test.bar", "o", {}],
-  ["test.bar.enable", "b", {}],
-  ["test.bar.param1", "i", 111, {}],
-  ["test.bar1", "test.bar", {}], # Object of the same type as previous.
-  ["test.bar1.param1", 222],     # Types are the same but defaults are separate.
+  ["debug.empty", "o", {title: "Empty object with no fields"}],
+
+  ["baz", "o", {abstract: true, title: "Abstract struct used as a field of another abstract struct"}],
+  ["baz.bazaar", "b", false, {}],
+
+  ["bar", "o", {abstract: true, title: "Abstract struct used in other fields"}],
+  ["bar.enable", "b", {}],
+  ["bar.param1", "i", 1111, {}],
+  ["bar.inner.param2", "s", "p2", {}],
+  ["bar.inner.param3", "i", 3333, {}],
+  ["bar.baz", "baz", {}],
+  ["test.bar1", "bar", {}],
+  ["test.bar2", "bar", {}],   # Object of the same type as previous.
+  ["test.bar2.param1", 2222],  # Types are the same but defaults are separate.
+  ["test.bar2.baz.bazaar", true],
+
+  ["boo", "o", {abstract: true, title: "Abstract struct not used anywhere in the config"}],
+  ["boo.param5", "i", 333, {}],
+  ["boo.param6", "s", "p6", {}],
+  ["boo.sub.param7", "i", 444, {}],
 ]
