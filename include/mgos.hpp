@@ -22,6 +22,7 @@
 #include "common/util/status.h"
 #include "common/util/statusor.h"
 
+#include "mgos_json_utils.hpp"
 #include "mgos_system.hpp"
 #include "mgos_timers.hpp"
 #include "mgos_utils.hpp"

@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-#include "common/json_utils.h"
+#include "mgos_json_utils.hpp"
 
 namespace mgos {
 
