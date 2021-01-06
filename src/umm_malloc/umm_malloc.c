@@ -489,6 +489,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdint.h>
 
 #include "umm_malloc.h"
 #include "umm_malloc_internal.h"
@@ -1699,6 +1700,7 @@ void *umm_malloc( size_t size ) {
   if (!INTEGRITY_CHECK()) {
     return NULL;
   }
+  if (POISON_SIZE(size) >= SIZE_MAX - size) return NULL;  // Overflow
 
   size += POISON_SIZE(size);
 
@@ -1727,6 +1729,7 @@ void *umm_calloc( size_t num, size_t item_size ) {
     return NULL;
   }
 
+  if (POISON_SIZE(size) >= SIZE_MAX - size) return NULL;  // Overflow
   size += POISON_SIZE(size);
   ret = _umm_malloc(size);
   if (ret != NULL) memset(ret, 0x00, size);
@@ -1755,6 +1758,7 @@ void *umm_realloc( void *ptr, size_t size ) {
     return NULL;
   }
 
+  if (POISON_SIZE(size) >= SIZE_MAX - size) return NULL;  // Overflow
   size += POISON_SIZE(size);
   ret = _umm_realloc( ptr, size );
 

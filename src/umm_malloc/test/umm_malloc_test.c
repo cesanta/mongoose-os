@@ -321,6 +321,9 @@ int main(void) {
   TRY(test_poison());
 #endif
 
+  // Check for integer overflows
+  TRY(umm_malloc((size_t) ~0) == NULL);
+
   TRY(random_stress());
   TRY(test_oom_random());
 
