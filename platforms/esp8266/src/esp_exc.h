@@ -15,8 +15,7 @@
  * limitations under the License.
  */
 
-#ifndef CS_FW_PLATFORMS_ESP8266_SRC_ESP_EXC_H_
-#define CS_FW_PLATFORMS_ESP8266_SRC_ESP_EXC_H_
+#pragma once
 
 #include <stdint.h>
 #include <xtensa/xtruntime-frames.h>
@@ -60,8 +59,8 @@ void esp_exc_common(uint32_t cause, struct regfile *regs);
  */
 extern struct regfile g_exc_regs;
 
+void esp_exc_extract_backtrace(void *sp, char *buf, int buf_len);
+
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* CS_FW_PLATFORMS_ESP8266_SRC_ESP_EXC_H_ */

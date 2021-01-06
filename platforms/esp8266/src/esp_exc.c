@@ -70,6 +70,30 @@ void esp_exc_printf(const char *fmt, ...) {
   esp_exc_puts(buf);
 }
 
+extern uint32_t ets_task_top_of_stack;
+
+void esp_exc_extract_backtrace(void *sp, char *buf, int buf_len) {
+  // Try to find some code pointers in the overflowed and top parts of stack.
+  for (const uint32_t *p = sp; p < (uint32_t *) 0x40000000; p++) {
+    if (((intptr_t) p) % 8 != 0) continue;  // Stack frames are 8-aligned.
+    uint32_t v = *p;
+    /* Does it look like an IRAM or flash pointer? */
+    if (!((v >= 0x40100000 && v < 0x40108000) ||
+          (v >= 0x40200000 && v < 0x40300000))) {
+      continue;
+    }
+    /* Does it look like a return pointer?
+     * Check instruction immediately before the one that the pointer points to,
+     * it should be a call instruction. */
+    uint32_t vp = *((uint32_t *) (v - 3));
+    bool is_call =
+        ((vp & 0x3f) == 5 /* call0 */ || (vp & 0xffffff) == 0xc0 /* callx0 */);
+    if (!is_call) continue;
+    snprintf(buf, buf_len - 1, "%s %d:%#08lx", buf,
+             (((intptr_t) &ets_task_top_of_stack) - (intptr_t) p), v);
+  }
+}
+
 void esp_print_exc_info(uint32_t cause, struct regfile *regs) {
   switch (cause) {
     case EXCCAUSE_ABORT:

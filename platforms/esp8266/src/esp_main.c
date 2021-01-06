@@ -211,14 +211,21 @@ IRAM bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
   return true;
 }
 
+static void report_stack_overflow(void *cb) {
+  char buf[200] = {0};
+  esp_exc_extract_backtrace(((char *) MGOS_STACK_CANARY_LOC) - 128, buf,
+                            sizeof(buf));
+  LOG(LL_ERROR, ("Stack overflow! Last cb %p, ptrs:%s", cb, buf));
+}
+
 static void mgos_task(os_event_t *e) {
   mgos_cb_t cb = (mgos_cb_t)(e->sig);
   *MGOS_STACK_CANARY_LOC = MGOS_STACK_CANARY_VAL;
   cb((void *) e->par);
   /* Check for stack overflow. */
   if (*MGOS_STACK_CANARY_LOC != MGOS_STACK_CANARY_VAL) {
-    mgos_cd_printf("Stack overflow! Last cb %p\n", cb);
-    /* This is not yet fatal but ptobably should be. */
+    report_stack_overflow(cb);
+    /* This is not yet fatal but probably should be. */
     // abort();
   }
   /* Keep soft WDT disabled. */
