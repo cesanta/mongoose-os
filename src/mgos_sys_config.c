@@ -316,7 +316,9 @@ enum mgos_init_result mgos_sys_config_init(void) {
         ("Sending logs to UDP %s", mgos_sys_config_get_debug_udp_log_addr()));
     if (mgos_debug_udp_init(mgos_sys_config_get_debug_udp_log_addr()) !=
         MGOS_INIT_OK) {
-      return MGOS_INIT_DEBUG_INIT_FAILED;
+      LOG(LL_ERROR, ("Failed to configure UDP logging!"));
+      // We don't want to abort boot just because of this.
+      // return MGOS_INIT_DEBUG_INIT_FAILED;
     }
   }
 #endif /* MGOS_ENABLE_DEBUG_UDP */
