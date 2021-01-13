@@ -25,10 +25,15 @@
 #ifndef __ASSEMBLER__
 #define _IRAM_STR_LIT(a) #a
 #define _IRAM_STR(a) _IRAM_STR_LIT(a)
+#if CS_PLATFORM == CS_P_ESP32
+#define _IRAM_SECTION_PREFIX ".iram1"
+#else
+#define _IRAM_SECTION_PREFIX ".text.IRAM"
+#endif
 
 #define IRAM     \
   __attribute__( \
-      (section(".text.IRAM." _IRAM_STR(__LINE__) "." _IRAM_STR(__COUNTER__))))
+      (section(_IRAM_SECTION_PREFIX "." _IRAM_STR(__LINE__) "." _IRAM_STR(__COUNTER__))))
 
 #define NOINLINE __attribute__((noinline))
 #endif  // __ASSEMBLER__
