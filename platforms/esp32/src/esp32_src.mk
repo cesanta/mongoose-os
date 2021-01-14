@@ -64,7 +64,7 @@ APP_OBJS = $(addsuffix .o,$(APP_SRCS))
 BUILD_INFO_OBJS = $(addsuffix .o,$(notdir $(BUILD_INFO_C)) $(notdir $(MG_BUILD_INFO_C)))
 
 C_CXX_CFLAGS += -DMGOS_APP=\"$(APP)\" -DFW_ARCHITECTURE=$(APP_PLATFORM) \
-                -include mgos_iram.h \
+                -DMGOS_ESP32 -include mgos_iram.h \
                 $(MG_FEATURES_TINY) -DMG_NET_IF=MG_NET_IF_LWIP_LOW_LEVEL \
                 $(MGOS_FEATURES) -DMGOS_MAX_NUM_UARTS=3 \
                 -DMGOS_DEBUG_UART=$(MGOS_DEBUG_UART) \
