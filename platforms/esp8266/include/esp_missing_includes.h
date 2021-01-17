@@ -15,17 +15,20 @@
  * limitations under the License.
  */
 
-#ifndef CS_COMMON_PLATFORMS_ESP8266_ESP_MISSING_INCLUDES_H_
-#define CS_COMMON_PLATFORMS_ESP8266_ESP_MISSING_INCLUDES_H_
+#pragma once
 
 #include <stdint.h>
 #include <stdlib.h>
+
+#ifdef __cplusplus
+// Can't be enabled yet due to SDK issues. TODO(rojer): Enable.
+//extern "C" {
+#endif
 
 void pp_soft_wdt_init(void);
 void pp_soft_wdt_stop(void);
 void pp_soft_wdt_feed(void);
 void pp_soft_wdt_restart(void);
-void system_soft_wdt_stop(void); /* Alias for pp_soft_wdt_stop */
 
 void Cache_Read_Disable(void);
 void Cache_Read_Enable(uint32_t, uint32_t, uint32_t);
@@ -65,4 +68,6 @@ void ets_putc(char c);
 
 void _ResetVector(void);
 
-#endif /* CS_COMMON_PLATFORMS_ESP8266_ESP_MISSING_INCLUDES_H_ */
+#ifdef __cplusplus
+//}
+#endif
