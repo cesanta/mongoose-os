@@ -58,7 +58,7 @@ struct timer_data {
 static struct timer_data *s_timer_data = NULL;
 static struct mgos_rlock_type *s_timer_data_lock = NULL;
 
-static void schedule_next_timer(struct timer_data *td) {
+static void schedule_next_timer(struct timer_data *td, double now) {
   struct timer_info *ti;
   struct timer_info *min_ti = NULL;
   LIST_FOREACH(ti, &td->timers, entries) {
@@ -67,7 +67,12 @@ static void schedule_next_timer(struct timer_data *td) {
     }
   }
   td->current = min_ti;
-  td->nc->ev_timer_time = (min_ti != NULL ? min_ti->next_invocation : 0);
+  if (min_ti != NULL) {
+    double diff = min_ti->next_invocation - now;
+    td->nc->ev_timer_time = mg_time() + diff;
+  } else {
+    td->nc->ev_timer_time = 0;
+  }
 }
 
 static void mgos_timer_ev(struct mg_connection *nc, int ev, void *ev_data,
@@ -80,11 +85,11 @@ static void mgos_timer_ev(struct mg_connection *nc, int ev, void *ev_data,
     struct timer_data *td = (struct timer_data *) user_data;
     struct timer_info *ti = td->current;
     /* Current can be NULL if it was the first to fire but was cleared. */
-    if (ti != NULL) {
+    const double now = mgos_uptime();
+    if (ti != NULL && ti->next_invocation <= now) {
       cb = ti->cb;
       cb_arg = ti->cb_arg;
       if (ti->interval_ms >= 0) {
-        const double now = mg_time();
         const double intvl = (ti->interval_ms / 1000.0);
         ti->next_invocation += intvl;
         /* Polling loop was delayed, re-sync the invocation. */
@@ -94,7 +99,7 @@ static void mgos_timer_ev(struct mg_connection *nc, int ev, void *ev_data,
         LIST_REMOVE(ti, entries);
       }
     }
-    schedule_next_timer(td);
+    schedule_next_timer(td, now);
     mgos_runlock(s_timer_data_lock);
     if (ti != NULL) free(ti);
   }
@@ -112,17 +117,18 @@ mgos_timer_id mgos_set_timer(int msecs, int flags, timer_callback cb,
   } else {
     ti->interval_ms = -1;
   }
+  double now = mgos_uptime();
   if (flags & MGOS_TIMER_RUN_NOW) {
     ti->next_invocation = 1;
   } else {
-    ti->next_invocation = mg_time() + msecs / 1000.0;
+    ti->next_invocation = now + msecs / 1000.0;
   }
   ti->cb = cb;
   ti->cb_arg = arg;
   {
     mgos_rlock(s_timer_data_lock);
     LIST_INSERT_HEAD(&s_timer_data->timers, ti, entries);
-    schedule_next_timer(s_timer_data);
+    schedule_next_timer(s_timer_data, now);
     mgos_runlock(s_timer_data_lock);
   }
   mongoose_schedule_poll(false /* from_isr */);
@@ -142,7 +148,7 @@ static void mgos_clear_sw_timer(mgos_timer_id id) {
   }
   LIST_REMOVE(ti, entries);
   if (s_timer_data->current == ti) {
-    schedule_next_timer(s_timer_data);
+    schedule_next_timer(s_timer_data, mgos_uptime());
     /* Removing a timer can only push back invocation, no need to do a poll. */
   }
   mgos_runlock(s_timer_data_lock);
@@ -180,16 +186,16 @@ bool mgos_get_timer_info(mgos_timer_id id, struct mgos_timer_info *info) {
   return true;
 }
 
-static void mgos_time_change_cb(int ev, void *evd, void *arg) {
+static void mgos_poll_cb(void *arg) {
   struct timer_data *td = (struct timer_data *) arg;
-  struct mgos_time_changed_arg *ev_data = (struct mgos_time_changed_arg *) evd;
   mgos_rlock(s_timer_data_lock);
-  struct timer_info *ti;
-  LIST_FOREACH(ti, &td->timers, entries) {
-    ti->next_invocation += ev_data->delta;
-  }
+  schedule_next_timer(td, mgos_uptime());
   mgos_runlock(s_timer_data_lock);
+}
 
+static void mgos_time_change_cb(int ev, void *evd, void *arg) {
+  mgos_poll_cb(arg);
+  (void) evd;
   (void) ev;
 }
 
@@ -207,5 +213,6 @@ enum mgos_init_result mgos_timers_init(void) {
   s_timer_data = td;
   s_timer_data_lock = mgos_rlock_create();
   mgos_event_add_handler(MGOS_EVENT_TIME_CHANGED, mgos_time_change_cb, td);
+  mgos_add_poll_cb(mgos_poll_cb, td);
   return mgos_hw_timers_init();
 }
