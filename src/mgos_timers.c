@@ -179,7 +179,7 @@ bool mgos_get_timer_info(mgos_timer_id id, struct mgos_timer_info *info) {
     return false;
   }
   info->interval_ms = ti->interval_ms;
-  info->msecs_left = (ti->next_invocation - mg_time()) * 1000;
+  info->msecs_left = (ti->next_invocation - mgos_uptime()) * 1000;
   info->cb = ti->cb;
   info->cb_arg = ti->cb_arg;
   mgos_runlock(s_timer_data_lock);
