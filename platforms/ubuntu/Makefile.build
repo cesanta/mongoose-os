@@ -20,7 +20,8 @@ FW_DIR ?= $(CURDIR)/fw
 # Extra parts to include in firmware
 APP_EXTRA_FW_PARTS ?=
 
-ASAN ?= 0
+ASAN ?= 1
+UBSAN ?= 1
 PROF ?= 0
 
 # Explicitly disable updater, it's not supported on POSIX build yet.
