@@ -98,6 +98,8 @@ static void mgos_timer_ev(struct mg_connection *nc, int ev, void *ev_data,
       } else {
         LIST_REMOVE(ti, entries);
       }
+    } else {
+      ti = NULL;
     }
     schedule_next_timer(td, now);
     mgos_runlock(s_timer_data_lock);
