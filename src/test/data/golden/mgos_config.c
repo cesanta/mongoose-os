@@ -13,7 +13,7 @@
 
 /* struct mgos_config */
 static const struct mgos_conf_entry mgos_config_schema_[] = {
-    {.type = CONF_TYPE_OBJECT, .key = "", .offset = 0, .num_desc = 38},
+    {.type = CONF_TYPE_OBJECT, .key = "", .offset = 0, .num_desc = 40},
     {.type = CONF_TYPE_OBJECT, .key = "wifi", .offset = offsetof(struct mgos_config, wifi), .num_desc = 8},
     {.type = CONF_TYPE_OBJECT, .key = "sta", .offset = offsetof(struct mgos_config, wifi.sta), .num_desc = 2},
     {.type = CONF_TYPE_STRING, .key = "ssid", .offset = offsetof(struct mgos_config, wifi.sta.ssid)},
@@ -27,12 +27,14 @@ static const struct mgos_conf_entry mgos_config_schema_[] = {
     {.type = CONF_TYPE_OBJECT, .key = "http", .offset = offsetof(struct mgos_config, http), .num_desc = 2},
     {.type = CONF_TYPE_BOOL, .key = "enable", .offset = offsetof(struct mgos_config, http.enable)},
     {.type = CONF_TYPE_INT, .key = "port", .offset = offsetof(struct mgos_config, http.port)},
-    {.type = CONF_TYPE_OBJECT, .key = "debug", .offset = offsetof(struct mgos_config, debug), .num_desc = 7},
+    {.type = CONF_TYPE_OBJECT, .key = "debug", .offset = offsetof(struct mgos_config, debug), .num_desc = 9},
     {.type = CONF_TYPE_INT, .key = "level", .offset = offsetof(struct mgos_config, debug.level)},
     {.type = CONF_TYPE_STRING, .key = "dest", .offset = offsetof(struct mgos_config, debug.dest)},
     {.type = CONF_TYPE_STRING, .key = "file_level", .offset = offsetof(struct mgos_config, debug.file_level)},
     {.type = CONF_TYPE_DOUBLE, .key = "test_d1", .offset = offsetof(struct mgos_config, debug.test_d1)},
     {.type = CONF_TYPE_DOUBLE, .key = "test_d2", .offset = offsetof(struct mgos_config, debug.test_d2)},
+    {.type = CONF_TYPE_FLOAT, .key = "test_f1", .offset = offsetof(struct mgos_config, debug.test_f1)},
+    {.type = CONF_TYPE_FLOAT, .key = "test_f2", .offset = offsetof(struct mgos_config, debug.test_f2)},
     {.type = CONF_TYPE_UNSIGNED_INT, .key = "test_ui", .offset = offsetof(struct mgos_config, debug.test_ui)},
     {.type = CONF_TYPE_OBJECT, .key = "empty", .offset = offsetof(struct mgos_config, debug.empty), .num_desc = 0},
     {.type = CONF_TYPE_OBJECT, .key = "test", .offset = offsetof(struct mgos_config, test), .num_desc = 16},
@@ -107,7 +109,7 @@ void mgos_config_http_set_defaults(struct mgos_config_http *cfg) {
 
 /* struct mgos_config_debug_empty */
 const struct mgos_conf_entry *mgos_config_debug_empty_get_schema(void) {
-  return &mgos_config_schema_[21];
+  return &mgos_config_schema_[23];
 }
 
 void mgos_config_debug_empty_set_defaults(struct mgos_config_debug_empty *cfg) {
@@ -125,13 +127,15 @@ void mgos_config_debug_set_defaults(struct mgos_config_debug *cfg) {
   cfg->file_level = "mg_foo.c=4";
   cfg->test_d1 = 2.0;
   cfg->test_d2 = 0.0;
+  cfg->test_f1 = 0.123;
+  cfg->test_f2 = 123.0;
   cfg->test_ui = 4294967295;
   mgos_config_debug_empty_set_defaults(&cfg->empty);
 }
 
 /* struct mgos_config_baz */
 const struct mgos_conf_entry *mgos_config_baz_get_schema(void) {
-  return &mgos_config_schema_[37];
+  return &mgos_config_schema_[39];
 }
 
 void mgos_config_baz_set_defaults(struct mgos_config_baz *cfg) {
@@ -140,7 +144,7 @@ void mgos_config_baz_set_defaults(struct mgos_config_baz *cfg) {
 
 /* struct mgos_config_bar_inner */
 const struct mgos_conf_entry *mgos_config_bar_inner_get_schema(void) {
-  return &mgos_config_schema_[34];
+  return &mgos_config_schema_[36];
 }
 
 void mgos_config_bar_inner_set_defaults(struct mgos_config_bar_inner *cfg) {
@@ -150,7 +154,7 @@ void mgos_config_bar_inner_set_defaults(struct mgos_config_bar_inner *cfg) {
 
 /* struct mgos_config_baz */
 const struct mgos_conf_entry *mgos_config_bar_baz_get_schema(void) {
-  return &mgos_config_schema_[37];
+  return &mgos_config_schema_[39];
 }
 
 void mgos_config_bar_baz_set_defaults(struct mgos_config_baz *cfg) {
@@ -159,7 +163,7 @@ void mgos_config_bar_baz_set_defaults(struct mgos_config_baz *cfg) {
 
 /* struct mgos_config_bar */
 const struct mgos_conf_entry *mgos_config_bar_get_schema(void) {
-  return &mgos_config_schema_[31];
+  return &mgos_config_schema_[33];
 }
 
 void mgos_config_bar_set_defaults(struct mgos_config_bar *cfg) {
@@ -171,7 +175,7 @@ void mgos_config_bar_set_defaults(struct mgos_config_bar *cfg) {
 
 /* struct mgos_config_bar_inner */
 const struct mgos_conf_entry *mgos_config_test_bar1_inner_get_schema(void) {
-  return &mgos_config_schema_[34];
+  return &mgos_config_schema_[36];
 }
 
 void mgos_config_test_bar1_inner_set_defaults(struct mgos_config_bar_inner *cfg) {
@@ -181,7 +185,7 @@ void mgos_config_test_bar1_inner_set_defaults(struct mgos_config_bar_inner *cfg)
 
 /* struct mgos_config_baz */
 const struct mgos_conf_entry *mgos_config_test_bar1_baz_get_schema(void) {
-  return &mgos_config_schema_[37];
+  return &mgos_config_schema_[39];
 }
 
 void mgos_config_test_bar1_baz_set_defaults(struct mgos_config_baz *cfg) {
@@ -190,7 +194,7 @@ void mgos_config_test_bar1_baz_set_defaults(struct mgos_config_baz *cfg) {
 
 /* struct mgos_config_bar */
 const struct mgos_conf_entry *mgos_config_test_bar1_get_schema(void) {
-  return &mgos_config_schema_[31];
+  return &mgos_config_schema_[33];
 }
 
 void mgos_config_test_bar1_set_defaults(struct mgos_config_bar *cfg) {
@@ -202,7 +206,7 @@ void mgos_config_test_bar1_set_defaults(struct mgos_config_bar *cfg) {
 
 /* struct mgos_config_bar_inner */
 const struct mgos_conf_entry *mgos_config_test_bar2_inner_get_schema(void) {
-  return &mgos_config_schema_[34];
+  return &mgos_config_schema_[36];
 }
 
 void mgos_config_test_bar2_inner_set_defaults(struct mgos_config_bar_inner *cfg) {
@@ -212,7 +216,7 @@ void mgos_config_test_bar2_inner_set_defaults(struct mgos_config_bar_inner *cfg)
 
 /* struct mgos_config_baz */
 const struct mgos_conf_entry *mgos_config_test_bar2_baz_get_schema(void) {
-  return &mgos_config_schema_[37];
+  return &mgos_config_schema_[39];
 }
 
 void mgos_config_test_bar2_baz_set_defaults(struct mgos_config_baz *cfg) {
@@ -221,7 +225,7 @@ void mgos_config_test_bar2_baz_set_defaults(struct mgos_config_baz *cfg) {
 
 /* struct mgos_config_bar */
 const struct mgos_conf_entry *mgos_config_test_bar2_get_schema(void) {
-  return &mgos_config_schema_[31];
+  return &mgos_config_schema_[33];
 }
 
 void mgos_config_test_bar2_set_defaults(struct mgos_config_bar *cfg) {
@@ -233,7 +237,7 @@ void mgos_config_test_bar2_set_defaults(struct mgos_config_bar *cfg) {
 
 /* struct mgos_config_test */
 const struct mgos_conf_entry *mgos_config_test_get_schema(void) {
-  return &mgos_config_schema_[22];
+  return &mgos_config_schema_[24];
 }
 
 void mgos_config_test_set_defaults(struct mgos_config_test *cfg) {
@@ -363,6 +367,16 @@ void mgos_config_set_debug_test_d1(struct mgos_config *cfg, double v) { cfg->deb
 double mgos_config_get_debug_test_d2(const struct mgos_config *cfg) { return cfg->debug.test_d2; }
 double mgos_config_get_default_debug_test_d2(void) { return 0.0; }
 void mgos_config_set_debug_test_d2(struct mgos_config *cfg, double v) { cfg->debug.test_d2 = v; }
+
+/* debug.test_f1 */
+float mgos_config_get_debug_test_f1(const struct mgos_config *cfg) { return cfg->debug.test_f1; }
+float mgos_config_get_default_debug_test_f1(void) { return 0.123; }
+void mgos_config_set_debug_test_f1(struct mgos_config *cfg, float v) { cfg->debug.test_f1 = v; }
+
+/* debug.test_f2 */
+float mgos_config_get_debug_test_f2(const struct mgos_config *cfg) { return cfg->debug.test_f2; }
+float mgos_config_get_default_debug_test_f2(void) { return 123.0; }
+void mgos_config_set_debug_test_f2(struct mgos_config *cfg, float v) { cfg->debug.test_f2 = v; }
 
 /* debug.test_ui */
 unsigned int mgos_config_get_debug_test_ui(const struct mgos_config *cfg) { return cfg->debug.test_ui; }

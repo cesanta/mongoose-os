@@ -117,6 +117,7 @@ class SchemaEntry:
     V_INT = "i"
     V_UNSIGNED_INT = "ui"
     V_BOOL = "b"
+    V_FLOAT = "f"
     V_DOUBLE = "d"
     V_STRING = "s"
     V_OBJECT = "o"
@@ -125,6 +126,7 @@ class SchemaEntry:
         V_INT: "CONF_TYPE_INT",
         V_UNSIGNED_INT: "CONF_TYPE_UNSIGNED_INT",
         V_BOOL: "CONF_TYPE_BOOL",
+        V_FLOAT: "CONF_TYPE_FLOAT",
         V_DOUBLE: "CONF_TYPE_DOUBLE",
         V_STRING: "CONF_TYPE_STRING",
         V_OBJECT: "CONF_TYPE_OBJECT",
@@ -147,7 +149,7 @@ class SchemaEntry:
                 self.default = 0
             elif self.vtype == SchemaEntry.V_UNSIGNED_INT:
                 self.default = 0
-            elif self.vtype == SchemaEntry.V_DOUBLE:
+            elif self.vtype in (SchemaEntry.V_FLOAT, SchemaEntry.V_DOUBLE):
                 self.default = 0.0
             elif self.vtype == SchemaEntry.V_STRING:
                 self.default = ""
@@ -171,7 +173,7 @@ class SchemaEntry:
         self.orig_path = None
 
         if self.vtype is not None:
-            if self.vtype == SchemaEntry.V_DOUBLE and isinstance(self.default, int):
+            if self.vtype in (SchemaEntry.V_FLOAT, SchemaEntry.V_DOUBLE) and isinstance(self.default, int):
                 self.default = float(self.default)
             if self.IsPrimitiveType():
                 self.ValidateDefault()
@@ -194,18 +196,18 @@ class SchemaEntry:
     def IsPrimitiveType(self):
         return self.vtype in (
             self.V_OBJECT, self.V_BOOL, self.V_INT, self.V_UNSIGNED_INT,
-            self.V_DOUBLE, self.V_STRING)
+            self.V_FLOAT, self.V_DOUBLE, self.V_STRING)
 
 
     def ValidateDefault(self):
-        if self.vtype == SchemaEntry.V_DOUBLE and type(self.default) is int:
+        if self.vtype in (SchemaEntry.V_FLOAT, SchemaEntry.V_DOUBLE) and type(self.default) is int:
             self.default = float(self.default)
         if (self.vtype == SchemaEntry.V_BOOL and not isinstance(self.default, bool) or
             self.vtype == SchemaEntry.V_INT and not isinstance(self.default, int) or
             self.vtype == SchemaEntry.V_UNSIGNED_INT and not isinstance(self.default, int) or
             # In Python, boolvalue is an instance of int, but we don't want that.
             self.vtype == SchemaEntry.V_INT and isinstance(self.default, bool) or
-            self.vtype == SchemaEntry.V_DOUBLE and not isinstance(self.default, float) or
+            self.vtype in (SchemaEntry.V_FLOAT, SchemaEntry.V_DOUBLE) and not isinstance(self.default, float) or
             self.vtype == SchemaEntry.V_STRING and not isinstance(self.default, str)):
             raise TypeError("%s: Invalid default value type (%s)" % (self.path, type(self.default)))
         if self.vtype == SchemaEntry.V_UNSIGNED_INT and self.default < 0:
@@ -219,6 +221,8 @@ class SchemaEntry:
             return "int"
         elif self.vtype == SchemaEntry.V_UNSIGNED_INT:
             return "unsigned int"
+        elif self.vtype == SchemaEntry.V_FLOAT:
+            return "float"
         elif self.vtype == SchemaEntry.V_DOUBLE:
             return "double"
         elif self.vtype == SchemaEntry.V_STRING:

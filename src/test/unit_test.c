@@ -44,6 +44,10 @@ static const char *test_config(void) {
   ASSERT_EQ(conf.debug.level, 1);    /* Override integer */
   ASSERT(conf.wifi.ap.pass == NULL); /* Reset string - set to NULL */
   ASSERT_EQ(conf.http.enable, 0);    /* Override boolean */
+  ASSERT_EQ(conf.debug.test_d2, 111.0);
+  ASSERT_EQ(sizeof(conf.debug.test_d2), sizeof(double));
+  ASSERT_EQ(conf.debug.test_f2, 11.5);
+  ASSERT_EQ(sizeof(conf.debug.test_f2), sizeof(float));
 
   ASSERT_EQ(conf.test.bar1.param1, 1111);
   ASSERT_EQ(conf.test.bar2.param1, 2222);
@@ -70,6 +74,7 @@ static const char *test_config(void) {
   ASSERT_STREQ(conf.debug.file_level, conf_debug.file_level);
   ASSERT_EQ(conf.debug.level, conf_debug.level);
   ASSERT_EQ(conf.debug.test_d1, conf_debug.test_d1);
+  ASSERT_EQ(conf.debug.test_f1, conf_debug.test_f1);
 
   mgos_config_debug_free(&conf_debug);
 

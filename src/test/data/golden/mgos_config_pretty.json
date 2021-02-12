@@ -21,7 +21,9 @@
     "dest": "uart1",
     "file_level": "mgos_bar=1",
     "test_d1": 2.000000,
-    "test_d2": 0.000000,
+    "test_d2": 111.000000,
+    "test_f1": 0.123000,
+    "test_f2": 11.500000,
     "test_ui": 4294967295,
     "empty": {
     }

@@ -119,6 +119,8 @@ void mgos_conf_parse_cb(void *data, const char *name, size_t name_len,
 #endif
   char *vp = (((char *) ctx->cfg) + e->offset - ctx->offset_adj);
   switch (e->type) {
+    case CONF_TYPE_FLOAT:
+      /* fall through */
     case CONF_TYPE_DOUBLE:
 #ifdef MGOS_BOOT_BUILD
       ctx->result = false;
@@ -143,6 +145,9 @@ void mgos_conf_parse_cb(void *data, const char *name, size_t name_len,
           *((unsigned int *) vp) = strtoul(tok->ptr, &endptr, 0);
           break;
 #ifndef MGOS_BOOT_BUILD
+        case CONF_TYPE_FLOAT:
+          *((float *) vp) = strtof(tok->ptr, &endptr);
+          break;
         case CONF_TYPE_DOUBLE:
           *((double *) vp) = strtod(tok->ptr, &endptr);
           break;
@@ -273,6 +278,8 @@ static bool mgos_conf_value_eq(const void *cfg, const void *base,
       /* fall through */
     case CONF_TYPE_UNSIGNED_INT:
       return *((int *) vp) == *((int *) bvp);
+    case CONF_TYPE_FLOAT:
+      return *((float *) vp) == *((float *) bvp);
     case CONF_TYPE_DOUBLE:
       return *((double *) vp) == *((double *) bvp);
     case CONF_TYPE_STRING: {
@@ -325,9 +332,13 @@ static void mgos_conf_emit_entry(struct emit_ctx *ctx,
       mbuf_append(ctx->out, s, len);
       break;
     }
+    case CONF_TYPE_FLOAT:
+      /* fall through */
     case CONF_TYPE_DOUBLE: {
-      len = snprintf(buf, sizeof(buf), "%lf",
-                     *((double *) (((char *) ctx->cfg) + e->offset)));
+      char *ptr = (((char *) ctx->cfg) + e->offset);
+      double v =
+          (e->type == CONF_TYPE_DOUBLE ? *((double *) ptr) : *((float *) ptr));
+      len = snprintf(buf, sizeof(buf), "%lf", v);
       mbuf_append(ctx->out, buf, len);
       break;
     }
@@ -450,6 +461,11 @@ bool mgos_conf_copy(const struct mgos_conf_entry *schema, const void *src,
       case CONF_TYPE_UNSIGNED_INT:
         *((int *) dvp) = *((const int *) svp);
         break;
+      case CONF_TYPE_FLOAT:
+#ifndef MGOS_BOOT_BUILD
+        *((float *) dvp) = *((const float *) svp);
+#endif
+        break;
       case CONF_TYPE_DOUBLE:
 #ifndef MGOS_BOOT_BUILD
         *((double *) dvp) = *((const double *) svp);
@@ -539,6 +555,14 @@ int mgos_conf_value_int(const void *cfg, const struct mgos_conf_entry *e) {
   return 0;
 }
 
+float mgos_conf_value_float(const void *cfg, const struct mgos_conf_entry *e) {
+  char *vp = (((char *) cfg) + e->offset);
+  if (e->type == CONF_TYPE_FLOAT) {
+    return *((float *) vp);
+  }
+  return 0;
+}
+
 double mgos_conf_value_double(const void *cfg,
                               const struct mgos_conf_entry *e) {
   char *vp = (((char *) cfg) + e->offset);
@@ -566,6 +590,9 @@ bool mgos_config_get(const struct mg_str key, struct mg_str *value,
     case CONF_TYPE_BOOL:
       value->len = mg_asprintf(
           cp, 0, "%s", (mgos_conf_value_int(cfg, e) ? "true" : "false"));
+      break;
+    case CONF_TYPE_FLOAT:
+      value->len = mg_asprintf(cp, 0, "%f", mgos_conf_value_float(cfg, e));
       break;
     case CONF_TYPE_DOUBLE:
       value->len = mg_asprintf(cp, 0, "%lf", mgos_conf_value_double(cfg, e));
@@ -627,6 +654,15 @@ bool mgos_config_set(const struct mg_str key, const struct mg_str value,
       } else {
         goto out;
       }
+      ret = true;
+      break;
+    }
+    case CONF_TYPE_FLOAT: {
+      float *vp = (float *) (((char *) cfg) + e->offset);
+      char *endptr;
+      value_nul = mg_strdup_nul(value);
+      *vp = strtof(value_nul.p, &endptr);
+      if (endptr != value_nul.p + value_nul.len) goto out;
       ret = true;
       break;
     }

@@ -144,6 +144,8 @@ struct mgos_config_debug {
   const char * file_level;
   double test_d1;
   double test_d2;
+  float test_f1;
+  float test_f2;
   unsigned int test_ui;
   struct mgos_config_debug_empty empty;
 };
@@ -649,6 +651,26 @@ static inline double mgos_sys_config_get_debug_test_d2(void) { return mgos_confi
 static inline double mgos_sys_config_get_default_debug_test_d2(void) { return mgos_config_get_default_debug_test_d2(); }
 void mgos_config_set_debug_test_d2(struct mgos_config *cfg, double v);
 static inline void mgos_sys_config_set_debug_test_d2(double v) { mgos_config_set_debug_test_d2(&mgos_sys_config, v); }
+
+/* debug.test_f1 */
+#define MGOS_CONFIG_HAVE_DEBUG_TEST_F1
+#define MGOS_SYS_CONFIG_HAVE_DEBUG_TEST_F1
+float mgos_config_get_debug_test_f1(const struct mgos_config *cfg);
+float mgos_config_get_default_debug_test_f1(void);
+static inline float mgos_sys_config_get_debug_test_f1(void) { return mgos_config_get_debug_test_f1(&mgos_sys_config); }
+static inline float mgos_sys_config_get_default_debug_test_f1(void) { return mgos_config_get_default_debug_test_f1(); }
+void mgos_config_set_debug_test_f1(struct mgos_config *cfg, float v);
+static inline void mgos_sys_config_set_debug_test_f1(float v) { mgos_config_set_debug_test_f1(&mgos_sys_config, v); }
+
+/* debug.test_f2 */
+#define MGOS_CONFIG_HAVE_DEBUG_TEST_F2
+#define MGOS_SYS_CONFIG_HAVE_DEBUG_TEST_F2
+float mgos_config_get_debug_test_f2(const struct mgos_config *cfg);
+float mgos_config_get_default_debug_test_f2(void);
+static inline float mgos_sys_config_get_debug_test_f2(void) { return mgos_config_get_debug_test_f2(&mgos_sys_config); }
+static inline float mgos_sys_config_get_default_debug_test_f2(void) { return mgos_config_get_default_debug_test_f2(); }
+void mgos_config_set_debug_test_f2(struct mgos_config *cfg, float v);
+static inline void mgos_sys_config_set_debug_test_f2(float v) { mgos_config_set_debug_test_f2(&mgos_sys_config, v); }
 
 /* debug.test_ui */
 #define MGOS_CONFIG_HAVE_DEBUG_TEST_UI
