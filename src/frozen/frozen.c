@@ -641,6 +641,7 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
 
         const char *end_of_format_specifier = "sdfFeEgGlhuIcx.*-0123456789";
         int n = strspn(fmt + 1, end_of_format_specifier);
+        if (n == 0 && fmt[1] == '%') n = 1;
         char *pbuf = buf;
         int need_len, size = sizeof(buf);
         char fmt2[20];
@@ -709,6 +710,8 @@ int json_vprintf(struct json_out *out, const char *fmt, va_list xap) {
               break;
             case 'p':
               (void) va_arg(ap, void *);
+              break;
+            case '%':
               break;
             default:
               /* many types are promoted to int */
