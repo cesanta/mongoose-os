@@ -63,7 +63,7 @@ static IRAM struct mgos_gpio_state *mgos_gpio_get_state(int pin) {
 };
 
 static struct mgos_gpio_state *mgos_gpio_get_or_create_state(int pin) {
-  struct mgos_gpio_state *s = mgos_gpio_get_state(pin);
+  struct mgos_gpio_state *s = mgos_gpio_get_state(pin), *old_s = NULL;
   if (s != NULL) return s;
   s = (struct mgos_gpio_state *) calloc(s_num_gpio_states + 1, sizeof(*s));
   if (s == NULL) return NULL;
@@ -73,10 +73,12 @@ static struct mgos_gpio_state *mgos_gpio_get_or_create_state(int pin) {
   if (s_state != NULL) {
     memcpy(s, s_state, s_num_gpio_states * sizeof(*s));
   }
+  old_s = s_state;
   s_state = s;
   s = &s_state[s_num_gpio_states++];
   s->pin = pin;
   mgos_ints_enable();
+  free(old_s);
   return s;
 }
 
