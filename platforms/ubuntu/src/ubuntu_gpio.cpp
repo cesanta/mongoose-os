@@ -44,11 +44,14 @@ struct GPIOPinCtx {
   }
 };
 
-static std::map<int, std::unique_ptr<GPIOPinCtx>> pins_;
+static std::map<int, std::unique_ptr<GPIOPinCtx>> *pins_ = nullptr;
 
 static GPIOPinCtx *GetPinCtx(int pin) {
-  auto it = pins_.find(pin);
-  if (it == pins_.end()) return nullptr;
+  if (pins_ == nullptr) {
+    pins_ = new std::map<int, std::unique_ptr<GPIOPinCtx>>();
+  }
+  auto it = pins_->find(pin);
+  if (it == pins_->end()) return nullptr;
   return it->second.get();
 }
 
@@ -60,7 +63,7 @@ static GPIOPinCtx *GetOrCreatePinCtx(int pin, enum mgos_gpio_mode mode) {
     LOG(LL_INFO, ("GPIO: New pin %s, mode %d (%s)", mgos_gpio_str(pin, buf),
                   mode, (mode == MGOS_GPIO_MODE_INPUT ? "input" : "output")));
     ctx = new_ctx.get();
-    pins_.emplace(pin, std::move(new_ctx));
+    pins_->emplace(pin, std::move(new_ctx));
   }
   return ctx;
 }
