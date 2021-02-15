@@ -182,9 +182,9 @@ static void ubuntu_net_up(void *arg) {
   inet_ntop(AF_INET, (void *) &ipaddr.netmask.sin_addr, netmask,
             INET_ADDRSTRLEN);
   LOG(LL_INFO, ("Network: ip=%s netmask=%s gateway=%s", ip, netmask, gateway));
-  mgos_event_trigger(MGOS_NET_EV_CONNECTING, NULL);
-  mgos_event_trigger(MGOS_NET_EV_CONNECTED, NULL);
-  mgos_event_trigger(MGOS_NET_EV_IP_ACQUIRED, NULL);
+  mgos_net_dev_event_cb(MGOS_NET_IF_TYPE_ETHERNET, 0, MGOS_NET_EV_CONNECTING);
+  mgos_net_dev_event_cb(MGOS_NET_IF_TYPE_ETHERNET, 0, MGOS_NET_EV_CONNECTED);
+  mgos_net_dev_event_cb(MGOS_NET_IF_TYPE_ETHERNET, 0, MGOS_NET_EV_IP_ACQUIRED);
   (void) arg;
 }
 
