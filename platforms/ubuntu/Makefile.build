@@ -19,14 +19,13 @@ FW_STAGING_DIR ?= $(BUILD_DIR)/fw_temp
 FW_DIR ?= $(CURDIR)/fw
 # Extra parts to include in firmware
 APP_EXTRA_FW_PARTS ?=
+FFI_SYMBOLS ?=
 
 ASAN ?= 1
 UBSAN ?= 1
 PROF ?= 0
 
-# Explicitly disable updater, it's not supported on POSIX build yet.
 MGOS_ENABLE_DEBUG_UDP = 0
-MGOS_ENABLE_BITBANG = 0
 MGOS_ENABLE_SYS_SERVICE = 0
 
 MGOS_POSIX_FEATURES ?= -DMGOS_PROMPT_DISABLE_ECHO -DMGOS_MAX_NUM_UARTS=2 \
@@ -47,7 +46,7 @@ MGOS_SRCS = mgos_init.c  \
             frozen.c mgos_event.c mgos_gpio.c \
             mgos_core_dump.c mgos_system.c mgos_system.cpp mgos_time.c \
             mgos_timers.c mgos_timers.cpp \
-            mgos_config_util.c mgos_json_utils.cpp mgos_sys_config.c \
+            mgos_config_util.c mgos_dlsym.c mgos_json_utils.cpp mgos_sys_config.c \
             json_utils.c cs_rbuf.c mgos_uart.c \
             mgos_utils.c mgos_utils.cpp cs_file.c cs_hex.c cs_crc32.c \
             error_codes.cpp status.cpp
@@ -107,6 +106,9 @@ MGOS_CONFIG_C = $(GEN_DIR)/mgos_config.c
 MGOS_RO_VARS_C = $(GEN_DIR)/mgos_ro_vars.c
 GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C)
 GENFILES_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.c.o,$(GENFILES_LIST))
+SYMBOLS_DUMP = $(GEN_DIR)/symbols_dump.txt
+FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
+FFI_EXPORTS_O = $(patsubst %.c,$(BUILD_DIR)/%.c.o,$(FFI_EXPORTS_C))
 
 MGOS_CONF_SCHEMA += $(PLATFORM_VPATH)/ubuntu_sys_config.yaml
 
@@ -115,7 +117,8 @@ PLATFORM_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.c.o,$(filter %.c,$(PLATFORM_SRCS))
 MGOS_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.c.o,$(filter %.c,$(MGOS_SRCS))) \
             $(patsubst %.cpp,$(BUILD_DIR)/%.cpp.o,$(filter %.cpp,$(MGOS_SRCS)))
 APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.c.o,$(filter %.c,$(APP_SOURCES))) \
-           $(patsubst %.cpp,$(BUILD_DIR)/%.cpp.o,$(filter %.cpp,$(APP_SOURCES)))
+           $(patsubst %.cpp,$(BUILD_DIR)/%.cpp.o,$(filter %.cpp,$(APP_SOURCES))) \
+           $(FFI_EXPORTS_O)
 OBJS = $(MGOS_OBJS) $(APP_OBJS) $(PLATFORM_OBJS) $(GENFILES_OBJS)
 
 # Files
@@ -128,6 +131,7 @@ FW_PARTS += $(APP_EXTRA_FW_PARTS)
 
 include $(MGOS_PATH)/tools/mk/mgos_common.mk
 include $(MGOS_PATH)/tools/mk/mgos_build_info.mk
+include $(MGOS_PATH)/tools/mk/mgos_ffi_exports.mk
 include $(MGOS_PATH)/tools/mk/mgos_fw_meta.mk
 include $(MGOS_PATH)/tools/mk/mgos_config.mk
 include $(MGOS_PATH)/tools/mk/mgos_features.mk
@@ -154,6 +158,13 @@ $(FS_STAGING_DIR): $(FS_FILES)
 	$(Q) $(foreach f,$(shell echo $(FS_FILES) | tr ' ' '\n' | sort | uniq), \
 		echo "  CP    $(f) -> $(FS_STAGING_DIR)"; \
 		cp $(f) $(FS_STAGING_DIR);)
+
+$(FFI_EXPORTS_C): $(FS_FILES)
+	$(call gen_ffi_exports,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))
+
+# In ffi exports file we use fake signatures: void func(void), and it conflicts
+# with the builtin functions like fopen, etc.
+$(FFI_EXPORTS_O): CFLAGS += -fno-builtin
 
 # Objects of all sorts
 $(BUILD_DIR)/%.c.o : %.c $(GENFILES_LIST)

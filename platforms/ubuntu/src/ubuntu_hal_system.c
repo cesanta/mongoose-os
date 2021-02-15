@@ -172,6 +172,8 @@ bool ubuntu_set_nsleep100(void) {
   return true;
 }
 
+uint32_t mgos_bitbang_n100_cal = 0;
+
 void mgos_ints_disable(void) {
   // LOG(LL_INFO, ("Not implemented"));
   return;
