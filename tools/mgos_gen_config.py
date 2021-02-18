@@ -710,7 +710,7 @@ class StringTableGen(Gen):
 bool {name}_is_default_str(const char *s) {{
   int num_str = (sizeof({stn}) / sizeof({stn}[0]));
   for (int i = 0; i < num_str; i++) {{
-    if ({stn}[i] == s) return true;
+    if (strcmp({stn}[i],s) == 0) return true;
   }}
   return false;
 }}""".format(name=self._struct_name, stn=stn))
