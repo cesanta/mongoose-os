@@ -20,6 +20,7 @@
 #include "esp_missing_includes.h"
 
 #include <user_interface.h>
+#include "version.h"
 
 #include "common/cs_dbg.h"
 #include "mgos_app.h"
@@ -267,6 +268,7 @@ void user_init(void) {
   system_init_done_cb(sdk_init_done_cb);
 }
 
+#if ESP_SDK_VERSION_MAJOR >= 3
 #if !defined(FW_RF_CAL_DATA_ADDR) || !defined(FW_SYS_PARAMS_ADDR)
 #error FW_RF_CAL_DATA_ADDR or FW_SYS_PARAMS_ADDR are not defined
 #endif
@@ -316,3 +318,19 @@ void user_pre_init(void) {
   __libc_init_array(); /* C++ global contructors. */
   mgos_app_preinit();
 }
+#else
+#ifndef FW_RF_CAL_DATA_ADDR
+#error FW_RF_CAL_DATA_ADDR is not defined
+#endif
+uint32_t user_rf_cal_sector_set(void) {
+  /* Defined externally. */
+  return FW_RF_CAL_DATA_ADDR / 4096;
+}
+
+void user_rf_pre_init(void) {
+  esp_exception_handler_init();
+  esp_core_dump_init();
+  __libc_init_array(); /* C++ global contructors. */
+  mgos_app_preinit();
+}
+#endif
