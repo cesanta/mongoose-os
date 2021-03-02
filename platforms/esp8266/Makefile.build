@@ -162,11 +162,15 @@ MEMORY_FLAGS = -DFS_MAX_OPEN_FILES=5
 
 .PHONY: all clean
 
+ifneq "$(MGOS_ESP8266_LWIP)" "1"
 # NB: These setting must match ones used during build of the LwIP library during Docker image build.
 LWIP_CFLAGS = -DTCP_MSS=1460 -DTCP_MSL=5000 -DLWIP_FEATURES=1 -DLWIP_IPV6=0 -DLWIP_COMPAT_SOCKETS=0 \
               -I$(MGOS_PATH)/include
 LIBS += -llwip2-1460-feat
 IPATH += /opt/Espressif/xtensa-lx106-elf/xtensa-lx106-elf/sysroot/usr/include/lwip2
+else
+LWIP_CFLAGS =
+endif
 
 MGOS_CFLAGS = -DMGOS_APP=\"$(APP)\" \
               -DMGOS_MAX_NUM_UARTS=2 \
