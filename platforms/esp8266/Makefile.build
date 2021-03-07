@@ -162,7 +162,7 @@ MEMORY_FLAGS = -DFS_MAX_OPEN_FILES=5
 
 .PHONY: all clean
 
-ifneq "$(MGOS_ESP8266_LWIP)" "1"
+ifeq "$(MGOS_ESP8266_LWIP)" "2"
 # NB: These setting must match ones used during build of the LwIP library during Docker image build.
 LWIP_CFLAGS = -DTCP_MSS=1460 -DTCP_MSL=5000 -DLWIP_FEATURES=1 -DLWIP_IPV6=0 -DLWIP_COMPAT_SOCKETS=0 \
               -I$(MGOS_PATH)/include
