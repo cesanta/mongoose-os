@@ -29,6 +29,7 @@
 #include "user_interface.h"
 #endif
 
+#include "esp_exc.h"
 #include "esp_features.h"
 #include "mgos_hal.h"
 #include "mgos_time.h"
@@ -49,6 +50,7 @@ void *malloc(size_t size) {
   void *res;
   CS_HEAP_SHIM_FLAG_SET();
   res = (void *) umm_malloc(size);
+  esp_check_stack_overflow(res);
 #ifdef ESP_ABORT_ON_MALLOC_FAILURE
   if (res == NULL) abort();
 #endif
@@ -58,6 +60,7 @@ void *malloc(size_t size) {
 void free(void *ptr) {
   CS_HEAP_SHIM_FLAG_SET();
   umm_free(ptr);
+  esp_check_stack_overflow(ptr);
 }
 
 void *realloc(void *ptr, size_t size) {
@@ -71,6 +74,7 @@ void *realloc(void *ptr, size_t size) {
     abort();
   }
 #endif
+  esp_check_stack_overflow(ptr);
   return res;
 }
 
@@ -81,6 +85,7 @@ void *calloc(size_t num, size_t size) {
 #ifdef ESP_ABORT_ON_MALLOC_FAILURE
   if (res == NULL) abort();
 #endif
+  esp_check_stack_overflow(res);
   return res;
 }
 

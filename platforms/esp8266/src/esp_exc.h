@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 #include <xtensa/xtruntime-frames.h>
 
@@ -60,6 +61,26 @@ void esp_exc_common(uint32_t cause, struct regfile *regs);
 extern struct regfile g_exc_regs;
 
 void esp_exc_extract_backtrace(void *sp, char *buf, int buf_len);
+
+extern uint32_t ets_task_top_of_stack;
+/*
+ * Tasks share a 4K stack. Detect overflow as soon as we can.
+ * This is a big problem because on other platforms we have 8K stack.
+ * TODO(rojer): Try relocating stack and extending it, reuse 4K region for heap.
+ */
+#define MGOS_STACK_CANARY_VAL 0x777
+#define MGOS_STACK_CANARY_LOC (&ets_task_top_of_stack)
+
+void esp_report_stack_overflow(void *tag);
+
+extern uint32_t esp_stack_canary_en;
+
+static inline __attribute__((always_inline)) void esp_check_stack_overflow(
+    void *tag) {
+  uint32_t en = esp_stack_canary_en;
+  if ((*MGOS_STACK_CANARY_LOC & en) == (MGOS_STACK_CANARY_VAL & en)) return;
+  esp_report_stack_overflow(tag);
+}
 
 #ifdef __cplusplus
 }

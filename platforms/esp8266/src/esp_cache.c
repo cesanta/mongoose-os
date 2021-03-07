@@ -21,6 +21,8 @@
 #include "esp_missing_includes.h"
 #include "platforms/esp8266/rboot/rboot/appcode/rboot-api.h"
 
+uint32_t esp_stack_canary_en = 0;
+
 IRAM NOINSTR void Cache_Read_Enable_New(void) {
   static uint8_t m1 = 0xff, m2 = 0xff;
   if (m1 == 0xff) {

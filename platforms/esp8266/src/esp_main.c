@@ -60,15 +60,6 @@
 #define MGOS_MONGOOSE_MAX_POLL_SLEEP_MS 1000
 #endif
 
-extern uint32_t ets_task_top_of_stack;
-/*
- * Tasks share a 4K stack. Detect overflow as soon as we can.
- * This is a big problem because on other platforms we have 8K stack.
- * TODO(rojer): Try relocating stack and extending it, reuse 4K region for heap.
- */
-#define MGOS_STACK_CANARY_VAL 0xDE4D57AC
-#define MGOS_STACK_CANARY_LOC (&ets_task_top_of_stack)
-
 extern const char *build_version, *build_id;
 extern const char *mg_build_version, *mg_build_id;
 
@@ -212,23 +203,17 @@ IRAM bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
   return true;
 }
 
-static void report_stack_overflow(void *cb) {
+void esp_report_stack_overflow(void *tag) {
   char buf[200] = {0};
   esp_exc_extract_backtrace(((char *) MGOS_STACK_CANARY_LOC) - 128, buf,
                             sizeof(buf));
-  LOG(LL_ERROR, ("Stack overflow! Last cb %p, ptrs:%s", cb, buf));
+  LOG(LL_ERROR, ("Stack overflow! Tag %p, ptrs:%s", tag, buf));
 }
 
 static void mgos_task(os_event_t *e) {
   mgos_cb_t cb = (mgos_cb_t)(e->sig);
-  *MGOS_STACK_CANARY_LOC = MGOS_STACK_CANARY_VAL;
   cb((void *) e->par);
-  /* Check for stack overflow. */
-  if (*MGOS_STACK_CANARY_LOC != MGOS_STACK_CANARY_VAL) {
-    report_stack_overflow(cb);
-    /* This is not yet fatal but probably should be. */
-    // abort();
-  }
+  esp_check_stack_overflow(cb);
   /* Keep soft WDT disabled. */
   system_soft_wdt_stop();
 }
@@ -328,6 +313,8 @@ uint32_t user_rf_cal_sector_set(void) {
 }
 
 void user_rf_pre_init(void) {
+  *MGOS_STACK_CANARY_LOC = MGOS_STACK_CANARY_VAL;
+  esp_stack_canary_en = 0xffffffff;
   esp_exception_handler_init();
   esp_core_dump_init();
   __libc_init_array(); /* C++ global contructors. */
