@@ -76,12 +76,24 @@ void mgos_app_preinit(void);
  * Information about libraries used by the firmware.
  */
 struct mgos_lib_info {
-  const char *name;
-  const char *version;
-  bool (*init)(void);
+  const char *name;         /* Library name. */
+  const char *version;      /* Version as set in the library's manifest. */
+  const char *repo_version; /* Source repo version (commit SHA for Git). */
+  const char *binary_libs;  /* Binary lib names and SHA256 sums, if any. */
+  bool (*init)(void);       /* Init function. */
 };
 extern const struct mgos_lib_info mgos_libs_info[];
-#define MGOS_LIB_INFO_VERSION 1
+#define MGOS_LIB_INFO_VERSION 2
+
+/*
+ * Information about source modules used by the firmware.
+ */
+struct mgos_module_info {
+  const char *name;         /* Module name. */
+  const char *repo_version; /* Source repo version (commit SHA for Git). */
+};
+extern const struct mgos_module_info mgos_modules_info[];
+#define MGOS_MODULE_INFO_VERSION 1
 
 #ifdef __cplusplus
 }
