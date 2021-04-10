@@ -103,7 +103,6 @@ MGOS_SRCS += cs_file.c cs_hex.c cs_rbuf.c \
 
 MGOS_SRCS += esp_config.c \
              esp_coredump.c \
-             esp_crypto.c \
              esp_debug.c \
              esp_exc.c \
              esp_flash_writer.c \
@@ -144,9 +143,7 @@ MGOS_ESP_FEATURES = '-DUMM_ONFREE(ptr, size)=memset(ptr, 0xfa, size)'
 
 MG_FEATURES ?= $(MG_FEATURES_TINY) -DMG_ESP8266 \
                -DMG_ENABLE_FILESYSTEM -DMG_ENABLE_DIRECTORY_LISTING \
-               -DMG_NET_IF=MG_NET_IF_LWIP_LOW_LEVEL \
-               -DCS_DISABLE_MD5 -DMG_EXT_MD5 \
-               -DMG_EXT_SHA1
+               -DMG_NET_IF=MG_NET_IF_LWIP_LOW_LEVEL
 
 FEATURES_EXTRA ?=
 FEATURES = $(MG_FEATURES) $(MGOS_FEATURES) $(MGOS_ESP_FEATURES) \

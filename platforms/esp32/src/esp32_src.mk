@@ -38,7 +38,7 @@ MGOS_SRCS += mgos_config_util.c mgos_core_dump.c mgos_dlsym.c mgos_event.c \
              mgos_sys_config.c $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
              mgos_file_utils.c mgos_hw_timers.c mgos_system.c mgos_system.cpp \
              mgos_time.c mgos_timers.c mgos_timers.cpp mgos_uart.c mgos_utils.c mgos_utils.cpp \
-             esp32_crypto.c esp32_debug.c esp32_exc.c esp32_fs_crypt.c \
+             esp32_debug.c esp32_exc.c esp32_fs_crypt.c \
              esp32_gpio.c esp32_hal.c esp32_hw_timers.c \
              esp32_main.c esp32_uart.c \
              error_codes.cpp status.cpp
@@ -70,8 +70,6 @@ C_CXX_CFLAGS += -DMGOS_APP=\"$(APP)\" -DFW_ARCHITECTURE=$(APP_PLATFORM) \
                 -DMGOS_DEBUG_UART=$(MGOS_DEBUG_UART) \
                 -DMG_ENABLE_FILESYSTEM \
                 -DMG_ENABLE_DIRECTORY_LISTING \
-                -DCS_DISABLE_MD5 -DMG_EXT_MD5 \
-                -DCS_DISABLE_SHA1 -DMG_EXT_SHA1 \
                 -DMGOS_NUM_HW_TIMERS=4
 
 CFLAGS += $(C_CXX_CFLAGS)
