@@ -1069,7 +1069,8 @@ int json_vscanf(const char *s, int len, const char *fmt, va_list ap) {
           memcpy(fmtbuf, fmt + i, conv_len);
           fmtbuf[conv_len] = '\0';
           i += conv_len;
-          i += strspn(fmt + i, delims);
+          if (fmt[i] != '}')
+            i += strspn(fmt + i, delims);
           break;
         }
       }
