@@ -513,6 +513,10 @@ bool mgos_conf_copy_str(const char *s, const char **copy) {
     *copy = (char *) s;
     return true;
   }
+  if (*s == '\0') {
+    *copy = NULL;
+    return true;
+  }
   *copy = strdup(s);
   return (*copy != NULL);
 }
