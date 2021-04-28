@@ -115,7 +115,8 @@ MGOS_SRCS += esp_config.c \
              esp_main.c \
              esp_periph.c \
              esp_uart.c \
-             esp_umm_malloc.c
+             esp_umm_malloc.c \
+             esp_wpa.c
 
 APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
@@ -129,12 +130,12 @@ IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
         $(MGOS_ESP8266_PATH)/include $(MGOS_ESP8266_PATH)/include/spiffs \
         $(BOOTLOADER_PATH)/rboot \
         $(MGOS_ESP_SRC_PATH)
-LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip
+LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip /tmp
 
 include $(MGOS_PATH)/tools/mk/mgos_features.mk
 
 # libraries used in this project, mainly provided by the SDK
-SDK_LIBS = c crypto espnow gcc m main net80211 pp phy stdc++ wpa
+SDK_LIBS = c crypto espnow gcc m main net80211 pp phy stdc++ wpa_debug
 LIBS = $(addprefix -l,$(SDK_LIBS))
 
 SHIMS = -DNDEBUG
@@ -357,6 +358,12 @@ $(APP_ELF): $(BIN_PARTS) $(LD_SCRIPT)
 ifeq "$(MGOS_ESP8266_RTOS)" "1"
 	$(OBJCOPY) --weaken-symbol printf --weaken-symbol puts /opt/Espressif/esp-open-sdk/xtensa-lx106-elf/xtensa-lx106-elf/lib/libc.a
 endif
+	$(OBJCOPY) --redefine-sym wpa_sm_rx_eapol=sdk_wpa_sm_rx_eapol /opt/Espressif/ESP8266_NONOS_SDK/lib/libwpa.a /tmp/libwpa_debug.a
+	mkdir /tmp/qq
+	cd /tmp/qq && xtensa-lx106-elf-ar x /tmp/libwpa_debug.a
+	$(OBJCOPY) --redefine-sym wpa_register=sdk_wpa_register /tmp/qq/wpa.o
+	rm /tmp/libwpa_debug.a
+	cd /tmp/qq && xtensa-lx106-elf-ar rc /tmp/libwpa_debug.a *.o
 	$(call link,$(BIN_PARTS) $(LIBS) $(LD_WRAPPERS))
 
 $(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(MGOS_ESP8266_PATH)/Makefile.build
