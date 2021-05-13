@@ -32,6 +32,7 @@
 #include "mgos_app.h"
 #include "mgos_bitbang.h"
 #include "mgos_config_util.h"
+#include "mgos_core_dump.h"
 #include "mgos_debug.h"
 #include "mgos_dlsym.h"
 #include "mgos_event.h"
