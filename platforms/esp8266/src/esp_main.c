@@ -258,7 +258,7 @@ void user_init(void) {
 #error FW_RF_CAL_DATA_ADDR or FW_SYS_PARAMS_ADDR are not defined
 #endif
 
-const partition_item_t g_esp_part_table[] = {
+static const partition_item_t s_part_table[] = {
     {SYSTEM_PARTITION_BOOTLOADER, 0x0, 0x1000},
     {SYSTEM_PARTITION_RF_CAL, FW_RF_CAL_DATA_ADDR, 0x1000},
     // The 4 sectors area at the end of flash that used to be called sys_params
@@ -297,8 +297,7 @@ void user_pre_init(void) {
       map = 1;
       break;
   }
-  system_partition_table_regist(g_esp_part_table, ARRAY_SIZE(g_esp_part_table),
-                                map);
+  system_partition_table_regist(s_part_table, ARRAY_SIZE(s_part_table), map);
   esp_exception_handler_init();
   esp_core_dump_init();
   __libc_init_array(); /* C++ global contructors. */
