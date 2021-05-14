@@ -22,7 +22,7 @@
 
 #ifdef __cplusplus
 // Can't be enabled yet due to SDK issues. TODO(rojer): Enable.
-//extern "C" {
+// extern "C" {
 #endif
 
 void pp_soft_wdt_init(void);
@@ -38,6 +38,10 @@ void Cache_Read_Enable_New(void);
 
 int SPIEraseBlock(uint32_t block);
 uint32_t SPIRead(uint32_t addr, void *dst, uint32_t size);
+
+uint8_t rom_i2c_readReg(uint32_t block, uint32_t host_id, uint32_t reg_add);
+void rom_i2c_writeReg(uint32_t block, uint32_t host_id, uint32_t reg_add,
+                      uint8_t data);
 
 #ifndef RTOS_SDK
 

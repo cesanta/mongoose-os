@@ -253,6 +253,26 @@ void user_init(void) {
   system_init_done_cb(sdk_init_done_cb);
 }
 
+#define UART_CLKDIV_80MHZ(B) (80000000 + B / 2) / B
+
+static void esp_pre_init(void) {
+  /* Enable stack canary. */
+  *MGOS_STACK_CANARY_LOC = MGOS_STACK_CANARY_VAL;
+  esp_stack_canary_en = 0xffffffff;
+  /* Set APB to 80 MHz and CPU to 160. */
+  rom_i2c_writeReg(103, 4, 1, 0x88);
+  rom_i2c_writeReg(103, 4, 2, 0x91);
+  system_update_cpu_freq(SYS_CPU_160MHZ);
+  uart_div_modify(0, UART_CLKDIV_80MHZ(115200));
+
+  esp_exception_handler_init();
+  esp_core_dump_init();
+  __libc_init_array(); /* C++ global contructors. */
+
+  /* Invoke app early init code. */
+  mgos_app_preinit();
+}
+
 #if ESP_SDK_VERSION_MAJOR >= 3
 #if !defined(FW_RF_CAL_DATA_ADDR) || !defined(FW_SYS_PARAMS_ADDR)
 #error FW_RF_CAL_DATA_ADDR or FW_SYS_PARAMS_ADDR are not defined
@@ -298,10 +318,7 @@ void user_pre_init(void) {
       break;
   }
   system_partition_table_regist(s_part_table, ARRAY_SIZE(s_part_table), map);
-  esp_exception_handler_init();
-  esp_core_dump_init();
-  __libc_init_array(); /* C++ global contructors. */
-  mgos_app_preinit();
+  esp_pre_init();
 }
 #else
 #ifndef FW_RF_CAL_DATA_ADDR
@@ -313,11 +330,6 @@ uint32_t user_rf_cal_sector_set(void) {
 }
 
 void user_rf_pre_init(void) {
-  *MGOS_STACK_CANARY_LOC = MGOS_STACK_CANARY_VAL;
-  esp_stack_canary_en = 0xffffffff;
-  esp_exception_handler_init();
-  esp_core_dump_init();
-  __libc_init_array(); /* C++ global contructors. */
-  mgos_app_preinit();
+  esp_pre_init();
 }
 #endif
