@@ -203,17 +203,20 @@ IRAM bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
   return true;
 }
 
-void esp_report_stack_overflow(void *tag) {
+void esp_report_stack_overflow(int tag1, int tag2, void *tag3) {
   char buf[200] = {0};
   esp_exc_extract_backtrace(((char *) MGOS_STACK_CANARY_LOC) - 128, buf,
                             sizeof(buf));
-  LOG(LL_ERROR, ("Stack overflow! Tag %p, ptrs:%s", tag, buf));
+  LOG(LL_ERROR, ("Stack overflow! Tag %d,%d,%p ptrs:%s", tag1, tag2, tag3, buf));
+#ifdef MGOS_ABORT_ON_STACK_OVERFLOW
+  *((int *) 123) = 456;
+#endif
 }
 
 static void mgos_task(os_event_t *e) {
   mgos_cb_t cb = (mgos_cb_t)(e->sig);
   cb((void *) e->par);
-  esp_check_stack_overflow(cb);
+  esp_check_stack_overflow(0, 0, cb);
   /* Keep soft WDT disabled. */
   system_soft_wdt_stop();
 }

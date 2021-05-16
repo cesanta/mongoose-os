@@ -75,7 +75,7 @@ extern uint32_t ets_task_top_of_stack;
 void esp_exc_extract_backtrace(void *sp, char *buf, int buf_len) {
   // Try to find some code pointers in the overflowed and top parts of stack.
   for (const uint32_t *p = sp; p < (uint32_t *) 0x40000000; p++) {
-    if (((intptr_t) p) % 8 != 0) continue;  // Stack frames are 8-aligned.
+    if (((uintptr_t) p & 0xf) != 0xc) continue;
     uint32_t v = *p;
     /* Does it look like an IRAM or flash pointer? */
     if (!((v >= 0x40100000 && v < 0x40108000) ||
@@ -89,8 +89,9 @@ void esp_exc_extract_backtrace(void *sp, char *buf, int buf_len) {
     bool is_call =
         ((vp & 0x3f) == 5 /* call0 */ || (vp & 0xffffff) == 0xc0 /* callx0 */);
     if (!is_call) continue;
-    snprintf(buf, buf_len - 1, "%s %d:%#08lx", buf,
-             (((intptr_t) &ets_task_top_of_stack) - (intptr_t) p), v);
+    int l = snprintf(buf, buf_len - 1, "%s %d:%#08lx", buf,
+                     (((intptr_t) &ets_task_top_of_stack) - (intptr_t) p), v);
+    if (l >= buf_len - 10) break;
   }
 }
 

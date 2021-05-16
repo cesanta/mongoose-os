@@ -49,8 +49,9 @@ int cs_heap_shim = 0;
 void *malloc(size_t size) {
   void *res;
   CS_HEAP_SHIM_FLAG_SET();
+  esp_check_stack_overflow(1, (int) size, NULL);
   res = (void *) umm_malloc(size);
-  esp_check_stack_overflow(res);
+  esp_check_stack_overflow(1, (int) size, res);
 #ifdef ESP_ABORT_ON_MALLOC_FAILURE
   if (res == NULL) abort();
 #endif
@@ -59,13 +60,15 @@ void *malloc(size_t size) {
 
 void free(void *ptr) {
   CS_HEAP_SHIM_FLAG_SET();
+  esp_check_stack_overflow(2, 0, ptr);
   umm_free(ptr);
-  esp_check_stack_overflow(ptr);
+  esp_check_stack_overflow(2, 1, ptr);
 }
 
 void *realloc(void *ptr, size_t size) {
   void *res;
   CS_HEAP_SHIM_FLAG_SET();
+  esp_check_stack_overflow(3, (int) size, ptr);
   res = (void *) umm_realloc(ptr, size);
 #ifdef ESP_ABORT_ON_MALLOC_FAILURE
   if (res == NULL) {
@@ -74,18 +77,19 @@ void *realloc(void *ptr, size_t size) {
     abort();
   }
 #endif
-  esp_check_stack_overflow(ptr);
+  esp_check_stack_overflow(4, (int) size, res);
   return res;
 }
 
 void *calloc(size_t num, size_t size) {
   void *res;
   CS_HEAP_SHIM_FLAG_SET();
+  esp_check_stack_overflow(5, (int) (num * size), NULL);
   res = (void *) umm_calloc(num, size);
 #ifdef ESP_ABORT_ON_MALLOC_FAILURE
   if (res == NULL) abort();
 #endif
-  esp_check_stack_overflow(res);
+  esp_check_stack_overflow(5, (int) (num * size), res);
   return res;
 }
 
