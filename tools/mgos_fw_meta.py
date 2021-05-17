@@ -330,6 +330,21 @@ def cmd_create_manifest(args):
         if k in bi:
             manifest[k] = bi[k]
 
+    for e in args.extra_attr:
+        if not e:
+            continue
+        k, v = e.split('=', 1)
+        if v in ('true', 'false'):
+            v = (v == 'true')
+        elif v == 'null':
+            v = None
+        else:
+            try:
+                v = int(v, 0)
+            except ValueError:
+                pass
+        manifest[k] = v
+
     for p in args.parts:
         name, attrs = p.split(':', 2)
         part = {}
@@ -508,6 +523,7 @@ if __name__ == '__main__':
     cm_cmd.add_argument('--src_dir', default='.')
     cm_cmd.add_argument('--staging_dir')
     cm_cmd.add_argument('--output', '-o')
+    cm_cmd.add_argument('--extra-attr', metavar='extra_attrs', default=[], action='append')
     cm_cmd.add_argument('parts', nargs='+')
     handlers['create_manifest'] = cmd_create_manifest
 

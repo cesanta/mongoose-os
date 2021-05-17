@@ -9,6 +9,7 @@
 FW_MANIFEST ?= $(FW_STAGING_DIR)/manifest.json
 FW_ZIP ?= $(FW_DIR)/$(APP)-$(APP_PLATFORM)-last.zip
 FW_META_CMD ?= $(MGOS_PATH)/tools/mgos_fw_meta.py
+MGOS_FW_EXTRA_ATTRS ?=
 
 $(FW_ZIP): $(FW_MANIFEST) $(FW_META_CMD)
 	$(vecho) "ZIP    $@"
@@ -24,6 +25,7 @@ $(FW_MANIFEST): $(FW_META_CMD)
 	$(Q) $(FW_META_CMD) create_manifest \
 	  --name=$(APP) --platform=$(APP_PLATFORM) \
 	  --build_info=$(BUILD_INFO_JSON) \
+	  $(addprefix --extra-attr=,$(MGOS_FW_EXTRA_ATTRS)) \
 	  --staging_dir=$(FW_STAGING_DIR) \
 	  --output=$(FW_MANIFEST) \
 	  $(FW_PARTS)
