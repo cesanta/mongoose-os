@@ -173,7 +173,7 @@ VPATH += $(SDK_PATH)/source/ti/devices/cc32xx/driverlib \
 SDK_CFLAGS = -DTARGET_IS_CC3220 -DUSE_CC3220_ROM_DRV_API -DUSE_FREERTOS
 
 MGOS_SRCS += $(notdir $(wildcard $(MGOS_CC3220_PATH)/src/*.c)) \
-             cs_crc32.c cs_file.c cs_hex.c cs_rbuf.c \
+             cs_crc32.c cs_file.c cs_hex.c cs_rbuf.c cs_varint.c \
              frozen.c json_utils.c \
              mgos_config_util.c mgos_core_dump.c mgos_debug.c mgos_dlsym.c mgos_event.c mgos_gpio.c \
              mgos_file_utils.c mgos_init.c \

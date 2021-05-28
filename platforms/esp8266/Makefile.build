@@ -94,7 +94,7 @@ MGOS_SRCS += cs_file.c cs_hex.c cs_rbuf.c \
              mgos_system.c mgos_system.cpp \
              mgos_uart.c \
              mgos_utils.c mgos_utils.cpp \
-             cs_crc32.c \
+             cs_crc32.c cs_varint.c \
              rboot-bigflash.c rboot-api.c \
              json_utils.c \
              umm_malloc.c \

@@ -155,7 +155,7 @@ FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
 MGOS_SRCS += $(notdir $(MGOS_CONFIG_C)) $(notdir $(MGOS_RO_VARS_C)) \
              mgos_config_util.c mgos_core_dump.c mgos_event.c mgos_gpio.c \
              mgos_hw_timers.c mgos_timers.cpp mgos_sys_config.c \
-             mgos_time.c mgos_timers.c cs_crc32.c cs_file.c cs_hex.c \
+             mgos_time.c mgos_timers.c cs_crc32.c cs_file.c cs_hex.c cs_varint.c \
              json_utils.c mgos_json_utils.cpp frozen.c mgos_uart.c cs_rbuf.c mgos_init.c \
              mgos_dlsym.c mgos_file_utils.c mgos_system.c mgos_system.cpp \
              mgos_utils.c mgos_utils.cpp \

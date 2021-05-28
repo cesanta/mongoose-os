@@ -15,8 +15,7 @@
  * limitations under the License.
  */
 
-#ifndef CS_COMMON_CS_VARINT_H_
-#define CS_COMMON_CS_VARINT_H_
+#pragma once
 
 #if defined(_WIN32) && _MSC_VER < 1700
 typedef unsigned char uint8_t;
@@ -55,5 +54,3 @@ uint64_t cs_varint_decode_unsafe(const uint8_t *buf, int *llen);
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* CS_COMMON_CS_VARINT_H_ */
