@@ -4,6 +4,23 @@
 #include "mgos.h"
 #include "mongoose.h"
 
+struct wpa_supplicant;
+u8 *sdk_wpa_sm_alloc_eapol(const struct wpa_supplicant *wpa_s, u8 type,
+                           const void *data, u16 data_len, size_t *msg_len,
+                           void **data_pos);
+
+u8 *wpa_sm_alloc_eapol(const struct wpa_supplicant *wpa_s, u8 type,
+                       const void *data, u16 data_len, size_t *msg_len,
+                       void **data_pos) {
+  u8_t *res =
+      sdk_wpa_sm_alloc_eapol(wpa_s, type, data, data_len, msg_len, data_pos);
+  struct pbuf *p = *((struct pbuf **) (((u8 *) wpa_s) + 0x1fc));
+  LOG(LL_INFO,
+      ("%p alloc EAPOL t %d d %p dl %d ml %d dp %p ret %p p %p pl %d", wpa_s,
+       type, data, data_len, *msg_len, *data_pos, res, p, p->tot_len));
+  return res;
+}
+
 int sdk_wpa_sm_rx_eapol(const u8 *src_addr, const u8 *buf, size_t len);
 
 void log_eapol(const u8 *buf, size_t len) {
@@ -50,7 +67,9 @@ void sdk_wpa_register(int x, int (*wpa_output_pbuf_cb)(struct pbuf *p),
 static int (*s_wpa_output_pbuf_cb)(struct pbuf *p);
 static int wrap_wpa_output_pbuf(struct pbuf *p) {
   int res = s_wpa_output_pbuf_cb(p);
-  LOG(LL_INFO, ("-> EAPOL %d res %d", p->len, res));
+  LOG(LL_INFO, ("-> EAPOL %p n %p p %p tl %d l %d t %d f %d r %d eb %p res %d",
+                p, p->next, p->payload, p->tot_len, p->len, p->type, p->flags,
+                p->ref, p->eb, res));
   log_eapol(p->payload + 14, p->len - 14);
   // mg_hexdumpf(stderr, p->payload, p->len);
   return res;

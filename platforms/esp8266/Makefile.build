@@ -362,6 +362,7 @@ endif
 	mkdir /tmp/qq
 	cd /tmp/qq && xtensa-lx106-elf-ar x /tmp/libwpa_debug.a
 	$(OBJCOPY) --redefine-sym wpa_register=sdk_wpa_register /tmp/qq/wpa.o
+	$(OBJCOPY) --redefine-sym wpa_sm_alloc_eapol=sdk_wpa_sm_alloc_eapol /tmp/qq/wpas_glue.o
 	rm /tmp/libwpa_debug.a
 	cd /tmp/qq && xtensa-lx106-elf-ar rc /tmp/libwpa_debug.a *.o
 	$(call link,$(BIN_PARTS) $(LIBS) $(LD_WRAPPERS))
