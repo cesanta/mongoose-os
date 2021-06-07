@@ -16,8 +16,9 @@ u8 *wpa_sm_alloc_eapol(const struct wpa_supplicant *wpa_s, u8 type,
       sdk_wpa_sm_alloc_eapol(wpa_s, type, data, data_len, msg_len, data_pos);
   struct pbuf *p = *((struct pbuf **) (((u8 *) wpa_s) + 0x1fc));
   LOG(LL_INFO,
-      ("%p alloc EAPOL t %d d %p dl %d ml %d dp %p ret %p p %p pl %d", wpa_s,
-       type, data, data_len, *msg_len, *data_pos, res, p, p->tot_len));
+      ("%p alloc EAPOL t %d d %p dl %d ml %d dp %p ret %p p %p pl %d LW %d",
+       wpa_s, type, data, data_len, *msg_len, *data_pos, res, p, p->tot_len,
+       LWIP_VERSION_MAJOR));
   return res;
 }
 
@@ -68,8 +69,20 @@ static int (*s_wpa_output_pbuf_cb)(struct pbuf *p);
 static int wrap_wpa_output_pbuf(struct pbuf *p) {
   int res = s_wpa_output_pbuf_cb(p);
   LOG(LL_INFO, ("-> EAPOL %p n %p p %p tl %d l %d t %d f %d r %d eb %p res %d",
-                p, p->next, p->payload, p->tot_len, p->len, p->type, p->flags,
-                p->ref, p->eb, res));
+                p, p->next, p->payload, p->tot_len, p->len,
+#if LWIP_VERSION_MAJOR == 1
+                p->type,
+#else
+                p->type_internal,
+#endif
+                p->flags,
+                p->ref,
+#if LWIP_VERSION_MAJOR == 1
+                p->eb,
+#else
+                NULL,
+#endif
+                res));
   log_eapol(p->payload + 14, p->len - 14);
   // mg_hexdumpf(stderr, p->payload, p->len);
   return res;
