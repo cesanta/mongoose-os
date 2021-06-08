@@ -135,7 +135,7 @@ LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip /tmp
 include $(MGOS_PATH)/tools/mk/mgos_features.mk
 
 # libraries used in this project, mainly provided by the SDK
-SDK_LIBS = c crypto espnow gcc m main net80211 pp phy stdc++ wpa_debug
+SDK_LIBS = c crypto espnow gcc m main net80211 pp_debug phy stdc++ wpa_debug
 LIBS = $(addprefix -l,$(SDK_LIBS))
 
 SHIMS = -DNDEBUG
@@ -358,13 +358,15 @@ $(APP_ELF): $(BIN_PARTS) $(LD_SCRIPT)
 ifeq "$(MGOS_ESP8266_RTOS)" "1"
 	$(OBJCOPY) --weaken-symbol printf --weaken-symbol puts /opt/Espressif/esp-open-sdk/xtensa-lx106-elf/xtensa-lx106-elf/lib/libc.a
 endif
-	$(OBJCOPY) --redefine-sym wpa_sm_rx_eapol=sdk_wpa_sm_rx_eapol /opt/Espressif/ESP8266_NONOS_SDK/lib/libwpa.a /tmp/libwpa_debug.a
-	mkdir /tmp/qq
-	cd /tmp/qq && xtensa-lx106-elf-ar x /tmp/libwpa_debug.a
-	$(OBJCOPY) --redefine-sym wpa_register=sdk_wpa_register /tmp/qq/wpa.o
-	$(OBJCOPY) --redefine-sym wpa_sm_alloc_eapol=sdk_wpa_sm_alloc_eapol /tmp/qq/wpas_glue.o
-	rm /tmp/libwpa_debug.a
-	cd /tmp/qq && xtensa-lx106-elf-ar rc /tmp/libwpa_debug.a *.o
+	mkdir /tmp/libwpa_debug && cd /tmp/libwpa_debug && xtensa-lx106-elf-ar x /opt/Espressif/ESP8266_NONOS_SDK/lib/libwpa.a
+	$(OBJCOPY) --redefine-sym wpa_sm_rx_eapol=sdk_wpa_sm_rx_eapol /tmp/libwpa_debug/wpa.o
+	$(OBJCOPY) --redefine-sym wpa_register=sdk_wpa_register /tmp/libwpa_debug/wpa.o
+	$(OBJCOPY) --redefine-sym wpa_sm_alloc_eapol=sdk_wpa_sm_alloc_eapol /tmp/libwpa_debug/wpas_glue.o
+	cd /tmp/libwpa_debug && xtensa-lx106-elf-ar rc /tmp/libwpa_debug.a *.o
+	mkdir /tmp/libpp_debug && cd /tmp/libpp_debug && xtensa-lx106-elf-ar x /opt/Espressif/ESP8266_NONOS_SDK/lib/libpp.a
+	$(OBJCOPY) --redefine-sym esf_buf_alloc=sdk_esf_buf_alloc /tmp/libpp_debug/esf_buf.o
+	$(OBJCOPY) --redefine-sym esf_buf_recycle=sdk_esf_buf_recycle /tmp/libpp_debug/esf_buf.o
+	cd /tmp/libpp_debug && xtensa-lx106-elf-ar rc /tmp/libpp_debug.a *.o
 	$(call link,$(BIN_PARTS) $(LIBS) $(LD_WRAPPERS))
 
 $(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(MGOS_ESP8266_PATH)/Makefile.build

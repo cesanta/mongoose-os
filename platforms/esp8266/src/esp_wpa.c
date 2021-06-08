@@ -53,7 +53,6 @@ int wpa_sm_rx_eapol(const u8 *src_addr, const u8 *buf, size_t len) {
       ("<- EAPOL %02x:%02x:%02x:%02x:%02x:%02x %p %d", src_addr[0], src_addr[1],
        src_addr[2], src_addr[3], src_addr[4], src_addr[5], buf, (int) len));
   log_eapol(buf, len);
-  // mg_hexdumpf(stderr, buf, len);
   return sdk_wpa_sm_rx_eapol(src_addr, buf, len);
 }
 
@@ -65,26 +64,52 @@ void sdk_wpa_register(int x, int (*wpa_output_pbuf_cb)(struct pbuf *p),
                       void *ppGetKey_cb, void (*wifi_deauth_cb)(int reason),
                       void (*wpa_neg_complete_cb)(void));
 
-static int (*s_wpa_output_pbuf_cb)(struct pbuf *p);
+// ieee80211_output_pbuf(ctx, struct pbuf *p)
+// int esf_buf_alloc(struct netif *nif, int a3 /* 1 */, int a4 /* 0 */)
+
+struct esf_buf {
+  struct pbuf *p;
+  // ...
+};
+extern struct esf_buf *sdk_esf_buf_alloc(struct pbuf *p, uint32_t a3,
+                                         uint32_t a4);
+struct esf_buf *esf_buf_alloc(struct pbuf *p, uint32_t a3, uint32_t a4) {
+  struct esf_buf *res = sdk_esf_buf_alloc(p, a3, a4);
+  if (a3 == 1 && p->tot_len == 256) {
+    pbuf_ref(p);
+    LOG(LL_INFO,
+        ("esf_buf_alloc(%p, %lu, %lu) pl %d = %p", p, a3, a4, p->len, res));
+  }
+  return res;
+}
+
+extern void sdk_esf_buf_recycle(struct esf_buf *eb, uint32_t a3);
+void esf_buf_recycle(struct esf_buf *eb, uint32_t a3) {
+  // Note: pbuf has already been freed at this point.
+  if (a3 == 1 && eb->p->tot_len == 256) {
+    LOG(LL_INFO, ("esf_buf_recycle(%p, %lu) p %p %d %d", eb, a3, eb->p,
+                  eb->p->len, eb->p->tot_len));
+    pbuf_free(eb->p);
+  }
+  sdk_esf_buf_recycle(eb, a3);
+}
+
+static int (*s_wpa_output_pbuf_cb)(struct pbuf *p);  // _ieee_output_pbuf
 static int wrap_wpa_output_pbuf(struct pbuf *p) {
+  pbuf_ref(p);
   int res = s_wpa_output_pbuf_cb(p);
-  LOG(LL_INFO, ("-> EAPOL %p n %p p %p tl %d l %d t %d f %d r %d eb %p res %d",
-                p, p->next, p->payload, p->tot_len, p->len,
+  void **ebp = (void **) (((uint8_t *) p) + 16);
+  LOG(LL_INFO,
+      ("-> EAPOL %p n %p p %p tl %d l %d t %d f %d r %d ebp %p eb %p res %d", p,
+       p->next, p->payload, p->tot_len, p->len,
 #if LWIP_VERSION_MAJOR == 1
-                p->type,
+       p->type,
 #else
-                p->type_internal,
+       p->type_internal,
 #endif
-                p->flags,
-                p->ref,
-#if LWIP_VERSION_MAJOR == 1
-                p->eb,
-#else
-                NULL,
-#endif
-                res));
+       p->flags, p->ref, ebp, *ebp, res));
   log_eapol(p->payload + 14, p->len - 14);
-  // mg_hexdumpf(stderr, p->payload, p->len);
+  pbuf_free(p);
   return res;
 }
 
