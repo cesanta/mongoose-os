@@ -77,8 +77,8 @@ struct esf_buf *esf_buf_alloc(struct pbuf *p, uint32_t a3, uint32_t a4) {
   struct esf_buf *res = sdk_esf_buf_alloc(p, a3, a4);
   if (a3 == 1 && p->tot_len == 256) {
     pbuf_ref(p);
-    LOG(LL_INFO,
-        ("esf_buf_alloc(%p, %lu, %lu) pl %d = %p", p, a3, a4, p->len, res));
+    LOG(LL_INFO, ("esf_buf_alloc(%p, %lu, %lu) pl %d = %p memfree %d", p, a3,
+                  a4, p->len, res, (int) mgos_get_free_heap_size()));
   }
   return res;
 }
