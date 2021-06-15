@@ -74,12 +74,33 @@ void mgos_msleep(uint32_t msecs) {
   mgos_usleep(msecs * 1000);
 }
 
+static uint8_t prev_intlevel = 0, nest_level = 0;
+
 IRAM void mgos_ints_disable(void) {
-  __asm volatile("rsil a2, 3" : : : "a2");
+  uint32_t prev_ps;
+  asm volatile("rsil %0, 3 \n" : "=a"(prev_ps) : :);
+  if (nest_level == 0) {
+    prev_intlevel = (prev_ps & 0xf);
+  }
+  nest_level++;
 }
 
 IRAM void mgos_ints_enable(void) {
-  __asm volatile("rsil a2, 0" : : : "a2");
+  nest_level--;
+  if (nest_level != 0) return;
+  switch (prev_intlevel) {
+    case 0:
+      asm volatile("rsil a2, 0" : : : "a2");
+      break;
+    case 1:
+      asm volatile("rsil a2, 1" : : : "a2");
+      break;
+    case 2:
+      asm volatile("rsil a2, 2" : : : "a2");
+      break;
+    default:
+      asm volatile("rsil a2, 3" : : : "a2");
+  }
 }
 
 #ifdef RTOS_SDK
