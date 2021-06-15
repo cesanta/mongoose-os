@@ -95,7 +95,7 @@ SECTIONS
     /* Note: Could reclaim a couple K by only pinning integer operations from libgcc */
     */libgcc.a:(.literal .text SORT_BY_NAME(.literal.*) SORT_BY_NAME(.text.*))
     */libmain.a:(SORT_BY_NAME(.literal.*) SORT_BY_NAME(.text.*))
-    */libpp.a:(SORT_BY_NAME(.literal.*) SORT_BY_NAME(.text.*))
+    */libpp_debug.a:(SORT_BY_NAME(.literal.*) SORT_BY_NAME(.text.*))
     */ESP8266_*_SDK/lib*.a:(.literal .text)
     *(SORT_BY_NAME(.literal.IRAM.*) SORT_BY_NAME(.text.IRAM.*))
     *(.fini.literal .fini)
