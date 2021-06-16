@@ -3,6 +3,7 @@
 #include "lwip/pbuf.h"
 #include "mgos.h"
 #include "mongoose.h"
+#include "umm_malloc.h"
 
 struct wpa_supplicant;
 u8 *sdk_wpa_sm_alloc_eapol(const struct wpa_supplicant *wpa_s, u8 type,
@@ -66,6 +67,7 @@ void sdk_wpa_register(int x, int (*wpa_output_pbuf_cb)(struct pbuf *p),
 
 // ieee80211_output_pbuf(ctx, struct pbuf *p)
 // int esf_buf_alloc(struct netif *nif, int a3 /* 1 */, int a4 /* 0 */)
+#define UMM_BLOCK_SIZE 8
 
 struct esf_buf {
   struct pbuf *p;
@@ -77,8 +79,10 @@ struct esf_buf *esf_buf_alloc(struct pbuf *p, uint32_t a3, uint32_t a4) {
   struct esf_buf *res = sdk_esf_buf_alloc(p, a3, a4);
   if (a3 == 1 && p->tot_len == 256) {
     pbuf_ref(p);
-    LOG(LL_INFO, ("esf_buf_alloc(%p, %lu, %lu) pl %d = %p memfree %d", p, a3,
-                  a4, p->len, res, (int) mgos_get_free_heap_size()));
+    umm_info(NULL, false);
+    LOG(LL_INFO, ("esf_buf_alloc(%p, %lu, %lu) pl %d = %p mf %u maxcont %u", p,
+                  a3, a4, p->len, res, mgos_get_free_heap_size(),
+                  ummHeapInfo.maxFreeContiguousBlocks * UMM_BLOCK_SIZE));
   }
   return res;
 }
