@@ -70,20 +70,55 @@ void sdk_wpa_register(int x, int (*wpa_output_pbuf_cb)(struct pbuf *p),
 #define UMM_BLOCK_SIZE 8
 
 struct esf_buf {
-  struct pbuf *p;
+  struct pbuf *p;  // 0
+  void *np1;       //  4
+  void *np2;       //  8
+  uint16 cnt1;     // 0xc
+  uint8 flg;       // 0xe
+  uint8 pad1[1];
+  struct ieee80211_frame *e_data;  // 0x10
+  uint16 len1;                     // 0x14
+  uint16 len2;                     // 0x16
+  uint8 pad3[4];
+  void *type1;          /* 0x1c */
+  struct esf_buf *next; /* 0x20 */
+  // struct _ebuf_sub1 *ep;
+};
+
+struct esf_buf_ctl {
+  struct esf_buf *type1_free_list;
   // ...
 };
+
 extern struct esf_buf *sdk_esf_buf_alloc(struct pbuf *p, uint32_t a3,
                                          uint32_t a4);
+static struct esf_buf_ctl *get_esf_buf_ctl(void) {
+  // Load from literal sdk_esf_buf_alloc's literal.
+  uint32_t l32r = *(((uint32_t *) sdk_esf_buf_alloc) + 4);
+  int16_t off = (int16_t)((l32r >> 16) & 0xffff);
+  uint32_t lit =
+      (((uint32_t) sdk_esf_buf_alloc) + 17 + (off << 2) + 3) & 0xfffffffc;
+  return *((struct esf_buf_ctl **) lit);
+}
+
+static int get_num_free_type1(void) {
+  int num_free = 0;
+  struct esf_buf_ctl *ctl = get_esf_buf_ctl();
+  for (struct esf_buf *eb = ctl->type1_free_list; eb != NULL; eb = eb->next) {
+    num_free++;
+  }
+  return num_free;
+}
+
 struct esf_buf *esf_buf_alloc(struct pbuf *p, uint32_t a3, uint32_t a4) {
   struct esf_buf *res = sdk_esf_buf_alloc(p, a3, a4);
   if (a3 == 1 && p->tot_len == 256) {
     pbuf_ref(p);
     umm_info(NULL, false);
-    LOG(LL_INFO, ("esf_buf_alloc(%p, %lu, %lu) pl %d = %p mf %u/%u/%u", p,
-                  a3, a4, p->len, res, mgos_get_free_heap_size(),
+    LOG(LL_INFO, ("esf_buf_alloc(%p, %lu, %lu) pl %d = %p mf %u/%u/%u nft1 %d",
+                  p, a3, a4, p->len, res, mgos_get_free_heap_size(),
                   ummHeapInfo.maxFreeContiguousBlocks * UMM_BLOCK_SIZE,
-                  mgos_get_min_free_heap_size()));
+                  mgos_get_min_free_heap_size(), get_num_free_type1()));
   }
   return res;
 }
@@ -92,8 +127,8 @@ extern void sdk_esf_buf_recycle(struct esf_buf *eb, uint32_t a3);
 void esf_buf_recycle(struct esf_buf *eb, uint32_t a3) {
   // Note: pbuf has already been freed at this point.
   if (a3 == 1 && eb->p->tot_len == 256) {
-    LOG(LL_INFO, ("esf_buf_recycle(%p, %lu) p %p %d %d", eb, a3, eb->p,
-                  eb->p->len, eb->p->tot_len));
+    LOG(LL_INFO, ("esf_buf_recycle(%p, %lu) p %p %d %d nft1 %d", eb, a3, eb->p,
+                  eb->p->len, eb->p->tot_len, get_num_free_type1()));
     pbuf_free(eb->p);
   }
   sdk_esf_buf_recycle(eb, a3);
