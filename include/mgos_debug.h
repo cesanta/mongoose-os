@@ -31,7 +31,7 @@ extern "C" {
 #endif
 
 #ifndef MGOS_DEBUG_TMP_BUF_SIZE
-#define MGOS_DEBUG_TMP_BUF_SIZE 128
+#define MGOS_DEBUG_TMP_BUF_SIZE 96
 #endif
 
 /*
