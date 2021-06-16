@@ -80,9 +80,10 @@ struct esf_buf *esf_buf_alloc(struct pbuf *p, uint32_t a3, uint32_t a4) {
   if (a3 == 1 && p->tot_len == 256) {
     pbuf_ref(p);
     umm_info(NULL, false);
-    LOG(LL_INFO, ("esf_buf_alloc(%p, %lu, %lu) pl %d = %p mf %u maxcont %u", p,
+    LOG(LL_INFO, ("esf_buf_alloc(%p, %lu, %lu) pl %d = %p mf %u/%u/%u", p,
                   a3, a4, p->len, res, mgos_get_free_heap_size(),
-                  ummHeapInfo.maxFreeContiguousBlocks * UMM_BLOCK_SIZE));
+                  ummHeapInfo.maxFreeContiguousBlocks * UMM_BLOCK_SIZE,
+                  mgos_get_min_free_heap_size()));
   }
   return res;
 }
