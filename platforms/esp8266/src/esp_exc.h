@@ -75,12 +75,15 @@ void esp_report_stack_overflow(int tag1, int tag2, void *tag3);
 
 extern uint32_t esp_stack_canary_en;
 
-static inline __attribute__((always_inline)) void esp_check_stack_overflow(
+static inline __attribute__((always_inline)) bool esp_check_stack_overflow(
     int tag1, int tag2, void *tag3) {
   uint32_t en = esp_stack_canary_en;
-  if ((*MGOS_STACK_CANARY_LOC & en) == (MGOS_STACK_CANARY_VAL & en)) return;
+  if ((*MGOS_STACK_CANARY_LOC & en) == (MGOS_STACK_CANARY_VAL & en)) {
+    return false;
+  }
   *MGOS_STACK_CANARY_LOC = MGOS_STACK_CANARY_VAL;
   esp_report_stack_overflow(tag1, tag2, tag3);
+  return true;
 }
 
 #ifdef __cplusplus
