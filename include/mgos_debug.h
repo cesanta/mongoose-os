@@ -30,7 +30,9 @@ extern "C" {
 #define MGOS_DEBUG_UART_BAUD_RATE 115200
 #endif
 
-#define MGOS_DEBUG_TMP_BUF_SIZE 256
+#ifndef MGOS_DEBUG_TMP_BUF_SIZE
+#define MGOS_DEBUG_TMP_BUF_SIZE 128
+#endif
 
 /*
  * Arguments for the `MGOS_EVENT_LOG` event, see `mgos_event_add_handler()`.
