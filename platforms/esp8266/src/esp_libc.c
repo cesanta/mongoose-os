@@ -53,7 +53,7 @@ void *malloc(size_t size) {
   res = (void *) umm_malloc(size);
   esp_check_stack_overflow(1, (int) size, res);
 #ifdef ESP_ABORT_ON_MALLOC_FAILURE
-  if (res == NULL) abort();
+  if (res == NULL && size != 0) abort();
 #endif
   return res;
 }
@@ -71,7 +71,7 @@ void *realloc(void *ptr, size_t size) {
   esp_check_stack_overflow(3, (int) size, ptr);
   res = (void *) umm_realloc(ptr, size);
 #ifdef ESP_ABORT_ON_MALLOC_FAILURE
-  if (res == NULL) abort();
+  if (res == NULL && size != 0) abort();
 #endif
   esp_check_stack_overflow(4, (int) size, res);
   return res;
@@ -83,7 +83,7 @@ void *calloc(size_t num, size_t size) {
   esp_check_stack_overflow(5, (int) (num * size), NULL);
   res = (void *) umm_calloc(num, size);
 #ifdef ESP_ABORT_ON_MALLOC_FAILURE
-  if (res == NULL) abort();
+  if (res == NULL && size != 0) abort();
 #endif
   esp_check_stack_overflow(5, (int) (num * size), res);
   return res;
