@@ -71,11 +71,7 @@ void *realloc(void *ptr, size_t size) {
   esp_check_stack_overflow(3, (int) size, ptr);
   res = (void *) umm_realloc(ptr, size);
 #ifdef ESP_ABORT_ON_MALLOC_FAILURE
-  if (res == NULL) {
-    printf("failed to alloc %u bytes, %d avail\n", size,
-           system_get_free_heap_size());
-    abort();
-  }
+  if (res == NULL) abort();
 #endif
   esp_check_stack_overflow(4, (int) size, res);
   return res;
