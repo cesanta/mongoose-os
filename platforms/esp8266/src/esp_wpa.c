@@ -101,7 +101,7 @@ static struct esf_buf_ctl *get_esf_buf_ctl(void) {
   return *((struct esf_buf_ctl **) lit);
 }
 
-static int get_num_free_type1(void) {
+int get_num_free_type1(void) {
   int num_free = 0;
   struct esf_buf_ctl *ctl = get_esf_buf_ctl();
   for (struct esf_buf *eb = ctl->type1_free_list; eb != NULL; eb = eb->next) {
@@ -113,6 +113,7 @@ static int get_num_free_type1(void) {
 struct esf_buf *esf_buf_alloc(struct pbuf *p, uint32_t a3, uint32_t a4) {
   struct esf_buf *res = sdk_esf_buf_alloc(p, a3, a4);
   if (a3 == 1 && p->tot_len == 256) {
+    p->flags |= 0x40;
     pbuf_ref(p);
     umm_info(NULL, false);
     LOG(LL_INFO, ("esf_buf_alloc(%p, %lu, %lu) pl %d = %p mf %u/%u/%u nft1 %d",
@@ -126,10 +127,12 @@ struct esf_buf *esf_buf_alloc(struct pbuf *p, uint32_t a3, uint32_t a4) {
 extern void sdk_esf_buf_recycle(struct esf_buf *eb, uint32_t a3);
 void esf_buf_recycle(struct esf_buf *eb, uint32_t a3) {
   // Note: pbuf has already been freed at this point.
-  if (a3 == 1 && eb->p->tot_len == 256) {
-    LOG(LL_INFO, ("esf_buf_recycle(%p, %lu) p %p %d %d nft1 %d", eb, a3, eb->p,
-                  eb->p->len, eb->p->tot_len, get_num_free_type1()));
-    pbuf_free(eb->p);
+  // Our allocation path adds an extra reference that keeps it alive.
+  struct pbuf *p = eb->p;
+  if (a3 == 1 && p->tot_len == 256 && (p->flags & 0x40) != 0) {
+    LOG(LL_INFO, ("esf_buf_recycle(%p, %lu) p %p %d %d nft1 %d", eb, a3, p,
+                  p->len, p->tot_len, get_num_free_type1()));
+    pbuf_free(p);
   }
   sdk_esf_buf_recycle(eb, a3);
 }
