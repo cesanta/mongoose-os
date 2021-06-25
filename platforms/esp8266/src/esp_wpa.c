@@ -120,6 +120,10 @@ struct esf_buf *esf_buf_alloc(struct pbuf *p, uint32_t a3, uint32_t a4) {
                   p, a3, a4, p->len, res, mgos_get_free_heap_size(),
                   ummHeapInfo.maxFreeContiguousBlocks * UMM_BLOCK_SIZE,
                   mgos_get_min_free_heap_size(), get_num_free_type1()));
+    if (res == NULL) {
+      LOG(LL_INFO, ("Aborting!"));
+      *((int *) 123) = 456;
+    }
   }
   return res;
 }
