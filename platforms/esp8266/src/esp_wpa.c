@@ -113,8 +113,6 @@ int get_num_free_type1(void) {
 struct esf_buf *esf_buf_alloc(struct pbuf *p, uint32_t a3, uint32_t a4) {
   struct esf_buf *res = sdk_esf_buf_alloc(p, a3, a4);
   if (a3 == 1 && p->tot_len == 256) {
-    p->flags |= 0x40;
-    pbuf_ref(p);
     umm_info(NULL, false);
     LOG(LL_INFO, ("esf_buf_alloc(%p, %lu, %lu) pl %d = %p mf %u/%u/%u nft1 %d",
                   p, a3, a4, p->len, res, mgos_get_free_heap_size(),
@@ -123,6 +121,9 @@ struct esf_buf *esf_buf_alloc(struct pbuf *p, uint32_t a3, uint32_t a4) {
     if (res == NULL) {
       LOG(LL_INFO, ("Aborting!"));
       *((int *) 123) = 456;
+    } else {
+      p->flags |= 0x40;
+      pbuf_ref(p);
     }
   }
   return res;
