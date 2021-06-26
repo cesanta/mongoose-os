@@ -92,13 +92,18 @@ struct esf_buf_ctl {
 
 extern struct esf_buf *sdk_esf_buf_alloc(struct pbuf *p, uint32_t a3,
                                          uint32_t a4);
+
+struct esf_buf_ctl *buf_ctl = NULL;
+
 static struct esf_buf_ctl *get_esf_buf_ctl(void) {
+  if (buf_ctl != NULL) return buf_ctl;
   // Load from literal sdk_esf_buf_alloc's literal.
   uint32_t l32r = *(((uint32_t *) sdk_esf_buf_alloc) + 4);
   int16_t off = (int16_t)((l32r >> 16) & 0xffff);
   uint32_t lit =
       (((uint32_t) sdk_esf_buf_alloc) + 17 + (off << 2) + 3) & 0xfffffffc;
-  return *((struct esf_buf_ctl **) lit);
+  buf_ctl = *((struct esf_buf_ctl **) lit);
+  return buf_ctl;
 }
 
 int get_num_free_type1(void) {
@@ -108,6 +113,16 @@ int get_num_free_type1(void) {
     num_free++;
   }
   return num_free;
+}
+
+struct esf_buf *type1_bufs[8] = {0};
+
+extern void record_t1_bufs(void) {
+  int i = 0;
+  struct esf_buf_ctl *ctl = get_esf_buf_ctl();
+  for (struct esf_buf *eb = ctl->type1_free_list; eb != NULL; eb = eb->next) {
+    type1_bufs[i++] = eb;
+  }
 }
 
 struct esf_buf *esf_buf_alloc(struct pbuf *p, uint32_t a3, uint32_t a4) {
