@@ -47,7 +47,7 @@ extern void esp_system_restart_low_level(void);
 bool s_rebooting = false;
 struct regfile g_exc_regs;
 
-void esp_exc_putc(int c) {
+IRAM void esp_exc_putc(int c) {
   int uart_no = mgos_get_stderr_uart();
   if (uart_no < 0) return;
   while (esp_uart_tx_fifo_len(uart_no) > 125) {

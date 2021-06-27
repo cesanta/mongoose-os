@@ -352,6 +352,10 @@ $(APP_BIN): $(APP_ELF) $(BUILD_DIR)/esptool2
 
 # -- Linking.
 
+LD_WRAPPERS += -Wl,--wrap=esf_buf_recycle -Wl,--wrap=esf_buf_alloc \
+               -Wl,--wrap=lmacProcessTXStartData
+               #-Wl,--wrap=pp_post
+
 # Link the main ELF output file.
 BIN_PARTS = $(BUILD_DIR)/esp_cache.c.o $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(APP_BIN_LIB_FILES)
 $(APP_ELF): $(BIN_PARTS) $(LD_SCRIPT)
@@ -364,8 +368,6 @@ endif
 	$(OBJCOPY) --redefine-sym wpa_sm_alloc_eapol=sdk_wpa_sm_alloc_eapol /tmp/libwpa_debug/wpas_glue.o
 	cd /tmp/libwpa_debug && xtensa-lx106-elf-ar rc /tmp/libwpa_debug.a *.o
 	mkdir /tmp/libpp_debug && cd /tmp/libpp_debug && xtensa-lx106-elf-ar x /opt/Espressif/ESP8266_NONOS_SDK/lib/libpp.a
-	$(OBJCOPY) --redefine-sym esf_buf_alloc=sdk_esf_buf_alloc /tmp/libpp_debug/esf_buf.o
-	$(OBJCOPY) --redefine-sym esf_buf_recycle=sdk_esf_buf_recycle /tmp/libpp_debug/esf_buf.o
 	cd /tmp/libpp_debug && xtensa-lx106-elf-ar rc /tmp/libpp_debug.a *.o
 	$(call link,$(BIN_PARTS) $(LIBS) $(LD_WRAPPERS))
 

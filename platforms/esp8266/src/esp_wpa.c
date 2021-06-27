@@ -2,8 +2,36 @@
 
 #include "lwip/pbuf.h"
 #include "mgos.h"
+#include "mgos_core_dump.h"
 #include "mongoose.h"
 #include "umm_malloc.h"
+
+struct wdevctl {
+  uint16_t num_free_bufs;
+  uint16_t num_free_bufs2;
+};
+
+extern struct wdevctl wDevCtrl;
+
+struct txq {
+  struct esf_buf *eb;
+  uint8_t unk4;
+  uint8_t unk5;
+  uint8_t unk6;
+  uint8_t unk7;
+  uint8_t unk8[9];
+  uint8_t lmac_state;  // 17 lmacIsIdle lmac_state == 0
+  uint8_t unk18[18];
+};
+
+struct _lmacConfMib {
+  uint8_t unk0[44];
+  struct txq txq[4];
+};
+
+struct _lmacConfMib lmacConfMib;
+
+int get_num_free_type1(void);
 
 struct wpa_supplicant;
 u8 *sdk_wpa_sm_alloc_eapol(const struct wpa_supplicant *wpa_s, u8 type,
@@ -30,22 +58,26 @@ void log_eapol(const u8 *buf, size_t len) {
   uint16_t mlen = ntohs(*((uint16_t *) (buf + 2)));
   uint16_t type = ntohs(*((uint16_t *) (buf + 5)));
   uint16_t klen = ntohs(*((uint16_t *) (buf + 7)));
-  LOG(LL_INFO, ("len %u type 0x%04x klen %u", mlen, type, klen));
+  LOG(LL_INFO,
+      ("len %u type 0x%04x klen %u bufs %d %u/%u", mlen, type, klen,
+       get_num_free_type1(), wDevCtrl.num_free_bufs, wDevCtrl.num_free_bufs2));
   LOG(LL_INFO,
       ("Nonce: "
        "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x"
-       "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+       "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x %u/%u",
        buf[17], buf[18], buf[19], buf[20], buf[21], buf[22], buf[23], buf[24],
        buf[25], buf[26], buf[27], buf[28], buf[29], buf[30], buf[31], buf[32],
        buf[33], buf[34], buf[35], buf[36], buf[37], buf[38], buf[39], buf[40],
-       buf[41], buf[42], buf[43], buf[44], buf[45], buf[46], buf[47], buf[48]));
+       buf[41], buf[42], buf[43], buf[44], buf[45], buf[46], buf[47], buf[48],
+       wDevCtrl.num_free_bufs, wDevCtrl.num_free_bufs2));
   if ((type & (1 << 8)) != 0) {
     LOG(LL_INFO,
         ("MIC:   "
-         "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
+         "%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x "
+         "%u/%u",
          buf[81], buf[82], buf[83], buf[84], buf[85], buf[86], buf[87], buf[88],
-         buf[89], buf[90], buf[91], buf[92], buf[93], buf[94], buf[95],
-         buf[96]));
+         buf[89], buf[90], buf[91], buf[92], buf[93], buf[94], buf[95], buf[96],
+         wDevCtrl.num_free_bufs, wDevCtrl.num_free_bufs2));
   }
 }
 
@@ -90,18 +122,18 @@ struct esf_buf_ctl {
   // ...
 };
 
-extern struct esf_buf *sdk_esf_buf_alloc(struct pbuf *p, uint32_t a3,
-                                         uint32_t a4);
-
 struct esf_buf_ctl *buf_ctl = NULL;
+
+extern struct esf_buf *__real_esf_buf_alloc(struct pbuf *p, uint32_t a3,
+                                            uint32_t a4);
 
 static struct esf_buf_ctl *get_esf_buf_ctl(void) {
   if (buf_ctl != NULL) return buf_ctl;
   // Load from literal sdk_esf_buf_alloc's literal.
-  uint32_t l32r = *(((uint32_t *) sdk_esf_buf_alloc) + 4);
+  uint32_t l32r = *(((uint32_t *) __real_esf_buf_alloc) + 4);
   int16_t off = (int16_t)((l32r >> 16) & 0xffff);
   uint32_t lit =
-      (((uint32_t) sdk_esf_buf_alloc) + 17 + (off << 2) + 3) & 0xfffffffc;
+      (((uint32_t) __real_esf_buf_alloc) + 17 + (off << 2) + 3) & 0xfffffffc;
   buf_ctl = *((struct esf_buf_ctl **) lit);
   return buf_ctl;
 }
@@ -125,8 +157,12 @@ extern void record_t1_bufs(void) {
   }
 }
 
-struct esf_buf *esf_buf_alloc(struct pbuf *p, uint32_t a3, uint32_t a4) {
-  struct esf_buf *res = sdk_esf_buf_alloc(p, a3, a4);
+#define WDEV_FIQ_REG (0x3ff20c18)
+
+void ppDiscardMPDU(struct esf_buf *ebuf);
+
+struct esf_buf *__wrap_esf_buf_alloc(struct pbuf *p, uint32_t a3, uint32_t a4) {
+  struct esf_buf *res = __real_esf_buf_alloc(p, a3, a4);
   if (a3 == 1 && p->tot_len == 256) {
     umm_info(NULL, false);
     LOG(LL_INFO, ("esf_buf_alloc(%p, %lu, %lu) pl %d = %p mf %u/%u/%u nft1 %d",
@@ -144,17 +180,37 @@ struct esf_buf *esf_buf_alloc(struct pbuf *p, uint32_t a3, uint32_t a4) {
   return res;
 }
 
-extern void sdk_esf_buf_recycle(struct esf_buf *eb, uint32_t a3);
-void esf_buf_recycle(struct esf_buf *eb, uint32_t a3) {
+extern void __real_esf_buf_recycle(struct esf_buf *eb, uint32_t a3);
+void __wrap_esf_buf_recycle(struct esf_buf *eb, uint32_t type) {
   // Note: pbuf has already been freed at this point.
   // Our allocation path adds an extra reference that keeps it alive.
   struct pbuf *p = eb->p;
-  if (a3 == 1 && p->tot_len == 256 && (p->flags & 0x40) != 0) {
-    LOG(LL_INFO, ("esf_buf_recycle(%p, %lu) p %p %d %d nft1 %d", eb, a3, p,
+  if (type == 1 && p->tot_len == 256 && (p->flags & 0x40) != 0) {
+    LOG(LL_INFO, ("esf_buf_recycle(%p, %lu) p %p %d %d nft1 %d", eb, type, p,
                   p->len, p->tot_len, get_num_free_type1()));
+    //*((int *) 123) = 456;
     pbuf_free(p);
+  } else if (type == 1) {
+    mgos_cd_printf("esf_buf_recycle(%p, %lu) nft1 %d\n", eb, type,
+                   get_num_free_type1());
   }
-  sdk_esf_buf_recycle(eb, a3);
+  __real_esf_buf_recycle(eb, type);
+}
+
+extern int __real_pp_post(int sig);
+IRAM int __wrap_pp_post(int sig) {
+  mgos_cd_putc('0' + sig);
+  return __real_pp_post(sig);
+}
+
+void __real_lmacProcessTXStartData(uint8_t id);
+IRAM void __wrap_lmacProcessTXStartData(uint8_t id) {
+  if (1 || id == 0) {
+    struct txq *q = &lmacConfMib.txq[id];
+    mgos_cd_printf("lmacProcessTXStartData(%u) eb %p %d,%d,%d,%d ls %d\n", id,
+                   q->eb, q->unk4, q->unk5, q->unk6, q->unk7, q->lmac_state);
+  }
+  __real_lmacProcessTXStartData(id);
 }
 
 static int (*s_wpa_output_pbuf_cb)(struct pbuf *p);  // _ieee_output_pbuf
@@ -171,21 +227,16 @@ static int wrap_wpa_output_pbuf(struct pbuf *p) {
        p->type_internal,
 #endif
        p->flags, p->ref, ebp, *ebp, res));
-  log_eapol(p->payload + 14, p->len - 14);
+  // log_eapol(p->payload + 14, p->len - 14);
   pbuf_free(p);
   return res;
 }
 
-struct wdevctl {
-  uint16_t num_free_bufs;
-};
-
-extern struct wdevctl wDevCtrl;
-
 static void (*s_wpa_config_assoc_ie_cb)(int a2, int *a3, int a4);
 static void wrap_wpa_config_assoc_ie_cb(int a2, int *a3, int a4) {
-  LOG(LL_INFO, ("!!wrap_wpa_config_assoc_ie_cb %d %p %d bufs %u", a2, a3, a4,
-                wDevCtrl.num_free_bufs));
+  LOG(LL_INFO,
+      ("!!wrap_wpa_config_assoc_ie_cb %d %p %d bufs %d %u/%u", a2, a3, a4,
+       get_num_free_type1(), wDevCtrl.num_free_bufs, wDevCtrl.num_free_bufs2));
   s_wpa_config_assoc_ie_cb(a2, a3, a4);
 }
 

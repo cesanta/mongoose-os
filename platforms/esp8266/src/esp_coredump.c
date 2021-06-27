@@ -41,7 +41,7 @@
 static struct regfile *s_regs;
 static struct esp_flash_write_ctx s_cd_write_ctx;
 
-void mgos_cd_putc(int c) {
+IRAM void mgos_cd_putc(int c) {
   esp_exc_putc(c);
   if (s_cd_write_ctx.addr != 0 &&
       (s_cd_write_ctx.addr & FLASH_ADDR_MAGIC_MASK) == 0) {
