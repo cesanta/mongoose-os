@@ -104,6 +104,7 @@ MGOS_SRCS += cs_file.c cs_hex.c cs_rbuf.c \
 MGOS_SRCS += esp_config.c \
              esp_coredump.c \
              esp_debug.c \
+             esp_esf_buf_monitor.c \
              esp_exc.c \
              esp_flash_writer.c \
              esp_gpio.c \
@@ -208,15 +209,12 @@ BOOT_LOADER_BIN = $(RBOOT_BUILD_DIR)/rboot.bin
 APP_BIN = $(BUILD_DIR)/$(APP).bin
 APP_ELF = $(BUILD_DIR)/$(APP).elf
 LD_SCRIPT = $(GEN_DIR)/$(APP0_ADDR).ld
-LD_WRAPPERS =
+LD_WRAPPERS = esf_buf_alloc esf_buf_recycle lmacProcessTXStartData
 HEAP_LOG_FLAGS =
 
 ifneq "${MGOS_ENABLE_HEAP_LOG}${MGOS_ENABLE_CALL_TRACE}" "00"
   HEAP_LOG_FLAGS += -DMGOS_ENABLE_HEAP_LOG
-  LD_WRAPPERS += -Wl,--wrap=umm_calloc \
-                 -Wl,--wrap=umm_malloc \
-                 -Wl,--wrap=umm_realloc \
-                 -Wl,--wrap=umm_free
+  LD_WRAPPERS += umm_calloc umm_malloc umm_realloc umm_free
 endif
 ifeq "${MGOS_ENABLE_CALL_TRACE}" "1"
   MGOS_SRCS += cs_heap_trace.c
@@ -351,13 +349,15 @@ $(APP_BIN): $(APP_ELF) $(BUILD_DIR)/esptool2
 
 # -- Linking.
 
+WLWRAP := -Wl,--wrap=
+
 # Link the main ELF output file.
 BIN_PARTS = $(BUILD_DIR)/esp_cache.c.o $(APP_OBJS) $(FFI_EXPORTS_O) $(BUILD_INFO_O) $(MG_BUILD_INFO_O) $(MGOS_LIB) $(APP_BIN_LIB_FILES)
 $(APP_ELF): $(BIN_PARTS) $(LD_SCRIPT)
 ifeq "$(MGOS_ESP8266_RTOS)" "1"
 	$(OBJCOPY) --weaken-symbol printf --weaken-symbol puts /opt/Espressif/esp-open-sdk/xtensa-lx106-elf/xtensa-lx106-elf/lib/libc.a
 endif
-	$(call link,$(BIN_PARTS) $(LIBS) $(LD_WRAPPERS))
+	$(call link,$(BIN_PARTS) $(LIBS) $(addprefix $(WLWRAP),$(LD_WRAPPERS)))
 
 $(BUILD_DIR)/dummy_main.c: $(APP_OBJS) $(MGOS_ESP8266_PATH)/Makefile.build
 	$(vecho) "GEN   $@"
