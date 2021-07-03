@@ -23,7 +23,7 @@
 // and that cannot be recovered from other than by rebooting.
 
 #ifndef ESP_ESF_BUF_MONITOR_INTERVAL_MS
-#define ESP_ESF_BUF_MONITOR_INTERVAL_MS 0  // Disabled by default
+#define ESP_ESF_BUF_MONITOR_INTERVAL_MS 5000
 #endif
 
 // This callback will be invoked once stuck TX is detected.
