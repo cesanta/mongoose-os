@@ -43,7 +43,7 @@ void esp_hw_wdt_setup(enum esp_hw_wdt_timeout stage0_timeout,
   }
   WRITE_PERI_REG(WDT_RELOAD_STAGE0, stage0_timeout);
   if (stage1_timeout != ESP_HW_WDT_DISABLE) {
-    WRITE_PERI_REG(WDT_RELOAD_STAGE1, stage0_timeout);
+    WRITE_PERI_REG(WDT_RELOAD_STAGE1, stage1_timeout);
   } else {
     ctl |= WDT_CTL_STAGE1_DISABLE;
     WRITE_PERI_REG(WDT_CTL, ctl);
