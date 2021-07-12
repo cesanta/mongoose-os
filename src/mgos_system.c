@@ -32,6 +32,12 @@
 #include "mgos_wifi.h"
 #endif
 
+bool restart_cd = true;
+
+void crash(void) {
+  *((int *) 123) = 456;
+}
+
 void mgos_system_restart(void) {
   mgos_event_trigger(MGOS_EVENT_REBOOT, NULL);
   mgos_vfs_umount_all();
@@ -42,6 +48,7 @@ void mgos_system_restart(void) {
 #endif
   LOG(LL_INFO, ("Restarting"));
   mgos_debug_flush();
+  if (restart_cd) crash();
   mgos_dev_system_restart();
 }
 
@@ -56,6 +63,7 @@ static void trigger_ev(void *arg) {
 
 void mgos_system_restart_after(int delay_ms) {
   LOG(LL_INFO, ("Rebooting in %d ms", delay_ms));
+  if (restart_cd) mgos_system_restart();
   struct mgos_event_reboot_after_arg *arg = calloc(1, sizeof(*arg));
   arg->reboot_at_uptime_micros = mgos_uptime_micros() + delay_ms * 1000;
   mgos_invoke_cb(trigger_ev, arg, false /* from_isr */);
