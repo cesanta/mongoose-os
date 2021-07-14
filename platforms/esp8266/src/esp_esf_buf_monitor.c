@@ -29,7 +29,7 @@ uint8_t g_esf_buf_canary_strikes = 0;
 
 extern struct esf_buf *__real_esf_buf_alloc(struct pbuf *p, uint32_t type,
                                             uint32_t a4);
-struct esf_buf *__wrap_esf_buf_alloc(struct pbuf *p, uint32_t type,
+IRAM struct esf_buf *__wrap_esf_buf_alloc(struct pbuf *p, uint32_t type,
                                      uint32_t a4) {
   struct esf_buf *eb = __real_esf_buf_alloc(p, type, a4);
   if (eb != NULL) {
@@ -44,7 +44,7 @@ struct esf_buf *__wrap_esf_buf_alloc(struct pbuf *p, uint32_t type,
 }
 
 extern void __real_esf_buf_recycle(struct esf_buf *eb, uint32_t type);
-void __wrap_esf_buf_recycle(struct esf_buf *eb, uint32_t type) {
+IRAM void __wrap_esf_buf_recycle(struct esf_buf *eb, uint32_t type) {
   for (int i = 0; i < 8; i++) {
     if (g_pending_bufs[i] == eb) {
       g_pending_bufs[i] = NULL;
