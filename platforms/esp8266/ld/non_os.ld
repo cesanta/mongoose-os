@@ -37,6 +37,7 @@ SECTIONS
     */libc.a:(.data .data.*)
     */libhal.a:(.data .data.* .rodata SORT_BY_NAME(.rodata.*))
     */ESP8266_*_SDK/lib*.a:(.data .data.*)
+    */esp8266/sdk_libs/lib*.a:(.data .data.*)
     */liblwip*.a:(.data .data.*)
     */libmbed*.a:(.data .data.*)
     */lib*.a:(.data .data.*)
@@ -97,6 +98,7 @@ SECTIONS
     */libmain.a:(SORT_BY_NAME(.literal.*) SORT_BY_NAME(.text.*))
     */libpp.a:(SORT_BY_NAME(.literal.*) SORT_BY_NAME(.text.*))
     */ESP8266_*_SDK/lib*.a:(.literal .text)
+    */esp8266/sdk_libs/lib*.a:(.literal .text)
     *(SORT_BY_NAME(.literal.IRAM.*) SORT_BY_NAME(.text.IRAM.*))
     *(.fini.literal .fini)
     _text_end = ABSOLUTE(.);
@@ -128,6 +130,7 @@ SECTIONS
     */libc.a:(SORT_BY_NAME(.literal.*) .irom.text .text SORT_BY_NAME(.text.*))
     */libstd*.a:(.literal SORT_BY_NAME(.literal.*) .irom.text .text SORT_BY_NAME(.text.*))
     */ESP8266_*_SDK/lib*.a:(.irom0.literal .literal.* .irom0.text SORT_BY_NAME(.text.*))
+    */esp8266/sdk_libs/lib*.a:(.irom0.literal .literal.* .irom0.text SORT_BY_NAME(.text.*))
     */liblwip*.a:(SORT_BY_NAME(.literal.*) .irom.text .text SORT_BY_NAME(.text.*))
     */libmbed*.a:(SORT_BY_NAME(.literal.*) .irom.text .text SORT_BY_NAME(.text.*))
     */lib*.a:(SORT_BY_NAME(.literal.*) .irom.text .text SORT_BY_NAME(.text.*))

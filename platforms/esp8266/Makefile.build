@@ -130,7 +130,7 @@ IPATH = $(MGOS_IPATH) $(sort $(APP_SOURCE_DIRS) $(APP_INCLUDES)) \
         $(MGOS_ESP8266_PATH)/include $(MGOS_ESP8266_PATH)/include/spiffs \
         $(BOOTLOADER_PATH)/rboot \
         $(MGOS_ESP_SRC_PATH)
-LPATH = $(SDK_PATH)/lib $(BUILD_DIR)/lwip
+LPATH = $(MGOS_ESP8266_PATH)/sdk_libs $(SDK_PATH)/lib $(BUILD_DIR)/lwip
 
 include $(MGOS_PATH)/tools/mk/mgos_features.mk
 
