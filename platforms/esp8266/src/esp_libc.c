@@ -135,19 +135,31 @@ void _exit(int status) {
   abort();
 }
 
-/*
- * This will prevent counter wrap if time is read regularly.
- * At least Mongoose poll queries time, so we're covered.
- */
-
 IRAM int64_t mgos_uptime_micros(void) {
-  static uint32_t prev_time = 0;
-  static uint32_t num_overflows = 0;
+  static volatile uint32_t t[2] = {0, 0};
   uint32_t time = system_get_time();
+  uint32_t prev_time = t[0], num_overflows = t[1];
+  /*
+   * Test for wraparound. This may get preempted and race (e.g. with ISR).
+   * We don't want to disable ints for every call to this function,
+   * hence the trickery.
+   */
+  if (((time ^ prev_time) & (1UL << 31)) != 0) {
+    mgos_ints_disable();
+    if (t[1] == num_overflows) {
+      /* We got here first, update the global overflow counter. */
+      t[1] = ++num_overflows;
+      t[0] = time;
+    } else {
+      /* We raced and lost, only update the local copy of the counter. */
+      num_overflows++;
+    }
+    mgos_ints_enable();
+  } else {
+    t[0] = time;
+  }
   int64_t time64 = time;
-  if (prev_time > 0 && time < prev_time) num_overflows++;
   time64 += (((uint64_t) num_overflows) * (1ULL << 32));
-  prev_time = time;
   return time64;
 }
 
