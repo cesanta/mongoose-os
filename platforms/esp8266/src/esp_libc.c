@@ -144,7 +144,7 @@ IRAM int64_t mgos_uptime_micros(void) {
    * We don't want to disable ints for every call to this function,
    * hence the trickery.
    */
-  if (((time ^ prev_time) & (1UL << 31)) != 0) {
+  if (((time ^ prev_time) & (1UL << 31)) != 0 && (time & (1UL << 31)) == 0) {
     mgos_ints_disable();
     if (t[1] == num_overflows) {
       /* We got here first, update the global overflow counter. */
