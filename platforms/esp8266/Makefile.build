@@ -104,7 +104,6 @@ MGOS_SRCS += cs_file.c cs_hex.c cs_rbuf.c \
 MGOS_SRCS += esp_config.c \
              esp_coredump.c \
              esp_debug.c \
-             esp_esf_buf_monitor.c \
              esp_exc.c \
              esp_flash_writer.c \
              esp_gpio.c \
@@ -209,7 +208,7 @@ BOOT_LOADER_BIN = $(RBOOT_BUILD_DIR)/rboot.bin
 APP_BIN = $(BUILD_DIR)/$(APP).bin
 APP_ELF = $(BUILD_DIR)/$(APP).elf
 LD_SCRIPT = $(GEN_DIR)/$(APP0_ADDR).ld
-LD_WRAPPERS = esf_buf_alloc esf_buf_recycle lmacProcessTXStartData
+LD_WRAPPERS =
 HEAP_LOG_FLAGS =
 
 ifneq "${MGOS_ENABLE_HEAP_LOG}${MGOS_ENABLE_CALL_TRACE}" "00"

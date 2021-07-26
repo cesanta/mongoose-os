@@ -38,7 +38,6 @@
 #include "esp_adc.h"
 #endif
 #include "esp_coredump.h"
-#include "esp_esf_buf_monitor.h"
 #include "esp_exc.h"
 #include "esp_features.h"
 #include "esp_fs.h"
@@ -173,10 +172,6 @@ enum mgos_init_result esp_mgos_init2(void) {
     LOG(LL_ERROR, ("%s init error: %d", "MG", ir));
     return ir;
   }
-
-#if ESP_ESF_BUF_MONITOR_INTERVAL_MS > 0
-  esp_esf_buf_monitor_init();
-#endif
 
   return MGOS_INIT_OK;
 }
