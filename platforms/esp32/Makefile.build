@@ -129,14 +129,18 @@ export MGOS_IPATH
 include $(MGOS_PATH)/tools/mk/mgos_mkfs.mk
 
 # Flags for other component builds go here.
+# -fno-jump-tables -fno-tree-switch-conversion:
+#    https://github.com/espressif/esp-idf/issues/1552#issuecomment-883600363
 CFLAGS += -Wall -Werror -pipe -mtext-section-literals \
+          -fno-jump-tables -fno-tree-switch-conversion \
           -I$(MGOS_PATH) -I$(MGOS_SRC_PATH) -I$(MGOS_INCLUDE_PATH) \
           $(APP_CFLAGS) $(addprefix -I ,$(APP_INCLUDES)) \
           -DMGOS_ROOT_DEVTAB='$(MGOS_ROOT_DEVTAB)' \
           -DMGOS_ROOT_FS_TYPE='$(MGOS_ROOT_FS_TYPE)' \
           -DMGOS_ROOT_FS_OPTS='$(MGOS_ROOT_FS_OPTS)' \
           -DMGOS_ROOT_FS_EXTRACT='$(MGOS_ROOT_FS_EXTRACT)'
-CXXFLAGS += -pipe $(APP_CXXFLAGS) $(addprefix -I ,$(APP_INCLUDES))
+CXXFLAGS += -pipe -fno-jump-tables -fno-tree-switch-conversion \
+            $(APP_CXXFLAGS) $(addprefix -I ,$(APP_INCLUDES))
 
 # Settings for the ESP-IDF build system
 # See docs here:
