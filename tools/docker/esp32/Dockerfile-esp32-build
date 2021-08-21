@@ -41,6 +41,9 @@ RUN git clone -j 8 --branch $DOCKER_TAG --depth 1 --recursive --shallow-submodul
 RUN cd /opt/Espressif/esp-idf && git tag v$DOCKER_TAG
 ENV IDF_PATH=/opt/Espressif/esp-idf
 
+ADD lwip_dns.patch /opt/Espressif/esp-idf/components/lwip/lwip
+RUN cd /opt/Espressif/esp-idf/components/lwip/lwip && patch -p 1 < lwip_dns.patch
+
 # Pre-build configuration tools
 RUN cd $IDF_PATH/tools/kconfig && make conf-idf
 

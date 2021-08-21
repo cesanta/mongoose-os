@@ -23,8 +23,7 @@
  * is lost, established, etc.
  */
 
-#ifndef CS_FW_INCLUDE_MGOS_NET_H_
-#define CS_FW_INCLUDE_MGOS_NET_H_
+#pragma once
 
 #include <stdbool.h>
 
@@ -35,7 +34,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* __cplusplus */
+#endif
 
 /*
  * Event group which should be given to `mgos_event_add_group_handler()`
@@ -85,6 +84,7 @@ struct mgos_net_ip_info {
   struct sockaddr_in ip;
   struct sockaddr_in netmask;
   struct sockaddr_in gw;
+  struct sockaddr_in dns;
 };
 
 struct mgos_net_event_data {
@@ -118,14 +118,6 @@ bool mgos_net_str_to_ip(const char *ips, struct sockaddr_in *sin);
  */
 bool mgos_net_str_to_ip_n(const struct mg_str ips, struct sockaddr_in *sin);
 
-/*
- * Returns nameserver address. The caller should `free()` it. Returns NULL
- * in case of no DNS.
- */
-char *mgos_get_nameserver(void);
-
 #ifdef __cplusplus
 }
-#endif /* __cplusplus */
-
-#endif /* CS_FW_INCLUDE_MGOS_NET_H_ */
+#endif

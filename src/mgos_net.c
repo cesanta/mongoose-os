@@ -38,6 +38,8 @@ struct net_ev_info {
   enum mgos_net_event ev;
 };
 
+static void mgos_update_nameserver(void);
+
 static const char *get_if_name(enum mgos_net_if_type if_type, int if_instance) {
   const char *name = "";
   switch (if_type) {
@@ -80,6 +82,7 @@ static void mgos_net_on_change_cb(void *arg) {
   switch (ei->ev) {
     case MGOS_NET_EV_DISCONNECTED: {
       LOG(LL_INFO, ("%s: disconnected", if_name));
+      mgos_update_nameserver();
       break;
     }
     case MGOS_NET_EV_CONNECTING: {
@@ -92,17 +95,13 @@ static void mgos_net_on_change_cb(void *arg) {
     }
     case MGOS_NET_EV_IP_ACQUIRED: {
       if (mgos_net_get_ip_info(ei->if_type, ei->if_instance, &evd.ip_info)) {
-        char ip[16], gw[16];
-        char *nameserver = mgos_get_nameserver();
-        memset(ip, 0, sizeof(ip));
-        memset(gw, 0, sizeof(gw));
+        char ip[16], gw[16], dns[16];
         mgos_net_ip_to_str(&evd.ip_info.ip, ip);
         mgos_net_ip_to_str(&evd.ip_info.gw, gw);
-        LOG(LL_INFO, ("%s: ready, IP %s, GW %s, DNS %s", if_name, ip, gw,
-                      nameserver ? nameserver : "default"));
-        mg_set_nameserver(mgos_get_mgr(), nameserver);
-        free(nameserver);
+        mgos_net_ip_to_str(&evd.ip_info.dns, dns);
+        LOG(LL_INFO, ("%s: ready, IP %s, GW %s, DNS %s", if_name, ip, gw, dns));
       }
+      mgos_update_nameserver();
       break;
     }
   }
@@ -179,18 +178,32 @@ bool mgos_net_str_to_ip_n(struct mg_str ips, struct sockaddr_in *sin) {
   return res;
 }
 
-char *mgos_get_nameserver() {
-#ifdef MGOS_HAVE_WIFI
-  char *dns = NULL;
-  if (mgos_sys_config_get_wifi_sta_nameserver() != NULL) {
-    dns = strdup(mgos_sys_config_get_wifi_sta_nameserver());
-  } else {
-    dns = mgos_wifi_get_sta_default_dns();
+static void mgos_update_nameserver(void) {
+  char nameserver[16];
+  struct mgos_net_ip_info ip_info;
+  memset(&ip_info, 0, sizeof(ip_info));
+  if (mgos_net_get_ip_info(MGOS_NET_IF_TYPE_ETHERNET, 0, &ip_info) &&
+      ip_info.ip.sin_addr.s_addr != 0 && ip_info.dns.sin_addr.s_addr != 0) {
+    goto out;
   }
-  return dns;
-#else
-  return NULL;
-#endif
+  memset(&ip_info, 0, sizeof(ip_info));
+  if (mgos_net_get_ip_info(MGOS_NET_IF_TYPE_WIFI, 0, &ip_info) &&
+      ip_info.ip.sin_addr.s_addr != 0 && ip_info.dns.sin_addr.s_addr != 0) {
+    goto out;
+  }
+  memset(&ip_info, 0, sizeof(ip_info));
+  if (mgos_net_get_ip_info(MGOS_NET_IF_TYPE_PPP, 0, &ip_info) &&
+      ip_info.ip.sin_addr.s_addr != 0 && ip_info.dns.sin_addr.s_addr != 0) {
+    goto out;
+  }
+  mgos_net_str_to_ip(MGOS_DEFAULT_NAMESERVER, &ip_info.dns);
+out:
+  mgos_net_ip_to_str(&ip_info.dns, nameserver);
+  struct mg_mgr *mgr = mgos_get_mgr();
+  if (mgr->nameserver != NULL && strcmp(mgr->nameserver, nameserver) == 0)
+    return;
+  LOG(LL_DEBUG, ("Setting DNS server to %s", nameserver));
+  mg_set_nameserver(mgr, nameserver);
 }
 
 enum mgos_init_result mgos_net_init(void) {
