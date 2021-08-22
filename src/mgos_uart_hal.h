@@ -1,17 +1,28 @@
 /*
  * Copyright (c) 2014-2017 Cesanta Software Limited
  * All rights reserved
+ *
+ * Licensed under the Apache License, Version 2.0 (the ""License"");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an ""AS IS"" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
-#ifndef CS_FW_SRC_MGOS_UART_HAL_H_
-#define CS_FW_SRC_MGOS_UART_HAL_H_
+#pragma once
 
 #include "mgos_system.h"
 #include "mgos_uart.h"
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* __cplusplus */
+#endif
 
 struct mgos_uart_state {
   int uart_no;
@@ -19,8 +30,8 @@ struct mgos_uart_state {
   struct mbuf rx_buf;
   struct mbuf tx_buf;
   bool rx_enabled;
-  bool xoff_recd;
   bool xoff_sent;
+  int64_t xoff_recd_ts;
   struct mgos_uart_stats stats;
   mgos_uart_dispatcher_t dispatcher_cb;
   void *dispatcher_data;
@@ -70,6 +81,4 @@ void mgos_uart_hal_set_rx_enabled(struct mgos_uart_state *us, bool enabled);
 
 #ifdef __cplusplus
 }
-#endif /* __cplusplus */
-
-#endif /* CS_FW_SRC_MGOS_UART_HAL_H_ */
+#endif

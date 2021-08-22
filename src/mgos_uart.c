@@ -24,11 +24,12 @@
 #include "mgos_mongoose.h"
 #include "mgos_mongoose_internal.h"
 #include "mgos_system.h"
+#include "mgos_time.h"
 #include "mgos_uart_hal.h"
 #include "mgos_utils.h"
 
-#ifndef IRAM
-#define IRAM
+#ifndef MGOS_XOFF_TIMEOUT
+#define MGOS_XOFF_TIMEOUT 2 /* seconds */
 #endif
 
 #ifndef MGOS_MAX_NUM_UARTS
@@ -57,13 +58,23 @@ IRAM void mgos_uart_schedule_dispatcher(int uart_no, bool from_isr) {
 #endif
 }
 
+static bool mgos_uart_check_xoff(struct mgos_uart_state *us) {
+  if (us->cfg.tx_fc_type != MGOS_UART_FC_SW) return true;
+  if (us->xoff_recd_ts == 0) return true;
+  int64_t elapsed = mgos_uptime_micros() - us->xoff_recd_ts;
+  /* Using 2^19 instead of 1000000 for speed, it's within 5%. */
+  if (elapsed < MGOS_XOFF_TIMEOUT * 1000000) return false;
+  us->xoff_recd_ts = 0;
+  return true;
+}
+
 void mgos_uart_dispatcher(void *arg) {
   int uart_no = (intptr_t) arg;
   struct mgos_uart_state *us = s_uart_state[uart_no];
   if (us == NULL) return;
   uart_lock(us);
   if (us->rx_enabled) mgos_uart_hal_dispatch_rx_top(us);
-  if (!us->xoff_recd) mgos_uart_hal_dispatch_tx_top(us);
+  if (mgos_uart_check_xoff(us)) mgos_uart_hal_dispatch_tx_top(us);
   if (us->dispatcher_cb != NULL) {
     uart_unlock(us);
     us->dispatcher_cb(uart_no, us->dispatcher_data);
@@ -126,10 +137,10 @@ size_t mgos_uart_read(int uart_no, void *buf, size_t len) {
       uint8_t ch = (uint8_t) us->rx_buf.buf[i];
       switch (ch) {
         case MGOS_UART_XON_CHAR:
-          us->xoff_recd = false;
+          us->xoff_recd_ts = 0;
           break;
         case MGOS_UART_XOFF_CHAR:
-          us->xoff_recd = true;
+          us->xoff_recd_ts = mgos_uptime_micros();
           break;
         default:
           ((uint8_t *) buf)[j++] = ch;
@@ -163,7 +174,7 @@ size_t mgos_uart_read_mbuf(int uart_no, struct mbuf *mb, size_t len) {
 
 void mgos_uart_flush(int uart_no) {
   struct mgos_uart_state *us = s_uart_state[uart_no];
-  if (us == NULL || us->xoff_recd) return;
+  if (us == NULL || !mgos_uart_check_xoff(us)) return;
   while (us->tx_buf.len > 0) {
     uart_lock(us);
     mgos_uart_hal_dispatch_tx_top(us);
@@ -201,7 +212,8 @@ bool mgos_uart_configure(int uart_no, const struct mgos_uart_config *cfg) {
     if (res) {
       memcpy(&us->cfg, cfg, sizeof(us->cfg));
       if (us->cfg.tx_fc_type != MGOS_UART_FC_SW) {
-        us->xoff_sent = us->xoff_recd = false;
+        us->xoff_sent = false;
+        us->xoff_recd_ts = 0;
       }
     }
   }
