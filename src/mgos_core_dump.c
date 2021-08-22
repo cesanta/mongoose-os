@@ -26,12 +26,13 @@
 #include "common/str_util.h"
 
 #include "mgos_system.h"
+#include "mgos_time.h"
 
 #ifndef NOINSTR
 #define NOINSTR
 #endif
 
-extern const char *build_version, *build_id;
+extern const char *build_version, *build_id, *build_timestamp;
 
 static mgos_cd_section_writer_f s_section_writers[8];
 
@@ -93,10 +94,12 @@ NOINSTR void mgos_cd_write(void) {
   mgos_cd_puts("\"app\": \"" MGOS_APP "\", ");
   mgos_cd_puts("\"arch\": \"" CS_STRINGIFY_MACRO(FW_ARCHITECTURE) "\", ");
   mgos_cd_printf("\"version\": \"%s\", ", build_version);
-  mgos_cd_printf("\"build_id\": \"%s\"", build_id);
+  mgos_cd_printf("\"build_id\": \"%s\", ", build_id);
+  mgos_cd_printf("\"build_ts\": \"%s\",\n", build_timestamp);
 #ifdef MGOS_SDK_BUILD_IMAGE
-  mgos_cd_printf(", \"build_image\": \"" MGOS_SDK_BUILD_IMAGE "\"");
+  mgos_cd_printf("\"build_image\": \"" MGOS_SDK_BUILD_IMAGE "\", ");
 #endif
+  mgos_cd_printf("\"uptime\": %lld", (long long) mgos_uptime_micros());
 // For ARM targets, add profile information.
 #if defined(__FPU_PRESENT)
 #if __FPU_PRESENT
