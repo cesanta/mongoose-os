@@ -33,11 +33,7 @@ RUN cd /opt/Espressif/esp-open-sdk && \
 
 USER root
 
-RUN cd /opt/Espressif/ESP8266_NONOS_SDK/lib && \
-    xtensa-lx106-elf-ar -x libmain.a && \
-    xtensa-lx106-elf-objcopy --weaken mem_manager.o && \
-    xtensa-lx106-elf-ar -rc libmain.a *.o && \
-    rm *.o
+RUN xtensa-lx106-elf-ar d /opt/Espressif/ESP8266_NONOS_SDK/lib/libmain.a mem_manager.o
 
 RUN xtensa-lx106-elf-objcopy \
       --weaken-symbol Cache_Read_Enable_New \

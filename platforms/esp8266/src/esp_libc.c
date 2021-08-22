@@ -89,6 +89,46 @@ void *calloc(size_t num, size_t size) {
   return res;
 }
 
+// Allocation functions used by the SDK.
+// Note that SDK function prototypes have additional arguments that we ignore.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wmissing-attributes"
+// void *pvPortMalloc(size_t size, const char *file, unsigned line, unsigned
+// iram) SDK 3.0 added "iram" parameter, presumably to allocate memory from
+// IRAM. It's not documented and has only been seen to be used for minor DHCP
+// stuff.
+void *pvPortMalloc(size_t size) __attribute__((alias("malloc")));
+
+// void *pvPortRealloc(void *ptr, size_t size, const char *file, unsigned line)
+void *pvPortRealloc(void *ptr, size_t size) __attribute__((alias("realloc")));
+
+// void vPortFree(void *ptr, const char *file, unsigned line) {
+void vPortFree(void *ptr) __attribute__((alias("free")));
+#pragma GCC diagnostic pop
+
+void *pvPortZalloc(size_t size, const char *file, unsigned line) {
+  (void) file;
+  (void) line;
+  return calloc(1, size);
+}
+
+size_t xPortGetFreeHeapSize(void) {
+  return umm_free_heap_size();
+}
+
+size_t xPortWantedSizeAlign(void) {
+  return 8;
+}
+
+void esp_umm_init(void) {
+  /* Nothing to do, see header for details */
+}
+
+void esp_umm_oom_cb(size_t size, size_t blocks_cnt) {
+  fprintf(stderr, "E:M %u (%u blocks)\n", (unsigned int) size,
+          (unsigned int) blocks_cnt);
+}
+
 #ifndef LWIP_OPEN_SRC
 
 uint32_t htonl(uint32_t hostlong) {

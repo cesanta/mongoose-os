@@ -114,8 +114,7 @@ MGOS_SRCS += esp_config.c \
              esp_libc.c \
              esp_main.c \
              esp_periph.c \
-             esp_uart.c \
-             esp_umm_malloc.c
+             esp_uart.c
 
 APP_SRCS := $(notdir $(foreach m,$(APP_SOURCES),$(wildcard $(m)))) $(APP_EXTRA_SRCS)
 APP_BIN_LIB_FILES := $(foreach m,$(APP_BIN_LIBS),$(wildcard $(m)))
