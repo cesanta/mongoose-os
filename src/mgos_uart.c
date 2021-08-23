@@ -21,6 +21,7 @@
 
 #include "common/cs_dbg.h"
 
+#include "mgos_iram.h"
 #include "mgos_mongoose.h"
 #include "mgos_mongoose_internal.h"
 #include "mgos_system.h"
