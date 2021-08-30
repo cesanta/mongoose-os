@@ -31,9 +31,14 @@
 #define _IRAM_SECTION_PREFIX ".text.IRAM"
 #endif
 
+#ifndef IRAM
 #define IRAM     \
   __attribute__( \
       (section(_IRAM_SECTION_PREFIX "." _IRAM_STR(__LINE__) "." _IRAM_STR(__COUNTER__))))
+#endif
 
+#ifndef NOINLINE
 #define NOINLINE __attribute__((noinline))
+#endif
+
 #endif  // __ASSEMBLER__
