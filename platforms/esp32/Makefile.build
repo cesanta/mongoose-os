@@ -1,4 +1,4 @@
-MAKEFLAGS += --warn-undefined-variables --silent
+MAKEFLAGS += --no-builtin-rules --warn-undefined-variables
 .DEFAULT_GOAL := all
 
 ifdef MGOS_VARS_FILE

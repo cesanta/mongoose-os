@@ -2,7 +2,7 @@
 #
 # Mongoose OS for Ubuntu
 
-MAKEFLAGS += --warn-undefined-variables
+MAKEFLAGS += --no-builtin-rules --warn-undefined-variables
 .DEFAULT_GOAL := all
 
 MGOS_PATH ?= ../..

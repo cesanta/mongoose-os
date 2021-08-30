@@ -2,7 +2,7 @@
 #
 # Mongoose OS Firmware boot loader for CC3200
 #
-MAKEFLAGS += --warn-undefined-variables
+MAKEFLAGS += --no-builtin-rules --warn-undefined-variables
 
 override APP = mg-boot
 override APP_PLATFORM = cc3200

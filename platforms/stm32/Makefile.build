@@ -1,4 +1,4 @@
-MAKEFLAGS += --warn-undefined-variables
+MAKEFLAGS += --no-builtin-rules --warn-undefined-variables
 .DEFAULT_GOAL := all
 
 .PHONY: all clean
