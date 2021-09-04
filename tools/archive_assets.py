@@ -24,7 +24,6 @@ import subprocess
 import tempfile
 import time
 
-import git       # apt-get install python3-git || pip3 install GitPython
 import requests  # apt-get install python3-requests || pip3 install requests
 
 import github_api
