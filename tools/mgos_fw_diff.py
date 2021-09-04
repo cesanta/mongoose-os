@@ -90,7 +90,7 @@ def do_diff(old_binary, new_binary, objdump_binary, size_cutoff):
     for s1, s2 in sorted(changes, key=lambda ss: abs(ss[1].size - ss[0].size), reverse=True):
         size_diff = s2.size - s1.size
         if s1.sect == s2.sect:
-            if s.size >= size_cutoff:
+            if s1.size >= size_cutoff or s2.size >= size_cutoff:
                 print(f"  {s1.name} {s1.sect} {sign(size_diff)}")
         else:
             print(f"  {s1.name} {s1.sect}/{s2.sect} {sign(size_diff)}")
