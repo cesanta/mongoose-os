@@ -32,7 +32,7 @@ import github_api
 token = ""
 
 parser = argparse.ArgumentParser(description="")
-parser.add_argument("--token_filepath", type=str, default="/secrets/github/cesantabot/github_token")
+parser.add_argument("--token_filepath", type=str, default=None, required=True)
 parser.add_argument("--out_dir", type=str)
 parser.add_argument("--parallelism", type=int, default=32)
 parser.add_argument("--tag", type=str)
