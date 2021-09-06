@@ -14,13 +14,13 @@ $(BUILD_DIR):
 	@mkdir -p $(BUILD_DIR)
 
 $(BUILD_DIR)/esptool2.o: esptool2.c esptool2.h esptool2_elf.h elf.h
-	@echo "CC $<"
-	$(CC) $(CFLAGS) -c $< -o $@
+	@echo "  CC    $<"
+	@$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/esptool2_elf.o: esptool2_elf.c esptool2.h esptool2_elf.h elf.h
-	@echo "CC $<"
-	$(CC) $(CFLAGS) -c $< -o $@
+	@echo "  CC    $<"
+	@$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD_DIR)/esptool2: $(BUILD_DIR)/esptool2.o $(BUILD_DIR)/esptool2_elf.o
-	@echo "LD $@"
-	$(LD) -o $@ $^
+	@echo "  LD    $@"
+	@$(LD) -o $@ $^

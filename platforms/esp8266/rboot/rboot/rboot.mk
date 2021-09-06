@@ -60,30 +60,30 @@ RBOOT_EXTRA_INCDIR := $(addprefix -I,$(RBOOT_EXTRA_INCDIR))
 all: $(RBOOT_BUILD_BASE)/rboot.bin
 
 $(RBOOT_BUILD_BASE)/rboot-stage2a.o: rboot-stage2a.c rboot-private.h rboot.h
-	@echo "CC $<"
+	@echo "  CC    $<"
 	@$(CC_WRAPPER) $(CC) $(CFLAGS) $(RBOOT_EXTRA_INCDIR) -c $< -o $@
 
 $(RBOOT_BUILD_BASE)/rboot-stage2a.elf: $(RBOOT_BUILD_BASE)/rboot-stage2a.o
-	@echo "LD $@"
+	@echo "  LD    $@"
 	@$(CC_WRAPPER) $(LD) -Trboot-stage2a.ld $(LDFLAGS) -Wl,--start-group $^ -Wl,--end-group -o $@
 
 $(RBOOT_GEN_BASE)/rboot-hex2a.h: $(RBOOT_BUILD_BASE)/rboot-stage2a.elf
-	@echo "E2 $@"
+	@echo "  E2    $@"
 	@$(ESPTOOL2) -quiet -header $< $@ .text
 
 $(RBOOT_BUILD_BASE)/rboot.o: rboot.c rboot-private.h rboot.h $(RBOOT_GEN_BASE)/rboot-hex2a.h
-	@echo "CC $<"
+	@echo "  CC    $<"
 	@$(CC) $(CFLAGS) -I$(RBOOT_GEN_BASE) $(RBOOT_EXTRA_INCDIR) -c $< -o $@
 
 $(RBOOT_BUILD_BASE)/%.o: %.c %.h
-	@echo "CC $<"
+	@echo "  CC    $<"
 	@$(CC) $(CFLAGS) $(RBOOT_EXTRA_INCDIR) -c $< -o $@
 
 $(RBOOT_BUILD_BASE)/%.elf: $(RBOOT_BUILD_BASE)/%.o
-	@echo "LD $@"
+	@echo "  LD    $@"
 	@$(LD) -T$(LD_SCRIPT) $(LDFLAGS) -Wl,--start-group $^ -Wl,--end-group -o $@
 
 $(RBOOT_BUILD_BASE)/%.bin: $(RBOOT_BUILD_BASE)/%.elf
-	@echo "E2 $@"
+	@echo "  E2    $@"
 	@$(ESPTOOL2) $(E2_OPTS) $< $@ .text .rodata
 

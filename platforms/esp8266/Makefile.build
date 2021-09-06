@@ -384,7 +384,7 @@ $(BUILD_DIR)/%.cpp.o: %.cpp $(GENFILES_FLAG)
 
 # Assembly sources.
 $(BUILD_DIR)/%.S.o: %.S $(GENFILES_FLAG)
-	$(vecho) "AS    $< -> $@"
+	$(vecho) "AS    $<"
 	$(Q) $(CC) -c -mtext-section-literals $(MGOS_CFLAGS) -o $@ $<
 
 # This one is for generated sources in build/gen directory.

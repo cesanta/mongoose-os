@@ -12,7 +12,7 @@ FW_META_CMD ?= $(MGOS_PATH)/tools/mgos_fw_meta.py
 MGOS_FW_EXTRA_ATTRS ?=
 
 $(FW_ZIP): $(FW_MANIFEST) $(FW_META_CMD)
-	$(vecho) "ZIP    $@"
+	$(vecho) "ZIP   $@"
 	$(Q) $(FW_META_CMD) create_fw \
 	  --manifest=$(FW_MANIFEST) \
 	  --src_dir=$(FW_STAGING_DIR) \
@@ -21,7 +21,7 @@ $(FW_ZIP): $(FW_MANIFEST) $(FW_META_CMD)
 	$(vecho) "Built $(APP)/$(APP_PLATFORM) version $(shell $(FW_META_CMD) get $(FW_MANIFEST) version) ($(shell $(FW_META_CMD) get $(FW_MANIFEST) build_id))"
 
 $(FW_MANIFEST): $(FW_META_CMD)
-	$(vecho) "GEN    $(FW_MANIFEST)"
+	$(vecho) "GEN   $(FW_MANIFEST)"
 	$(Q) $(FW_META_CMD) create_manifest \
 	  --name=$(APP) --platform=$(APP_PLATFORM) \
 	  --build_info=$(BUILD_INFO_JSON) \
