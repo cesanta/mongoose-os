@@ -497,6 +497,7 @@ void mgos_conf_free(const struct mgos_conf_entry *schema, void *cfg) {
 }
 
 void mgos_conf_set_str(const char **vp, const char *v) {
+  if (*vp == v) return;
   mgos_conf_free_str(vp);
   mgos_conf_copy_str(v, vp);
 }
