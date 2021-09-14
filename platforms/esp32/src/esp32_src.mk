@@ -63,17 +63,18 @@ MGOS_OBJS = $(addsuffix .o,$(MGOS_SRCS)) esp32_nsleep100.S.o
 APP_OBJS = $(addsuffix .o,$(APP_SRCS))
 BUILD_INFO_OBJS = $(addsuffix .o,$(notdir $(BUILD_INFO_C)) $(notdir $(MG_BUILD_INFO_C)))
 
-C_CXX_CFLAGS += -DMGOS_APP=\"$(APP)\" -DFW_ARCHITECTURE=$(APP_PLATFORM) \
+C_CXX_CFLAGS += -pipe -DMGOS_APP=\"$(APP)\" -DFW_ARCHITECTURE=$(APP_PLATFORM) \
                 -DMGOS_ESP32 -include mgos_iram.h \
                 $(MG_FEATURES_TINY) -DMG_NET_IF=MG_NET_IF_LWIP_LOW_LEVEL \
                 $(MGOS_FEATURES) -DMGOS_MAX_NUM_UARTS=3 \
                 -DMGOS_DEBUG_UART=$(MGOS_DEBUG_UART) \
                 -DMG_ENABLE_FILESYSTEM \
                 -DMG_ENABLE_DIRECTORY_LISTING \
-                -DMGOS_NUM_HW_TIMERS=4
+                -DMGOS_NUM_HW_TIMERS=4 \
+                -fno-jump-tables -fno-tree-switch-conversion
 
 CFLAGS += $(C_CXX_CFLAGS)
-CXXFLAGS += $(C_CXX_CFLAGS)
+CXXFLAGS += $(C_CXX_CFLAGS) -fno-exceptions -fno-rtti
 
 $(BUILD_INFO_C): $(MGOS_OBJS) $(APP_OBJS)
 	$(call gen_build_info,$@,$(APP_PATH),$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))

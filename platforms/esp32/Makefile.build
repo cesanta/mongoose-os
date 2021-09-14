@@ -139,7 +139,8 @@ CFLAGS += -Wall -Werror -pipe -mtext-section-literals \
           -DMGOS_ROOT_FS_TYPE='$(MGOS_ROOT_FS_TYPE)' \
           -DMGOS_ROOT_FS_OPTS='$(MGOS_ROOT_FS_OPTS)' \
           -DMGOS_ROOT_FS_EXTRACT='$(MGOS_ROOT_FS_EXTRACT)'
-CXXFLAGS += -pipe -fno-jump-tables -fno-tree-switch-conversion \
+CXXFLAGS += -pipe -fno-exceptions -fno-rtti \
+            -fno-jump-tables -fno-tree-switch-conversion \
             $(APP_CXXFLAGS) $(addprefix -I ,$(APP_INCLUDES))
 
 # Settings for the ESP-IDF build system
