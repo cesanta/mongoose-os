@@ -80,6 +80,26 @@ class FFISymbol:
         return self.return_type + " " + self.name + self.args
 
 
+class WriteIfModifiedFile:
+    def __init__(self, name):
+        self._name = name
+        self._data = bytes()
+
+    def write(self, data):
+        self._data += data.encode("utf-8")
+
+    def close(self):
+        try:
+            with open(self._name, "rb") as f:
+                data = f.read()
+                if data == self._data:
+                    return
+        except OSError:
+            pass
+        with open(self._name, "wb") as f:
+            f.write(self._data)
+
+
 def file_or_stdout(fname):
     if fname == '-':
         return sys.stdout
@@ -89,7 +109,7 @@ def file_or_stdout(fname):
             os.makedirs(dirname, mode=0o755)
         except Exception:
             pass
-    return open(fname, "w", encoding="utf-8")
+    return WriteIfModifiedFile(fname)
 
 
 def _write_build_info(bi, args):
@@ -100,6 +120,7 @@ def _write_build_info(bi, args):
         else:
             bij = bi
         json.dump(bij, out, indent=2, sort_keys=True)
+        out.close()
 
     bi['var_prefix'] = args.var_prefix
 
@@ -111,6 +132,7 @@ const char *%(var_prefix)sbuild_id = "%(build_id)s";
 const char *%(var_prefix)sbuild_timestamp = "%(build_timestamp)s";
 const char *%(var_prefix)sbuild_version = "%(build_version)s";\
 """ % bi, file=out)
+        out.close()
 
     if args.go_output:
         out = file_or_stdout(args.go_output)
@@ -124,6 +146,7 @@ const (
     %(var_prefix)sBuildTimestamp = "%(build_timestamp)s"
 )\
 """ % bi, file=out)
+        out.close()
 
 
 def cmd_gen_build_info(args):
@@ -275,6 +298,7 @@ const struct mgos_ffi_export ffi_exports[] = {""", file=out)
 
     print("};", file=out)
     print("const int ffi_exports_cnt = %d;" % len(symbols), file=out)
+    out.close()
 
 
 def cmd_get_build_info(args):
