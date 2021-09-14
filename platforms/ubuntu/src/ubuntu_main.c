@@ -15,7 +15,10 @@
  */
 
 #include <signal.h>
+#include <sys/types.h>
 #include <sys/wait.h>
+#include <time.h>
+#include <unistd.h>
 
 #include "common/queue.h"
 
@@ -234,6 +237,8 @@ enum mgos_init_result mongoose_init(void) {
                 free_heap_size));
 
   mgos_invoke_cb(ubuntu_net_up, NULL, false /* from_isr */);
+
+  srand(time(NULL) + getpid());
 
   return mgos_init();
 }
