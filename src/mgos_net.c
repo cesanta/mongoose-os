@@ -95,11 +95,13 @@ static void mgos_net_on_change_cb(void *arg) {
     }
     case MGOS_NET_EV_IP_ACQUIRED: {
       if (mgos_net_get_ip_info(ei->if_type, ei->if_instance, &evd.ip_info)) {
-        char ip[16], gw[16], dns[16];
+        char ip[16], gw[16], dns[16], ntp[16];
         mgos_net_ip_to_str(&evd.ip_info.ip, ip);
         mgos_net_ip_to_str(&evd.ip_info.gw, gw);
         mgos_net_ip_to_str(&evd.ip_info.dns, dns);
-        LOG(LL_INFO, ("%s: ready, IP %s, GW %s, DNS %s", if_name, ip, gw, dns));
+        mgos_net_ip_to_str(&evd.ip_info.ntp, ntp);
+        LOG(LL_INFO, ("%s: ready, IP %s, GW %s, DNS %s, NTP %s", if_name, ip,
+                      gw, dns, ntp));
       }
       mgos_update_nameserver();
       break;
@@ -202,7 +204,7 @@ out:
   struct mg_mgr *mgr = mgos_get_mgr();
   if (mgr->nameserver != NULL && strcmp(mgr->nameserver, nameserver) == 0)
     return;
-  LOG(LL_DEBUG, ("Setting DNS server to %s", nameserver));
+  LOG(LL_DEBUG, ("Setting %s server to %s", "DNS", nameserver));
   mg_set_nameserver(mgr, nameserver);
 }
 

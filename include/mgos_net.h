@@ -85,6 +85,7 @@ struct mgos_net_ip_info {
   struct sockaddr_in netmask;
   struct sockaddr_in gw;
   struct sockaddr_in dns;
+  struct sockaddr_in ntp;
 };
 
 struct mgos_net_event_data {
