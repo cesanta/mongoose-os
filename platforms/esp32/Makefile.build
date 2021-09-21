@@ -44,6 +44,16 @@ MGOS_ROOT_FS_SIZE ?= 262144
 
 export MGOS_ROOT_FS_SIZE
 
+# SPIFFS uses its own VFS-level encryption because flash access
+# is not compatible with built-in flash encryption.
+ifneq ("$(MGOS_ROOT_FS_TYPE)", "SPIFFS")
+export FS_PART_ENCR_FLAG = encrypted
+FS_PART_ENCR_FLAG_JSON = true
+else
+export FS_PART_ENCR_FLAG =
+FS_PART_ENCR_FLAG_JSON = false
+endif
+
 APP_FS_DIRS = $(sort $(dir $(APP_FS_FILES)))
 
 MGOS_PATH ?= ../..
@@ -194,7 +204,7 @@ FW_PARTS = boot:type=boot,addr=0x1000,src=$(BOOTLOADER_BIN),encrypt=true,update=
            nvs:type=nvs,addr=$(NVS_ADDR),size=$(NVS_SIZE),fill=0xff,encrypt=false \
            otadata:type=otadata,addr=$(OTA_DATA_OFFSET),size=$(OTA_DATA_SIZE),src=$(MGOS_ESP_PATH)/otadata.bin,encrypt=true \
            app:type=app,addr=$(APP_OFFSET),ptn=app_0,src=$(APP_BIN),encrypt=true \
-           fs:src=$(FS_IMG),type=fs,ptn=fs_0,fs_size=$(MGOS_ROOT_FS_SIZE) \
+           fs:src=$(FS_IMG),type=fs,ptn=fs_0,fs_size=$(MGOS_ROOT_FS_SIZE),encrypt=$(FS_PART_ENCR_FLAG_JSON) \
            $(APP_EXTRA_FW_PARTS)
 
 include $(MGOS_PATH)/tools/mk/mgos_fw_meta.mk

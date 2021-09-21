@@ -5,13 +5,15 @@
 # be sure to change the offset in Kconfig.projbuild
 #
 # Note: NVS is required for WiFi.
+# Note2: Having "encrypted" flag always set is fine, devices that do not have encryption
+# enabled just ignore it.
 #
-# Name,   Type, SubType, Offset,             Size            Flags
-nvs,      data, nvs,     $NVS_ADDR,          $NVS_SIZE
-otadata,  data, ota,     $OTA_DATA_ADDR,     $OTA_DATA_SIZE
-app_0,    app,  ota_0,   $APP_OFFSET,        $APP_SLOT_SIZE
-fs_0,     data, spiffs,  ,                   $MGOS_ROOT_FS_SIZE
-app_1,    app,  ota_1,   ,                   $APP_SLOT_SIZE
-fs_1,     data, spiffs,  ,                   $MGOS_ROOT_FS_SIZE
+# Name,   Type, SubType, Offset,             Size                Flags
+nvs,      data, nvs,     $NVS_ADDR,          $NVS_SIZE,
+otadata,  data, ota,     $OTA_DATA_ADDR,     $OTA_DATA_SIZE,     encrypted
+app_0,    app,  ota_0,   $APP_OFFSET,        $APP_SLOT_SIZE,     encrypted
+fs_0,     data, spiffs,  ,                   $MGOS_ROOT_FS_SIZE, $FS_PART_ENCR_FLAG
+app_1,    app,  ota_1,   ,                   $APP_SLOT_SIZE,     encrypted
+fs_1,     data, spiffs,  ,                   $MGOS_ROOT_FS_SIZE, $FS_PART_ENCR_FLAG
 $ESP_IDF_EXTRA_PARTITION
 $ESP_IDF_EXTRA_PARTITION_2
