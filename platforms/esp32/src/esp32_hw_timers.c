@@ -72,9 +72,10 @@ IRAM bool mgos_hw_timers_dev_set(struct mgos_hw_timer_info *ti, int usecs,
     }
   }
 
-  if (esp_intr_set_in_iram(dd->inth, (flags & MGOS_ESP32_HW_TIMER_IRAM) != 0) !=
-      ESP_OK) {
-    return false;
+  bool want_iram = (flags & MGOS_ESP32_HW_TIMER_IRAM) != 0;
+  if (want_iram != dd->iram) {
+    if (esp_intr_set_in_iram(dd->inth, want_iram) != ESP_OK) return false;
+    dd->iram = want_iram;
   }
 
   tg->int_ena.val |= mask;

@@ -17,6 +17,7 @@
 
 #pragma once
 
+#include <stdbool.h>
 #include <stdint.h>
 
 #include "esp_intr_alloc.h"
@@ -33,6 +34,7 @@ struct mgos_hw_timer_dev_data {
   timg_dev_t *tg;
   uint8_t tgn;
   uint8_t tn;
+  bool iram;
 };
 
 #ifdef __cplusplus
