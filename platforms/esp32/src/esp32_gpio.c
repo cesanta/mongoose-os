@@ -33,8 +33,19 @@
 
 #include "common/cs_dbg.h"
 
+#include "esp_efuse.h"
+#include "soc/efuse_reg.h"
+
+#ifndef MGOS_ESP32_DISABLE_GPIO_SPI_FLASH_CHECK
+#define MGOS_ESP32_DISABLE_GPIO_SPI_FLASH_CHECK 0
+#endif
+
 gpio_isr_handle_t s_int_handle;
 static uint8_t s_int_ena[GPIO_PIN_COUNT];
+
+#if !MGOS_ESP32_DISABLE_GPIO_SPI_FLASH_CHECK
+static int s_chip_pkg;
+#endif
 
 /* Invoked by SDK, runs in ISR context. */
 IRAM static void esp32_gpio_isr(void *arg) {
@@ -74,7 +85,15 @@ IRAM bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
     default:
       return false;
   }
-  if (pin >= 6 && pin <= 11) {
+
+#if !MGOS_ESP32_DISABLE_GPIO_SPI_FLASH_CHECK
+  bool ok;
+  if (s_chip_pkg == EFUSE_RD_CHIP_VER_PKG_ESP32U4WDH) {
+    ok = (pin < 6 || (pin > 8 && pin != 11 && pin != 16 && pin != 17));
+  } else {
+    ok = (pin < 6 || pin > 11);
+  }
+  if (!ok) {
     LOG(LL_ERROR, ("GPIO%d is used by SPI flash, don't use it", pin));
     /*
      * Alright, so you're here to investigate what's up with this error. So,
@@ -87,9 +106,20 @@ IRAM bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
      * crash most ESP32 modules, but in a different way.
      * So really, just stay away from GPIO6-11 if you can help it.
      * If you are sure you know what you're doing, use gpio_set_direction().
+     *
+     * Note:
+     * For ESP32-U4WDH (defined by chip_pkg == 4) GPIO9 and GPIO10 are
+     * available, but GPIO16 and GPIO17 are not. Source:
+     * https://www.espressif.com/sites/default/files/documentation/esp32_datasheet_en.pdf
+     * Section 2.2 in the notes.
+     *
+     * Add `MGOS_ESP32_DISABLE_GPIO_SPI_FLASH_CHECK: 1` to cdefs to disable
+     * this check.
      */
     return false;
   }
+#endif
+
   if (gpio_set_direction(pin, m) != ESP_OK) {
     return false;
   }
@@ -233,6 +263,9 @@ enum mgos_init_result mgos_gpio_hal_init() {
   mgos_bitbang_n100_cal = 6;
 #else
 #error Unsupported CPU frequency
+#endif
+#if !MGOS_ESP32_DISABLE_GPIO_SPI_FLASH_CHECK
+  s_chip_pkg = esp_efuse_get_pkg_ver();
 #endif
   return MGOS_INIT_OK;
 }
