@@ -94,7 +94,7 @@ NOINSTR void mgos_cd_write(void) {
   mgos_cd_puts("\"app\": \"" MGOS_APP "\", ");
   mgos_cd_puts("\"arch\": \"" CS_STRINGIFY_MACRO(FW_ARCHITECTURE) "\", ");
   mgos_cd_printf("\"version\": \"%s\", ", build_version);
-  mgos_cd_printf("\"build_id\": \"%s\", ", build_id);
+  mgos_cd_printf("\"build_id\": \"%.80s\", ", build_id);
   mgos_cd_printf("\"build_ts\": \"%s\",\n", build_timestamp);
 #ifdef MGOS_SDK_BUILD_IMAGE
   mgos_cd_printf("\"build_image\": \"" MGOS_SDK_BUILD_IMAGE "\", ");
