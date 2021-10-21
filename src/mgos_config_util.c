@@ -107,7 +107,7 @@ void mgos_conf_parse_cb(void *data, const char *name, size_t name_len,
   const struct mgos_conf_entry *e =
       mgos_conf_find_schema_entry(path, ctx->schema);
   if (e == NULL) {
-    LOG(LL_INFO, ("Extra key: [%s]", path));
+    LOG(LL_DEBUG, ("Unknown key [%s]", path));
     return;
   }
 #ifndef MGOS_BOOT_BUILD
