@@ -234,14 +234,13 @@ static bool mgos_conf_parse_off(const struct mg_str json, const char *acl,
 }
 
 bool mgos_conf_parse(const struct mg_str json, const char *acl,
-                     const struct mgos_conf_entry *schema,
-                     struct mgos_config *cfg) {
+                     const struct mgos_conf_entry *schema, void *cfg) {
   return mgos_conf_parse_off(json, acl, schema, 0, cfg, NULL);
 }
 
 bool mgos_conf_parse_msg(const struct mg_str json, const char *acl,
-                         const struct mgos_conf_entry *schema,
-                         struct mgos_config *cfg, char **msg) {
+                         const struct mgos_conf_entry *schema, void *cfg,
+                         char **msg) {
   return mgos_conf_parse_off(json, acl, schema, 0, cfg, msg);
 }
 

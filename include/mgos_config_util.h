@@ -84,8 +84,7 @@ struct mgos_config;
  * checking keys against `acl`.
  */
 bool mgos_conf_parse(const struct mg_str json, const char *acl,
-                     const struct mgos_conf_entry *schema,
-                     struct mgos_config *cfg);
+                     const struct mgos_conf_entry *schema, void *cfg);
 
 /*
  * Identical to `mgos_conf_parse()` but allows the caller to get an error
@@ -95,8 +94,8 @@ bool mgos_conf_parse(const struct mg_str json, const char *acl,
  * is owned by the caller and has to be free()d.
  */
 bool mgos_conf_parse_msg(const struct mg_str json, const char *acl,
-                         const struct mgos_conf_entry *schema,
-                         struct mgos_config *cfg, char **msg);
+                         const struct mgos_conf_entry *schema, void *cfg,
+                         char **msg);
 
 /*
  * Parse a sub-section of the config.

@@ -64,9 +64,6 @@ bool mgos_sys_config_is_initialized(void) {
 static mgos_config_validator_fn *s_validators;
 static int s_num_validators;
 
-static int load_config_file(const char *filename, const char *acl,
-                            bool check_try, bool delete_try,
-                            struct mgos_config *cfg);
 static bool mgos_sys_config_load_level_internal(struct mgos_config *cfg,
                                                 enum mgos_config_level level,
                                                 bool check_try,
@@ -94,6 +91,138 @@ void mgos_expand_placeholders(const struct mg_str src, struct mg_str *str) {
   }
 }
 
+static bool load_config(const char *name, struct mg_str cfg_data,
+                        const char *acl, const struct mgos_conf_entry *schema,
+                        void *cfg) {
+  bool result = true;
+  /* Make a temporary copy, in case it gets overridden while loading. */
+  char *acl_copy = (acl != NULL ? strdup(acl) : NULL);
+  if (!mgos_conf_parse(cfg_data, acl_copy, schema, cfg)) {
+    LOG(LL_ERROR, ("Failed to parse %s", name));
+    result = false;
+  }
+  free(acl_copy);
+  return result;
+}
+
+static bool load_config_file(const char *filename, const char *acl,
+                             bool check_try, bool delete_try,
+                             const struct mgos_conf_entry *schema, void *cfg) {
+  char *data = NULL;
+  size_t size;
+  bool result = false;
+  struct stat st;
+  char tfn_buf[32], *try_filename = tfn_buf;
+  // See if we have "${filename}.try" and prefer that.
+  // Delete the file immediately after loading.
+  if (check_try &&
+      mg_asprintf(&try_filename, sizeof(tfn_buf), "%s%s", filename,
+                  CONF_FILE_TRY_SUFFIX) > 0 &&
+      stat(try_filename, &st) == 0) {
+    filename = try_filename;
+  } else {
+    if (try_filename != tfn_buf) free(try_filename);
+    try_filename = NULL;
+  }
+  if (stat(filename, &st) != 0) {
+    goto out;
+  }
+  LOG(LL_DEBUG, ("Loading %s", filename));
+  data = cs_read_file(filename, &size);
+  if (data == NULL) {
+    goto out;
+  }
+  result = load_config(filename, mg_mk_str_n(data, size), acl, schema, cfg);
+
+out:
+  free(data);
+  if (try_filename != NULL) {
+    if (delete_try) remove(try_filename);
+    if (try_filename != tfn_buf) free(try_filename);
+  }
+  return result;
+}
+
+/*
+ * Parse config JSON from a VFS device.
+ * `spec` should specify device name and offset (`name,offset`).
+ * `offset` is optional and defaults to 0.
+ * JSON data must be terminated with NUL or 0xff.
+ */
+void mgos_conf_parse_dev(const char *spec, const char *acl,
+                         const struct mgos_conf_entry *schema, void *cfg) {
+  char *data = NULL, *data2 = NULL;
+  struct mg_str entry, dev_name = MG_NULL_STR, s;
+  struct mgos_vfs_dev *dev = NULL;
+  size_t i = 0, offset = 0, dev_size = 0, data_size = 0, data_len = 0;
+  while (spec != NULL && i < 2) {
+    spec = mg_next_comma_list_entry(spec, &entry, NULL);
+    if (entry.len == 0) break;
+    switch (i) {
+      case 0: {
+        dev_name = mg_strdup_nul(entry);
+        break;
+      }
+      case 1: {
+        struct mg_str tmp = mg_strdup_nul(entry);
+        offset = (size_t) atoi(tmp.p);
+        mg_strfree(&tmp);
+        break;
+      }
+    }
+    i++;
+  }
+  if (dev_name.len == 0) goto out;
+  dev = mgos_vfs_dev_open(dev_name.p);
+  if (dev == NULL) goto out;
+  dev_size = mgos_vfs_dev_get_size(dev);
+  if (dev_size == 0) goto out;
+  while (data_size < dev_size) {
+    const char *end;
+    data_size += 128;
+    if (data_size > dev_size) data_size = dev_size;
+    data2 = realloc(data, data_size);
+    if (data2 == NULL) goto out;
+    data = data2;
+    if (mgos_vfs_dev_read(dev, offset + data_len, data_size - data_len,
+                          data + data_len) != MGOS_VFS_DEV_ERR_NONE) {
+      goto out;
+    }
+    // If it doesn't look like JSON, abort early.
+    if (data[0] != '{') {
+      LOG(LL_INFO, ("Not a valid config"));
+      goto out;
+    }
+    s = mg_mk_str_n(data + data_len, data_size - data_len);
+    end = mg_strchr(s, '\0');
+    if (end == NULL) {
+      // We allow 0xff termination to make it even more friendlt to the user.
+      // 0xff is the zero value for NOR flash and is not valid JSON, so it's ok.
+      end = mg_strchr(s, '\xff');
+    }
+    if (end != NULL) {
+      data_len += (end - s.p);
+      break;
+    }
+    data_len += 128;
+  }
+  if (data_len == dev_size) goto out;
+  LOG(LL_DEBUG, ("Applying dev %s off %d len %d", dev_name.p, (int) offset,
+                 (int) data_len));
+  load_config(spec, mg_mk_str_n(data, data_len), acl, schema, cfg);
+
+out:
+  mg_strfree(&dev_name);
+  mgos_vfs_dev_close(dev);
+  free(data);
+  return;
+}
+
+#define PARSE_CONFIG_DEV_LEVEL(l)                                          \
+  if (i == l) {                                                            \
+    mgos_conf_parse_dev(CS_STRINGIFY_MACRO(MGOS_CONFIG_DEV_##l), acl, sch, \
+                        cfg);                                              \
+  }
 static bool mgos_sys_config_load_level_internal(struct mgos_config *cfg,
                                                 enum mgos_config_level level,
                                                 bool check_try,
@@ -106,14 +235,39 @@ static bool mgos_sys_config_load_level_internal(struct mgos_config *cfg,
   // Start with compiled-in defaults.
   mgos_config_set_defaults(cfg);
   const char *acl = "*";
+  const struct mgos_conf_entry *sch = mgos_config_schema();
   for (i = 1; i <= (int) level; i++) {
+#ifdef MGOS_CONFIG_DEV_1
+    PARSE_CONFIG_DEV_LEVEL(1);
+#endif
+#ifdef MGOS_CONFIG_DEV_2
+    PARSE_CONFIG_DEV_LEVEL(2);
+#endif
+#ifdef MGOS_CONFIG_DEV_3
+    PARSE_CONFIG_DEV_LEVEL(3);
+#endif
+#ifdef MGOS_CONFIG_DEV_4
+    PARSE_CONFIG_DEV_LEVEL(4);
+#endif
+#ifdef MGOS_CONFIG_DEV_5
+    PARSE_CONFIG_DEV_LEVEL(5);
+#endif
+#ifdef MGOS_CONFIG_DEV_6
+    PARSE_CONFIG_DEV_LEVEL(6);
+#endif
+#ifdef MGOS_CONFIG_DEV_7
+    PARSE_CONFIG_DEV_LEVEL(7);
+#endif
+#ifdef MGOS_CONFIG_DEV_8
+    PARSE_CONFIG_DEV_LEVEL(8);
+#endif
     fname[CONF_USER_FILE_NUM_IDX] = '0' + i;
     /* Backward compat: load conf_vendor.json at level 5.5 */
     if (i == 6) {
-      load_config_file(CONF_VENDOR_FILE, cfg->conf_acl, false, false, cfg);
+      load_config_file(CONF_VENDOR_FILE, cfg->conf_acl, false, false, sch, cfg);
       acl = cfg->conf_acl;
     }
-    if (!load_config_file(fname, acl, check_try, delete_try, cfg)) {
+    if (!load_config_file(fname, acl, check_try, delete_try, sch, cfg)) {
       // Nothing to do, all the overlays are optional.
     }
     acl = cfg->conf_acl;
@@ -206,53 +360,6 @@ void mgos_config_reset(int level) {
   }
 }
 
-static int load_config_file(const char *filename, const char *acl,
-                            bool check_try, bool delete_try,
-                            struct mgos_config *cfg) {
-  char *data = NULL, *acl_copy = NULL;
-  size_t size;
-  int result = 1;
-  struct stat st;
-  char tfn_buf[32], *try_filename = tfn_buf;
-  // See if we have "${filename}.try" and prefer that.
-  // Delete the file immediately after loading.
-  if (check_try &&
-      mg_asprintf(&try_filename, sizeof(tfn_buf), "%s%s", filename,
-                  CONF_FILE_TRY_SUFFIX) > 0 &&
-      stat(try_filename, &st) == 0) {
-    filename = try_filename;
-  } else {
-    if (try_filename != tfn_buf) free(try_filename);
-    try_filename = NULL;
-  }
-  if (stat(filename, &st) != 0) {
-    result = 0;
-    goto clean;
-  }
-  LOG(LL_INFO, ("Loading %s", filename));
-  data = cs_read_file(filename, &size);
-  if (data == NULL) {
-    result = 0;
-    goto clean;
-  }
-  /* Make a temporary copy, in case it gets overridden while loading. */
-  acl_copy = (acl != NULL ? strdup(acl) : NULL);
-  if (!mgos_conf_parse(mg_mk_str_n(data, size), acl_copy, mgos_config_schema(),
-                       cfg)) {
-    LOG(LL_ERROR, ("Failed to parse %s", filename));
-    result = 0;
-    goto clean;
-  }
-clean:
-  free(data);
-  free(acl_copy);
-  if (try_filename != NULL) {
-    if (delete_try) remove(try_filename);
-    if (try_filename != tfn_buf) free(try_filename);
-  }
-  return result;
-}
-
 void mbedtls_debug_set_threshold(int threshold);
 
 enum mgos_init_result mgos_sys_config_init(void) {
@@ -289,7 +396,7 @@ enum mgos_init_result mgos_sys_config_init(void) {
   /* Successfully loaded system config. Try overrides - they are optional. */
   load_config_file(CONF_USER_FILE, mgos_sys_config_get_conf_acl(),
                    true /* check_try */, true /* delete_try */,
-                   &mgos_sys_config);
+                   mgos_config_schema(), &mgos_sys_config);
 
   s_initialized = true;
 
