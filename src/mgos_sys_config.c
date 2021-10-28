@@ -189,10 +189,7 @@ void mgos_conf_parse_dev(const char *spec, const char *acl,
       goto out;
     }
     // If it doesn't look like JSON, abort early.
-    if (data[0] != '{') {
-      LOG(LL_INFO, ("Not a valid config"));
-      goto out;
-    }
+    if (data[0] != '{') goto out;
     s = mg_mk_str_n(data + data_len, data_size - data_len);
     end = mg_strchr(s, '\0');
     if (end == NULL) {
