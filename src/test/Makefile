@@ -30,18 +30,21 @@ INCS = -I$(REPO_ROOT)/src \
        -I. \
        $(CFLAGS_EXTRA)
 
-CFLAGS = -W -Wall -Wextra -Werror -g -O0 -Wno-multichar -I$(BUILD_DIR) $(INCS)
+CFLAGS = -W -Wall -Wextra -Werror -g -O0 -Wno-multichar -ffunction-sections -Wl,--gc-sections -I$(BUILD_DIR) $(INCS)
 
 all: $(BUILD_DIR) diff test
 
 test: $(PROG)
 	./$(PROG)
-	{ \
+	@{ \
 	  x=0; \
 	  diff -u data/golden/mgos_config_pretty.json $(BUILD_DIR)/mgos_config_pretty.json || x=1; \
+	  diff -u data/golden/mgos_config.json $(BUILD_DIR)/mgos_config.json || x=1; \
 	  diff -u data/golden/mgos_config_boo_pretty.json $(BUILD_DIR)/mgos_config_boo_pretty.json || x=1; \
+	  diff -u data/golden/mgos_config_test_bar1_pretty.json $(BUILD_DIR)/mgos_config_test_bar1_pretty.json || x=1; \
 	  exit $$x; \
 	}
+	@echo DIFF PASS
 
 diff: $(SYS_CONF_C)
 	{ \
@@ -57,7 +60,9 @@ update_golden: $(PROG)
 	cp ./build/mgos_config.c data/golden/mgos_config.c
 	cp ./build/mgos_config.h data/golden/mgos_config.h
 	cp ./build/mgos_config_schema.json data/golden/mgos_config_schema.json
+	cp ./build/mgos_config.json data/golden/mgos_config.json
 	cp ./build/mgos_config_boo_pretty.json data/golden/mgos_config_boo_pretty.json
+	cp ./build/mgos_config_test_bar1_pretty.json data/golden/mgos_config_test_bar1_pretty.json
 	cp ./build/mgos_config_pretty.json data/golden/mgos_config_pretty.json
 
 $(BUILD_DIR):

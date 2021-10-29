@@ -253,6 +253,7 @@ bool mgos_conf_parse_sub(const struct mg_str json,
 struct emit_ctx {
   const void *cfg;
   const void *base;
+  int offset_adj;
   bool pretty;
   struct mbuf *out;
   mgos_conf_emit_cb_t cb;
@@ -266,10 +267,11 @@ static void mgos_emit_indent(struct mbuf *m, int n) {
 }
 
 static bool mgos_conf_value_eq(const void *cfg, const void *base,
-                               const struct mgos_conf_entry *e) {
+                               const struct mgos_conf_entry *e,
+                               int offset_adj) {
   if (base == NULL) return false;
-  char *vp = (((char *) cfg) + e->offset);
-  char *bvp = (((char *) base) + e->offset);
+  char *vp = (((char *) cfg) + e->offset - offset_adj);
+  char *bvp = (((char *) base) + e->offset - offset_adj);
   switch (e->type) {
     case CONF_TYPE_INT:
       /* fall through */
@@ -291,7 +293,8 @@ static bool mgos_conf_value_eq(const void *cfg, const void *base,
     case CONF_TYPE_OBJECT: {
       for (int i = e->num_desc; i > 0; i--) {
         e++;
-        if (e->type != CONF_TYPE_OBJECT && !mgos_conf_value_eq(cfg, base, e)) {
+        if (e->type != CONF_TYPE_OBJECT &&
+            !mgos_conf_value_eq(cfg, base, e, offset_adj)) {
           return false;
         }
       }
@@ -309,16 +312,17 @@ static void mgos_conf_emit_entry(struct emit_ctx *ctx,
                                  const struct mgos_conf_entry *e, int indent) {
   char buf[40];
   int len;
+  const char *vp = (((char *) ctx->cfg) + e->offset - ctx->offset_adj);
   switch (e->type) {
     case CONF_TYPE_INT:
     case CONF_TYPE_UNSIGNED_INT: {
       len = snprintf(buf, sizeof(buf), (e->type == CONF_TYPE_INT ? "%d" : "%u"),
-                     *((int *) (((char *) ctx->cfg) + e->offset)));
+                     *((int *) vp));
       mbuf_append(ctx->out, buf, len);
       break;
     }
     case CONF_TYPE_BOOL: {
-      int v = *((int *) (((char *) ctx->cfg) + e->offset));
+      int v = *((int *) vp);
       const char *s;
       int len;
       if (v != 0) {
@@ -334,15 +338,14 @@ static void mgos_conf_emit_entry(struct emit_ctx *ctx,
     case CONF_TYPE_FLOAT:
       /* fall through */
     case CONF_TYPE_DOUBLE: {
-      char *ptr = (((char *) ctx->cfg) + e->offset);
       double v =
-          (e->type == CONF_TYPE_DOUBLE ? *((double *) ptr) : *((float *) ptr));
+          (e->type == CONF_TYPE_DOUBLE ? *((double *) vp) : *((float *) vp));
       len = snprintf(buf, sizeof(buf), "%lf", v);
       mbuf_append(ctx->out, buf, len);
       break;
     }
     case CONF_TYPE_STRING: {
-      const char *v = *((char **) (((char *) ctx->cfg) + e->offset));
+      const char *v = *((char **) vp);
       mg_json_emit_str(ctx->out, mg_mk_str(v), 1);
       break;
     }
@@ -361,7 +364,7 @@ static void mgos_conf_emit_obj(struct emit_ctx *ctx,
   int i;
   for (i = 0; i < num_entries;) {
     const struct mgos_conf_entry *e = schema + i;
-    if (mgos_conf_value_eq(ctx->cfg, ctx->base, e)) {
+    if (mgos_conf_value_eq(ctx->cfg, ctx->base, e, ctx->offset_adj)) {
       i++;
       if (e->type == CONF_TYPE_OBJECT) {
         i += e->num_desc;
@@ -394,6 +397,7 @@ void mgos_conf_emit_cb(const void *cfg, const void *base,
   if (out == NULL) out = &m;
   struct emit_ctx ctx = {.cfg = cfg,
                          .base = base,
+                         .offset_adj = schema->offset,
                          .pretty = pretty,
                          .out = out,
                          .cb = cb,
