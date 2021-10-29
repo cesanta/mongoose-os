@@ -28,6 +28,7 @@ static inline bool mgos_config_wifi_sta_parse(struct mg_str json, struct mgos_co
   mgos_config_wifi_sta_set_defaults(cfg);
   return mgos_conf_parse_sub(json, mgos_config_wifi_sta_get_schema(), cfg);
 }
+bool mgos_config_wifi_sta_parse_f(const char *fname, struct mgos_config_wifi_sta *cfg);
 static inline bool mgos_config_wifi_sta_emit(const struct mgos_config_wifi_sta *cfg, bool pretty, struct json_out *out) {
   return mgos_conf_emit_json_out(cfg, NULL, mgos_config_wifi_sta_get_schema(), pretty, out);
 }
@@ -54,6 +55,7 @@ static inline bool mgos_config_wifi_ap_parse(struct mg_str json, struct mgos_con
   mgos_config_wifi_ap_set_defaults(cfg);
   return mgos_conf_parse_sub(json, mgos_config_wifi_ap_get_schema(), cfg);
 }
+bool mgos_config_wifi_ap_parse_f(const char *fname, struct mgos_config_wifi_ap *cfg);
 static inline bool mgos_config_wifi_ap_emit(const struct mgos_config_wifi_ap *cfg, bool pretty, struct json_out *out) {
   return mgos_conf_emit_json_out(cfg, NULL, mgos_config_wifi_ap_get_schema(), pretty, out);
 }
@@ -78,6 +80,7 @@ static inline bool mgos_config_wifi_parse(struct mg_str json, struct mgos_config
   mgos_config_wifi_set_defaults(cfg);
   return mgos_conf_parse_sub(json, mgos_config_wifi_get_schema(), cfg);
 }
+bool mgos_config_wifi_parse_f(const char *fname, struct mgos_config_wifi *cfg);
 static inline bool mgos_config_wifi_emit(const struct mgos_config_wifi *cfg, bool pretty, struct json_out *out) {
   return mgos_conf_emit_json_out(cfg, NULL, mgos_config_wifi_get_schema(), pretty, out);
 }
@@ -102,6 +105,7 @@ static inline bool mgos_config_http_parse(struct mg_str json, struct mgos_config
   mgos_config_http_set_defaults(cfg);
   return mgos_conf_parse_sub(json, mgos_config_http_get_schema(), cfg);
 }
+bool mgos_config_http_parse_f(const char *fname, struct mgos_config_http *cfg);
 static inline bool mgos_config_http_emit(const struct mgos_config_http *cfg, bool pretty, struct json_out *out) {
   return mgos_conf_emit_json_out(cfg, NULL, mgos_config_http_get_schema(), pretty, out);
 }
@@ -124,6 +128,7 @@ static inline bool mgos_config_debug_empty_parse(struct mg_str json, struct mgos
   mgos_config_debug_empty_set_defaults(cfg);
   return mgos_conf_parse_sub(json, mgos_config_debug_empty_get_schema(), cfg);
 }
+bool mgos_config_debug_empty_parse_f(const char *fname, struct mgos_config_debug_empty *cfg);
 static inline bool mgos_config_debug_empty_emit(const struct mgos_config_debug_empty *cfg, bool pretty, struct json_out *out) {
   return mgos_conf_emit_json_out(cfg, NULL, mgos_config_debug_empty_get_schema(), pretty, out);
 }
@@ -155,6 +160,7 @@ static inline bool mgos_config_debug_parse(struct mg_str json, struct mgos_confi
   mgos_config_debug_set_defaults(cfg);
   return mgos_conf_parse_sub(json, mgos_config_debug_get_schema(), cfg);
 }
+bool mgos_config_debug_parse_f(const char *fname, struct mgos_config_debug *cfg);
 static inline bool mgos_config_debug_emit(const struct mgos_config_debug *cfg, bool pretty, struct json_out *out) {
   return mgos_conf_emit_json_out(cfg, NULL, mgos_config_debug_get_schema(), pretty, out);
 }
@@ -178,6 +184,7 @@ static inline bool mgos_config_baz_parse(struct mg_str json, struct mgos_config_
   mgos_config_baz_set_defaults(cfg);
   return mgos_conf_parse_sub(json, mgos_config_baz_get_schema(), cfg);
 }
+bool mgos_config_baz_parse_f(const char *fname, struct mgos_config_baz *cfg);
 static inline bool mgos_config_baz_emit(const struct mgos_config_baz *cfg, bool pretty, struct json_out *out) {
   return mgos_conf_emit_json_out(cfg, NULL, mgos_config_baz_get_schema(), pretty, out);
 }
@@ -202,6 +209,7 @@ static inline bool mgos_config_bar_inner_parse(struct mg_str json, struct mgos_c
   mgos_config_bar_inner_set_defaults(cfg);
   return mgos_conf_parse_sub(json, mgos_config_bar_inner_get_schema(), cfg);
 }
+bool mgos_config_bar_inner_parse_f(const char *fname, struct mgos_config_bar_inner *cfg);
 static inline bool mgos_config_bar_inner_emit(const struct mgos_config_bar_inner *cfg, bool pretty, struct json_out *out) {
   return mgos_conf_emit_json_out(cfg, NULL, mgos_config_bar_inner_get_schema(), pretty, out);
 }
@@ -222,6 +230,7 @@ static inline bool mgos_config_bar_baz_parse(struct mg_str json, struct mgos_con
   mgos_config_bar_baz_set_defaults(cfg);
   return mgos_conf_parse_sub(json, mgos_config_bar_baz_get_schema(), cfg);
 }
+bool mgos_config_bar_baz_parse_f(const char *fname, struct mgos_config_baz *cfg);
 static inline bool mgos_config_bar_baz_emit(const struct mgos_config_baz *cfg, bool pretty, struct json_out *out) {
   return mgos_conf_emit_json_out(cfg, NULL, mgos_config_bar_baz_get_schema(), pretty, out);
 }
@@ -248,6 +257,7 @@ static inline bool mgos_config_bar_parse(struct mg_str json, struct mgos_config_
   mgos_config_bar_set_defaults(cfg);
   return mgos_conf_parse_sub(json, mgos_config_bar_get_schema(), cfg);
 }
+bool mgos_config_bar_parse_f(const char *fname, struct mgos_config_bar *cfg);
 static inline bool mgos_config_bar_emit(const struct mgos_config_bar *cfg, bool pretty, struct json_out *out) {
   return mgos_conf_emit_json_out(cfg, NULL, mgos_config_bar_get_schema(), pretty, out);
 }
@@ -268,6 +278,7 @@ static inline bool mgos_config_test_bar1_inner_parse(struct mg_str json, struct 
   mgos_config_test_bar1_inner_set_defaults(cfg);
   return mgos_conf_parse_sub(json, mgos_config_test_bar1_inner_get_schema(), cfg);
 }
+bool mgos_config_test_bar1_inner_parse_f(const char *fname, struct mgos_config_bar_inner *cfg);
 static inline bool mgos_config_test_bar1_inner_emit(const struct mgos_config_bar_inner *cfg, bool pretty, struct json_out *out) {
   return mgos_conf_emit_json_out(cfg, NULL, mgos_config_test_bar1_inner_get_schema(), pretty, out);
 }
@@ -288,6 +299,7 @@ static inline bool mgos_config_test_bar1_baz_parse(struct mg_str json, struct mg
   mgos_config_test_bar1_baz_set_defaults(cfg);
   return mgos_conf_parse_sub(json, mgos_config_test_bar1_baz_get_schema(), cfg);
 }
+bool mgos_config_test_bar1_baz_parse_f(const char *fname, struct mgos_config_baz *cfg);
 static inline bool mgos_config_test_bar1_baz_emit(const struct mgos_config_baz *cfg, bool pretty, struct json_out *out) {
   return mgos_conf_emit_json_out(cfg, NULL, mgos_config_test_bar1_baz_get_schema(), pretty, out);
 }
@@ -308,6 +320,7 @@ static inline bool mgos_config_test_bar1_parse(struct mg_str json, struct mgos_c
   mgos_config_test_bar1_set_defaults(cfg);
   return mgos_conf_parse_sub(json, mgos_config_test_bar1_get_schema(), cfg);
 }
+bool mgos_config_test_bar1_parse_f(const char *fname, struct mgos_config_bar *cfg);
 static inline bool mgos_config_test_bar1_emit(const struct mgos_config_bar *cfg, bool pretty, struct json_out *out) {
   return mgos_conf_emit_json_out(cfg, NULL, mgos_config_test_bar1_get_schema(), pretty, out);
 }
@@ -328,6 +341,7 @@ static inline bool mgos_config_test_bar2_inner_parse(struct mg_str json, struct 
   mgos_config_test_bar2_inner_set_defaults(cfg);
   return mgos_conf_parse_sub(json, mgos_config_test_bar2_inner_get_schema(), cfg);
 }
+bool mgos_config_test_bar2_inner_parse_f(const char *fname, struct mgos_config_bar_inner *cfg);
 static inline bool mgos_config_test_bar2_inner_emit(const struct mgos_config_bar_inner *cfg, bool pretty, struct json_out *out) {
   return mgos_conf_emit_json_out(cfg, NULL, mgos_config_test_bar2_inner_get_schema(), pretty, out);
 }
@@ -348,6 +362,7 @@ static inline bool mgos_config_test_bar2_baz_parse(struct mg_str json, struct mg
   mgos_config_test_bar2_baz_set_defaults(cfg);
   return mgos_conf_parse_sub(json, mgos_config_test_bar2_baz_get_schema(), cfg);
 }
+bool mgos_config_test_bar2_baz_parse_f(const char *fname, struct mgos_config_baz *cfg);
 static inline bool mgos_config_test_bar2_baz_emit(const struct mgos_config_baz *cfg, bool pretty, struct json_out *out) {
   return mgos_conf_emit_json_out(cfg, NULL, mgos_config_test_bar2_baz_get_schema(), pretty, out);
 }
@@ -368,6 +383,7 @@ static inline bool mgos_config_test_bar2_parse(struct mg_str json, struct mgos_c
   mgos_config_test_bar2_set_defaults(cfg);
   return mgos_conf_parse_sub(json, mgos_config_test_bar2_get_schema(), cfg);
 }
+bool mgos_config_test_bar2_parse_f(const char *fname, struct mgos_config_bar *cfg);
 static inline bool mgos_config_test_bar2_emit(const struct mgos_config_bar *cfg, bool pretty, struct json_out *out) {
   return mgos_conf_emit_json_out(cfg, NULL, mgos_config_test_bar2_get_schema(), pretty, out);
 }
@@ -392,6 +408,7 @@ static inline bool mgos_config_test_parse(struct mg_str json, struct mgos_config
   mgos_config_test_set_defaults(cfg);
   return mgos_conf_parse_sub(json, mgos_config_test_get_schema(), cfg);
 }
+bool mgos_config_test_parse_f(const char *fname, struct mgos_config_test *cfg);
 static inline bool mgos_config_test_emit(const struct mgos_config_test *cfg, bool pretty, struct json_out *out) {
   return mgos_conf_emit_json_out(cfg, NULL, mgos_config_test_get_schema(), pretty, out);
 }
@@ -415,6 +432,7 @@ static inline bool mgos_config_boo_sub_parse(struct mg_str json, struct mgos_con
   mgos_config_boo_sub_set_defaults(cfg);
   return mgos_conf_parse_sub(json, mgos_config_boo_sub_get_schema(), cfg);
 }
+bool mgos_config_boo_sub_parse_f(const char *fname, struct mgos_config_boo_sub *cfg);
 static inline bool mgos_config_boo_sub_emit(const struct mgos_config_boo_sub *cfg, bool pretty, struct json_out *out) {
   return mgos_conf_emit_json_out(cfg, NULL, mgos_config_boo_sub_get_schema(), pretty, out);
 }
@@ -440,6 +458,7 @@ static inline bool mgos_config_boo_parse(struct mg_str json, struct mgos_config_
   mgos_config_boo_set_defaults(cfg);
   return mgos_conf_parse_sub(json, mgos_config_boo_get_schema(), cfg);
 }
+bool mgos_config_boo_parse_f(const char *fname, struct mgos_config_boo *cfg);
 static inline bool mgos_config_boo_emit(const struct mgos_config_boo *cfg, bool pretty, struct json_out *out) {
   return mgos_conf_emit_json_out(cfg, NULL, mgos_config_boo_get_schema(), pretty, out);
 }
@@ -467,6 +486,7 @@ static inline bool mgos_config_parse(struct mg_str json, struct mgos_config *cfg
   mgos_config_set_defaults(cfg);
   return mgos_conf_parse_sub(json, mgos_config_get_schema(), cfg);
 }
+bool mgos_config_parse_f(const char *fname, struct mgos_config *cfg);
 static inline bool mgos_config_emit(const struct mgos_config *cfg, bool pretty, struct json_out *out) {
   return mgos_conf_emit_json_out(cfg, NULL, mgos_config_get_schema(), pretty, out);
 }

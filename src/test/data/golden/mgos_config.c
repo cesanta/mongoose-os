@@ -8,6 +8,8 @@
 
 #include <stdbool.h>
 
+#include "common/cs_file.h"
+
 #include "mgos_config_util.h"
 
 
@@ -74,6 +76,14 @@ void mgos_config_wifi_sta_set_defaults(struct mgos_config_wifi_sta *cfg) {
   cfg->ssid = NULL;
   cfg->pass = "so\nmany\nlines\n";
 }
+bool mgos_config_wifi_sta_parse_f(const char *fname, struct mgos_config_wifi_sta *cfg) {
+  size_t len;
+  char *data = cs_read_file(fname, &len);
+  if (data == NULL) return false;
+  bool res = mgos_config_wifi_sta_parse(mg_mk_str_n(data, len), cfg);
+  free(data);
+  return res;
+}
 
 /* struct mgos_config_wifi_ap */
 const struct mgos_conf_entry *mgos_config_wifi_ap_get_schema(void) {
@@ -86,6 +96,14 @@ void mgos_config_wifi_ap_set_defaults(struct mgos_config_wifi_ap *cfg) {
   cfg->channel = 6;
   cfg->dhcp_end = "192.168.4.200";
 }
+bool mgos_config_wifi_ap_parse_f(const char *fname, struct mgos_config_wifi_ap *cfg) {
+  size_t len;
+  char *data = cs_read_file(fname, &len);
+  if (data == NULL) return false;
+  bool res = mgos_config_wifi_ap_parse(mg_mk_str_n(data, len), cfg);
+  free(data);
+  return res;
+}
 
 /* struct mgos_config_wifi */
 const struct mgos_conf_entry *mgos_config_wifi_get_schema(void) {
@@ -95,6 +113,14 @@ const struct mgos_conf_entry *mgos_config_wifi_get_schema(void) {
 void mgos_config_wifi_set_defaults(struct mgos_config_wifi *cfg) {
   mgos_config_wifi_sta_set_defaults(&cfg->sta);
   mgos_config_wifi_ap_set_defaults(&cfg->ap);
+}
+bool mgos_config_wifi_parse_f(const char *fname, struct mgos_config_wifi *cfg) {
+  size_t len;
+  char *data = cs_read_file(fname, &len);
+  if (data == NULL) return false;
+  bool res = mgos_config_wifi_parse(mg_mk_str_n(data, len), cfg);
+  free(data);
+  return res;
 }
 
 /* struct mgos_config_http */
@@ -106,6 +132,14 @@ void mgos_config_http_set_defaults(struct mgos_config_http *cfg) {
   cfg->enable = true;
   cfg->port = 80;
 }
+bool mgos_config_http_parse_f(const char *fname, struct mgos_config_http *cfg) {
+  size_t len;
+  char *data = cs_read_file(fname, &len);
+  if (data == NULL) return false;
+  bool res = mgos_config_http_parse(mg_mk_str_n(data, len), cfg);
+  free(data);
+  return res;
+}
 
 /* struct mgos_config_debug_empty */
 const struct mgos_conf_entry *mgos_config_debug_empty_get_schema(void) {
@@ -114,6 +148,14 @@ const struct mgos_conf_entry *mgos_config_debug_empty_get_schema(void) {
 
 void mgos_config_debug_empty_set_defaults(struct mgos_config_debug_empty *cfg) {
   (void) cfg;
+}
+bool mgos_config_debug_empty_parse_f(const char *fname, struct mgos_config_debug_empty *cfg) {
+  size_t len;
+  char *data = cs_read_file(fname, &len);
+  if (data == NULL) return false;
+  bool res = mgos_config_debug_empty_parse(mg_mk_str_n(data, len), cfg);
+  free(data);
+  return res;
 }
 
 /* struct mgos_config_debug */
@@ -132,6 +174,14 @@ void mgos_config_debug_set_defaults(struct mgos_config_debug *cfg) {
   cfg->test_ui = 4294967295;
   mgos_config_debug_empty_set_defaults(&cfg->empty);
 }
+bool mgos_config_debug_parse_f(const char *fname, struct mgos_config_debug *cfg) {
+  size_t len;
+  char *data = cs_read_file(fname, &len);
+  if (data == NULL) return false;
+  bool res = mgos_config_debug_parse(mg_mk_str_n(data, len), cfg);
+  free(data);
+  return res;
+}
 
 /* struct mgos_config_baz */
 const struct mgos_conf_entry *mgos_config_baz_get_schema(void) {
@@ -140,6 +190,14 @@ const struct mgos_conf_entry *mgos_config_baz_get_schema(void) {
 
 void mgos_config_baz_set_defaults(struct mgos_config_baz *cfg) {
   cfg->bazaar = false;
+}
+bool mgos_config_baz_parse_f(const char *fname, struct mgos_config_baz *cfg) {
+  size_t len;
+  char *data = cs_read_file(fname, &len);
+  if (data == NULL) return false;
+  bool res = mgos_config_baz_parse(mg_mk_str_n(data, len), cfg);
+  free(data);
+  return res;
 }
 
 /* struct mgos_config_bar_inner */
@@ -151,6 +209,14 @@ void mgos_config_bar_inner_set_defaults(struct mgos_config_bar_inner *cfg) {
   cfg->param2 = "p2";
   cfg->param3 = 3333;
 }
+bool mgos_config_bar_inner_parse_f(const char *fname, struct mgos_config_bar_inner *cfg) {
+  size_t len;
+  char *data = cs_read_file(fname, &len);
+  if (data == NULL) return false;
+  bool res = mgos_config_bar_inner_parse(mg_mk_str_n(data, len), cfg);
+  free(data);
+  return res;
+}
 
 /* struct mgos_config_baz */
 const struct mgos_conf_entry *mgos_config_bar_baz_get_schema(void) {
@@ -159,6 +225,14 @@ const struct mgos_conf_entry *mgos_config_bar_baz_get_schema(void) {
 
 void mgos_config_bar_baz_set_defaults(struct mgos_config_baz *cfg) {
   cfg->bazaar = false;
+}
+bool mgos_config_bar_baz_parse_f(const char *fname, struct mgos_config_baz *cfg) {
+  size_t len;
+  char *data = cs_read_file(fname, &len);
+  if (data == NULL) return false;
+  bool res = mgos_config_bar_baz_parse(mg_mk_str_n(data, len), cfg);
+  free(data);
+  return res;
 }
 
 /* struct mgos_config_bar */
@@ -172,6 +246,14 @@ void mgos_config_bar_set_defaults(struct mgos_config_bar *cfg) {
   mgos_config_bar_inner_set_defaults(&cfg->inner);
   mgos_config_bar_baz_set_defaults(&cfg->baz);
 }
+bool mgos_config_bar_parse_f(const char *fname, struct mgos_config_bar *cfg) {
+  size_t len;
+  char *data = cs_read_file(fname, &len);
+  if (data == NULL) return false;
+  bool res = mgos_config_bar_parse(mg_mk_str_n(data, len), cfg);
+  free(data);
+  return res;
+}
 
 /* struct mgos_config_bar_inner */
 const struct mgos_conf_entry *mgos_config_test_bar1_inner_get_schema(void) {
@@ -182,6 +264,14 @@ void mgos_config_test_bar1_inner_set_defaults(struct mgos_config_bar_inner *cfg)
   cfg->param2 = "p2";
   cfg->param3 = 3333;
 }
+bool mgos_config_test_bar1_inner_parse_f(const char *fname, struct mgos_config_bar_inner *cfg) {
+  size_t len;
+  char *data = cs_read_file(fname, &len);
+  if (data == NULL) return false;
+  bool res = mgos_config_test_bar1_inner_parse(mg_mk_str_n(data, len), cfg);
+  free(data);
+  return res;
+}
 
 /* struct mgos_config_baz */
 const struct mgos_conf_entry *mgos_config_test_bar1_baz_get_schema(void) {
@@ -190,6 +280,14 @@ const struct mgos_conf_entry *mgos_config_test_bar1_baz_get_schema(void) {
 
 void mgos_config_test_bar1_baz_set_defaults(struct mgos_config_baz *cfg) {
   cfg->bazaar = false;
+}
+bool mgos_config_test_bar1_baz_parse_f(const char *fname, struct mgos_config_baz *cfg) {
+  size_t len;
+  char *data = cs_read_file(fname, &len);
+  if (data == NULL) return false;
+  bool res = mgos_config_test_bar1_baz_parse(mg_mk_str_n(data, len), cfg);
+  free(data);
+  return res;
 }
 
 /* struct mgos_config_bar */
@@ -203,6 +301,14 @@ void mgos_config_test_bar1_set_defaults(struct mgos_config_bar *cfg) {
   mgos_config_test_bar1_inner_set_defaults(&cfg->inner);
   mgos_config_test_bar1_baz_set_defaults(&cfg->baz);
 }
+bool mgos_config_test_bar1_parse_f(const char *fname, struct mgos_config_bar *cfg) {
+  size_t len;
+  char *data = cs_read_file(fname, &len);
+  if (data == NULL) return false;
+  bool res = mgos_config_test_bar1_parse(mg_mk_str_n(data, len), cfg);
+  free(data);
+  return res;
+}
 
 /* struct mgos_config_bar_inner */
 const struct mgos_conf_entry *mgos_config_test_bar2_inner_get_schema(void) {
@@ -213,6 +319,14 @@ void mgos_config_test_bar2_inner_set_defaults(struct mgos_config_bar_inner *cfg)
   cfg->param2 = "p2";
   cfg->param3 = 3333;
 }
+bool mgos_config_test_bar2_inner_parse_f(const char *fname, struct mgos_config_bar_inner *cfg) {
+  size_t len;
+  char *data = cs_read_file(fname, &len);
+  if (data == NULL) return false;
+  bool res = mgos_config_test_bar2_inner_parse(mg_mk_str_n(data, len), cfg);
+  free(data);
+  return res;
+}
 
 /* struct mgos_config_baz */
 const struct mgos_conf_entry *mgos_config_test_bar2_baz_get_schema(void) {
@@ -221,6 +335,14 @@ const struct mgos_conf_entry *mgos_config_test_bar2_baz_get_schema(void) {
 
 void mgos_config_test_bar2_baz_set_defaults(struct mgos_config_baz *cfg) {
   cfg->bazaar = true;
+}
+bool mgos_config_test_bar2_baz_parse_f(const char *fname, struct mgos_config_baz *cfg) {
+  size_t len;
+  char *data = cs_read_file(fname, &len);
+  if (data == NULL) return false;
+  bool res = mgos_config_test_bar2_baz_parse(mg_mk_str_n(data, len), cfg);
+  free(data);
+  return res;
 }
 
 /* struct mgos_config_bar */
@@ -234,6 +356,14 @@ void mgos_config_test_bar2_set_defaults(struct mgos_config_bar *cfg) {
   mgos_config_test_bar2_inner_set_defaults(&cfg->inner);
   mgos_config_test_bar2_baz_set_defaults(&cfg->baz);
 }
+bool mgos_config_test_bar2_parse_f(const char *fname, struct mgos_config_bar *cfg) {
+  size_t len;
+  char *data = cs_read_file(fname, &len);
+  if (data == NULL) return false;
+  bool res = mgos_config_test_bar2_parse(mg_mk_str_n(data, len), cfg);
+  free(data);
+  return res;
+}
 
 /* struct mgos_config_test */
 const struct mgos_conf_entry *mgos_config_test_get_schema(void) {
@@ -244,6 +374,14 @@ void mgos_config_test_set_defaults(struct mgos_config_test *cfg) {
   mgos_config_test_bar1_set_defaults(&cfg->bar1);
   mgos_config_test_bar2_set_defaults(&cfg->bar2);
 }
+bool mgos_config_test_parse_f(const char *fname, struct mgos_config_test *cfg) {
+  size_t len;
+  char *data = cs_read_file(fname, &len);
+  if (data == NULL) return false;
+  bool res = mgos_config_test_parse(mg_mk_str_n(data, len), cfg);
+  free(data);
+  return res;
+}
 
 /* struct mgos_config_boo_sub */
 const struct mgos_conf_entry *mgos_config_boo_sub_get_schema(void) {
@@ -252,6 +390,14 @@ const struct mgos_conf_entry *mgos_config_boo_sub_get_schema(void) {
 
 void mgos_config_boo_sub_set_defaults(struct mgos_config_boo_sub *cfg) {
   cfg->param7 = 444;
+}
+bool mgos_config_boo_sub_parse_f(const char *fname, struct mgos_config_boo_sub *cfg) {
+  size_t len;
+  char *data = cs_read_file(fname, &len);
+  if (data == NULL) return false;
+  bool res = mgos_config_boo_sub_parse(mg_mk_str_n(data, len), cfg);
+  free(data);
+  return res;
 }
 
 /* struct mgos_config_boo */
@@ -263,6 +409,14 @@ void mgos_config_boo_set_defaults(struct mgos_config_boo *cfg) {
   cfg->param5 = 333;
   cfg->param6 = "p6";
   mgos_config_boo_sub_set_defaults(&cfg->sub);
+}
+bool mgos_config_boo_parse_f(const char *fname, struct mgos_config_boo *cfg) {
+  size_t len;
+  char *data = cs_read_file(fname, &len);
+  if (data == NULL) return false;
+  bool res = mgos_config_boo_parse(mg_mk_str_n(data, len), cfg);
+  free(data);
+  return res;
 }
 
 /* struct mgos_config */
@@ -276,6 +430,14 @@ void mgos_config_set_defaults(struct mgos_config *cfg) {
   mgos_config_http_set_defaults(&cfg->http);
   mgos_config_debug_set_defaults(&cfg->debug);
   mgos_config_test_set_defaults(&cfg->test);
+}
+bool mgos_config_parse_f(const char *fname, struct mgos_config *cfg) {
+  size_t len;
+  char *data = cs_read_file(fname, &len);
+  if (data == NULL) return false;
+  bool res = mgos_config_parse(mg_mk_str_n(data, len), cfg);
+  free(data);
+  return res;
 }
 
 /* Global instance */

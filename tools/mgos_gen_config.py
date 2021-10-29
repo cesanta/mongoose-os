@@ -470,6 +470,7 @@ class StructDefGen(Gen):
             lines.append("  %s%s_set_defaults(cfg);" % (self._struct_name, ident_suff))
             lines.append("  return mgos_conf_parse_sub(json, %s%s_get_schema(), cfg);" % (self._struct_name, ident_suff))
             lines.append("}")
+            lines.append("bool %s%s_parse_f(const char *fname, %s *cfg);" % (self._struct_name, ident_suff, ctype))
             lines.append("static inline bool %s%s_emit(const %s *cfg, bool pretty, struct json_out *out) {" % (
                 self._struct_name, ident_suff, ctype))
             lines.append("  return mgos_conf_emit_json_out(cfg, NULL, %s%s_get_schema(), pretty, out);" % (self._struct_name, ident_suff))
@@ -565,6 +566,14 @@ class StructDefGen(Gen):
                     lines.append("  cfg->%s = %s;" % (fe.key, fe.GetCDefaultValue()))
             if len(fields) == 0:
                 lines.append("  (void) cfg;")
+            lines.append("}")
+            lines.append("bool %s%s_parse_f(const char *fname, %s *cfg) {" % (self._struct_name, ident_suff, ctype))
+            lines.append("  size_t len;")
+            lines.append("  char *data = cs_read_file(fname, &len);")
+            lines.append("  if (data == NULL) return false;")
+            lines.append("  bool res = %s%s_parse(mg_mk_str_n(data, len), cfg);" % (self._struct_name, ident_suff))
+            lines.append("  free(data);")
+            lines.append("  return res;")
             lines.append("}")
         return lines
 
@@ -829,6 +838,8 @@ class CWriter:
 #include "{name}.h"
 
 #include <stdbool.h>
+
+#include "common/cs_file.h"
 
 #include "mgos_config_util.h"
 

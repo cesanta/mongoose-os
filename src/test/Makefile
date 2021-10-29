@@ -34,15 +34,15 @@ CFLAGS = -W -Wall -Wextra -Werror -g -O0 -Wno-multichar -ffunction-sections -Wl,
 
 all: $(BUILD_DIR) diff test
 
-test: $(PROG)
+test: diff $(PROG)
 	./$(PROG)
-	@{ \
+	{ \
 	  x=0; \
 	  diff -u data/golden/mgos_config_pretty.json $(BUILD_DIR)/mgos_config_pretty.json || x=1; \
 	  diff -u data/golden/mgos_config.json $(BUILD_DIR)/mgos_config.json || x=1; \
 	  diff -u data/golden/mgos_config_boo_pretty.json $(BUILD_DIR)/mgos_config_boo_pretty.json || x=1; \
 	  diff -u data/golden/mgos_config_test_bar1_pretty.json $(BUILD_DIR)/mgos_config_test_bar1_pretty.json || x=1; \
-	  exit $$x; \
+	  echo $$x; exit $$x; \
 	}
 	@echo DIFF PASS
 

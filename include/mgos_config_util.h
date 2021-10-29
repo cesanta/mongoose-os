@@ -103,6 +103,10 @@ bool mgos_conf_parse_msg(const struct mg_str json, const char *acl,
 bool mgos_conf_parse_sub(const struct mg_str json,
                          const struct mgos_conf_entry *sub_schema, void *cfg);
 
+bool mgos_conf_parse_sub_f(const char *fname,
+                           const struct mgos_conf_entry *sub_schema,
+                           const void *cfg);
+
 /*
  * Callback for `mgos_conf_emit_cb` (see below); `data` is the emitted data and
  * `param` is user-defined param given to `mgos_conf_emit_cb`.

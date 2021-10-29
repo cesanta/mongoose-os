@@ -83,9 +83,15 @@ static const char *test_config(void) {
                             "build/mgos_config_pretty.json"));
   ASSERT(
       mgos_config_emit_f(&conf, false /* pretty */, "build/mgos_config.json"));
-  ASSERT(
-      mgos_config_test_bar1_emit_f(&conf.test.bar1, true /* pretty */,
-                                   "build/mgos_config_test_bar1_pretty.json"));
+
+  {
+    struct mgos_config_bar tb1;
+    ASSERT(mgos_config_test_bar1_parse_f(
+        "data/golden/mgos_config_test_bar1.json", &tb1));
+    ASSERT(mgos_config_test_bar1_emit_f(
+        &tb1, true /* pretty */, "build/mgos_config_test_bar1_pretty.json"));
+    mgos_config_bar_free(&tb1);
+  }
 
   {  // Test parsing of a sub-struct.
     struct mgos_config_wifi_ap wifi_ap;
