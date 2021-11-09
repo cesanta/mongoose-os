@@ -32,9 +32,9 @@ INCS = -I$(REPO_ROOT)/src \
 
 CFLAGS = -W -Wall -Wextra -Werror -g -O0 -Wno-multichar -ffunction-sections -Wl,--gc-sections -I$(BUILD_DIR) $(INCS)
 
-all: $(BUILD_DIR) diff test
+all: $(BUILD_DIR) test diff
 
-test: diff $(PROG)
+test: $(PROG)
 	./$(PROG)
 	{ \
 	  x=0; \

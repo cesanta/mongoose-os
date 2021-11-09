@@ -149,8 +149,10 @@ struct mgos_config_debug {
   const char * file_level;
   double test_d1;
   double test_d2;
+  double test_d3;
   float test_f1;
   float test_f2;
+  float test_f3;
   unsigned int test_ui;
   struct mgos_config_debug_empty empty;
 };
@@ -672,6 +674,16 @@ static inline double mgos_sys_config_get_default_debug_test_d2(void) { return mg
 void mgos_config_set_debug_test_d2(struct mgos_config *cfg, double v);
 static inline void mgos_sys_config_set_debug_test_d2(double v) { mgos_config_set_debug_test_d2(&mgos_sys_config, v); }
 
+/* debug.test_d3 */
+#define MGOS_CONFIG_HAVE_DEBUG_TEST_D3
+#define MGOS_SYS_CONFIG_HAVE_DEBUG_TEST_D3
+double mgos_config_get_debug_test_d3(const struct mgos_config *cfg);
+double mgos_config_get_default_debug_test_d3(void);
+static inline double mgos_sys_config_get_debug_test_d3(void) { return mgos_config_get_debug_test_d3(&mgos_sys_config); }
+static inline double mgos_sys_config_get_default_debug_test_d3(void) { return mgos_config_get_default_debug_test_d3(); }
+void mgos_config_set_debug_test_d3(struct mgos_config *cfg, double v);
+static inline void mgos_sys_config_set_debug_test_d3(double v) { mgos_config_set_debug_test_d3(&mgos_sys_config, v); }
+
 /* debug.test_f1 */
 #define MGOS_CONFIG_HAVE_DEBUG_TEST_F1
 #define MGOS_SYS_CONFIG_HAVE_DEBUG_TEST_F1
@@ -691,6 +703,16 @@ static inline float mgos_sys_config_get_debug_test_f2(void) { return mgos_config
 static inline float mgos_sys_config_get_default_debug_test_f2(void) { return mgos_config_get_default_debug_test_f2(); }
 void mgos_config_set_debug_test_f2(struct mgos_config *cfg, float v);
 static inline void mgos_sys_config_set_debug_test_f2(float v) { mgos_config_set_debug_test_f2(&mgos_sys_config, v); }
+
+/* debug.test_f3 */
+#define MGOS_CONFIG_HAVE_DEBUG_TEST_F3
+#define MGOS_SYS_CONFIG_HAVE_DEBUG_TEST_F3
+float mgos_config_get_debug_test_f3(const struct mgos_config *cfg);
+float mgos_config_get_default_debug_test_f3(void);
+static inline float mgos_sys_config_get_debug_test_f3(void) { return mgos_config_get_debug_test_f3(&mgos_sys_config); }
+static inline float mgos_sys_config_get_default_debug_test_f3(void) { return mgos_config_get_default_debug_test_f3(); }
+void mgos_config_set_debug_test_f3(struct mgos_config *cfg, float v);
+static inline void mgos_sys_config_set_debug_test_f3(float v) { mgos_config_set_debug_test_f3(&mgos_sys_config, v); }
 
 /* debug.test_ui */
 #define MGOS_CONFIG_HAVE_DEBUG_TEST_UI

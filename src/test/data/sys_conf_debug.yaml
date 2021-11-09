@@ -16,8 +16,10 @@
   ["debug.file_level", "s", "mg_foo.c=4", {title: "File level"}],
   ["debug.test_d1", "d", 0.123, {title: "Test doubles 1"}],
   ["debug.test_d2", "d", 0, {}],
+  ["debug.test_d3", "d", 1e-04, {}],
   ["debug.test_f1", "f", 0.123, {title: "Test float 1"}],
   ["debug.test_f2", "f", 123, {}],
+  ["debug.test_f3", "f", 1e-05, {}],
   ["debug.test_ui", "ui", 4294967295, {}],
   ["debug.empty", "o", {title: "Empty object with no fields"}],
 

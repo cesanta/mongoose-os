@@ -200,8 +200,12 @@ class SchemaEntry:
 
 
     def ValidateDefault(self):
-        if self.vtype in (SchemaEntry.V_FLOAT, SchemaEntry.V_DOUBLE) and type(self.default) is int:
-            self.default = float(self.default)
+        if (self.vtype in (SchemaEntry.V_FLOAT, SchemaEntry.V_DOUBLE) and
+            type(self.default) in (int, str)):
+            try:
+                self.default = float(self.default)
+            except ValueError:
+                raise TypeError("%s: Invalid default value '%s'" % (self.path, self.default))
         if (self.vtype == SchemaEntry.V_BOOL and not isinstance(self.default, bool) or
             self.vtype == SchemaEntry.V_INT and not isinstance(self.default, int) or
             self.vtype == SchemaEntry.V_UNSIGNED_INT and not isinstance(self.default, int) or
@@ -209,9 +213,9 @@ class SchemaEntry:
             self.vtype == SchemaEntry.V_INT and isinstance(self.default, bool) or
             self.vtype in (SchemaEntry.V_FLOAT, SchemaEntry.V_DOUBLE) and not isinstance(self.default, float) or
             self.vtype == SchemaEntry.V_STRING and not isinstance(self.default, str)):
-            raise TypeError("%s: Invalid default value type (%s)" % (self.path, type(self.default)))
+            raise TypeError("%s: Invalid default value type '%s'" % (self.path, type(self.default)))
         if self.vtype == SchemaEntry.V_UNSIGNED_INT and self.default < 0:
-            raise TypeError("%s: Invalid default unsigned value (%d)" % (self.path, self.default))
+            raise TypeError("%s: Invalid default unsigned value '%d'" % (self.path, self.default))
 
     def GetIdentifierName(self):
         return self.path.replace(".", "_")
