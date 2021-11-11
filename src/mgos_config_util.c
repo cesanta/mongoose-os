@@ -612,8 +612,9 @@ bool mgos_config_get(const struct mg_str key, struct mg_str *value,
     case CONF_TYPE_OBJECT: {
       struct mbuf mb;
       mbuf_init(&mb, 0);
-      mgos_conf_emit_cb(cfg, NULL /* base */, e, false /* pretty */, &mb,
-                        NULL /* cb */, NULL /* cb_param */);
+      mgos_conf_emit_cb(((char *) cfg) + e->offset, NULL /* base */, e,
+                        false /* pretty */, &mb, NULL /* cb */,
+                        NULL /* cb_param */);
       value->p = mb.buf;
       value->len = mb.len;
       break;
