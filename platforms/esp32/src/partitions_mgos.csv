@@ -16,4 +16,6 @@ fs_0,     data, spiffs,  ,                   $MGOS_ROOT_FS_SIZE, $FS_PART_ENCR_F
 app_1,    app,  ota_1,   ,                   $APP_SLOT_SIZE,     encrypted
 fs_1,     data, spiffs,  ,                   $MGOS_ROOT_FS_SIZE, $FS_PART_ENCR_FLAG
 $ESP_IDF_EXTRA_PARTITION
+$ESP_IDF_EXTRA_PARTITION_1
 $ESP_IDF_EXTRA_PARTITION_2
+$ESP_IDF_EXTRA_PARTITION_3
