@@ -45,8 +45,8 @@ static inline void uart_lock(struct mgos_uart_state *us) {
 }
 
 static inline void uart_unlock(struct mgos_uart_state *us) {
-  mgos_runlock(us->lock);
   us->locked--;
+  mgos_runlock(us->lock);
 }
 
 IRAM void mgos_uart_schedule_dispatcher(int uart_no, bool from_isr) {
