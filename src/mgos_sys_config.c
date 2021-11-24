@@ -102,6 +102,7 @@ static bool load_config(const char *name, struct mg_str cfg_data,
     result = false;
   }
   free(acl_copy);
+  (void) name;
   return result;
 }
 
