@@ -95,13 +95,10 @@ static bool load_config(const char *name, struct mg_str cfg_data,
                         const char *acl, const struct mgos_conf_entry *schema,
                         void *cfg) {
   bool result = true;
-  /* Make a temporary copy, in case it gets overridden while loading. */
-  char *acl_copy = (acl != NULL ? strdup(acl) : NULL);
-  if (!mgos_conf_parse(cfg_data, acl_copy, schema, cfg)) {
+  if (!mgos_conf_parse_sub_msg(cfg_data, schema, acl, cfg, NULL)) {
     LOG(LL_ERROR, ("Failed to parse %s", name));
     result = false;
   }
-  free(acl_copy);
   (void) name;
   return result;
 }
@@ -498,13 +495,8 @@ void mgos_sys_config_register_validator(mgos_config_validator_fn fn) {
 }
 
 bool mgos_config_apply_s(const struct mg_str json, bool save) {
-  /* Make a temporary copy, in case it gets overridden while loading. */
-  char *acl_copy = (mgos_sys_config_get_conf_acl() != NULL
-                        ? strdup(mgos_sys_config_get_conf_acl())
-                        : NULL);
   bool res =
-      mgos_conf_parse(json, acl_copy, mgos_config_schema(), &mgos_sys_config);
-  free(acl_copy);
+      mgos_conf_parse(json, mgos_sys_config_get_conf_acl(), &mgos_sys_config);
   if (save) save_cfg(&mgos_sys_config, NULL);
   return res;
 }

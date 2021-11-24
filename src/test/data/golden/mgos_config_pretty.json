@@ -5,6 +5,7 @@
       "pass": "try less cork"
     },
     "ap": {
+      "enable": false,
       "ssid": "Quote \" me \\\\ please",
       "pass": "",
       "channel": 6,

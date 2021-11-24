@@ -44,6 +44,7 @@ static inline void mgos_config_wifi_sta_free(struct mgos_config_wifi_sta *cfg) {
 
 /* wifi.ap type struct mgos_config_wifi_ap */
 struct mgos_config_wifi_ap {
+  int enable;
   const char * ssid;
   const char * pass;
   int channel;
@@ -541,6 +542,16 @@ static inline void mgos_sys_config_set_wifi_sta_pass(const char * v) { mgos_conf
 #define MGOS_SYS_CONFIG_HAVE_WIFI_AP
 const struct mgos_config_wifi_ap *mgos_config_get_wifi_ap(const struct mgos_config *cfg);
 static inline const struct mgos_config_wifi_ap *mgos_sys_config_get_wifi_ap(void) { return mgos_config_get_wifi_ap(&mgos_sys_config); }
+
+/* wifi.ap.enable */
+#define MGOS_CONFIG_HAVE_WIFI_AP_ENABLE
+#define MGOS_SYS_CONFIG_HAVE_WIFI_AP_ENABLE
+int mgos_config_get_wifi_ap_enable(const struct mgos_config *cfg);
+int mgos_config_get_default_wifi_ap_enable(void);
+static inline int mgos_sys_config_get_wifi_ap_enable(void) { return mgos_config_get_wifi_ap_enable(&mgos_sys_config); }
+static inline int mgos_sys_config_get_default_wifi_ap_enable(void) { return mgos_config_get_default_wifi_ap_enable(); }
+void mgos_config_set_wifi_ap_enable(struct mgos_config *cfg, int v);
+static inline void mgos_sys_config_set_wifi_ap_enable(int v) { mgos_config_set_wifi_ap_enable(&mgos_sys_config, v); }
 
 /* wifi.ap.ssid */
 #define MGOS_CONFIG_HAVE_WIFI_AP_SSID

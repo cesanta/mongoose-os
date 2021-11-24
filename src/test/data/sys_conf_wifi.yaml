@@ -12,6 +12,7 @@
   - {title: "Password", type: "password"}
 
 - ["wifi.ap", "o", {title: "WiFi Access Point"}]
+- ["wifi.ap.enable", "b", false, {title: "Enable"}]
 - ["wifi.ap.ssid", "s", 'Quote " me \\ please', {title: "SSID"}]
 - ["wifi.ap.pass", "s", "маловато будет", {title: "Password", type: "password"}]
 - ["wifi.ap.channel", "i", 6, {title: "Channel"}]

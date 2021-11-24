@@ -84,7 +84,7 @@ struct mgos_config;
  * checking keys against `acl`.
  */
 bool mgos_conf_parse(const struct mg_str json, const char *acl,
-                     const struct mgos_conf_entry *schema, void *cfg);
+                     struct mgos_config *cfg);
 
 /*
  * Identical to `mgos_conf_parse()` but allows the caller to get an error
@@ -94,8 +94,7 @@ bool mgos_conf_parse(const struct mg_str json, const char *acl,
  * is owned by the caller and has to be free()d.
  */
 bool mgos_conf_parse_msg(const struct mg_str json, const char *acl,
-                         const struct mgos_conf_entry *schema, void *cfg,
-                         char **msg);
+                         struct mgos_config *cfg, char **msg);
 
 /*
  * Parse a sub-section of the config.
@@ -106,6 +105,10 @@ bool mgos_conf_parse_sub(const struct mg_str json,
 bool mgos_conf_parse_sub_f(const char *fname,
                            const struct mgos_conf_entry *sub_schema,
                            const void *cfg);
+
+bool mgos_conf_parse_sub_msg(const struct mg_str json,
+                             const struct mgos_conf_entry *sub_schema,
+                             const char *acl, void *cfg, char **msg);
 
 /*
  * Callback for `mgos_conf_emit_cb` (see below); `data` is the emitted data and

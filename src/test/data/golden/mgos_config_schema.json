@@ -4,6 +4,7 @@
   ["wifi.sta.ssid", "s", {"title": "SSID"}],
   ["wifi.sta.pass", "s", {"title": "Password", "type": "password"}],
   ["wifi.ap", "o", {"title": "WiFi Access Point"}],
+  ["wifi.ap.enable", "b", {"title": "Enable"}],
   ["wifi.ap.ssid", "s", {"title": "SSID"}],
   ["wifi.ap.pass", "s", {"title": "Password", "type": "password"}],
   ["wifi.ap.channel", "i", {"title": "Channel"}],

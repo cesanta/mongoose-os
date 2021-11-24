@@ -19,7 +19,6 @@
 static const char *test_config(void) {
   size_t size;
   char *json2 = cs_read_file("data/overrides.json", &size);
-  const struct mgos_conf_entry *schema = mgos_config_schema();
   struct mgos_config conf;
   struct mgos_config_debug conf_debug;
 
@@ -38,7 +37,7 @@ static const char *test_config(void) {
   ASSERT_STREQ(conf.wifi.ap.dhcp_end, "192.168.4.200");
 
   /* Apply overrides */
-  ASSERT_EQ(mgos_conf_parse(mg_mk_str(json2), "*", schema, &conf), true);
+  ASSERT_EQ(mgos_conf_parse(mg_mk_str(json2), "*", &conf), true);
   ASSERT_STREQ(conf.wifi.sta.ssid, "cookadoodadoo"); /* Set string */
   ASSERT_STREQ(conf.wifi.sta.pass, "try less cork");
   ASSERT_EQ(conf.debug.level, 1);    /* Override integer */
@@ -94,14 +93,41 @@ static const char *test_config(void) {
   }
 
   {  // Test parsing of a sub-struct.
+    struct mg_str json = MG_MK_STR("{\"ssid\": \"test\", \"channel\": 9}");
     struct mgos_config_wifi_ap wifi_ap;
-    ASSERT(mgos_config_wifi_ap_parse(
-        mg_mk_str("{\"ssid\": \"test\", \"channel\": 9}"), &wifi_ap));
+    ASSERT(mgos_config_wifi_ap_parse(json, &wifi_ap));
     ASSERT_STREQ(wifi_ap.ssid, "test");
     ASSERT_EQ(wifi_ap.channel, 9);
     ASSERT_STREQ(wifi_ap.dhcp_end, "192.168.4.200");  // Default value.
     ASSERT_PTREQ(wifi_ap.dhcp_end,
                  conf.wifi.ap.dhcp_end);  // Shared const pointer.
+    mgos_config_wifi_ap_free(&wifi_ap);
+  }
+  {  // Test parsing of a single field.
+    const struct mgos_conf_entry *ap_sch =
+        mgos_conf_find_schema_entry("wifi.ap", mgos_config_schema());
+    ASSERT_PTREQ(ap_sch, mgos_config_wifi_ap_get_schema());
+    struct mg_str json = MG_MK_STR("{\"ssid\": \"test\", \"channel\": 9}");
+    struct mgos_config_wifi_ap wifi_ap = {0};
+    ASSERT(mgos_conf_parse_sub(json, ap_sch, &wifi_ap));
+    ASSERT_STREQ(wifi_ap.ssid, "test");
+    ASSERT_EQ(wifi_ap.channel, 9);
+    ASSERT_PTREQ(wifi_ap.dhcp_end, NULL);  // Default values not set.
+    ASSERT(mgos_conf_parse_sub(
+        mg_mk_str("\"x\""),
+        mgos_conf_find_schema_entry("wifi.ap.pass", mgos_config_schema()),
+        &wifi_ap.pass));
+    ASSERT(mgos_conf_parse_sub(
+        mg_mk_str("123"),
+        mgos_conf_find_schema_entry("wifi.ap.channel", mgos_config_schema()),
+        &wifi_ap.channel));
+    ASSERT(mgos_conf_parse_sub(
+        mg_mk_str("true"),
+        mgos_conf_find_schema_entry("wifi.ap.enable", mgos_config_schema()),
+        &wifi_ap.enable));
+    ASSERT_STREQ(wifi_ap.pass, "x");
+    ASSERT_EQ(wifi_ap.channel, 123);
+    ASSERT(wifi_ap.enable);
     mgos_config_wifi_ap_free(&wifi_ap);
   }
 
