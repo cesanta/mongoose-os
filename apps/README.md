@@ -2,7 +2,7 @@
 
 Mongoose OS apps are maintained as separate repositories under the [mongoose-os-apps](https://github.com/mongoose-os-libs) organization.
 
-Here's a list as of 2020/07/08:
+Here's a list as of 2021/12/14:
 
 | Name | Description |
 | ---- | ----------- |
@@ -35,11 +35,13 @@ Here's a list as of 2020/07/08:
 | [example-arduino-onewire-c](https://github.com/mongoose-os-apps/example-arduino-onewire-c) |  |
 | [example-arduino-onewire-js](https://github.com/mongoose-os-apps/example-arduino-onewire-js) |  |
 | [example-arduino-wire-c](https://github.com/mongoose-os-apps/example-arduino-wire-c) |  |
+| [example-bh1750](https://github.com/mongoose-os-apps/example-bh1750) | Sample application for the BH1750 driver |
 | [example-binary-lib-c](https://github.com/mongoose-os-apps/example-binary-lib-c) | Binary library use example |
 | [example-ble-js](https://github.com/mongoose-os-apps/example-ble-js) | BLE JS API use example |
 | [example-dht-c](https://github.com/mongoose-os-apps/example-dht-c) |  |
 | [example-dht-js](https://github.com/mongoose-os-apps/example-dht-js) |  |
 | [example-dns-sd](https://github.com/mongoose-os-apps/example-dns-sd) | DNS-SD usage example |
+| [example-factory-config](https://github.com/mongoose-os-apps/example-factory-config) | Device factory confguration example |
 | [example-homekit](https://github.com/mongoose-os-apps/example-homekit) | Demo application for HomeKit ADK |
 | [example-m5stack-js](https://github.com/mongoose-os-apps/example-m5stack-js) | Basic demo for M5stack |
 | [example-neopixel-c](https://github.com/mongoose-os-apps/example-neopixel-c) |  |
@@ -59,6 +61,8 @@ Here's a list as of 2020/07/08:
 | [losant-motion-sensor](https://github.com/mongoose-os-apps/losant-motion-sensor) | Detecting Motion Using a PIR sensor, ESP8266, and Mongoose OS |
 | [losant-mqtt](https://github.com/mongoose-os-apps/losant-mqtt) | Losant + Mongoose OS example |
 | [losant-temp-sensor](https://github.com/mongoose-os-apps/losant-temp-sensor) | :thermometer: A Mongoose OS app for sending temperature readings of ESP32 to Losant. |
+| [mel-ac-demo](https://github.com/mongoose-os-apps/mel-ac-demo) | Demo app for the MEL-AC library. Controll Mitsubishi Electirc AC and AWT unit using Mongoose OS RPC |
+| [mel-ac-homekit](https://github.com/mongoose-os-apps/mel-ac-homekit) | Mitsubishi Electric AirCo (conditioner) and ATW (heat pump) control for HomeKit |
 | [mq135](https://github.com/mongoose-os-apps/mq135) |  |
 | [neopixel-aws-iot](https://github.com/mongoose-os-apps/neopixel-aws-iot) | Neopixel control using AWS IoT and Android App |
 | [ota-aws-shadow](https://github.com/mongoose-os-apps/ota-aws-shadow) |  |

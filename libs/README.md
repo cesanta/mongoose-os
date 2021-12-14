@@ -2,7 +2,7 @@
 
 Mongoose OS libraries are maintained as separate repositores under the [mongoose-os-libs](https://github.com/mongoose-os-libs) organization.
 
-Here's a list as of 2019/07/08:
+Here's a list as of 2021/12/14:
 
 | Name | Description |
 | ---- | ----------- |
@@ -71,6 +71,7 @@ Here's a list as of 2019/07/08:
 | [homekit-adk](https://github.com/mongoose-os-libs/homekit-adk) | Port of Apple's HomeKit ADK to Mongoose OS |
 | [http-server](https://github.com/mongoose-os-libs/http-server) |  |
 | [htu21df-i2c](https://github.com/mongoose-os-libs/htu21df-i2c) | Mongoose OS library implementing an I2C driver for HTU21D(F) |
+| [htu31d-i2c](https://github.com/mongoose-os-libs/htu31d-i2c) |  |
 | [i2c](https://github.com/mongoose-os-libs/i2c) |  |
 | [ili9341-spi](https://github.com/mongoose-os-libs/ili9341-spi) | ILI9341 TFT Driver for Mongoose OS |
 | [imu](https://github.com/mongoose-os-libs/imu) | Mongoose OS library for inertial measurement units |
@@ -90,8 +91,10 @@ Here's a list as of 2019/07/08:
 | [mcp9808-i2c](https://github.com/mongoose-os-libs/mcp9808-i2c) | Mongoose OS library implementing an I2C driver for MCP9808 |
 | [md-max72xx](https://github.com/mongoose-os-libs/md-max72xx) |  |
 | [mdash-api](https://github.com/mongoose-os-libs/mdash-api) | Use mDash API to set a device label and create the UI |
+| [mel-ac](https://github.com/mongoose-os-libs/mel-ac) | Mitsubishi Electric AC (air conditioner unit) and ATW (air to water unit) control library for Mongoose OS |
 | [miniz](https://github.com/mongoose-os-libs/miniz) | Miniz compression library |
 | [mjs](https://github.com/mongoose-os-libs/mjs) | Embedded JavaScript engine for Mongoose OS |
+| [modbus](https://github.com/mongoose-os-libs/modbus) | Modbus implementation |
 | [mongoose](https://github.com/mongoose-os-libs/mongoose) | Mongoose Embedded Web Server Library |
 | [mq135](https://github.com/mongoose-os-libs/mq135) | MQ135 gas sensor support |
 | [mqtt](https://github.com/mongoose-os-libs/mqtt) | MQTT protocol support library for Mongoose OS |
@@ -105,6 +108,7 @@ Here's a list as of 2019/07/08:
 | [pca9685](https://github.com/mongoose-os-libs/pca9685) | I2C driver for PCA9685, 16 channel 12 bit PWM controller |
 | [pcf857x-i2c](https://github.com/mongoose-os-libs/pcf857x-i2c) | Mongoose OS Library for PCF857x: an 8- and 16-port GPIO expander w/ interrupt support |
 | [pppos](https://github.com/mongoose-os-libs/pppos) | PPPoS / cellullar modem support |
+| [pq](https://github.com/mongoose-os-libs/pq) | Mongoose OS Parallel Event Loops |
 | [prometheus-metrics](https://github.com/mongoose-os-libs/prometheus-metrics) |  |
 | [prometheus-sensors](https://github.com/mongoose-os-libs/prometheus-sensors) | A library that takes measurements of popular sensors on I2C/SPI and forwards them to Prometheus |
 | [provision](https://github.com/mongoose-os-libs/provision) | A device provisioning library |
@@ -118,6 +122,7 @@ Here's a list as of 2019/07/08:
 | [rpc-service-atca](https://github.com/mongoose-os-libs/rpc-service-atca) |  |
 | [rpc-service-config](https://github.com/mongoose-os-libs/rpc-service-config) |  |
 | [rpc-service-cron](https://github.com/mongoose-os-libs/rpc-service-cron) |  |
+| [rpc-service-dev](https://github.com/mongoose-os-libs/rpc-service-dev) | RPC service for low-level storage device methods |
 | [rpc-service-fs](https://github.com/mongoose-os-libs/rpc-service-fs) |  |
 | [rpc-service-gattc](https://github.com/mongoose-os-libs/rpc-service-gattc) |  |
 | [rpc-service-gpio](https://github.com/mongoose-os-libs/rpc-service-gpio) |  |
@@ -139,6 +144,7 @@ Here's a list as of 2019/07/08:
 | [stmpe610-spi](https://github.com/mongoose-os-libs/stmpe610-spi) |  |
 | [tmp006](https://github.com/mongoose-os-libs/tmp006) | A Texas Instruments TMP006 temperature sensor |
 | [veml6075-i2c](https://github.com/mongoose-os-libs/veml6075-i2c) |  |
+| [veml7700](https://github.com/mongoose-os-libs/veml7700) | VEML7700 Ambient Light Sensor Driver |
 | [vfs-common](https://github.com/mongoose-os-libs/vfs-common) | Mongoose OS VFS common bits |
 | [vfs-dev-encr](https://github.com/mongoose-os-libs/vfs-dev-encr) | VFS device that encrypts reads and writes |
 | [vfs-dev-part](https://github.com/mongoose-os-libs/vfs-dev-part) | A VFS device that exposes a part of another device |
