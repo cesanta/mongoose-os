@@ -28,6 +28,10 @@
 #define CS_CTASSERT(pred, msg) \
   extern char CS_CTASSERT_JOIN(ASSERTION_FAILED_, msg)[!!(pred) ? 1 : -1]
 
+#ifndef UNUSED_ARG
+#define UNUSED_ARG __attribute__((unused))
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
