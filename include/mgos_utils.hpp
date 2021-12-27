@@ -20,6 +20,8 @@
 #include <cstdlib>
 #include <string>
 
+#include "mgos_utils.h"
+
 namespace mgos {
 
 std::string SPrintf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
