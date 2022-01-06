@@ -59,4 +59,8 @@ void *ScopedCPtr::release() {
   return ptr;
 }
 
+std::string ToString(const struct mg_str &s) {
+  return std::string(s.p, s.len);
+}
+
 }  // namespace mgos

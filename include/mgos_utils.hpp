@@ -22,6 +22,8 @@
 
 #include "mgos_utils.h"
 
+#include "common/mg_str.h"
+
 namespace mgos {
 
 std::string SPrintf(const char *fmt, ...) __attribute__((format(printf, 1, 2)));
@@ -44,5 +46,7 @@ class ScopedCPtr {
  private:
   void *ptr_ = nullptr;
 };
+
+std::string ToString(const struct mg_str &s);
 
 }  // namespace mgos
