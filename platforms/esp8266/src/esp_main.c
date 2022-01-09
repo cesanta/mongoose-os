@@ -156,8 +156,7 @@ enum mgos_init_result esp_mgos_init2(void) {
   if (strcmp(MGOS_APP, "mongoose-os") != 0) {
     LOG(LL_INFO, ("%s %s (%s)", MGOS_APP, build_version, build_id));
   }
-  LOG(LL_INFO,
-      ("Mongoose OS %s (%s) sp %p", mg_build_version, mg_build_id, &ir));
+  LOG(LL_INFO, ("Mongoose OS %s (%s)", mg_build_version, mg_build_id));
   LOG(LL_INFO, ("CPU: %s, %d MHz, RAM: %u total, %u free",
                 esp_chip_type_str(esp_get_chip_type()),
                 (int) (mgos_get_cpu_freq() / 1000000), mgos_get_heap_size(),
@@ -207,7 +206,8 @@ void esp_report_stack_overflow(int tag1, int tag2, void *tag3) {
   char buf[200] = {0};
   esp_exc_extract_backtrace(((char *) MGOS_STACK_CANARY_LOC) - 128, buf,
                             sizeof(buf));
-  LOG(LL_ERROR, ("Stack overflow! Tag %d,%d,%p ptrs:%s", tag1, tag2, tag3, buf));
+  LOG(LL_ERROR,
+      ("Stack overflow! Tag %d,%d,%p ptrs:%s", tag1, tag2, tag3, buf));
 #ifdef MGOS_ABORT_ON_STACK_OVERFLOW
   *((int *) 123) = 456;
 #endif

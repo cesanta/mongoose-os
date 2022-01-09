@@ -92,6 +92,7 @@ IRAM void mgos_hw_timers_dev_isr_bottom(struct mgos_hw_timer_info *ti) {
 
 IRAM void mgos_hw_timers_dev_clear(struct mgos_hw_timer_info *ti) {
   RTC_CLR_REG_MASK(FRC1_CTRL_ADDRESS, TM_ENABLE);
+  CLEAR_PERI_REG_MASK(NMI_INT_ENABLE_REG, FRC1_INT_ENA);
   (void) ti;
 }
 

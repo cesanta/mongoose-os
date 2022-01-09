@@ -35,6 +35,7 @@
 #include "mgos_core_dump.h"
 #include "mgos_debug.h"
 #include "mgos_hal.h"
+#include "mgos_hw_timers_hal.h"
 #include "mgos_vfs.h"
 
 #include "esp_coredump.h"
@@ -194,6 +195,9 @@ IRAM NOINSTR void abort(void) {
 }
 
 void mgos_dev_system_restart(void) {
+  // Clear FRC1, as it is not cleared by soft restart
+  // and can cause all sorts of trouble.
+  mgos_hw_timers_dev_clear(NULL);
   esp_system_restart_low_level();
   // Not reached
   while (1) {
