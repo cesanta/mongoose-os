@@ -193,6 +193,7 @@ static void esp_mgos_init(void *arg) {
 }
 
 static os_event_t s_main_queue[MGOS_TASK_QUEUE_LENGTH];
+static uint8_t s_num_stack_overflows = 0;
 
 IRAM bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
   if (!system_os_post(MGOS_TASK_PRIORITY, (uint32_t) cb, (uint32_t) arg)) {
@@ -204,6 +205,7 @@ IRAM bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
 
 void esp_report_stack_overflow(int tag1, int tag2, void *tag3) {
   char buf[200] = {0};
+  s_num_stack_overflows++;
   esp_exc_extract_backtrace(((char *) MGOS_STACK_CANARY_LOC) - 128, buf,
                             sizeof(buf));
   LOG(LL_ERROR,
