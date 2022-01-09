@@ -195,8 +195,6 @@ struct mgos_uart_stats {
   uint32_t tx_ints;
   uint32_t tx_bytes;
   uint32_t tx_throttles;
-
-  void *dev_data;
 };
 
 /* Get UART statistics */
