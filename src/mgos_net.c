@@ -202,8 +202,9 @@ static void mgos_update_nameserver(void) {
 out:
   mgos_net_ip_to_str(&ip_info.dns, nameserver);
   struct mg_mgr *mgr = mgos_get_mgr();
-  if (mgr->nameserver != NULL && strcmp(mgr->nameserver, nameserver) == 0)
+  if (mgr->nameserver != NULL && strcmp(mgr->nameserver, nameserver) == 0) {
     return;
+  }
   LOG(LL_DEBUG, ("Setting %s server to %s", "DNS", nameserver));
   mg_set_nameserver(mgr, nameserver);
 }
