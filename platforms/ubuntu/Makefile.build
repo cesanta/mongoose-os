@@ -1,7 +1,3 @@
-# -*- mode: makefile -*-
-#
-# Mongoose OS for Ubuntu
-
 MAKEFLAGS += --no-builtin-rules --warn-undefined-variables
 .DEFAULT_GOAL := all
 
@@ -101,13 +97,13 @@ APP_ELF = $(BUILD_DIR)/$(APP).elf
 BUILD_INFO_C = $(GEN_DIR)/build_info.c
 BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
 MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
+BUILD_INFO_O = $(patsubst %.c,$(BUILD_DIR)/%.c.o,$(BUILD_INFO_C) $(MG_BUILD_INFO_C))
 MGOS_CONFIG_C = $(GEN_DIR)/mgos_config.c
 MGOS_RO_VARS_C = $(GEN_DIR)/mgos_ro_vars.c
-GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C)
+FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
+GENFILES_LIST = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(FFI_EXPORTS_C)
 GENFILES_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.c.o,$(GENFILES_LIST))
 SYMBOLS_DUMP = $(GEN_DIR)/symbols_dump.txt
-FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
-FFI_EXPORTS_O = $(patsubst %.c,$(BUILD_DIR)/%.c.o,$(FFI_EXPORTS_C))
 
 MGOS_CONF_SCHEMA += $(PLATFORM_VPATH)/ubuntu_sys_config.yaml
 
@@ -116,9 +112,10 @@ PLATFORM_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.c.o,$(filter %.c,$(PLATFORM_SRCS))
 MGOS_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.c.o,$(filter %.c,$(MGOS_SRCS))) \
             $(patsubst %.cpp,$(BUILD_DIR)/%.cpp.o,$(filter %.cpp,$(MGOS_SRCS)))
 APP_OBJS = $(patsubst %.c,$(BUILD_DIR)/%.c.o,$(filter %.c,$(APP_SOURCES))) \
-           $(patsubst %.cpp,$(BUILD_DIR)/%.cpp.o,$(filter %.cpp,$(APP_SOURCES))) \
-           $(FFI_EXPORTS_O)
-OBJS = $(MGOS_OBJS) $(APP_OBJS) $(PLATFORM_OBJS) $(GENFILES_OBJS)
+           $(patsubst %.cpp,$(BUILD_DIR)/%.cpp.o,$(filter %.cpp,$(APP_SOURCES)))
+BIN_OBJS = $(MGOS_OBJS) $(APP_OBJS) $(PLATFORM_OBJS) $(GENFILES_OBJS)
+
+ALL_OBJS = $(BIN_OBJS) $(BUILD_INFO_O)
 
 # Files
 FS_STAGING_DIR ?= $(BUILD_DIR)/fs
@@ -136,7 +133,7 @@ include $(MGOS_PATH)/tools/mk/mgos_config.mk
 include $(MGOS_PATH)/tools/mk/mgos_features.mk
 include $(MGOS_PATH)/tools/mk/mgos_mkfs.mk
 
-all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(GENFILES_LIST) $(OBJS) $(FS_STAGING_DIR) $(FW_ZIP) $(APP_ELF)
+all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(FW_ZIP)
 
 # Directories
 $(BIN_DIR) $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR):
@@ -144,10 +141,10 @@ $(BIN_DIR) $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR):
 	$(Q) mkdir -p $@
 
 # Generated files
-$(BUILD_INFO_C) $(BUILD_INFO_JSON):
+$(BUILD_INFO_C) $(BUILD_INFO_JSON): $(BIN_OBJS)
 	$(call gen_build_info,$@,$(APP_PATH),$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
 
-$(MG_BUILD_INFO_C):
+$(MG_BUILD_INFO_C): $(MGOS_OBJS)
 	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
 
 # Output filesystem directory
@@ -171,7 +168,7 @@ $(BUILD_DIR)/%.c.o : %.c $(GENFILES_LIST)
 	$(Q) mkdir -p $(dir $@)
 	$(Q) $(CC) $(CFLAGS) $(INCDIRS) -c $< -o $@
 
-$(BUILD_DIR)/%.cpp.o : %.cpp
+$(BUILD_DIR)/%.cpp.o : %.cpp $(GENFILES_LIST)
 	$(vecho) "CXX   $<"
 	$(Q) mkdir -p $(dir $@)
 	$(Q) $(CXX) $(CXXFLAGS) $(INCDIRS) -c $< -o $@
@@ -182,16 +179,16 @@ $(BUILD_DIR)/$(BUILD_LIB_NAME): $(BUILD_DIR) $(GENFILES_LIST) $(APP_OBJS)
 	$(Q) $(AR) cr $@ $(APP_OBJS)
 
 # Application target.
-$(APP_ELF): $(OBJS)
+$(APP_ELF): $(ALL_OBJS)
 	$(vecho) "LD    $@"
 	$(Q) $(CXX) -Wl,--gc-sections -Wl,-Map=$@.map \
-	  -Wl,--start-group $(OBJS) $(APP_BIN_LIBS) $(LDLIBS) -Wl,--end-group \
+	  -Wl,--start-group $^ $(APP_BIN_LIBS) $(LDLIBS) -Wl,--end-group \
 	  $(LDFLAGS) -o $@
 
-$(FW_MANIFEST): $(APP_ELF)
+$(FW_MANIFEST): $(APP_ELF) $(XKJSNKJ)
 
 clean:
 	$(Q) rm -rf $(BIN_DIR) $(BUILD_DIR)
 
 # Slurp in auto-generated header dependencies.
--include $(patsubst %.o,%.d,$(OBJS))
+-include $(patsubst %.o,%.d,$(BIN_OBJS))
