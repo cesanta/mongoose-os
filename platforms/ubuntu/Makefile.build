@@ -133,7 +133,7 @@ include $(MGOS_PATH)/tools/mk/mgos_config.mk
 include $(MGOS_PATH)/tools/mk/mgos_features.mk
 include $(MGOS_PATH)/tools/mk/mgos_mkfs.mk
 
-all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR) $(FW_ZIP)
+all: $(BUILD_DIR) $(FW_STAGING_DIR) $(FS_STAGING_DIR) $(FW_DIR) $(FW_ZIP)
 
 # Directories
 $(BIN_DIR) $(BUILD_DIR) $(FW_STAGING_DIR) $(FW_DIR):
@@ -185,7 +185,7 @@ $(APP_ELF): $(ALL_OBJS)
 	  -Wl,--start-group $^ $(APP_BIN_LIBS) $(LDLIBS) -Wl,--end-group \
 	  $(LDFLAGS) -o $@
 
-$(FW_MANIFEST): $(APP_ELF) $(XKJSNKJ)
+$(FW_MANIFEST): $(APP_ELF)
 
 clean:
 	$(Q) rm -rf $(BIN_DIR) $(BUILD_DIR)
