@@ -65,6 +65,7 @@ static GPIOPinCtx *GetOrCreatePinCtx(int pin, enum mgos_gpio_mode mode) {
     ctx = new_ctx.get();
     pins_->emplace(pin, std::move(new_ctx));
   }
+  (void) buf;
   return ctx;
 }
 
@@ -85,6 +86,7 @@ bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
     char buf[8];
     LOG(LL_INFO, ("mgos_gpio_set_pull(%s, %d): invalid pin",
                   mgos_gpio_str(pin, buf), pull));
+    (void) buf;
     return false;
   }
   ctx->pull = pull;
@@ -96,6 +98,7 @@ bool mgos_gpio_read(int pin) {
   if (ctx == nullptr) {
     char buf[8];
     LOG(LL_INFO, ("mgos_gpio_read(%s): invalid pin", mgos_gpio_str(pin, buf)));
+    (void) buf;
     return false;
   }
   return ctx->in_value;
@@ -107,6 +110,7 @@ bool mgos_gpio_read_out(int pin) {
     char buf[8];
     LOG(LL_INFO,
         ("mgos_gpio_read_out(%s): invalid pin", mgos_gpio_str(pin, buf)));
+    (void) buf;
     return false;
   }
   return ctx->out_value;
@@ -118,6 +122,7 @@ void mgos_gpio_write(int pin, bool level) {
     char buf[8];
     LOG(LL_INFO, ("mgos_gpio_write(%s, %d): invalid pin",
                   mgos_gpio_str(pin, buf), level));
+    (void) buf;
     return;
   }
   ctx->out_value = level;
@@ -127,6 +132,8 @@ bool mgos_gpio_hal_enable_int(int pin) {
   char buf[8];
   LOG(LL_INFO, ("mgos_gpio_hal_enable_int(%s): not implemented",
                 mgos_gpio_str(pin, buf)));
+  (void) buf;
+  (void) pin;
   return true;
 }
 
@@ -134,6 +141,8 @@ bool mgos_gpio_hal_disable_int(int pin) {
   char buf[8];
   LOG(LL_INFO, ("mgos_gpio_hal_disable_int(%s): not implemented",
                 mgos_gpio_str(pin, buf)));
+  (void) buf;
+  (void) pin;
   return true;
 }
 
@@ -141,6 +150,9 @@ bool mgos_gpio_hal_set_int_mode(int pin, enum mgos_gpio_int_mode mode) {
   char buf[8];
   LOG(LL_INFO, ("mgos_gpio_hal_set_int_mode(%s, %d): not implemented",
                 mgos_gpio_str(pin, buf), mode));
+  (void) buf;
+  (void) pin;
+  (void) mode;
   return true;
 }
 
