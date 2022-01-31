@@ -14,22 +14,23 @@
  * limitations under the License.
  */
 
+#include <pthread.h>
 #include <signal.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
 
-#include "common/queue.h"
+#include "rpa_queue.h"
 
 #include "mgos_debug_internal.h"
 #include "mgos_init_internal.h"
 #include "mgos_mongoose.h"
 #include "mgos_mongoose_internal.h"
-#include "mgos_mongoose_internal.h"
 #include "mgos_net_hal.h"
 #include "mgos_sys_config.h"
 #include "mgos_uart_internal.h"
+#include "mgos_utils.h"
 #include "ubuntu.h"
 
 extern const char *build_version, *build_id;
@@ -43,23 +44,37 @@ static pid_t s_parent, s_child;
 struct cb_info {
   void (*cb)(void *arg);
   void *cb_arg;
-  STAILQ_ENTRY(cb_info) next;
 };
 
-STAILQ_HEAD(s_cbs, cb_info) s_cbs = STAILQ_HEAD_INITIALIZER(s_cbs);
-struct mgos_rlock_type *s_cbs_lock = NULL;
+static rpa_queue_t *s_cbs_main = NULL;
+static rpa_queue_t *s_cbs_bg = NULL;
+
 struct mgos_rlock_type *s_mgos_lock = NULL;
 
-static void ubuntu_sigint_handler(int sig) {
+static void ubuntu_sigint_handler(int sig UNUSED_ARG) {
   mongoose_running = false;
-  (void) sig;
+}
+
+static void *ubuntu_bg_task(void *arg UNUSED_ARG) {
+  LOG(LL_DEBUG, ("Background task started"));
+  struct cb_info *cbi = NULL;
+  while (rpa_queue_pop(s_cbs_bg, (void **) &cbi)) {
+    cbi->cb(cbi->cb_arg);
+    free(cbi);
+  }
+  LOG(LL_DEBUG, ("Background task exiting"));
+  return NULL;
 }
 
 static int ubuntu_mongoose(void) {
   enum mgos_init_result r;
+  pthread_t bg_task;
 
-  s_cbs_lock = mgos_rlock_create();
   s_mgos_lock = mgos_rlock_create();
+
+  assert(rpa_queue_create(&s_cbs_main, 32));
+  assert(rpa_queue_create(&s_cbs_bg, 32));
+  assert(pthread_create(&bg_task, NULL /* attr */, ubuntu_bg_task, NULL) == 0);
 
   ubuntu_set_boottime();
   ubuntu_set_nsleep100();
@@ -79,31 +94,25 @@ static int ubuntu_mongoose(void) {
   };
   sigaction(SIGINT, &sa, NULL);
   while (mongoose_running) {
-    mgos_rlock(s_cbs_lock);
-    while (!STAILQ_EMPTY(&s_cbs)) {
-      struct cb_info *cbi = STAILQ_FIRST(&s_cbs);
-      STAILQ_REMOVE_HEAD(&s_cbs, next);
-      mgos_runlock(s_cbs_lock);
+    struct cb_info *cbi = NULL;
+    while (rpa_queue_trypop(s_cbs_main, (void **) &cbi)) {
       cbi->cb(cbi->cb_arg);
       free(cbi);
-      mgos_rlock(s_cbs_lock);
     }
-    mgos_runlock(s_cbs_lock);
     mongoose_poll(1);
   }
+  rpa_queue_term(s_cbs_bg);
+  pthread_join(bg_task, NULL /* retval */);
   return 0;
 }
 
-bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
+bool mgos_invoke_cb(mgos_cb_t cb, void *arg, uint32_t flags) {
   struct cb_info *cbi = (struct cb_info *) calloc(1, sizeof(*cbi));
   if (cbi == NULL) return false;
   cbi->cb = cb;
   cbi->cb_arg = arg;
-  mgos_rlock(s_cbs_lock);
-  STAILQ_INSERT_TAIL(&s_cbs, cbi, next);
-  mgos_runlock(s_cbs_lock);
-  (void) from_isr;
-  return true;
+  return rpa_queue_trypush(
+      ((flags & MGOS_INVOKE_CB_F_BG_TASK) ? s_cbs_bg : s_cbs_main), cbi);
 }
 
 static int ubuntu_main(void) {
@@ -158,9 +167,6 @@ int main(int argc, char *argv[]) {
   }
   LOGM(LL_INFO, ("Exiting. Have a great day!"));
   return ret;
-
-  (void) argc;
-  (void) argv;
 }
 
 static void dummy_handler(struct mg_connection *nc, int ev, void *ev_data,
@@ -236,7 +242,7 @@ enum mgos_init_result mongoose_init(void) {
   LOG(LL_INFO, ("CPU: %d MHz, heap: %lu total, %lu free", cpu_freq, heap_size,
                 free_heap_size));
 
-  mgos_invoke_cb(ubuntu_net_up, NULL, false /* from_isr */);
+  mgos_invoke_cb(ubuntu_net_up, NULL, 0);
 
   srand(time(NULL) + getpid());
 

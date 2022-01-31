@@ -88,11 +88,19 @@ void mgos_ints_enable(void);
 /* Callback for `mgos_invoke_cb()` */
 typedef void (*mgos_cb_t)(void *arg);
 
+#define MGOS_INVOKE_CB_F_FROM_ISR (1 << 0)
+#define MGOS_INVOKE_CB_F_BG_TASK (1 << 1)
+
 /*
- * Invoke a callback in the main MGOS event loop.
+ * Schedule a callback for execution.
+ *
+ * By default callbacks are executed on the main task.
+ * MGOS_INVOKE_CB_F_BG_TASK can be used to execute on a background task
+ * (if platform provides a separate task for this purpose).
+ *
  * Returns true if the callback has been scheduled for execution.
  */
-bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr);
+bool mgos_invoke_cb(mgos_cb_t cb, void *arg, uint32_t flags);
 
 /* Get the CPU frequency in Hz */
 uint32_t mgos_get_cpu_freq(void);

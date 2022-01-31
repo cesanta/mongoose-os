@@ -106,7 +106,8 @@ IRAM void mongoose_schedule_poll(bool from_isr) {
   if (s_mg_polls_in_flight < 2) {
     s_mg_polls_in_flight++;
     mgos_ints_enable();
-    if (mgos_invoke_cb(mgos_mg_poll_cb, NULL, from_isr)) {
+    if (mgos_invoke_cb(mgos_mg_poll_cb, NULL,
+                       (from_isr ? MGOS_INVOKE_CB_F_FROM_ISR : 0))) {
       return;
     } else {
       /* Ok, that didn't work, roll back our counter change. */
@@ -195,11 +196,12 @@ static void esp_mgos_init(void *arg) {
 static os_event_t s_main_queue[MGOS_TASK_QUEUE_LENGTH];
 static uint8_t s_num_stack_overflows = 0;
 
-IRAM bool mgos_invoke_cb(mgos_cb_t cb, void *arg, bool from_isr) {
+IRAM bool mgos_invoke_cb(mgos_cb_t cb, void *arg, uint32_t flags) {
+  // Note: no background task on ESP8266.
   if (!system_os_post(MGOS_TASK_PRIORITY, (uint32_t) cb, (uint32_t) arg)) {
     return false;
   }
-  (void) from_isr;
+  (void) flags;
   return true;
 }
 
@@ -226,7 +228,7 @@ static void mgos_task(os_event_t *e) {
 static void sdk_init_done_cb(void) {
   system_os_task(mgos_task, MGOS_TASK_PRIORITY, s_main_queue,
                  MGOS_TASK_QUEUE_LENGTH);
-  mgos_invoke_cb(esp_mgos_init, NULL, false /* from_isr */);
+  mgos_invoke_cb(esp_mgos_init, NULL, 0);
 }
 
 extern void __libc_init_array(void);

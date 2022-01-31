@@ -85,8 +85,7 @@ void mgos_debug_udp_send(const struct mg_str prefix, const struct mg_str data) {
       s_cb_pending++;
     }
 #else
-    if (mgos_invoke_cb(udp_flush_cb, NULL, false /* from_isr */))
-      s_cb_pending++;
+    if (mgos_invoke_cb(udp_flush_cb, NULL, 0)) s_cb_pending++;
 #endif
   }
   mgos_unlock();
