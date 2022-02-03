@@ -58,8 +58,9 @@ bool ubuntu_ipc_init_main(void);
 // Initialize the socketpair in mongoose
 bool ubuntu_ipc_init_mongoose(void);
 
+#define UBUNTU_IPC_RES_RESTART -123
 // Handle incoming IPC requests from mongoose to main.
-bool ubuntu_ipc_handle(uint16_t timeout_ms);
+int ubuntu_ipc_handle(uint16_t timeout_ms);
 
 // Destroy the socketpair in main
 bool ubuntu_ipc_destroy_main(void);

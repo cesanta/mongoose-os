@@ -85,11 +85,6 @@ size_t mgos_get_min_free_heap_size(void) {
   return 0;
 }
 
-void mgos_dev_system_restart(void) {
-  LOG(LL_INFO, ("Not implemented yet"));
-  while (1) {}
-}
-
 size_t mgos_get_fs_memory_usage(void) {
   LOG(LL_INFO, ("Not implemented yet"));
   return 0;

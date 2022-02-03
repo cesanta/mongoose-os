@@ -43,7 +43,7 @@
 
 #ifdef __cplusplus
 extern "C" {
-#endif /* __cplusplus */
+#endif
 
 struct ubuntu_pipe {
   struct mgos_rlock_type *lock;
@@ -52,12 +52,13 @@ struct ubuntu_pipe {
 };
 
 enum ubuntu_pipe_cmd {
-  UBUNTU_CMD_WDT = 0,      // in=NULL; out=NULL
-  UBUNTU_CMD_WDT_EN,       // in=NULL; out=NULL
-  UBUNTU_CMD_WDT_DIS,      // in=NULL; out=NULL
-  UBUNTU_CMD_WDT_TIMEOUT,  // in=int *secs; out=NULL
-  UBUNTU_CMD_PING,         // in=char *msg; out=char *msg
-  UBUNTU_CMD_OPEN,         // in=char *path, int *flags; out=NULL (fd in cmsg)
+  UBUNTU_CMD_WDT = 0,          // in=NULL; out=NULL
+  UBUNTU_CMD_WDT_EN = 1,       // in=NULL; out=NULL
+  UBUNTU_CMD_WDT_DIS = 2,      // in=NULL; out=NULL
+  UBUNTU_CMD_WDT_TIMEOUT = 3,  // in=int *secs; out=NULL
+  UBUNTU_CMD_PING = 4,         // in=char *msg; out=char *msg
+  UBUNTU_CMD_OPEN = 5,    // in=char *path, int *flags; out=NULL (fd in cmsg)
+  UBUNTU_CMD_REBOOT = 6,  // in=NULL; out=NULL
 };
 typedef uint8_t ubuntu_pipe_cmd;
 
@@ -75,4 +76,4 @@ void ubuntu_ipc_ping(void);
 
 #ifdef __cplusplus
 }
-#endif /* __cplusplus */
+#endif

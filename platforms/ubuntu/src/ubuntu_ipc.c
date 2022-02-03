@@ -23,9 +23,9 @@
 struct ubuntu_pipe s_pipe;
 
 static int ubuntu_ipc_handle_open(const char *pathname, int flags) {
-  const char *patterns[] = {"/dev/i2c-*", "/dev/spidev*.*", "/proc/cpuinfo",
-                            "/sys/class/net/*/address", "/proc/net/route",
-                            NULL};
+  const char *patterns[] = {"/dev/i2c-*",      "/dev/spidev*.*",
+                            "/proc/cpuinfo",   "/sys/class/net/*/address",
+                            "/proc/net/route", NULL};
   int i;
   bool ok = false;
 
@@ -42,7 +42,7 @@ static int ubuntu_ipc_handle_open(const char *pathname, int flags) {
   return open(pathname, flags);
 }
 
-bool ubuntu_ipc_handle(uint16_t timeout_ms) {
+int ubuntu_ipc_handle(uint16_t timeout_ms) {
   fd_set rfds;
   struct timeval tv;
   int retval;
@@ -55,6 +55,7 @@ bool ubuntu_ipc_handle(uint16_t timeout_ms) {
     char control[CMSG_SPACE(sizeof(int))];
   } control_un;
   int fd = -1;
+  int ret = 0;
 
   FD_ZERO(&rfds);
   FD_SET(s_pipe.main_fd, &rfds);
@@ -62,14 +63,14 @@ bool ubuntu_ipc_handle(uint16_t timeout_ms) {
   tv.tv_sec = 0;
   tv.tv_usec = timeout_ms * 1000;
 
-  //  LOG(LL_INFO, ("Selecting for %u ms", timeout_ms));
+  // LOGM(LL_DEBUG, ("Selecting for %u ms", timeout_ms));
   retval = select(FD_SETSIZE, &rfds, NULL, NULL, &tv);
   if (retval < 0) {
     LOGM(LL_ERROR, ("Cannot not select"));
-    return false;
+    return -1;
   } else if (retval == 0) {
-    //    LOG(LL_INFO, ("No data within %u ms", timeout_ms));
-    return true;
+    LOGM(LL_INFO, ("No data within %u ms", timeout_ms));
+    return 0;
   }
 
   memset(&msg, 0, sizeof(struct msghdr));
@@ -81,14 +82,16 @@ bool ubuntu_ipc_handle(uint16_t timeout_ms) {
 
   _len = recvmsg(s_pipe.main_fd, &msg, 0);
   if (_len <= 0) {
-    return false;
+    return -2;
   }
-  // LOG(LL_INFO, ("Received: cmd=%d len=%u msg='%.*s'", iovec_payload.cmd,
-  // iovec_payload.len, (int)iovec_payload.len, (char *)iovec_payload.data));
+  // LOGM(LL_DEBUG, ("Received: cmd=%d len=%u msg='%.*s' %d %d",
+  // iovec_payload.cmd,
+  //                iovec_payload.len, (int) iovec_payload.len,
+  //                (char *) iovec_payload.data, retval, _len));
 
   iovec_payload.len = 0;
   // Handle command
-  switch (iovec_payload.cmd) {
+  switch ((enum ubuntu_pipe_cmd) iovec_payload.cmd) {
     case UBUNTU_CMD_WDT:
       ubuntu_wdt_feed();
       break;
@@ -135,26 +138,34 @@ bool ubuntu_ipc_handle(uint16_t timeout_ms) {
     }
 
     case UBUNTU_CMD_PING:
-    default:
       iovec_payload.len = 5;
       memcpy(&iovec_payload.data, "PONG!", iovec_payload.len);
+      break;
+
+    case UBUNTU_CMD_REBOOT:
+      ret = UBUNTU_IPC_RES_RESTART;
+      // LOGM(LL_DEBUG, ("Restart requested"));
+      break;
   }
 
-  iov[0].iov_base = (void *) &iovec_payload;
-  iov[0].iov_len = iovec_payload.len + 2;
-  msg.msg_iov = iov;
-  msg.msg_iovlen = 1;
-  _len = sendmsg(s_pipe.main_fd, &msg, 0);
-  if (_len <= 0) {
-    return false;
+  if (ret != UBUNTU_IPC_RES_RESTART) {
+    iov[0].iov_base = (void *) &iovec_payload;
+    iov[0].iov_len = iovec_payload.len + 2;
+    msg.msg_iov = iov;
+    msg.msg_iovlen = 1;
+    _len = sendmsg(s_pipe.main_fd, &msg, 0);
+    if (_len <= 0) {
+      return -3;
+    }
+    // LOGM(LL_DEBUG, ("Sent: cmd=%d len=%u msg='%.*s' fd=%d",
+    // iovec_payload.cmd,
+    //                iovec_payload.len, (int) iovec_payload.len,
+    //                (char *) iovec_payload.data, fd));
   }
   if (fd > 0) {
     close(fd);  // Close the UBUNTU_CMD_OPEN fd in parent
   }
-  //  LOG(LL_INFO, ("Sent: cmd=%d len=%u msg='%.*s' fd=%d", iovec_payload.cmd,
-  //  iovec_payload.len, (int)iovec_payload.len, (char *)iovec_payload.data,
-  //  fd));
-  return true;
+  return ret;
 }
 
 bool ubuntu_ipc_init(void) {

@@ -29,7 +29,7 @@ static bool ubuntu_ipc_cmd(const struct ubuntu_pipe_message *in,
   struct msghdr msg;
   struct iovec iov[1];
 
-  if (!in || !out) {
+  if (in == NULL) {
     return false;
   }
 
@@ -46,15 +46,19 @@ static bool ubuntu_ipc_cmd(const struct ubuntu_pipe_message *in,
     goto exit;
   }
 
-  iov[0].iov_base = (void *) out;
-  iov[0].iov_len = sizeof(struct ubuntu_pipe_message);
-  msg.msg_iov = iov;
-  msg.msg_iovlen = 1;
-  len = recvmsg(s_pipe.mongoose_fd, &msg, 0);
-  if (len < 2) {
-    LOG(LL_ERROR, ("Cannot read message %d %d", (int) len, errno));
-    goto exit;
+  if (out != NULL) {
+    iov[0].iov_base = (void *) out;
+    iov[0].iov_len = sizeof(struct ubuntu_pipe_message);
+    msg.msg_iov = iov;
+    msg.msg_iovlen = 1;
+    len = recvmsg(s_pipe.mongoose_fd, &msg, 0);
+    if (len < 2) {
+      LOG(LL_ERROR, ("Cannot read message %d %d", (int) len, errno));
+      goto exit;
+    }
   }
+
+  ret = true;
 
 exit:
   mgos_runlock(s_pipe.lock);
@@ -149,7 +153,6 @@ void mgos_wdt_feed(void) {
   out.cmd = UBUNTU_CMD_WDT;
   out.len = 0;
   ubuntu_ipc_cmd(&out, &in);
-  return;
 }
 
 void mgos_wdt_enable(void) {
@@ -160,7 +163,6 @@ void mgos_wdt_enable(void) {
   out.cmd = UBUNTU_CMD_WDT_EN;
   out.len = 0;
   ubuntu_ipc_cmd(&out, &in);
-  return;
 }
 
 void mgos_wdt_disable(void) {
@@ -169,16 +171,14 @@ void mgos_wdt_disable(void) {
   out.cmd = UBUNTU_CMD_WDT_DIS;
   out.len = 0;
   ubuntu_ipc_cmd(&out, &in);
-  return;
 }
 
 void ubuntu_ipc_ping(void) {
-  struct ubuntu_pipe_message out, in;
-
-  memset(&in, 0, sizeof(struct ubuntu_pipe_message));
-  memset(&out, 0, sizeof(struct ubuntu_pipe_message));
-  out.cmd = UBUNTU_CMD_PING;
-  out.len = 4;
+  struct ubuntu_pipe_message out = {
+      .cmd = UBUNTU_CMD_PING,
+      .len = 4,
+  };
+  struct ubuntu_pipe_message in = {0};
   memcpy(&out.data, "PING", out.len);
   ubuntu_ipc_cmd(&out, &in);
   LOG(LL_INFO, ("Sent: cmd=%u len=%u msg='%.*s'", out.cmd, out.len,
@@ -186,3 +186,13 @@ void ubuntu_ipc_ping(void) {
   LOG(LL_INFO, ("Received: cmd=%u len=%u msg='%.*s'", in.cmd, in.len,
                 (int) in.len, in.data));
 }
+
+void mgos_dev_system_restart(void) {
+  struct ubuntu_pipe_message out = {
+      .cmd = UBUNTU_CMD_REBOOT,
+      .len = 0,
+  };
+  ubuntu_ipc_cmd(&out, NULL);
+  exit(0);
+}
+

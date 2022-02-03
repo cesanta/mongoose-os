@@ -86,6 +86,9 @@ static int ubuntu_mongoose(void) {
   if (r != MGOS_INIT_OK) {
     LOG(LL_ERROR,
         ("mongoose_init=%d (expecting %d), exiting", r, MGOS_INIT_OK));
+    mgos_system_restart();
+    rpa_queue_term(s_cbs_bg);
+    pthread_join(bg_task, NULL /* retval */);
     return -3;
   }
   mongoose_running = true;
@@ -120,11 +123,20 @@ static int ubuntu_main(void) {
     int wstatus;
     pid_t wpid;
 
-    ubuntu_ipc_handle(1000);
-    if (!ubuntu_wdt_ok()) {
-      LOGM(LL_INFO, ("Watchdog timeout"));
+    int res = ubuntu_ipc_handle(1000);
+    if (res == UBUNTU_IPC_RES_RESTART) {
+      waitpid(-1, &wstatus, 0);
+      return UBUNTU_IPC_RES_RESTART;
+    }
+    if (res < 0) {
+      LOGM(LL_ERROR, ("IPC error"));
       kill(s_child, SIGTERM);
-      break;
+      return res;
+    }
+    if (!ubuntu_wdt_ok()) {
+      LOGM(LL_ERROR, ("Watchdog timeout"));
+      kill(s_child, SIGTERM);
+      return -5;
     }
 
     wpid = waitpid(-1, &wstatus, WNOHANG);
@@ -132,7 +144,6 @@ static int ubuntu_main(void) {
       return WEXITSTATUS(wstatus);
     }
   }
-  return 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -158,14 +169,23 @@ int main(int argc, char *argv[]) {
     ubuntu_ipc_init_main();
     ret = ubuntu_main();
     ubuntu_ipc_destroy_main();
-    return ret;
   } else {
     // Child
     ubuntu_ipc_init_mongoose();
     ubuntu_mongoose();
     ubuntu_ipc_destroy_mongoose();
+    return 0;
   }
-  LOGM(LL_INFO, ("Exiting. Have a great day!"));
+  if (ret == UBUNTU_IPC_RES_RESTART) {
+    // Need to NULL-terminate argv for exec.
+    char *new_argv[1000] = {0};
+    for (int i = 0; i < argc; i++) {
+      new_argv[i] = argv[i];
+    }
+    LOGM(LL_INFO, ("Restarting"));
+    execv(new_argv[0], new_argv);
+  }
+  LOGM((ret == 0 ? LL_INFO : LL_ERROR), ("Exiting %d. Have a great day!", ret));
   return ret;
 }
 
