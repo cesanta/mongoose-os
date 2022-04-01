@@ -98,10 +98,12 @@ enum mgos_event_sys {
   /*
    * Fired when device is connected/disconnected to the cloud server.
    * ev_data: `struct mgos_cloud_arg`
+   * Note, MGOS_EVENT_CLOUD_CONNECTING & MGOS_EVENT_CLOUD_CONNECTERROR works for MQTT, may not trigger for other services
    */
   MGOS_EVENT_CLOUD_CONNECTED,
   MGOS_EVENT_CLOUD_DISCONNECTED,
   MGOS_EVENT_CLOUD_CONNECTING,
+  MGOS_EVENT_CLOUD_CONNECTERROR,
 
   /*
    * Fired when a reboot is scheduled after certain time.
