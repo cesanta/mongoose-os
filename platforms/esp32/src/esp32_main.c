@@ -79,9 +79,10 @@ enum mgos_init_result mgos_freertos_pre_init(void) {
   }
 
   /* Disable WDT on idle task(s), mgos task WDT should do fine. */
-  TaskHandle_t h;
-  if ((h = xTaskGetIdleTaskHandleForCPU(0)) != NULL) esp_task_wdt_delete(h);
-  if ((h = xTaskGetIdleTaskHandleForCPU(1)) != NULL) esp_task_wdt_delete(h);
+  for (int i = 0; i < configNUM_CORES; i++) {
+    TaskHandle_t h = xTaskGetIdleTaskHandleForCPU(i);
+    if (h != NULL) esp_task_wdt_delete(h);
+  }
 
 #ifdef CS_MMAP
   mgos_vfs_mmap_init();

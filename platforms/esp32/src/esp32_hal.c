@@ -23,6 +23,7 @@
 #include "esp_system.h"
 #include "esp_task_wdt.h"
 
+#include "hal/wdt_hal.h"
 #include "soc/rtc.h"
 #include "soc/timer_group_reg.h"
 #include "soc/timer_group_struct.h"
@@ -46,7 +47,24 @@ size_t mgos_get_min_free_heap_size(void) {
   return xPortGetMinimumEverFreeHeapSize();
 }
 
+// Note (2022/05/15): This is defined weak because for the moment ota-common
+// also defines it, for compatibility reasons. Can be dropped in the future.
+bool __attribute__((weak)) g_system_restart_sys_reset = false;
+
 void mgos_dev_system_restart(void) {
+  if (g_system_restart_sys_reset) {
+    // Cause system reset through WDT.
+    wdt_hal_context_t rtc_wdt_ctx;
+    wdt_hal_init(&rtc_wdt_ctx, WDT_RWDT, 0, false);
+    wdt_hal_write_protect_disable(&rtc_wdt_ctx);
+    wdt_hal_config_stage(&rtc_wdt_ctx, WDT_STAGE0, 1, WDT_STAGE_ACTION_RESET_SYSTEM);
+    wdt_hal_config_stage(&rtc_wdt_ctx, WDT_STAGE1, 10, WDT_STAGE_ACTION_RESET_RTC);
+    wdt_hal_set_flashboot_en(&rtc_wdt_ctx, true);
+    wdt_hal_write_protect_enable(&rtc_wdt_ctx);
+    wdt_hal_enable(&rtc_wdt_ctx);
+    while (true) {
+    }
+  }
   esp_restart();
 }
 

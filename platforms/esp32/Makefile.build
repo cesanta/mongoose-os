@@ -171,9 +171,9 @@ COMPONENT_DIRS = $(APP_PATH)/components \
                  /opt
 # Explicitly specify SDK components to build.
 SDK_COMPONENTS = app_trace app_update bootloader bootloader_support cxx driver efuse esp32 \
-                 esp_common esp_event esp_gdbstub esp_ipc esp_netif \
+                 esp_common esp_event esp_gdbstub esp_ipc esp_hw_support esp_netif esp_phy esp_pm \
                  esp_ringbuf esp_rom esp_system esp_timer espcoredump esptool_py \
-                 freertos heap log lwip micro-ecc newlib nvs_flash partition_table \
+                 freertos hal heap log lwip micro-ecc newlib nvs_flash partition_table \
                  pthread soc spi_flash vfs xtensa xtensa-debug-module
 
 MGOS_MAIN_COMPONENT ?= mosapp
