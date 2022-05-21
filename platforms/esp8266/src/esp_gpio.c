@@ -39,7 +39,45 @@ static uint8_t s_int_config[GPIO_PIN_COUNT];
 #define INT_TYPE_MASK 0x7
 #define INT_ENA 0x8
 
-void gpio16_output_conf(void) {
+IRAM static uint32_t get_gpio_periph(int gpio_no) {
+  switch (gpio_no) {
+    case 0:
+      return PERIPHS_IO_MUX_GPIO0_U;
+    case 1:
+      return PERIPHS_IO_MUX_U0TXD_U;
+    case 2:
+      return PERIPHS_IO_MUX_GPIO2_U;
+    case 3:
+      return PERIPHS_IO_MUX_U0RXD_U;
+    case 4:
+      return PERIPHS_IO_MUX_GPIO4_U;
+    case 5:
+      return PERIPHS_IO_MUX_GPIO5_U;
+    case 6:
+      return PERIPHS_IO_MUX_SD_CLK_U;
+    case 7:
+      return PERIPHS_IO_MUX_SD_DATA0_U;
+    case 8:
+      return PERIPHS_IO_MUX_SD_DATA1_U;
+    case 9:
+      return PERIPHS_IO_MUX_SD_DATA2_U;
+    case 10:
+      return PERIPHS_IO_MUX_SD_DATA3_U;
+    case 11:
+      return PERIPHS_IO_MUX_SD_CMD_U;
+    case 12:
+      return PERIPHS_IO_MUX_MTDI_U;
+    case 13:
+      return PERIPHS_IO_MUX_MTCK_U;
+    case 14:
+      return PERIPHS_IO_MUX_MTMS_U;
+    case 15:
+      return PERIPHS_IO_MUX_MTDO_U;
+  }
+  return 0;
+}
+
+IRAM static void gpio16_output_conf(void) {
   WRITE_PERI_REG(
       PAD_XPD_DCDC_CONF,
       (READ_PERI_REG(PAD_XPD_DCDC_CONF) & 0xffffffbc) | (uint32_t) 0x1);
@@ -53,7 +91,7 @@ void gpio16_output_conf(void) {
                      (uint32_t) 0x1);
 }
 
-void gpio16_input_conf(void) {
+IRAM static void gpio16_input_conf(void) {
   WRITE_PERI_REG(
       PAD_XPD_DCDC_CONF,
       (READ_PERI_REG(PAD_XPD_DCDC_CONF) & 0xffffffbc) | (uint32_t) 0x1);
@@ -96,20 +134,6 @@ IRAM bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
     return false;
   }
 
-  const struct gpio_info *gi = get_gpio_info(pin);
-  if (gi == NULL) return false;
-
-  /*
-   * GPIO12-15 are confugred as JTAG pins by default (func 0), GPIO13 is MTCK,
-   * GPIO15 is MTDO. It's been observed that changing the function of GPIO13
-   * to GPIO while leaving GPIO15 as MTDO drives it high. Therefore, if we are
-   * reconfiguring GPIO13 as GPIO, JTAG is obviously no longer relevant,
-   * reconfigure GPIO15 as GPIO too to avoid activation.
-   */
-  if (pin == 13 && PIN_FUNC_GET(PERIPHS_IO_MUX_MTDO_U) == 0) {
-    PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U, FUNC_GPIO15);
-  }
-  PIN_FUNC_SELECT(gi->periph, gi->func);
   switch (mode) {
     case MGOS_GPIO_MODE_INPUT:
       GPIO_REG_WRITE(GPIO_ENABLE_W1TC_ADDRESS, BIT(pin));
@@ -130,6 +154,33 @@ IRAM bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
       break;
   }
 
+  /* Select the GPIO peripheral function. */
+  const uint32_t gpio_periph = get_gpio_periph(pin);
+  if (gpio_periph == 0) return false;
+  uint32_t gpio_func;
+  switch (pin) {
+    case 0:
+    case 2:
+    case 4:
+    case 5:
+      gpio_func = 0;
+      break;
+    default:
+      gpio_func = 3;
+      break;
+  }
+  /*
+   * GPIO12-15 are confugred as JTAG pins by default (func 0), GPIO13 is MTCK,
+   * GPIO15 is MTDO. It's been observed that changing the function of GPIO13
+   * to GPIO while leaving GPIO15 as MTDO drives it high. Therefore, if we are
+   * reconfiguring GPIO13 as GPIO, JTAG is obviously no longer relevant,
+   * reconfigure GPIO15 as GPIO too to avoid activation.
+   */
+  if (pin == 13 && PIN_FUNC_GET(PERIPHS_IO_MUX_MTDO_U) == 0) {
+    PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U, FUNC_GPIO15);
+  }
+  PIN_FUNC_SELECT(gpio_periph, gpio_func);
+
   return true;
 }
 
@@ -141,15 +192,15 @@ IRAM void gpio_pin_intr_state_set(uint32 i, GPIO_INT_TYPE intr_state) {
 }
 
 IRAM bool mgos_gpio_set_pull(int pin, enum mgos_gpio_pull_type pull) {
-  const struct gpio_info *gi = get_gpio_info(pin);
-  if (gi == NULL) return false;
+  const uint32_t gpio_periph = get_gpio_periph(pin);
+  if (gpio_periph == 0) return false;
 
   switch (pull) {
     case MGOS_GPIO_PULL_NONE:
-      PIN_PULLUP_DIS(gi->periph);
+      PIN_PULLUP_DIS(gpio_periph);
       break;
     case MGOS_GPIO_PULL_UP:
-      PIN_PULLUP_EN(gi->periph);
+      PIN_PULLUP_EN(gpio_periph);
       break;
     case MGOS_GPIO_PULL_DOWN:
       /* No pull-down on ESP8266 */
@@ -237,7 +288,7 @@ enum mgos_init_result mgos_gpio_hal_init(void) {
 }
 
 bool mgos_gpio_hal_set_int_mode(int pin, enum mgos_gpio_int_mode mode) {
-  if (get_gpio_info(pin) == NULL) return false;
+  if (get_gpio_periph(pin) == 0) return false;
   GPIO_INT_TYPE it;
   switch (mode) {
     case MGOS_GPIO_INT_NONE:
