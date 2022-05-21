@@ -33,6 +33,7 @@
 #include "esp_periph.h"
 
 #define GPIO_PIN_COUNT 16
+#define PIN_FUNC_GET(p) ((READ_PERI_REG(p) >> PERIPHS_IO_MUX_FUNC_S) & 0x3)
 
 static uint8_t s_int_config[GPIO_PIN_COUNT];
 #define INT_TYPE_MASK 0x7
@@ -98,14 +99,23 @@ IRAM bool mgos_gpio_set_mode(int pin, enum mgos_gpio_mode mode) {
   const struct gpio_info *gi = get_gpio_info(pin);
   if (gi == NULL) return false;
 
+  /*
+   * GPIO12-15 are confugred as JTAG pins by default (func 0), GPIO13 is MTCK,
+   * GPIO15 is MTDO. It's been observed that changing the function of GPIO13
+   * to GPIO while leaving GPIO15 as MTDO drives it high. Therefore, if we are
+   * reconfiguring GPIO13 as GPIO, JTAG is obviously no longer relevant,
+   * reconfigure GPIO15 as GPIO too to avoid activation.
+   */
+  if (pin == 13 && PIN_FUNC_GET(PERIPHS_IO_MUX_MTDO_U) == 0) {
+    PIN_FUNC_SELECT(PERIPHS_IO_MUX_MTDO_U, FUNC_GPIO15);
+  }
+  PIN_FUNC_SELECT(gi->periph, gi->func);
   switch (mode) {
     case MGOS_GPIO_MODE_INPUT:
-      PIN_FUNC_SELECT(gi->periph, gi->func);
       GPIO_REG_WRITE(GPIO_ENABLE_W1TC_ADDRESS, BIT(pin));
       break;
     case MGOS_GPIO_MODE_OUTPUT:
     case MGOS_GPIO_MODE_OUTPUT_OD:
-      PIN_FUNC_SELECT(gi->periph, gi->func);
       GPIO_REG_WRITE(GPIO_ENABLE_W1TS_ADDRESS, BIT(pin));
       gpio_pin_intr_state_set(GPIO_ID_PIN(pin), GPIO_PIN_INTR_DISABLE);
       GPIO_REG_WRITE(GPIO_STATUS_W1TC_ADDRESS, BIT(pin));
