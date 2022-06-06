@@ -120,11 +120,8 @@ mgos_timer_id mgos_set_timer(int msecs, int flags, timer_callback cb,
     ti->interval_ms = -1;
   }
   double now = mgos_uptime();
-  if (flags & MGOS_TIMER_RUN_NOW) {
-    ti->next_invocation = 1;
-  } else {
-    ti->next_invocation = now + msecs / 1000.0;
-  }
+  ti->next_invocation = now;
+  if (!(flags & MGOS_TIMER_RUN_NOW)) ti->next_invocation += msecs / 1000.0;
   ti->cb = cb;
   ti->cb_arg = arg;
   {
