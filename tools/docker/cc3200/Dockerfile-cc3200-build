@@ -36,7 +36,8 @@ ADD tmp/$SDK_DIR /opt/$SDK_DIR
 ARG NWP_SP_FILE
 ADD tmp/$NWP_SP_FILE tmp/$NWP_SP_FILE.sign /opt/
 
-ADD mgos_fw_meta.py mklfs mkspiffs mkspiffs8 /usr/local/bin/
+ARG TARGETARCH
+ADD mgos_fw_meta.py $TARGETARCH/mklfs $TARGETARCH/mkspiffs $TARGETARCH/mkspiffs8 /usr/local/bin/
 ADD serve_core/ /opt/serve_core/
 RUN ln -s /opt/serve_core/serve_core.py /usr/local/bin/serve_core.py
 

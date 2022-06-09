@@ -29,12 +29,18 @@ docker-pre-build-%: Dockerfile-%
 
 docker-build-%: docker-pre-build-%
 	@echo Building $(REGISTRY)/$*:$(DOCKER_TAG) "$(TOOLCHAIN_URL)"
-	docker buildx build --load $(DOCKER_FLAGS) -t $(REGISTRY)/$*:$(DOCKER_TAG) -f Dockerfile-$* .
+	docker buildx build \
+	--platform $(call clist, $(foreach i, $(PLATFORMS), linux/$(i))) \
+	$(DOCKER_FLAGS) -t $(REGISTRY)/$*:$(DOCKER_TAG) -f Dockerfile-$* .
 	@echo Built $(REGISTRY)/$*:$(DOCKER_TAG)
 
 docker-push-%:
 	docker buildx build --push \
 	--platform $(call clist, $(foreach i, $(PLATFORMS), linux/$(i))) \
+	$(DOCKER_FLAGS) -t $(REGISTRY)/$*:$(DOCKER_TAG) -f Dockerfile-$* .
+
+docker-load-%:
+	docker buildx build --load \
 	$(DOCKER_FLAGS) -t $(REGISTRY)/$*:$(DOCKER_TAG) -f Dockerfile-$* .
 
 mgos_fw_meta.py: $(REPO_PATH)/tools/mgos_fw_meta.py

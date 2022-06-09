@@ -41,7 +41,8 @@ ARG STM32CUBE_F7_DIR
 ADD tmp/$STM32CUBE_F7_DIR /opt/$STM32CUBE_F7_DIR
 ENV STM32CUBE_F7_PATH /opt/$STM32CUBE_F7_DIR
 
-ADD mgos_fw_meta.py mklfs mkspiffs mkspiffs8 /usr/local/bin/
+ARG TARGETARCH
+ADD mgos_fw_meta.py $TARGETARCH/mklfs $TARGETARCH/mkspiffs $TARGETARCH/mkspiffs8 /usr/local/bin/
 ADD serve_core/ /opt/serve_core/
 RUN ln -s /opt/serve_core/serve_core.py /usr/local/bin/serve_core.py
 

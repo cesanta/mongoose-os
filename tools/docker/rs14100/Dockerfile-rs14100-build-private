@@ -21,7 +21,8 @@ RUN DEBIAN_FRONTEND=noninteractive add-apt-repository -y -u ppa:team-gcc-arm-emb
 ARG RS14100_SDK
 ADD tmp/$RS14100_SDK /opt/$RS14100_SDK
 
-ADD mgos_fw_meta.py mklfs mkspiffs mkspiffs8 /usr/local/bin/
+ARG TARGETARCH
+ADD mgos_fw_meta.py $TARGETARCH/mklfs $TARGETARCH/mkspiffs $TARGETARCH/mkspiffs8 /usr/local/bin/
 ADD serve_core/ /opt/serve_core/
 RUN ln -s /opt/serve_core/serve_core.py /usr/local/bin/serve_core.py
 
