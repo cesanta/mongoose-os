@@ -8,9 +8,16 @@
 
 REPO_PATH ?= $(realpath ../../..)
 REGISTRY ?= docker.io/mgos
+PLATFORMS ?= amd64
 DOCKER_TAG ?= latest
 DOCKER_FLAGS ?= 
 GCC ?= docker.io/gcc
+
+# helper to substitute space with comma
+e :=
+c := ,
+clist = $(subst $e $e,$c,$(strip $1))
+
 
 all: docker-build
 
@@ -22,11 +29,13 @@ docker-pre-build-%: Dockerfile-%
 
 docker-build-%: docker-pre-build-%
 	@echo Building $(REGISTRY)/$*:$(DOCKER_TAG) "$(TOOLCHAIN_URL)"
-	docker buildx build $(DOCKER_FLAGS) -t $(REGISTRY)/$*:$(DOCKER_TAG) -f Dockerfile-$* .
+	docker buildx build --load $(DOCKER_FLAGS) -t $(REGISTRY)/$*:$(DOCKER_TAG) -f Dockerfile-$* .
 	@echo Built $(REGISTRY)/$*:$(DOCKER_TAG)
 
 docker-push-%:
-	docker buildx build --push $(DOCKER_FLAGS) -t $(REGISTRY)/$*:$(DOCKER_TAG) -f Dockerfile-$* .
+	docker buildx build --push \
+	--platform $(call clist, $(foreach i, $(PLATFORMS), linux/$(i))) \
+	$(DOCKER_FLAGS) -t $(REGISTRY)/$*:$(DOCKER_TAG) -f Dockerfile-$* .
 
 mgos_fw_meta.py: $(REPO_PATH)/tools/mgos_fw_meta.py
 	cp -v $< .
@@ -34,7 +43,7 @@ mgos_fw_meta.py: $(REPO_PATH)/tools/mgos_fw_meta.py
 serve_core: $(wildcard $(REPO_PATH)/fw/tools/serve_core/*.py)
 	rsync -av $(REPO_PATH)/tools/serve_core/ $@/
 
-mklfs: mklfs-amd64
+mklfs: $(foreach i,$(PLATFORMS),mklfs-$(i))
 
 mklfs-%:
 	rm -rf vfs-fs-lfs
@@ -49,7 +58,7 @@ mklfs-%:
 	    FROZEN_PATH=/mongoose-os/src/frozen'
 	cp -v vfs-fs-lfs/tools/mklfs $*/mklfs
 
-mkspiffs mkspiffs8 : mkspiffs-amd64 mkspiffs8-amd64
+mkspiffs mkspiffs8 : $(foreach i,$(PLATFORMS),mkspiffs-$(i)) $(foreach i,$(PLATFORMS),mkspiffs8-$(i))
 
 mkspiffs-% mkspiffs8-%:
 	rm -rf vfs-fs-spiffs
@@ -67,4 +76,4 @@ mkspiffs-% mkspiffs8-%:
 	cp -v vfs-fs-spiffs/tools/mkspiffs8 $*/mkspiffs8
 
 clean-tools:
-	rm -rf mgos_fw_meta.py serve_core serve_core.py mklfs mkspiffs mkspiffs8 vfs-fs-* arm64 amd64
+	rm -rf amd64 arm64 mgos_fw_meta.py serve_core serve_core.py mklfs mkspiffs mkspiffs8 vfs-fs-*
