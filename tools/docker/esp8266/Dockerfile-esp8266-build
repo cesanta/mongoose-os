@@ -46,7 +46,8 @@ RUN mv /opt/Espressif/ESP8266_NONOS_SDK/lib/libc.a /opt/Espressif/ESP8266_NONOS_
 
 ADD rom.bin rom.elf /opt/Espressif/rom/
 
-ADD mgos_fw_meta.py mklfs mkspiffs mkspiffs8 /usr/local/bin/
+ARG TARGETARCH
+ADD mgos_fw_meta.py $TARGETARCH/mklfs $TARGETARCH/mkspiffs $TARGETARCH/mkspiffs8 /usr/local/bin/
 ADD serve_core/ /opt/serve_core/
 RUN ln -s /opt/serve_core/serve_core.py /usr/local/bin/serve_core.py
 

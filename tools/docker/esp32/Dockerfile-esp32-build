@@ -5,7 +5,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
       apt-utils autoconf bison build-essential flex gawk gdb-multiarch git gperf help2man \
       libexpat-dev libncurses5-dev libtool-bin \
       python3 python3-dev python3-git python3-pip python3-pyelftools python3-serial python3-six python3-yaml \
-      python-is-python3 rsync software-properties-common sudo texinfo unzip wget zip && \
+      python-is-python3 rsync software-properties-common sudo texinfo unzip wget xz-utils zip && \
     apt-get clean
 
 RUN cd /tmp && \
@@ -21,15 +21,17 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
 
 RUN useradd -d /opt/Espressif -m -s /bin/bash user && chown -R user /opt
 
-ARG TOOLCHAIN_URL
+ARG TARGETARCH
+ARG TOOLCHAIN_URL=https://github.com/espressif/crosstool-NG/releases/download/esp-2021r2-patch3/xtensa-esp32-elf-gcc8_4_0-esp-2021r2-patch3-linux-${TARGETARCH}.tar.gz
 RUN cd /opt/Espressif && wget -q $TOOLCHAIN_URL && \
-    tar xzf `basename $TOOLCHAIN_URL` && \
+    tar xf `basename $TOOLCHAIN_URL` && \
     rm `basename $TOOLCHAIN_URL`
 ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/Espressif/xtensa-esp32-elf/bin
 ADD ct_path.sh /etc/profile.d
 
 ARG DOCKER_TAG
 RUN sudo -u user git clone -j 8 --branch $DOCKER_TAG --depth 1 --recursive --shallow-submodules https://github.com/mongoose-os/esp-idf /opt/Espressif/esp-idf
+RUN git config --global --add safe.directory /opt/Espressif/esp-idf
 ENV IDF_PATH=/opt/Espressif/esp-idf
 
 # Apply submodule patches.
@@ -42,7 +44,8 @@ RUN cd $IDF_PATH/tools/kconfig && make conf-idf
 
 ADD rom.bin rom.elf /opt/Espressif/rom/
 
-ADD mgos_fw_meta.py mklfs mkspiffs mkspiffs8 /usr/local/bin/
+ARG TARGETARCH
+ADD mgos_fw_meta.py $TARGETARCH/mklfs $TARGETARCH/mkspiffs $TARGETARCH/mkspiffs8 /usr/local/bin/
 ADD serve_core/ /opt/serve_core/
 RUN ln -s /opt/serve_core/serve_core.py /usr/local/bin/serve_core.py
 
