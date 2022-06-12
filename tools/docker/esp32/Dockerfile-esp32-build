@@ -22,11 +22,9 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
 RUN useradd -d /opt/Espressif -m -s /bin/bash user && chown -R user /opt
 
 ARG TARGETARCH
-ARG TOOLCHAIN_URL=https://github.com/espressif/crosstool-NG/releases/download/esp-2021r2-patch3/xtensa-esp32-elf-gcc8_4_0-esp-2021r2-patch3-linux-${TARGETARCH}.tar.gz
-RUN cd /opt/Espressif && wget -q $TOOLCHAIN_URL && \
-    tar xf `basename $TOOLCHAIN_URL` && \
-    rm `basename $TOOLCHAIN_URL`
-ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/Espressif/xtensa-esp32-elf/bin
+ARG TOOLCHAIN_URLS="https://github.com/espressif/crosstool-NG/releases/download/esp-2021r2-patch3/xtensa-esp32-elf-gcc8_4_0-esp-2021r2-patch3-linux-${TARGETARCH}.tar.gz https://github.com/espressif/crosstool-NG/releases/download/esp-2021r2-patch3/riscv32-esp-elf-gcc8_4_0-esp-2021r2-patch3-linux-${TARGETARCH}.tar.gz"
+RUN cd /opt/Espressif && for u in $TOOLCHAIN_URLS; do wget -q $u && tar xf `basename $u` && rm `basename $u`; done
+ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/Espressif/riscv32-esp-elf/bin:/opt/Espressif/xtensa-esp32-elf/bin
 ADD ct_path.sh /etc/profile.d
 
 ARG DOCKER_TAG
