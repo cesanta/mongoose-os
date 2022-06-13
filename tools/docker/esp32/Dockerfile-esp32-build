@@ -22,9 +22,9 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
 RUN useradd -d /opt/Espressif -m -s /bin/bash user && chown -R user /opt
 
 ARG TARGETARCH
-ARG TOOLCHAIN_URLS="https://github.com/espressif/crosstool-NG/releases/download/esp-2021r2-patch3/xtensa-esp32-elf-gcc8_4_0-esp-2021r2-patch3-linux-${TARGETARCH}.tar.gz https://github.com/espressif/crosstool-NG/releases/download/esp-2021r2-patch3/riscv32-esp-elf-gcc8_4_0-esp-2021r2-patch3-linux-${TARGETARCH}.tar.gz"
+ARG TOOLCHAIN_URLS="https://github.com/espressif/crosstool-NG/releases/download/esp-2021r2-patch3/xtensa-esp32-elf-gcc8_4_0-esp-2021r2-patch3-linux-${TARGETARCH}.tar.gz https://github.com/espressif/crosstool-NG/releases/download/esp-2021r2-patch3/riscv32-esp-elf-gcc8_4_0-esp-2021r2-patch3-linux-${TARGETARCH}.tar.gz https://github.com/espressif/crosstool-NG/releases/download/esp-2021r2-patch3/xtensa-esp32s3-elf-gcc8_4_0-esp-2021r2-patch3-linux-${TARGETARCH}.tar.gz"
 RUN cd /opt/Espressif && for u in $TOOLCHAIN_URLS; do wget -q $u && tar xf `basename $u` && rm `basename $u`; done
-ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/Espressif/riscv32-esp-elf/bin:/opt/Espressif/xtensa-esp32-elf/bin
+ENV PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/opt/Espressif/riscv32-esp-elf/bin:/opt/Espressif/xtensa-esp32-elf/bin:/opt/Espressif/xtensa-esp32s3-elf/bin
 ADD ct_path.sh /etc/profile.d
 
 ARG DOCKER_TAG
@@ -49,5 +49,7 @@ RUN ln -s /opt/serve_core/serve_core.py /usr/local/bin/serve_core.py
 
 ARG DOCKER_TAG
 ENV MGOS_TARGET_GDB /opt/Espressif/xtensa-esp32-elf/bin/xtensa-esp32-elf-gdb
+ENV MGOS_TARGET_GDB_ESP32S3 /opt/Espressif/xtensa-esp32s3-elf/bin/xtensa-esp32s3-elf-gdb
+ENV MGOS_TARGET_GDB_ESP32C3 /opt/Espressif/riscv32-esp-elf/bin/riscv32-esp-elf-gdb
 ENV MGOS_SDK_REVISION $DOCKER_TAG
 ENV MGOS_SDK_BUILD_IMAGE docker.io/mgos/esp32-build:$DOCKER_TAG
