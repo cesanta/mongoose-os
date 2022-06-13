@@ -11,6 +11,7 @@
 # Name,   Type, SubType, Offset,             Size                Flags
 nvs,      data, nvs,     $NVS_ADDR,          $NVS_SIZE,
 otadata,  data, ota,     $OTA_DATA_ADDR,     $OTA_DATA_SIZE,     encrypted
+$ESP_IDF_EXTRA_BEFORE_PARTITION
 app_0,    app,  ota_0,   $APP_OFFSET,        $APP_SLOT_SIZE,     encrypted
 fs_0,     data, spiffs,  ,                   $MGOS_ROOT_FS_SIZE, $FS_PART_ENCR_FLAG
 app_1,    app,  ota_1,   ,                   $APP_SLOT_SIZE,     encrypted
