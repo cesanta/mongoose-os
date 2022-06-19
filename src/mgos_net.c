@@ -198,7 +198,7 @@ static void mgos_update_nameserver(void) {
       ip_info.ip.sin_addr.s_addr != 0 && ip_info.dns.sin_addr.s_addr != 0) {
     goto out;
   }
-  mgos_net_str_to_ip(MGOS_DEFAULT_NAMESERVER, &ip_info.dns);
+  mgos_net_str_to_ip(CS_STRINGIFY_MACRO(MGOS_DEFAULT_NAMESERVER), &ip_info.dns);
 out:
   mgos_net_ip_to_str(&ip_info.dns, nameserver);
   struct mg_mgr *mgr = mgos_get_mgr();
