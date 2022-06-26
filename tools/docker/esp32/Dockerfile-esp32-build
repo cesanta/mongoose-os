@@ -1,8 +1,8 @@
-FROM ubuntu:jammy-20220428
+FROM ubuntu:jammy-20220531
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y -q \
-      apt-utils autoconf bison build-essential flex gawk gdb-multiarch git gperf help2man \
+      apt-utils autoconf bison build-essential cmake flex gawk gdb-multiarch git gperf help2man \
       libexpat-dev libncurses5-dev libtool-bin \
       python3 python3-dev python3-git python3-pip python3-pyelftools python3-serial python3-six python3-yaml \
       python-is-python3 rsync software-properties-common sudo texinfo unzip wget xz-utils zip && \
@@ -13,7 +13,7 @@ RUN cd /tmp && \
     cd /tmp/fsync-stub && ./install.sh && \
     rm -rf /tmp/fsync-stub
 
-# Espressif's GDB is compiled with Python2
+# ESP-IDF uses CMake and GDB is compiled with Python2.
 RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y -q \
       python2 python2-dev && \

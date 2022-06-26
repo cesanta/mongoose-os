@@ -29,7 +29,7 @@ docker-pre-build-%: Dockerfile-%
 
 docker-build-%: docker-pre-build-%
 	@echo Building $(REGISTRY)/$*:$(DOCKER_TAG) "$(TOOLCHAIN_URL)"
-	docker buildx build \
+	docker buildx build --load \
 	--platform $(call clist, $(foreach i, $(PLATFORMS), linux/$(i))) \
 	$(DOCKER_FLAGS) -t $(REGISTRY)/$*:$(DOCKER_TAG) -f Dockerfile-$* .
 	@echo Built $(REGISTRY)/$*:$(DOCKER_TAG)
