@@ -97,7 +97,8 @@ NOINSTR void mgos_cd_write(void) {
   mgos_cd_printf("\"build_id\": \"%.80s\", ", build_id);
   mgos_cd_printf("\"build_ts\": \"%s\",\n", build_timestamp);
 #ifdef MGOS_SDK_BUILD_IMAGE
-  mgos_cd_printf("\"build_image\": \"" MGOS_SDK_BUILD_IMAGE "\", ");
+  mgos_cd_printf(
+      "\"build_image\": \"" CS_STRINGIFY_MACRO(MGOS_SDK_BUILD_IMAGE) "\", ");
 #endif
   mgos_cd_printf("\"uptime\": %lld", (long long) mgos_uptime_micros());
 // For ARM targets, add profile information.

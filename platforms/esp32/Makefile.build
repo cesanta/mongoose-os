@@ -127,6 +127,10 @@ include $(MGOS_PATH)/tools/mk/mgos_config.mk
 include $(MGOS_PATH)/tools/mk/mgos_ffi_exports.mk
 include $(MGOS_PATH)/tools/mk/mgos_mkfs.mk
 
+MGOS_FEATURES += $(MG_FEATURES_TINY) \
+                 -DMG_ENABLE_FILESYSTEM -DMG_ENABLE_DIRECTORY_LISTING \
+                 -DMG_NET_IF=MG_NET_IF_LWIP_LOW_LEVEL
+
 # -fno-jump-tables -fno-tree-switch-conversion:
 #    https://github.com/espressif/esp-idf/issues/1552#issuecomment-883600363
 export EXTRA_CPPFLAGS = -pipe -Wall -Werror -Wno-error=strict-aliasing \
@@ -136,8 +140,7 @@ export EXTRA_CPPFLAGS = -pipe -Wall -Werror -Wno-error=strict-aliasing \
           -DMGOS_ROOT_FS_OPTS=$(MGOS_ROOT_FS_OPTS) \
           -DMGOS_APP="$(APP)" -DFW_ARCHITECTURE=$(APP_PLATFORM) \
           -DMGOS_ESP32 -include mgos_iram.h \
-          $(MGOS_FEATURES) -DMG_ENABLE_FILESYSTEM -DMG_ENABLE_DIRECTORY_LISTING \
-          -DMGOS_MAX_NUM_UARTS=3 -DMGOS_NUM_HW_TIMERS=4 \
+          $(MGOS_FEATURES) -DMGOS_MAX_NUM_UARTS=3 -DMGOS_NUM_HW_TIMERS=4 \
           $(addprefix -I,$(APP_INCLUDES) $(MGOS_IPATH) $(GEN_DIR) $(APP_SOURCE_DIRS)) \
           -I$(IDF_PATH)/components/freertos/include/freertos
 export EXTRA_CFLAGS = $(APP_CFLAGS)
