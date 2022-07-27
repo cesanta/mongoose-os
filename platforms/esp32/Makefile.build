@@ -65,8 +65,8 @@ MGOS_PATH ?= ../..
 include $(MGOS_PATH)/tools/mk/mgos_common.mk
 
 APP_PATH := $(CURDIR)
-MGOS_ESP_PATH ?= $(MGOS_PATH)/platforms/esp32
-MGOS_ESP_SRC_PATH ?= $(MGOS_PATH)/platforms/esp32/main
+MGOS_ESP_PATH := $(MGOS_PATH)/platforms/$(APP_PLATFORM)
+MGOS_ESP_SRC_PATH := $(MGOS_ESP_PATH)/main
 
 BUILD_DIR ?= $(CURDIR)/.build
 FS_STAGING_DIR = $(BUILD_DIR)/fs
@@ -215,7 +215,7 @@ include $(MGOS_PATH)/tools/mk/mgos_fw_meta.mk
 
 all: $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(FW_ZIP)
 
-cmake-out: $(SDKCONFIG_DEFAULTS_OUT) $(APP_SOURCES) $(MGOS_SOURCES) $(GEN_SOURCES) $(MANIFEST_FINAL)
+cmake-out: $(BUILD_DIR) $(SDKCONFIG_DEFAULTS_OUT) $(APP_SOURCES) $(MGOS_SOURCES) $(GEN_SOURCES) $(MANIFEST_FINAL)
 	cd $(BUILD_DIR) && \
 	  cmake -DCOMPONENTS="$(COMPONENTS)" \
 	        -DEXTRA_COMPONENT_DIRS="$(APP_PATH)/components" \
@@ -231,7 +231,7 @@ $(BOOTLOADER_BIN) $(PARTITION_TABLE_BIN): $(APP_BIN)
 
 FS_FILES += $(GEN_DIR)/conf0.json
 
-$(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
+$(BUILD_DIR) $(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
 	$(vecho) "MKDIR $@"
 	$(Q) mkdir -p $@
 
