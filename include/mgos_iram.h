@@ -25,7 +25,7 @@
 #ifndef __ASSEMBLER__
 #define _IRAM_STR_LIT(a) #a
 #define _IRAM_STR(a) _IRAM_STR_LIT(a)
-#ifdef MGOS_ESP32
+#if defined(MGOS_ESP32) || defined(MGOS_ESP32C3)
 #define _IRAM_SECTION_PREFIX ".iram1"
 #else
 #define _IRAM_SECTION_PREFIX ".text.IRAM"

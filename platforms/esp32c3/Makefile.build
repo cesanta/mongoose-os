@@ -1,0 +1,16 @@
+MAKEFLAGS += --no-builtin-rules --no-print-directory
+#MAKEFLAGS += --warn-undefined-variables
+.DEFAULT_GOAL := all
+
+ifdef MGOS_VARS_FILE
+include $(MGOS_VARS_FILE)
+endif
+
+APP_PLATFORM = esp32c3
+SDK_COMPONENTS = riscv
+MGOS_ESP_SRCS = esp32c3_gpio.c esp32c3_hw_timers.c esp32c3_uart.c
+MGOS_ESP32XX_SRCS = esp32xx_debug.c esp32xx_hal.c esp32xx_main.c riscv_nsleep100.S
+MGOS_ESP_CPPFLAGS = -DMGOS_ESP32C3 -DMGOS_MAX_NUM_UARTS=2 -DMGOS_NUM_HW_TIMERS=2
+BOOTLOADER_OFFSET = 0
+
+include $(MGOS_PATH)/platforms/esp32xx/Makefile.build

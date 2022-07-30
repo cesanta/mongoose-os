@@ -32,8 +32,10 @@
 
 #if CS_PLATFORM == CS_P_CC3200 || CS_PLATFORM == CS_P_CC3220
 #include "cc32xx_uart.h"
-#elif CS_PLATFORM == CS_P_ESP32
+#elif defined(MGOS_ESP32)
 #include "esp32_uart.h"
+#elif defined(MGOS_ESP32C3)
+#include "esp32c3_uart.h"
 #elif CS_PLATFORM == CS_P_ESP8266
 #include "esp_uart.h"
 #elif defined(RS14100)

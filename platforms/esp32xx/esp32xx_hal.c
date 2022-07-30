@@ -25,8 +25,6 @@
 
 #include "hal/wdt_hal.h"
 #include "soc/rtc.h"
-#include "soc/timer_group_reg.h"
-#include "soc/timer_group_struct.h"
 
 #include "mgos_debug.h"
 #include "mgos_hal.h"
@@ -47,9 +45,7 @@ size_t mgos_get_min_free_heap_size(void) {
   return xPortGetMinimumEverFreeHeapSize();
 }
 
-// Note (2022/05/15): This is defined weak because for the moment ota-common
-// also defines it, for compatibility reasons. Can be dropped in the future.
-bool __attribute__((weak)) g_system_restart_sys_reset = false;
+bool g_system_restart_sys_reset = false;
 
 void mgos_dev_system_restart(void) {
   if (g_system_restart_sys_reset) {
@@ -89,13 +85,7 @@ void mgos_wdt_enable(void) {
 }
 
 void mgos_wdt_set_timeout(int secs) {
-  /* WDT0 is configured in esp_task_wdt_init, we only modify the timeout. */
-  TIMERG0.wdt_wprotect = TIMG_WDT_WKEY_VALUE;
-  TIMERG0.wdt_config2 = secs * 2000; /* Units: 0.5 ms ticks */
-  TIMERG0.wdt_config3 = (secs + 1) * 2000;
-  TIMERG0.wdt_config0.en = 1;
-  TIMERG0.wdt_feed = 1;
-  TIMERG0.wdt_wprotect = 0;
+  esp_task_wdt_init(secs, true /* panic */);
 }
 
 int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {

@@ -1,0 +1,248 @@
+# Common makefile for all platforms using ESP-IDF.
+
+APP ?= mongoose-os
+APP_CFLAGS ?=
+APP_CXXFLAGS ?=
+APP_CONF_SCHEMA ?=
+APP_EXTRA_SRCS ?=
+APP_VERSION ?=
+APP_BUILD_ID ?=
+FFI_SYMBOLS ?=
+# List of app source files, globs are supported
+APP_SOURCES ?=
+# List of include dirs, in addition to dirs from APP_SOURCES
+APP_INCLUDES ?=
+# List of app files to put into the device's filesystem, globs are supported
+APP_FS_FILES ?=
+# List of static libs (.a) which are parts of the app
+APP_BIN_LIBS ?=
+# Extra parts to include in firmware
+APP_EXTRA_FW_PARTS ?=
+# Override some settings in SDKCONFIG, e.g. to disable FOO and enable BAR:
+# ESP_IDF_SDKCONFIG_OPTS = "CONFIG_FOO= CONFIG_BAR=y"
+ESP_IDF_SDKCONFIG_OPTS ?=
+# Extra components of ESP-IDF to enable during build
+ESP_IDF_EXTRA_COMPONENTS ?=
+# Extra flash partition definition.
+# ESP_IDF_EXTRA_PARTITION="fs_ext,data,spiffs,,256K"
+# Partition will be placed after all other mOS partitions.
+ESP_IDF_EXTRA_PARTITION ?=
+ESP_IDF_EXTRA_PARTITION_1 ?=
+ESP_IDF_EXTRA_PARTITION_2 ?=
+ESP_IDF_EXTRA_PARTITION_3 ?=
+
+MGOS_UPDATE_BOOT_LOADER ?= false
+
+MGOS_DEBUG_UART ?= 0
+MGOS_ROOT_DEVTAB ?=
+MGOS_ROOT_FS_TYPE ?= LFS
+MGOS_ROOT_FS_SIZE ?= 262144
+
+export IDF_TARGET = $(APP_PLATFORM)
+
+export MGOS_ROOT_FS_SIZE
+
+# SPIFFS uses its own VFS-level encryption because flash access
+# is not compatible with built-in flash encryption.
+ifneq ("$(MGOS_ROOT_FS_TYPE)", "SPIFFS")
+export FS_PART_ENCR_FLAG = encrypted
+FS_PART_ENCR_FLAG_JSON = true
+else
+export FS_PART_ENCR_FLAG =
+FS_PART_ENCR_FLAG_JSON = false
+endif
+
+APP_FS_DIRS = $(sort $(dir $(APP_FS_FILES)))
+
+MGOS_PATH ?= ../..
+include $(MGOS_PATH)/tools/mk/mgos_common.mk
+
+APP_PATH := $(CURDIR)
+MGOS_ESP_PATH := $(MGOS_PATH)/platforms/$(APP_PLATFORM)
+MGOS_ESP_SRC_PATH := $(MGOS_ESP_PATH)/main
+MGOS_ESP32XX_PATH := $(MGOS_PATH)/platforms/esp32xx
+
+BUILD_DIR ?= $(CURDIR)/.build
+FS_STAGING_DIR = $(BUILD_DIR)/fs
+FW_STAGING_DIR ?= $(BUILD_DIR)/fw_temp
+FW_DIR ?= $(BUILD_DIR)/firmware
+GEN_DIR ?= $(BUILD_DIR)/gen
+
+export APP_SLOT_SIZE ?= 0x180000
+FS_IMG = $(FW_STAGING_DIR)/fs.img
+export ESP_IDF_EXTRA_PARTITION
+export ESP_IDF_EXTRA_PARTITION_1
+export ESP_IDF_EXTRA_PARTITION_2
+export ESP_IDF_EXTRA_PARTITION_3
+export NVS_ADDR ?= 0x9000
+export NVS_SIZE ?= 0x4000
+export APP_OFFSET ?= 0x10000
+export OTA_DATA_ADDR ?= 0xd000
+export OTA_DATA_SIZE = 0x2000
+MAP_FILE = $(BUILD_DIR)/$(APP).map
+
+# Absolutize all paths which can be given by the caller
+override APP_SOURCES := $(abspath $(APP_SOURCES))
+override APP_INCLUDES := $(abspath $(APP_INCLUDES))
+override APP_FS_FILES := $(abspath $(APP_FS_FILES))
+override APP_BIN_LIBS := $(abspath $(APP_BIN_LIBS))
+override APP_CONF_SCHEMA := $(abspath $(APP_CONF_SCHEMA))
+override APP_EXTRA_SRCS := $(abspath $(APP_EXTRA_SRCS))
+override BUILD_DIR := $(abspath $(BUILD_DIR))
+override FW_STAGING_DIR := $(abspath $(FW_STAGING_DIR))
+override GEN_DIR := $(abspath $(GEN_DIR))
+override MGOS_PATH := $(abspath $(MGOS_PATH))
+
+BUILD_INFO_JSON = $(GEN_DIR)/build_info.json
+
+GEN_BUILD_INFO_EXTRA ?=
+
+MGOS_FEATURES =
+MGOS_CONF_SCHEMA =
+FS_FILES =
+
+include $(MGOS_PATH)/tools/mk/mgos_features.mk
+
+BUILD_INFO_C = $(GEN_DIR)/build_info.c
+FFI_EXPORTS_C = $(GEN_DIR)/ffi_exports.c
+MG_BUILD_INFO_C = $(GEN_DIR)/mg_build_info.c
+MGOS_CONFIG_C = $(GEN_DIR)/mgos_config.c
+MGOS_RO_VARS_C = $(GEN_DIR)/mgos_ro_vars.c
+APP_BIN = $(BUILD_DIR)/$(APP).bin
+BOOTLOADER_BIN = $(BUILD_DIR)/bootloader/bootloader.bin
+PARTITION_TABLE_BIN = $(BUILD_DIR)/partition_table/partition-table.bin
+PARTITION_TABLE_OFFSET = 0x8000
+
+# TODO(rojer): We should really stop doing this.
+APP_SOURCE_DIRS = $(sort $(dir $(APP_SOURCES)))
+
+include $(MGOS_PATH)/tools/mk/mgos_build_info.mk
+include $(MGOS_PATH)/tools/mk/mgos_config.mk
+include $(MGOS_PATH)/tools/mk/mgos_ffi_exports.mk
+include $(MGOS_PATH)/tools/mk/mgos_mkfs.mk
+
+MGOS_FEATURES += $(MG_FEATURES_TINY) \
+                 -DMG_ENABLE_FILESYSTEM -DMG_ENABLE_DIRECTORY_LISTING \
+                 -DMG_NET_IF=MG_NET_IF_LWIP_LOW_LEVEL
+MGOS_IPATH += $(MGOS_ESP_PATH) $(MGOS_ESP32XX_PATH)
+
+# -fno-jump-tables -fno-tree-switch-conversion:
+#    https://github.com/espressif/esp-idf/issues/1552#issuecomment-883600363
+export EXTRA_CPPFLAGS = -pipe -Wall -Werror -Wno-error=strict-aliasing \
+          -fno-jump-tables -fno-tree-switch-conversion \
+          -DMGOS_ROOT_DEVTAB=$(MGOS_ROOT_DEVTAB) \
+          -DMGOS_ROOT_FS_TYPE=$(MGOS_ROOT_FS_TYPE) \
+          -DMGOS_ROOT_FS_OPTS=$(MGOS_ROOT_FS_OPTS) \
+          -DMGOS_APP="$(APP)" -DFW_ARCHITECTURE=$(APP_PLATFORM) \
+          -include mgos_iram.h $(MGOS_FEATURES) $(MGOS_ESP_CPPFLAGS) \
+          -DMG_ENABLE_FILESYSTEM -DMG_ENABLE_DIRECTORY_LISTING \
+          $(addprefix -I,$(APP_INCLUDES) $(MGOS_IPATH) $(GEN_DIR) $(APP_SOURCE_DIRS)) \
+          -I$(IDF_PATH)/components/freertos/include/freertos
+export EXTRA_CFLAGS = $(APP_CFLAGS)
+export EXTRA_CXXFLAGS = $(APP_CXXFLAGS)
+
+export APP
+export MGOS_ESP_PATH
+
+ifeq "$(VERBOSE)" "1"
+export VERBOSE
+endif
+export COLOR = 0
+
+# Explicitly specify SDK components to build.
+SDK_COMPONENTS += app_trace app_update bootloader bootloader_support cxx driver efuse esp32 \
+                  esp_common esp_event esp_gdbstub esp_ipc esp_hw_support esp_netif esp_phy esp_pm \
+                  esp_ringbuf esp_rom esp_system esp_timer espcoredump esptool_py \
+                  freertos hal heap log lwip micro-ecc newlib nvs_flash partition_table \
+                  pthread soc spi_flash vfs
+
+export COMPONENTS = $(SDK_COMPONENTS) main mosapp $(ESP_IDF_EXTRA_COMPONENTS)
+
+MGOS_SRCS += mgos_config_util.c mgos_core_dump.c mgos_dlsym.c mgos_event.c \
+             mgos_gpio.c mgos_init.c mgos_mmap_esp.c \
+             mgos_sys_config.c \
+             mgos_file_utils.c mgos_hw_timers.c mgos_system.c mgos_system.cpp \
+             mgos_time.c mgos_timers.c mgos_timers.cpp mgos_uart.c mgos_utils.c \
+             mgos_json_utils.cpp mgos_utils.cpp error_codes.cpp status.cpp \
+             common/cs_crc32.c common/cs_file.c common/cs_hex.c common/cs_rbuf.c common/cs_varint.c common/json_utils.c \
+             frozen/frozen.c
+
+export MGOS_SOURCES = $(addprefix $(MGOS_SRC_PATH)/,$(MGOS_SRCS)) \
+                      $(addprefix $(MGOS_ESP_SRC_PATH)/,$(MGOS_ESP_SRCS)) \
+                      $(addprefix $(MGOS_ESP32XX_PATH)/,$(MGOS_ESP32XX_SRCS))
+
+$(BUILD_INFO_C): $(MGOS_SOURCES) $(APP_SOURCES)
+	$(call gen_build_info,$@,$(APP_PATH),$(APP_BUILD_ID),$(APP_VERSION),,$(BUILD_INFO_C),$(BUILD_INFO_JSON))
+
+$(MG_BUILD_INFO_C): $(MGOS_SOURCES)
+	$(call gen_build_info,$@,$(MGOS_PATH)/fw,,,mg_,$(MG_BUILD_INFO_C),)
+
+export GEN_SOURCES = $(MGOS_CONFIG_C) $(MGOS_RO_VARS_C) $(BUILD_INFO_C) $(MG_BUILD_INFO_C) $(FFI_EXPORTS_C)
+
+export APP_BIN_LIBS
+export APP_SOURCES
+
+SDKCONFIG_OUT = $(GEN_DIR)/sdkconfig
+SDKCONFIG_DEFAULTS_OUT = $(GEN_DIR)/sdkconfig.defaults
+
+$(SDKCONFIG_DEFAULTS_OUT): $(MGOS_ESP_PATH)/sdkconfig.defaults $(MANIFEST_FINAL)
+	@mkdir -p $(dir $@)
+	@(cat $< && for kv in $(ESP_IDF_SDKCONFIG_OPTS); do echo $$kv; done) > $@
+	@# Force rebuild of sdkconfig, otherwise it's not updated
+	@rm -f $(SDKCONFIG_OUT)
+
+$(FFI_EXPORTS_C): $(APP_FS_FILES)
+	$(call gen_ffi_exports,$@,$(FFI_SYMBOLS),$(filter %.js,$(FS_FILES)))
+
+FW_PARTS = boot:type=boot,addr=$(BOOTLOADER_OFFSET),src=$(BOOTLOADER_BIN),encrypt=true,update=$(MGOS_UPDATE_BOOT_LOADER) \
+           pt:type=pt,addr=$(PARTITION_TABLE_OFFSET),src=$(PARTITION_TABLE_BIN),encrypt=true \
+           otadata:type=otadata,ptn=otadata,src=$(MGOS_ESP32XX_PATH)/otadata.bin,encrypt=false \
+           nvs:type=nvs,ptn=nvs,size=$(NVS_SIZE),fill=0xff,encrypt=false \
+           app:type=app,ptn=app_0,src=$(APP_BIN),encrypt=true \
+           fs:type=fs,ptn=fs_0,src=$(FS_IMG),fs_size=$(MGOS_ROOT_FS_SIZE),encrypt=$(FS_PART_ENCR_FLAG_JSON) \
+           $(APP_EXTRA_FW_PARTS)
+
+include $(MGOS_PATH)/tools/mk/mgos_fw_meta.mk
+
+all: $(FW_STAGING_DIR) $(FW_DIR) $(GEN_DIR) $(FW_ZIP)
+
+cmake-out: $(BUILD_DIR) $(SDKCONFIG_DEFAULTS_OUT) $(APP_SOURCES) $(MGOS_SOURCES) $(GEN_SOURCES) $(MANIFEST_FINAL)
+	cd $(BUILD_DIR) && \
+	  cmake -DCOMPONENTS="$(COMPONENTS)" \
+	        -DEXTRA_COMPONENT_DIRS="$(APP_PATH)/components" \
+	        -DFFI_EXPORTS_C="$(FFI_EXPORTS_C)" \
+	        -DSDKCONFIG="$(SDKCONFIG_OUT)" \
+	        -DSDKCONFIG_DEFAULTS="$(SDKCONFIG_DEFAULTS_OUT)" \
+	        $(MGOS_ESP_PATH)
+
+$(APP_BIN): cmake-out
+	$(MAKE) -C $(BUILD_DIR) all
+
+$(BOOTLOADER_BIN) $(PARTITION_TABLE_BIN): $(APP_BIN)
+
+FS_FILES += $(GEN_DIR)/conf0.json
+
+$(BUILD_DIR) $(FW_DIR) $(FW_STAGING_DIR) $(GEN_DIR):
+	$(vecho) "MKDIR $@"
+	$(Q) mkdir -p $@
+
+app-bin-check: $(APP_BIN)
+	$(eval _appsize := $(shell ls -1 -l $(APP_BIN) | awk '{print $$5}'))
+	$(eval _appslotsize := $(shell echo $$(($(APP_SLOT_SIZE)))))
+	$(eval _appsizepct := $(shell echo $$(($(_appsize) * 100 / $(_appslotsize)))))
+	$(vecho) "  App size: $(_appsize) of $(_appslotsize) ($(_appsizepct)%)"
+	@[ $(_appsize) -lt $(_appslotsize) ] || { echo App is too big && exit 1; }
+
+$(FW_MANIFEST): app-bin-check $(BOOTLOADER_BIN) $(PARTITION_TABLE_BIN) $(FS_IMG) $(MKFS)
+
+$(FS_IMG): $(MKFS) $(APP_FS_DIRS) $(FS_FILES)
+	$(call mkfs,$(MGOS_ROOT_FS_SIZE),$(MGOS_ROOT_FS_OPTS))
+
+# Lib targets, used in lib builds.
+$(BUILD_DIR)/lib.a $(BUILD_DIR)/moslib/libmoslib.a: cmake-out
+	$(MAKE) -C $(BUILD_DIR) -f esp-idf/mosapp/CMakeFiles/__idf_mosapp.dir/build.make esp-idf/mosapp/libmosapp.a
+	@mkdir -p $(dir $@)
+	@cp $(BUILD_DIR)/esp-idf/mosapp/libmosapp.a $@
+
+clean:
+	rm -rf $(BUILD_DIR)

@@ -19,8 +19,6 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "esp32/rom/ets_sys.h"
-#include "esp32/rom/spi_flash.h"
 #include "esp_attr.h"
 #include "esp_debug_helpers.h"
 #include "esp_event.h"
@@ -44,10 +42,17 @@
 #include "esp32_wifi.h"
 #endif
 
-#include "esp32_debug.h"
-#include "esp32_exc.h"
+#include "esp32xx_debug.h"
 #ifdef MGOS_HAVE_OTA_COMMON
 #include "esp32_updater.h"
+#endif
+
+#if defined(MGOS_ESP32)
+#include "esp32/rom/ets_sys.h"
+#include "esp32/rom/spi_flash.h"
+#elif defined(MGOS_ESP32C3)
+#include "esp32c3/rom/ets_sys.h"
+#include "esp32c3/rom/spi_flash.h"
 #endif
 
 enum mgos_init_result mgos_freertos_pre_init(void) {
@@ -59,7 +64,7 @@ enum mgos_init_result mgos_freertos_pre_init(void) {
   esp32_updater_early_init();
 #endif
 
-  r = esp32_debug_init();
+  r = esp32xx_debug_init();
   if (r != MGOS_INIT_OK) return r;
 
   LOG(LL_INFO, ("ESP-IDF %s", esp_get_idf_version()));
@@ -69,10 +74,8 @@ enum mgos_init_result mgos_freertos_pre_init(void) {
 
   {
     uint8_t mac[6];
-    /* Use cutom MAC as base if it's configured, default otherwise. */
-    if ((REG_READ(EFUSE_BLK3_RDATA5_REG) >> 24) == 1) {
-      esp_efuse_mac_get_custom(mac);
-    } else {
+    /* Use custom MAC as base if it's configured, default otherwise. */
+    if (esp_efuse_mac_get_custom(mac) != ESP_OK) {
       esp_efuse_mac_get_default(mac);
     }
     esp_base_mac_addr_set(mac);
@@ -88,10 +91,10 @@ enum mgos_init_result mgos_freertos_pre_init(void) {
   mgos_vfs_mmap_init();
 #endif
 
-  esp32_exception_handler_init();
-
   return MGOS_INIT_OK;
 }
+
+extern void panic_print_char(char c);
 
 /*
  * Note that this function may be invoked from a very low level.
@@ -99,13 +102,11 @@ enum mgos_init_result mgos_freertos_pre_init(void) {
  */
 static IRAM void sdk_putc(char c) {
   if (mgos_debug_uart_is_suspended()) return;
-  ets_write_char_uart(c);
+  panic_print_char(c);
 }
 
-extern void panic_print_char(char c);
-
 IRAM void mgos_cd_putc(int c) {
-  ets_write_char_uart(c);
+  panic_print_char(c);
 }
 
 extern void cs_log_lock(void);

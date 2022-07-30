@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-#include "esp32_debug.h"
+#include "esp32xx_debug.h"
 
 #include <assert.h>
 #include <errno.h>
@@ -67,7 +67,7 @@ static ssize_t debug_write(int fd, const void *data, size_t size) {
   return size;
 }
 
-enum mgos_init_result esp32_debug_init() {
+enum mgos_init_result esp32xx_debug_init() {
   esp_vfs_t vfs = {
       .open = &debug_open,
       .read = &debug_read,

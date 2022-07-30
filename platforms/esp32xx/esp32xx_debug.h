@@ -15,8 +15,7 @@
  * limitations under the License.
  */
 
-#ifndef CS_FW_PLATFORMS_ESP32_SRC_ESP32_DEBUG_H_
-#define CS_FW_PLATFORMS_ESP32_SRC_ESP32_DEBUG_H_
+#pragma once
 
 #include "mgos_init.h"
 
@@ -24,10 +23,8 @@
 extern "C" {
 #endif
 
-enum mgos_init_result esp32_debug_init();
+enum mgos_init_result esp32xx_debug_init();
 
 #ifdef __cplusplus
 }
 #endif
-
-#endif /* CS_FW_PLATFORMS_ESP32_SRC_ESP32_DEBUG_H_ */
