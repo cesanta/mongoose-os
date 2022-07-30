@@ -35,7 +35,7 @@ MGOS_UPDATE_BOOT_LOADER ?= false
 
 MGOS_DEBUG_UART ?= 0
 MGOS_ROOT_DEVTAB ?=
-MGOS_ROOT_FS_TYPE ?= LFS
+MGOS_ROOT_FS_TYPE ?= SPIFFS
 MGOS_ROOT_FS_SIZE ?= 262144
 
 export IDF_TARGET = $(APP_PLATFORM)
@@ -196,7 +196,7 @@ $(FFI_EXPORTS_C): $(APP_FS_FILES)
 
 FW_PARTS = boot:type=boot,addr=$(BOOTLOADER_OFFSET),src=$(BOOTLOADER_BIN),encrypt=true,update=$(MGOS_UPDATE_BOOT_LOADER) \
            pt:type=pt,addr=$(PARTITION_TABLE_OFFSET),src=$(PARTITION_TABLE_BIN),encrypt=true \
-           otadata:type=otadata,ptn=otadata,src=$(MGOS_ESP32XX_PATH)/otadata.bin,encrypt=false \
+           otadata:type=otadata,ptn=otadata,src=$(MGOS_ESP32XX_PATH)/otadata.bin,encrypt=true \
            nvs:type=nvs,ptn=nvs,size=$(NVS_SIZE),fill=0xff,encrypt=false \
            app:type=app,ptn=app_0,src=$(APP_BIN),encrypt=true \
            fs:type=fs,ptn=fs_0,src=$(FS_IMG),fs_size=$(MGOS_ROOT_FS_SIZE),encrypt=$(FS_PART_ENCR_FLAG_JSON) \
