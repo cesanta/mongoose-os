@@ -19,6 +19,8 @@
       platform: esp8266
     - name: esp32
       platform: esp32
+    - name: esp32c3
+      platform: esp32c3
     - name: rs14100
       platform: rs14100
     - name: stm32-B-L475E-IOT01A
@@ -57,6 +59,8 @@
       platform: esp8266
     - name: esp32
       platform: esp32
+    - name: esp32c3
+      platform: esp32c3
     - name: rs14100
       platform: rs14100
     - name: stm32-B-L475E-IOT01A
@@ -101,6 +105,8 @@
       platform: esp8266
     - name: esp32-nossl
       platform: esp32
+    - name: esp32c3-nossl
+      platform: esp32c3
     - name: rs14100-nossl
       platform: rs14100
     - name: stm32-B-L475E-IOT01A-nossl
