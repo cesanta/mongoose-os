@@ -41,7 +41,7 @@
 
 #include "esp32xx_debug.h"
 #ifdef MGOS_HAVE_OTA_COMMON
-#include "esp32_updater.h"
+#include "esp32xx_updater.h"
 #endif
 
 #if defined(MGOS_ESP32)
@@ -58,7 +58,7 @@ enum mgos_init_result mgos_freertos_pre_init(void) {
   srand(esp_random()); /* esp_random() uses HW RNG */
 
 #ifdef MGOS_HAVE_OTA_COMMON
-  esp32_updater_early_init();
+  esp32xx_updater_early_init();
 #endif
 
   r = esp32xx_debug_init();
