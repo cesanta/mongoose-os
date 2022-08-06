@@ -38,9 +38,6 @@
 #include "mgos_net_hal.h"
 #include "mgos_system.h"
 #include "mgos_vfs_internal.h"
-#ifdef MGOS_HAVE_WIFI
-#include "esp32_wifi.h"
-#endif
 
 #include "esp32xx_debug.h"
 #ifdef MGOS_HAVE_OTA_COMMON
