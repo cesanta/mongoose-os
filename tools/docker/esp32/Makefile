@@ -1,5 +1,5 @@
 DOCKERFILES = esp32-build
-SPIFFS_CONFIG_PATH = /vfs-fs-spiffs/include/esp32
+SPIFFS_CONFIG_PATH = /vfs-fs-spiffs/include/esp32xx
 PLATFORMS = amd64
 # Can't build arm64 image on amd64. TODO(nikwest): Fix it.
 # arm64
