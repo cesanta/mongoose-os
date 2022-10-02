@@ -22,7 +22,7 @@ ARG RS14100_SDK
 ADD tmp/$RS14100_SDK /opt/$RS14100_SDK
 
 ARG TARGETARCH
-ADD mgos_fw_meta.py $TARGETARCH/mklfs $TARGETARCH/mkspiffs $TARGETARCH/mkspiffs8 /usr/local/bin/
+ADD mgos_fw_meta.py $TARGETARCH/*lfs $TARGETARCH/*spiffs* /usr/local/bin/
 ADD serve_core/ /opt/serve_core/
 RUN ln -s /opt/serve_core/serve_core.py /usr/local/bin/serve_core.py
 

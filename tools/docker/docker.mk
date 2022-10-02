@@ -60,9 +60,9 @@ mklfs-%:
 	  -v $(REPO_PATH):/mongoose-os \
 	  -v $(CURDIR)/vfs-fs-lfs:/vfs-fs-lfs \
 	  $(GCC) \
-	  bash -c 'make -C /vfs-fs-lfs/tools mklfs \
+	  bash -c 'make -C /vfs-fs-lfs/tools -j4 mklfs unlfs \
 	    FROZEN_PATH=/mongoose-os/src/frozen'
-	cp -v vfs-fs-lfs/tools/mklfs $*/mklfs
+	cp -v vfs-fs-lfs/tools/mklfs vfs-fs-lfs/tools/unlfs $*/
 
 mkspiffs mkspiffs8 : $(foreach i,$(PLATFORMS),mkspiffs-$(i)) $(foreach i,$(PLATFORMS),mkspiffs8-$(i))
 
@@ -75,11 +75,11 @@ mkspiffs-% mkspiffs8-%:
 	  -v $(REPO_PATH):/mongoose-os \
 	  -v $(CURDIR)/vfs-fs-spiffs:/vfs-fs-spiffs \
 	  $(GCC) \
-	  bash -c 'make -C /vfs-fs-spiffs/tools mkspiffs mkspiffs8 \
+	  bash -c 'make -C /vfs-fs-spiffs/tools -j4 mkspiffs mkspiffs8 unspiffs unspiffs8 \
 	    FROZEN_PATH=/mongoose-os/src/frozen \
 	    SPIFFS_CONFIG_PATH=$(SPIFFS_CONFIG_PATH)'
-	cp -v vfs-fs-spiffs/tools/mkspiffs $*/mkspiffs
-	cp -v vfs-fs-spiffs/tools/mkspiffs8 $*/mkspiffs8
+	cp -v vfs-fs-spiffs/tools/mkspiffs vfs-fs-spiffs/tools/mkspiffs8 $*/
+	cp -v vfs-fs-spiffs/tools/unspiffs vfs-fs-spiffs/tools/unspiffs8 $*/
 
 clean-tools:
 	rm -rf amd64 arm64 mgos_fw_meta.py serve_core serve_core.py mklfs mkspiffs mkspiffs8 vfs-fs-*
