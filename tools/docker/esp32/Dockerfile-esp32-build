@@ -19,7 +19,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
       python2 python2-dev && \
     apt-get clean
 
-RUN useradd -d /opt/Espressif -m -s /bin/bash user && chown -R user /opt
+RUN useradd -d /opt/Espressif -m -s /bin/bash user && chmod o+rx /opt/Espressif
 
 ARG TARGETARCH
 ARG TOOLCHAIN_URLS="https://github.com/espressif/crosstool-NG/releases/download/esp-2021r2-patch3/xtensa-esp32-elf-gcc8_4_0-esp-2021r2-patch3-linux-${TARGETARCH}.tar.gz https://github.com/espressif/crosstool-NG/releases/download/esp-2021r2-patch3/riscv32-esp-elf-gcc8_4_0-esp-2021r2-patch3-linux-${TARGETARCH}.tar.gz https://github.com/espressif/crosstool-NG/releases/download/esp-2021r2-patch3/xtensa-esp32s3-elf-gcc8_4_0-esp-2021r2-patch3-linux-${TARGETARCH}.tar.gz"
