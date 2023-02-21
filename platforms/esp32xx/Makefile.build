@@ -142,6 +142,7 @@ export EXTRA_CFLAGS = $(APP_CFLAGS)
 export EXTRA_CXXFLAGS = $(APP_CXXFLAGS)
 
 export APP
+export MGOS_PATH
 export MGOS_ESP_PATH
 
 ifeq "$(VERBOSE)" "1"
