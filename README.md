@@ -68,3 +68,7 @@ and send GitHub pull request.
    https://github.com/mongoose-os-libs organisations for new app/library
    contributions
    * Create Mongoose OS releases
+
+# See also:
+[Mongoose Web Server Library](https://mongoose.ws/) - a robust, open-source solution licensed under GPLv2, designed to seamlessly integrate web server functionality into your embedded devices. 
+With complementary [Mongoose Wizard](https://mongoose.ws/wizard/) - a no-code visual tool that enables rapid WebUI creation without the need for frontend expertise.
