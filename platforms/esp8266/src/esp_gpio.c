@@ -272,8 +272,12 @@ void (*mgos_nsleep100)(uint32_t n);
 uint32_t mgos_bitbang_n100_cal;
 
 enum mgos_init_result mgos_gpio_hal_init(void) {
-  for (int i = 0; i < 16; i++) {
+  // Interupts are not cleared after soft reset (notably GPIO2)
+  // Probably the GPIO2 is triggered because of the second UART - U1TXD, 
+  // which is transmitting data during boot. Clear everything
+  for (int i = 0; i < GPIO_PIN_COUNT; i++) {
     mgos_gpio_hal_disable_int(i);
+    mgos_gpio_hal_clear_int(i);
   }
 #ifdef RTOS_SDK
   _xt_isr_attach(ETS_GPIO_INUM, (void *) esp8266_gpio_isr, NULL);
