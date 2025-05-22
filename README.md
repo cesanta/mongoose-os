@@ -80,3 +80,4 @@ Detailed articles and expert content focused on embedded network technologies:
 - [Embedded Web Server: A Comprehensive Guide for Modern Connected Devices](https://mongoose.ws/articles/embedded-web-server-a-comprehensive-guide-for-modern-connected-devices/)
 - [Building Embedded Web Device Dashboards](https://mongoose.ws/articles/building-embedded-web-device-dashboard/)
 - [ESP32 Device Dashboard: A Step-by-Step Guide for Developers](https://mongoose.ws/articles/esp32-device-dashboard/)
+- [How to build an STM32 Web Dashboard](https://mongoose.ws/articles/stm32-device-dashboard/)
