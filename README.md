@@ -82,3 +82,4 @@ Detailed articles and expert content focused on embedded network technologies:
 - [ESP32 Device Dashboard: A Step-by-Step Guide for Developers](https://mongoose.ws/articles/esp32-device-dashboard/)
 - [How to build an STM32 Web Dashboard](https://mongoose.ws/articles/stm32-device-dashboard/)
 - [STM32 WebSocket Guide](https://mongoose.ws/articles/stm32-websocket-guide/)
+- [Web File Manager on STM32, ESP32 and Embedded Linux](https://mongoose.ws/articles/building-a-web-file-manager-on-stm32-esp32-embedded-linux/)
