@@ -84,3 +84,4 @@ Detailed articles and expert content focused on embedded network technologies:
 - [STM32 WebSocket Guide](https://mongoose.ws/articles/stm32-websocket-guide/)
 - [Web File Manager on STM32, ESP32 and Embedded Linux](https://mongoose.ws/articles/building-a-web-file-manager-on-stm32-esp32-embedded-linux/)
 - [Web dashboard on Zephyr RTOS](https://mongoose.ws/articles/web-dashboard-on-zephyr-rtos/)
+- [Limiting TCP/IP RAM usage on STM32](https://mongoose.ws/articles/limiting-tcpip-ram-usage-on-stm32/)
