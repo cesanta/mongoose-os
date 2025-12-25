@@ -42,6 +42,9 @@ void mgos_system_restart_after(int delay_ms);
 /* Return random number in a given range. */
 float mgos_rand_range(float from, float to);
 
+/* Removes 'data_size' bytes from index of the buffer */
+size_t mbuf_remove_range(struct mbuf *, size_t index, size_t data_size);
+
 #ifdef __cplusplus
 }
 #endif
