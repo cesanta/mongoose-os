@@ -38,9 +38,11 @@ class Timer {
 
   bool Reset(int msecs, int flags);
 
-  bool IsValid();
+  bool IsValid() const;
 
- private:
+  int GetMsecsLeft() const;
+
+ protected:
   static void HandlerCB(void *arg);
 
   Handler handler_;
