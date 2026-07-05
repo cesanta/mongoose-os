@@ -234,9 +234,13 @@ void mgos_uart_hal_dispatch_bottom(struct mgos_uart_state *us) {
 
 void mgos_uart_hal_flush_fifo(struct mgos_uart_state *us) {
   uart_dev_t *ud = UART_LL_GET_HW(us->uart_no);
-  while (esp32c6_uart_tx_fifo_len(us->uart_no) > 0) {
+  /* Bounded spins: with the UART clock gated the FIFO registers read
+   * constant garbage and an unbounded loop would hang forever. */
+  uint32_t guard = 1000000;
+  while (esp32c6_uart_tx_fifo_len(us->uart_no) > 0 && guard-- > 0) {
   }
-  while (!uart_ll_is_tx_idle(ud)) {
+  guard = 1000000;
+  while (!uart_ll_is_tx_idle(ud) && guard-- > 0) {
   }
 }
 
@@ -307,6 +311,11 @@ bool mgos_uart_hal_init(struct mgos_uart_state *us) {
   /* On the C6 UART clock gating goes through PCR, handled by the LL layer. */
   uart_ll_enable_bus_clock(uart_no, true);
   uart_ll_reset_register(uart_no);
+  /* Enable the core clock right away, like the IDF driver's
+   * uart_module_enable(): the *_sync config registers (FIFO reset,
+   * conf0/conf1, baud) only latch via reg_update when sclk runs, and the
+   * LL helpers spin-wait on that latch — without sclk they hang forever. */
+  uart_ll_sclk_enable(UART_LL_GET_HW(uart_no));
   uds->ud = UART_LL_GET_HW(uart_no);
   /* Start with ints disabled. */
   uart_ll_disable_intr_mask(uds->ud, UART_LL_INTR_MASK);
@@ -335,11 +344,14 @@ bool mgos_uart_hal_configure(struct mgos_uart_state *us,
   uart_ll_disable_intr_mask(ud, UART_LL_INTR_MASK);
 
   if (cfg->baud_rate > 0) {
-    mgos_uart_hal_flush_fifo(us);
-    uart_ll_set_sclk(ud, (soc_module_clk_t) UART_SCLK_XTAL);
-    uart_ll_sclk_enable(ud);
-    uart_ll_set_baudrate(ud, cfg->baud_rate, SOC_XTAL_FREQ_40M * 1000000);
-  }
+    /* Order mirrors the IDF driver (uart_module_enable): sclk_enable
+     * before set_sclk; a freshly bus-clocked UART has no running core
+     * clock and register-sync waits would spin forever. */
+      uart_ll_sclk_enable(ud);
+      uart_ll_set_sclk(ud, (soc_module_clk_t) UART_SCLK_XTAL);
+      mgos_uart_hal_flush_fifo(us);
+      uart_ll_set_baudrate(ud, cfg->baud_rate, SOC_XTAL_FREQ_40M * 1000000);
+    }
 
   if (uart_set_pin(uart_no, cfg->dev.tx_gpio, cfg->dev.rx_gpio,
                    (cfg->rx_fc_type == MGOS_UART_FC_HW ? cfg->dev.rts_gpio
