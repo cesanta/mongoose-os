@@ -15,6 +15,33 @@
  * limitations under the License.
  */
 
+/*
+ * The loop timing is a function of CPU frequency only, so the C6 variants
+ * are aliases of the same code, kept as separate symbols per chip to match
+ * the esp32<variant>_ naming convention.
+ */
+
+        .section .iram1.esp32c6_nsleep100_40, "x"
+        .align 4
+esp32c6_nsleep100_40:
+        .global esp32c6_nsleep100_40
+        .type   esp32c6_nsleep100_40, @function
+        j esp32c3_nsleep100_40
+
+        .section .iram1.esp32c6_nsleep100_80, "x"
+        .align 4
+esp32c6_nsleep100_80:
+        .global esp32c6_nsleep100_80
+        .type   esp32c6_nsleep100_80, @function
+        j esp32c3_nsleep100_80
+
+        .section .iram1.esp32c6_nsleep100_160, "x"
+        .align 4
+esp32c6_nsleep100_160:
+        .global esp32c6_nsleep100_160
+        .type   esp32c6_nsleep100_160, @function
+        j esp32c3_nsleep100_160
+
         .section .iram1.esp32c3_nsleep100_40, "x"
         .align 4
 esp32c3_nsleep100_40:

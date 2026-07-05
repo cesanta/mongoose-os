@@ -36,6 +36,8 @@
 #include "esp32_uart.h"
 #elif defined(MGOS_ESP32C3)
 #include "esp32c3_uart.h"
+#elif defined(MGOS_ESP32C6)
+#include "esp32c6_uart.h"
 #elif CS_PLATFORM == CS_P_ESP8266
 #include "esp_uart.h"
 #elif defined(RS14100)

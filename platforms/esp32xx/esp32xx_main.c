@@ -50,6 +50,9 @@
 #elif defined(MGOS_ESP32C3)
 #include "esp32c3/rom/ets_sys.h"
 #include "esp32c3/rom/spi_flash.h"
+#elif defined(MGOS_ESP32C6)
+#include "esp32c6/rom/ets_sys.h"
+#include "esp32c6/rom/spi_flash.h"
 #endif
 
 enum mgos_init_result mgos_freertos_pre_init(void) {
