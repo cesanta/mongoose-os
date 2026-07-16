@@ -40,9 +40,21 @@ CONFIG_SPI_FLASH_DANGEROUS_WRITE_ALLOWED=y
 # HW timer HAL (gptimer) starts/stops timers from ISR context.
 CONFIG_GPTIMER_CTRL_FUNC_IN_IRAM=y
 
-# Stop wpa-supplicant from building custom crypto.
-CONFIG_MBEDTLS_CCM_C=y
-CONFIG_MBEDTLS_CMAC_C=y
-CONFIG_MBEDTLS_NIST_KW_C=y
+
 
 # App-specific settings below.
+
+# WPA-enterprise off: mgos whole-archive linking of the IDF 6
+# wpa_supplicant collides on duplicate eap_fast symbols. Re-enable and
+# fix linking if enterprise is needed.
+CONFIG_ESP_WIFI_ENTERPRISE_SUPPORT=n
+
+# TLS (mongoose mg_ssl_if_mbedtls on mbedTLS 4):
+# - FS_IO: mgos loads certs from the VFS (mbedtls_x509_crt_parse_file);
+# - KEEP_PEER_CERTIFICATE=n: replaces the MG_SSL_IF_MBEDTLS_FREE_CERTS
+#   post-handshake cert freeing, whose fields are private in >= 3.x.
+CONFIG_MBEDTLS_FS_IO=y
+CONFIG_MBEDTLS_SSL_KEEP_PEER_CERTIFICATE=n
+# mgos_sys_config.c calls mbedtls_debug_set_threshold (debug.mbedtls_level);
+# only compiled with MBEDTLS_DEBUG_C. Also handy for TLS bring-up.
+CONFIG_MBEDTLS_DEBUG=y

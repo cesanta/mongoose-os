@@ -15,12 +15,15 @@ idf_component_register(
     esp_rom
     esp_system
     esp_timer
+    esp_wifi
     espcoredump
     freertos
     hal
     lwip
+    mbedtls
     nvs_flash
     soc
     spi_flash
     vfs
+    wpa_supplicant
 )
