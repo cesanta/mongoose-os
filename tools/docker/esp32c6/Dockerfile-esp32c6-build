@@ -57,6 +57,9 @@ RUN ln -s ${IDF_TOOLS_PATH}/tools/riscv32-esp-elf/*/riscv32-esp-elf \
 # The IDF python venv (idf.py, esptool, etc.), the toolchain and gdb.
 # Equivalent of ". export.sh" but usable from non-login shells.
 ENV PATH=/opt/Espressif/python_env/bin:/opt/Espressif/riscv32-esp-elf/bin:/opt/Espressif/riscv32-esp-elf-gdb/bin:/opt/Espressif/esp-idf/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ENV IDF_PYTHON_ENV_PATH=/opt/Espressif/python_env
+ENV ESP_IDF_VERSION=6.0.2
+ENV ESP_ROM_ELF_DIR=/opt/Espressif/tools/tools/esp-rom-elfs
 ADD ct_path.sh /etc/profile.d
 
 # Mongoose OS host-side tools. Built/copied by the Makefile in this directory
@@ -70,7 +73,7 @@ RUN ln -s /opt/serve_core/serve_core.py /usr/local/bin/serve_core.py
 
 # NOTE: no ROM dump shipped for C6 (the esp32 image ADDs rom.bin/rom.elf for
 # serve_core). ESP32-C6 ROM ELFs are installed by install.sh under
-# ${IDF_TOOLS_PATH}/tools/esp-rom-elfs/ and can be pointed at explicitly.
+# ${IDF_TOOLS_PATH}/tools/esp-rom-elfs/ and exposed through ESP_ROM_ELF_DIR.
 
 ARG DOCKER_TAG
 ENV MGOS_TARGET_GDB=/opt/Espressif/riscv32-esp-elf-gdb/bin/riscv32-esp-elf-gdb
