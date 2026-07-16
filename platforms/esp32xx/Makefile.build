@@ -43,6 +43,9 @@ export IDF_TARGET = $(APP_PLATFORM)
 export MGOS_ROOT_FS_SIZE
 
 ifeq "$(APP_PLATFORM)" "esp32c6"
+# Keep historical whole-archive linking, but exclude the IDF 6 archive that has
+# duplicated EAP objects when force-loaded.
+export MGOS_LINK_NO_WHOLE_ARCHIVE_LIBS = libwpa_supplicant.a
 ESP_IDF_FREERTOS_INCLUDE ?= $(IDF_PATH)/components/freertos/FreeRTOS-Kernel/include/freertos
 MGOS_ROOT_FS_OPTS_CDEF = -DMGOS_ROOT_FS_OPTS='$(MGOS_ROOT_FS_OPTS)'
 MGOS_ESP32XX_WARNINGS = -Wno-error=array-parameter -Wno-error=cast-function-type
