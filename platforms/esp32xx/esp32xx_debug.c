@@ -20,11 +20,13 @@
 #include <assert.h>
 #include <errno.h>
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <sys/reent.h>
 
 #include "freertos/FreeRTOS.h"
 
+#include "esp_idf_version.h"
 #include "esp_vfs.h"
 
 #include <lwip/pbuf.h>
@@ -81,9 +83,18 @@ enum mgos_init_result esp32xx_debug_init() {
    * structs. We do not reallocate them because pointers have now been copied to
    * all the existing RTOS tasks.
    */
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+  stdin = fopen("/__mgos_debug/in", "r");
+  stdout = fopen("/__mgos_debug/out", "w");
+  stderr = fopen("/__mgos_debug/err", "w");
+  if (stdin == NULL || stdout == NULL || stderr == NULL) {
+    return MGOS_INIT_CONSOLE_INIT_FAILED;
+  }
+#else
   _GLOBAL_REENT->_stdin->_file = open("/__mgos_debug/in", O_RDONLY);
   _GLOBAL_REENT->_stdout->_file = open("/__mgos_debug/out", O_WRONLY);
   _GLOBAL_REENT->_stderr->_file = open("/__mgos_debug/err", O_WRONLY);
+#endif
   return MGOS_INIT_OK;
 }
 
@@ -93,8 +104,12 @@ static ip_addr_t s_dst;
 static uint16_t s_port;
 
 enum mgos_init_result mgos_debug_udp_init(const char *dst) {
-  uint32_t ip1, ip2, ip3, ip4, port;
+  unsigned int ip1, ip2, ip3, ip4, port;
   if (sscanf(dst, "%u.%u.%u.%u:%u", &ip1, &ip2, &ip3, &ip4, &port) != 5) {
+    LOG(LL_ERROR, ("Invalid address"));
+    return MGOS_INIT_DEBUG_INIT_FAILED;
+  }
+  if (ip1 > 255 || ip2 > 255 || ip3 > 255 || ip4 > 255 || port > 0xffff) {
     LOG(LL_ERROR, ("Invalid address"));
     return MGOS_INIT_DEBUG_INIT_FAILED;
   }

@@ -46,10 +46,12 @@ void mgos_app_preinit(void) __attribute__((weak));
 void mgos_app_preinit(void) {
 }
 
+#ifndef MGOS_NO_WEAK_DEPS_INIT
 bool mgos_deps_init(void) __attribute__((weak));
 bool mgos_deps_init(void) {
   return true;
 }
+#endif
 
 enum mgos_app_init_result mgos_app_init(void) __attribute__((weak));
 enum mgos_app_init_result mgos_app_init(void) {

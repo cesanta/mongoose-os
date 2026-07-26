@@ -20,8 +20,13 @@
 
 #include "esp_attr.h"
 #include "esp_heap_caps.h"
+#include "esp_idf_version.h"
 #include "esp_system.h"
 #include "esp_task_wdt.h"
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+#include "esp_mac.h"
+#include "esp_random.h"
+#endif
 
 #include "hal/wdt_hal.h"
 #include "soc/rtc.h"
@@ -30,6 +35,20 @@
 #include "mgos_hal.h"
 #include "mgos_sys_config.h"
 #include "mgos_vfs.h"
+
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+static bool s_wdt_enabled;
+
+static void esp32xx_wdt_add_current_task_if_needed(void) {
+  esp_err_t status = esp_task_wdt_status(NULL);
+  if (status == ESP_OK) return;
+  if (status == ESP_ERR_NOT_FOUND) esp_task_wdt_add(NULL);
+}
+
+static void esp32xx_wdt_reset_current_task_if_subscribed(void) {
+  if (esp_task_wdt_status(NULL) == ESP_OK) esp_task_wdt_reset();
+}
+#endif
 
 size_t mgos_get_heap_size(void) {
   multi_heap_info_t info;
@@ -73,19 +92,49 @@ void device_set_mac_address(uint8_t mac[6]) {
 }
 
 void mgos_wdt_feed(void) {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+  esp32xx_wdt_reset_current_task_if_subscribed();
+#else
   esp_task_wdt_reset();
+#endif
 }
 
 void mgos_wdt_disable(void) {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+  if (esp_task_wdt_status(NULL) == ESP_OK) esp_task_wdt_delete(NULL);
+  s_wdt_enabled = false;
+#else
   esp_task_wdt_delete(xTaskGetCurrentTaskHandle());
+#endif
 }
 
 void mgos_wdt_enable(void) {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+  s_wdt_enabled = true;
+  esp32xx_wdt_add_current_task_if_needed();
+  esp32xx_wdt_reset_current_task_if_subscribed();
+#else
   esp_task_wdt_add(xTaskGetCurrentTaskHandle());
+#endif
 }
 
 void mgos_wdt_set_timeout(int secs) {
+#if ESP_IDF_VERSION >= ESP_IDF_VERSION_VAL(5, 0, 0)
+  esp_task_wdt_config_t cfg = {
+      .timeout_ms = (uint32_t) secs * 1000,
+      .idle_core_mask = 0,
+      .trigger_panic = true,
+  };
+  /* The task WDT is initialized by the IDF startup code
+   * (CONFIG_ESP_TASK_WDT_INIT); fall back to init if it is not. */
+  if (esp_task_wdt_reconfigure(&cfg) != ESP_OK) {
+    esp_task_wdt_init(&cfg);
+  }
+  if (s_wdt_enabled) esp32xx_wdt_add_current_task_if_needed();
+  esp32xx_wdt_reset_current_task_if_subscribed();
+#else
   esp_task_wdt_init(secs, true /* panic */);
+#endif
 }
 
 int mg_ssl_if_mbed_random(void *ctx, unsigned char *buf, size_t len) {

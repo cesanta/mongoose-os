@@ -1,0 +1,82 @@
+# DRAFT: Mongoose OS SDK build image for ESP32-C6.
+#
+# Differences vs tools/docker/esp32/Dockerfile-esp32-build:
+#  - Uses upstream ESP-IDF (github.com/espressif/esp-idf) at a fixed tag
+#    (IDF_VERSION build arg, default v6.0.2), not the Cesanta fork.
+#    The IDF version is therefore decoupled from DOCKER_TAG.
+#  - Toolchains are installed by IDF's own install.sh (riscv32-esp-elf),
+#    not by downloading fixed crosstool-NG tarballs.
+#  - No patch_submodules.sh, no kconfig conf-idf pre-build (gone in IDF 5+),
+#    no pip install -r requirements.txt (install.sh creates the python venv).
+
+FROM ubuntu:noble
+
+# Prerequisites for ESP-IDF 6.x (per Espressif docs) + general build tools.
+RUN DEBIAN_FRONTEND=noninteractive apt-get update && \
+    DEBIAN_FRONTEND=noninteractive apt-get install -y -q \
+      apt-utils bison build-essential ccache cmake dfu-util flex gawk \
+      gdb-multiarch git gperf libffi-dev libssl-dev libusb-1.0-0 ninja-build \
+      python3 python3-dev python3-pip python3-venv python-is-python3 \
+      rsync sudo unzip wget xz-utils zip && \
+    apt-get clean
+
+# Same fsync stub as the esp32 image (speeds up builds on overlayfs).
+RUN cd /tmp && \
+    git clone https://github.com/rojer/fsync-stub && \
+    cd /tmp/fsync-stub && ./install.sh && \
+    rm -rf /tmp/fsync-stub
+
+RUN useradd -d /opt/Espressif -m -s /bin/bash user && chmod o+rx /opt/Espressif
+
+# Upstream ESP-IDF, pinned by tag. ESP32-C6 requires IDF >= 5.1;
+# the mgos esp32c6 port is validated against v6.0.2.
+ARG IDF_VERSION=v6.0.2
+RUN sudo -u user git clone -j 8 --branch ${IDF_VERSION} --depth 1 --recursive \
+      --shallow-submodules https://github.com/espressif/esp-idf \
+      /opt/Espressif/esp-idf
+RUN git config --global --add safe.directory /opt/Espressif/esp-idf
+
+ENV IDF_PATH=/opt/Espressif/esp-idf
+ENV IDF_TOOLS_PATH=/opt/Espressif/tools
+
+# Install toolchain (riscv32-esp-elf), gdb, esp-rom-elfs and the IDF python
+# virtualenv for the esp32c6 target.
+RUN sudo -u user -E ${IDF_PATH}/install.sh esp32c6 && \
+    chmod -R o+rX ${IDF_TOOLS_PATH}
+
+# ENV PATH must be static, but install.sh uses versioned directories
+# (e.g. tools/riscv32-esp-elf/esp-<ver>/riscv32-esp-elf). Create stable
+# symlinks so PATH and MGOS_TARGET_GDB do not depend on tool versions.
+# TO VERIFY on first build: each glob must match exactly one directory.
+RUN ln -s ${IDF_TOOLS_PATH}/tools/riscv32-esp-elf/*/riscv32-esp-elf \
+      /opt/Espressif/riscv32-esp-elf && \
+    ln -s ${IDF_TOOLS_PATH}/tools/riscv32-esp-elf-gdb/*/riscv32-esp-elf-gdb \
+      /opt/Espressif/riscv32-esp-elf-gdb && \
+    ln -s ${IDF_TOOLS_PATH}/python_env/idf*_env /opt/Espressif/python_env
+
+# The IDF python venv (idf.py, esptool, etc.), the toolchain and gdb.
+# Equivalent of ". export.sh" but usable from non-login shells.
+ENV PATH=/opt/Espressif/python_env/bin:/opt/Espressif/riscv32-esp-elf/bin:/opt/Espressif/riscv32-esp-elf-gdb/bin:/opt/Espressif/esp-idf/tools:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+ENV IDF_PYTHON_ENV_PATH=/opt/Espressif/python_env
+ENV ESP_IDF_VERSION=6.0.2
+ENV ESP_ROM_ELF_DIR=/opt/Espressif/tools/tools/esp-rom-elfs
+ADD ct_path.sh /etc/profile.d
+
+# Mongoose OS host-side tools. Built/copied by the Makefile in this directory
+# (see docker.mk: mklfs comes from github.com/mongoose-os-libs/vfs-fs-lfs
+# tools/ built with FROZEN_PATH=<mongoose-os>/src/frozen; mkspiffs from
+# vfs-fs-spiffs tools/ with SPIFFS_CONFIG_PATH=/vfs-fs-spiffs/include/esp32xx).
+ARG TARGETARCH
+ADD mgos_fw_meta.py $TARGETARCH/*lfs $TARGETARCH/*spiffs* /usr/local/bin/
+ADD serve_core/ /opt/serve_core/
+RUN ln -s /opt/serve_core/serve_core.py /usr/local/bin/serve_core.py
+
+# NOTE: no ROM dump shipped for C6 (the esp32 image ADDs rom.bin/rom.elf for
+# serve_core). ESP32-C6 ROM ELFs are installed by install.sh under
+# ${IDF_TOOLS_PATH}/tools/esp-rom-elfs/ and exposed through ESP_ROM_ELF_DIR.
+
+ARG DOCKER_TAG
+ENV MGOS_TARGET_GDB=/opt/Espressif/riscv32-esp-elf-gdb/bin/riscv32-esp-elf-gdb
+ENV MGOS_TARGET_GDB_ESP32C6=/opt/Espressif/riscv32-esp-elf-gdb/bin/riscv32-esp-elf-gdb
+ENV MGOS_SDK_REVISION=$DOCKER_TAG
+ENV MGOS_SDK_BUILD_IMAGE=docker.io/mgos/esp32c6-build:$DOCKER_TAG
