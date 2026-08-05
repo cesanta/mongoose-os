@@ -117,7 +117,8 @@ static void mgos_gpio_int_cb(void *arg) {
       mgos_runlock(s_lock);
       s->cb(pin, s->cb_arg);
       mgos_rlock(s_lock);
-      s->cnt--;
+      if(s->cnt > 0)
+        s->cnt--;
     }
   } else {
     if (s->button.timer_id == MGOS_INVALID_TIMER_ID) {
