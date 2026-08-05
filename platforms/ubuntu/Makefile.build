@@ -20,6 +20,12 @@ FFI_SYMBOLS ?=
 ASAN ?= 1
 UBSAN ?= 1
 PROF ?= 0
+# COMPILER_TOOLKIT, valid options:
+#   aarch64-linux-gnu
+#   arm-linux-gnueabi
+#   arm-linux-gnueabihf
+#   x86_64-linux-gnu (the default)
+COMPILER_TOOLKIT ?= x86_64-linux-gnu
 
 MGOS_ENABLE_DEBUG_UDP = 0
 MGOS_ENABLE_SYS_SERVICE = 0
@@ -56,6 +62,12 @@ C_CXX_FLAGS = -O0 -ggdb -MD -Wall -Wextra -Werror -pipe \
               $(MONGOOSE_FEATURES)
 LDFLAGS ?=
 
+# Select compiler toolkit
+CC = $(COMPILER_TOOLKIT)-gcc
+CXX = $(COMPILER_TOOLKIT)-g++
+AR = $(COMPILER_TOOLKIT)-ar
+LD = $(COMPILER_TOOLKIT)-ld
+
 ifeq "$(ASAN)" "1"
 CC = clang
 CXX = clang++
@@ -86,7 +98,6 @@ CXXFLAGS = -std=gnu++11 -fno-exceptions $(C_CXX_FLAGS) $(APP_CXXFLAGS)
 LDFLAGS += -lstdc++
 
 INCDIRS = $(addprefix -I,$(INCLUDES))
-AR ?= ar
 APP_BIN_LIBS ?=
 LIBS  ?= pthread cap
 LDLIBS = $(addprefix -l,$(LIBS))
