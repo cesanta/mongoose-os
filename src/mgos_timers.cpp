@@ -51,8 +51,17 @@ bool Timer::Reset(int msecs, int flags) {
   return IsValid();
 }
 
-bool Timer::IsValid() {
+bool Timer::IsValid() const {
   return (id_ != MGOS_INVALID_TIMER_ID);
+}
+
+int Timer::GetMsecsLeft() const {
+  if (!IsValid()) return 0;
+  struct mgos_timer_info ti;
+  if (mgos_get_timer_info(id_, &ti)) {
+    return ti.msecs_left;
+  }
+  return 0;
 }
 
 // static
