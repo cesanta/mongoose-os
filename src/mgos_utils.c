@@ -33,6 +33,22 @@ float mgos_rand_range(float from, float to) {
   return from + (((float) (to - from)) / RAND_MAX * rand());
 }
 
+
+size_t mbuf_remove_range(struct mbuf *mb, size_t i, size_t n) WEAK;
+size_t mbuf_remove_range(struct mbuf *mb, size_t i, size_t n) {
+  size_t ret = 0;
+  if (n > 0 && n <= (mb->len - i)) {
+    memmove(&mb->buf[i], &mb->buf[i] + n, mb->len - n);
+    mb->len -= n;
+    ret = n;
+  }
+  else if (n > 0 && n >= (mb->len - i)) {
+    ret = mb->len - i;
+    mb->len -= ret;
+  }
+  return ret;
+}
+
 #if CS_ENABLE_STDIO
 /*
  * Intended for ffi
